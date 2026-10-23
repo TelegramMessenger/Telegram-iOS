@@ -514,11 +514,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             layout = layout.withUpdatedInputHeight(previousInputHeight)
         }
         
-        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
-        // insets (every other phone) it keeps the full width.
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
+        // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
+        // (every other phone) it keeps the full width.
         let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let maximumWidth: CGFloat = min(430.0, bandWidth)
         let inset: CGFloat = 24.0
@@ -958,10 +958,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.errorTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center)
         
         if let (layout, _) = self.layoutArguments {
-            // iPhone Duo: centered under the field in the band between the side insets, as containerLayoutUpdated lays it out.
-            let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-            let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-            let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+            // iPhone Duo: centered under the field in the content band, as containerLayoutUpdated lays it out.
+            let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
             
             let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: bandWidth - 48.0, height: .greatestFiniteMagnitude))
             let yOffset: CGFloat = layout.size.width > 320.0 ? errorOriginOffset + 13.0 : errorOriginOffset

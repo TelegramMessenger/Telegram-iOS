@@ -29,6 +29,7 @@ import PlainButtonComponent
 import StoreKit
 import DeviceModel
 import GlassBarButtonComponent
+import AuthorizationUtils
 
 final class AuthorizationSequencePaymentScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -251,11 +252,18 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.plainBackgroundColor
             }
             
-            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
-            // content is centered in the band between the insets. With equal insets these are the old values.
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
-            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
+            // iPhone Duo: one side's safe inset is the side strip; the content keeps to the band between the insets,
+            // centered on the full width on the unfolded screen (authorizationContentBand). With equal insets these are
+            // the old values.
+            let (bandMinX, bandWidth): (CGFloat, CGFloat)
+            if environment.safeInsets.left != environment.safeInsets.right {
+                (bandMinX, bandWidth) = authorizationContentBand(size: availableSize, safeInsets: environment.safeInsets, deviceMetrics: environment.deviceMetrics)
+            } else {
+                (bandMinX, bandWidth) = (environment.safeInsets.left, availableSize.width - environment.safeInsets.left - environment.safeInsets.right)
+            }
+            let sideInset: CGFloat = 16.0 + bandMinX
+            let rightSideInset: CGFloat = 16.0 + availableSize.width - bandMinX - bandWidth
+            let bandCenterX: CGFloat = bandMinX + bandWidth / 2.0
             
             let helpButtonSize = self.helpButton.update(
                 transition: transition,

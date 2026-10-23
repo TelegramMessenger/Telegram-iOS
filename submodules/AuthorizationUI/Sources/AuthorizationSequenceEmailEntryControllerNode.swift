@@ -222,11 +222,11 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.titleNode.attributedText = NSAttributedString(string: self.mode == .setup ? self.strings.LoginEmail_Title : self.strings.Login_EnterNewEmailTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
 
         
-        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
-        // insets (every other phone) it keeps the full width.
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
+        // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
+        // (every other phone) it keeps the full width.
         let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let inset: CGFloat = 24.0
         let maximumWidth: CGFloat = min(430.0, bandWidth)

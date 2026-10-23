@@ -68,6 +68,9 @@ These are the user's decisions; a screen that follows them is correct, one that 
    its own button uses `sideColumnNavigationButtonFrame`.
 2. **Content keeps to the band** between the side insets: lists, headers, top rows, centred texts. Scrolling content
    stays in the band too (it would otherwise pass under the corner block).
+   The login flow on the unfolded screen is the exception: its content is centred on the full width, in line with its
+   bottom button and the keyboard, inset by the larger side inset on both sides, when that leaves room for its 430pt
+   column (`authorizationContentBand` in AuthorizationUtils). Folded, it keeps to the band.
 3. **A button or panel anchored at the bottom spans the strip** and keeps clear only of a corner block that reaches
    its row, which at the bottom is only FL's bottom-right block (`bottomEdgeSideInsets()`). This covers primary
    bottom buttons, bottom toolbars, selection panels, short bottom sheets and their buttons.
@@ -141,4 +144,5 @@ other device stays byte-identical; the band helpers above are built that way.
 - Screens no link reaches: a temporary Darwin-notification hook that pushes the screen (marked for removal and
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
-  (side tab bar and its edit toolbar per posture).
+  (side tab bar and its edit toolbar per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
+  flow's content band per posture).

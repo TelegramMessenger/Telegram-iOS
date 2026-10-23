@@ -609,11 +609,11 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: self.account == nil ? self.strings.Login_NewNumber : self.strings.Login_PhoneTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
-        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
-        // insets (every other phone) it keeps the full width.
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets; on the unfolded screen it
+        // is centered on the full width, clear of the strip on both sides (authorizationContentBand). With equal insets
+        // (every other phone) it keeps the full width.
         let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
         
         let inset: CGFloat = 24.0
         let maximumWidth: CGFloat = min(430.0, bandWidth)
@@ -1063,11 +1063,10 @@ final class PhoneConfirmationController: ViewController {
             let sideInset: CGFloat = 8.0
             let innerInset: CGFloat = 18.0
             
-            // iPhone Duo: beside a side strip the card keeps to the band between the side insets. With equal
-            // insets (every other phone) it is centered on the full width.
-            let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-            let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-            let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+            // iPhone Duo: beside a side strip the card keeps to the band between the side insets, centered on the full width
+            // on the unfolded screen (authorizationContentBand). With equal insets (every other phone) it is centered on the
+            // full width.
+            let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
             
             let maximumWidth: CGFloat = min(430.0, bandWidth)
             
