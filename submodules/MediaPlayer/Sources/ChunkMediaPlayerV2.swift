@@ -214,6 +214,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     
     private var didSeekOnce: Bool = false
     private var isPlaying: Bool = false
+    // Whether the clock moved since the last seek (an open included): until it does, the parts state's `startNotBefore`
+    // holds it.
+    private var hasClockMovedSinceSeek: Bool = false
     private var baseRate: Double = 1.0
     private var isSoundEnabled: Bool
     private var isMuted: Bool
@@ -671,7 +674,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             if let previousValidPartEndTime, previousValidPartEndTime >= duration - 0.5 {
                 isBuffering = false
             } else {
-                isBuffering = playableDuration < 1.0
+                let isStartHeld = !self.hasClockMovedSinceSeek && self.partsState.startNotBefore.map { CACurrentMediaTime() < $0 } == true
+                isBuffering = playableDuration < 1.0 || isStartHeld
             }
         case let .directReader(directReader):
             var readerImpl: ChunkMediaPlayerPartsState.DirectReader.Impl?
@@ -772,6 +776,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             if !isBuffering && !isTooShortToPlay {
                 effectiveRate = self.baseRate
             }
+        }
+        if effectiveRate != 0.0 {
+            self.hasClockMovedSinceSeek = true
         }
         if !isBuffering {
             self.pendingContinuePlaybackAfterSeekToTimestamp = nil
@@ -990,6 +997,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         }
         
         self.seekId += 1
+        self.hasClockMovedSinceSeek = false
         self.seekTimestamp = timestamp
         let seekId = self.seekId
         self.pendingSeekTimestamp = timestamp

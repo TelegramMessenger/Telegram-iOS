@@ -62,4 +62,25 @@ final class HLSPlaybackLabTests: XCTestCase {
             XCTAssertLessThanOrEqual(startTime, baseStartTime + 0.05, label)
         }
     }
+
+    // A cold open at a timestamp lands inside a segment, so its first part holds only what is left of it: 2 s and 1 s
+    // here. On 3g the next part needs about 3.2 s, so a clock started at 1 s ahead stalled (2.25 s and 3.2 s); it now
+    // waits for that part instead (deviation D14).
+    func testAColdOpenNearASegmentsEndDoesNotStall() {
+        for start in [18.0, 19.0] {
+            let result = PlaybackLab(profile: LabProfiles.threeG, cache: .none, levels: LabStreams.testVideoLadder, preloadLevel: LabStreams.testVideoPreloadLevel, seconds: 300.0, startPosition: start).run(wallSeconds: 90.0)
+            XCTAssertNotNil(result.startTime, "start \(start)")
+            XCTAssertEqual(result.stallCount, 0, "start \(start)")
+        }
+    }
+
+    // Where no stall is predicted the clock starts when it did before: an open at a segment's start, and one near its
+    // end on a fast link.
+    func testAnOpenThatWouldNotStallStartsAsBefore() {
+        for (profile, start, startTime) in [(LabProfiles.threeG, 15.0, 3.30), (LabProfiles.lte, 15.0, 0.55), (LabProfiles.lte, 18.0, 0.55)] {
+            let result = PlaybackLab(profile: profile, cache: .none, levels: LabStreams.testVideoLadder, preloadLevel: LabStreams.testVideoPreloadLevel, seconds: 300.0, startPosition: start).run(wallSeconds: 90.0)
+            XCTAssertEqual(result.startTime ?? -1.0, startTime, accuracy: 0.051, "\(profile.name) start \(start)")
+            XCTAssertEqual(result.stallCount, 0, "\(profile.name) start \(start)")
+        }
+    }
 }

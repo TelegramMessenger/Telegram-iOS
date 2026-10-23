@@ -4,7 +4,7 @@ HLS videos play through `submodules/HLSPlayback`, a Foundation-only Swift port o
 use: the playlist parser, the EWMA estimator, ABR with abandon, a buffer model and an event-driven
 `HLSPlaybackController`. The app's environment (`TelegramUniversalVideoContent/Sources/HLSNative/`) feeds
 `ChunkMediaPlayerV2` through its `.custom` source, and `HLSVideoNativeContentNode` is the content node. The deviations
-from hls.js (D1–D13), the failure policy, the logs and the measurements are in
+from hls.js (D1–D14), the failure policy, the logs and the measurements are in
 [`docs/native-hls-player.md`](../../docs/native-hls-player.md). None of this shows up as a build error:
 
 - **Levels are sorted by height** (`HLSLevels.sorted`), and every level index is into that order.
@@ -33,6 +33,14 @@ from hls.js (D1–D13), the failure policy, the logs and the measurements are in
   slow link and it is abandoned. hls.js's switch hysteresis is judged against the level last chosen, not the last
   appended part (two segments back), or picks alternate between two levels. Changes to the scheduler go through the
   playback lab (`HLSPlaybackLabTests`): no profile may stall more or start later than `LabBaseline`.
+- **The clock waits for `startNotBefore` after an open or a seek inside a part** (D14): while that part is the only one
+  ahead, the controller predicts when the next part lands and the node hands the moment to `ChunkMediaPlayerV2` with
+  the parts, which holds its clock until then before its first move since a seek. An appended part is reported only
+  after the next load is chosen: the node reads the gate in that report, and reported earlier the gate would charge a
+  guess at the part's level instead of the load the scheduler chose (480p instead of 720p, landing 1.25 s apart, in the lab).
+  Keep the lab's player model (`PlaybackLab`) taking the gate in the buffer-change callback as the node does. The held
+  clock also holds the first frame (no media is requested while buffering). The lab opens mid-segment through `PlaybackLab(startPosition:)` on
+  `LabStreams.testVideoLadder` (three levels, no 360p rung, whose fast segments would hide the stall).
 - **A caller that knows where playback starts passes it** (`HLSVideoContent.startTimestamp`; the gallery passes the
   timecode, stored position or forwarded timestamp by its own precedence). Without it the controller starts at 0 and
   loads or appends the opening before the seek arrives.

@@ -40,6 +40,7 @@ does, where it deliberately differs from hls.js, and the facts the code depends 
 | D11 | choosing Auto flushes the buffer | Auto and the inline cap never flush | a flush shows as a stall for no gain |
 | D12 | with no sample, the first auto pick uses `max(500 kbit/s, min(top, 5 Mbit/s))` | a start with no opening on disk takes the level the class's shared estimate (D3) picks by hls.js's first-level rule when that level's key is above 480 (`estimateStartAboveKey`, the owner's rule), else the preload quality; a later pick before a sample reads the shared estimate the same way | start where the preload put the bytes, or above it when the link is known |
 | D13 | one fragment loads at a time | two segment loads in flight: the next starts once the newest owes the network at most `pipelineWindowBytes` (the download path's window, 6 parts of 128 KB per file) or while the current part is made; not before the first part is appended and the class has an estimate | the link idles between requests otherwise; measured in the lab, step-down +2.5% bitrate, every other profile equal |
+| D14 | playback starts when media can play | after an open or a seek inside a part, while that part is the only one ahead, the clock waits until it can start with `playerMinimumBuffer` (1 s) still ahead when the next part lands at the current estimate (`startNotBefore`, handed to `ChunkMediaPlayerV2` with the parts); at most until that part lands | an open 3 s into a 5 s segment started with 2 s ahead and stalled 2.4–2.5 s on 3g (simulator), 2.25 s in the lab |
 
 Also deliberate:
 - `maxHole` is 0.2 s, because `ChunkMediaPlayerV2` plays through gaps up to 0.5 s.
@@ -177,6 +178,23 @@ bytes still missing.
   early enough by itself (mov subtracts the edit list's media time again before searching); on the one without, six
   targets of 150 lost frames, and the first frame came 40–120 ms late. Of the simulator's cached quality files, the
   HEVC ones and most H.264 ones carry no video edit list.
+- **The clock waits after an open or a seek inside a part (D14)** while the part holding the position is the only one
+  ahead and leaves less than a whole segment: `HLSPlaybackController.startNotBefore` is the earliest moment the clock
+  can start and still have 1 s ahead when the next part lands (in flight: what it still owes, plus the first byte if
+  nothing has arrived; not yet issued: the next segment at the part's level, as the level choice charges it). The node
+  hands it to `ChunkMediaPlayerV2` with the parts, which holds its clock until then only before its first move since a
+  seek; a run that reaches the video's end is never held. The controller reports an appended part after it has chosen
+  the next load, so the gate charges that load. Without it, a cold open at a timestamp near a segment's end started with
+  1–2 s ahead, and hls.js's level choice (faithful here: its first pass fails, its second tolerates `min(segment, 4 s)`
+  of starvation) kept 720p, so the clock stalled until the next part landed. Lab, 3g, the test video's ladder: an open
+  2 s before a segment's end starts at 5.60 s with no stall (was 3.30 s and a 2.25 s stall), 1 s before at 6.55 s (was
+  3.30 s and 3.20 s); on LTE only the open 1 s before the end changes (1.10 s, was 0.55 s and a 0.5 s stall); every
+  open at a segment's start is unchanged. A prediction a few hundredths short can leave a blip under the player's 0.3 s
+  spinner (3g, 3 s before the end: 0.05 s). The player requests no media while its clock is held, so the first frame
+  waits too: on the simulator under 3g, a cold open at 1583 s (3 s into segment 316) showed its first frame at 7.9 s
+  instead of 4.7 s and stalled 289 ms instead of 2,515 ms (the next part came 0.35 s after the prediction: other
+  downloads slowed the shaped link after the estimate was taken). Showing that frame while the clock is held is not
+  built.
 - **A part's two readers probe only their own stream** (temp-file parts only): the other media type is discarded
   before `avformat_find_stream_info`, which otherwise decodes H.264 in software for the audio reader too.
 

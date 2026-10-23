@@ -335,7 +335,8 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
     
     private func bufferChanged(parts: [HLSBufferedPart], duration: Double?) {
         let playerParts = self.partStore.parts(for: parts)
-        self.playerSource.partsPromise.set(.single(ChunkMediaPlayerPartsState(duration: duration, content: .parts(playerParts))))
+        // The controller's clock is the player's (`CACurrentMediaTime`).
+        self.playerSource.partsPromise.set(.single(ChunkMediaPlayerPartsState(duration: duration, content: .parts(playerParts), startNotBefore: self.controller.startNotBefore)))
         
         if let duration, duration > 0.0 {
             // Widened by 0.2 s each way, as the JavaScript player reported it; the scrubber reads only the ratio.
