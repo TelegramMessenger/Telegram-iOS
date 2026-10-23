@@ -272,7 +272,10 @@ private final class ShareScreenHeaderComponent: Component {
 public final class ShareScreen: ViewControllerComponentContainer {
     public typealias Subject = ShareScreenSubject
 
-    public var enqueued: (([EnginePeer.Id], [Int64]) -> Void)?
+    public var sent: (([EnginePeer.Id]) -> Void)?
+    public var enqueued: (([EnginePeer.Id], [Int64]) -> Void)? {
+        didSet { self.sender.enqueued = self.enqueued }
+    }
     public var actionCompleted: (() -> Void)?
     public var linkCopied: ((Int32?) -> Void)?
     public var dismissed: (() -> Void)?
@@ -472,16 +475,17 @@ public final class ShareScreen: ViewControllerComponentContainer {
             let environment: ShareControllerEnvironment = self.externalConfiguration?.environment ?? ShareControllerAppEnvironment(sharedContext: self.context.sharedContext)
             environment.donateSendMessageIntent(account: ShareControllerAppAccountContext(context: self.context), peerIds: ids)
         }
-        self.sender.enqueued = { [weak self] ids, correlations in
+        self.sender.sent = { [weak self] ids in
             guard let self else { return }
             let haptic = HapticFeedback()
             let hapticDelay = ids.count == 1 && ids.first == self.context.account.peerId ? 0.88 : 0.44
             Queue.mainQueue().after(hapticDelay) {
                 haptic.success()
             }
-            self.enqueued?(ids, correlations)
+            self.sent?(ids)
             self.close()
         }
+        self.sender.enqueued = self.enqueued
         self.sender.externalStatusUpdated = { [weak self] status in self?.updateExternalStatus(status) }
         self.sender.mediaStartTimestamp = self.effectiveStartTimestamp
     }

@@ -785,6 +785,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     private var highlightedState: HighlightedState?
     
+    private weak var activationProgressMosaicNode: ChatMessageMediaBubbleContentNode?
+    
     private var backgroundFrameTransition: (CGRect, CGRect)?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
@@ -877,6 +879,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             guard let strongSelf = self else {
                 return .none
             }
+            strongSelf.updateMainContainerActivationTarget(mosaicNode: nil)
             if !strongSelf.backgroundNode.frame.contains(location) {
                 return .none
             }
@@ -898,6 +901,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         if openContextMenu.disableDefaultPressAnimation {
                             return .customActivationProcess
                         } else {
+                            if !openContextMenu.selectAll {
+                                strongSelf.updateMainContainerActivationTarget(mosaicNode: strongSelf.mosaicContentNode(at: location, message: openContextMenu.tapMessage))
+                            }
                             return .default
                         }
                     } else {
@@ -5759,7 +5765,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         let previousContextContentFrame = strongSelf.mainContextSourceNode.contentRect
         strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-        strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
+        strongSelf.updateMainContainerActivationTarget(mosaicNode: strongSelf.activationProgressMosaicNode)
         
         if previousContextFrame.size != strongSelf.mainContextSourceNode.bounds.size || previousContextContentFrame != strongSelf.mainContextSourceNode.contentRect {
             strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size, animation)
@@ -7499,6 +7505,37 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             reactionButtonsNodeFrame.origin.y += rect.minY
             
             reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+        }
+    }
+    
+    private func mosaicContentNode(at location: CGPoint, message: Message) -> ChatMessageMediaBubbleContentNode? {
+        guard let item = self.item, case .group = item.content else {
+            return nil
+        }
+        var mediaNodeCount = 0
+        var result: ChatMessageMediaBubbleContentNode?
+        for contentNode in self.contentNodes {
+            guard let mediaNode = contentNode as? ChatMessageMediaBubbleContentNode, mediaNode.supernode === self.clippingNode else {
+                continue
+            }
+            mediaNodeCount += 1
+            if mediaNode.item?.message.stableId == message.stableId, self.view.convert(mediaNode.bounds, from: mediaNode.view).contains(location) {
+                result = mediaNode
+            }
+        }
+        return mediaNodeCount > 1 ? result : nil
+    }
+    
+    private func updateMainContainerActivationTarget(mosaicNode: ChatMessageMediaBubbleContentNode?) {
+        self.activationProgressMosaicNode = mosaicNode
+        if let mosaicNode {
+            self.mainContainerNode.targetNodeForActivationProgress = mosaicNode
+            self.mainContainerNode.targetNodeForActivationProgressContentRect = nil
+            self.mainContainerNode.activationProgressScaleInset = 7.5
+        } else {
+            self.mainContainerNode.targetNodeForActivationProgress = self.mainContextSourceNode.contentNode
+            self.mainContainerNode.targetNodeForActivationProgressContentRect = self.mainContextSourceNode.contentRect
+            self.mainContainerNode.activationProgressScaleInset = 15.0
         }
     }
     
