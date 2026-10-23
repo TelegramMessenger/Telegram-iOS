@@ -31,8 +31,6 @@ swift_library(
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",
-        "//submodules/Components/ReactionButtonListComponent",
-        "//submodules/AnimatedAvatarSetNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
         "//submodules/ItemListUI",
         "//submodules/LottieBinding",

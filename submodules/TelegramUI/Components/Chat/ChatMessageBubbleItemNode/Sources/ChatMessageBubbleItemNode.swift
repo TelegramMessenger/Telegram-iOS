@@ -1982,6 +1982,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
             
+            if item.associatedData.hidesShareButton {
+                // A feed row: the host offers its own ways to share.
+                needsShareButton = false
+                needsSummarizeButton = false
+            }
+            
             if (item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected()) {
                 if mayHaveSeparateCommentsButton && hasCommentButton(item: item) {
                 } else {

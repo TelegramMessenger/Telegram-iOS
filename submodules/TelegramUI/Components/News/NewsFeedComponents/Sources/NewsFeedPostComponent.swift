@@ -796,6 +796,17 @@ public final class NewsFeedPostComponent: Component {
 
         func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
             let isFirstUpdate = self.component == nil
+            // A switch between compact and expanded crossfades: the row as it was is kept in a snapshot that fades
+            // out over the new layout, laid out at once. The views moving between the two layouts read badly.
+            let crossfades = !isFirstUpdate && self.component?.displayMode != component.displayMode && !transition.animation.isImmediate
+            var snapshotView: UIView?
+            if crossfades, let snapshot = self.lensView.snapshotView(afterScreenUpdates: false) {
+                snapshot.frame = self.lensView.frame
+                snapshot.isUserInteractionEnabled = false
+                self.contentView.addSubview(snapshot)
+                snapshotView = snapshot
+            }
+            let contentTransition: ComponentTransition = crossfades ? .immediate : transition
             self.component = component
             self.state = state
             let theme = component.theme
@@ -809,9 +820,16 @@ public final class NewsFeedPostComponent: Component {
             let separatorFrame: CGRect
             let postText: NSAttributedString
             if component.displayMode == .expanded, let expanded = component.expanded {
-                (rowSize, separatorFrame, postText) = self.updateExpanded(component: component, content: expanded, availableSize: availableSize, timeText: timeText, transition: transition)
+                (rowSize, separatorFrame, postText) = self.updateExpanded(component: component, content: expanded, availableSize: availableSize, timeText: timeText, transition: contentTransition)
             } else {
-                (rowSize, separatorFrame, postText) = self.updateCompact(component: component, availableSize: availableSize, timeText: timeText, transition: transition)
+                (rowSize, separatorFrame, postText) = self.updateCompact(component: component, availableSize: availableSize, timeText: timeText, transition: contentTransition)
+            }
+            if let snapshotView {
+                self.lensView.alpha = 0.0
+                transition.setAlpha(view: self.lensView, alpha: 1.0)
+                transition.setAlpha(view: snapshotView, alpha: 0.0, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
             }
 
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor

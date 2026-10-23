@@ -17,19 +17,23 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   exactly as Contacts → Sort does. `NavigationBarComponent` sets `morphsIntoContextMenu` on that capsule; nothing in
   News sets it (docs/context-menu-liquid-morph.md).
 - **One component, two layouts.** `NewsFeedPostComponent` keeps its compact layout untouched in `updateCompact`
-  and adds `updateExpanded`; the avatar, channel name, badge and time are the *same* `ComponentView`s moved and
-  restyled, so a mode change is one animated CoreList pass (`NewsScreenNode.displayModeTransition`, the 0.5 s
-  spring) in which the shared views travel and the row's height rides the same spring. The expanded-only content
-  (`NewsExpandedPostContentView`) fades in under them. Do not give the two modes different item identities or
-  component types: CoreList would replace the row instead of morphing it.
+  and adds `updateExpanded`; the avatar, channel name, badge and time are the *same* `ComponentView`s, restyled
+  and moved. A mode change is one animated CoreList pass (`NewsScreenNode.displayModeTransition`, the 0.5 s
+  spring) in which the row's height rides the spring while its content **crossfades**: the row as it was is
+  snapshotted, the new layout is applied at once, and the snapshot fades out over it. Do not give the two modes
+  different item identities or component types: CoreList would replace the row instead of animating its height.
 - **The bubble is the chat's own.** The expanded text, link preview, polls and files are a real
   `ChatMessageItemImpl` node from `SharedAccountContext.makeChatMessageFeedItem`, the preview factory with
-  `ChatMessageFeedItemActions` (links, media, peers, Instant View, click-through) routed to the screen. Two flags on
-  `ChatMessageItemAssociatedData` make it a feed bubble: `hidesBubbleBackground` (the bubble draws no background,
-  so the row's background shows in both themes) and `hidesAuthorHeader` (the row draws the channel line; without
-  it a channel post shows the channel's name inside the bubble too). It is **not** a preview (`isPreview: false`):
-  a preview hides a link preview's action button, and the feed shows Instant View. The item lays itself out for
-  the chat's rotated list: `bubbleContainerNode.subnodeTransform` turns it back (as `RankChatPreviewItem` does).
+  `ChatMessageFeedItemActions` (links, media, peers, Instant View, click-through) routed to the screen. Three
+  flags on `ChatMessageItemAssociatedData` make it a feed bubble: `hidesBubbleBackground` (no background, so the
+  row's shows in both themes), `hidesAuthorHeader` (the row draws the channel line; without it a channel post
+  shows the channel's name inside the bubble too) and `hidesShareButton` (no share arrow beside the bubble). Its
+  **status line (views, time) is hidden by passing bubble corners with `hasTails: false`**: the text and link
+  preview content nodes draw no `ChatMessageDateAndStatusNode` then (that is their own rule, no flag), and the
+  row shows the views, with the chat's `Chat/Message/ImpressionCount` icon, and the time in its channel line.
+  It is **not** a preview (`isPreview: false`): a preview hides a link preview's action button, and the feed
+  shows Instant View. The item lays itself out for the chat's rotated list: `bubbleContainerNode.subnodeTransform`
+  turns it back (as `RankChatPreviewItem` does).
 - **Bubble geometry is placed by constants, not measured** (`NewsExpandedPostMetrics.bubbleTextLeadingInset`,
   `bubbleTextTopInset`, `bubbleWidthOverhead`): an incoming bubble's text starts 20 pt into its item and 6 pt under
   its top, and the item's width is the wanted text width plus 73 (36 fill inset, 9 edge insets, 6 content inset,
@@ -37,11 +41,10 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   constants change in the bubble, the column shifts.
 - **Photos and videos never reach the bubble.** `newsExpandedPostParts` strips them into the horizontal gallery
   (`newsExpandedGalleryLayout`: one photo keeps its aspect, several share the 270 pt height) and gives the bubble a
-  copy of the message with the rest of its media; reactions and the comments thread attributes are stripped as
-  well, since the row draws them itself in one scrolling line (`ReactionButtonsAsyncLayoutContainer`, the chat's
-  pills, plus `NewsCommentsPillView` first). The gallery and the reactions line are full-width scroll views whose
-  content starts at the column, so scrolled content passes under the avatar's column; where a strip meets the
-  avatar vertically the avatar goes along with the content (`newsExpandedAvatarOffset`).
+  copy of the message with the rest of its media; the reactions and comments-thread attributes are stripped as
+  well, and the row draws neither: the feed shows no reactions line and no comments pill, by design. The gallery
+  is a full-width scroll view whose content starts at the column, so scrolled content passes under the avatar's
+  column; where it meets the avatar vertically the avatar goes along with the content (`newsExpandedAvatarOffset`).
 - **Show more.** While a post is collapsed its text is cut to its first ten lines as plain text, measured with a
   `TextNode` at the bubble's font and width (`newsCollapsedText`), and the entities are dropped: formatting and
   links come with Show more (`NewsScreenNode.expandedTextPosts`, per post identity, for the screen's lifetime).

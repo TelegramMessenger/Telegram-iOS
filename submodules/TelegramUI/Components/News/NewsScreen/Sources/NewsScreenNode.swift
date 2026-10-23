@@ -303,12 +303,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             },
             openInstantPage: { [weak self] message in
                 self?.openInstantPage(message: message)
-            },
-            openComments: { [weak self] in
-                self?.openComments(message: message)
-            },
-            toggleReaction: { [weak self] value in
-                self?.toggleReaction(value, message: message)
             }
         )
     }
@@ -368,50 +362,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         navigationController.pushViewController(pageController)
-    }
-
-    /// The post's comments: its discussion thread, as the chat's comments button opens it.
-    private func openComments(message: EngineMessage) {
-        let _ = (self.context.engine.messages.fetchChannelReplyThreadMessage(messageId: message.id, atMessageId: nil)
-        |> deliverOnMainQueue).start(next: { [weak self] thread in
-            guard let self, let navigationController = self.controller?.navigationController as? NavigationController else {
-                return
-            }
-            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .replyThread(thread)))
-        }, error: { _ in
-        })
-    }
-
-    /// A tap on a reaction pill: the reaction is added to, or removed from, the account's reactions on the post.
-    private func toggleReaction(_ value: MessageReaction.Reaction, message: EngineMessage) {
-        func update(_ value: MessageReaction.Reaction) -> UpdateMessageReaction? {
-            switch value {
-            case let .builtin(emoji):
-                return .builtin(emoji)
-            case let .custom(fileId):
-                return .custom(fileId: fileId, file: nil)
-            case .stars:
-                return nil
-            }
-        }
-        guard update(value) != nil else {
-            return
-        }
-        var reactions: [UpdateMessageReaction] = []
-        var wasChosen = false
-        if let attribute = mergedMessageReactions(attributes: message.attributes, isTags: false) {
-            for reaction in attribute.reactions where reaction.isSelected {
-                if reaction.value == value {
-                    wasChosen = true
-                } else if let mapped = update(reaction.value) {
-                    reactions.append(mapped)
-                }
-            }
-        }
-        if !wasChosen, let mapped = update(value) {
-            reactions.append(mapped)
-        }
-        self.context.engine.messages.setMessageReactions(ids: [message.id], reactions: reactions)
     }
 
     override func didLoad() {

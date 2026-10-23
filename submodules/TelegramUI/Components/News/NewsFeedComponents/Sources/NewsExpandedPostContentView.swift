@@ -11,8 +11,6 @@ import TelegramStringFormatting
 import PhotoResources
 import MultilineTextComponent
 import PlainButtonComponent
-import ReactionButtonListComponent
-import AnimatedAvatarSetNode
 import ChatMessageItemView
 import NewsFeedSupport
 
@@ -31,10 +29,8 @@ public final class NewsFeedPostExpandedContent {
     public let openMedia: (EngineMessage, EngineMedia?) -> Bool
     public let openPeer: (EnginePeer) -> Void
     public let openInstantPage: (EngineMessage) -> Void
-    public let openComments: () -> Void
-    public let toggleReaction: (MessageReaction.Reaction) -> Void
 
-    public init(presentationData: PresentationData, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isTextExpanded: Bool, toggleTextExpanded: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMedia: @escaping (EngineMessage, EngineMedia?) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void, openComments: @escaping () -> Void, toggleReaction: @escaping (MessageReaction.Reaction) -> Void) {
+    public init(presentationData: PresentationData, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isTextExpanded: Bool, toggleTextExpanded: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMedia: @escaping (EngineMessage, EngineMedia?) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void) {
         self.presentationData = presentationData
         self.availableReactions = availableReactions
         self.accountPeer = accountPeer
@@ -44,8 +40,6 @@ public final class NewsFeedPostExpandedContent {
         self.openMedia = openMedia
         self.openPeer = openPeer
         self.openInstantPage = openInstantPage
-        self.openComments = openComments
-        self.toggleReaction = toggleReaction
     }
 
     static func isEqual(_ lhs: NewsFeedPostExpandedContent?, _ rhs: NewsFeedPostExpandedContent?) -> Bool {
@@ -121,7 +115,7 @@ private func newsExpandedPostParts(messages: [EngineMessage]) -> (bubble: [Engin
     return (bubble, gallery)
 }
 
-/// The bubble shows the content only: the row draws the reactions and comments itself, in one line.
+/// The bubble shows the content only: reactions and the comments thread are left out of the feed row.
 private func newsBubbleMessage(_ message: EngineMessage, collapsedText: String?) -> EngineMessage {
     var attributes = message.attributes.filter { attribute in
         if attribute is ReactionsMessageAttribute || attribute is ReplyThreadMessageAttribute {
@@ -156,90 +150,6 @@ private func newsCollapsedText(_ text: String, font: UIFont, width: CGFloat) -> 
     let nsText = text as NSString
     let prefix = nsText.substring(with: NSRange(location: 0, length: min(range.length, nsText.length))).trimmingCharacters(in: .whitespacesAndNewlines)
     return prefix + "…"
-}
-
-/// The reaction pills' colours: the incoming bubble's, as the chat draws them under a channel post.
-private func newsReactionColors(theme: PresentationTheme) -> ReactionButtonComponent.Colors {
-    let themeColors = bubbleColorComponents(theme: theme, incoming: true, wallpaper: false)
-    return ReactionButtonComponent.Colors(
-        deselectedBackground: themeColors.reactionInactiveBackground.argb,
-        selectedBackground: themeColors.reactionActiveBackground.argb,
-        deselectedForeground: themeColors.reactionInactiveForeground.argb,
-        selectedForeground: themeColors.reactionActiveForeground.argb,
-        selectedIconTintColor: 0,
-        deselectedStarsBackground: themeColors.reactionStarsInactiveBackground.argb,
-        selectedStarsBackground: themeColors.reactionStarsActiveBackground.argb,
-        deselectedStarsForeground: themeColors.reactionStarsInactiveForeground.argb,
-        selectedStarsForeground: themeColors.reactionStarsActiveForeground.argb,
-        extractedBackground: theme.contextMenu.backgroundColor.argb,
-        extractedForeground: theme.contextMenu.primaryColor.argb,
-        extractedSelectedForeground: theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : theme.list.itemCheckColors.foregroundColor.argb,
-        deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
-        selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb,
-        isDark: theme.overallDarkAppearance
-    )
-}
-
-/// The comments pill: the latest commenters, a bubble, the count and a chevron, in the reaction pills' colours.
-private final class NewsCommentsPillView: UIView {
-    private let avatarsContext = AnimatedAvatarSetContext()
-    private let avatarsNode = AnimatedAvatarSetNode()
-    private let iconView = UIImageView()
-    private let countLabel = UILabel()
-    private let chevronView = UIImageView()
-    var action: (() -> Void)?
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        self.layer.cornerRadius = NewsExpandedPostMetrics.reactionsHeight * 0.5
-        self.clipsToBounds = true
-        self.avatarsNode.isUserInteractionEnabled = false
-        self.addSubview(self.avatarsNode.view)
-        self.iconView.contentMode = .center
-        self.addSubview(self.iconView)
-        self.countLabel.font = Font.medium(11.0)
-        self.addSubview(self.countLabel)
-        self.chevronView.contentMode = .center
-        self.addSubview(self.chevronView)
-        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
-    }
-
-    required init?(coder: NSCoder) {
-        preconditionFailure()
-    }
-
-    @objc private func tapped() {
-        self.action?()
-    }
-
-    func update(context: AccountContext, peers: [EnginePeer], count: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, backgroundColor: UIColor, foregroundColor: UIColor, synchronousLoad: Bool) -> CGSize {
-        self.backgroundColor = backgroundColor
-        let height = NewsExpandedPostMetrics.reactionsHeight
-        var x: CGFloat = 5.0
-        let avatarsSize = self.avatarsNode.update(context: context, content: self.avatarsContext.update(peers: Array(peers.prefix(3)), animated: false), itemSize: CGSize(width: 20.0, height: 20.0), animated: false, synchronousLoad: synchronousLoad)
-        if avatarsSize.width > 0.0 {
-            self.avatarsNode.frame = CGRect(origin: CGPoint(x: x, y: floor((height - avatarsSize.height) * 0.5)), size: avatarsSize)
-            self.avatarsNode.isHidden = false
-            x += avatarsSize.width + 2.0
-        } else {
-            self.avatarsNode.isHidden = true
-            x = 9.0
-        }
-        self.iconView.image = UIImage(systemName: "bubble.left", withConfiguration: UIImage.SymbolConfiguration(pointSize: 14.0, weight: .medium))?.withTintColor(foregroundColor, renderingMode: .alwaysOriginal)
-        let iconSize = self.iconView.image?.size ?? CGSize(width: 18.0, height: 18.0)
-        self.iconView.frame = CGRect(origin: CGPoint(x: x, y: floor((height - iconSize.height) * 0.5)), size: iconSize)
-        x += iconSize.width + 3.0
-        self.countLabel.textColor = foregroundColor
-        self.countLabel.text = count > 0 ? compactNumericCountString(Int(count), decimalSeparator: dateTimeFormat.decimalSeparator) : strings.News_Comments
-        let countSize = self.countLabel.sizeThatFits(CGSize(width: 200.0, height: height))
-        self.countLabel.frame = CGRect(origin: CGPoint(x: x, y: floor((height - countSize.height) * 0.5)), size: countSize)
-        x += countSize.width + 3.0
-        self.chevronView.image = UIImage(systemName: "chevron.right", withConfiguration: UIImage.SymbolConfiguration(pointSize: 9.0, weight: .semibold))?.withTintColor(foregroundColor, renderingMode: .alwaysOriginal)
-        let chevronSize = self.chevronView.image?.size ?? CGSize(width: 7.0, height: 11.0)
-        self.chevronView.frame = CGRect(origin: CGPoint(x: x, y: floor((height - chevronSize.height) * 0.5)), size: chevronSize)
-        x += chevronSize.width + 9.0
-        return CGSize(width: x, height: height)
-    }
 }
 
 /// One gallery item: the photo or video's thumbnail with continuous corners, and "▶ 0:12" on a video.
@@ -341,8 +251,8 @@ private final class NewsHorizontalStripView: UIScrollView {
     }
 }
 
-/// The expanded row's content under the channel line: the views and time, the bubble's content, Show more, the
-/// gallery and the reactions line. The row owns the avatar, the channel name, its badge and the time view, and places
+/// The expanded row's content under the channel line: the views and time, the bubble's content, Show more and the
+/// gallery. The row owns the avatar, the channel name, its badge and the time view, and places
 /// them where this view says.
 final class NewsExpandedPostContentView: UIView {
     struct Layout {
@@ -361,9 +271,6 @@ final class NewsExpandedPostContentView: UIView {
     private let showMoreView = ComponentView<Empty>()
     private let galleryView = NewsHorizontalStripView()
     private var galleryItemViews: [NewsGalleryItemView] = []
-    private let reactionsView = NewsHorizontalStripView()
-    private let reactionsContainer = ReactionButtonsAsyncLayoutContainer()
-    private var commentsPillView: NewsCommentsPillView?
 
     /// The avatar's horizontal offset for the gallery's scrolling (`newsExpandedAvatarOffset`).
     var avatarOffsetChanged: ((CGFloat) -> Void)?
@@ -382,7 +289,6 @@ final class NewsExpandedPostContentView: UIView {
         self.bubbleContainerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         self.addSubview(self.bubbleContainerNode.view)
         self.addSubview(self.galleryView)
-        self.addSubview(self.reactionsView)
         self.galleryView.scrolled = { [weak self] distance in
             guard let self, let galleryFrame = self.galleryFrame else {
                 return
@@ -404,9 +310,6 @@ final class NewsExpandedPostContentView: UIView {
         if !self.galleryView.isHidden, self.galleryView.frame.contains(point) {
             return true
         }
-        if !self.reactionsView.isHidden, self.reactionsView.frame.contains(point) {
-            return true
-        }
         if let showMoreView = self.showMoreView.view, showMoreView.superview != nil, showMoreView.frame.contains(point) {
             return true
         }
@@ -415,12 +318,11 @@ final class NewsExpandedPostContentView: UIView {
 
     /// Whether `point` (in this view) is on a strip that scrolls sideways.
     func hasHorizontalScrolling(at point: CGPoint) -> Bool {
-        for strip in [self.galleryView, self.reactionsView] where !strip.isHidden && strip.frame.contains(point) {
-            if strip.contentSize.width + strip.contentInset.left + strip.contentInset.right > strip.bounds.width + 0.5 {
-                return true
-            }
+        let strip = self.galleryView
+        guard !strip.isHidden, strip.frame.contains(point) else {
+            return false
         }
-        return false
+        return strip.contentSize.width + strip.contentInset.left + strip.contentInset.right > strip.bounds.width + 0.5
     }
 
     func update(component: NewsFeedPostComponent, content: NewsFeedPostExpandedContent, width: CGFloat, timeSize: CGSize, avatarFrame: CGRect, synchronousLoad: Bool, transition: ComponentTransition) -> Layout {
@@ -461,7 +363,8 @@ final class NewsExpandedPostContentView: UIView {
             let viewsSize = self.viewsLabel.sizeThatFits(CGSize(width: 100.0, height: 100.0))
             transition.setFrame(view: self.viewsLabel, frame: centred(maxX: metaMaxX, size: viewsSize))
             metaMaxX -= viewsSize.width + 2.0
-            let eyeImage = UIImage(systemName: "eye", withConfiguration: UIImage.SymbolConfiguration(pointSize: 11.0, weight: .medium))?.withTintColor(secondaryColor, renderingMode: .alwaysOriginal)
+            // The chat's own view-count icon (the one its status line shows), in the channel line now.
+            let eyeImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: secondaryColor)
             self.viewsIconView.image = eyeImage
             let eyeSize = eyeImage?.size ?? CGSize(width: 14.0, height: 10.0)
             transition.setFrame(view: self.viewsIconView, frame: centred(maxX: metaMaxX, size: eyeSize))
@@ -614,112 +517,10 @@ final class NewsExpandedPostContentView: UIView {
         }
         self.galleryFrame = galleryFrame
 
-        // The reactions line: comments first, then the reactions as the chat draws them, scrolling sideways.
-        let reactionsFrame = self.updateReactions(component: component, content: content, width: width, contentX: contentX, y: nextY + metrics.reactionsTopSpacing, synchronousLoad: synchronousLoad, transition: transition)
-        if let reactionsFrame {
-            nextY = reactionsFrame.maxY
-        }
-
         let height = nextY + metrics.bottomInset
         return Layout(height: height, timeFrame: timeFrame, metaWidth: metaWidth)
     }
 
-    private func updateReactions(component: NewsFeedPostComponent, content: NewsFeedPostExpandedContent, width: CGFloat, contentX: CGFloat, y: CGFloat, synchronousLoad: Bool, transition: ComponentTransition) -> CGRect? {
-        let metrics = NewsExpandedPostMetrics.self
-        let theme = component.theme
-        let context = component.context
-        guard let message = component.messages.first else {
-            return nil
-        }
-        var replyThread: ReplyThreadMessageAttribute?
-        for attribute in message.attributes {
-            if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.commentsPeerId != nil {
-                replyThread = attribute
-            }
-        }
-        let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: false)
-        var mappedReactions: [ReactionButtonsAsyncLayoutContainer.Reaction] = []
-        if let reactionsAttribute {
-            for reaction in reactionsAttribute.reactions {
-                var centerAnimation: TelegramMediaFile?
-                var animationFileId: Int64?
-                switch reaction.value {
-                case .builtin, .stars:
-                    if let availableReactions = content.availableReactions {
-                        for availableReaction in availableReactions.reactions where availableReaction.value == reaction.value {
-                            centerAnimation = availableReaction.centerAnimation?._parse()
-                            break
-                        }
-                    }
-                case let .custom(fileId):
-                    animationFileId = fileId
-                }
-                mappedReactions.append(ReactionButtonsAsyncLayoutContainer.Reaction(
-                    reaction: ReactionButtonComponent.Reaction(value: reaction.value, centerAnimation: centerAnimation, animationFileId: animationFileId, title: nil),
-                    count: Int(reaction.count),
-                    peers: [],
-                    chosenOrder: reaction.chosenOrder
-                ))
-            }
-        }
-        guard replyThread != nil || !mappedReactions.isEmpty else {
-            self.reactionsView.isHidden = true
-            if let commentsPillView = self.commentsPillView {
-                commentsPillView.removeFromSuperview()
-                self.commentsPillView = nil
-            }
-            let _ = self.reactionsContainer.update(context: context, action: { _, _, _ in }, reactions: [], colors: newsReactionColors(theme: theme), isTag: false, constrainedWidth: .greatestFiniteMagnitude)
-            return nil
-        }
-        let colors = newsReactionColors(theme: theme)
-        let frame = CGRect(x: 0.0, y: y, width: width, height: metrics.reactionsHeight)
-        transition.setFrame(view: self.reactionsView, frame: frame)
-        self.reactionsView.contentInset = UIEdgeInsets(top: 0.0, left: contentX, bottom: 0.0, right: metrics.rightInset)
-        self.reactionsView.isHidden = false
-        var x: CGFloat = 0.0
-        if let replyThread {
-            let pill: NewsCommentsPillView
-            if let current = self.commentsPillView {
-                pill = current
-            } else {
-                pill = NewsCommentsPillView(frame: CGRect())
-                self.reactionsView.addSubview(pill)
-                self.commentsPillView = pill
-            }
-            var peers: [EnginePeer] = []
-            for peerId in replyThread.latestUsers {
-                if let peer = message.peers[peerId] {
-                    peers.append(EnginePeer(peer))
-                }
-            }
-            let size = pill.update(context: context, peers: peers, count: replyThread.count, strings: component.strings, dateTimeFormat: component.dateTimeFormat, backgroundColor: UIColor(argb: colors.deselectedBackground), foregroundColor: UIColor(argb: colors.deselectedForeground), synchronousLoad: synchronousLoad)
-            pill.action = {
-                content.openComments()
-            }
-            transition.setFrame(view: pill, frame: CGRect(origin: CGPoint(x: x, y: 0.0), size: size))
-            x += size.width + metrics.reactionsSpacing
-        } else if let commentsPillView = self.commentsPillView {
-            commentsPillView.removeFromSuperview()
-            self.commentsPillView = nil
-        }
-        let result = self.reactionsContainer.update(context: context, action: { _, value, _ in
-            content.toggleReaction(value)
-        }, reactions: mappedReactions, colors: colors, isTag: false, constrainedWidth: .greatestFiniteMagnitude)
-        let applied = result.apply(.None, ReactionButtonsAsyncLayoutContainer.Arguments(animationCache: context.animationCache, animationRenderer: context.animationRenderer))
-        for item in applied.items {
-            let view = item.node.view
-            if view.superview !== self.reactionsView {
-                self.reactionsView.addSubview(view)
-            }
-            transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: x, y: 0.0), size: item.size))
-            x += item.size.width + metrics.reactionsSpacing
-        }
-        for removed in applied.removedNodes {
-            removed.view.removeFromSuperview()
-        }
-        self.reactionsView.contentSize = CGSize(width: max(0.0, x - metrics.reactionsSpacing), height: metrics.reactionsHeight)
-        return frame
-    }
 }
 
 /// The channel name's colour: the channel's own name colour (as the chat draws its name), the accent when it has none.

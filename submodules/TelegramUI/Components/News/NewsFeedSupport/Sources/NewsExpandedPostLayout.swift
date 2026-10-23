@@ -2,7 +2,7 @@ import Foundation
 import CoreGraphics
 
 /// An expanded post row's measures (the "-1T Valuation" mockup, Channels frame): a 36 pt avatar at the left, the
-/// channel line, the message bubble's content, the media in a horizontal gallery and the reactions in one line.
+/// channel line, the message bubble's content and the media in a horizontal gallery.
 public enum NewsExpandedPostMetrics {
     public static let avatarInset: CGFloat = 8.0
     public static let avatarSize: CGFloat = 36.0
@@ -22,9 +22,6 @@ public enum NewsExpandedPostMetrics {
     public static let galleryCornerRadius: CGFloat = 8.0
     public static let galleryMinimumItemWidth: CGFloat = 120.0
     public static let galleryTopSpacing: CGFloat = 6.0
-    public static let reactionsTopSpacing: CGFloat = 6.0
-    public static let reactionsHeight: CGFloat = 30.0
-    public static let reactionsSpacing: CGFloat = 6.0
     public static let showMoreTopSpacing: CGFloat = 2.0
     public static let bottomInset: CGFloat = 8.0
     /// A post longer than this shows "Show more" instead of the rest (spec).
