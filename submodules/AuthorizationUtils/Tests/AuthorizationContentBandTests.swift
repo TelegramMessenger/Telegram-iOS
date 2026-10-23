@@ -138,4 +138,11 @@ final class AuthorizationContentBandTests: XCTestCase {
         let layout = self.layout(size: CGSize(width: 466.0, height: 678.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0), reservedCorners: ContainerViewLayoutCorners(topLeft: nil, topRight: CGSize(width: 84.0, height: 170.0), bottomLeft: nil, bottomRight: nil))
         self.assertBand(authorizationBottomBand(layout: layout), 0.0, 382.0)
     }
+
+    func test_bottom_layoutForm_foldedLandscapeLeft_clearOfTheBottomBlock() {
+        let layout = self.layout(size: CGSize(width: 678.0, height: 466.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0), reservedCorners: ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: CGSize(width: 84.0, height: 82.0)))
+        let bottom = authorizationBottomBand(layout: layout)
+        self.assertBand(bottom, 0.0, 594.0)
+        XCTAssertLessThanOrEqual(bottom.minX + bottom.width, 678.0 - 84.0)
+    }
 }
