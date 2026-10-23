@@ -413,7 +413,26 @@ public final class FFMpegFileReader {
             case let .stream(streamIndex, pts):
                 avFormatContext.seekFrame(forStreamIndex: Int32(streamIndex), pts: pts, positionOnKeyframe: true)
             case let .direct(position):
-                avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: CMTimeMakeWithSeconds(Float64(position), preferredTimescale: stream.info.timeScale).value, positionOnKeyframe: true)
+                let target = CMTimeMakeWithSeconds(Float64(position), preferredTimescale: stream.info.timeScale).value
+                avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: target, positionOnKeyframe: true)
+                if skipNonReferenceFramesBefore != nil {
+                    // The seek searches decode times, so a target in the decoder delay before a keyframe lands on that
+                    // keyframe, after frames of the previous group that present at or after the target. Then seek
+                    // again to just before the keyframe's decode time, which lands on the keyframe before it.
+                    let packet = FFMpegPacket()
+                    var keyframe: (pts: Int64, dts: Int64)?
+                    while avFormatContext.readFrame(into: packet) {
+                        if Int(packet.streamIndex) == stream.info.index {
+                            keyframe = (packet.pts, packet.dts)
+                            break
+                        }
+                    }
+                    if let keyframe, keyframe.pts != Int64.min, keyframe.dts != Int64.min, keyframe.pts > target {
+                        avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: keyframe.dts - 1, positionOnKeyframe: true)
+                    } else {
+                        avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: target, positionOnKeyframe: true)
+                    }
+                }
             }
         } else {
             avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: 0, positionOnKeyframe: true)

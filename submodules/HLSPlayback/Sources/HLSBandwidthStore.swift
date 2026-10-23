@@ -100,17 +100,21 @@ public final class HLSBandwidthStore {
         return estimator
     }
 
-    // A starting estimate from outside the player (the account's other downloads) for a class with no estimator: one with
-    // that estimate and no weight, which the class's first sample replaces.
-    public func seedPrior(bitsPerSecond: Double, networkClass: HLSNetworkClass) {
+    // A starting estimate from outside the player (the account's other downloads) for a class with no sample of its own:
+    // one with that estimate and no weight, which the class's first sample replaces, as does a later seed. False when
+    // the class has sampled.
+    @discardableResult
+    public func seedPrior(bitsPerSecond: Double, networkClass: HLSNetworkClass) -> Bool {
         self.lock.lock()
         defer {
             self.lock.unlock()
         }
         let state = self.state(networkClass)
-        if state.estimator == nil {
-            state.estimator = HLSBandwidthEstimator(defaultEstimate: bitsPerSecond)
+        if state.estimator != nil && state.lastSampleTime != nil {
+            return false
         }
+        state.estimator = HLSBandwidthEstimator(defaultEstimate: bitsPerSecond)
+        return true
     }
 
     // An abandon's sample and reset.

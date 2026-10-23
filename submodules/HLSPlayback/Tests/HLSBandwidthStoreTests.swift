@@ -116,6 +116,14 @@ final class HLSBandwidthStoreTests: XCTestCase {
         XCTAssertEqual(result.estimate, 2_000_000.0, accuracy: 1e-3)
     }
 
+    // A seed is what the other downloads measured at the time: a later one replaces it until the class samples.
+    func testALaterSeedReplacesAnEarlierOneTheClassNeverSampled() {
+        let store = HLSBandwidthStore()
+        store.seedPrior(bitsPerSecond: 8_000_000.0, networkClass: self.wifi)
+        store.seedPrior(bitsPerSecond: 2_000_000.0, networkClass: self.wifi)
+        XCTAssertEqual(store.estimator(for: self.wifi)?.estimate ?? -1.0, 2_000_000.0, accuracy: 1e-3)
+    }
+
     func testASeedNeverReplacesTheClassesOwnEstimate() {
         let store = HLSBandwidthStore()
         let _ = store.sample(durationMs: 1000.0, bytes: 1_250_000, networkClass: self.wifi, defaultEstimate: 500_000.0, now: 1.0)

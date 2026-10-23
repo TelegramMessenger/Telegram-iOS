@@ -379,9 +379,11 @@ public func galleryItemForEntry(
                     }
                     
                     if isHLS {
-                        // Where the item's player will seek once it owns the content, by the same precedence.
+                        // Where the item's player will seek once it owns the content, by the same precedence. A forwarded
+                        // timestamp only for the item the gallery opens on: a neighbour swiped to that already shows its
+                        // video plays from 0, so loading at its timestamp would be wasted, and one that does not seeks.
                         var startTimestamp = timecode
-                        if startTimestamp == nil {
+                        if startTimestamp == nil && isCentral {
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ForwardVideoTimestampAttribute {
                                     startTimestamp = Double(attribute.timestamp)

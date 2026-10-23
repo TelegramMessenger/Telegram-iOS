@@ -40,7 +40,8 @@ from hls.js (D1–D13), the failure policy, the logs and the measurements are in
   above 20 s or on pause; `pushPriorityDownload` on the quality files). Holding it for the whole playback starves
   every other download on a slow link: the owner's rule is that the player must not.
 - **A first video is seeded from the account's other downloads** (`TelegramEngine.resources.downloadThroughputEstimate`
-  into `HLSBandwidthStore.seedPrior`, weightless, only for a class with no estimate of its own).
+  into `HLSBandwidthStore.seedPrior`, weightless, only for a class that has not sampled; each new player seeds
+  again, replacing an older seed).
 - **A part's timing comes from its boxes** (`HLSFragmentTiming`), FFmpeg's probe only when they are in another shape.
   It must give what FFmpeg's probe gives: `HLSFragmentTimingParityTests` (UniversalMediaPlayer) pins that on
   ffmpeg-CLI fixtures. A change of the server's segment format makes parts fall back to the probe, slower but right;
@@ -50,7 +51,10 @@ from hls.js (D1–D13), the failure policy, the logs and the measurements are in
   the overflow tests in `HLSFragmentTimingTests`).
 - **`ChunkMediaPlayerV2`'s temp-file readers (HLS parts only)** open a part that holds a seek target at the keyframe
   before it and skip non-reference frames until the target, and probe only their own stream. Both are scoped by the
-  content kind; other players' readers are unchanged.
+  content kind; other players' readers are unchanged. FFmpeg's mov seek searches decode times, so after it the video
+  reader checks the keyframe it landed on and seeks once more when that keyframe presents after the target; without
+  it a target in the decoder delay before a keyframe loses the previous group's frames that present after the target
+  (`testNoFrameAtOrAfterTheTargetIsLostWhereverTheTargetFalls`).
 - **No network failure is terminal** (owner decision). A fetch waits for the server for as long as it takes; only a
   fatal error ends one, and a range fetch reports that as completion, so check the bytes
   (`fetchedResourceRangeUntilOnDisk`). Every HLS fetch retries with backoff, and a failing level is avoided for a

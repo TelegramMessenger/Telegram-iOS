@@ -287,9 +287,8 @@ final class HLSVideoNativeContentNode: ASDisplayNode, UniversalVideoContentNode 
             let networkClass = HLSVideoNativeContentNode.networkClass(networkType)
             self.networkClass = networkClass.rawValue
             // The first video on a network starts from what the account's other downloads measured there. The store
-            // takes it only for a class with no estimate of its own.
-            if networkType != .none, HLSBandwidthStore.shared.estimator(for: networkClass) == nil, let estimate = self.engine.resources.downloadThroughputEstimate(isWifi: networkType == .wifi) {
-                HLSBandwidthStore.shared.seedPrior(bitsPerSecond: estimate, networkClass: networkClass)
+            // takes it only for a class that has not sampled, replacing an older seed.
+            if networkType != .none, let estimate = self.engine.resources.downloadThroughputEstimate(isWifi: networkType == .wifi), HLSBandwidthStore.shared.seedPrior(bitsPerSecond: estimate, networkClass: networkClass) {
                 Logger.shared.log("HLSNative", "\(fileId): seeded estimate=\(Int(estimate)) from downloads")
             }
             self.controller.setNetworkClass(networkClass)

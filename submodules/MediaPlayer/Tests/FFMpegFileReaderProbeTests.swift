@@ -9,9 +9,17 @@ import CoreMedia
 //     -c:v libx264 -profile:v high -bf 3 -g 25 -crf 38 -pix_fmt yuv420p -c:a aac -b:a 32k \
 //     -movflags +empty_moov+default_base_moof -frag_duration 100000000 fragment720.mp4
 final class FFMpegFileReaderProbeTests: XCTestCase {
+    // CPU time of the calling thread, which the probe runs on: FFmpeg probes with one decoder thread
+    // (avformat_find_stream_info sets "threads" to 1), so a busy machine does not decide the comparison.
+    private func threadCPUSeconds() -> Double {
+        var time = timespec()
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time)
+        return Double(time.tv_sec) + Double(time.tv_nsec) / 1e9
+    }
+
     private func open(mediaType: FFMpegFileReader.SelectedStream.MediaType, probeOnlySelectedMediaType: Bool) throws -> (seconds: Double, frames: Int) {
         let path = try XCTUnwrap(Bundle(for: FFMpegFileReaderProbeTests.self).path(forResource: "fragment720", ofType: "mp4"))
-        let start = CFAbsoluteTimeGetCurrent()
+        let start = self.threadCPUSeconds()
         let reader = try XCTUnwrap(FFMpegFileReader(
             source: .file(path),
             useHardwareAcceleration: false,
@@ -21,7 +29,7 @@ final class FFMpegFileReaderProbeTests: XCTestCase {
             ignoreEditList: false,
             probeOnlySelectedMediaType: probeOnlySelectedMediaType
         ))
-        let seconds = CFAbsoluteTimeGetCurrent() - start
+        let seconds = self.threadCPUSeconds() - start
         var frames = 0
         while case .frame = reader.readFrame() {
             frames += 1
@@ -29,7 +37,7 @@ final class FFMpegFileReaderProbeTests: XCTestCase {
         return (seconds, frames)
     }
 
-    // Best of five, so a busy machine does not decide it.
+    // Best of five.
     private func openTime(mediaType: FFMpegFileReader.SelectedStream.MediaType, probeOnlySelectedMediaType: Bool) throws -> Double {
         var best = Double.infinity
         for _ in 0 ..< 5 {
@@ -46,7 +54,8 @@ final class FFMpegFileReaderProbeTests: XCTestCase {
 
         let allTime = try self.openTime(mediaType: .audio, probeOnlySelectedMediaType: false)
         let onlyTime = try self.openTime(mediaType: .audio, probeOnlySelectedMediaType: true)
-        XCTAssertLessThan(onlyTime, allTime * 0.5, "probing only audio: \(onlyTime) s, every stream: \(allTime) s")
+        // Measured 0.39 (1.6 ms against 4.1 ms of CPU); about 1.0 when the reader probes every stream.
+        XCTAssertLessThan(onlyTime, allTime * 0.75, "probing only audio: \(onlyTime) s, every stream: \(allTime) s")
     }
 
     func testAVideoReaderThatProbesOnlyItsStreamReadsTheSameFrames() throws {

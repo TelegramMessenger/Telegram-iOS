@@ -29,7 +29,7 @@ does, where it deliberately differs from hls.js, and the facts the code depends 
 |---|---|---|---|
 | D1 | every fragment samples bandwidth | only bytes that came over the network sample; a load that joined a fetch already under way does not | disk reads would inflate the estimate |
 | D2 | sample to end of parsing; measured TTFB | a sample is the load's network bytes over the link's busy time charged to it: from the later of the busy period's start and the previous completed load's end (`HLSBandwidthStore`), so loads in flight together are not charged the same seconds twice; a cancelled load's time goes to the loads still running, so the estimate errs low; a fixed 100 ms TTFB in the fetch-time model | MediaBox reports bytes only as whole parts land |
-| D3 | default estimate 500 kbit/s, reset per player | one estimate per network class (Wi-Fi, cellular: one class, since LTE and 5G hand over under a playing video) for the process, read and fed by every player (`HLSBandwidthStore`); after 60 s without a sample it becomes a prior of at most 4 s of weight, halved per 300 s idle; a class with no estimate starts from what the account's other downloads measured on that network (`DownloadThroughputMeter`), with no weight | a second video should not start from scratch; Wi-Fi says nothing about cellular |
+| D3 | default estimate 500 kbit/s, reset per player | one estimate per network class (Wi-Fi, cellular: one class, since LTE and 5G hand over under a playing video) for the process, read and fed by every player (`HLSBandwidthStore`); after 60 s without a sample it becomes a prior of at most 4 s of weight, halved per 300 s idle; a class that has not sampled starts from what the account's other downloads measured on that network (`DownloadThroughputMeter`), with no weight, a newer seed replacing an older one | a second video should not start from scratch; Wi-Fi says nothing about cellular |
 | D4 | quality from bandwidth alone | cache-aware: a level whose next segment is on disk wins over the target | play what is cached |
 | D5 | master → level playlist → init ∥ segment | no master; every level's playlist at creation; when the init is not ready, init and first segment are one fetch `[0, seg0.end)` | fewer round trips to the first frame |
 | D6 | an abandon falls to the rule's level | to a lower level cached at that position first | |
@@ -147,7 +147,8 @@ bytes still missing.
   priorities is fetched once; it used to share part slots round-robin, a third to the player.
 - **A first video starts from the account's other downloads** (D3): FetchV2 times every media part with the engine's
   send-to-receive duration into `DownloadThroughputMeter` (bits over the union of the parts' intervals, the last
-  120 s, nil below 512 KB); a class with no estimate is seeded from it, with no weight. Small files measure round
+  120 s, nil below 512 KB); a class that has not sampled is seeded from it, with no weight, again by every new
+  player. Small files measure round
   trips, so the seed errs low. Under `-debugNetworkProfile` the shaper reports a held response's time as the shaped
   link's, or the meter would measure the Mac's network.
 - **A part's timing is read from its boxes** (`HLSFragmentTiming`): per track, the first sample's presentation time
@@ -168,7 +169,14 @@ bytes still missing.
 - **A seek inside a part decodes from the keyframe before it** (`ChunkMediaPlayerV2`, temp-file parts only): the
   part's readers open with a direct seek to the target, and the video decoder skips non-reference frames
   (`AVDISCARD_NONREF`) until the first packet at or after the target, which no frame at or after the target precedes
-  in decode order. A real 1080p segment held 2 keyframes and 48 non-reference frames of 98.
+  in decode order. A real 1080p segment held 2 keyframes and 48 non-reference frames of 98. FFmpeg's mov seek
+  searches decode times (`mov_seek_stream`), so a target in the decoder delay before a keyframe (at or after its
+  decode time, before its presentation) lands on it, after frames of the previous group that present at or after the
+  target; the reader reads the first packet after the seek and, when that keyframe presents after the target, seeks
+  again to just before its decode time. On the fixture whose video edit list takes the delay off, the seek landed
+  early enough by itself (mov subtracts the edit list's media time again before searching); on the one without, six
+  targets of 150 lost frames, and the first frame came 40–120 ms late. Of the simulator's cached quality files, the
+  HEVC ones and most H.264 ones carry no video edit list.
 - **A part's two readers probe only their own stream** (temp-file parts only): the other media type is discarded
   before `avformat_find_stream_info`, which otherwise decodes H.264 in software for the audio reader too.
 
