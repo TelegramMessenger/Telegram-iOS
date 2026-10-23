@@ -19,6 +19,14 @@ struct PickerSticker: Identifiable, Equatable, Hashable {
     let emoji: String
     let width: Int
     let height: Int
+
+    var renderFileId: Int? {
+        switch render {
+        case .raster(let id, _): return id
+        case .lottie(let id): return id
+        case .none: return nil
+        }
+    }
 }
 
 /// How to produce a static grid-tile image for a sticker.

@@ -7,4 +7,6 @@
 
 + (NSURL *)stickerPacksURL;
 
++ (void)prefetchRecentStickersWithLimit:(NSUInteger)limit;
+
 @end

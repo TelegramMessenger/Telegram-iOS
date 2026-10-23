@@ -21,6 +21,7 @@ final class StickerPickerStore {
     private let logger = Logger(subsystem: "org.telegram.TelegramWatch", category: "stickerpicker")
     private var files: [Int: File] = [:]
     private var trackedFileIds: Set<Int> = []
+    private var pinnedFileIds: Set<Int> = []
     private var setStickers: [Int64: [PickerSticker]] = [:]
 
     init(loader: StickerPickerLoader) {
@@ -52,6 +53,7 @@ final class StickerPickerStore {
     }
 
     func cancelFileDownload(fileId: Int) {
+        guard !pinnedFileIds.contains(fileId) else { return }
         trackedFileIds.remove(fileId)
         logger.info("cancelFileDownload fileId=\(fileId, privacy: .public)")
         Task { [logger, loader] in
@@ -59,6 +61,33 @@ final class StickerPickerStore {
                 try await loader.cancelDownloadFile(fileId: fileId)
             } catch {
                 logger.warning("cancelDownloadFile fileId=\(fileId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Pre-downloads favorite and recent stickers with high priority so they are
+    /// cached on disk before the user scrolls to them. Pinned file IDs are
+    /// protected from cancellation by `cancelFileDownload`.
+    func prefetchStickers() {
+        let all = favorites + recents
+        var renderIds = Set<Int>()
+        for sticker in all {
+            if let id = sticker.renderFileId {
+                renderIds.insert(id)
+            }
+        }
+        guard !renderIds.isEmpty else { return }
+        let newIds = renderIds.subtracting(trackedFileIds)
+        pinnedFileIds.formUnion(newIds)
+        trackedFileIds.formUnion(newIds)
+        logger.info("prefetchStickers: pinning \(newIds.count, privacy: .public) sticker render files")
+        for id in newIds {
+            Task { [logger, loader] in
+                do {
+                    _ = try await loader.downloadFile(fileId: id, priority: 4)
+                } catch {
+                    logger.warning("prefetch fileId=\(id, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                }
             }
         }
     }

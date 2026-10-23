@@ -117,6 +117,7 @@ NSString *const TGStickersControllerIdentifier = @"TGStickersController";
                 updateInteface(initial, currentStickerModels, true);
             }
         }]];
+        [TGBridgeStickersSignals prefetchRecentStickersWithLimit:24];
     }
     else
     {

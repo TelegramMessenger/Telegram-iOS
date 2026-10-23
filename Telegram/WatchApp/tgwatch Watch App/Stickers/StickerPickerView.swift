@@ -30,6 +30,7 @@ struct StickerPickerView: View {
             .task {
                 client.setActiveStickerPicker(store)
                 await store.load()
+                store.prefetchStickers()
             }
             .onDisappear { client.setActiveStickerPicker(nil) }
     }
