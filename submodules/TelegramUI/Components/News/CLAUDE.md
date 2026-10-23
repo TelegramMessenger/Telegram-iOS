@@ -36,9 +36,11 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   turns it back (as `RankChatPreviewItem` does).
 - **Bubble geometry is placed by constants, not measured** (`NewsExpandedPostMetrics.bubbleTextLeadingInset`,
   `bubbleTextTopInset`, `bubbleWidthOverhead`): an incoming bubble's text starts 20 pt into its item and 6 pt under
-  its top, and the item's width is the wanted text width plus 73 (36 fill inset, 9 edge insets, 6 content inset,
-  22 text insets — `ChatMessageItemLayoutConstants` and `ChatMessageBubbleItemNode`'s width rule). If those
-  constants change in the bubble, the column shifts.
+  its top, and the item's width is the wanted text width plus 40. The 40 is specific to channel posts: a
+  broadcast channel's bubble is allowed the full width (`allowFullWidth` in `ChatMessageBubbleItemNode`), so the
+  36 pt `maximumWidthFill` inset of an ordinary chat never applies, and the item takes only 3 (no share button)
+  + 9 edge insets + 6 content inset + 22 text insets. Assuming the ordinary 73 let text run past the column by
+  up to 33 pt. If those constants change in the bubble, the column shifts.
 - **Photos and videos never reach the bubble.** `newsExpandedPostParts` strips them into the horizontal gallery
   (`newsExpandedGalleryLayout`: one photo keeps its aspect, several share the 270 pt height) and gives the bubble a
   copy of the message with the rest of its media; the reactions and comments-thread attributes are stripped as

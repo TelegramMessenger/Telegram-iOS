@@ -788,8 +788,9 @@ public final class NewsFeedPostComponent: Component {
                 transition.setFrame(view: timeView, frame: layout.timeFrame)
             }
 
+            // The mockup's separator runs under the content column, from its left edge to the right inset.
             let pixel = 1.0 / UIScreenScale
-            let separator = CGRect(x: 0.0, y: layout.height - pixel, width: width, height: pixel)
+            let separator = CGRect(x: contentX, y: layout.height - pixel, width: max(0.0, width - contentX - metrics.rightInset), height: pixel)
             let postText = newsPostText(component: component, maxLength: Int(contentWidth * 2.0))
             return (CGSize(width: width, height: layout.height), separator, postText)
         }

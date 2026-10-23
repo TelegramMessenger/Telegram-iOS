@@ -27,13 +27,14 @@ public enum NewsExpandedPostMetrics {
     /// A post longer than this shows "Show more" instead of the rest (spec).
     public static let collapsedLineLimit = 10
 
-    /// The chat bubble's own geometry (`ChatMessageItemLayoutConstants`), which the row places the bubble by: an
-    /// incoming bubble's text starts 20 pt into its item (3 edge inset, 6 content inset, 11 text inset), 6 pt
-    /// under the bubble's top, and the item wants its text width plus 73 pt of width (36 fill inset, 9 of edge
-    /// insets, 6 content inset, 22 text insets).
+    /// The chat bubble's own geometry (`ChatMessageItemLayoutConstants`, `ChatMessageBubbleItemNode`), which the row
+    /// places the bubble by: an incoming bubble's text starts 20 pt into its item (3 edge inset, 6 content inset,
+    /// 11 text inset), 6 pt under the bubble's top, and the item wants its text width plus 40 pt of width. A
+    /// channel post's bubble is allowed the full width (`allowFullWidth`, so no 36 pt fill inset applies): the
+    /// item takes 3 off for the absent share button, 9 of edge insets, 6 content inset and 22 text insets.
     public static let bubbleTextLeadingInset: CGFloat = 20.0
     public static let bubbleTextTopInset: CGFloat = 6.0
-    public static let bubbleWidthOverhead: CGFloat = 73.0
+    public static let bubbleWidthOverhead: CGFloat = 40.0
 
     /// Where the content column starts: after the avatar and the gap.
     public static func contentX(leftInset: CGFloat) -> CGFloat {
