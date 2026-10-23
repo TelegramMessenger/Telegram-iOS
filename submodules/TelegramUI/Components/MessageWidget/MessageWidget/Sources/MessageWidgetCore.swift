@@ -2,6 +2,7 @@ import Foundation
 import MessageWidgetRendering
 import QuartzCore
 import WidgetRuntimeIOS
+import WidgetSandboxIntl
 
 /// One message widget, the worker half (spec 2026-10-15 D2), on WidgetRuntime (M1d plan, Task 8): its session
 /// (`WRSession`: the runtime, its render tree and its CoreText host), its tree renderer and its tile drawer. Main never
@@ -560,5 +561,9 @@ private final class SessionDelegate: NSObject, WRSessionDelegate {
 
     func session(_ session: WRSession, storageCommit area: String, entries: [[String]]) {
         self.core?.storageCommit(area, entries: entries)
+    }
+
+    func session(_ session: WRSession, intl requestJson: String) -> String {
+        return WidgetSandboxIntl.answer(requestJson)
     }
 }

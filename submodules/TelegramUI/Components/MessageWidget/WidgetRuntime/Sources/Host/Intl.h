@@ -1,14 +1,16 @@
-// Intl (V5b plan; ECMA-402, 2024 edition) over the system ICU: what the Intl*.cpp files share. The constructors are
-// hand-built QuickJS classes (an ECMA-402 object is not a WebIDL one); each reads its options into a fixed-size record,
-// its payload, and opens ICU only to format, through the per-runtime IntlCache.
+// Intl (V5b plan; ECMA-402, 2024 edition) over widget-sandbox's `intl` capability (Host::intl): what the Intl*.cpp
+// files share. The constructors are hand-built QuickJS classes (an ECMA-402 object is not a WebIDL one); each reads its
+// options in ECMA-402's order, refusing what ECMA-402 refuses, and keeps the ones the widget gave. Every answer that
+// needs locale data is the host's, to the request widget-sandbox's shim sends for the same call: `{"kind":…,
+// "locale":…,"opts":{…},…}` with the given options (a date format's with the shim's defaults added), its glue's answer
+// back. The app's host is that glue itself (widget-sandbox's iOS IntlBridge, Foundation's formatters): ICU's formatting
+// API is not public on iOS (Sources/Host/ICU.h).
 #pragma once
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
-#include <list>
-#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -17,68 +19,29 @@
 
 #include "quickjs.h"
 #include "Sources/Host/Encoding.h"
-#include "Sources/Host/ICU.h"
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Values.h"
 
 namespace wr::intl {
 
-/// ICU handles kept per runtime; the least recently used goes beyond this.
-inline constexpr size_t kIntlCacheSize = 32;
-/// The longest string handed to ICU, in UTF-16 units; longer is a RangeError.
+/// The longest string handed to the host, in UTF-16 units (a list's items together); longer is a RangeError.
 inline constexpr uint32_t kMaxIntlString = uint32_t(1) << 20;
+/// The longest answer taken from the host, in bytes; longer is a RangeError.
+inline constexpr size_t kMaxIntlAnswer = size_t(4) << 20;
 /// The longest locale tag read, in bytes (ICU's ULOC_FULLNAME_CAPACITY); longer is a RangeError.
-inline constexpr size_t kMaxLocaleTag = ULOC_FULLNAME_CAPACITY;
+inline constexpr size_t kMaxLocaleTag = 157;
 /// The most distinct tags a locale list may hold; more is a RangeError (V5b final review, C1).
 inline constexpr size_t kMaxLocaleList = 128;
 /// The most items ListFormat.format reads; more is a RangeError (V5b final review, I1: units alone let a million empty
 /// strings through).
 inline constexpr size_t kMaxListItems = 10000;
 
-/// ICU handles by key (the resolved record a format needs). A handle is owned here and closed when evicted or when the
-/// runtime goes; a JS object never holds one. A pointer get returns stays valid for the next kIntlCacheSize - 1 gets.
-class IntlCache {
-public:
-    IntlCache() = default;
-    IntlCache(const IntlCache&) = delete;
-    IntlCache& operator=(const IntlCache&) = delete;
-    ~IntlCache();
-
-    /// The handle cached under `key`, or the one `opener` makes, charged work::kIntlOpen first. `opener` returns nullptr
-    /// when ICU refuses; nothing is cached then. Throws Thrown when the charge stops the widget.
-    template <class T, class Open>
-    T* get(JSContext* ctx, const std::string& key, Open opener, void (*close)(T*)) {
-        if (void* found = this->find(key)) {
-            return static_cast<T*>(found);
-        }
-        this->chargeOpen(ctx);
-        T* handle = opener();
-        if (handle) {
-            this->insert(key, handle, reinterpret_cast<void (*)(void*)>(close));
-        }
-        return handle;
-    }
-    size_t size() const { return m_entries.size(); }
-
-private:
-    struct Entry {
-        std::string key;
-        void* handle;
-        void (*close)(void*);
-    };
-    void* find(const std::string& key);
-    void insert(const std::string& key, void* handle, void (*close)(void*));
-    static void chargeOpen(JSContext* ctx);
-    std::list<Entry> m_entries;  // the most recently used first
-};
-
 /// The Intl state of a runtime, in its HostState.
 struct IntlState {
     explicit IntlState(JSRuntime* rt) : rt(rt) {}
     ~IntlState() { intl.clear(rt); }
     JSRuntime* rt;
-    IntlCache cache;
     /// The runtime's own Intl object (intlObject), JS_UNDEFINED until first made.
     Held intl;
     /// By IntlClass; allocated per runtime, 0 until registered.
@@ -87,36 +50,106 @@ struct IntlState {
 
 IntlState& intlState(JSContext* ctx);
 
-/// ECMA-402 CanonicalizeLocaleList: the canonical BCP 47 tags of `locales`, deduplicated, in order. Charges
-/// work::kNodeVisit per index read. Throws TypeError (an entry neither a string nor an object), RangeError (not a
-/// structurally valid tag, or longer than kMaxLocaleTag) and Thrown.
+/// ECMA-402 CanonicalizeLocaleList: the canonical BCP 47 tags of `locales` (UTS 35's case: language and extensions in
+/// lower case, a script in title case, a region in upper case), deduplicated, in order. Charges work::kNodeVisit per index
+/// read. Throws TypeError (an entry neither a string nor an object), RangeError (not a structurally valid tag, or longer
+/// than kMaxLocaleTag) and Thrown.
 std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst locales);
-/// ECMA-402 ResolveLocale's locale: the first requested tag that BestAvailableLocale finds among ICU's available
-/// locales (unicode extensions dropped), else the host's locale (HostState::locale()) resolved the same way, else
-/// "en-US".
+/// The locale a request names: the first requested tag, else the host's locale (HostState::locale(), the app's
+/// language) when it is a valid tag, else "en-US"; without its unicode extensions either way. The host's glue makes it
+/// its formatters' locale, and Foundation's Locale misreads a unicode extension ("ar-EG-u-nu-arab" is "ar-EG-u-nu",
+/// whose formatters have no pattern, on which the glue traps); the options carry what ECMA-402 lets an extension set.
+/// With no list of available locales here, every structurally valid tag is taken as one (widget-sandbox's shim does
+/// the same).
 std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested);
-/// ECMA-402 SupportedLocales, for every supportedLocalesOf: a new array. Throws Thrown.
+/// `tag` without its unicode extension sequences ("-u-…" up to the next singleton).
+std::string withoutUnicodeExtensions(const std::string& tag);
+/// ECMA-402 SupportedLocales, for every supportedLocalesOf: the canonical requested tags, a new array. Throws Thrown.
 JSValue supportedLocales(JSContext* ctx, JSValueConst locales, JSValueConst options);
+
+/// The options a widget gave, in the order they were read, as the members of a request's "opts" object (in the JS
+/// heap): a string option's string, a number option's number after its range check, a boolean option's boolean.
+class GivenOptions {
+public:
+    explicit GivenOptions(JSContext* ctx) : m_members(JSAllocator<char>(JS_GetRuntime(ctx))) {}
+    void addString(const char* name, std::string_view utf8);
+    void addNumber(JSContext* ctx, const char* name, double value);
+    void addBool(const char* name, bool value);
+    /// `{…}`.
+    JSText json() const;
+
+private:
+    JSText m_members;
+};
 
 /// ECMA-402 CoerceOptionsToObject: a null-prototype object for undefined, else ToObject. A new reference. Throws Thrown.
 Value coerceOptionsToObject(JSContext* ctx, JSValueConst options);
 /// ECMA-402 GetOption for a string: nullopt when the property is undefined; RangeError when `allowed` is not empty and
 /// lacks the value, or when it is longer than `maxLength` units (every free-form option has a grammar shorter than the
-/// default). Throws Thrown.
+/// default). A defined value is added to `given`. Throws Thrown.
 std::optional<std::string> getStringOption(JSContext* ctx, JSValueConst options, const char* name,
-                                           std::initializer_list<const char*> allowed, size_t maxLength = 64);
-/// ECMA-402 GetOption for a boolean: nullopt when undefined, else ToBoolean. Throws Thrown.
-std::optional<bool> getBooleanOption(JSContext* ctx, JSValueConst options, const char* name);
-/// ECMA-402 GetNumberOption: nullopt when undefined; RangeError when NaN or outside [min, max]; floor. Throws Thrown.
-std::optional<int> getNumberOption(JSContext* ctx, JSValueConst options, const char* name, int min, int max);
+                                           std::initializer_list<const char*> allowed, GivenOptions* given = nullptr,
+                                           size_t maxLength = 64);
+/// ECMA-402 GetOption for a boolean: nullopt when undefined, else ToBoolean, added to `given`. Throws Thrown.
+std::optional<bool> getBooleanOption(JSContext* ctx, JSValueConst options, const char* name, GivenOptions* given = nullptr);
+/// ECMA-402 GetNumberOption: nullopt when undefined; RangeError when NaN or outside [min, max]; floor, added to `given`.
+/// Throws Thrown.
+std::optional<int> getNumberOption(JSContext* ctx, JSValueConst options, const char* name, int min, int max,
+                                   GivenOptions* given = nullptr);
+
+/// A request of the `intl` capability, written as the shim's JSON.stringify writes it: `{"kind":…`, then the members in
+/// the order added. Never through JS_JSONStringify, which would run a widget's toJSON. In the JS heap.
+class IntlRequest {
+public:
+    IntlRequest(JSContext* ctx, const char* kind);
+    IntlRequest& string(const char* name, std::string_view utf8);
+    /// A JS string, an unpaired surrogate as U+FFFD (the glue reads UTF-8).
+    IntlRequest& string(const char* name, const String& value);
+    /// As JSON.stringify writes a number: null when it is not finite.
+    IntlRequest& number(const char* name, double value);
+    /// `json` as it is: the given options, a list.
+    IntlRequest& raw(const char* name, std::string_view json);
+    /// Asks the host: work::kIntlRequest (work::kIntlDateRequest for a date's kinds, with work::kIntlDateParts for
+    /// dateParts), and work::kIntlByte per byte of the request, charged before; per byte of the answer, after. Throws
+    /// RangeError for an answer longer than kMaxIntlAnswer, and Thrown.
+    std::string send();
+
+private:
+    void name(const char* name);
+    JSContext* m_ctx;
+    JSText m_json;
+    uint64_t m_charge;
+};
+
+/// Appends `utf8` to `out` as a JSON string.
+void appendJSONString(JSText& out, std::string_view utf8);
+/// The host's answer as a JS string: a new reference.
+JSValue answerString(JSContext* ctx, std::string_view answer);
+/// The host's answer parsed as JSON when it is an array (formatToParts) or an object (resolvedOptions), as `array`
+/// asks; else a new empty one, the shim's fallback. A new reference. Throws Thrown.
+Value answerJSON(JSContext* ctx, const std::string& answer, bool array);
+/// resolvedOptions' object: for each of `keys`, in order, the host's value when `answer` has the key, else ours when
+/// `ours` has it, else none. A new reference. Throws Thrown.
+JSValue mergedOptions(JSContext* ctx, JSValueConst answer, JSValueConst ours, std::initializer_list<const char*> keys);
 
 // ───────────── the classes
 
 enum class IntlClass : uint8_t { NumberFormat, DateTimeFormat, PluralRules, RelativeTimeFormat, ListFormat, Collator };
 
-/// What every Intl object's payload has: its cached bound function (format, compare), JS_UNDEFINED until first read.
+/// What every Intl object's payload has: its cached bound function (format, compare), JS_UNDEFINED until first read,
+/// and the locale and given options its requests carry.
 struct IntlObjectBase {
+    IntlObjectBase(std::string_view locale, JSText opts) : opts(std::move(opts)) { copyInto(this->locale, locale); }
     JSValue bound = JS_UNDEFINED;
+    char locale[kMaxLocaleTag + 1] = {};
+    JSText opts;
+
+private:
+    static void copyInto(char (&out)[kMaxLocaleTag + 1], std::string_view value) {
+        const size_t n = std::min(value.size(), kMaxLocaleTag);
+        std::copy(value.begin(), value.begin() + std::ptrdiff_t(n), out);
+        out[n] = 0;
+    }
 };
 /// Destroys a T payload made by createIntlObject: the class's finalizer.
 template <class T>
@@ -173,46 +206,19 @@ T& intlReceiver(JSContext* ctx, JSValueConst value, JSClassID id, const char* me
 /// A bound function of `function` with `target` as its one datum (ECMA-402's bound format and compare): `length`, no
 /// name. A new reference. Throws Thrown.
 JSValue boundIntlFunction(JSContext* ctx, JSCFunctionData* function, int length, JSValueConst target);
-/// Copies `value` into `out` (cut to N - 1 bytes; callers have checked the length).
-template <size_t N>
-void copyInto(char (&out)[N], std::string_view value) {
-    const size_t n = std::min(value.size(), N - 1);
-    std::copy(value.begin(), value.begin() + std::ptrdiff_t(n), out);
-    out[n] = 0;
-}
 /// The index of `value` in `allowed` (ECMA-402 GetOption's list), or `fallback` when the option was undefined.
 int optionIndex(const std::optional<std::string>& value, std::initializer_list<const char*> allowed, int fallback);
-/// A UTF-16 result of ICU, in the JS heap: `produce(buffer, capacity, status)` is called to fill, and again with room
-/// enough when ICU reports an overflow, as ICU's *_format / *ToString calls work. Throws RangeError when ICU fails or
-/// the result passes kMaxIntlString.
-template <class Produce>
-Text16 icuText(JSContext* ctx, Produce produce);
-/// icuText as a JS string: a new reference.
-template <class Produce>
-JSValue icuString(JSContext* ctx, Produce produce) {
-    const Text16 text = icuText(ctx, produce);
-    return String::fromUTF16(ctx, text.data(), text.size()).toJS(ctx);
-}
+/// `allowed`'s entry at `index`.
+const char* optionAt(std::initializer_list<const char*> allowed, size_t index);
+/// Defines a string, number or boolean data property: resolvedOptions' entries. Throw Thrown.
+void defineString(JSContext* ctx, JSValueConst object, const char* name, std::string_view value);
+void defineInt(JSContext* ctx, JSValueConst object, const char* name, int value);
+void defineBool(JSContext* ctx, JSValueConst object, const char* name, bool value);
+/// UTS 35's type (3*8alphanum) *("-" (3*8alphanum)): calendar, collation and numbering system values.
+bool isUnicodeType(std::string_view type);
 
 /// `string`'s UTF-16 units, in the JS heap; a RangeError past kMaxIntlString units, the copy charged as a scan.
 Text16 utf16Of(JSContext* ctx, const String& string);
-/// Whether this device's libicucore has every function ICU.h declares (they are weak imports): Intl installs only then.
-bool icuAvailable();
-/// Whether ICU has the numbering system `name` as a simple digit system (ECMA-402's available numbering systems;
-/// ICU's algorithmic ones, roman or hebr, are not digits).
-bool isSupportedNumberingSystem(const std::string& name);
-/// The ICU locale id of a BCP 47 tag ("en_US" for "en-US"); "en_US" when ICU cannot read it.
-std::string toICULocale(const std::string& tag);
-/// A UFieldPositionIterator, closed on scope exit.
-using FieldIterator = std::unique_ptr<UFieldPositionIterator, void (*)(UFieldPositionIterator*)>;
-/// A new iterator. Throws RangeError when ICU fails.
-FieldIterator openFieldIterator();
-/// ECMA-402's parts of ICU's output `text`, from `fields` (filled by the format call): each code unit given its
-/// innermost field (-1 for none), a part per run of one field, typed by `type(field, value, context)`. A new array.
-/// Charges work::kNodeVisit per field. Throws.
-using PartType = const char* (*)(int field, std::u16string_view value, const void* context);
-JSValue partsFromFields(JSContext* ctx, const Text16& text, UFieldPositionIterator* fields, PartType type,
-                        const void* context);
 
 // ───────────── NumberFormat (IntlNumberFormat.cpp)
 
@@ -232,11 +238,10 @@ struct DigitOptions {
     RoundingType roundingType = RoundingType::FractionDigits;
     uint8_t computedRoundingPriority = 0;  // auto, morePrecision, lessPrecision
 };
-/// Reads the digit options in ECMA-402's order (minimumIntegerDigits … trailingZeroDisplay) into `out`. Throws.
+/// Reads the digit options in ECMA-402's order (minimumIntegerDigits … trailingZeroDisplay) into `out`, the defined
+/// ones into `given`. Throws.
 void readDigitOptions(JSContext* ctx, JSValueConst options, int mnfdDefault, int mxfdDefault, Notation notation,
-                      DigitOptions& out);
-/// The ICU skeleton stems for `digits`: integer width, precision, rounding mode.
-std::u16string digitsSkeleton(const DigitOptions& digits);
+                      DigitOptions& out, GivenOptions* given);
 /// resolvedOptions' digit entries, in ECMA-402's order: minimumIntegerDigits, then the fraction and the significant
 /// digits the rounding type uses.
 void defineDigitCounts(JSContext* ctx, JSValueConst object, const DigitOptions& digits);
@@ -264,7 +269,7 @@ void installDateOverrides(JSContext* ctx);
 // ───────────── PluralRules, RelativeTimeFormat, ListFormat, Collator (IntlText.cpp)
 
 void defineTextFormats(JSContext* ctx, JSValueConst intl);
-/// String.prototype.localeCompare.
+/// String.prototype.localeCompare, toLocaleUpperCase and toLocaleLowerCase.
 void installStringOverrides(JSContext* ctx);
 
 /// The runtime's own Intl object, made on first use: a new reference. The lazy global answers with it, and the
@@ -272,26 +277,5 @@ void installStringOverrides(JSContext* ctx);
 JSValue intlObject(JSContext* ctx);
 /// Defines the lazy global `Intl`. Called by installHost.
 void installIntl(JSContext* ctx);
-
-template <class Produce>
-Text16 icuText(JSContext* ctx, Produce produce) {
-    Text16 buffer{JSAllocator<char16_t>(JS_GetRuntime(ctx))};
-    buffer.resize(128);
-    UErrorCode status = U_ZERO_ERROR;
-    int32_t length = produce(buffer.data(), int32_t(buffer.size()), &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR || status == U_STRING_NOT_TERMINATED_WARNING) {
-        if (length < 0 || uint32_t(length) > kMaxIntlString) {
-            throw RangeError{"Intl: the result is too long."};
-        }
-        buffer.resize(size_t(length) + 1);
-        status = U_ZERO_ERROR;
-        length = produce(buffer.data(), int32_t(buffer.size()), &status);
-    }
-    if (U_FAILURE(status) || length < 0) {
-        throw RangeError{std::string("Intl: ICU failed: ") + u_errorName(status)};
-    }
-    buffer.resize(size_t(length));
-    return buffer;
-}
 
 } // namespace wr::intl

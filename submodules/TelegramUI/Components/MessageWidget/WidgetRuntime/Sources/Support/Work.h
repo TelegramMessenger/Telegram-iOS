@@ -40,8 +40,19 @@ inline constexpr uint64_t kRenderNode = 4;
 inline constexpr uint64_t kRenderAttribute = 2;
 /// A UTF-8 byte of CSS handed to litehtml's parser: a `<style>` sheet or a `style` attribute.
 inline constexpr uint64_t kCssByte = 1;
-/// An ICU formatter, rules or collator opened on an Intl cache miss (V5b plan): ICU loads its locale data for it.
-inline constexpr uint64_t kIntlOpen = 2000;
+/// A request of Intl's `intl` capability (Host::intl), on top of its bytes: the app's host parses it and makes a
+/// Foundation formatter, rules or collator for each one. LimitsTests' testAnIntlRequestLoopCostsNoMorePerUnitThanJS
+/// holds these rates, through the app.
+inline constexpr uint64_t kIntlRequest = 2000;
+/// A date request (`date`, `dateMethod`, `dateParts`, `dateOptions`) instead: the host may make a DateFormatter and its
+/// pattern from templates for it (its cache holds 64; a widget can vary the options past that), ~12 times a number's.
+inline constexpr uint64_t kIntlDateRequest = 24000;
+/// `dateParts` on top: the host formats each field of the pattern with a formatter of its own.
+inline constexpr uint64_t kIntlDateParts = 16000;
+/// A UTF-8 byte of an `intl` request or answer: the host's JSON parse and its formatting over the text.
+inline constexpr uint64_t kIntlByte = 1;
+/// An item of a list ListFormat hands the host, on top of its bytes and the item's read.
+inline constexpr uint64_t kIntlListItem = 50;
 /// Eight UTF-16 units ICU case-maps for a language with case rules of its own (toLocaleUpperCase('tr'), v0.1.1 plan,
 /// Task 10), on top of the copy's scan; WorkCostTests holds it.
 inline constexpr uint64_t kCaseMapEightUnits = 1;

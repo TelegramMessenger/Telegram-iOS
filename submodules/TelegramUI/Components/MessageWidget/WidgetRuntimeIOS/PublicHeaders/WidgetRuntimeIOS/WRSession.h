@@ -50,6 +50,10 @@ typedef NS_OPTIONS(NSUInteger, WRGestureAxes) {
 /// SDK v1 §3.2: the whole content of a storage area (`local` or `session`) a task changed, as [key, value] pairs in
 /// insertion order, at the end of that task. Not after the widget has stopped.
 - (void)session:(WRSession *)session storageCommit:(NSString *)area entries:(NSArray<NSArray<NSString *> *> *)entries;
+/// widget-sandbox's `intl` capability: a request as its shim sends one, the answer as its glue gives it (the app's
+/// delegate hands it to that glue, widget-sandbox's IntlBridge). All of Intl's locale data comes from here; without it
+/// every format is "". Charged before it is asked.
+- (NSString *)session:(WRSession *)session intl:(NSString *)requestJson;
 @end
 
 /// A published layer tree: immutable, and readable on any thread. It outlives its session.

@@ -49,13 +49,29 @@ Taken:
   kept: an origin of its own in the master, twidget edit 41), into `Sources/Host/ProfileTables.inc`; its tests read the
   file through `:ProfileJSON`.
 - `fixtures/intl-cases.json` from `packages/core/tests/fixtures/intl-cases.json` (v0.1.1): 166 Intl requests as the
-  shim sends them, with V8's answers. WidgetRuntime's `IntlCasesTests` (host, the system ICU) and `WRIntlCasesTests`
-  (iOS) run each as the call a widget would make (`Tests/IntlCases.js`), with an explicit drift list
+  shim sends them, with V8's answers. `:WidgetSandboxIntlTests` runs the glue below on it alone; WidgetRuntime's
+  `IntlCasesTests` (host) checks that the runtime sends exactly those requests, and `WRIntlCasesTests` (iOS) runs each
+  as the call a widget would make (`Tests/IntlCases.js`) through the glue, with an explicit drift list
   (`Tests/intl-cases-expected-failures.txt`); they read it through `:IntlCases`.
+- `ios/IntlBridge.swift` and `ios/PluralRules.swift`, unedited: the iOS glue's `intl` capability (the "Intl
+  delegation" section of `packages/ios/Sources/WidgetSandbox/SandboxEngine.swift`, after an `import Foundation`, and
+  `PluralRules.swift`), which answers WidgetRuntime's Intl requests in the app (`:WidgetSandboxIntl`). Foundation only:
+  ICU's formatting API is not public on iOS, which is why upstream delegates Intl to the host. `ios/WidgetSandboxIntl.swift`
+  is ours: the public entry, and the one member of upstream's `SandboxEngine` the section reads. Upstream's glue traps
+  on a locale tag with a unicode extension (Foundation's `Locale` turns `ar-EG-u-nu-arab` into a locale whose
+  formatters have no pattern, which the glue force-unwraps), and upstream's shim passes tags as written: WidgetRuntime
+  never sends one (`intl::resolveLocale`).
+
+  ```sh
+  git -C ~/build/widget-sandbox show "$V":packages/ios/Sources/WidgetSandbox/SandboxEngine.swift \
+    | awk '/^\/\/ MARK: - Intl delegation/,0' | { printf 'import Foundation\n\n'; cat; } > "$W/ios/IntlBridge.swift"
+  git -C ~/build/widget-sandbox show "$V":packages/ios/Sources/WidgetSandbox/PluralRules.swift > "$W/ios/PluralRules.swift"
+  ```
 
 Not taken: `packages/conformance/harness/` (inlined into every widget), `results/` (the framework's own reports),
 `catalogue.md`, `probe-fixture.json`, `tools/*.d.mts`, and everything else outside `corpus/` and
-`packages/conformance/` (the framework's renderers, hosts and SDKs: our runtime is our own, spec §1).
+`packages/conformance/` but the iOS glue's Intl (the framework's renderers, hosts and SDKs: our runtime is our own,
+spec §1).
 
 The previous vendoring (the corpus at side-branch commit 1144002 and the old runtime's JS bundles) is gone: its corpus
 differed from v0.1.0 in 216 of the files both share, and the bundles (`WidgetJS/`, Chart.js and D3) were used by

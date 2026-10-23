@@ -139,7 +139,7 @@ cc_library(
         # Selectors parse with litehtml's CSS Syntax tokenizer (Sources/DOM/Selectors.cpp), the policy layer's.
         "//third-party/twidget:litehtml_fork",
     ],
-    # Intl and URL's IDNA (V5b): the system ICU.
+    # The system ICU's public part only (Sources/Host/ICU.h): URL's IDNA, case mapping, the bidi classes.
     linkopts = ["-licucore"],
     visibility = ["//visibility:public"],
 )
@@ -156,6 +156,7 @@ cc_test(
         "Tests/NoIOScanTests.cpp",
         "Tests/URLDataTests.cpp",
         "Tests/IntlCasesTests.cpp",
+        "Tests/BidiTests.cpp",
     ]) + [
         "Tests/DOMHarness.cpp",
         "Tests/DOMHarness.h",
@@ -306,8 +307,22 @@ cc_test(
     ],
 )
 
-# widget-sandbox v0.1.1's Intl parity fixture over the host's ICU (v0.1.1 plan, Task 10; Tests/IntlCasesTests.cpp),
-# with the drift list Tests/intl-cases-expected-failures.txt.
+# UAX #9 (Sources/Render/Bidi.cpp) against a sample of Unicode's BidiCharacterTest.txt; the whole file through
+# --test_env=WR_BIDI_CHARACTER_TEST=<path> (Tests/BidiTests.cpp).
+cc_test(
+    name = "WidgetRuntimeBidiTests",
+    srcs = ["Tests/BidiTests.cpp"],
+    copts = WR_COPTS,
+    data = ["Tests/bidi-character-test-sample.txt"],
+    env = {"WR_BIDI_CHARACTER_TEST": "$(rootpath Tests/bidi-character-test-sample.txt)"},
+    deps = [
+        ":WidgetRuntime",
+        ":WidgetRuntimeTestSupport",
+    ],
+)
+
+# widget-sandbox v0.1.1's Intl fixture as a protocol check (Tests/IntlCasesTests.cpp): every case as a widget makes it,
+# over a host answering only the fixture's own requests.
 cc_test(
     name = "WidgetRuntimeIntlCasesTests",
     srcs = [
@@ -332,7 +347,7 @@ cc_test(
     ],
 )
 
-# The Intl cases' mapping and drift list, for the host test above and WidgetRuntimeIOS's WRIntlCasesTests.
+# The Intl cases' mapping and drift list, for the host test above and WidgetRuntimeIOS's WRIntlCasesTests.swift.
 filegroup(
     name = "IntlCasesSupport",
     testonly = True,

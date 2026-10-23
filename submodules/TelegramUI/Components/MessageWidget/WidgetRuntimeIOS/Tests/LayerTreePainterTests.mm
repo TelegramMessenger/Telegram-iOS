@@ -27,7 +27,6 @@ class QuietHost final : public wr::Host {
 public:
     double monotonicNow() override { return 0; }
     double wallClockNow() override { return 1767225600000.0; }
-    std::string defaultTimeZone() override { return "UTC"; }
     void log(wr::LogLevel, std::string_view) override {}
     void diagnostic(std::string_view, std::string_view) override {}
 };

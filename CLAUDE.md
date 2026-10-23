@@ -55,7 +55,7 @@ is the single pin.
 Host `swift_test`s run the same way (`… bazel-9.2.0-darwin-arm64 test //submodules/MetalEngine:MetalPipelineCacheTests`; one test
 via `--test_filter=MetalPipelineCacheTests/<name>`, comma lists are not supported): `MetalPipelineCacheTests` (runs
 on the Mac's GPU), `//submodules/MTProtoRustEngine:MTProtoRustEngineMappingTests`,
-`//submodules/UrlWhitelist:UrlWhitelistTests`.
+`//submodules/UrlWhitelist:UrlWhitelistTests`, `//third-party/widget-sandbox:WidgetSandboxIntlTests`.
 
 **App-side `ios_unit_test` targets**, each run via `--target` (what each one pins, and what app code can and cannot do
 in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submodules/TextFormat:TextFormatTests`,
@@ -206,6 +206,15 @@ subsystem from elsewhere.
 - **Smaller ones**: links with a login part (`submodules/UrlWhitelist/`), the code-block highlighter's recursion bound
   (`third-party/libprisma/`), an Apple Metal binary-archive bug (`submodules/MetalEngine/`), wallpaper soft light
   (`submodules/GradientBackground/`), app-side tests ([`docs/app-unit-tests.md`](docs/app-unit-tests.md)).
+
+## The system ICU: only the SDK's headers are public
+
+`libicucore` ships with iOS, but only the functions `$SDK/usr/include/unicode/*.h` declare (character properties, case
+mapping, UTF, IDNA, regex) are public API. Any other (`unumf_*`, `udat_*`, `ucol_*`, `ubidi_*`, `uloc_*`, …) links,
+since the SDK's `libicucore.tbd` exports it, and App Store review then rejects the build ("Non-public API usage"). Never
+declare an ICU function by hand: locale formatting goes through Foundation, as message widgets' Intl does.
+`build-system/Make/ICUImportCheck.py` fails `Make.py build` on any libicucore import of the built `.ipa` that the
+SDK's headers do not declare.
 
 ## iOS 26/27 windows and touch delivery
 

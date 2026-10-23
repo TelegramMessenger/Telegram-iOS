@@ -1,4 +1,5 @@
 load("@build_bazel_rules_apple//apple:resources.bzl", "apple_resource_bundle", "apple_resource_group")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library", "swift_test")
 load("//build-system/bazel-utils:plist_fragment.bzl", "plist_fragment")
 
 # The corpus by folder (names repeat across folders: generated/with-profile and without-profile share 21), at
@@ -24,6 +25,29 @@ filegroup(
     testonly = True,
     srcs = ["fixtures/intl-cases.json"],
     visibility = ["//submodules/TelegramUI/Components/MessageWidget:__subpackages__"],
+)
+
+# widget-sandbox's iOS glue for the `intl` capability (VENDOR.md): upstream's IntlBridge and CLDR plural rules,
+# Foundation only, behind our entry point. WidgetRuntime's Intl asks it for every answer that needs locale data.
+swift_library(
+    name = "WidgetSandboxIntl",
+    module_name = "WidgetSandboxIntl",
+    srcs = [
+        "ios/IntlBridge.swift",
+        "ios/PluralRules.swift",
+        "ios/WidgetSandboxIntl.swift",
+    ],
+    visibility = ["//submodules/TelegramUI/Components/MessageWidget:__subpackages__"],
+)
+
+# The glue alone against the Intl fixture, on the host's Foundation:
+# `./build-input/bazel-9.2.0-darwin-arm64 test //third-party/widget-sandbox:WidgetSandboxIntlTests`.
+swift_test(
+    name = "WidgetSandboxIntlTests",
+    srcs = ["ios/Tests/WidgetSandboxIntlTests.swift"],
+    data = [":IntlCases"],
+    env = {"WR_INTL_CASES": "$(rootpath :IntlCases)"},
+    deps = [":WidgetSandboxIntl"],
 )
 
 # The corpus' documents as plain files, for host tests (WidgetRuntime's measurements).

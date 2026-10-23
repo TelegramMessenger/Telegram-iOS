@@ -14,6 +14,7 @@
 
 #include "Sources/Host/CSSPolicy.h"
 #include "Sources/Host/ICU.h"
+#include "Sources/Render/Bidi.h"
 #include "Sources/Render/DataUrl.h"
 #include "Sources/Render/LayerTree.h"
 
@@ -471,27 +472,14 @@ litehtml::pixel_t WidgetContainer::text_width(const char* text, litehtml::uint_p
 }
 
 bool WidgetContainer::bidi_levels(const std::vector<std::string>& runs, bool rtl, std::vector<uint8_t>& levels) {
-    // Weak imports: a null address is a function this iOS's libicucore lacks.
-    static const bool available = [] {
-        const void* const functions[] = {
-            reinterpret_cast<const void*>(&ubidi_open),
-            reinterpret_cast<const void*>(&ubidi_close),
-            reinterpret_cast<const void*>(&ubidi_setPara),
-            reinterpret_cast<const void*>(&ubidi_getLevelAt),
-        };
-        return std::all_of(std::begin(functions), std::end(functions), [](const void* f) { return f != nullptr; });
-    }();
-    if (!available) {
-        return false;
-    }
     // The line's text in UTF-16, each run sampled at its first strong character (L, R or AL), else at its first unit
     // (review minors, Task 5: a run can start with a neutral, whose level is its neighbours'); a malformed byte reads as
     // U+FFFD.
     std::u16string text;
-    std::vector<int32_t> starts;
+    std::vector<size_t> starts;
     starts.reserve(runs.size());
     for (const std::string& run : runs) {
-        starts.push_back(int32_t(text.size()));
+        starts.push_back(text.size());
         bool strongSeen = false;
         for (size_t i = 0; i < run.size();) {
             UChar32 c = 0;
@@ -501,7 +489,7 @@ bool WidgetContainer::bidi_levels(const std::vector<std::string>& runs, bool rtl
             if (!strongSeen) {
                 const UCharDirection direction = u_charDirection(c);
                 if (direction == U_LEFT_TO_RIGHT || direction == U_RIGHT_TO_LEFT || direction == U_RIGHT_TO_LEFT_ARABIC) {
-                    starts.back() = int32_t(text.size());
+                    starts.back() = text.size();
                     strongSeen = true;
                 }
             }
@@ -516,21 +504,10 @@ bool WidgetContainer::bidi_levels(const std::vector<std::string>& runs, bool rtl
             text.push_back(u'\uFFFC');
         }
     }
-    if (text.size() > size_t(INT32_MAX)) {
-        return false;
-    }
-    std::unique_ptr<UBiDi, void (*)(UBiDi*)> bidi(ubidi_open(), ubidi_close);
-    if (!bidi) {
-        return false;
-    }
-    UErrorCode status = U_ZERO_ERROR;
-    ubidi_setPara(bidi.get(), text.data(), int32_t(text.size()), rtl ? 1 : 0, nullptr, &status);
-    if (U_FAILURE(status)) {
-        return false;
-    }
+    const std::vector<uint8_t> resolved = bidi::levels(text, rtl ? 1 : 0);
     levels.clear();
-    for (int32_t start : starts) {
-        levels.push_back(ubidi_getLevelAt(bidi.get(), start));
+    for (size_t start : starts) {
+        levels.push_back(resolved[start]);
     }
     return true;
 }

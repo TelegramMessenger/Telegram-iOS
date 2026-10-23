@@ -1,6 +1,7 @@
 // Intl.PluralRules, RelativeTimeFormat, ListFormat and Collator, and String.prototype.localeCompare (V5b plan, Task 4;
-// ECMA-402 §16, §17, §13, §10): the conformance set's values, the other options, the refusals, and huge inputs bounded
-// and charged. Expected strings are ICU's own output.
+// ECMA-402 §16, §17, §13, §10): the requests (`plural`, `relative`, `list`, `compare`), the plural categories found
+// through the host, resolvedOptions, the refusals, huge inputs bounded and charged, and the locale case mapping that
+// stays the system ICU's. The host is the echo glue (wr_test::echoIntl) unless a case says otherwise.
 #include <string>
 
 #include "Sources/Host/HostState.h"
@@ -15,35 +16,58 @@ const char* const kErr = "window.err = f => { try { f(); return 'ok' } catch (e)
 
 } // namespace
 
-WR_TEST(testTheTextConformanceValues) {
+WR_TEST(testTheRequests) {
     HostEnv env;
-    CHECK_EQ(env.eval("new Intl.PluralRules('en-US').select(1) + ',' + new Intl.PluralRules('ru-RU').select(3)"), std::string("one,few"));
-    CHECK_EQ(env.eval("new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(-1, 'day')"), std::string("yesterday"));
-    CHECK_EQ(env.eval("new Intl.ListFormat('en', { type: 'conjunction' }).format(['a', 'b', 'c'])"), std::string("a, b, and c"));
-    CHECK_EQ(env.eval("new Intl.Collator('en').compare('a', 'B') < 0"), std::string("true"));
-    CHECK_EQ(env.eval("['b', 'a', 'C'].sort((x, y) => x.localeCompare(y)).join()"), std::string("a,b,C"));
+    env.host().intlAnswer = wr_test::echoIntl;
+    CHECK_EQ(env.eval("new Intl.PluralRules('ru-RU', { type: 'ordinal', minimumFractionDigits: 1 }).select(3)"),
+             std::string("{\"kind\":\"plural\",\"locale\":\"ru-RU\",\"opts\":{\"type\":\"ordinal\",\"minimumFractionDigits\":1},\"value\":3}"));
+    CHECK_EQ(env.eval("new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' }).format(-1.5, 'days')"),
+             std::string("{\"kind\":\"relative\",\"locale\":\"en\",\"opts\":{\"style\":\"short\",\"numeric\":\"auto\"},\"value\":-1.5,\"unit\":\"days\"}"));
+    CHECK_EQ(env.eval("new Intl.ListFormat('en', { type: 'unit' }).format(new Set(['a', 'b']))"),
+             std::string("{\"kind\":\"list\",\"locale\":\"en\",\"opts\":{\"type\":\"unit\"},\"value\":[\"a\",\"b\"]}"));
+    CHECK_EQ(env.eval("new Intl.ListFormat('en').format()"),
+             std::string("{\"kind\":\"list\",\"locale\":\"en\",\"opts\":{},\"value\":[]}"));
+    env.host().intlAnswer = [](std::string_view) { return std::string("-1"); };
+    CHECK_EQ(env.eval("[new Intl.Collator('de', { sensitivity: 'base', numeric: true }).compare('a', 1), 'x'.localeCompare('y', 'sv')].join()"),
+             std::string("-1,-1"));
+    CHECK_EQ(env.host().intlRequests[env.host().intlRequests.size() - 2],
+             std::string("{\"kind\":\"compare\",\"locale\":\"de\",\"opts\":{\"numeric\":true,\"sensitivity\":\"base\"},\"a\":\"a\",\"b\":\"1\"}"));
+    CHECK_EQ(env.host().intlRequests.back(), std::string("{\"kind\":\"compare\",\"locale\":\"sv\",\"opts\":{},\"a\":\"x\",\"b\":\"y\"}"));
 }
 
-WR_TEST(testTheOtherTextOptions) {
+/// PluralRules' categories are the ones the host's rules give a set of samples, under the type alone; "other" always.
+WR_TEST(testPluralCategoriesComeFromTheHost) {
     HostEnv env;
-    CHECK_EQ(env.eval("const ord = new Intl.PluralRules('en', { type: 'ordinal' }); [ord.select(2), ord.select(3), ord.select(11),"
-                      " new Intl.PluralRules('en', { minimumFractionDigits: 1 }).select(1)].join()"),
-             std::string("two,few,other,other"));
-    CHECK_EQ(env.eval("JSON.stringify(new Intl.PluralRules('ru').resolvedOptions().pluralCategories)"),
+    env.host().intlAnswer = [](std::string_view request) {
+        // ru's cardinal rules, for integers: one (1, 21, 101), few (2–4, 22–24), many (0, 5–20, 25–30, 100), other (fractions).
+        const size_t at = request.find("\"value\":");
+        const double n = std::stod(std::string(request.substr(at + 8)));
+        const long i = long(n);
+        if (n != double(i)) {
+            return std::string("other");
+        }
+        return std::string(i % 10 == 1 && i % 100 != 11 ? "one" : (i % 10 >= 2 && i % 10 <= 4 && (i % 100 < 12 || i % 100 > 14)) ? "few" : "many");
+    };
+    CHECK_EQ(env.eval("JSON.stringify(new Intl.PluralRules('ru', { minimumFractionDigits: 2 }).resolvedOptions().pluralCategories)"),
              std::string("[\"one\",\"few\",\"many\",\"other\"]"));
-    CHECK_EQ(env.eval("const rtf = new Intl.RelativeTimeFormat('en'); [rtf.format(-1, 'days'), rtf.format(2, 'hour'),"
-                      " new Intl.RelativeTimeFormat('en', { style: 'short' }).format(3, 'month')].join('|')"),
-             std::string("1 day ago|in 2 hours|in 3 mo."));
-    CHECK_EQ(env.eval("[new Intl.ListFormat('en', { type: 'disjunction' }).format(['a', 'b', 'c']),"
-                      " new Intl.ListFormat('en', { type: 'unit', style: 'narrow' }).format(['a', 'b', 'c']),"
-                      " new Intl.ListFormat('en').format('xy'), new Intl.ListFormat('en').format()].join('|')"),
-             std::string("a, b, or c|a b c|x and y|"));
-    CHECK_EQ(env.eval("[new Intl.Collator('en', { sensitivity: 'base' }).compare('a', 'A'),"
-                      " new Intl.Collator('en', { numeric: true }).compare('2', '10'), new Intl.Collator('en').compare('2', '10'),"
-                      " ['b', 'a'].sort(new Intl.Collator('en').compare).join(''), 'a'.localeCompare('A', 'en', { sensitivity: 'base' })].join()"),
-             std::string("0,-1,1,ab,0"));
-    CHECK_EQ(env.eval("const co = new Intl.Collator('de', { numeric: true }).resolvedOptions(); [co.locale, co.usage, co.sensitivity, co.numeric, co.caseFirst].join()"),
-             std::string("de,sort,variant,true,false"));
+    CHECK(env.host().intlRequests.back().find("\"opts\":{\"type\":\"cardinal\"}") != std::string::npos);
+    CHECK_EQ(env.eval("const pr = new Intl.PluralRules('ru').resolvedOptions(); [pr.locale, pr.type, pr.minimumFractionDigits, pr.maximumFractionDigits].join()"),
+             std::string("ru,cardinal,0,3"));
+    CHECK_EQ(env.eval("[new Intl.PluralRules('ru').select(Infinity), new Intl.PluralRules('ru').select(NaN)].join()"), std::string("other,other"));
+}
+
+WR_TEST(testResolvedOptions) {
+    HostEnv env;
+    CHECK_EQ(env.eval("JSON.stringify(new Intl.RelativeTimeFormat('en-u-nu-arab', { numeric: 'auto', numberingSystem: 'thai' }).resolvedOptions())"),
+             std::string("{\"locale\":\"en\",\"style\":\"long\",\"numeric\":\"auto\",\"numberingSystem\":\"latn\"}"));
+    CHECK_EQ(env.eval("JSON.stringify(new Intl.ListFormat('en', { type: 'disjunction', style: 'narrow' }).resolvedOptions())"),
+             std::string("{\"locale\":\"en\",\"type\":\"disjunction\",\"style\":\"narrow\"}"));
+    CHECK_EQ(env.eval("JSON.stringify(new Intl.Collator('de', { numeric: true, collation: 'phonebk' }).resolvedOptions())"),
+             std::string("{\"locale\":\"de\",\"usage\":\"sort\",\"sensitivity\":\"variant\",\"ignorePunctuation\":false,\"collation\":\"phonebk\","
+                         "\"numeric\":true,\"caseFirst\":\"false\"}"));
+    CHECK_EQ(env.eval("const co = new Intl.Collator('en', { usage: 'search', collation: 'phonebk', caseFirst: 'upper', ignorePunctuation: true }).resolvedOptions();"
+                      " [co.usage, co.collation, co.caseFirst, co.ignorePunctuation].join()"),
+             std::string("search,default,upper,true"));
 }
 
 WR_TEST(testWhatTheTextFormatsRefuse) {
@@ -53,8 +77,8 @@ WR_TEST(testWhatTheTextFormatsRefuse) {
                       " err(() => new Intl.ListFormat('en').format(['a', 1])), err(() => new Intl.ListFormat('en', { type: 'bogus' })),"
                       " err(() => new Intl.ListFormat('en', 5)), err(() => Intl.PluralRules.prototype.select.call({}, 1)),"
                       " err(() => Object.getOwnPropertyDescriptor(Intl.Collator.prototype, 'compare').get.call({})),"
-                      " err(() => String.prototype.localeCompare.call(null, 'a'))].join()"),
-             std::string("RangeError,RangeError,TypeError,RangeError,TypeError,TypeError,TypeError,TypeError"));
+                      " err(() => String.prototype.localeCompare.call(null, 'a')), err(() => new Intl.Collator('en', { collation: 'x' }))].join()"),
+             std::string("RangeError,RangeError,TypeError,RangeError,TypeError,TypeError,TypeError,TypeError,RangeError"));
     CHECK_EQ(env.eval("[Intl.PluralRules, Intl.RelativeTimeFormat, Intl.ListFormat, Intl.Collator].map(C => Object.prototype.toString.call(new C('en'))).join()"),
              std::string("[object Intl.PluralRules],[object Intl.RelativeTimeFormat],[object Intl.ListFormat],[object Intl.Collator]"));
     CHECK_EQ(env.eval("[err(() => Intl.Collator('en')), err(() => Intl.PluralRules('en')), err(() => Intl.ListFormat('en'))].join()"),
@@ -65,11 +89,12 @@ WR_TEST(testWhatTheTextFormatsRefuse) {
 WR_TEST(testHugeInputsAreBoundedAndCharged) {
     HostEnv env;
     env.eval(kErr);
+    env.host().intlAnswer = [](std::string_view) { return std::string("0"); };
     CHECK_EQ(env.eval("const over = 'a'.repeat(1048577); err(() => over.localeCompare(over))"), std::string("RangeError"));
     JSRuntime* rt = env.runtime().jsRuntime();
     uint64_t before = JS_GetWorkUnits(rt);
     CHECK_EQ(env.eval("const big = 'a'.repeat(1000000); big.localeCompare(big)"), std::string("0"));
-    CHECK(JS_GetWorkUnits(rt) - before >= 2 * 1000000 / 8);
+    CHECK(JS_GetWorkUnits(rt) - before >= 2 * 1000000 * wr::work::kIntlByte);
     // A list of a million items is refused at the item cap (the final review's I1), each item charged as it is read.
     // The array is made before the count starts: filling it is charged too (the fix-wave review's m4).
     env.eval("window.million = new Array(1000000).fill('a'); 1");
@@ -77,7 +102,7 @@ WR_TEST(testHugeInputsAreBoundedAndCharged) {
     CHECK_EQ(env.eval("(() => { try { new Intl.ListFormat('en', { type: 'unit', style: 'narrow' }).format(million) } catch (e) { return e.name + ': ' + e.message } })()"),
              std::string("RangeError: Intl.ListFormat.prototype.format: the list has more than 10000 items."));
     const uint64_t listWork = JS_GetWorkUnits(rt) - before;
-    CHECK(listWork >= 10000 * wr::work::kNodeVisit);
+    CHECK(listWork >= 10000 * (wr::work::kNodeVisit + wr::work::kIntlListItem));
     // It stopped at the cap: reading all million items would charge at least 1,000,000 * kNodeVisit by itself.
     CHECK(listWork < 1000000 * wr::work::kNodeVisit);
 }
@@ -87,41 +112,20 @@ WR_TEST(testHugeInputsAreBoundedAndCharged) {
 WR_TEST(testAListIsBoundedByItsItemCount) {
     HostEnv env;
     env.eval(kErr);
-    // Refused at the item cap, before ICU sees a list (an output past the length cap was refused only after formatting).
+    env.host().intlAnswer = wr_test::echoIntl;
     CHECK_EQ(env.eval("(() => { try { new Intl.ListFormat('en').format(new Array(1000000).fill('')) } catch (e) { return e.name + ': ' + e.message } })()"),
              std::string("RangeError: Intl.ListFormat.prototype.format: the list has more than 10000 items."));
     CHECK_EQ(env.eval("let closed = false, after = false; function* g() { try { yield 'a'; yield 1; after = true; yield 'b' } finally { closed = true } }"
                       "[err(() => new Intl.ListFormat('en').format(g())), closed, after].join()"),
              std::string("TypeError,true,false"));
-    CHECK_EQ(env.eval("new Intl.ListFormat('en', { type: 'unit', style: 'narrow' }).format(new Array(10000).fill('a')).length"), std::string("19999"));
-}
-
-/// The final review's M3 (re-graded): a numberingSystem ICU does not know falls back to the locale's own, as ECMA-402
-/// says, rather than making ICU refuse the locale.
-WR_TEST(testAnUnknownNumberingSystemFallsBack) {
-    HostEnv env;
-    CHECK_EQ(env.eval("const d = new Intl.DateTimeFormat('en-US', { numberingSystem: 'abcd', timeZone: 'UTC' }); [d.format(0), d.resolvedOptions().numberingSystem].join()"),
-             std::string("1/1/1970,latn"));
-    CHECK_EQ(env.eval("const r = new Intl.RelativeTimeFormat('en', { numberingSystem: 'abcd' }); [r.format(1, 'day'), r.resolvedOptions().numberingSystem].join()"),
-             std::string("in 1 day,latn"));
-    CHECK_EQ(env.eval("new Intl.DateTimeFormat('en-US', { numberingSystem: 'arab', timeZone: 'UTC', year: 'numeric' }).format(0) === '\u0661\u0669\u0667\u0660'"),
-             std::string("true"));
-}
-
-/// The final review's M4 (re-graded): a Collator sets only the attributes its options give and reports the rest from
-/// ICU, so a locale's own tailoring stands (Danish sorts upper case first, Thai ignores punctuation).
-WR_TEST(testACollatorKeepsTheLocalesOwnDefaults) {
-    HostEnv env;
-    CHECK_EQ(env.eval("const da = new Intl.Collator('da'); [da.compare('a', 'A'), da.resolvedOptions().caseFirst].join()"), std::string("1,upper"));
-    CHECK_EQ(env.eval("new Intl.Collator('th').resolvedOptions().ignorePunctuation"), std::string("true"));
-    CHECK_EQ(env.eval("[new Intl.Collator('da', { caseFirst: 'lower' }).compare('a', 'A'), new Intl.Collator('en').resolvedOptions().caseFirst,"
-                      " new Intl.Collator('en').resolvedOptions().ignorePunctuation].join()"),
-             std::string("-1,false,false"));
+    CHECK_EQ(env.eval("JSON.parse(new Intl.ListFormat('en', { type: 'unit', style: 'narrow' }).format(new Array(10000).fill('a'))).value.length"),
+             std::string("10000"));
 }
 
 /// v0.1.1 plan, Task 10 (ECMA-402 TransformCase): toLocaleUpperCase and toLocaleLowerCase follow the language's own
 /// case rules, the first requested locale's or else the host's; other languages keep the root's mapping, the engine's
-/// own even when a widget replaces toUpperCase; a long string is mapped whole and charged for.
+/// own even when a widget replaces toUpperCase; a long string is mapped whole and charged for. The system ICU's public
+/// case mapping, no request.
 WR_TEST(testLocaleCaseMapping) {
     HostEnv env;
     env.eval(kErr);
@@ -140,4 +144,5 @@ WR_TEST(testLocaleCaseMapping) {
     const uint64_t before = JS_GetWorkUnits(rt);
     CHECK_EQ(env.eval("'i'.repeat(4000000).toLocaleUpperCase('tr').length"), std::string("4000000"));
     CHECK(JS_GetWorkUnits(rt) - before >= 4000000 / 8 * (1 + wr::work::kCaseMapEightUnits));
+    CHECK(env.host().intlRequests.empty());
 }

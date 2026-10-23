@@ -89,7 +89,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 | `…/WidgetRuntime/Sources/Host/TelegramWidget.*`, `IDL/telegram.webidl` | The SDK (V2a, widget-sandbox v0.1.0 sdk-v1.md): `TelegramWidget` v1, `HapticFeedback`, `navigator` (`language`, the clipboard and sharing refused) |
 | `…/WidgetRuntime/Sources/Host/{Links,ThemeParams,Storage,Inert}.*` | V2a: the link rules and routes, the theme palette, Web Storage, and the network and dialog APIs that do nothing |
 | `…/WidgetRuntime/Sources/Host/{Crypto,Base64,Encoding,StructuredClone,URL,URLParser,Abort,Blob,Sequences}.*`, `IDL/builtins.webidl` | V5a: the built-ins, each against its own standard |
-| `…/WidgetRuntime/Sources/Host/{ICU.h,Intl.h,IntlCore.cpp,IntlNumberFormat.cpp,IntlDateTimeFormat.cpp,IntlText.cpp}` | V5b: Intl over the system ICU, and ICU's declarations |
+| `…/WidgetRuntime/Sources/Host/{Intl.h,IntlCore.cpp,IntlNumberFormat.cpp,IntlDateTimeFormat.cpp,IntlText.cpp}`, `third-party/widget-sandbox/ios/` | V5b: Intl over widget-sandbox's `intl` capability (`Host::intl`), answered in the app by widget-sandbox's iOS glue |
+| `…/WidgetRuntime/Sources/Host/ICU.h`, `…/Sources/Render/Bidi.{h,cpp}` | The system ICU's public part (character properties, case mapping, IDNA) and UAX #9 over it |
 | `…/WidgetRuntime/Sources/Canvas/`, `…/WidgetRuntimeIOS/Sources/CanvasBitmap.{h,mm}` | V5d: Canvas 2D (the interpreter, the context and its objects, the canvas and img elements) and the iOS bitmap |
 | `…/WidgetRuntime/Sources/Animation/`, `IDL/web-animations.webidl`, `Sources/Support/Promises.*`, `third-party/wpt/web-animations` | V5e: Web Animations (the objects, easing, interpolation and timing, the per-runtime `AnimationState` with the update step and the sampler) and its WPT; `Sources/Animation/PROVENANCE.md` lists what is ported from where |
 | `…/WidgetRuntime/Sources/Animation/CSS*.{h,cpp}`, `IDL/css-animations.webidl`, `third-party/wpt/css/css-{animations,transitions}` | V5f: CSS animations and transitions (the `@keyframes` and declaration parsers, `CSSAnimation`/`CSSTransition`, the style-change step and the events) and the event interfaces' WPT |
@@ -613,34 +614,54 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   - *Not in V5f:* the reversing shortening factor (a transition reversed mid-way takes its full duration back),
     `transition-behavior: allow-discrete`, `@starting-style`, animations of `::before`/`::after`, computed values, and a
     transition on an element a rebuild restyled before anything tracked it (it has no before-change style).
-- **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over the system ICU, `libicucore`: `NumberFormat`,
+- **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over widget-sandbox's `intl` capability: `NumberFormat`,
   `DateTimeFormat`, `PluralRules`, `RelativeTimeFormat`, `ListFormat`, `Collator` and `getCanonicalLocales`, with
   `formatToParts` for the first two and `resolvedOptions` and `supportedLocalesOf` for all six; `Number`/`BigInt`/
   `Date.prototype.toLocale*String` and `String.prototype.localeCompare` go through the same code, and
   `toLocaleUpperCase`/`toLocaleLowerCase` are ECMA-402's TransformCase (v0.1.1): in a language with case rules of its
-  own (az, el, hy, lt, tr) ICU's mapping, charged `work::kCaseMapEightUnits` per eight units on top of the copy, with
-  no length limit but the engine's; in any other the engine's own mapping, kept at install. The classes are
-  hand-built QuickJS classes, not WebIDL ones (an ECMA-402 object is not a WebIDL object: `NumberFormat`,
-  `DateTimeFormat` and `Collator` construct when called as functions, `format` and `compare` are accessors returning a
-  cached bound function, the class string is `"Intl.NumberFormat"`), allocated per runtime. `Intl` is a lazy global (a
-  third host auto-init tag, `Runtime::defineLazyGlobal`); the prototype overrides are installed at startup and reach
-  the runtime's own `Intl` object, never `globalThis.Intl`, and read `this` through the engine's `valueOf`/`getTime`
-  taken at startup (`Runtime::intrinsic`). A constructor reads every option in ECMA-402's order into a fixed-size
-  record (its js_malloc'd payload); ICU objects live only in the runtime's `IntlCache` (32 handles, least recently used
-  evicted), taken when a value is formatted, after every argument is converted, so no ICU handle or buffer is held
-  while script runs. A number is formatted through an ICU number skeleton made from the record, a date through a
-  pattern ICU's pattern generator made at construction (an explicit hour cycle rewrites its hour letters, a requested
-  era its era field: Apple's CLDR answers a short era narrow, "A" for "AD"), and the resolved date fields are read back
-  from that pattern. **Parity with V8** is measured on widget-sandbox v0.1.1's fixture (`fixtures/intl-cases.json`,
-  166 requests with V8's answers): `:WidgetRuntimeIntlCasesTests` on the host's ICU and `WRIntlCasesTests` on iOS's run
-  each as a widget would (`Tests/IntlCases.js`); 165 answer as V8 on both, and the one that does not is in
-  `Tests/intl-cases-expected-failures.txt` with its reason (Apple's CLDR joins a medium date and a time with " at ",
-  as Safari does). The list only shrinks, and a case off the list fails. The default locale is the host's (`HostState::locale`, the
-  app's language), resolved like a request; the default time zone is `Host::defaultTimeZone()` (the device's on iOS,
-  UTC in the test hosts). The declarations are our own (`ICU.h`): the SDK ships only a few of ICU's headers, so the
-  functions and enums are copied by hand from ICU 78.1's, every one `@stable` at ICU 69 or older, iOS 15.0's
-  library, which is the floor. ICU loading its own locale data is the system library's I/O, like Core Text's fonts;
-  nothing in the runtime opens a file.
+  own (az, el, hy, lt, tr) the system ICU's mapping (`u_strToUpper`, public), charged `work::kCaseMapEightUnits` per
+  eight units on top of the copy, with no length limit but the engine's; in any other the engine's own mapping, kept
+  at install. The classes are hand-built QuickJS classes, not WebIDL ones (an ECMA-402 object is not a WebIDL object:
+  `NumberFormat`, `DateTimeFormat` and `Collator` construct when called as functions, `format` and `compare` are
+  accessors returning a cached bound function, the class string is `"Intl.NumberFormat"`), allocated per runtime.
+  `Intl` is a lazy global (a third host auto-init tag, `Runtime::defineLazyGlobal`); the prototype overrides are
+  installed at startup and reach the runtime's own `Intl` object, never `globalThis.Intl`, and read `this` through the
+  engine's `valueOf`/`getTime` taken at startup (`Runtime::intrinsic`).
+  - **No locale data here.** ICU's formatting API is not public on iOS: App Store review rejects an app importing
+    `libicucore`'s `unumf_*`, `udat_*`, `ucol_*`, … (only what the SDK's `unicode/*.h` declare may be called;
+    `build-system/Make/ICUImportCheck.py` fails the build on anything else). So a constructor reads every option in
+    ECMA-402's order, refusing what ECMA-402 refuses, and keeps the ones the widget gave (`GivenOptions`, JSON in the JS
+    heap); everything that needs locale data is `Host::intl`, the request widget-sandbox's shim sends for the same call
+    (`{"kind":"number","locale":…,"opts":{…},"value":…}`; a date format's options with ToDateTimeOptions' defaults
+    added as the shim adds them, because its glue formats only the fields it is given) and its glue's answer back: the
+    text, or JSON for `numberParts`/`dateParts` and `numberOptions`/`dateOptions`. A request is written in native code
+    (`IntlRequest`), never through `JSON.stringify`, which would run a widget's `toJSON`, after every argument is
+    converted, so nothing is held while script runs. Charged before the host is asked: `work::kIntlRequest`
+    (`kIntlDateRequest` for a date's kinds, which may make a `DateFormatter` each, and `kIntlDateParts` more for
+    `dateParts`), and `work::kIntlByte` per byte of the request and of the answer, `work::kIntlListItem` per list item
+    (LimitsTests' `testAnIntlRequestLoopCostsNoMorePerUnitThanJS` holds them through the app, the glue's formatter
+    cache defeated). NaN and the infinities, which JSON
+    cannot carry, are formatted here.
+  - **The app's host is widget-sandbox's own iOS glue** (`third-party/widget-sandbox/ios/`, upstream's `IntlBridge` and
+    CLDR plural rules, vendored unedited): Foundation's `NumberFormatter`, `DateFormatter` (from templates; parts by
+    formatting each pattern field alone), `RelativeDateTimeFormatter`, `ListFormatStyle` and `String.compare`.
+    `MessageWidgetCore`'s session delegate hands it each request (`WRSessionDelegate session:intl:`); a session without
+    one has no locale data and formats "".
+  - **The locale** a request names is the first requested tag (UTS 35's case), else the host's (`HostState::locale`,
+    the app's language), **never with a unicode extension**: Foundation's `Locale(identifier:)` misreads one
+    (`ar-EG-u-nu-arab` becomes `ar-EG-u-nu`, whose formatters have no pattern) and the glue traps on the nil pattern,
+    which would take the app down; `testTheExtremesAreAnswered` holds the glue to every other shape. With no list of
+    available locales, every structurally valid tag is one, as in the shim, and `supportedLocalesOf` answers the
+    canonical requested tags. `resolvedOptions` takes what needs
+    locale data from the glue's answer where it has one (the locale it formats in, a currency's digits, a date's fields
+    and time zone) and the rest from ECMA-402's resolution of the options here; PluralRules' `pluralCategories` are the
+    categories the glue's rules give a set of samples.
+  - **Parity with V8** is measured on widget-sandbox v0.1.1's fixture (`fixtures/intl-cases.json`, 166 requests with
+    V8's answers) three ways: `//third-party/widget-sandbox:WidgetSandboxIntlTests` runs the glue alone on the host's
+    Foundation (as upstream's `testSharedFixtureMatchesV8`); `:WidgetRuntimeIntlCasesTests` runs each case as a widget
+    would (`Tests/IntlCases.js`) over a host that answers only the fixture's requests, so every case passes only when the
+    runtime sends exactly the shim's request; `WRIntlCasesTests` runs them end to end on iOS, the glue answering, against
+    the `ios` lines of `Tests/intl-cases-expected-failures.txt` (each with its reason; the list only shrinks).
 - **getComputedStyle** (V3, `Render/ComputedStyle.cpp`): `CSSStyleDeclaration` in a read-only computed mode (every
   write throws `NoModificationAllowedError`, `cssText` is ""), each read a layout query that serializes what litehtml
   computed: keywords from litehtml's own tables, colors `rgb()`/`rgba()`, lengths in px (width, height, padding and
@@ -794,8 +815,11 @@ runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for
   says), the colour-stop fix-up, Blink's dash and dot metrics, `object-fit`/`object-position`, SVG `<use>` and per-run
   `tspan` text, `text-overflow: ellipsis`, and right-to-left: `direction`, `dir` (`auto` from the first strong
   character, drawn or not, kept current by text and structure changes and by a descendant's own `dir`), `start`/`end`
-  alignment, and each line's items in bidi order from ICU's levels (`document_container::bidi_levels`, answered by
-  `WidgetContainer` from `ubidi`, each item at the level of its first strong character). The direction `dir` gives
+  alignment, and each line's items in bidi order from UAX #9's levels (`document_container::bidi_levels`, answered by
+  `WidgetContainer` from `bidi::levels` in `Sources/Render/Bidi.cpp`, each item at the level of its first strong
+  character). The algorithm is ours, over the bidi classes and paired brackets of the system ICU's public `uchar.h`
+  (ICU's own `ubidi_*` is not public API on iOS); it passes all 91,670 cases of Unicode's `BidiCharacterTest.txt`
+  (`:WidgetRuntimeBidiTests` runs a sample, the whole file with `--test_env=WR_BIDI_CHARACTER_TEST=<path>`). The direction `dir` gives
   reaches the UA's rules as the Builder's host marker `data-tg-dir`, so an author's `[dir=auto]` matches and
   `[dir=rtl]` does not match an `auto` that resolves to rtl, as in a browser.
 - **The runtime's UA sheet** (`kWidgetUAStylesheet`, unlayered, after litehtml's master): `<q>`'s marks, the `[dir]`
@@ -900,11 +924,11 @@ reader select of the published layout, built on the widget's queue while its bub
 | Random bytes | 65,536 per `getRandomValues` | `Crypto.h` `kMaxRandomBytes` | `QuotaExceededError` | Web Crypto's |
 | Clone depth | 1,000 nested values | `StructuredClone.h` `kMaxCloneDepth` | `DataCloneError` | no native recursion without bound |
 | A `CSS.supports` value or condition | 16,384 UTF-16 units, 64 nested blocks (the selector parser's caps) | `CSSComponents.h` `kMaxSelectorUnits`, `kMaxBracketDepth` | `false` | a browser answers `false` for what it cannot parse; bounds the tokenizer's and componentizer's native work |
-| ICU handles | 32 per runtime | `Intl.h` `kIntlCacheSize` | the least recently used is closed | Intl's native state stays bounded whatever a widget constructs |
-| A string handed to ICU | 1,048,576 UTF-16 code units (a list's items together) | `Intl.h` `kMaxIntlString` | `RangeError` | bounds the copies made for ICU and its work |
-| A locale tag | 157 bytes (ICU's `ULOC_FULLNAME_CAPACITY`) | `Intl.h` `kMaxLocaleTag` | `RangeError` | ICU's buffers are fixed-size |
+| A string handed to the `intl` host | 1,048,576 UTF-16 code units (a list's items together) | `Intl.h` `kMaxIntlString` | `RangeError` | bounds a request and the host's work |
+| An `intl` answer | 4 MiB | `Intl.h` `kMaxIntlAnswer` | `RangeError` | bounds what the host's answer makes in the JS heap |
+| A locale tag | 157 bytes | `Intl.h` `kMaxLocaleTag` | `RangeError` | bounds the tag every request and object carries |
 | Distinct tags in a locale list | 128 | `Intl.h` `kMaxLocaleList` | `RangeError` | the list is deduplicated through a hash set; no request needs more |
-| Items a `ListFormat` reads | 10,000 | `Intl.h` `kMaxListItems` | `RangeError`, the iterator closed | units alone let a million empty strings through, each a native allocation in ICU |
+| Items a `ListFormat` reads | 10,000 | `Intl.h` `kMaxListItems` | `RangeError`, the iterator closed | units alone let a million empty strings through, each a string the host makes |
 | A free-form Intl option (`timeZone`, `currency`, `unit`, …) | 64 UTF-16 units | `getStringOption`'s `maxLength` | `RangeError` | every one has a shorter grammar |
 | Keyframes | 10,000 per effect, 10,000 values in a property's list, 512 properties per keyframe (the first by name), values of 4,096 UTF-16 units, property keys of 128, easing text of 4,096 | `KeyframeEffect.h`, `Easing.h` `kMaxEasingText` | `RangeError` (counts), `TypeError` (lengths); properties past 512 dropped | the reference's `processKeyframes` |
 | Rendered animations | the first 1,024 live animations with a target, in tracking order; 64 keyframes and 64 properties of each; 16 KiB of declarations per element, which count toward the render's 1 MiB | `AnimationState.h` | not rendered (`animation-limit` once) / left out | the reference renderer's caps; litehtml keeps the text on the system heap |
@@ -1057,14 +1081,17 @@ M1d's, from the old runtime (spec §10.1):
   (`Blob.slice`, `AbortSignal.timeout`); there is no `FileReader` and no `AbortSignal.any`.
 - **Intl diverges in places** (V5b): `formatRange`, `formatRangeToParts`, `selectRange`, the `formatToParts` of
   `RelativeTimeFormat` and `ListFormat`, `Segmenter`, `DisplayNames`, `Locale`, `DurationFormat` and
-  `supportedValuesOf` are absent; a resolved locale drops its `-u-` extension (the `numberingSystem` and `calendar`
-  options are honored); a string handed to `NumberFormat.format` goes through `ToNumber`; a time zone resolves to
-  ICU's canonical (CLDR) id (`Asia/Calcutta`, not `Asia/Kolkata`: the IANA lookup is ICU 74, above the floor), and an
-  offset time zone (`+01:00`) is a `RangeError`. A `numberingSystem` ICU does not have as digits falls back to the
-  locale's own. A `Collator` sets only the attributes its options give, so a locale's tailoring stands (Danish sorts
-  upper case first, Thai ignores punctuation) and `resolvedOptions` reports it. Known gap: ICU 69 (iOS 15) has not
-  been run, and the number skeletons for `roundingMode: 'halfCeil'` / `'halfFloor'` may be refused there (a
-  `RangeError` at format, on iOS 15 only).
+  `supportedValuesOf` are absent. A tag's unicode extension (`-u-nu-arab`, `-u-ca-…`, `-u-hc-…`) is dropped; the
+  `numberingSystem`, `calendar` and `hourCycle` options are the way to ask. What the glue formats is Foundation's, and
+  it formats only what widget-sandbox's
+  shim asks it for: no compact, scientific or unit notation, `roundingMode`, `roundingIncrement` or
+  `trailingZeroDisplay` (accepted and reported, not applied); a `calendar` or `numberingSystem` is reported, the glue
+  formats Gregorian in Latin digits; `caseFirst` and `ignorePunctuation` do not reach the comparison; quarters are
+  English words, and months elsewhere; a unit list is a narrow conjunction (widget-sandbox's docs/changes.md, v0.1.1,
+  lists the glue's own approximations). Locale tags are canonicalized in case only (no alias is replaced) and every
+  valid tag is supported; a time zone the glue does not know formats in the device's, and only a name that cannot be
+  one (`+01:00`, `../x`) is a `RangeError`. A string handed to `NumberFormat.format` goes through `ToNumber`, and a
+  BigInt reaches the glue as a number.
 
 Two things the M1d plan wrote otherwise keep the old runtime's behaviour, so they are not divergences: the host CSS
 goes with litehtml's master sheet (an author's rules win over it, as with `LHDocument`'s `MasterWithCSS`), and a
@@ -1145,6 +1172,8 @@ Host tests, from the repo root:
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeTests \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeBindingTests \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeIntlCasesTests \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeBidiTests \
+  //third-party/widget-sandbox:WidgetSandboxIntlTests \
   //build-system/WidgetIDL:WidgetIDLTests //third-party/quickjs-ng:QuickJSHostTests \
   //third-party/gumbo:GumboHtml5libTests --test_output=errors
 ./build-input/bazel-9.2.0-darwin-arm64 test //third-party/gumbo:GumboForkTests   # alone: its timing case is flaky under load

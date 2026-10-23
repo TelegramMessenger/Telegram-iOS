@@ -18,10 +18,10 @@ void noteCreated(JSContext* ctx) {
 
 namespace {
 
-/// The host of a runtime made without one: its clocks read zero, it logs nothing, and it refuses every script source.
+/// The host of a runtime made without one: its clocks read zero, it logs nothing, it refuses every script source, and it has
+/// no locale data.
 class RefusingHost final : public Host {
 public:
-    std::string defaultTimeZone() override { return "UTC"; }
     double monotonicNow() override { return 0; }
     double wallClockNow() override { return 0; }
     void log(LogLevel, std::string_view) override {}

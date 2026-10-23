@@ -1352,7 +1352,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
 47. **Bidi reordering of a line's items, phase 2 of right-to-left** (2026-10-22, fidelity plan, Task 13).
     - **47.1** `document_container::bidi_levels(runs, rtl, levels)`: a hook (default: false, the logical order kept)
       that answers each unit's embedding level from the line's text (UAX #9 up to rule I2). WidgetRuntime's container
-      answers from ICU's `ubidi`; the test container leaves it unset.
+      answers from its own UAX #9 (`Sources/Render/Bidi.cpp`: ICU's `ubidi` is not public API on iOS); the test
+      container leaves it unset.
     - **47.2** `line_box::reorder_bidi`, called after the first pass of `finish` (alignment and justification already
       laid out): a unit is one content item (a text piece, or an atomic inline as U+FFFC) with the inline start and
       continuation edges before it and the end edges after it; rule L2 reverses runs from the highest level down to the

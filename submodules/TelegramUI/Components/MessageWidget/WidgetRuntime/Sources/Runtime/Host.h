@@ -65,9 +65,12 @@ public:
     /// Web Crypto (V5a plan, Task 1): `count` cryptographically random bytes into `out`. The default is the system's
     /// (arc4random_buf). It must not throw.
     virtual void randomBytes(uint8_t* out, size_t count) { arc4random_buf(out, count); }
-    /// The IANA name of the time zone a widget's `Intl` formats in by default (V5b plan, Task 1). No default: a host
-    /// that forgot it would ship UTC.
-    virtual std::string defaultTimeZone() = 0;
+    /// widget-sandbox's `intl` capability: a request as its shim sends one (`{"kind":…,"locale":…,"opts":{…},…}`,
+    /// Sources/Host/Intl.h) and the answer as its glue gives it: the formatted text, or JSON for the parts and options
+    /// kinds. All of Intl's locale data comes from here; the app's is widget-sandbox's iOS glue, Foundation's
+    /// formatters. Synchronous, on the widget's queue, inside a step, charged before it is asked. It must not throw. The
+    /// default has no locale data and answers "".
+    virtual std::string intl(std::string_view requestJson) { return {}; }
 };
 
 } // namespace wr

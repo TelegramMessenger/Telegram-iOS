@@ -136,10 +136,18 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 - **Rendering follows Chromium's answers, as widget-sandbox's conformance set encodes them**, held by the harness's
   ratchet. Its one partly is upstream's: a `data:` PNG in `auto/05-colour-backgrounds-b` has a bad CRC, which Chromium
   draws and ImageIO refuses. Right-to-left covers `direction`, `dir` (`auto` included) and each line's bidi order from
-  ICU (`document_container::bidi_levels`), not floats, absolutely positioned static positions or table columns. A
+  our UAX #9 (`WidgetRuntime/Sources/Render/Bidi.cpp`, `document_container::bidi_levels`), not floats, absolutely
+  positioned static positions or table columns. A
   `calc()` mixing a percentage with a length is a counted tree in `css_length` (16 bytes) of at most 64 nodes, because
   a cached declaration's one tree is evaluated for every element it styles at every layout. What still differs: the
   runtime record's "Rendering fidelity".
+- **Intl's locale data is widget-sandbox's iOS glue, never ICU's formatting API.** The runtime keeps ECMA-402's option
+  handling and asks `Host::intl` for everything locale-dependent, with the request upstream's shim sends; the session
+  delegate (`MessageWidgetCore`'s `session(_:intl:)`) answers through `WidgetSandboxIntl`
+  (`third-party/widget-sandbox/ios/`, Foundation only). App Store review rejects libicucore's
+  `unumf_*`/`udat_*`/`ucol_*`/`ubidi_*`: they link, but only what the SDK's `unicode/*.h` declare is public.
+  `build-system/Make/ICUImportCheck.py` fails `Make.py build` on any other libicucore import; bidi is our UAX #9
+  (`WidgetRuntime/Sources/Render/Bidi.cpp`). The runtime record's Intl section has the protocol and the divergences.
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; every later call answers its empty default. A stop or failure
   after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer` keeps its
@@ -279,7 +287,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   `…/MessageWidget:MessageWidgetCorpusTests` (the corpus check above), `…/WidgetRuntimeIOS:WidgetRuntimeIOSTests`,
   `//third-party/twidget:TwidgetRenderingTests`, `//submodules/TelegramCore:TelegramCoreTests`
   (`TelegramMediaWidgetTests`, `LocalWidgetMessagesTests`), `//submodules/ChatListUI:ChatListUITests` (the preview
-  text); the harness: `./build-input/bazel-9.2.0-darwin-arm64 test //Tests/WidgetHarness:WidgetHarnessTests
+  text), the Intl glue alone on the host (`./build-input/bazel-9.2.0-darwin-arm64 test
+  //third-party/widget-sandbox:WidgetSandboxIntlTests`); the harness: `./build-input/bazel-9.2.0-darwin-arm64 test //Tests/WidgetHarness:WidgetHarnessTests
   //Tests/WidgetHarness:WidgetHarnessUITests`; host: `./build-input/bazel-9.2.0-darwin-arm64 test
   //third-party/twidget:TwidgetForkTests //third-party/twidget:TwidgetLitehtmlSmokeTests
   //third-party/quickjs-ng:QuickJSWorkTests //third-party/quickjs-ng:QuickJSSmokeTests`, and the cost suite optimized,

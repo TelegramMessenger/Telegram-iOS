@@ -113,7 +113,6 @@ public:
     explicit WRProductionHost(WRSession* session) : m_session(session) {}
     double monotonicNow() override { return CACurrentMediaTime() * 1000; }
     double wallClockNow() override { return [NSDate date].timeIntervalSince1970 * 1000; }
-    std::string defaultTimeZone() override { return std::string([NSTimeZone localTimeZone].name.UTF8String ?: "UTC"); }
     void log(wr::LogLevel level, std::string_view line) override;
     void diagnostic(std::string_view kind, std::string_view detail) override;
     void bridgeCall(std::string_view method, std::string_view argsJson) override;
@@ -121,6 +120,7 @@ public:
         return area == "session" ? m_sessionPreload : area == "local" ? m_localPreload : std::vector<std::pair<std::string, std::string>>{};
     }
     void storageCommit(std::string_view area, const std::vector<std::pair<std::string, std::string>>& entries) override;
+    std::string intl(std::string_view requestJson) override;
     /// The client's stored areas (setStoragePreloadLocal:session:), read once at the widget's first touch of each.
     std::vector<std::pair<std::string, std::string>> m_localPreload;
     std::vector<std::pair<std::string, std::string>> m_sessionPreload;
@@ -771,6 +771,17 @@ void WRProductionHost::diagnostic(std::string_view kind, std::string_view detail
 void WRProductionHost::bridgeCall(std::string_view method, std::string_view argsJson) {
     WRSession* session = m_session;
     [delegate session:session bridge:text(method) args:text(argsJson)];
+}
+
+std::string WRProductionHost::intl(std::string_view requestJson) {
+    WRSession* session = m_session;
+    id<WRSessionDelegate> d = delegate;
+    if (![d respondsToSelector:@selector(session:intl:)]) {
+        return {};
+    }
+    // By length: a list item's U+0000 is in the answer too.
+    NSData* answer = [[d session:session intl:text(requestJson)] dataUsingEncoding:NSUTF8StringEncoding];
+    return answer ? std::string(static_cast<const char*>(answer.bytes), answer.length) : std::string();
 }
 
 void WRProductionHost::storageCommit(std::string_view area, const std::vector<std::pair<std::string, std::string>>& entries) {
