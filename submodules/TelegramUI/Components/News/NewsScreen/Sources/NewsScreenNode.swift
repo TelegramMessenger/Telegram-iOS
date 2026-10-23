@@ -104,6 +104,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.forYou = NewsForYouFeedBinding(context: context)
         self.added = NewsAddedFeedBinding(context: context)
+        // For you is the server's; without it the tab opens on Added, which is built on the device.
+        if !isNewsFeedServerAvailable(appConfiguration: context.currentAppConfiguration.with { $0 }) {
+            self.selectedSegment = 1
+        }
 
         super.init()
 
@@ -112,8 +116,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.addSubnode(self.listsContainerNode)
         self.listsContainerNode.view.addSubview(self.forYouList)
         self.listsContainerNode.view.addSubview(self.addedList)
-        self.addedList.isHidden = true
-        self.addedOverlayView.isHidden = true
+        self.forYouList.isHidden = self.selectedSegment != 0
+        self.addedList.isHidden = self.selectedSegment != 1
+        self.addedOverlayView.isHidden = self.addedList.isHidden
         self.view.addSubview(self.edgeEffectView)
         self.view.addSubview(self.headerView)
         self.headerView.addPageOverlay(self.addedOverlayView)

@@ -187,13 +187,13 @@ final class NewsFeedSupportTests: XCTestCase {
         return configuration
     }
 
-    func testNewsIsForDevOnly() {
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: AppConfiguration.defaultValue))
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: nil)))
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 0.0)))
-        XCTAssertTrue(isNewsFeedEnabled(appConfiguration: self.configuration(nil, dev: 1.0)))
+    func testServerFeedIsForDevOnly() {
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: AppConfiguration.defaultValue))
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: nil)))
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 0.0)))
+        XCTAssertTrue(isNewsFeedServerAvailable(appConfiguration: self.configuration(nil, dev: 1.0)))
         // The kill switch alone does not enable it.
-        XCTAssertFalse(isNewsFeedEnabled(appConfiguration: self.configuration(.bool(true), dev: nil)))
+        XCTAssertFalse(isNewsFeedServerAvailable(appConfiguration: self.configuration(.bool(true), dev: nil)))
     }
 
     func testKillSwitchFollowsABool() {

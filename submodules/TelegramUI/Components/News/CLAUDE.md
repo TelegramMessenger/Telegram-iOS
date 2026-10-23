@@ -49,3 +49,18 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   (`NewsExpandedPostContentView.hasInteractiveContent`); a tap on plain bubble text comes back as the item's
   click-through and opens the post. The screen's page swipe yields to a strip that can scroll
   (`NewsFeedListView.hasHorizontalScrollingRow`), otherwise the gallery could never be scrolled left.
+
+## The tab without the server's feed (2026-10-23)
+
+`isNewsFeedEnabled` (the tab) now follows only the `news_feed_enabled` kill switch; the server's feed is a
+separate question, `isNewsFeedServerAvailable` (the app config's `dev == 1`, as before). The server grants
+`dev` per authorization and only to sessions created by the official app: a build signed with a personal team
+and api_id never gets it, and the official api_id/api_hash in such a build is refused at login. So without
+`dev` the Added page runs on `AddedFeedSource.localChannels` (`LocalChannelsFeedContextImpl` in TelegramCore): the
+60 most recently active subscribed broadcast channels (main and archived chat lists), each one's latest 20 posts
+through the account's view tracker (holes are filled with `messages.getHistory` as a chat does), merged newest
+first by `EngineFeedPosition`, live. Load older asks every channel for 20 more, up to 100; nothing is ever
+"newer" than the live window, so the New posts pill never shows; the read mark is kept under its own cache key
+(`localChannelsFeedFilterId = -1`) and never sent to the server. The screen opens on Added in that case; For you
+stays the server's and shows its error row for accounts without the feed. The UI is the same in both modes:
+`NewsAddedFeedBinding` chooses the source, nothing else changes.
