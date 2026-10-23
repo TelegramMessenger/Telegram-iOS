@@ -56,7 +56,9 @@ from hls.js (D1–D14), the failure policy, the logs and the measurements are in
   check a new format against `extractFFMpegMediaInfo` before widening what the parser accepts. Its bytes come from the
   network, so it never traps or walks an unbounded count: every size and time is checked for overflow and the samples
   it reads are bounded (`maximumSampleCount`), and any such input goes to FFmpeg (`testCorruptedBoxesNeverTrap` and
-  the overflow tests in `HLSFragmentTimingTests`).
+  the overflow tests in `HLSFragmentTimingTests`). An audio edit list (AAC priming) is read only for plain AAC-LC
+  at the track's timescale (`plainAACSampleRate`): FFmpeg adds the skipped priming back at the codec's sample rate,
+  which for HE-AAC can differ from the timescale, so any other config stays FFmpeg's.
 - **`ChunkMediaPlayerV2`'s temp-file readers (HLS parts only)** open a part that holds a seek target at the keyframe
   before it and skip non-reference frames until the target, and probe only their own stream. Both are scoped by the
   content kind; other players' readers are unchanged. FFmpeg's mov seek searches decode times, so after it the video

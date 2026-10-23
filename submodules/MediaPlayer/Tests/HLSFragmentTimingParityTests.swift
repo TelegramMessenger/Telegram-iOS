@@ -6,7 +6,7 @@ import HLSPlayback
 // HLSFragmentTiming reads an HLS part's timing from its boxes instead of FFmpeg's probe (`extractFFMpegMediaInfo`),
 // and must give what the probe gives. The fixtures come from the ffmpeg CLI: fragment and fragment720 (no edit lists),
 // fragment-videoedit (an edit list on the video track only, as Telegram's segments have), fragment-edit (edit lists on
-// both tracks, the audio one marking AAC priming). fragment-edit was made with
+// both tracks, the audio one marking 1024 samples of AAC-LC priming, which FFmpeg skips). fragment-edit was made with
 //   ffmpeg -f lavfi -i testsrc2=size=64x64:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 2 \
 //     -c:v libx264 -bf 2 -g 25 -c:a aac -b:a 32k -movflags +empty_moov+delay_moov+default_base_moof \
 //     -frag_duration 100000000 fragment-edit.mp4
@@ -35,7 +35,7 @@ final class HLSFragmentTimingParityTests: XCTestCase {
     }
 
     func testTheBoxesGiveTheProbesTiming() throws {
-        for name in ["fragment", "fragment720", "fragment-videoedit"] {
+        for name in ["fragment", "fragment720", "fragment-videoedit", "fragment-edit"] {
             let path = try self.path(name)
             let parsed = try XCTUnwrap(HLSFragmentTiming.parse(try Data(contentsOf: URL(fileURLWithPath: path))), name)
             let expected = try self.probe(path)
@@ -43,10 +43,5 @@ final class HLSFragmentTimingParityTests: XCTestCase {
             self.assertEqual(parsed.audio, expected.audio, "\(name) audio")
             XCTAssertEqual(parsed.videoCodecName, expected.videoCodecName, name)
         }
-    }
-
-    // FFmpeg skips priming samples rather than starting before them; the parser leaves such a part to it.
-    func testAnAudioEditListIsLeftToTheProbe() throws {
-        XCTAssertNil(HLSFragmentTiming.parse(try Data(contentsOf: URL(fileURLWithPath: try self.path("fragment-edit")))))
     }
 }

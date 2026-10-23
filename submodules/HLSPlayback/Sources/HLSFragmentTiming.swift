@@ -2,11 +2,12 @@ import Foundation
 
 // A part's track timing read from its fMP4 boxes (the init's `moov`, the segment's `moof`) instead of probing it with
 // FFmpeg: what `extractFFMpegMediaInfo` reports for such a part, per track, start = the first sample's presentation
-// time (its decode time plus composition offset, less the edit list's media time) and duration = the end of its decode
-// times (`tfdt` plus the sample durations) less that start. Nil for any shape outside the one HLS segments come in (more
-// than one `moof`, a track split over several `traf`s, an edit list other than one plain entry, a negative composition
-// offset, an unknown video codec) and for bytes no honest segment holds (a malformed box, a time that overflows, more
-// samples than `maximumSampleCount`): the caller then asks FFmpeg.
+// time (its decode time plus composition offset, less the edit list's media time; for AAC priming FFmpeg adds that
+// back as skipped samples) and duration = the end of its decode times (`tfdt` plus the sample durations) less that
+// start. Nil for any shape outside the one HLS segments come in (more than one `moof`, a track split over several
+// `traf`s, an edit list other than one plain entry, an audio edit list on anything but plain AAC-LC at the track's
+// timescale, a negative composition offset, an unknown video codec) and for bytes no honest segment holds (a malformed
+// box, a time that overflows, more samples than `maximumSampleCount`): the caller then asks FFmpeg.
 public enum HLSFragmentTiming {
     public struct Track: Equatable {
         public var start: Double
@@ -36,6 +37,8 @@ public enum HLSFragmentTiming {
         var handler: String = ""
         var sampleEntry: String?
         var editMediaTime: Int64 = 0
+        // The sample rate of an mp4a entry whose esds holds plain AAC-LC (see `plainAACSampleRate`).
+        var plainAACSampleRate: Int?
     }
 
     private struct Fragment {
@@ -183,12 +186,18 @@ public enum HLSFragmentTiming {
                     }
                 } else if track.handler == "soun" && !sawAudio {
                     sawAudio = true
-                    // An audio edit list marks priming samples, which FFmpeg skips rather than starting before.
+                    // An audio edit list marks AAC priming. FFmpeg skips it as samples and adds them back to the start at
+                    // the codec's sample rate, so for plain AAC-LC at the track's timescale the start is the first
+                    // sample's decode time; any other codec or rate is FFmpeg's (HE-AAC's rate can be twice the core's).
+                    var timedTrack = track
                     if track.editMediaTime != 0 {
-                        return nil
+                        guard let sampleRate = track.plainAACSampleRate, sampleRate == Int(track.timescale) else {
+                            return nil
+                        }
+                        timedTrack.editMediaTime = 0
                     }
                     if let fragment = fragments[track.trackId], fragment.firstPresentationTime != nil {
-                        guard let timing = HLSFragmentTiming.timing(track: track, fragment: fragment) else {
+                        guard let timing = HLSFragmentTiming.timing(track: timedTrack, fragment: fragment) else {
                             return nil
                         }
                         info.audio = timing
@@ -218,6 +227,9 @@ public enum HLSFragmentTiming {
             track.handler = handler
             if let minf = self.child("minf", in: mdia), let stbl = self.child("stbl", in: minf), let stsd = self.child("stsd", in: stbl), let entryCount = self.u32(stsd.lowerBound + 4), entryCount > 0 {
                 track.sampleEntry = self.fourCC(stsd.lowerBound + 12)
+                if handler == "soun", track.sampleEntry == "mp4a", stsd.lowerBound + 8 <= stsd.upperBound, let entry = self.children(stsd.lowerBound + 8 ..< stsd.upperBound)?.first {
+                    track.plainAACSampleRate = self.plainAACSampleRate(entry: entry.1)
+                }
             }
             if let edts = self.child("edts", in: trak), let elst = self.child("elst", in: edts) {
                 guard let version = self.u8(elst.lowerBound), let count = self.u32(elst.lowerBound + 4), count == 1 else {
@@ -242,6 +254,74 @@ public enum HLSFragmentTiming {
                 track.editMediaTime = mediaTime
             }
             return track
+        }
+
+        // The sample rate of an mp4a sample entry (version 0) whose esds describes MPEG-4 audio (0x40) with an
+        // AudioSpecificConfig of plain AAC-LC: object type 2, a table sample rate, a channel configuration of 1–7, no
+        // core coder or extension flag, and nothing after it but a sync extension that signals SBR as absent. Nil for
+        // anything else, HE-AAC included.
+        func plainAACSampleRate(entry: Range<Int>) -> Int? {
+            // SampleEntry (6 reserved, data reference index), AudioSampleEntry (version, 6 reserved, channel count,
+            // sample size, 4 reserved, sample rate), then its boxes.
+            guard entry.lowerBound + 28 <= entry.upperBound, self.u8(entry.lowerBound + 8) == 0, self.u8(entry.lowerBound + 9) == 0, let esds = self.child("esds", in: entry.lowerBound + 28 ..< entry.upperBound), esds.lowerBound + 4 <= esds.upperBound else {
+                return nil
+            }
+            guard let es = self.descriptor(tag: 0x03, in: esds.lowerBound + 4 ..< esds.upperBound), let esFlags = self.u8(es.lowerBound + 2) else {
+                return nil
+            }
+            var position = es.lowerBound + 3
+            if esFlags & 0x80 != 0 {
+                position += 2
+            }
+            if esFlags & 0x40 != 0 {
+                guard let length = self.u8(position) else {
+                    return nil
+                }
+                position += 1 + Int(length)
+            }
+            if esFlags & 0x20 != 0 {
+                position += 2
+            }
+            guard position <= es.upperBound, let decoderConfig = self.descriptor(tag: 0x04, in: position ..< es.upperBound), decoderConfig.lowerBound + 13 <= decoderConfig.upperBound, self.u8(decoderConfig.lowerBound) == 0x40, let config = self.descriptor(tag: 0x05, in: decoderConfig.lowerBound + 13 ..< decoderConfig.upperBound) else {
+                return nil
+            }
+            var bits = BitReader(bytes: self.bytes, range: config)
+            guard bits.read(5) == 2, let frequencyIndex = bits.read(4), frequencyIndex < HLSFragmentTiming.aacSampleRates.count, let channels = bits.read(4), channels >= 1 && channels <= 7, bits.read(1) != nil, bits.read(1) == 0, bits.read(1) == 0 else {
+                return nil
+            }
+            if bits.remaining > 0 {
+                guard bits.read(11) == 0x2b7, bits.read(5) == 5, bits.read(1) == 0, bits.isRestZero else {
+                    return nil
+                }
+            }
+            return HLSFragmentTiming.aacSampleRates[frequencyIndex]
+        }
+
+        // The body of the first descriptor in `range` (ISO 14496-1: a tag, then a size of up to four 7-bit bytes) if
+        // its tag is `tag`; nil when it runs past `range`.
+        func descriptor(tag: UInt8, in range: Range<Int>) -> Range<Int>? {
+            guard range.lowerBound < range.upperBound, self.u8(range.lowerBound) == tag else {
+                return nil
+            }
+            var position = range.lowerBound + 1
+            var size = 0
+            for index in 0 ..< 4 {
+                guard position < range.upperBound, let byte = self.u8(position) else {
+                    return nil
+                }
+                position += 1
+                size = (size << 7) | Int(byte & 0x7f)
+                if byte & 0x80 == 0 {
+                    break
+                }
+                if index == 3 {
+                    return nil
+                }
+            }
+            guard size <= range.upperBound - position else {
+                return nil
+            }
+            return position ..< position + size
         }
 
         func parseTrackFragment(_ traf: Range<Int>, defaultDurations: [UInt32: UInt32]) -> Fragment? {
@@ -350,6 +430,49 @@ public enum HLSFragmentTiming {
         }
         let timescale = Double(track.timescale)
         return Track(start: Double(start) / timescale, duration: Double(max(0, duration)) / timescale)
+    }
+
+    // MPEG-4 Audio's sampling frequency table (ISO 14496-3), by index.
+    static let aacSampleRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350]
+
+    // Reads big-endian bits within a byte range.
+    private struct BitReader {
+        let bytes: UnsafeRawBufferPointer
+        let range: Range<Int>
+        private var bitPosition = 0
+
+        init(bytes: UnsafeRawBufferPointer, range: Range<Int>) {
+            self.bytes = bytes
+            self.range = range
+        }
+
+        var remaining: Int {
+            return self.range.count * 8 - self.bitPosition
+        }
+
+        var isRestZero: Bool {
+            var copy = self
+            while copy.remaining > 0 {
+                if copy.read(1) != 0 {
+                    return false
+                }
+            }
+            return true
+        }
+
+        // Nil past the end.
+        mutating func read(_ count: Int) -> Int? {
+            guard count <= self.remaining else {
+                return nil
+            }
+            var value = 0
+            for _ in 0 ..< count {
+                let byte = self.bytes[self.range.lowerBound + self.bitPosition / 8]
+                value = (value << 1) | Int((byte >> (7 - UInt8(self.bitPosition % 8))) & 1)
+                self.bitPosition += 1
+            }
+            return value
+        }
     }
 
     // The name `resolveFFMpegCodecName` gives the codec FFmpeg identifies from this sample entry.

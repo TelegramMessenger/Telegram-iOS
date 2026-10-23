@@ -156,17 +156,23 @@ bytes still missing.
   less the edit list's media time, and the end of the decode times, as FFmpeg's probe reports them (its start is the
   first packet's, `index_entries[0]`, not the earliest: open-GOP leading pictures present before it). Only the shape
   Telegram's segments come in is read (one `moof`, one `traf` per track, no edit list or one plain entry on the video
-  track, no negative composition offset); anything else, an audio edit list marking priming included, goes to FFmpeg's
+  track, no negative composition offset, an audio edit list only for plain AAC, below); anything else goes to FFmpeg's
   probe as before, and so do bytes no honest segment holds (a size past its box, a time that overflows, more than
   `maximumSampleCount` samples): segment bytes come from the network, and the parser must never trap or walk an
   unbounded count. Matched to the
   microsecond on 26 real 720p and 1080p segments of the test video (against ffprobe; 6 of them against the vendored
   FFmpeg's probe), on ffmpeg-CLI fixtures, and on 64 real parts cut from the simulator's cache of 45 quality files
-  (AV1 29, H.264 28, HEVC 7; ffprobe 9.0.2, start and `extractFFMpegMediaInfo`'s `duration − start`). The other 34
-  parts of that cache carry an audio edit list marking AAC priming (media time 2112 or 1024, on AV1 and H.264 quality
-  files) and are left to the probe, as are both such videos of the device run below. FFmpeg's start for them adds the
-  priming back as skipped samples at the codec's sample rate (`update_initial_timestamps`), which the boxes alone do
-  not give for HE-AAC.
+  (AV1 29, H.264 28, HEVC 7; ffprobe 9.0.2, start and `extractFFMpegMediaInfo`'s `duration − start`).
+- **AAC priming is read for plain AAC only.** About a third of the quality files (15 of 45 in the simulator's cache,
+  AV1 and H.264 ones) carry an audio edit list marking the encoder's priming (media time 2112 or 1024). FFmpeg does not
+  move the timeline for it: mov sets the media time as samples to skip (`start_pad`, `skip_samples`), and the stream's
+  start adds them back at the codec's sample rate (`update_initial_timestamps`). With plain AAC-LC at the track's
+  timescale the two cancel, so the start is the first sample's decode time and the length the sum of its durations;
+  the parser reads the mp4a entry's esds (MPEG-4 audio, an AudioSpecificConfig of object type 2, a table rate equal to
+  the timescale, channels 1–7, no core coder or extension flag, and nothing after it but a sync extension saying SBR
+  is absent) and leaves everything else to the probe: HE-AAC (FFmpeg's rate can then be twice the core's), any other
+  config, a rate that differs from the timescale. All 34 primed parts of that cache (AAC-LC 44.1 kHz, 2- and 5-byte
+  configs) and the `fragment-edit` fixture match: 74 of 74 cached parts with the parser reading them all.
 - **A seek inside a part decodes from the keyframe before it** (`ChunkMediaPlayerV2`, temp-file parts only): the
   part's readers open with a direct seek to the target, and the video decoder skips non-reference frames
   (`AVDISCARD_NONREF`) until the first packet at or after the target, which no frame at or after the target precedes

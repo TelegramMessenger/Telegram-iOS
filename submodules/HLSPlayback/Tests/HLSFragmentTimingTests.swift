@@ -23,6 +23,9 @@ final class HLSFragmentTimingTests: XCTestCase {
         var sampleSizes = true
         // A version 1 edit list of one entry with this media time, in place of `edits`.
         var largeEditMediaTime: Int64? = nil
+        // An mp4a sample entry with this AudioSpecificConfig in its esds, at this sample rate; nil: an empty entry.
+        var audioSpecificConfig: [UInt8]? = nil
+        var sampleRate: UInt32 = 48000
     }
 
     private func u32(_ value: UInt32) -> Data {
@@ -45,7 +48,7 @@ final class HLSFragmentTimingTests: XCTestCase {
         let tkhd = self.fullBox("tkhd", self.u32(0) + self.u32(0) + self.u32(spec.trackId) + Data(count: 68))
         let mdhd = self.fullBox("mdhd", self.u32(0) + self.u32(0) + self.u32(spec.timescale) + self.u32(0) + Data(count: 4))
         let hdlr = self.fullBox("hdlr", self.u32(0) + Data(spec.handler.utf8) + Data(count: 13))
-        let stsd = self.fullBox("stsd", self.u32(1) + self.box(spec.sampleEntry, Data(count: 8)))
+        let stsd = self.fullBox("stsd", self.u32(1) + self.sampleEntry(spec))
         let minf = self.box("minf", self.box("stbl", stsd))
         var trak = tkhd
         if let mediaTime = spec.largeEditMediaTime {
@@ -59,6 +62,24 @@ final class HLSFragmentTimingTests: XCTestCase {
         }
         trak += self.box("mdia", mdhd + hdlr + minf)
         return self.box("trak", trak)
+    }
+
+    // A descriptor of the esds (ISO 14496-1), its size in one byte.
+    private func descriptor(_ tag: UInt8, _ body: Data) -> Data {
+        return Data([tag, UInt8(body.count)]) + body
+    }
+
+    private func sampleEntry(_ spec: TrackSpec) -> Data {
+        guard let config = spec.audioSpecificConfig else {
+            return self.box(spec.sampleEntry, Data(count: 8))
+        }
+        // SampleEntry (6 reserved, data reference index), AudioSampleEntry version 0 (8 reserved, channel count, sample
+        // size, 4 reserved, sample rate 16.16), then the esds: ES (id, flags), DecoderConfig (MPEG-4 audio, audio
+        // stream, buffer size, bit rates), DecoderSpecificInfo (the config), SLConfig.
+        var entry = Data(count: 6) + Data([0, 1]) + Data(count: 8) + Data([0, 2, 0, 16]) + Data(count: 4) + self.u32(spec.sampleRate << 16)
+        let decoderConfig = self.descriptor(0x04, Data([0x40, 0x15, 0, 0, 0]) + self.u32(128_000) + self.u32(128_000) + self.descriptor(0x05, Data(config)))
+        entry += self.fullBox("esds", self.descriptor(0x03, Data([0, 2, 0]) + decoderConfig + self.descriptor(0x06, Data([0x02]))))
+        return self.box(spec.sampleEntry, entry)
     }
 
     private func traf(_ spec: TrackSpec) -> Data {
@@ -145,7 +166,8 @@ final class HLSFragmentTimingTests: XCTestCase {
         XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(edits: [(500, -1), (0, 2000)]), self.audio()])))
         XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(edits: [(4000, 2000)]), self.audio()])))
         XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(sampleEntry: "mp4v"), self.audio()])))
-        // An audio edit list marks priming samples, which FFmpeg skips.
+        // An audio edit list marks priming samples, which FFmpeg skips at the codec's sample rate: without a config to
+        // read it from, the part is FFmpeg's.
         XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(), self.audio(edits: [(0, 1024)])])))
     }
 
@@ -203,13 +225,50 @@ final class HLSFragmentTimingTests: XCTestCase {
 
     // Every byte of the boxes set to 0x00 and to 0xFF in turn: the parser returns, with timing or nil.
     func testCorruptedBoxesNeverTrap() {
-        let whole = self.part([self.video(), self.audio()])
-        for index in 0 ..< whole.count - 24 {
-            for value: UInt8 in [0x00, 0xff] {
-                var corrupted = whole
-                corrupted[index] = value
-                _ = HLSFragmentTiming.parse(corrupted)
+        for whole in [self.part([self.video(), self.audio()]), self.part([self.video(), self.primedAudio(config: [0x11, 0x88, 0x56, 0xe5, 0x00])])] {
+            for index in 0 ..< whole.count - 24 {
+                for value: UInt8 in [0x00, 0xff] {
+                    var corrupted = whole
+                    corrupted[index] = value
+                    _ = HLSFragmentTiming.parse(corrupted)
+                }
             }
         }
+    }
+
+    // AAC at 48 kHz with 2112 priming samples marked by its edit list, in this AudioSpecificConfig.
+    private func primedAudio(config: [UInt8], sampleRate: UInt32 = 48000) -> TrackSpec {
+        var audio = self.audio(edits: [(0, 2112)])
+        audio.audioSpecificConfig = config
+        audio.sampleRate = sampleRate
+        return audio
+    }
+
+    // FFmpeg skips priming as samples and adds them back to the start at the codec's sample rate: for plain AAC at the
+    // track's timescale, the start is the first sample's decode time (measured on 34 real parts and a fixture).
+    func testPlainAACPrimingStartsAtTheFirstSamplesDecodeTime() throws {
+        // AAC-LC, 48 kHz, stereo.
+        let info = try XCTUnwrap(HLSFragmentTiming.parse(self.part([self.video(), self.primedAudio(config: [0x11, 0x90])])))
+        let audio = try XCTUnwrap(info.audio)
+        XCTAssertEqual(audio.start, 75_922_432.0 / 48000.0, accuracy: 1e-9)
+        XCTAssertEqual(audio.duration, 3072.0 / 48000.0, accuracy: 1e-9)
+    }
+
+    // A config that signals SBR explicitly as absent (sync extension 0x2b7, SBR, not present) is plain AAC.
+    func testAnExplicitNoSBRExtensionIsPlainAAC() throws {
+        let info = try XCTUnwrap(HLSFragmentTiming.parse(self.part([self.video(), self.primedAudio(config: [0x11, 0x88, 0x56, 0xe5, 0x00])])))
+        XCTAssertEqual(info.audio?.start ?? 0.0, 75_922_432.0 / 48000.0, accuracy: 1e-9)
+    }
+
+    // FFmpeg's sample rate for HE-AAC can be twice the core rate, and anything else needs FFmpeg's config parser.
+    func testPrimingOtherThanPlainAACIsLeftToFFmpeg() {
+        // HE-AAC (object type 5).
+        XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(), self.primedAudio(config: [0x2b, 0x10, 0x88, 0x00])])))
+        // AAC-LC with SBR signalled present (sync extension, SBR, present, 48 kHz extension).
+        XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(), self.primedAudio(config: [0x13, 0x10, 0x56, 0xe5, 0x98])])))
+        // AAC-LC at 44.1 kHz in a 48 kHz track.
+        XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(), self.primedAudio(config: [0x12, 0x10])])))
+        // A channel configuration of 0 (a program config element follows).
+        XCTAssertNil(HLSFragmentTiming.parse(self.part([self.video(), self.primedAudio(config: [0x11, 0x80])])))
     }
 }
