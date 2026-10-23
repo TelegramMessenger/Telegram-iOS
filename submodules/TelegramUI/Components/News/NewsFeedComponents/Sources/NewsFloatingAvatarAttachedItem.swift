@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import ComponentFlow
+import Display
 import CoreList
 import AccountContext
 import TelegramCore
@@ -59,6 +60,7 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
     private var item: NewsFloatingAvatarAttachedItem
     private let avatar = ComponentView<Empty>()
     private var restingFrame = CGRect()
+    private var hasAppeared = false
 
     public var onContentDidChange: ((Bool) -> Void)?
     /// The scrolled gallery under this avatar's column, if any, in this view's coordinates: its frame and how far
@@ -101,6 +103,12 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
             avatarView.frame = frame
         }
         self.applyObstacle()
+        if !self.hasAppeared {
+            self.hasAppeared = true
+            // Fades in: on a morph from compact the row's own avatar grows into this place underneath, and the
+            // floating one must not cover it before it has arrived.
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.45)
+        }
         return metrics.avatarTop + metrics.avatarSize + metrics.bottomInset
     }
 

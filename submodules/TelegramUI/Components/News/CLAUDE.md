@@ -18,10 +18,17 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   News sets it (docs/context-menu-liquid-morph.md).
 - **One component, two layouts.** `NewsFeedPostComponent` keeps its compact layout untouched in `updateCompact`
   and adds `updateExpanded`; the avatar, channel name, badge and time are the *same* `ComponentView`s, restyled
-  and moved. A mode change is one animated CoreList pass (`NewsScreenNode.displayModeTransition`, the 0.5 s
-  spring) in which the row's height rides the spring while its content **crossfades**: the row as it was is
-  snapshotted, the new layout is applied at once, and the snapshot fades out over it. Do not give the two modes
-  different item identities or component types: CoreList would replace the row instead of animating its height.
+  and moved, so a mode change is one animated CoreList pass (`NewsScreenNode.displayModeTransition`, the 0.5 s
+  spring) in which their frames travel and the row's height rides the spring. `morph(from:to:transition:)` adds
+  the rest: the compact text scales 15 → 17 pt and travels to the bubble's text origin while the bubble fades in
+  over it, the thumbnail travels into the gallery's first photo (its layer keeps the aspect meanwhile), and the
+  row's own avatar grows 16 → 36 pt under the floating one, which fades in and then owns it. The reverse plays
+  the same paths back. Do not give the two modes different item identities or component types: CoreList would
+  replace the row instead of animating it.
+- **The bubble container never animates its height.** The item inside is turned by π about the container's
+  centre, so a height that animates shows the item above its place by the growth at first (Show more pushed the
+  text up). Its origin never changes between layouts, so an immediate frame keeps the content put while the
+  rows below move.
 - **The bubble is the chat's own.** The expanded text, link preview, polls and files are a real
   `ChatMessageItemImpl` node from `SharedAccountContext.makeChatMessageFeedItem`, the preview factory with
   `ChatMessageFeedItemActions` (links, media, peers, Instant View, click-through) routed to the screen. Three

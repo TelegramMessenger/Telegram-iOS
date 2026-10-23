@@ -224,6 +224,8 @@ public final class NewsFeedPostComponent: Component {
         /// The floating avatars of the runs this row is in (`NewsFloatingAvatarAttachedItem`), told where the
         /// row's gallery is so they keep out of it.
         private var floatingAvatarViews: [NewsFloatingAvatarView] = []
+        /// The update in progress switches the mode: the layouts animate their shared views and `morph` runs.
+        private var isMorphing = false
         /// The time as last laid out.
         private var renderedTimeText: String?
         private var timeTimer: SwiftSignalKit.Timer?
@@ -256,6 +258,8 @@ public final class NewsFeedPostComponent: Component {
             self.thumbnailView.layer.cornerRadius = NewsPostRowMetrics.thumbnailCornerRadius
             self.thumbnailView.layer.cornerCurve = .continuous
             self.thumbnailView.clipsToBounds = true
+            // Its frame animates into the gallery's first photo and back: the drawn image keeps its aspect meanwhile.
+            self.thumbnailView.layer.contentsGravity = .resizeAspectFill
             self.lensView.addSubview(self.thumbnailView)
             // "▶ 0:12" on a video's thumbnail: no background, a soft shadow (Feed2 FeedRow.swift:436-442).
             self.videoLabel.isHidden = true
@@ -778,9 +782,20 @@ public final class NewsFeedPostComponent: Component {
                     self.lensView.addSubview(avatarView)
                 }
                 // The list draws an expanded row's avatar, floating over its channel's run (the row's attachment);
-                // the row keeps its own in place, hidden, so a switch back to compact finds it where it was.
-                avatarView.isHidden = true
-                transition.setFrame(view: avatarView, frame: avatarFrame)
+                // the row keeps its own in place, hidden, so a switch back to compact finds it where it was. On the
+                // morph from compact it grows into place first and hides once the floating one is over it.
+                if !self.isMorphing {
+                    avatarView.isHidden = true
+                    avatarView.frame = avatarFrame
+                } else {
+                    avatarView.isHidden = false
+                    transition.setFrame(view: avatarView, frame: avatarFrame, completion: { [weak self, weak avatarView] _ in
+                        guard let self, self.component?.displayMode == .expanded else {
+                            return
+                        }
+                        avatarView?.isHidden = true
+                    })
+                }
             }
             let titleFrame = centred(x: contentX, size: titleSize)
             if let titleView = self.title.view {
@@ -814,19 +829,102 @@ public final class NewsFeedPostComponent: Component {
             return (CGSize(width: width, height: layout.height), separator, postText)
         }
 
+        /// What a mode morph starts from: the row's geometry before the new layout.
+        private struct MorphOrigin {
+            let textFrame: CGRect?
+            let thumbnailFrame: CGRect?
+            let bubbleTextOrigin: CGPoint?
+            let galleryItemFrame: CGRect?
+        }
+
+        private func morphOrigin() -> MorphOrigin {
+            var bubbleTextOrigin: CGPoint?
+            var galleryItemFrame: CGRect?
+            if let contentView = self.expandedContentView, contentView.superview != nil {
+                bubbleTextOrigin = contentView.bubbleTextOrigin.map { contentView.convert($0, to: self.lensView) }
+                galleryItemFrame = contentView.firstGalleryItemFrame.map { contentView.convert($0, to: self.lensView) }
+            }
+            return MorphOrigin(
+                textFrame: self.text.view.flatMap { $0.superview != nil && !$0.isHidden && $0.alpha > 0.0 ? $0.frame : nil },
+                thumbnailFrame: self.thumbnailView.isHidden || self.thumbnailView.alpha == 0.0 ? nil : self.thumbnailView.frame,
+                bubbleTextOrigin: bubbleTextOrigin,
+                galleryItemFrame: galleryItemFrame
+            )
+        }
+
+        /// The compact and expanded layouts morph into each other: the avatar, name, badge and time are shared
+        /// views whose frames animate; the compact text scales (15 → 17 pt) and travels to where the bubble's text
+        /// starts while the bubble fades in over it, and the thumbnail travels into the gallery's first photo. The
+        /// reverse plays the same paths backwards. `origin` is the row before the new layout was applied.
+        private func morph(from origin: MorphOrigin, to displayMode: NewsFeedDisplayMode, transition: ComponentTransition) {
+            let textScale = 17.0 / 15.0
+            switch displayMode {
+            case .expanded:
+                guard let contentView = self.expandedContentView else {
+                    return
+                }
+                if let textView = self.text.view, let textFrame = origin.textFrame, let target = contentView.bubbleTextOrigin.map({ contentView.convert($0, to: self.lensView) }) {
+                    // Top-left corners meet: the scale is about the centre, so the centre travels to where the
+                    // scaled text's centre would be.
+                    let targetCenter = CGPoint(x: target.x + textFrame.width * textScale * 0.5, y: target.y + textFrame.height * textScale * 0.5)
+                    textView.frame = textFrame
+                    textView.alpha = 0.0
+                    transition.animatePosition(view: textView, from: CGPoint(x: textFrame.midX, y: textFrame.midY), to: targetCenter)
+                    transition.animateScale(view: textView, from: 1.0, to: textScale)
+                    transition.animateAlpha(view: textView, from: 1.0, to: 0.0)
+                } else if let textView = self.text.view {
+                    textView.alpha = 0.0
+                }
+                if let thumbnailFrame = origin.thumbnailFrame, let target = contentView.firstGalleryItemFrame.map({ contentView.convert($0, to: self.lensView) }) {
+                    self.thumbnailView.isHidden = false
+                    self.thumbnailView.alpha = 1.0
+                    self.thumbnailView.frame = thumbnailFrame
+                    transition.setFrame(view: self.thumbnailView, frame: target, completion: { [weak self] _ in
+                        guard let self, self.component?.displayMode == .expanded else {
+                            return
+                        }
+                        self.thumbnailView.isHidden = true
+                    })
+                    transition.animateAlpha(view: self.thumbnailView, from: 1.0, to: 0.0, delay: 0.0)
+                    self.thumbnailView.alpha = 0.0
+                }
+                self.videoLabel.alpha = 0.0
+                contentView.alpha = 1.0
+                transition.animateAlpha(view: contentView, from: 0.0, to: 1.0)
+            case .compact:
+                if let textView = self.text.view, let origin = origin.bubbleTextOrigin {
+                    let textFrame = textView.frame
+                    let fromCenter = CGPoint(x: origin.x + textFrame.width * textScale * 0.5, y: origin.y + textFrame.height * textScale * 0.5)
+                    textView.alpha = 1.0
+                    transition.animatePosition(view: textView, from: fromCenter, to: CGPoint(x: textFrame.midX, y: textFrame.midY))
+                    transition.animateScale(view: textView, from: textScale, to: 1.0)
+                    transition.animateAlpha(view: textView, from: 0.0, to: 1.0)
+                } else if let textView = self.text.view {
+                    textView.alpha = 1.0
+                    transition.animateAlpha(view: textView, from: 0.0, to: 1.0)
+                }
+                if !self.thumbnailView.isHidden {
+                    let thumbnailFrame = self.thumbnailView.frame
+                    self.thumbnailView.alpha = 1.0
+                    if let from = origin.galleryItemFrame {
+                        transition.animatePosition(view: self.thumbnailView, from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: thumbnailFrame.midX, y: thumbnailFrame.midY))
+                        transition.animateBoundsSize(view: self.thumbnailView, from: from.size, to: thumbnailFrame.size)
+                    }
+                    transition.animateAlpha(view: self.thumbnailView, from: 0.0, to: 1.0)
+                }
+                self.videoLabel.alpha = 1.0
+                transition.animateAlpha(view: self.videoLabel, from: 0.0, to: 1.0)
+            }
+        }
+
         func update(component: NewsFeedPostComponent, availableSize: CGSize, state: EmptyComponentState, transition: ComponentTransition) -> CGSize {
             let isFirstUpdate = self.component == nil
-            // A switch between compact and expanded crossfades: the row as it was is kept in a snapshot that fades
-            // out over the new layout, laid out at once. The views moving between the two layouts read badly.
-            let crossfades = !isFirstUpdate && self.component?.displayMode != component.displayMode && !transition.animation.isImmediate
-            var snapshotView: UIView?
-            if crossfades, let snapshot = self.lensView.snapshotView(afterScreenUpdates: false) {
-                snapshot.frame = self.lensView.frame
-                snapshot.isUserInteractionEnabled = false
-                self.contentView.addSubview(snapshot)
-                snapshotView = snapshot
+            let morphs = !isFirstUpdate && self.component?.displayMode != component.displayMode && !transition.animation.isImmediate
+            let origin = morphs ? self.morphOrigin() : nil
+            self.isMorphing = morphs
+            defer {
+                self.isMorphing = false
             }
-            let contentTransition: ComponentTransition = crossfades ? .immediate : transition
             self.component = component
             self.state = state
             let theme = component.theme
@@ -840,16 +938,12 @@ public final class NewsFeedPostComponent: Component {
             let separatorFrame: CGRect
             let postText: NSAttributedString
             if component.displayMode == .expanded, let expanded = component.expanded {
-                (rowSize, separatorFrame, postText) = self.updateExpanded(component: component, content: expanded, availableSize: availableSize, timeText: timeText, transition: contentTransition)
+                (rowSize, separatorFrame, postText) = self.updateExpanded(component: component, content: expanded, availableSize: availableSize, timeText: timeText, transition: transition)
             } else {
-                (rowSize, separatorFrame, postText) = self.updateCompact(component: component, availableSize: availableSize, timeText: timeText, transition: contentTransition)
+                (rowSize, separatorFrame, postText) = self.updateCompact(component: component, availableSize: availableSize, timeText: timeText, transition: transition)
             }
-            if let snapshotView {
-                self.lensView.alpha = 0.0
-                transition.setAlpha(view: self.lensView, alpha: 1.0)
-                transition.setAlpha(view: snapshotView, alpha: 0.0, completion: { [weak snapshotView] _ in
-                    snapshotView?.removeFromSuperview()
-                })
+            if let origin {
+                self.morph(from: origin, to: component.displayMode, transition: transition)
             }
 
             self.separatorLayer.backgroundColor = theme.list.itemPlainSeparatorColor.cgColor

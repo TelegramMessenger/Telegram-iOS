@@ -279,6 +279,17 @@ final class NewsExpandedPostContentView: UIView {
         return self.galleryView.scrolledDistance
     }
     var galleryScrolled: (() -> Void)?
+    /// Where the bubble's text starts, in this view, while the post has a bubble: a row morphing its compact text
+    /// into the bubble's aims here.
+    private(set) var bubbleTextOrigin: CGPoint?
+    /// The first gallery item's frame in this view, as shown now (the gallery's scrolling included): the compact
+    /// row's thumbnail morphs into it and out of it.
+    var firstGalleryItemFrame: CGRect? {
+        guard let galleryFrame = self.galleryFrame, !self.galleryView.isHidden, let first = self.galleryItemViews.first else {
+            return nil
+        }
+        return CGRect(origin: CGPoint(x: galleryFrame.minX + first.frame.minX - self.galleryView.contentOffset.x, y: galleryFrame.minY + first.frame.minY), size: first.frame.size)
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -441,14 +452,19 @@ final class NewsExpandedPostContentView: UIView {
                 let contentFrame = (itemNode as? ChatMessageItemView)?.contentFrame() ?? CGRect(origin: CGPoint(x: 3.0, y: itemNode.insets.top), size: nodeSize)
                 let textLeading = contentFrame.minX + metrics.bubbleTextLeadingInset - 3.0
                 let containerFrame = CGRect(origin: CGPoint(x: contentX - textLeading, y: nextY - metrics.bubbleTextTopInset - contentFrame.minY), size: nodeSize)
-                transition.setFrame(view: self.bubbleContainerNode.view, frame: containerFrame)
+                // Never animated: the item inside is turned by π about the container's centre, so a height that
+                // animates shows the item above its place by the growth at first (Show more pushed the text up).
+                // The origin never changes between layouts, so the content stays put and the rows below move.
+                self.bubbleContainerNode.view.frame = containerFrame
                 self.bubbleContainerNode.view.isHidden = false
+                self.bubbleTextOrigin = CGPoint(x: contentX, y: nextY)
                 nextY = containerFrame.minY + contentFrame.maxY - metrics.bubbleTextTopInset
             }
         } else if let itemNode = self.bubbleItemNode {
             itemNode.removeFromSupernode()
             self.bubbleItemNode = nil
             self.bubbleContainerNode.view.isHidden = true
+            self.bubbleTextOrigin = nil
         }
 
         if showsShowMore {
