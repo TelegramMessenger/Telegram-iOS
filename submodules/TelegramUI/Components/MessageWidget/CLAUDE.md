@@ -147,7 +147,10 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (`third-party/widget-sandbox/ios/`, Foundation only). App Store review rejects libicucore's
   `unumf_*`/`udat_*`/`ucol_*`/`ubidi_*`: they link, but only what the SDK's `unicode/*.h` declare is public.
   `build-system/Make/ICUImportCheck.py` fails `Make.py build` on any other libicucore import; bidi is our UAX #9
-  (`WidgetRuntime/Sources/Render/Bidi.cpp`). The runtime record's Intl section has the protocol and the divergences.
+  (`WidgetRuntime/Sources/Render/Bidi.cpp`). **A request never carries a unicode extension** (`intl::resolveLocale`):
+  on a tag like `ar-EG-u-nu-arab` upstream's glue and Foundation itself trap, which crashes the app. Passing
+  extensions on waits for upstream's glue to build its locale with `Locale.Components`; see widget-sandbox's
+  VENDOR.md. The runtime record's Intl section has the protocol and the divergences.
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; every later call answers its empty default. A stop or failure
   after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer` keeps its

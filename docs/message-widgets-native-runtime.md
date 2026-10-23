@@ -651,11 +651,19 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `MessageWidgetCore`'s session delegate hands it each request (`WRSessionDelegate session:intl:`); a session without
     one has no locale data and formats "".
   - **The locale** a request names is the first requested tag (UTS 35's case), else the host's (`HostState::locale`,
-    the app's language), **never with a unicode extension**: Foundation's `Locale(identifier:)` misreads one
-    (`ar-EG-u-nu-arab` becomes `ar-EG-u-nu`, whose formatters have no pattern) and the glue traps on the nil pattern,
-    which would take the app down; `testTheExtremesAreAnswered` holds the glue to every other shape. With no list of
-    available locales, every structurally valid tag is one, as in the shim, and `supportedLocalesOf` answers the
-    canonical requested tags. `resolvedOptions` takes what needs
+    the app's language), **never with a unicode extension**, because one can take the app down. The glue builds its
+    `Locale` with `Locale(identifier:)`. Foundation's identifier parsing drops a numbering system's 4-letter value:
+    `ar-EG-u-nu-arab` becomes `ar_EG@numbers=yes`, and `fa-u-nu-arab`, `hi-IN-u-nu-deva` and
+    `en-u-nu-latn-ca-gregory` go the same way (`canonicalIdentifier(from:)` and `identifier(.icu, from:)` too).
+    Formatters for such a locale are broken: `DateFormatter.dateFormat` and the `NumberFormatter` symbols are nil,
+    which the glue force-unwraps, and `RelativeDateTimeFormatter.localizedString(from:)` traps inside Foundation. So
+    guarding the glue would not be enough: the locale must not be built. Tags without a unicode extension are safe
+    (`testTheExtremesAreAnswered`; a fuzz of 1,500 random tags across every request kind). `Locale(components:
+    Locale.Components(identifier:))` (iOS 16+) parses such tags and formats with the extension applied (digits,
+    calendar, hour cycle), and upstream's own fixture still passes with it. That fix belongs in the glue, which is
+    vendored unedited; once upstream's glue builds its locale that way, a request may keep its extension on iOS 16 and
+    later. With no list of available locales, every structurally valid tag is one, as in the shim, and
+    `supportedLocalesOf` answers the canonical requested tags. `resolvedOptions` takes what needs
     locale data from the glue's answer where it has one (the locale it formats in, a currency's digits, a date's fields
     and time zone) and the rest from ECMA-402's resolution of the options here; PluralRules' `pluralCategories` are the
     categories the glue's rules give a set of samples.

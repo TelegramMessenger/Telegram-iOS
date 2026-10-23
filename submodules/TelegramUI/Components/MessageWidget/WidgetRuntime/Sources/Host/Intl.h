@@ -57,8 +57,11 @@ IntlState& intlState(JSContext* ctx);
 std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst locales);
 /// The locale a request names: the first requested tag, else the host's locale (HostState::locale(), the app's
 /// language) when it is a valid tag, else "en-US"; without its unicode extensions either way. The host's glue makes it
-/// its formatters' locale, and Foundation's Locale misreads a unicode extension ("ar-EG-u-nu-arab" is "ar-EG-u-nu",
-/// whose formatters have no pattern, on which the glue traps); the options carry what ECMA-402 lets an extension set.
+/// its formatters' Locale(identifier:), which misreads some unicode extensions ("ar-EG-u-nu-arab" is
+/// "ar_EG@numbers=yes"). The glue force-unwraps that locale's nil patterns and symbols, and Foundation's
+/// RelativeDateTimeFormatter traps on it: either takes the app down. The options carry what ECMA-402 lets an extension
+/// set. (Upstream's glue would be safe with Locale(components: Locale.Components(identifier:)), iOS 16+; then the
+/// extensions could stay there. widget-sandbox VENDOR.md.)
 /// With no list of available locales here, every structurally valid tag is taken as one (widget-sandbox's shim does
 /// the same).
 std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested);

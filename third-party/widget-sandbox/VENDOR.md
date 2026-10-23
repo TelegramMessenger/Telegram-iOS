@@ -57,10 +57,19 @@ Taken:
   delegation" section of `packages/ios/Sources/WidgetSandbox/SandboxEngine.swift`, after an `import Foundation`, and
   `PluralRules.swift`), which answers WidgetRuntime's Intl requests in the app (`:WidgetSandboxIntl`). Foundation only:
   ICU's formatting API is not public on iOS, which is why upstream delegates Intl to the host. `ios/WidgetSandboxIntl.swift`
-  is ours: the public entry, and the one member of upstream's `SandboxEngine` the section reads. Upstream's glue traps
-  on a locale tag with a unicode extension (Foundation's `Locale` turns `ar-EG-u-nu-arab` into a locale whose
-  formatters have no pattern, which the glue force-unwraps), and upstream's shim passes tags as written: WidgetRuntime
-  never sends one (`intl::resolveLocale`).
+  is ours: the public entry, and the one member of upstream's `SandboxEngine` the section reads.
+
+  **Upstream's glue traps on a locale tag with a unicode extension** (still so at v0.1.2, whose Intl section is the
+  same as v0.1.1's). Upstream's shim passes tags as written, so on upstream's own client one widget line crashes the
+  app. The glue's `Locale(identifier:)` turns `ar-EG-u-nu-arab` into `ar_EG@numbers=yes`. The glue force-unwraps the
+  resulting nil `dateFormat` (`plainConnector(formatter.dateFormat, …)`) and `NumberFormatter` symbols (`numberParts`),
+  and `RelativeDateTimeFormatter` traps inside Foundation itself. WidgetRuntime never sends a unicode extension
+  (`intl::resolveLocale`).
+
+  The fix is upstream's to make: build the locale with `Locale(components: Locale.Components(identifier:))` (iOS 16+).
+  With it, the crashing requests format with their extensions applied, and `intl-cases.json` still passes on macOS 27,
+  iOS 26.5 and iOS 27.0. When a vendored version has it, `resolveLocale` may keep extensions on iOS 16 and later.
+  The runtime record's Intl section has the details.
 
   ```sh
   git -C ~/build/widget-sandbox show "$V":packages/ios/Sources/WidgetSandbox/SandboxEngine.swift \
