@@ -599,7 +599,11 @@ public final class NewsFeedPostComponent: Component {
                 if avatarView.superview == nil {
                     self.lensView.addSubview(avatarView)
                 }
-                transition.setFrame(view: avatarView, frame: layout.avatar)
+                if self.isMorphing {
+                    avatarView.frame = layout.avatar
+                } else {
+                    transition.setFrame(view: avatarView, frame: layout.avatar)
+                }
             }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
@@ -784,18 +788,8 @@ public final class NewsFeedPostComponent: Component {
                 // The list draws an expanded row's avatar, floating over its channel's run (the row's attachment);
                 // the row keeps its own in place, hidden, so a switch back to compact finds it where it was. On the
                 // morph from compact it grows into place first and hides once the floating one is over it.
-                if !self.isMorphing {
-                    avatarView.isHidden = true
-                    avatarView.frame = avatarFrame
-                } else {
-                    avatarView.isHidden = false
-                    transition.setFrame(view: avatarView, frame: avatarFrame, completion: { [weak self, weak avatarView] _ in
-                        guard let self, self.component?.displayMode == .expanded else {
-                            return
-                        }
-                        avatarView?.isHidden = true
-                    })
-                }
+                avatarView.isHidden = !self.isMorphing
+                avatarView.frame = avatarFrame
             }
             let titleFrame = centred(x: contentX, size: titleSize)
             if let titleView = self.title.view {
@@ -831,10 +825,13 @@ public final class NewsFeedPostComponent: Component {
 
         /// What a mode morph starts from: the row's geometry before the new layout.
         private struct MorphOrigin {
+            let avatarFrame: CGRect?
             let textFrame: CGRect?
             let thumbnailFrame: CGRect?
             let bubbleTextOrigin: CGPoint?
             let galleryItemFrame: CGRect?
+            /// The expanded content on its way out (a morph to compact): blurred as it fades.
+            weak var expandedContentView: NewsExpandedPostContentView?
         }
 
         private func morphOrigin() -> MorphOrigin {
@@ -845,11 +842,46 @@ public final class NewsFeedPostComponent: Component {
                 galleryItemFrame = contentView.firstGalleryItemFrame.map { contentView.convert($0, to: self.lensView) }
             }
             return MorphOrigin(
+                avatarFrame: self.avatar.view?.frame,
                 textFrame: self.text.view.flatMap { $0.superview != nil && !$0.isHidden && $0.alpha > 0.0 ? $0.frame : nil },
                 thumbnailFrame: self.thumbnailView.isHidden || self.thumbnailView.alpha == 0.0 ? nil : self.thumbnailView.frame,
                 bubbleTextOrigin: bubbleTextOrigin,
-                galleryItemFrame: galleryItemFrame
+                galleryItemFrame: galleryItemFrame,
+                expandedContentView: self.expandedContentView
             )
+        }
+
+        /// Blurs a layer from one radius to another over the morph; a blur ending at 0 removes its filter afterwards.
+        private func animateBlur(layer: CALayer, from: CGFloat, to: CGFloat, duration: Double) {
+            guard let filter = CALayer.blur() else {
+                return
+            }
+            filter.setValue(to as NSNumber, forKey: "inputRadius")
+            layer.filters = [filter]
+            let animation = CABasicAnimation(keyPath: "filters.gaussianBlur.inputRadius")
+            animation.fromValue = from as NSNumber
+            animation.toValue = to as NSNumber
+            animation.duration = duration
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.isRemovedOnCompletion = true
+            if to == 0.0 {
+                animation.delegate = LensBlurCleanup(layer: layer)
+            }
+            layer.add(animation, forKey: "newsMorphBlur")
+        }
+
+        /// The avatar is drawn at its new size already (the component re-rendered it): it scales from the old size
+        /// over the new drawing and travels from the old centre, so nothing is re-laid out mid-flight.
+        private func morphAvatar(from oldFrame: CGRect, transition: ComponentTransition, completion: (() -> Void)? = nil) {
+            guard let avatarView = self.avatar.view, oldFrame.width > 0.0 else {
+                completion?()
+                return
+            }
+            let newFrame = avatarView.frame
+            transition.animatePosition(view: avatarView, from: CGPoint(x: oldFrame.midX, y: oldFrame.midY), to: CGPoint(x: newFrame.midX, y: newFrame.midY))
+            transition.animateScale(view: avatarView, from: oldFrame.width / max(1.0, newFrame.width), to: 1.0, completion: { _ in
+                completion?()
+            })
         }
 
         /// The compact and expanded layouts morph into each other: the avatar, name, badge and time are shared
@@ -858,10 +890,27 @@ public final class NewsFeedPostComponent: Component {
         /// reverse plays the same paths backwards. `origin` is the row before the new layout was applied.
         private func morph(from origin: MorphOrigin, to displayMode: NewsFeedDisplayMode, transition: ComponentTransition) {
             let textScale = 17.0 / 15.0
+            let blurRadius: CGFloat = 8.0
+            var duration = 0.4
+            if case let .curve(value, _) = transition.animation {
+                duration = min(value, 0.45)
+            }
             switch displayMode {
             case .expanded:
                 guard let contentView = self.expandedContentView else {
                     return
+                }
+                if let oldAvatarFrame = origin.avatarFrame {
+                    self.morphAvatar(from: oldAvatarFrame, transition: transition, completion: { [weak self] in
+                        guard let self, self.component?.displayMode == .expanded else {
+                            return
+                        }
+                        self.avatar.view?.isHidden = true
+                    })
+                }
+                self.animateBlur(layer: contentView.layer, from: blurRadius, to: 0.0, duration: duration)
+                if let textView = self.text.view {
+                    self.animateBlur(layer: textView.layer, from: 0.0, to: blurRadius, duration: duration)
                 }
                 if let textView = self.text.view, let textFrame = origin.textFrame, let target = contentView.bubbleTextOrigin.map({ contentView.convert($0, to: self.lensView) }) {
                     // Top-left corners meet: the scale is about the centre, so the centre travels to where the
@@ -892,6 +941,15 @@ public final class NewsFeedPostComponent: Component {
                 contentView.alpha = 1.0
                 transition.animateAlpha(view: contentView, from: 0.0, to: 1.0)
             case .compact:
+                if let oldAvatarFrame = origin.avatarFrame {
+                    self.morphAvatar(from: oldAvatarFrame, transition: transition)
+                }
+                if let leaving = origin.expandedContentView {
+                    self.animateBlur(layer: leaving.layer, from: 0.0, to: blurRadius, duration: duration)
+                }
+                if let textView = self.text.view {
+                    self.animateBlur(layer: textView.layer, from: blurRadius, to: 0.0, duration: duration)
+                }
                 if let textView = self.text.view, let origin = origin.bubbleTextOrigin {
                     let textFrame = textView.frame
                     let fromCenter = CGPoint(x: origin.x + textFrame.width * textScale * 0.5, y: origin.y + textFrame.height * textScale * 0.5)
