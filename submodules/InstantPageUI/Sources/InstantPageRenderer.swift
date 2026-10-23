@@ -2911,7 +2911,7 @@ private func findTextItem(
             }
         case let .table(table):
             for cell in table.cells {
-                let cellAbs = cell.frame.offsetBy(dx: f.minX + table.contentInset, dy: f.minY)
+                let cellAbs = cell.frame.offsetBy(dx: f.minX + table.contentInset, dy: f.minY + (table.titleFrame?.height ?? 0.0))
                 if !cellAbs.contains(point) { continue }
                 if let sub = cell.subLayout {
                     if let hit = findTextItem(in: sub, point: point,
@@ -2924,7 +2924,7 @@ private func findTextItem(
                 let titleAbs = titleFrame.offsetBy(dx: f.minX + table.contentInset, dy: f.minY)
                 if titleAbs.contains(point) {
                     if let hit = findTextItem(in: titleLayout, point: point,
-                                              accumulatedOffset: CGPoint(x: titleAbs.minX, y: titleAbs.minY)) {
+                                              accumulatedOffset: CGPoint(x: titleAbs.minX + v2TableCellInsets.left, y: titleAbs.minY + v2TableCellInsets.top)) {
                         return hit
                     }
                 }
@@ -2989,14 +2989,14 @@ private func findAnchorFrame(
         case let .table(table):
             for cell in table.cells {
                 if let sub = cell.subLayout {
-                    let cellOffset = CGPoint(x: f.minX + table.contentInset + cell.frame.minX, y: f.minY + cell.frame.minY)
+                    let cellOffset = CGPoint(x: f.minX + table.contentInset + cell.frame.minX, y: f.minY + (table.titleFrame?.height ?? 0.0) + cell.frame.minY)
                     if let hit = findAnchorFrame(in: sub, name: name, accumulatedOffset: cellOffset) {
                         return hit
                     }
                 }
             }
             if let titleLayout = table.titleSubLayout, let titleFrame = table.titleFrame {
-                let titleOffset = CGPoint(x: f.minX + table.contentInset + titleFrame.minX, y: f.minY + titleFrame.minY)
+                let titleOffset = CGPoint(x: f.minX + table.contentInset + v2TableCellInsets.left, y: f.minY + titleFrame.minY + v2TableCellInsets.top)
                 if let hit = findAnchorFrame(in: titleLayout, name: name, accumulatedOffset: titleOffset) {
                     return hit
                 }
@@ -3046,8 +3046,8 @@ private func collectSelectableTextItems(
         case let .table(table):
             if let titleLayout = table.titleSubLayout, let titleFrame = table.titleFrame {
                 let titleOffset = CGPoint(
-                    x: accumulatedOffset.x + table.frame.minX + table.contentInset + titleFrame.minX,
-                    y: accumulatedOffset.y + table.frame.minY + titleFrame.minY
+                    x: accumulatedOffset.x + table.frame.minX + table.contentInset + v2TableCellInsets.left,
+                    y: accumulatedOffset.y + table.frame.minY + titleFrame.minY + v2TableCellInsets.top
                 )
                 collectSelectableTextItems(in: titleLayout, accumulatedOffset: titleOffset, into: &result)
             }
@@ -3055,7 +3055,7 @@ private func collectSelectableTextItems(
                 if let sub = cell.subLayout {
                     let cellOffset = CGPoint(
                         x: accumulatedOffset.x + table.frame.minX + table.contentInset + cell.frame.minX,
-                        y: accumulatedOffset.y + table.frame.minY + cell.frame.minY
+                        y: accumulatedOffset.y + table.frame.minY + (table.titleFrame?.height ?? 0.0) + cell.frame.minY
                     )
                     collectSelectableTextItems(in: sub, accumulatedOffset: cellOffset, into: &result)
                 }
