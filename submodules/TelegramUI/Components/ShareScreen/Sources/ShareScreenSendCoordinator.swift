@@ -328,6 +328,7 @@ final class ShareScreenSendCoordinator {
         }))
     }
 
+    private func awaitDelivery(messageIds: [EngineMessage.Id], peers: [EnginePeer], correlationIds: [Int64]) {
         let context = self.context
         let enqueued = self.enqueued
         let present: (ViewController) -> Void = { [weak self] controller in
