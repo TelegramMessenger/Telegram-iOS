@@ -220,8 +220,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     @objc private func deleteButtonPressed() {
         let sourceView: UIView
-        if let buttonPanelView = self.buttonPanel.view as? GlassControlPanelComponent.View, let itemView = buttonPanelView.rightItemView?.itemView(id: AnyHashable("delete")) {
-            sourceView = itemView
+        if let buttonPanelView = self.buttonPanel.view as? GlassControlPanelComponent.View, let rightItemView = buttonPanelView.rightItemView, rightItemView.itemView(id: AnyHashable("delete")) != nil {
+            sourceView = rightItemView.menuSourceView
         } else if let buttonPanelView = self.buttonPanel.view {
             sourceView = buttonPanelView
         } else {

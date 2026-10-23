@@ -530,6 +530,22 @@ public class GlassBackgroundView: UIView {
         return self.nativeView ?? self
     }
 
+    /// The glass's outline in its bounds, in the shape it was last laid out with. The rounding is drawn by the native
+    /// view (`layer.cornerRadius` there, not here), so a context menu that morphs out of this glass takes its outline
+    /// from this.
+    public var outlinePath: UIBezierPath? {
+        guard let shape = self.params?.shape else {
+            return nil
+        }
+        let bounds = self.bounds
+        switch shape {
+        case let .roundedRect(cornerRadius):
+            return UIBezierPath(roundedRect: bounds, cornerRadius: min(cornerRadius, min(bounds.width, bounds.height) * 0.5))
+        case .customRoundedRect:
+            return UIBezierPath(cgPath: GlassBackgroundView.generateRoundedRectPath(rect: bounds, cornerRadii: shape.cornerRadii(for: bounds.size)))
+        }
+    }
+
     public var contentView: UIView {
         if let nativeView = self.nativeView {
             return nativeView.contentView

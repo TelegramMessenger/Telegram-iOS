@@ -496,7 +496,6 @@ public final class ShareScreen: ViewControllerComponentContainer {
 
     fileprivate func presentAccountMenu(source: GlassContextExtractableContainer) {
         guard !self.sender.isSending, let configuration = self.externalConfiguration else { return }
-        source.morphsIntoContextMenu = true
         let data = self.context.sharedContext.currentPresentationData.with { $0 }
         let items: [ContextMenuItem] = configuration.accounts.map { account in
             .custom(AccountPeerContextItem(context: account.context, account: account.context.account, peer: account.peer, action: { [weak self] _, dismiss in

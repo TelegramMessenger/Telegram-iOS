@@ -2854,8 +2854,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         guard let self else {
                             return
                         }
-                        if let controlsView = self.buttons?.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, let sourceView = rightItemView.itemView(id: AnyHashable("more")) {
-                            self.searchOrMorePressed(view: sourceView, gesture: nil)
+                        if let controlsView = self.buttons?.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil {
+                            self.searchOrMorePressed(view: rightItemView.menuSourceView, gesture: nil)
                         }
                     }
                 ))

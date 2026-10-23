@@ -83,7 +83,9 @@ public final class LensTransitionContainer: UIView {
         self.originalSourceView = sourceView
         self.sourceSizeAtOpen = (sourceView as? ContextExtractableContainer)?.normalState.size
         self.sourceLease = ContextMenuSourceLease(source: sourceView, decorations: ContextReferenceContentNode.additionalSourceViews(for: sourceView), makeContent: ContextReferenceContentNode.makeSourceContent(for: sourceView))
-        let previewView = self.sourceLease?.content?.view ?? (sourceView as? GlassContextExtractableContainer)?.transitionView ?? sourceView
+        // A glass source morphs through its native effect view, so its backdrop goes with its content; the glass itself
+        // stays the source's identity, which outlives a native view `renewNativeView` replaces.
+        let previewView = self.sourceLease?.content?.view ?? (sourceView as? GlassContextExtractableContainer)?.transitionView ?? (sourceView as? GlassBackgroundView)?.transitionView ?? sourceView
         guard let source = LiquidMorphTransition.sourcePreview(for: previewView, parameters: parameters) else {
             self.restoreSourceViews()
             self.fadeIn(alongsideAnimations: alongsideAnimations)

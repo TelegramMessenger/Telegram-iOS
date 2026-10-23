@@ -98,6 +98,12 @@ public final class GlassBarButtonComponent: Component {
         
         private var component: GlassBarButtonComponent?
         
+        /// The source for a context menu this button opens: its glass, which morphs into the menu, or the button itself
+        /// in the generic state.
+        public var menuSourceView: UIView {
+            return self.glassBackgroundView ?? self
+        }
+        
         public override init(frame: CGRect) {
             self.containerView = HighlightTrackingButton()
             self.genericContainerView = UIView()
@@ -264,6 +270,7 @@ public final class GlassBarButtonComponent: Component {
                 } else {
                     glassBackgroundTransition = .immediate
                     glassBackgroundView = GlassBackgroundView()
+                    glassBackgroundView.morphsIntoContextMenu = true
                     self.glassContainerView.addSubview(glassBackgroundView)
                     self.glassBackgroundView = glassBackgroundView
                     
@@ -281,6 +288,7 @@ public final class GlassBarButtonComponent: Component {
                 } else {
                     glassBackgroundTransition = .immediate
                     glassBackgroundView = GlassBackgroundView()
+                    glassBackgroundView.morphsIntoContextMenu = true
                     self.glassContainerView.addSubview(glassBackgroundView)
                     self.glassBackgroundView = glassBackgroundView
                     

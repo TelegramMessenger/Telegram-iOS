@@ -2634,10 +2634,10 @@ private final class WalletTransactionContentComponent: Component {
                         action: { [weak self] in
                             guard let self,
                                   let controlsView = self.controlButtons.view as? GlassControlPanelComponent.View,
-                                  let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
+                                  let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil else {
                                 return
                             }
-                            self.openExplorer(sourceView: sourceView)
+                            self.openExplorer(sourceView: rightItemView.menuSourceView)
                         }
                     )],
                     background: controlsBackground
