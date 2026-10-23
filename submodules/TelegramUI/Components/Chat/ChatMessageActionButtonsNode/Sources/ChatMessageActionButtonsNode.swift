@@ -565,7 +565,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                                     themeColor: titleColor,
                                     loopMode: .forever
                                 ),
-                                isVisibleForAnimations: true,
+                                isVisibleForAnimations: context.sharedContext.energyUsageSettings.loopEmoji,
                                 action: nil
                             )),
                             environment: {},
