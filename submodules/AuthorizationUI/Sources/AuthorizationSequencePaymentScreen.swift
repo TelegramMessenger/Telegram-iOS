@@ -255,15 +255,19 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
             // iPhone Duo: one side's safe inset is the side strip; the content keeps to the band between the insets,
             // centered on the full width on the unfolded screen (authorizationContentBand). With equal insets these are
             // the old values.
-            let (bandMinX, bandWidth): (CGFloat, CGFloat)
+            let sideInset: CGFloat
+            let rightSideInset: CGFloat
+            let bandCenterX: CGFloat
             if environment.safeInsets.left != environment.safeInsets.right {
-                (bandMinX, bandWidth) = authorizationContentBand(size: availableSize, safeInsets: environment.safeInsets, deviceMetrics: environment.deviceMetrics)
+                let (bandMinX, bandWidth) = authorizationContentBand(size: availableSize, safeInsets: environment.safeInsets, deviceMetrics: environment.deviceMetrics)
+                sideInset = 16.0 + bandMinX
+                rightSideInset = 16.0 + availableSize.width - bandMinX - bandWidth
+                bandCenterX = bandMinX + bandWidth / 2.0
             } else {
-                (bandMinX, bandWidth) = (environment.safeInsets.left, availableSize.width - environment.safeInsets.left - environment.safeInsets.right)
+                sideInset = 16.0 + environment.safeInsets.left
+                rightSideInset = 16.0 + environment.safeInsets.right
+                bandCenterX = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             }
-            let sideInset: CGFloat = 16.0 + bandMinX
-            let rightSideInset: CGFloat = 16.0 + availableSize.width - bandMinX - bandWidth
-            let bandCenterX: CGFloat = bandMinX + bandWidth / 2.0
             
             let helpButtonSize = self.helpButton.update(
                 transition: transition,

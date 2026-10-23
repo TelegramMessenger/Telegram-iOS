@@ -70,7 +70,9 @@ These are the user's decisions; a screen that follows them is correct, one that 
    stays in the band too (it would otherwise pass under the corner block).
    The login flow on the unfolded screen is the exception: its content is centred on the full width, in line with its
    bottom button and the keyboard, inset by the larger side inset on both sides, when that leaves room for its 430pt
-   column (`authorizationContentBand` in AuthorizationUtils). Folded, it keeps to the band.
+   column (`authorizationContentBand` in AuthorizationUtils). Folded, it keeps to the band. This covers every
+   AuthorizationUI screen, also where Settings reuses them (Change Number, login email setup), and
+   `TwoFactorDataInputScreen` with an unauthorized engine (password recovery during login).
 3. **A button or panel anchored at the bottom spans the strip** and keeps clear only of a corner block that reaches
    its row, which at the bottom is only FL's bottom-right block (`bottomEdgeSideInsets()`). This covers primary
    bottom buttons, bottom toolbars, selection panels, short bottom sheets and their buttons.

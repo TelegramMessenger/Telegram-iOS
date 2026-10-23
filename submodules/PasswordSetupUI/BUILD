@@ -44,6 +44,7 @@ swift_library(
         "//submodules/LottieBinding:LottieBinding",
         "//submodules/LottieSettings:LottieSettings",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/AuthorizationUtils:AuthorizationUtils",
     ],
     visibility = [
         "//visibility:public",

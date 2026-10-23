@@ -54,10 +54,20 @@ final class AuthorizationContentBandTests: XCTestCase {
         self.assertBand(authorizationContentBand(layout: self.layout(size: CGSize(width: 678.0, height: 466.0), safeInsets: UIEdgeInsets(top: 0.0, left: 84.0, bottom: 0.0, right: 0.0))), 84.0, 594.0)
     }
 
+    // Another device of the same size with unequal insets is not the Duo's unfolded screen: the band.
+
+    func test_otherDeviceUnequalInsets_band() {
+        self.assertBand(authorizationContentBand(layout: self.layout(size: CGSize(width: 951.0, height: 669.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0), deviceMetrics: .iPhone16Pro)), 0.0, 867.0)
+    }
+
     // The component-environment form agrees with the layout form.
 
     func test_environmentForm_matchesLayoutForm() {
-        let band = authorizationContentBand(size: CGSize(width: 951.0, height: 669.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0), deviceMetrics: .iPhoneDuo)
-        self.assertBand(band, 84.0, 783.0)
+        let size = CGSize(width: 951.0, height: 669.0)
+        let safeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)
+        let layoutBand = authorizationContentBand(layout: self.layout(size: size, safeInsets: safeInsets))
+        let environmentBand = authorizationContentBand(size: size, safeInsets: safeInsets, deviceMetrics: .iPhoneDuo)
+        self.assertBand(environmentBand, layoutBand.minX, layoutBand.width)
+        self.assertBand(environmentBand, 84.0, 783.0)
     }
 }
