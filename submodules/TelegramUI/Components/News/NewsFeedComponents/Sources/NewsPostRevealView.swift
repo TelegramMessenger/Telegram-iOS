@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import AsyncDisplayKit
 import Display
 import ItemListUI
 import TelegramPresentationData
@@ -56,41 +55,45 @@ func newsPostRevealOptions(theme: PresentationTheme, strings: PresentationString
 
 /// The post row's swipe, hosted as the poll composer hosts it (`ComposeOptionRevealNode`): the row owns its layout,
 /// ItemListUI owns the whole swipe (spec §1).
-final class NewsPostRevealNode: ItemListRevealOptionsItemNode {
+final class NewsPostRevealView: ItemListRevealOptionsItemView {
     /// The row's content: it slides with the swipe.
-    let contentNode = ASDisplayNode()
+    let contentView = UIView()
     /// The press highlight and the swipe surface. The control sets its alpha, and while the row is open rounds it and
     /// moves it with the content.
-    let highlightNode = ASDisplayNode()
+    let highlightView = UIView()
     var opened: (() -> Void)?
     var separatorAlphaChanged: (() -> Void)?
     var selected: ((NewsPostSwipeAction) -> Void)?
 
-    init() {
-        super.init(layerBacked: false, rotated: false, seeThrough: false)
-        self.highlightNode.isUserInteractionEnabled = false
-        self.addSubnode(self.contentNode)
+    override init() {
+        super.init()
+        self.highlightView.isUserInteractionEnabled = false
+        self.addSubview(self.contentView)
     }
 
-    /// `size` is the frame the row gave this node. No options: the swipe is off (its recognizers are disabled).
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+
+    /// `size` is the frame the row gave this view. No options: the swipe is off (its recognizers are disabled).
     func update(size: CGSize, options: [ItemListRevealOption], highlightColor: UIColor) {
-        self.contentNode.bounds = CGRect(origin: CGPoint(), size: size)
-        self.contentNode.position = CGPoint(x: size.width / 2.0 + self.revealOffset, y: size.height / 2.0)
-        self.highlightNode.backgroundColor = highlightColor
-        self.updateRevealOptionsHighlightedBackgroundFrame(self.highlightNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.contentView.bounds = CGRect(origin: CGPoint(), size: size)
+        self.contentView.center = CGPoint(x: size.width / 2.0 + self.revealOffset, y: size.height / 2.0)
+        self.highlightView.backgroundColor = highlightColor
+        self.updateRevealOptionsHighlightedBackgroundFrame(self.highlightView, frame: CGRect(origin: CGPoint(), size: size))
         self.updateLayout(size: size, leftInset: 0.0, rightInset: 0.0)
         self.setRevealOptions((left: [], right: options))
     }
 
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
-        self.contentNode.position = CGPoint(x: self.bounds.width / 2.0 + offset, y: self.bounds.height / 2.0)
+        self.contentView.center = CGPoint(x: self.bounds.width / 2.0 + offset, y: self.bounds.height / 2.0)
     }
 
     override func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
         super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
         // A tap on the shifted row closes it (the control's tap) and reaches nothing inside.
-        self.contentNode.isUserInteractionEnabled = !isActive
+        self.contentView.isUserInteractionEnabled = !isActive
     }
 
     override func revealOptionsSeparatorAlphaUpdated() {
@@ -117,7 +120,7 @@ final class NewsPostRevealNode: ItemListRevealOptionsItemNode {
         // its horizontal check. Make the list's pan wait too, as the chat list's does (vertical movement fails the
         // row's recognizer at 10 pt). Only the touch recognizer, which is neither a tap nor a pan; the pager decides
         // before it (the control requires the pager's failure).
-        if !(gestureRecognizer is UITapGestureRecognizer), !(gestureRecognizer is UIPanGestureRecognizer), otherGestureRecognizer is UIPanGestureRecognizer, !(otherGestureRecognizer is InteractiveTransitionGestureRecognizer), let ancestor = otherGestureRecognizer.view, ancestor !== self.view, self.view.isDescendant(of: ancestor) {
+        if !(gestureRecognizer is UITapGestureRecognizer), !(gestureRecognizer is UIPanGestureRecognizer), otherGestureRecognizer is UIPanGestureRecognizer, !(otherGestureRecognizer is InteractiveTransitionGestureRecognizer), let ancestor = otherGestureRecognizer.view, ancestor !== self, self.isDescendant(of: ancestor) {
             return true
         }
         return super.gestureRecognizer(gestureRecognizer, shouldBeRequiredToFailBy: otherGestureRecognizer)
