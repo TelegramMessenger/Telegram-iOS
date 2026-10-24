@@ -1573,6 +1573,7 @@ private func layoutDetails(
 private struct V2TableRow {
     var minColumnWidths: [Int: CGFloat]
     var maxColumnWidths: [Int: CGFloat]
+    var unbreakableColumnWidths: [Int: CGFloat]
 }
 
 let v2TableCellInsets: UIEdgeInsets = {
@@ -1586,9 +1587,9 @@ let v2TableCornerRadius: CGFloat = 10.0
 // padding (v2TableCellInsets.left + .right), leaving ~34pt of text. Below this a column
 // is too narrow to read, so the table scrolls horizontally instead.
 let v2TableMinCompressedColumnWidth: CGFloat = 60.0
-// A column's compress-to-fit floor is its widest unbreakable word (plus padding), but at most
-// this fraction of the table's content width: one very long token (a URL) then wraps instead of
-// widening its column past half the bubble, so at least two columns are always in view.
+// A column's compress-to-fit floor is its widest unbreakable segment (plus padding), but at most
+// this fraction of the width the columns may fill: one very long token (a URL) then wraps instead
+// of widening its column past half the bubble, so at least two columns are always in view.
 let v2TableMaxColumnFloorFraction: CGFloat = 0.5
 
 /// Second-pass column solver for a table whose columns' minimum (maximally-wrapped)
@@ -1700,11 +1701,13 @@ private func compressTableColumnsToFit(
 }
 
 /// Width allocation for a V2 table: per-column widths and the resulting grid width (`totalWidth`,
-/// borders included), from the columns' minimum (maximally-wrapped) and natural widths after the
-/// colspan constraints. `totalWidth > contentBoundingWidth` means the table scrolls horizontally.
+/// borders included), from the columns' minimum (maximally-wrapped at spaces), natural and
+/// unbreakable (`v2WidestUnbreakableSegmentWidth`) widths, padding included, after the colspan
+/// constraints. `totalWidth > contentBoundingWidth` means the table scrolls horizontally.
 func v2TableColumnWidths(
     minColumnWidths: [Int: CGFloat],
     maxColumnWidths: [Int: CGFloat],
+    unbreakableColumnWidths: [Int: CGFloat],
     columnCount: Int,
     contentBoundingWidth: CGFloat,
     borderWidth: CGFloat,
@@ -1718,13 +1721,19 @@ func v2TableColumnWidths(
         maxTotalWidth += maxColumnWidths[i] ?? 0.0
     }
 
-    // Compress-to-fit floor per column: its widest unbreakable word plus padding (the minimum
-    // width), at least `minCompressedColumnWidth` and at most the cap. Whole points, so the
-    // solver's rounding cannot leave a column a fraction short of its word.
-    let floorCap = contentBoundingWidth * v2TableMaxColumnFloorFraction
+    // Compress-to-fit floor per column: its widest unbreakable segment plus padding, at least
+    // `minCompressedColumnWidth` and at most the cap. Whole points (the cap included, so two capped
+    // columns still fit), so the solver's rounding cannot leave a column a fraction short of its word.
+    // The natural widths the solver scales are held at the minimum and the unbreakable width, which
+    // colspan growth (rounded differently for each) can leave above the natural width; the floor would
+    // otherwise drop to it.
+    let floorCap = floor(maxContentWidth * v2TableMaxColumnFloorFraction)
     var compressedFloors: [Int: CGFloat] = [:]
+    var compressedNaturalWidths: [Int: CGFloat] = [:]
     for i in 0 ..< columnCount {
-        compressedFloors[i] = ceil(max(minCompressedColumnWidth, min(minColumnWidths[i] ?? 0.0, floorCap)))
+        let unbreakable = unbreakableColumnWidths[i] ?? minColumnWidths[i] ?? 0.0
+        compressedFloors[i] = ceil(max(minCompressedColumnWidth, min(unbreakable, floorCap)))
+        compressedNaturalWidths[i] = max(maxColumnWidths[i] ?? 1.0, minColumnWidths[i] ?? 0.0, unbreakable)
     }
 
     var totalWidth: CGFloat
@@ -1744,7 +1753,7 @@ func v2TableColumnWidths(
         }
         totalWidth = contentBoundingWidth
     } else if let compressed = compressTableColumnsToFit(
-        maxColumnWidths: maxColumnWidths,
+        maxColumnWidths: compressedNaturalWidths,
         columnCount: columnCount,
         target: maxContentWidth,
         floors: compressedFloors
@@ -1772,6 +1781,26 @@ func v2TableColumnWidths(
     }
 
     return (finalColumnWidths, totalWidth)
+}
+
+/// The widest run of `string` between two line-break opportunities (UAX #14, the rules CoreText
+/// wraps by), trailing whitespace excluded: the narrowest width the text wraps to without breaking
+/// inside a word. Unlike `layoutTextItem(minimizeWidth: true)`, which splits at spaces only, this
+/// lets CJK text break between characters and Thai between dictionary words.
+func v2WidestUnbreakableSegmentWidth(_ string: NSAttributedString) -> CGFloat {
+    let text = string.string as CFString
+    let length = CFStringGetLength(text)
+    guard length > 0, let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, text, CFRangeMake(0, length), kCFStringTokenizerUnitLineBreak, nil) else {
+        return 0.0
+    }
+    var widest: CGFloat = 0.0
+    while !CFStringTokenizerAdvanceToNextToken(tokenizer).isEmpty {
+        let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+        let line = CTLineCreateWithAttributedString(string.attributedSubstring(from: NSRange(location: range.location, length: range.length)))
+        let width = CTLineGetTypographicBounds(line, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(line)
+        widest = max(widest, CGFloat(width))
+    }
+    return widest
 }
 
 private func layoutTable(
@@ -1811,7 +1840,7 @@ private func layoutTable(
     var tableRows: [V2TableRow] = []
     var columnCount: Int = 0
 
-    var columnSpans: [Range<Int>: (CGFloat, CGFloat)] = [:]
+    var columnSpans: [Range<Int>: (CGFloat, CGFloat, CGFloat)] = [:]
     var rowSpans: [Int: [(Int, Int)]] = [:]
 
     // Pass 1: measure min/max intrinsic width per cell.
@@ -1819,6 +1848,7 @@ private func layoutTable(
     for row in rows {
         var minColumnWidths: [Int: CGFloat] = [:]
         var maxColumnWidths: [Int: CGFloat] = [:]
+        var unbreakableColumnWidths: [Int: CGFloat] = [:]
         var i: Int = 0
 
         for cell in row.cells {
@@ -1835,6 +1865,7 @@ private func layoutTable(
 
             var minCellWidth: CGFloat = 1.0
             var maxCellWidth: CGFloat = 1.0
+            var unbreakableCellWidth: CGFloat = 1.0
             if let text = cell.text {
                 // Mirror V1 (`InstantPageTableItem.layoutTableItem`): `attributedStringForRichText`'s
                 // boundingWidth sizes inline attachments to `cellWidthLimit - totalCellPadding`, while
@@ -1860,20 +1891,23 @@ private func layoutTable(
                 ).0 {
                     maxCellWidth = max(minCellWidth, longestItem.effectiveWidth() + totalCellPadding)
                 }
+                unbreakableCellWidth = min(minCellWidth, ceil(v2WidestUnbreakableSegmentWidth(attrStr)) + totalCellPadding)
             }
 
             if cell.colspan > 1 {
                 minColumnWidths[i] = 1.0
                 maxColumnWidths[i] = 1.0
+                unbreakableColumnWidths[i] = 1.0
                 let spanRange = i ..< i + Int(cell.colspan)
-                if let (minSW, maxSW) = columnSpans[spanRange] {
-                    columnSpans[spanRange] = (max(minSW, minCellWidth), max(maxSW, maxCellWidth))
+                if let (minSW, maxSW, unbreakableSW) = columnSpans[spanRange] {
+                    columnSpans[spanRange] = (max(minSW, minCellWidth), max(maxSW, maxCellWidth), max(unbreakableSW, unbreakableCellWidth))
                 } else {
-                    columnSpans[spanRange] = (minCellWidth, maxCellWidth)
+                    columnSpans[spanRange] = (minCellWidth, maxCellWidth, unbreakableCellWidth)
                 }
             } else {
                 minColumnWidths[i] = minCellWidth
                 maxColumnWidths[i] = maxCellWidth
+                unbreakableColumnWidths[i] = unbreakableCellWidth
             }
 
             let colspan = cell.colspan > 1 ? Int(clamping: cell.colspan) : 1
@@ -1889,7 +1923,7 @@ private func layoutTable(
 
             i += colspan
         }
-        tableRows.append(V2TableRow(minColumnWidths: minColumnWidths, maxColumnWidths: maxColumnWidths))
+        tableRows.append(V2TableRow(minColumnWidths: minColumnWidths, maxColumnWidths: maxColumnWidths, unbreakableColumnWidths: unbreakableColumnWidths))
         columnCount = max(columnCount, i)
         r += 1
     }
@@ -1897,25 +1931,31 @@ private func layoutTable(
     // Aggregate column min/max across all rows.
     var minColumnWidths: [Int: CGFloat] = [:]
     var maxColumnWidths: [Int: CGFloat] = [:]
+    var unbreakableColumnWidths: [Int: CGFloat] = [:]
     for i in 0 ..< columnCount {
         var minWidth: CGFloat = 1.0
         var maxWidth: CGFloat = 1.0
+        var unbreakableWidth: CGFloat = 1.0
         for row in tableRows {
             if let w = row.minColumnWidths[i] { minWidth = max(minWidth, w) }
             if let w = row.maxColumnWidths[i] { maxWidth = max(maxWidth, w) }
+            if let w = row.unbreakableColumnWidths[i] { unbreakableWidth = max(unbreakableWidth, w) }
         }
         minColumnWidths[i] = minWidth
         maxColumnWidths[i] = maxWidth
+        unbreakableColumnWidths[i] = unbreakableWidth
     }
 
     // Apply colspan constraints.
     for (range, span) in columnSpans {
-        let (minSpanWidth, maxSpanWidth) = span
+        let (minSpanWidth, maxSpanWidth, unbreakableSpanWidth) = span
         var minWidth: CGFloat = 0.0
         var maxWidth: CGFloat = 0.0
+        var unbreakableWidth: CGFloat = 0.0
         for i in range {
             if let w = minColumnWidths[i] { minWidth += w }
             if let w = maxColumnWidths[i] { maxWidth += w }
+            if let w = unbreakableColumnWidths[i] { unbreakableWidth += w }
         }
         if minWidth < minSpanWidth {
             let delta = minSpanWidth - minWidth
@@ -1935,11 +1975,22 @@ private func layoutTable(
                 }
             }
         }
+        if unbreakableWidth < unbreakableSpanWidth {
+            // Rounded up, unlike the minimum's growth: the spanned columns' floors must cover the
+            // spanning cell's widest segment entirely.
+            let delta = unbreakableSpanWidth - unbreakableWidth
+            for i in range {
+                if let w = unbreakableColumnWidths[i] {
+                    unbreakableColumnWidths[i] = w + ceil(delta / CGFloat(range.count))
+                }
+            }
+        }
     }
 
     let (finalColumnWidths, totalWidth) = v2TableColumnWidths(
         minColumnWidths: minColumnWidths,
         maxColumnWidths: maxColumnWidths,
+        unbreakableColumnWidths: unbreakableColumnWidths,
         columnCount: columnCount,
         contentBoundingWidth: contentBoundingWidth,
         borderWidth: borderWidth,
