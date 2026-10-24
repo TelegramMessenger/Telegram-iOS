@@ -602,7 +602,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             let isAppExtension = Bundle.main.bundlePath.hasSuffix(".appex")
             let initialActiveServer = proxySettings?.effectiveActiveServer
             let initialWebProxyConfiguration = initialActiveServer?.webProxyConfiguration
-            WebProxyTransport.shared.apply(configuration: isAppExtension ? nil : initialWebProxyConfiguration)
+            WebProxyTransport.shared.apply(configuration: WebProxyProcessPolicy.current.allowsCarrier ? initialWebProxyConfiguration : nil)
             if initialActiveServer?.isWebProxy == true {
                 context.makeTcpConnectionInterface = { delegate, delegateQueue in
                     return WebProxyTransport.shared.makeConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
@@ -1171,15 +1171,15 @@ public final class Network: NSObject {
         }
         |> distinctUntilChanged
         let leaseToken = self.webProxyLeaseToken
-        let leaseIsAppExtension = self.isAppExtension
+        let carrierAllowed = WebProxyProcessPolicy.current.allowsCarrier
         self.webProxyCarrierDemandDisposable.set(webProxyCarrierDemand.start(next: { wanted in
-            WebProxyTransport.shared.setCarrierDemand(leaseToken, wanted: wanted && !leaseIsAppExtension)
+            WebProxyTransport.shared.setCarrierDemand(leaseToken, wanted: wanted && carrierAllowed)
         }))
     }
 
     func updateProxySettings(_ activeServer: ProxyServerSettings?) {
         let webConfiguration = activeServer?.webProxyConfiguration
-        WebProxyTransport.shared.apply(configuration: self.isAppExtension ? nil : webConfiguration)
+        WebProxyTransport.shared.apply(configuration: WebProxyProcessPolicy.current.allowsCarrier ? webConfiguration : nil)
         self.webProxyActive.set(activeServer?.isWebProxy == true)
         if activeServer?.isWebProxy == true {
             self.context.makeTcpConnectionInterface = { delegate, delegateQueue in
