@@ -58,6 +58,8 @@ public final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognize
     }
 }
 
+/// `ItemListRevealOptionsItemView` (ItemListRevealOptionsItemView.swift) is this class's plain-view twin, ported line by
+/// line. Keep the two in step: a change to one's mechanics belongs in the other.
 open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerDelegate {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
