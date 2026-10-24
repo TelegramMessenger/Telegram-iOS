@@ -132,8 +132,8 @@ public enum CoreListAnchorMode: Equatable {
 /// Released when a drag begins (`ScrollEngine.onWillBeginDragging`: under `PhysicsScrollEngine` the
 /// pan's `.began` — after its movement hysteresis, or at once for a finger landing on moving content —
 /// and under `UIKitScrollEngine`, `scrollViewWillBeginDragging`; a tap that never becomes a drag keeps
-/// it), by any later `scrollTo` (a holding one arms a new hold), by the row leaving the collection, by a
-/// full replace, and by `releaseScrollHold()`.
+/// it), by a `scroll(by:)` that moves, by any later `scrollTo` (a holding one arms a new hold), by the
+/// row leaving the collection, by a full replace, and by `releaseScrollHold()`.
 public struct CoreListScrollHold {
     public enum Edge {
         /// `viewportInsets.top` — under the chat's π rotation, the input-panel edge.
@@ -540,8 +540,8 @@ public final class CoreVirtualListView: UIView {
     /// row's index shifts every time a message arrives, and `lowestPinnedItemIndex` is already
     /// re-derived per pass, so there is nothing here to go stale.
     ///
-    /// Engaged by an explicit `scrollTo` at the pinned index; released on finger-down, on the pinned
-    /// row leaving the collection, and on a full replace. Release is PERMANENT for that pin —
+    /// Engaged by an explicit `scrollTo` at the pinned index; released on finger-down, by a `scroll(by:)`
+    /// that moves, on the pinned row leaving the collection, and on a full replace. Release is PERMANENT for that pin —
     /// scrolling back to the edge does not re-engage it, matching `ListViewImpl`.
     ///
     /// This answers WHERE the pinned row goes. `bottomEdgePinSlack` answers whether the list has
@@ -578,8 +578,9 @@ public final class CoreVirtualListView: UIView {
     /// auto-scrolls while the fingers hold near an edge (`ListViewImpl.scrollWithDirection` on the other
     /// backend). Moves content by `distance` points, positive DOWN as for `additionalScrollDistance`,
     /// stopping at the declared edges, and returns whether it moved. One call travels at most
-    /// `preloadMargin`, the distance loaded content always reaches past the viewport, so a step cannot pass
-    /// an edge the window has not loaded and declared yet.
+    /// `preloadMargin`, the distance loaded content reaches past the viewport, so a step cannot pass an
+    /// edge the window has not loaded and declared yet (up to one frame of flight travel when the step
+    /// catches a keyframe flight, since the window was last rebalanced at the previous sampling tick).
     ///
     /// It is a drag frame without the finger: the offset write goes through `handleUserScroll`, exactly as
     /// `engine.onScroll` does, so the window rebalances, slack retires and `onVisibleWindowChanged` fires
@@ -591,7 +592,9 @@ public final class CoreVirtualListView: UIView {
     ///
     /// A step that cannot move at the presented position (held against an edge, called every frame)
     /// changes nothing, as ListViewImpl writes nothing when it cannot scroll: the latch and hold stay, and a
-    /// spring-back keeps playing. A step INTO content from an overscroll does halt the spring-back, and
+    /// spring-back keeps playing. If ending a flight moves an edge onto the caught offset (hold slack
+    /// retiring), the step returns false with the release and the halt standing, as a drag's start would
+    /// leave them. A step INTO content from an overscroll does halt the spring-back, and
     /// nothing restarts it if the steps stop while still overscrolled (until the next touch); accepted, as
     /// the chat's selection rarely starts inside a bounce.
     @discardableResult
@@ -1101,8 +1104,9 @@ public final class CoreVirtualListView: UIView {
         }
         engine.onWillBeginDragging = { [weak self] in
             // Mirrors `ListViewImpl.scrollViewWillBeginDragging` (`Display/Source/ListView.swift:879`).
-            // The TOUCH releases the pin, not the movement: a programmatic offset write keeps it, which
-            // is what every self-update flush and inset change is. The scroll hold releases the same way.
+            // The USER releases the pin, not the movement: a programmatic offset write keeps it, which
+            // is what every self-update flush and inset change is. The touch is one release, `scroll(by:)`
+            // the other. The scroll hold releases the same way.
             self?.holdsPinnedRow = false
             self?.heldRow = nil
             self?.willBeginDragging?()
