@@ -349,15 +349,15 @@
     },
     "auto\/09-transforms-effects-a\/light" : {
       "css.filter.blur-brightness-drop-shadow · filter functions are kept" : "pass",
-      "css.transform.2d · a transform set from script (style.transform, calc())" : "fail",
+      "css.transform.2d · a transform set from script (style.transform, calc())" : "pass",
       "css.transform.2d · rotate(90deg) swaps the bounding box" : "pass",
       "css.transform.2d · scale(2) with transform-origin 0 0" : "pass",
       "css.transform.2d · the translate property" : "pass",
       "css.transform.2d · translateX(150%) is a share of the box's own width" : "pass",
       "css.transform.2d · translateX(30px) moves the box" : "pass",
       "css.transform.3d · rotateY(60deg) is dropped: the box keeps its width" : "pass",
-      "css.value.math · calc(% + px) inside translateX()" : "fail",
-      "css.value.math · calc() with * and nested parentheses inside translateX()" : "fail"
+      "css.value.math · calc(% + px) inside translateX()" : "pass",
+      "css.value.math · calc() with * and nested parentheses inside translateX()" : "pass"
     },
     "auto\/09-transforms-effects-b\/light" : {
       "css.cursor · cursor reaches the renderer" : "pass",

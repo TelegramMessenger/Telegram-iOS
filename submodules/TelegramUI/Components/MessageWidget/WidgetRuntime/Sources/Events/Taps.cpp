@@ -220,6 +220,7 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
     }
     case PointerPhase::Up:
     case PointerPhase::Cancel:
+    case PointerPhase::Retract:
         if (pointer == m_pointers.end()) {
             return;
         }
@@ -242,6 +243,9 @@ void TapState::pointer(JSContext* ctx, PointerPhase phase, double x, double y, i
                     break;
                 case PointerPhase::Cancel:
                     this->runCancel(ctx, x, y, pointerId, primary);
+                    break;
+                case PointerPhase::Retract:
+                    this->runCancel(ctx, x, y, pointerId, primary, true);
                     break;
                 }
             }));
@@ -369,7 +373,16 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
         this->cancelHold(ctx);
         m_arbitered = pointerId;
         m_arbiterOpen = true;
-        this->deliver(ctx, m_arbiter.down(EventLoop::of(ctx).currentTime(), x, y, claim, kind, press.button), press);
+        m_arbiterBeforePress = m_arbiter;
+        const twidget::GestureVerdict verdict = m_arbiter.down(EventLoop::of(ctx).currentTime(), x, y, claim, kind, press.button);
+        this->deliver(ctx, verdict, press);
+        // A press the bubble takes is over for the widget (the verdict's cancel: pointercancel, nothing more of it). A
+        // touch's ends through the host, whose own recognizer took it (the menu, the chat's scroll, a swipe); a mouse's
+        // secondary click where no hold is claimed, the message's menu, has nothing else to end it.
+        if (verdict.cancel && mouse) {
+            this->runCancel(ctx, x, y, pointerId, primary);
+            return;
+        }
         if (std::optional<double> deadline = m_arbiter.holdDeadline()) {
             m_holdTask = EventLoop::of(ctx).queueTaskAt(*deadline, TaskSource::UserInteraction,
                                                         makeTask(ctx, [this](JSContext* ctx) { this->runHold(ctx); }));
@@ -519,7 +532,7 @@ void TapState::runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool
     }
 }
 
-void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary) {
+void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool retract) {
     Press* press = this->press(pointerId);
     if (!press) {
         return;
@@ -527,7 +540,12 @@ void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, 
     if (this->arbitrates(pointerId, primary)) {
         m_arbiterOpen = false;
         this->cancelHold(ctx);
-        m_arbiter.cancel();
+        // A retracted press never was, for the arbiter: the tap before it can still be a double tap's first.
+        if (retract) {
+            m_arbiter = m_arbiterBeforePress;
+        } else {
+            m_arbiter.cancel();
+        }
     }
     HostState::of(ctx).userActions().removeActive(ctx, press->number);
     {

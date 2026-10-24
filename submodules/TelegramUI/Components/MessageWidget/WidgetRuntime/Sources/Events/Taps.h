@@ -28,7 +28,9 @@ namespace wr {
 class Element;
 class EventTarget;
 
-enum class PointerPhase : uint8_t { Down, Move, Up, Cancel };
+/// `Retract`: a press the host started before its touch arrived (the bubble's question at a touch's down) that no touch
+/// took up, a pointer's touch pressing instead: it ends for the widget as a cancel, and for the double tap it never was.
+enum class PointerPhase : uint8_t { Down, Move, Up, Cancel, Retract };
 
 /// What a press claims beyond its taps and double taps, which are always the widget's (sdk-v1 §5.5; widget-sandbox
 /// v0.1.2, G1): widget-sandbox's shared gesture policy (`twidget::gesture::claimOf`) over the computed touch-action of
@@ -129,12 +131,14 @@ private:
     void deliver(JSContext* ctx, const std::optional<twidget::GestureVerdict>& verdict, Press& press);
     bool arbitrates(int32_t pointerId, bool primary) const { return primary && m_arbiterOpen && pointerId == m_arbitered; }
     void runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool moved);
-    void runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary);
+    void runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool retract = false);
 
     std::vector<HostPointer> m_pointers;
     /// widget-sandbox's gesture policy on the primary pointer (as its renderer core runs it): the double tap's dblclick,
     /// the hold's contextmenu, the hold that clicks not. The press it hears, while open, and its hold task.
     twidget::GestureArbiter m_arbiter;
+    /// The arbiter as it was before the open primary press's down, which a retraction (`PointerPhase::Retract`) restores.
+    twidget::GestureArbiter m_arbiterBeforePress;
     int32_t m_arbitered = 0;
     bool m_arbiterOpen = false;
     uint64_t m_holdTask = 0;

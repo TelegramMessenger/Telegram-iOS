@@ -365,13 +365,14 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
     }
 
     /// The bubble's question starts a press before its touch reaches the recognizer, and cannot tell a pointer from a
-    /// finger: a pointer's touch ends that press as cancelled and presses again as a mouse.
+    /// finger: a pointer's touch retracts that press (a cancel to the widget, never a press to its double tap) and presses
+    /// again as a mouse.
     func testAPointerTouchRestartsAnEarlyPress() {
         let (recognizer, calls) = self.pointerRecognizer()
         recognizer.touchKind = { _, _ in MessageWidgetPointerKind(mouse: true, button: 0) }
         _ = recognizer.beginPressEarly(at: .zero)
         recognizer.touchesBegan([UITouch()], with: UIEvent())
-        XCTAssertEqual(calls().map { "\($0.phase):\($0.kind.mouse ? "M" : "T"):\($0.primary ? "P" : "S")" }, ["began:T:P", "cancelled:T:P", "began:M:P"])
+        XCTAssertEqual(calls().map { "\($0.phase):\($0.kind.mouse ? "M" : "T"):\($0.primary ? "P" : "S")" }, ["began:T:P", "retracted:T:P", "began:M:P"])
     }
 
     /// A pointer hovers over the view before it clicks: a question the bubble asks where it hovers is answered as the
@@ -468,17 +469,17 @@ final class TouchRecognizerTests: MessageWidgetTestCase {
         XCTAssertEqual(phases(), [.began, .ended])
     }
 
-    /// An early press no touch adopts ends as cancelled on the next run-loop turn, and one at another point when the
-    /// touch begins.
-    func testAnEarlyPressNoTouchAdoptsIsCancelled() {
+    /// An early press no touch adopts is retracted on the next run-loop turn, and one at another point when the touch
+    /// begins.
+    func testAnEarlyPressNoTouchAdoptsIsRetracted() {
         let (recognizer, phases) = self.recognizer(press: MessageWidgetPress(claim: [.horizontal], takesTaps: true))
         _ = recognizer.beginPressEarly(at: .zero)
         self.pump(0.05)
-        XCTAssertEqual(phases(), [.began, .cancelled])
+        XCTAssertEqual(phases(), [.began, .retracted])
         _ = recognizer.beginPressEarly(at: CGPoint(x: 40.0, y: 40.0))
         recognizer.touchesBegan([UITouch()], with: UIEvent())
         self.pump(0.05)
-        XCTAssertEqual(phases(), [.began, .cancelled, .began, .cancelled, .began])
+        XCTAssertEqual(phases(), [.began, .retracted, .began, .retracted, .began])
     }
 
     /// While the touch is down, the bubble's questions are about it wherever they are asked from: its press animation

@@ -252,8 +252,9 @@ std::string transform(const litehtml::css_properties& css, double boxWidth, doub
         litehtml::transform_matrix f;
         switch (it->kind) {
         case litehtml::transform_function::translate:
-            f.tx = it->x.units() == litehtml::css_units_percentage ? float(it->x.val() * boxWidth / 100.0) : it->x.val();
-            f.ty = it->y.units() == litehtml::css_units_percentage ? float(it->y.val() * boxHeight / 100.0) : it->y.val();
+            // A percentage, or a calc() tree mixing one with a length (twidget edit 56), is a share of the border box.
+            f.tx = float(it->x.calc_percent(litehtml::pixel_t(float(boxWidth))));
+            f.ty = float(it->y.calc_percent(litehtml::pixel_t(float(boxHeight))));
             break;
         case litehtml::transform_function::scale:
             f.a = it->v[0];

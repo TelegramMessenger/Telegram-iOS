@@ -1455,6 +1455,13 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     reads), and `subst_vars` keeps a longhand written after one of them holding a `var()`, in layout as in
     WidgetRuntime's getComputedStyle. Insertions only.
 
+56. **A translation's math functions** (`css_effects.cpp`). `parse_transform`'s translate functions and the `translate`
+    property hand a math function argument whole to `css_length::from_token`, whose tree (edit 48) holds one that mixes
+    a percentage with a length (`translateX(calc(100% + 10px))`, nested products, `min()`); the fold of one unit, which
+    every other transform argument still goes through, refused it and the whole transform was dropped. Layout and the
+    painter already evaluate a translation with `calc_percent` against the border box. Pinned by `fork_test.cpp`
+    ("Edit 56") and widget-sandbox v0.1.3's `auto/09-transforms-effects-a`.
+
 ## The iOS font resolver
 
 `ResolveFont`'s twin keeps the macOS resolution order and generic-family names verbatim: each

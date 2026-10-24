@@ -73,6 +73,30 @@ class CoreTests: MessageWidgetTestCase {
         XCTAssertTrue(click.diagnostics.contains { $0.kind == "activation-blocked" })
     }
 
+    /// A press the view retracts (action 4: it started one for the bubble's question, and a pointer's touch pressed there
+    /// instead) ends for the widget as a cancel, but the double click it came between goes on.
+    func testARetractedPressKeepsADoubleClick() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div id=d style='height:40px'></div><script>window.log = []; for (const t of ['click', 'dblclick', 'pointercancel']) document.getElementById('d').addEventListener(t, e => log.push(t + ':' + e.detail))</script></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let point = CGPoint(x: 20.0, y: 20.0)
+        var log: String?
+        _ = self.task(core, .touch) {
+            core.touch(action: 0, at: point, pointer: 1, primary: true, mouse: true)
+            core.touch(action: 2, at: point, pointer: 1, primary: true, mouse: true)
+            core.touch(action: 0, at: point, pointer: 2, primary: true)
+            core.touch(action: 4, at: point, pointer: 2, primary: true)
+            core.touch(action: 0, at: point, pointer: 3, primary: true, mouse: true)
+            core.touch(action: 2, at: point, pointer: 3, primary: true, mouse: true)
+        }
+        _ = self.task(core, .event) {
+            log = core.evaluate("log.join(' ')")
+        }
+        XCTAssertEqual(log, "click:1 pointercancel:0 click:2 dblclick:2")
+    }
+
     /// Multitouch (design §5.1): every finger's down answers what its press is to the widget, not only the primary's.
     func testANonPrimaryDownAnswers() throws {
         let core = self.makeCore("<!doctype html><body style='margin:0'><button id=b style='display:block;width:200px;height:40px'>b</button></body>")

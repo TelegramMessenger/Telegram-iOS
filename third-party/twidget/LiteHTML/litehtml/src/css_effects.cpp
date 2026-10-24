@@ -717,7 +717,9 @@ namespace litehtml
             if(tok.type == WHITESPACE)
                 continue;
             css_token arg = tok;
-            if(!fold_calc(arg) || (is_one_of(arg.type, NUMBER, PERCENTAGE, DIMENSION) && !std::isfinite(arg.n.number)))
+            // Edit 56: as transform's translate functions, the translate property's math functions are from_token's.
+            const bool whole = name == _translate_ && arg.type == CV_FUNCTION;
+            if((!whole && !fold_calc(arg)) || (is_one_of(arg.type, NUMBER, PERCENTAGE, DIMENSION) && !std::isfinite(arg.n.number)))
                 return false;
             args.push_back(arg);
         }
@@ -768,8 +770,14 @@ namespace litehtml
                 functions.clear();
                 return false;
             }
+            // Telegram (VENDOR.md edit 56): a translation's math function goes whole to css_length::from_token, whose
+            // tree holds one that mixes a percentage with a length (calc(100% + 10px)), as a width's does; the fold
+            // below takes one unit only.
+            const bool translates = is_one_of(lowcase(tok.name()), "translate", "translatex", "translatey", "translate3d");
             for(auto& arg : args)
             {
+                if(translates && arg.type == CV_FUNCTION)
+                    continue;
                 if(!fold_calc(arg))
                 {
                     functions.clear();

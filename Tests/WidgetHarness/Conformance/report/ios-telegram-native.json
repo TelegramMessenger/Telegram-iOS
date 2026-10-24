@@ -10,13 +10,13 @@
   "features": [
    "webAnimations"
   ],
-  "date": "2026-10-24T15:25:57Z",
+  "date": "2026-10-24T19:01:46Z",
   "commit": "11aacec5"
  },
  "summary": {
   "in": {
-   "pass": 163,
-   "partial": 4,
+   "pass": 165,
+   "partial": 2,
    "fail": 0,
    "xfail": 0,
    "xpass": 0,
@@ -3385,10 +3385,9 @@
   },
   "css.transform.2d": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 6,
-    "fail": 1
+    "pass": 7
    },
    "evidence": [
     {
@@ -3440,8 +3439,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "a transform set from script (style.transform, calc())",
-     "status": "fail",
-     "detail": "got 0, want 30 ±0.5",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3827,10 +3826,9 @@
   },
   "css.value.math": {
    "status": "in",
-   "verdict": "partial",
+   "verdict": "pass",
    "counts": {
-    "pass": 5,
-    "fail": 2
+    "pass": 7
    },
    "evidence": [
     {
@@ -3882,8 +3880,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "calc(% + px) inside translateX()",
-     "status": "fail",
-     "detail": "got 0, want 30 ±0.5",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3891,8 +3889,8 @@
      "test": "auto/09-transforms-effects-a",
      "kind": "check",
      "name": "calc() with * and nested parentheses inside translateX()",
-     "status": "fail",
-     "detail": "got 0, want 30 ±0.5",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
      "theme": "light",
      "width": 390
     }
@@ -5387,7 +5385,7 @@
      "kind": "check",
      "name": "document.timeline.currentTime is a number",
      "status": "pass",
-     "detail": "78.15691666305065",
+     "detail": "77.98712499439716",
      "theme": "light",
      "width": 390
     },
@@ -6431,7 +6429,7 @@
      "kind": "check",
      "name": "requestAnimationFrame: three frames with increasing timestamps",
      "status": "pass",
-     "detail": "24,41,57",
+     "detail": "30,46,63",
      "theme": "light",
      "width": 390
     }
@@ -8606,8 +8604,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 7,
-    "fail": 3
+    "pass": 10
    },
    "stages": [
     {
