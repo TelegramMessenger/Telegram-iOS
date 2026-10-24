@@ -210,6 +210,9 @@ public final class MessageWidgetInstance {
     public var reportedHeight: CGFloat? {
         return self.reportedSize?.height
     }
+    /// The edge the widget asked to stay put when its height changes (sdk-v1 §5.6), as its latest live snapshot reported
+    /// it; top until then. A stopped widget keeps the last one.
+    public private(set) var resizeAnchor: MessageWidgetResizeAnchor = .top
     /// The width last asked of the core: the boot's, `layout`'s or `fill`'s.
     private var requestedWidth: CGFloat = 0.0
     /// The width the layout pass last offered (`layout(width:)`), and whether `fill` has set the widget's width since.
@@ -443,7 +446,7 @@ public final class MessageWidgetInstance {
     /// A press's down answers what the press is to the widget (SDK v1 §5.5); `.unanswered` when the down has not run
     /// within the wait.
     @discardableResult
-    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) -> MessageWidgetPress {
+    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool, mouse: Bool = false, button: Int = 0) -> MessageWidgetPress {
         guard self.bootQueued, !self.destroyed, self.deadReason == nil else {
             return .none
         }
@@ -453,7 +456,7 @@ public final class MessageWidgetInstance {
         }
         var press: MessageWidgetPress = .none
         let finished = self.perform(.touch, wait: true) { core in
-            press = core.touch(action: action, at: point, pointer: pointer, primary: primary)
+            press = core.touch(action: action, at: point, pointer: pointer, primary: primary, mouse: mouse, button: button)
         }
         return finished ? press : .unanswered
     }
@@ -670,7 +673,7 @@ public final class MessageWidgetInstance {
         var changed = false
         switch snapshot.state {
         case .live:
-            break
+            self.resizeAnchor = snapshot.resizeAnchor
         case let .frozen(reason):
             if self.deadReason == nil {
                 self.deadReason = reason

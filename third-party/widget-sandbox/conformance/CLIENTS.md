@@ -20,7 +20,7 @@ You need three things: the framework tag, your own host and renderer, and Node �
 | `tools/report.mjs` | Turns run files into the report. |
 | `tools/diff.mjs` | The pixel rule, if you prefer to judge stages yourself. |
 
-The widgets are ordinary widget HTML: one file, `data:` images only, no network, each a mini-widget (under 4 KB of gzip). Load them exactly as you load a widget from a message.
+The widgets are ordinary widget HTML: one file, `data:` images only, no network, each a mini-widget (under 4 KB compressed). Load them exactly as you load a widget from a message.
 
 ## What a widget tells you
 
@@ -71,6 +71,8 @@ Build it as a test target or a debug mode in your client. For every entry of `ma
    | `{"wait": n}` | wait n ms |
 
    An action your platform cannot perform goes into `skippedActions` (its index); the checks it feeds are then reported as skipped, not failed.
+
+   Perform the actions through your **real bubble**, with its recognizers on: `auto/23-gestures` (and `auto/16-sdk-taps-b`, `auto/17-drag-hover`) check who gets each press, by the shared gesture policy (`docs/sdk-v1.md` §5.5): a `press` of 700 ms on a `touch-action: auto` element must reach the widget as `pointercancel` (your message menu took it), a `drag` from the widget's leading 20 px as well (back); on `touch-action: none` the widget must get the whole press and the renderer's own `contextmenu`; a vertical `drag` must reach the widget as `pointercancel` on `none` and on `pan-x` too (your list scrolled: vertical drags are always the chat's since v0.1.3); a `dblclick` must reach the widget whole on every element (both clicks and `dblclick`: your reaction never acts over the widget). A desktop client performs `press` and `drag` with the mouse, and those checks expect the widget to keep them. A runner that injects input below the bubble (straight into the renderer view) reports these checks as failures: that is the bubble the test is about.
 7. **Snapshot the widget** at 2× scale. Crop every stage in `manifest.tests[].stages` whose `themes` include this theme, at `rect` (`[x, y, w, h]` in CSS px from the widget's top-left). Each crop is a PNG of `2w × 2h` pixels. Save it next to the run file.
 8. **Record what the host saw:**
    - the bridge calls your host accepted after the gesture gate (`openLink` and the like, with their arguments);
@@ -163,13 +165,13 @@ Seventeen small widgets test what **your client** implements on its side of SDK 
 - haptics of each kind and the rate limit;
 - storage (re-creation, app restart, deletion with the message, the 16 KB quota);
 - stopping after 2 consecutive crashes;
-- drag versus swipe-to-reply, with double tap and long press staying with the bubble;
+- who gets a press (`12-drag-gestures`): double taps are always the widget's; horizontal drags and holds on `touch-action: none` are the widget's, on `auto` the bubble's (menu, swipe-to-reply); a vertical drag is always the chat's scroll, over `none` too; a drag from the leading 20 px is back;
 - the hard clip at the maximum height (600 px, the shared v0.1.0 value);
 - the theme palette with a live switch.
 
 Three of them need a test bot (layer 233): storage of a forwarded copy (forward the message into another chat), a bot editing the message, and the bubble size anchors (`inputMediaWidget` with `width` / `height`: 0 = auto, W = a fixed width in [200, max], H = a fixed height in [50, 600]; auto heights are clamped to [50, 600] and cached per message).
 
-Each widget is a v1 mini-widget (at most 4 KB gzipped). It carries a one-line instruction for the tester. Its expected client behaviour, contract section and reference picture are in [`visual/sdk/README.md`](visual/sdk/README.md), the post list for the test channel. Post the picture (`refs/visual/sdk/<name>.png`, plus `.dark.png` for the palette) as a separate image next to the widget.
+Each widget is a v1 mini-widget (at most 4 KB compressed). It carries a one-line instruction for the tester. Its expected client behaviour, contract section and reference picture are in [`visual/sdk/README.md`](visual/sdk/README.md), the post list for the test channel. Post the picture (`refs/visual/sdk/<name>.png`, plus `.dark.png` for the palette) as a separate image next to the widget.
 
 The automatic set checks the framework side of the same contract. In `auto/16`, `auto/15` and `auto/20` that covers:
 - argument checks and `TypeError`;
@@ -185,7 +187,7 @@ They need SDK v1 in the framework (`docs/sdk-v1.md`).
 
 Every widget of the set is a mini-widget, so a test bot sends all of them as real layer-233 messages (`inputMediaWidget` with the HTML; bots may post only into private chats, so a tester forwards them into the shared channel). `channel.json` is the posting order: the visual set (`visual/01…16`, in reading order, with the parts of a split topic one after the other), the client SDK group, then the automatic set. Each post has the widget, its size anchors (`width` / `height`, `0` = auto), a caption saying what to check, and the reference photos to post right after it: `refs/visual/<widget>.png`, plus `.dark.png` for the theme-dependent ones.
 
-In a visual widget each row shows a group of features drawn live by your client, with one line saying what to compare with the same row of the picture. Interactive rows say what to tap or drag. Testers scroll through on a phone and report a row that does not match, with a screenshot. Fonts differ between platforms by design: compare the structure, not the letter shapes. An automatic widget reports itself: its result line at the bottom must say `done` and show no `fail` count (each failing check is listed under it). `.tgw` is only a local development format; nothing in the channel needs it.
+In a visual widget each row shows a group of features drawn live by your client, with one line saying what to compare with the same row of the picture. Interactive rows say what to tap or drag. Testers scroll through on a phone and report a row that does not match, with a screenshot. Fonts differ between platforms by design: compare the structure, not the letter shapes. An automatic widget reports itself: its result line at the bottom must say `done` and show no `fail` count (each failing check is listed under it).
 
 ## When the framework changes
 

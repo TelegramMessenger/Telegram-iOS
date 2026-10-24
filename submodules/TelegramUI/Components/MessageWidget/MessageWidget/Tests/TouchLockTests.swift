@@ -15,12 +15,12 @@ final class TouchLockTests: MessageWidgetTestCase {
         super.tearDown()
     }
 
-    /// A recognizer on a plain view, answering every press `takesTaps`.
-    private func holder(takesTaps: Bool = true) -> (UIView, MessageWidgetTouchRecognizer) {
+    /// A recognizer on a plain view, answering every press: it takes taps, and claims its hold when `hold`.
+    private func holder(hold: Bool = true) -> (UIView, MessageWidgetTouchRecognizer) {
         let view = UIView()
         let recognizer = MessageWidgetTouchRecognizer()
-        recognizer.onTouch = { phase, _, _, _ in
-            return phase == .began ? MessageWidgetPress(claim: [], takesTaps: takesTaps) : .none
+        recognizer.onTouch = { phase, _, _, _, _ in
+            return phase == .began ? MessageWidgetPress(claim: [], takesTaps: true, hold: hold) : .none
         }
         view.addGestureRecognizer(recognizer)
         return (view, recognizer)
@@ -144,7 +144,7 @@ final class TouchLockTests: MessageWidgetTestCase {
         heldRecognizer.touchesBegan([UITouch()], with: UIEvent())
         XCTAssertTrue(MessageWidgetTouchLock.isHolding(held))
         var calls = 0
-        otherRecognizer.onTouch = { phase, _, _, _ in
+        otherRecognizer.onTouch = { phase, _, _, _, _ in
             calls += 1
             return phase == .began ? MessageWidgetPress(claim: [], takesTaps: true) : .none
         }
@@ -155,7 +155,7 @@ final class TouchLockTests: MessageWidgetTestCase {
         let (third, thirdRecognizer) = self.holder()
         elsewhere.addSubview(third)
         var thirdCalls = 0
-        thirdRecognizer.onTouch = { _, _, _, _ in
+        thirdRecognizer.onTouch = { _, _, _, _, _ in
             thirdCalls += 1
             return .none
         }
@@ -163,14 +163,15 @@ final class TouchLockTests: MessageWidgetTestCase {
         XCTAssertEqual(thirdCalls, 1)
     }
 
-    func testTheWidgetHoldsWhileAPressTakesTaps() {
+    /// The lock is held while a press claims its hold (touch-action: none), not while one only takes taps.
+    func testTheWidgetHoldsWhileAPressClaimsItsHold() {
         let (view, recognizer) = self.holder()
         let touch = UITouch()
         recognizer.touchesBegan([touch], with: UIEvent())
         XCTAssertTrue(MessageWidgetTouchLock.isHolding(view))
         recognizer.touchesEnded([touch], with: UIEvent())
         XCTAssertFalse(MessageWidgetTouchLock.isHolding(view))
-        let (other, otherRecognizer) = self.holder(takesTaps: false)
+        let (other, otherRecognizer) = self.holder(hold: false)
         otherRecognizer.touchesBegan([UITouch()], with: UIEvent())
         XCTAssertFalse(MessageWidgetTouchLock.isHolding(other))
     }
@@ -193,13 +194,15 @@ final class TouchLockTests: MessageWidgetTestCase {
     /// A widget view leaving its window (a recycled bubble) ends its fingers, and the lock with them.
     func testALockEndsWhenTheHolderLeavesItsWindow() {
         let (instance, view) = self.booted("<!doctype html><html><head><style>body{margin:0}</style></head><body>"
-            + "<button style=\"display:block;width:200px;height:100px\">b</button></body></html>")
+            + "<button style=\"display:block;width:200px;height:100px;touch-action:none\">b</button></body></html>")
         withExtendedLifetime(instance) {
             TouchLockTests.window.addSubview(view)
             defer {
                 view.removeFromSuperview()
             }
             let recognizer = view.gestureRecognizers?.compactMap { $0 as? MessageWidgetTouchRecognizer }.first
+            // Past the widget's leading 20 pt, where a press claims nothing.
+            recognizer?.touchLocation = { _ in CGPoint(x: 100.0, y: 50.0) }
             recognizer?.touchesBegan([UITouch()], with: UIEvent())
             XCTAssertTrue(MessageWidgetTouchLock.isHolding(view))
             view.removeFromSuperview()

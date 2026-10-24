@@ -4,9 +4,9 @@ import MtProtoKit
 import TelegramApi
 @testable import TelegramCore
 
-/// The widget message media (`messageMediaWidget width:int height:int payload:bytes`, layer 233; widget-sandbox v0.1.0
-/// tgw-format.md): the size anchors and the HTML gzipped by the server, which the client gunzips with no size check of
-/// its own.
+/// The widget message media (`messageMediaWidget width:int height:int payload:bytes`, layer 233; widget-sandbox
+/// tgw-format.md): the size anchors and the HTML compressed by the server, zlib since v0.1.3 (gzip before), which the
+/// client inflates with no size check of its own.
 final class TelegramMediaWidgetTests: XCTestCase {
     /// The server's `messageMediaWidget` is stored as the widget media, anchors and gzip payload unchanged.
     func testTheApiWidgetBecomesATelegramMediaWidget() {
@@ -36,11 +36,39 @@ final class TelegramMediaWidgetTests: XCTestCase {
         XCTAssertTrue(decoded.peerIds.isEmpty)
     }
 
-    func testTheHtmlIsThePayloadGunzipped() {
+    /// The server's payload since widget-sandbox v0.1.3: PHP's `gzcompress($html, 9)`, a zlib stream (here zlib's own
+    /// `compress(html, 9)`, the same bytes).
+    static let serverPayload = Data([0x78, 0xda, 0xb3, 0x29, 0xb0, 0xf3, 0xc8, 0xb4, 0xd1, 0x2f, 0xb0, 0x03, 0x00, 0x0d, 0xaf, 0x02, 0xb5])
+
+    func testAServerZlibPayloadInflates() {
+        XCTAssertEqual(TelegramMediaWidget(width: 0, height: 0, payload: TelegramMediaWidgetTests.serverPayload).html(), "<p>Hi</p>")
+    }
+
+    /// A message stored before the server switched to zlib keeps its gzip payload.
+    func testAGzipPayloadStillInflates() {
+        let payload = MTGzip.compress("<p>Hi</p>".data(using: .utf8)!)!
+        XCTAssertEqual(payload.prefix(2), Data([0x1f, 0x8b]))
+        XCTAssertEqual(TelegramMediaWidget(width: 0, height: 0, payload: payload).html(), "<p>Hi</p>")
+    }
+
+    func testATruncatedZlibStreamIsNil() {
+        let truncated = TelegramMediaWidgetTests.serverPayload.prefix(TelegramMediaWidgetTests.serverPayload.count - 4)
+        XCTAssertNil(TelegramMediaWidget(width: 0, height: 0, payload: Data(truncated)).html())
+    }
+
+    /// `78 DB` fails zlib's header check (CMF·256 + FLG is not a multiple of 31): no inflate is tried.
+    func testABadZlibHeaderIsNil() {
+        var payload = TelegramMediaWidgetTests.serverPayload
+        payload[payload.startIndex + 1] = 0xdb
+        XCTAssertNil(TelegramMediaWidget(width: 0, height: 0, payload: payload).html())
+    }
+
+    /// A local widget (debug insertion) is compressed as the server compresses: zlib at level 9.
+    func testALocalPayloadIsZlibLevel9() {
         guard let widget = TelegramMediaWidget(html: "<p>Hi</p>", width: 0, height: 0) else {
             return XCTFail("no widget")
         }
-        XCTAssertEqual(widget.payload.prefix(2), Data([0x1f, 0x8b]))
+        XCTAssertEqual(widget.payload, TelegramMediaWidgetTests.serverPayload)
         XCTAssertEqual(widget.html(), "<p>Hi</p>")
     }
 

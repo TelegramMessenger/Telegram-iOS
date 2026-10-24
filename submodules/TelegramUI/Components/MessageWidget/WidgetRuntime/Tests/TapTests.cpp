@@ -1,5 +1,5 @@
 // Taps (M1d plan, Task 2): the host's pointer phases, hit-tested on the runtime's own layout and dispatched as Pointer
-// Events, Touch Events and the compatibility mouse events, with the 8 px slop and the click rules.
+// Events, Touch Events and the compatibility mouse events, with the gesture policy's 10 px slop and the click rules.
 #include <string>
 
 #include "Sources/Events/Taps.h"
@@ -46,6 +46,8 @@ WR_TEST(testTapDispatchesInOrder) {
     CHECK_EQ(env.env().eval("let c; document.getElementById('a').onclick = e => c = [e.clientX, e.clientY, "
                             "e.pageX, e.button, e.detail, e.view === window].join(); 1"),
              std::string("1"));
+    // Past the double tap's 300 ms: a tap of its own (detail 1).
+    env.env().advance(1000);
     tap(env, 41, 42);
     CHECK_EQ(env.env().eval("c"), std::string("41,42,41,0,1,true"));
     CHECK_EQ(env.env().eval("let p; document.getElementById('a').onpointerdown = e => p = [e.pointerId, e.pointerType, "
@@ -120,8 +122,8 @@ WR_TEST(testMoveOverTheSlopCancelsTheClick) {
     RenderEnv env(kBoxes);
     wr::HostState& host = wr::HostState::of(env.ctx());
     host.pointer(env.ctx(), PointerPhase::Down, 30, 40, 1, true);
-    host.pointer(env.ctx(), PointerPhase::Move, 38, 40, 1, true);
-    host.pointer(env.ctx(), PointerPhase::Up, 38, 40, 1, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 41, 40, 1, true);
+    host.pointer(env.ctx(), PointerPhase::Up, 41, 40, 1, true);
     env.env().drain();
     CHECK_EQ(log(env), std::string("pointerdown:a touchstart:a pointerup:a touchend:a"));
     CHECK_EQ(env.env().eval("log.length = 0"), std::string("0"));
@@ -162,7 +164,8 @@ WR_TEST(testMovesOnlyWhenListened) {
     host.pointer(env.ctx(), PointerPhase::Down, 30, 40, 1, true);
     host.pointer(env.ctx(), PointerPhase::Move, 50, 40, 1, true);
     host.pointer(env.ctx(), PointerPhase::Up, 50, 40, 1, true);
-    CHECK_EQ(env.env().drain(), 2);
+    // The primary's first move past the slop still reaches the gesture arbiter (a drag, no hold), and dispatches nothing.
+    CHECK_EQ(env.env().drain(), 3);
     CHECK_EQ(env.env().eval("window.moves = []; document.body.addEventListener('pointermove', e => "
                             "moves.push(e.target.id + ':' + e.clientX)); 1"),
              std::string("1"));
@@ -231,7 +234,7 @@ WR_TEST(testMovementAddsUpToTheDrag) {
 
 namespace {
 
-// The axes the primary press at (x, y) claims (sdk-v1 §5.5), as "x", "y", "xy" or "-".
+// What the primary press at (x, y) claims (sdk-v1 §5.5): its axes and its holds, as "x", "y", "h" together, or "-".
 std::string claimAt(RenderEnv& env, double x, double y, bool primary = true) {
     wr::HostState& host = wr::HostState::of(env.ctx());
     host.pointer(env.ctx(), PointerPhase::Down, x, y, 7, primary);
@@ -239,18 +242,19 @@ std::string claimAt(RenderEnv& env, double x, double y, bool primary = true) {
     const wr::GestureClaim claim = host.gestureClaim();
     host.pointer(env.ctx(), PointerPhase::Up, x, y, 7, primary);
     env.env().drain();
-    std::string axes = std::string(claim.x ? "x" : "") + (claim.y ? "y" : "");
+    std::string axes = std::string(claim.x ? "x" : "") + (claim.y ? "y" : "") + (claim.hold ? "h" : "");
     return axes.empty() ? "-" : axes;
 }
 
 } // namespace
 
-/// sdk-v1 §5.5, protocol.md "Touch gestures inside a scrolling host": a press claims the axes an ancestor's computed
-/// touch-action forbids panning on (the walk stops below <html>), and both when the widget cancels its pointerdown or
-/// touchstart.
+/// sdk-v1 §5.5, protocol.md "Touch gestures inside a scrolling host": a press claims horizontal drags when the computed
+/// touch-action of its target or an ancestor forbids horizontal panning, or when the widget cancels its pointerdown or
+/// touchstart; `none` claims holds too (widget-sandbox v0.1.2, G1). Vertical drags are never claimed (v0.1.3, G2), so a
+/// value that allows horizontal panning (pan-x, pan-left) claims nothing.
 WR_TEST(testThePressClaimsTheAxesItsTouchActionForbids) {
     RenderEnv env(
-        "<!doctype html><html style='touch-action:none'><head><style>body{margin:0;padding:0} div{position:absolute;"
+        "<!doctype html><html><head><style>body{margin:0;padding:0} div{position:absolute;"
         "top:0;width:40px;height:40px}</style></head><body>"
         "<div id=free style='left:0'></div>"
         "<div id=none style='left:50px;touch-action:none'></div>"
@@ -265,18 +269,69 @@ WR_TEST(testThePressClaimsTheAxesItsTouchActionForbids) {
         "document.getElementById('start').addEventListener('touchstart', e => e.preventDefault());</script>"
         "</body></html>");
     CHECK_EQ(claimAt(env, 20, 20), std::string("-"));
-    CHECK_EQ(claimAt(env, 70, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 70, 20), std::string("xh"));
     CHECK_EQ(claimAt(env, 120, 20), std::string("x"));
-    CHECK_EQ(claimAt(env, 170, 20), std::string("y"));
+    CHECK_EQ(claimAt(env, 170, 20), std::string("-"));
     CHECK_EQ(claimAt(env, 220, 20), std::string("-"));
-    CHECK_EQ(claimAt(env, 270, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 270, 20), std::string("x"));
     CHECK_EQ(claimAt(env, 320, 20), std::string("-"));
-    CHECK_EQ(claimAt(env, 370, 20), std::string("xy"));
-    CHECK_EQ(claimAt(env, 420, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 370, 20), std::string("x"));
+    CHECK_EQ(claimAt(env, 420, 20), std::string("x"));
     // A press on nothing claims nothing; a press that is not the primary pointer's claims as the primary's does
     // (multitouch design §5.1: every finger's press answers).
     CHECK_EQ(claimAt(env, 600, 300), std::string("-"));
     CHECK_EQ(claimAt(env, 70, 20, false), claimAt(env, 70, 20));
+}
+
+/// widget-sandbox v0.1.2 (G1, gesture_policy's claimOf): touch-action: none on the target or an ancestor, the widget's
+/// <html> included, claims holds as well as horizontal drags; a canceled pointerdown claims horizontal drags and never a
+/// hold (v0.1.3, G2: never vertical ones).
+WR_TEST(testTouchActionNoneClaimsHolds) {
+    RenderEnv env(
+        "<!doctype html><html><head><style>body{margin:0;padding:0} div{position:absolute;top:0;width:40px;"
+        "height:40px}</style></head><body>"
+        "<div id=wrap style='left:50px;touch-action:none'><div id=inner style='left:0;touch-action:auto'></div></div>"
+        "<div id=down style='left:100px'></div>"
+        "<div id=both style='left:150px;touch-action:none'></div>"
+        "<script>for (const id of ['down', 'both']) document.getElementById(id).addEventListener('pointerdown', e => "
+        "e.preventDefault());</script></body></html>");
+    CHECK_EQ(claimAt(env, 70, 20), std::string("xh"));
+    CHECK_EQ(claimAt(env, 120, 20), std::string("x"));
+    CHECK_EQ(claimAt(env, 170, 20), std::string("xh"));
+    RenderEnv root("<!doctype html><html style='touch-action:none'><head><style>body{margin:0}</style></head><body>"
+                   "<div style='height:100px'></div></body></html>");
+    CHECK_EQ(claimAt(root, 50, 50), std::string("xh"));
+}
+
+/// widget-sandbox v0.1.2: a press that starts in the widget's leading 20 px (the left edge) takes no claim, whatever its
+/// touch-action: the back gesture starts there.
+WR_TEST(testTheLeadingStripTakesNoClaim) {
+    RenderEnv env("<!doctype html><html><head><style>body{margin:0;padding:0} #n{position:absolute;left:0;top:0;"
+                  "width:100px;height:40px;touch-action:none}</style></head><body><div id=n></div></body></html>");
+    CHECK_EQ(claimAt(env, 10, 20), std::string("-"));
+    CHECK_EQ(claimAt(env, 19.5, 20), std::string("-"));
+    CHECK_EQ(claimAt(env, 20, 20), std::string("xh"));
+    CHECK_EQ(claimAt(env, 60, 20), std::string("xh"));
+}
+
+/// widget-sandbox v0.1.2's slop (gesture_policy TOUCH_SLOP_PX): a press is still a tap until it moves more than 10 px
+/// from its down, as a distance: a move inside is not delivered and the tap clicks, one past it is a drag.
+WR_TEST(testTheSlopIsTenPixels) {
+    RenderEnv env(kBoxes);
+    CHECK_EQ(env.env().eval("window.moves = 0; document.getElementById('a').addEventListener('pointermove', () => moves++); 1"),
+             std::string("1"));
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 30, 40, 1, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 39, 40, 1, true);
+    host.pointer(env.ctx(), PointerPhase::Up, 39, 40, 1, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[moves, log.includes('click:a')].join()"), std::string("0,true"));
+    CHECK_EQ(env.env().eval("log = []; 1"), std::string("1"));
+    host.pointer(env.ctx(), PointerPhase::Down, 30, 40, 1, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 38, 48, 1, true);
+    host.pointer(env.ctx(), PointerPhase::Up, 38, 48, 1, true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[moves, log.includes('click:a')].join()"), std::string("1,false"));
 }
 
 /// touch-action is read as the press starts, as browsers fix it at touchstart: a handler that changes it changes the
@@ -288,7 +343,7 @@ WR_TEST(testTheClaimIsTheTouchActionBeforeTheHandlers) {
         "document.getElementById('a').addEventListener('pointerdown', e => { e.target.style.touchAction = 'none'; });"
         "</script></body></html>");
     CHECK_EQ(claimAt(env, 20, 20), std::string("-"));
-    CHECK_EQ(claimAt(env, 20, 20), std::string("xy"));
+    CHECK_EQ(claimAt(env, 20, 20), std::string("xh"));
 }
 
 namespace {
@@ -462,4 +517,172 @@ WR_TEST(testEachPressActivatesOnce) {
     at(env, PointerPhase::Up, 90, 40, 2, false);
     at(env, PointerPhase::Up, 40, 40, 1, true);
     CHECK_EQ(env.env().host().bridgeCalls.size(), size_t(2));
+}
+
+namespace {
+
+void mousePress(RenderEnv& env, double x, double y, double toX, int16_t button) {
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, x, y, 3, true, twidget::PointerKind::Mouse, button);
+    if (toX != x) {
+        host.pointer(env.ctx(), PointerPhase::Move, toX, y, 3, true, twidget::PointerKind::Mouse, button);
+    }
+    host.pointer(env.ctx(), PointerPhase::Up, toX, y, 3, true, twidget::PointerKind::Mouse, button);
+    env.env().drain();
+}
+
+} // namespace
+
+/// An iPad pointer is a mouse (widget-sandbox v0.1.2): its press is pointer events with pointerType mouse and the mouse
+/// events in a mouse's own order, no touch events, and its click comes on the up over the down's target, moved or not.
+WR_TEST(testAMousePressIsAMouse) {
+    RenderEnv env(kBoxes);
+    CHECK_EQ(env.env().eval("window.p = []; document.getElementById('a').addEventListener('pointerdown', e => "
+                            "p.push([e.pointerType, e.button, e.buttons, e.isPrimary].join())); 1"),
+             std::string("1"));
+    mousePress(env, 40, 40, 60, 0);
+    CHECK_EQ(log(env), std::string("pointerdown:a mousedown:a pointerup:a mouseup:a click:a"));
+    CHECK_EQ(env.env().eval("p.join(' ')"), std::string("mouse,0,1,true"));
+}
+
+/// The secondary button's press is the mouse's too, with button 2 and buttons 2, and makes no click.
+WR_TEST(testASecondaryMouseButtonClicksNot) {
+    RenderEnv env(kBoxes);
+    CHECK_EQ(env.env().eval("window.p = []; document.getElementById('a').addEventListener('pointerdown', e => "
+                            "p.push([e.pointerType, e.button, e.buttons].join())); 1"),
+             std::string("1"));
+    mousePress(env, 40, 40, 40, 2);
+    CHECK_EQ(log(env), std::string("pointerdown:a mousedown:a pointerup:a mouseup:a"));
+    CHECK_EQ(env.env().eval("p.join(' ')"), std::string("mouse,2,2"));
+}
+
+namespace {
+
+// Two adjacent 50 × 40 boxes (#a at x 30, #b at x 80) and a touch-action: none one (#n at x 140), and a log of their
+// clicks (with detail), dblclicks and contextmenus.
+const char* const kGestures =
+    "<!doctype html><html><head><style>body{margin:0;padding:0} div{position:absolute;top:0;width:50px;height:40px}"
+    "#a{left:30px} #b{left:80px} #n{left:140px;touch-action:none}</style></head><body><div id=a></div><div id=b></div>"
+    "<div id=n></div><script>window.log = [];"
+    "for (const t of ['click', 'dblclick', 'contextmenu'])"
+    "  for (const id of ['a', 'b', 'n']) document.getElementById(id).addEventListener(t, e => log.push(t + ':' + id +"
+    "    (t === 'contextmenu' ? '' : ':' + e.detail)));"
+    "</script></body></html>";
+
+void tapAt(RenderEnv& env, double x, double y) {
+    tap(env, x, y);
+}
+
+std::string drained(RenderEnv& env) {
+    const std::string value = env.env().eval("log.join(' ')");
+    env.env().eval("log = []; 1");
+    return value;
+}
+
+} // namespace
+
+/// widget-sandbox v0.1.2 (G1, the gesture policy's arbiter): a double tap over the widget is the widget's on every
+/// element, touch-action auto as none: both clicks (the second with detail 2), then dblclick.
+WR_TEST(testADoubleTapIsADblclickOnEveryElement) {
+    RenderEnv env(kGestures);
+    tapAt(env, 50, 20);
+    env.env().advance(100);
+    tapAt(env, 50, 20);
+    CHECK_EQ(drained(env), std::string("click:a:1 click:a:2 dblclick:a:2"));
+    env.env().advance(1000);
+    tapAt(env, 160, 20);
+    env.env().advance(100);
+    tapAt(env, 162, 22);
+    CHECK_EQ(drained(env), std::string("click:n:1 click:n:2 dblclick:n:2"));
+}
+
+/// A double tap's second down comes at most 300 ms after the first up and lands at most 40 px from the first down; it
+/// may be on another element (the dblclick goes to the second tap's).
+WR_TEST(testADoubleTapIsCloseAndQuick) {
+    RenderEnv env(kGestures);
+    tapAt(env, 50, 20);
+    env.env().advance(350);
+    tapAt(env, 50, 20);
+    CHECK_EQ(drained(env), std::string("click:a:1 click:a:1"));
+    env.env().advance(1000);
+    tapAt(env, 40, 20);
+    env.env().advance(100);
+    tapAt(env, 95, 20);
+    CHECK_EQ(drained(env), std::string("click:a:1 click:b:1"));
+    env.env().advance(1000);
+    tapAt(env, 65, 20);
+    env.env().advance(100);
+    tapAt(env, 95, 20);
+    CHECK_EQ(drained(env), std::string("click:a:1 click:b:2 dblclick:b:2"));
+}
+
+/// Only a tap starts a double tap: a drag past the slop, then a quick tap, is a tap alone.
+WR_TEST(testOnlyATapStartsADoubleTap) {
+    RenderEnv env(kGestures);
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 40, 20, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 60, 20, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Up, 60, 20, 7, true);
+    env.env().drain();
+    env.env().advance(100);
+    tapAt(env, 60, 20);
+    CHECK_EQ(drained(env), std::string("click:a:1"));
+}
+
+/// A hold on touch-action: none is the widget's: within the slop at 500 ms it gets contextmenu (a drift inside the slop
+/// keeps it a hold), and its up makes no click.
+WR_TEST(testAHoldOnNoneGetsContextmenu) {
+    RenderEnv env(kGestures);
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 160, 20, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Move, 165, 20, 7, true);
+    env.env().drain();
+    env.env().advance(499);
+    CHECK_EQ(env.env().eval("log.join(' ')"), std::string(""));
+    env.env().advance(1);
+    CHECK_EQ(env.env().eval("log.join(' ')"), std::string("contextmenu:n"));
+    env.env().advance(200);
+    host.pointer(env.ctx(), PointerPhase::Up, 165, 20, 7, true);
+    env.env().drain();
+    CHECK_EQ(drained(env), std::string("contextmenu:n"));
+}
+
+/// A hold on auto is the bubble's (its menu cancels the press on the client): the widget gets no contextmenu, and a
+/// held press that the host lets end makes no click.
+WR_TEST(testAHoldOnAutoClicksNot) {
+    RenderEnv env(kGestures);
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 50, 20, 7, true);
+    env.env().drain();
+    env.env().advance(600);
+    host.pointer(env.ctx(), PointerPhase::Up, 50, 20, 7, true);
+    env.env().drain();
+    CHECK_EQ(drained(env), std::string(""));
+    tapAt(env, 50, 20);
+    CHECK_EQ(drained(env), std::string("click:a:1"));
+}
+
+/// The arbiter is the primary pointer's: a second finger holding touch-action: none gets no contextmenu.
+WR_TEST(testASecondFingersHoldGetsNoContextmenu) {
+    RenderEnv env(kGestures);
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    host.pointer(env.ctx(), PointerPhase::Down, 50, 20, 7, true);
+    host.pointer(env.ctx(), PointerPhase::Down, 160, 20, 8, false);
+    env.env().drain();
+    env.env().advance(600);
+    host.pointer(env.ctx(), PointerPhase::Up, 160, 20, 8, false);
+    host.pointer(env.ctx(), PointerPhase::Up, 50, 20, 7, true);
+    env.env().drain();
+    CHECK_EQ(drained(env), std::string(""));
+}
+
+/// A mouse's secondary click on touch-action: none is the widget's contextmenu, right away; elsewhere it is the
+/// bubble's menu and the widget gets none.
+WR_TEST(testAMouseRightClickOnNoneIsAContextmenu) {
+    RenderEnv env(kGestures);
+    mousePress(env, 160, 20, 160, 2);
+    CHECK_EQ(drained(env), std::string("contextmenu:n"));
+    env.env().advance(1000);
+    mousePress(env, 50, 20, 50, 2);
+    CHECK_EQ(drained(env), std::string(""));
 }

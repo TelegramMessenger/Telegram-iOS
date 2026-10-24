@@ -12,6 +12,7 @@
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Work.h"
+#include "twidget/sdk_policy.h"
 
 namespace wr {
 
@@ -167,6 +168,22 @@ void TelegramWidget::openLink(JSContext* ctx, std::optional<Value> url) {
 
 void TelegramWidget::openTelegramLink(JSContext* ctx, std::optional<Value> url) {
     openLinkFromWidget(ctx, LinkMethod::OpenTelegramLink, url);
+}
+
+void TelegramWidget::setResizeAnchor(JSContext* ctx, std::optional<Value> edge) {
+    std::optional<std::string> checked;
+    if (edge && JS_IsString(edge->get())) {
+        // Longer than either edge is neither: only a short prefix is converted.
+        bool cut = false;
+        const std::string text = String::adopt(ctx, JS_DupValue(ctx, edge->get())).utf8Prefix(16, &cut);
+        if (!cut) {
+            checked = twidget::sdk::checkResizeAnchor(text);
+        }
+    }
+    if (!checked) {
+        throw TypeError{"TelegramWidget.setResizeAnchor: edge must be 'top' or 'bottom'"};
+    }
+    HostState::of(ctx).setResizeAnchor(*checked == "bottom" ? ResizeAnchor::Bottom : ResizeAnchor::Top);
 }
 
 void TelegramWidget::ready(JSContext* ctx) {

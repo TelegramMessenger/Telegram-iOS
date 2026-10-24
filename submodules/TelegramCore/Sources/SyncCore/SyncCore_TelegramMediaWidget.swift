@@ -1,16 +1,18 @@
 import Foundation
 import Postbox
 import MtProtoKit
+import zlib
 
-/// A widget message's media (`messageMediaWidget width:int height:int payload:bytes`, layer 233; widget-sandbox v0.1.0
-/// tgw-format.md): the bot's size anchors and the widget's HTML, gzipped by the server. The client gunzips it and adds no
-/// size check of its own: the server bounds the HTML at 32 KB and the payload at 4 KB.
+/// A widget message's media (`messageMediaWidget width:int height:int payload:bytes`, layer 233; widget-sandbox
+/// tgw-format.md): the bot's size anchors and the widget's HTML, compressed by the server: a zlib stream since v0.1.3
+/// (PHP's `gzcompress($html, 9)`), gzip before. The client inflates either and adds no size check of its own: the server
+/// bounds the HTML at 32 KB and the payload at 4 KB. Never Compression's `COMPRESSION_ZLIB`: raw deflate despite the name.
 public final class TelegramMediaWidget: Media, Equatable {
     /// The width anchor in CSS px; 0 is auto (the bubble's width).
     public let width: Int32
     /// The height anchor in CSS px; 0 is auto (the content's height).
     public let height: Int32
-    /// The widget's HTML, gzipped, as the server sends it.
+    /// The widget's HTML, compressed, as the server sends it.
     public let payload: Data
 
     public let peerIds: [PeerId] = []
@@ -25,11 +27,20 @@ public final class TelegramMediaWidget: Media, Equatable {
         self.payload = payload
     }
 
-    /// `html` gzipped as the server gzips it (for local messages); nil only if compression fails.
+    /// `html` compressed as the server compresses it, zlib at level 9 (for local messages); nil only if compression fails.
     public convenience init?(html: String, width: Int32, height: Int32) {
-        guard let payload = MTGzip.compress(Data(html.utf8)) else {
+        let source = Data(html.utf8)
+        var payload = Data(count: Int(compressBound(uLong(source.count))))
+        var length = uLongf(payload.count)
+        let status = payload.withUnsafeMutableBytes { output in
+            source.withUnsafeBytes { input in
+                compress2(output.bindMemory(to: Bytef.self).baseAddress, &length, input.bindMemory(to: Bytef.self).baseAddress, uLong(source.count), 9)
+            }
+        }
+        guard status == Z_OK else {
             return nil
         }
+        payload.count = Int(length)
         self.init(width: width, height: height, payload: payload)
     }
 
@@ -45,10 +56,18 @@ public final class TelegramMediaWidget: Media, Equatable {
         encoder.encodeData(self.payload, forKey: "p")
     }
 
-    /// The widget's HTML: the payload gunzipped (strictly: nil on any inflate error or an unfinished stream), nil unless
-    /// it is gzip and UTF-8.
+    /// The widget's HTML: the payload inflated (strictly: nil on any inflate error or an unfinished stream), nil unless
+    /// it is zlib or gzip and UTF-8.
     public func html() -> String? {
-        guard self.payload.count >= 2, self.payload[self.payload.startIndex] == 0x1f, self.payload[self.payload.startIndex + 1] == 0x8b else {
+        guard self.payload.count >= 2 else {
+            return nil
+        }
+        let first = self.payload[self.payload.startIndex]
+        let second = self.payload[self.payload.startIndex + 1]
+        // gzip's magic, or a zlib header (RFC 1950): deflate, and CMF·256 + FLG a multiple of 31. MTGzip inflates both.
+        let isGzip = first == 0x1f && second == 0x8b
+        let isZlib = first & 0x0f == 8 && (UInt16(first) << 8 | UInt16(second)) % 31 == 0
+        guard isGzip || isZlib else {
             return nil
         }
         guard let data = MTGzip.decompress(self.payload) else {

@@ -553,6 +553,53 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         return true
     }
 
+    /// A message widget's resize anchor (widget-sandbox v0.1.3, integration.md "Which edge stays put"): the scroll
+    /// target that keeps what must not move where it is while the row at `index` changes height, or nil where the list's
+    /// own placement already does. The list keeps what lies on the screen-bottom side of a changed row (the rotated list's
+    /// low indices), so: a row on screen, even partly, keeps its `anchor` edge (its screen top is the list's maxY, its
+    /// screen bottom the list's minY); a row below the viewport keeps the lowest visible row; a row above it needs
+    /// nothing. At the chat's bottom a top-anchored row that grows leaves the chat scrolled up by its growth, a valid
+    /// place; one that shrinks would need space past the end, which the target's clamp refuses. The target
+    /// is the pass's own (no hold), placed from the row's new height and clamped at the ends as any target is (the list
+    /// never shows space past its ends), and it replaces a held jump. Settled geometry, so passes in flight compose.
+    private func keepingEdge(of index: Int, anchor: ListViewItemResizeAnchor) -> CoreListScrollTarget? {
+        guard index >= 0, index < self.entries.count, let view = self.coreList.loadedItemView(at: index) else {
+            return nil
+        }
+        let frame = self.coreList.settledFrame(of: view)
+        let insetTop = self.currentInsets.top
+        // On screen is the whole viewport: content under the chat's bars (the input panel, the navigation bar) shows
+        // through them.
+        let visibleMinY: CGFloat = 0.0
+        let visibleMaxY = self.currentSize.height
+        if frame.minY >= visibleMaxY {
+            return nil
+        }
+        if frame.maxY <= visibleMinY {
+            var lowest: (index: Int, frame: CGRect)?
+            for entry in self.coreList.loadedItemEntries {
+                let entryFrame = self.coreList.settledFrame(of: entry.view)
+                if entryFrame.maxY > visibleMinY && entryFrame.minY < visibleMaxY && entryFrame.minY < (lowest?.frame.minY ?? .greatestFiniteMagnitude) {
+                    lowest = (entry.index, entryFrame)
+                }
+            }
+            guard let lowest else {
+                return nil
+            }
+            return CoreListScrollTarget(index: lowest.index, direction: .forward, hold: nil) { _, _ in
+                return lowest.frame.minY - insetTop
+            }
+        }
+        return CoreListScrollTarget(index: index, direction: .forward, hold: nil) { height, _ in
+            switch anchor {
+            case .top:
+                return frame.maxY - height - insetTop
+            case .bottom:
+                return frame.minY - insetTop
+            }
+        }
+    }
+
     private func pointOffset(for position: ListViewScrollPosition,
                              excludesAttachedHeaderSpace: Bool,
                              index: Int,
@@ -1023,6 +1070,10 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                 }
                 return self.pointOffset(for: position, excludesAttachedHeaderSpace: excludesAttachedHeaderSpace, index: index, height: height, view: view)
             }
+        }
+
+        if scrollTo == nil, !self.isTracking, let resize = updateIndicesAndItems.first(where: { $0.resizeAnchor != nil }), let anchor = resize.resizeAnchor {
+            scrollTo = self.keepingEdge(of: resize.index, anchor: anchor)
         }
 
         // The applied animation and the reported transition are one value, so they cannot drift.

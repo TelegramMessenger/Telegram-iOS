@@ -34,6 +34,9 @@ namespace animation {
 class AnimationState;
 }
 
+/// The edge of the widget's bubble that stays put when its height changes (SDK v1 §5.6, widget-sandbox v0.1.3).
+enum class ResizeAnchor : uint8_t { Top, Bottom };
+
 class HostState : public RuntimeExtension {
 public:
     /// Made by installHost, after createGlobal<Window>: the window is the global's payload, and the time origins are
@@ -64,13 +67,18 @@ public:
     /// The host's pointer (M1d plan, Task 2): one phase of a tap at (x, y) in CSS px, hit-tested on the published layout
     /// and dispatched as a task (Sources/Events/Taps.h). The host's, as setVisible is: it never throws, and a stopped
     /// widget queues nothing.
-    void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary) {
-        m_taps.pointer(ctx, phase, x, y, pointerId, primary);
+    void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary,
+                 twidget::PointerKind kind = twidget::PointerKind::Touch, int16_t button = 0) {
+        m_taps.pointer(ctx, phase, x, y, pointerId, primary, kind, button);
     }
     /// The gesture claim of the last press (TapState::claim), once its down task has run.
     GestureClaim gestureClaim() const { return m_taps.claim(); }
     /// Whether the last press takes taps (TapState::takesTaps), once its down task has run.
     bool pressTakesTaps() const { return m_taps.takesTaps(); }
+    /// SDK v1 §5.6 (widget-sandbox v0.1.3): the edge of the bubble the widget asked to stay put when its height changes
+    /// (TelegramWidget::setResizeAnchor), reported with the height; Top until it asks.
+    ResizeAnchor resizeAnchor() const { return m_resizeAnchor; }
+    void setResizeAnchor(ResizeAnchor anchor) { m_resizeAnchor = anchor; }
     /// The press's pointer state, for Pointer Events' capture (Element::setPointerCapture).
     TapState& taps() { return m_taps; }
     /// SDK v1 §2.5, user activation (widget-sandbox v0.1.0 packages/core/src/host/user-activation.ts): each trusted
@@ -179,6 +187,7 @@ private:
     double m_wallTimeOrigin;
     /// The tap under way. Before the loop, so destroyed after it: a queued phase's task points at it.
     TapState m_taps;
+    ResizeAnchor m_resizeAnchor = ResizeAnchor::Top;
     Theme m_theme = Theme::Light;
     ThemePalette m_palette;
     ThemeButtonTokens m_buttonTokens;

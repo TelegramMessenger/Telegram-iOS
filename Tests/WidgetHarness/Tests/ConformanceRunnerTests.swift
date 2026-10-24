@@ -36,8 +36,8 @@ final class ConformanceRunnerTests: XCTestCase {
     /// each widget loads." A visual run ends once its widget has loaded, and the baseline records only that it loaded.
     func testTheVisualSetIsLoadedOnly() throws {
         let tests = try ConformanceManifest.loadVisualSet()
-        XCTAssertEqual(tests.count, 37)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 41)
+        XCTAssertEqual(tests.count, 38)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 42)
         XCTAssertTrue(tests.allSatisfy { $0.loadOnly && $0.actions.isEmpty && $0.stages.isEmpty && FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let unstyled = try XCTUnwrap(tests.first { $0.id == "visual/14-unstyled-document" })
         let started = Date()
@@ -51,8 +51,8 @@ final class ConformanceRunnerTests: XCTestCase {
 
     func testTheManifestLoadsTheAutomaticSet() throws {
         let tests = try ConformanceManifest.loadAutomaticSet()
-        XCTAssertEqual(tests.count, 39)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 41)
+        XCTAssertEqual(tests.count, 41)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 43)
         XCTAssertTrue(tests.allSatisfy { FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let taps = try XCTUnwrap(tests.first { $0.id == "auto/16-sdk-taps-a" })
         XCTAssertEqual(taps.actions.count, 3)
@@ -101,10 +101,18 @@ final class ConformanceRunnerTests: XCTestCase {
         XCTAssertEqual(run.skippedActions, [])
     }
 
+    /// widget-sandbox v0.1.2: a double tap over the widget is the widget's, so the runner performs it: two taps, each
+    /// carrying its own tap's permission.
+    func testAScriptedDoubleTapReachesTheWidget() throws {
+        let run = try self.runner().run(self.fixture("conformance-tap", actions: [["dblclick": "button"]]), theme: "light", timeout: 5.0)
+        XCTAssertEqual(run.skippedActions, [])
+        XCTAssertEqual(run.observed.bridge.map(\.method), ["openLink", "openLink"])
+    }
+
     /// An action the runner cannot perform for real is reported as not performed, never as done: hover (a touch
-    /// platform), a key (no keyboard, D4), a double tap (the bubble's). `wait` is performed.
+    /// platform), a key (no keyboard, D4), a right click (the bubble's). `wait` is performed.
     func testActionsTheRunnerCannotPerformAreSkipped() throws {
-        let actions: [[String: Any]] = [["hover": "button"], ["key": "Enter"], ["dblclick": "button"], ["wait": 10]]
+        let actions: [[String: Any]] = [["hover": "button"], ["key": "Enter"], ["rightclick": "button"], ["wait": 10]]
         let run = try self.runner().run(self.fixture("conformance-tap", actions: actions), theme: "light", timeout: 3.0)
         XCTAssertEqual(run.skippedActions, [0, 1, 2])
         XCTAssertEqual(run.status, "awaiting")

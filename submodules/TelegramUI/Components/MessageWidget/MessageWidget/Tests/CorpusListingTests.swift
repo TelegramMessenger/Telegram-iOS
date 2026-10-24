@@ -6,7 +6,7 @@ final class CorpusListingTests: XCTestCase {
     func testTheSenderListsEveryFolderButAttacksInOrder() {
         let root = Bundle(for: CorpusListingTests.self).resourceURL!.appendingPathComponent("corpus")
         let items = MessageWidgetCorpusListing.items(in: root)
-        XCTAssertEqual(items.count, 243)
+        XCTAssertEqual(items.count, 254)
         XCTAssertFalse(items.contains { $0.path.hasPrefix("attacks/") })
         XCTAssertEqual(items.map(\.path), items.map(\.path).sorted())
         XCTAssertEqual(items.first?.label, "widget-sandbox " + (items.first?.path ?? ""))

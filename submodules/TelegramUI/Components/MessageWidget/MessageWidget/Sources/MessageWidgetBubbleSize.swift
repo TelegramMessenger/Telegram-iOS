@@ -49,14 +49,22 @@ public enum MessageWidgetBubbleSize {
     }
 }
 
-/// The last auto height each message's widget reported, so a message that scrolls back in opens at that height and the
-/// list does not jump (integration.md: "cache it per message"). In memory for the process. Main thread only. Past
-/// `capacity` entries, the least recently set is dropped.
+/// The edge of a widget's bubble that stays put on screen when its height changes (`TelegramWidget.setResizeAnchor`,
+/// sdk-v1 §5.6, widget-sandbox v0.1.3): `top`, the default, grows the bubble downward; `bottom` upward.
+public enum MessageWidgetResizeAnchor: Equatable {
+    case top
+    case bottom
+}
+
+/// The last auto height each message's widget reported, and its resize anchor, so a message that scrolls back in opens
+/// at that height and the list does not jump (integration.md: "cache it per message", "keep the anchor next to the
+/// cached height"). In memory for the process. Main thread only. Past `capacity` entries, the least recently set is
+/// dropped.
 public final class MessageWidgetHeightCache {
     public static let shared = MessageWidgetHeightCache()
 
     private let capacity: Int
-    private var entries: [AnyHashable: (height: CGFloat, stamp: UInt64)] = [:]
+    private var entries: [AnyHashable: (height: CGFloat, anchor: MessageWidgetResizeAnchor, stamp: UInt64)] = [:]
     /// Keys in the order they were set; an entry whose stamp no longer matches was set again later.
     private var order: [(key: AnyHashable, stamp: UInt64)] = []
     private var orderStart = 0
@@ -75,9 +83,13 @@ public final class MessageWidgetHeightCache {
         return self.entries[key]?.height
     }
 
-    public func set(_ height: CGFloat, for key: AnyHashable) {
+    public func entry(for key: AnyHashable) -> (height: CGFloat, anchor: MessageWidgetResizeAnchor)? {
+        return self.entries[key].map { ($0.height, $0.anchor) }
+    }
+
+    public func set(_ height: CGFloat, anchor: MessageWidgetResizeAnchor = .top, for key: AnyHashable) {
         self.nextStamp += 1
-        self.entries[key] = (height, self.nextStamp)
+        self.entries[key] = (height, anchor, self.nextStamp)
         self.order.append((key, self.nextStamp))
         while self.entries.count > self.capacity, self.orderStart < self.order.count {
             let oldest = self.order[self.orderStart]

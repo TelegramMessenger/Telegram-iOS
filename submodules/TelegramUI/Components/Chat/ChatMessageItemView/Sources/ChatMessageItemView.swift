@@ -663,6 +663,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open var scrollTiltProvider: ((CFTimeInterval) -> Float)?
     
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
+    /// The edge of the message that stays put on screen when its next height change lands (a message widget's resize
+    /// anchor); nil leaves the list's own placement. Read when the message asks to be updated.
+    open var resizeAnchor: ListViewItemResizeAnchor? {
+        return nil
+    }
     
     private var fetchEffectDisposable: Disposable?
     

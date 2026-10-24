@@ -10,7 +10,7 @@
    "photos": [
     "refs/visual/01-boxes.png"
    ],
-   "gzip": 2010
+   "zlib": 1998
   },
   {
    "widget": "visual/02-colours-gradients.html",
@@ -20,7 +20,7 @@
    "photos": [
     "refs/visual/02-colours-gradients.png"
    ],
-   "gzip": 2472
+   "zlib": 2459
   },
   {
    "widget": "visual/03-text-a.html",
@@ -30,7 +30,7 @@
    "photos": [
     "refs/visual/03-text-a.png"
    ],
-   "gzip": 2115
+   "zlib": 2102
   },
   {
    "widget": "visual/03-text-b.html",
@@ -40,7 +40,7 @@
    "photos": [
     "refs/visual/03-text-b.png"
    ],
-   "gzip": 2314
+   "zlib": 2302
   },
   {
    "widget": "visual/04-layout.html",
@@ -50,7 +50,7 @@
    "photos": [
     "refs/visual/04-layout.png"
    ],
-   "gzip": 2438
+   "zlib": 2424
   },
   {
    "widget": "visual/05-transforms-effects-a.html",
@@ -60,7 +60,7 @@
    "photos": [
     "refs/visual/05-transforms-effects-a.png"
    ],
-   "gzip": 2078
+   "zlib": 2317
   },
   {
    "widget": "visual/05-transforms-effects-b.html",
@@ -70,7 +70,7 @@
    "photos": [
     "refs/visual/05-transforms-effects-b.png"
    ],
-   "gzip": 2145
+   "zlib": 2132
   },
   {
    "widget": "visual/06-css-animations.html",
@@ -80,7 +80,7 @@
    "photos": [
     "refs/visual/06-css-animations.png"
    ],
-   "gzip": 2902
+   "zlib": 2889
   },
   {
    "widget": "visual/07-web-animations.html",
@@ -90,7 +90,7 @@
    "photos": [
     "refs/visual/07-web-animations.png"
    ],
-   "gzip": 2673
+   "zlib": 2658
   },
   {
    "widget": "visual/08-canvas-a.html",
@@ -100,7 +100,7 @@
    "photos": [
     "refs/visual/08-canvas-a.png"
    ],
-   "gzip": 2679
+   "zlib": 2667
   },
   {
    "widget": "visual/08-canvas-b.html",
@@ -110,7 +110,7 @@
    "photos": [
     "refs/visual/08-canvas-b.png"
    ],
-   "gzip": 2625
+   "zlib": 2613
   },
   {
    "widget": "visual/09-svg-a.html",
@@ -120,7 +120,7 @@
    "photos": [
     "refs/visual/09-svg-a.png"
    ],
-   "gzip": 2386
+   "zlib": 2374
   },
   {
    "widget": "visual/09-svg-b.html",
@@ -130,7 +130,7 @@
    "photos": [
     "refs/visual/09-svg-b.png"
    ],
-   "gzip": 2357
+   "zlib": 2344
   },
   {
    "widget": "visual/10-images.html",
@@ -140,7 +140,7 @@
    "photos": [
     "refs/visual/10-images.png"
    ],
-   "gzip": 3160
+   "zlib": 3143
   },
   {
    "widget": "visual/11-interaction.html",
@@ -150,7 +150,7 @@
    "photos": [
     "refs/visual/11-interaction.png"
    ],
-   "gzip": 3142
+   "zlib": 3130
   },
   {
    "widget": "visual/12-theme.html",
@@ -161,7 +161,7 @@
     "refs/visual/12-theme.png",
     "refs/visual/12-theme.dark.png"
    ],
-   "gzip": 1978
+   "zlib": 1966
   },
   {
    "widget": "visual/13-out-of-profile.html",
@@ -171,7 +171,7 @@
    "photos": [
     "refs/visual/13-out-of-profile.png"
    ],
-   "gzip": 2622
+   "zlib": 2610
   },
   {
    "widget": "visual/14-unstyled-document.html",
@@ -182,7 +182,7 @@
     "refs/visual/14-unstyled-document.png",
     "refs/visual/14-unstyled-document.dark.png"
    ],
-   "gzip": 1670
+   "zlib": 1658
   },
   {
    "widget": "visual/15-body-background.html",
@@ -193,7 +193,7 @@
     "refs/visual/15-body-background.png",
     "refs/visual/15-body-background.dark.png"
    ],
-   "gzip": 1360
+   "zlib": 1348
   },
   {
    "widget": "visual/16-selection.html",
@@ -203,7 +203,7 @@
    "photos": [
     "refs/visual/16-selection.png"
    ],
-   "gzip": 1762
+   "zlib": 1750
   },
   {
    "widget": "visual/sdk/01-link-external.html",
@@ -213,7 +213,7 @@
    "photos": [
     "refs/visual/sdk/01-link-external.png"
    ],
-   "gzip": 1746
+   "zlib": 1734
   },
   {
    "widget": "visual/sdk/02-link-telegram.html",
@@ -223,7 +223,7 @@
    "photos": [
     "refs/visual/sdk/02-link-telegram.png"
    ],
-   "gzip": 1581
+   "zlib": 1569
   },
   {
    "widget": "visual/sdk/03-link-rejected.html",
@@ -233,7 +233,7 @@
    "photos": [
     "refs/visual/sdk/03-link-rejected.png"
    ],
-   "gzip": 1897
+   "zlib": 1885
   },
   {
    "widget": "visual/sdk/04-link-timer.html",
@@ -243,7 +243,7 @@
    "photos": [
     "refs/visual/sdk/04-link-timer.png"
    ],
-   "gzip": 1551
+   "zlib": 1539
   },
   {
    "widget": "visual/sdk/05-haptics.html",
@@ -253,7 +253,7 @@
    "photos": [
     "refs/visual/sdk/05-haptics.png"
    ],
-   "gzip": 1631
+   "zlib": 1619
   },
   {
    "widget": "visual/sdk/06-haptics-rate.html",
@@ -263,7 +263,7 @@
    "photos": [
     "refs/visual/sdk/06-haptics-rate.png"
    ],
-   "gzip": 1693
+   "zlib": 1681
   },
   {
    "widget": "visual/sdk/07-storage-recreate.html",
@@ -273,7 +273,7 @@
    "photos": [
     "refs/visual/sdk/07-storage-recreate.png"
    ],
-   "gzip": 1580
+   "zlib": 1567
   },
   {
    "widget": "visual/sdk/08-storage-restart.html",
@@ -283,7 +283,7 @@
    "photos": [
     "refs/visual/sdk/08-storage-restart.png"
    ],
-   "gzip": 1526
+   "zlib": 1514
   },
   {
    "widget": "visual/sdk/09-storage-delete.html",
@@ -293,7 +293,7 @@
    "photos": [
     "refs/visual/sdk/09-storage-delete.png"
    ],
-   "gzip": 1584
+   "zlib": 1572
   },
   {
    "widget": "visual/sdk/10-storage-quota.html",
@@ -303,7 +303,7 @@
    "photos": [
     "refs/visual/sdk/10-storage-quota.png"
    ],
-   "gzip": 1665
+   "zlib": 1653
   },
   {
    "widget": "visual/sdk/11-crash-restart.html",
@@ -313,17 +313,17 @@
    "photos": [
     "refs/visual/sdk/11-crash-restart.png"
    ],
-   "gzip": 1592
+   "zlib": 1580
   },
   {
    "widget": "visual/sdk/12-drag-gestures.html",
    "width": 0,
    "height": 0,
-   "caption": "visual/sdk/12-drag-gestures · Drag inside the widget versus the bubble's gestures. Drag the knob left and right: no swipe-to-reply, the list does not scroll. Swipe left on the grey area: swipe-to-reply. Double tap: the reaction appears. Long press: the bubble menu. The counters stay 0. The client must: The widget claims horizontal drags of the knob (touch-action: none, preventDefault); elsewhere the chat keeps swipe-to-reply and scrolling; double tap and long press stay with the bubble and never reach the widget.",
+   "caption": "visual/sdk/12-drag-gestures · Who gets a press: double taps always, holds and horizontal drags by touch-action, vertical drags never, and the edge strip. Blue (touch-action: none): drag the knob sideways, hold “Hold me” (it counts the time); no swipe-to-reply, no menu, the counters move. Drag up or down over blue: the chat scrolls, “to the chat” counts it. Striped (auto): long press = the message menu, swipe = reply; “cancelled” counts each one. Double-tap anywhere in the widget: no reaction, the widget counts the double taps. Bottom pad: a drag from the red strip is the back gesture, from the rest it moves the green mark. The client must: A double tap over the widget is always the widget's: both clicks and dblclick, on every element, and the client's reaction stays on the bubble outside the widget. A vertical drag is always the chat's: the list scrolls and the widget gets pointercancel, on touch-action: none too (v0.1.3). touch-action: none gives the widget horizontal drags (on both axes once a drag started sideways) and holds (it gets contextmenu, no message menu); on auto the bubble takes holds and swipes and the widget gets pointercancel; a press in the leading 20 px of the widget is never the widget's (system back). The client follows the shared gesture policy (gesture-policy.ts: 500 ms hold, 300 ms / 40 px double tap, 10 px slop, 20 px edge strip).",
    "photos": [
     "refs/visual/sdk/12-drag-gestures.png"
    ],
-   "gzip": 1966
+   "zlib": 2819
   },
   {
    "widget": "visual/sdk/13-max-height.html",
@@ -333,7 +333,7 @@
    "photos": [
     "refs/visual/sdk/13-max-height.png"
    ],
-   "gzip": 1591
+   "zlib": 1579
   },
   {
    "widget": "visual/sdk/14-theme-palette.html",
@@ -344,7 +344,7 @@
     "refs/visual/sdk/14-theme-palette.png",
     "refs/visual/sdk/14-theme-palette.dark.png"
    ],
-   "gzip": 1913
+   "zlib": 1900
   },
   {
    "widget": "visual/sdk/15-storage-forward.html",
@@ -354,7 +354,7 @@
    "photos": [
     "refs/visual/sdk/15-storage-forward.png"
    ],
-   "gzip": 1428
+   "zlib": 1416
   },
   {
    "widget": "visual/sdk/16-bot-edit.html",
@@ -364,7 +364,7 @@
    "photos": [
     "refs/visual/sdk/16-bot-edit.png"
    ],
-   "gzip": 1514
+   "zlib": 1502
   },
   {
    "widget": "visual/sdk/17-size-hint.html",
@@ -374,7 +374,7 @@
    "photos": [
     "refs/visual/sdk/17-size-hint.png"
    ],
-   "gzip": 1514
+   "zlib": 1502
   },
   {
    "widget": "visual/sdk/17-size-hint.html",
@@ -384,7 +384,7 @@
    "photos": [
     "refs/visual/sdk/17-size-hint.png"
    ],
-   "gzip": 1514
+   "zlib": 1502
   },
   {
    "widget": "visual/sdk/17-size-hint.html",
@@ -394,7 +394,7 @@
    "photos": [
     "refs/visual/sdk/17-size-hint.png"
    ],
-   "gzip": 1514
+   "zlib": 1502
   },
   {
    "widget": "visual/sdk/17-size-hint.html",
@@ -404,7 +404,17 @@
    "photos": [
     "refs/visual/sdk/17-size-hint.png"
    ],
-   "gzip": 1514
+   "zlib": 1502
+  },
+  {
+   "widget": "visual/sdk/18-resize-anchor.html",
+   "width": 0,
+   "height": 0,
+   "caption": "visual/sdk/18-resize-anchor · The resize anchor: the edge the widget chose stays put when its height changes. Anchor bottom (the start): tap + line a few times: the buttons stay under your finger, the bubble grows upward and the messages above it move up; − line shrinks it back the same way. Tap the anchor button for top: now + line keeps the bubble's top still and pushes the buttons and the messages below down. Try both with the bubble near the top and near the bottom of the screen. The client must: With every height the host reports the widget's anchor (setResizeAnchor, v0.1.3); the chat list keeps that edge of the bubble in place on screen: bottom, the content above moves and the bubble's bottom edge does not; top (the default), the content below moves. No jump of the anchored edge while the height animates. A bubble off screen keeps what is on screen in place.",
+   "photos": [
+    "refs/visual/sdk/18-resize-anchor.png"
+   ],
+   "zlib": 2061
   },
   {
    "widget": "auto/01-html-elements-a.html",
@@ -412,7 +422,7 @@
    "height": 0,
    "caption": "auto/01-html-elements-a · HTML elements and their UA styles: text structure, headings, sections, inline text. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3506
+   "zlib": 3493
   },
   {
    "widget": "auto/01-html-elements-b.html",
@@ -420,7 +430,7 @@
    "height": 0,
    "caption": "auto/01-html-elements-b · HTML elements and their UA styles: pre, blockquote, lists, tables, ruby. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3225
+   "zlib": 3213
   },
   {
    "widget": "auto/01-html-elements-c.html",
@@ -428,7 +438,7 @@
    "height": 0,
    "caption": "auto/01-html-elements-c · HTML elements and their UA styles: sub/sup, legacy, unknown, details, button, links, gauges. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3517
+   "zlib": 3501
   },
   {
    "widget": "auto/02-attributes-images-a.html",
@@ -436,7 +446,7 @@
    "height": 0,
    "caption": "auto/02-attributes-images-a · Global attributes, dir, data-/aria-, legacy presentational attributes, inline handlers, out-of-profile attributes; img width/height, picture. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3437
+   "zlib": 3424
   },
   {
    "widget": "auto/02-attributes-images-b.html",
@@ -444,7 +454,7 @@
    "height": 0,
    "caption": "auto/02-attributes-images-b · <img> formats, remote images. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3510
+   "zlib": 3492
   },
   {
    "widget": "auto/03-layout-a.html",
@@ -452,7 +462,7 @@
    "height": 0,
    "caption": "auto/03-layout-a · Layout and box model (1/3): display, flex, gap, grid. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3597
+   "zlib": 3576
   },
   {
    "widget": "auto/03-layout-b.html",
@@ -460,7 +470,7 @@
    "height": 0,
    "caption": "auto/03-layout-b · Layout and box model (2/3): sizes, spacing, border, box-sizing, aspect-ratio, logical properties, outline, float, columns. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3461
+   "zlib": 3446
   },
   {
    "widget": "auto/03-layout-c.html",
@@ -468,7 +478,7 @@
    "height": 0,
    "caption": "auto/03-layout-c · Layout and box model (3/3): table, flow-root, contents, radius, positioning, z-index, overflow, visibility, opacity. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3653
+   "zlib": 3639
   },
   {
    "widget": "auto/04-values-units.html",
@@ -476,7 +486,7 @@
    "height": 0,
    "caption": "auto/04-values-units · Units, viewport units, calc/min/max/clamp, custom properties, CSS-wide keywords, generated content, env(). the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3746
+   "zlib": 3732
   },
   {
    "widget": "auto/05-colour-backgrounds-a.html",
@@ -484,7 +494,7 @@
    "height": 0,
    "caption": "auto/05-colour-backgrounds-a · Colour and backgrounds (1/2): colours, colour functions, light-dark(). the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 2836
+   "zlib": 2822
   },
   {
    "widget": "auto/05-colour-backgrounds-b.html",
@@ -492,7 +502,7 @@
    "height": 0,
    "caption": "auto/05-colour-backgrounds-b · Colour and backgrounds (2/2): backgrounds and data: images, gradients, box-shadow, outline, object-fit. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3207
+   "zlib": 3195
   },
   {
    "widget": "auto/06-text-fonts-a.html",
@@ -500,7 +510,7 @@
    "height": 0,
    "caption": "auto/06-text-fonts-a · Fonts (generic families, named families and @font-face out), font properties, tabular numbers. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3212
+   "zlib": 3199
   },
   {
    "widget": "auto/06-text-fonts-b.html",
@@ -508,7 +518,7 @@
    "height": 0,
    "caption": "auto/06-text-fonts-b · Alignment, decoration, transforms, white-space, wrapping, line clamp, vertical-align, lists, writing-mode. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3364
+   "zlib": 3350
   },
   {
    "widget": "auto/06-text-fonts-c.html",
@@ -516,7 +526,7 @@
    "height": 0,
    "caption": "auto/06-text-fonts-c · Ellipsis, text-shadow, emoji and decoration (pixels), RTL and shaping, emoji, opt-in selection. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3173
+   "zlib": 3159
   },
   {
    "widget": "auto/07-selectors-a.html",
@@ -524,7 +534,7 @@
    "height": 0,
    "caption": "auto/07-selectors-a · Selectors: type, class, id, attributes, combinators. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 2619
+   "zlib": 2605
   },
   {
    "widget": "auto/07-selectors-b.html",
@@ -532,7 +542,7 @@
    "height": 0,
    "caption": "auto/07-selectors-b · Selectors: structural pseudo-classes, :is/:where, :has, :root, pseudo-elements, :hover kept, :focus and host-scoped selectors out. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3473
+   "zlib": 3461
   },
   {
    "widget": "auto/08-at-rules.html",
@@ -540,7 +550,7 @@
    "height": 0,
    "caption": "auto/08-at-rules · @media (width, colour scheme, reduced motion, hover/pointer, print), @supports from the profile, @import, @container, @layer, @property, exotic at-rules, CSS nesting. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3701
+   "zlib": 3686
   },
   {
    "widget": "auto/09-transforms-effects-a.html",
@@ -548,7 +558,7 @@
    "height": 0,
    "caption": "auto/09-transforms-effects-a · 2D transforms, 3D transforms out, filter (blur, brightness, drop-shadow; others; url() out). the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3285
+   "zlib": 3505
   },
   {
    "widget": "auto/09-transforms-effects-b.html",
@@ -556,7 +566,7 @@
    "height": 0,
    "caption": "auto/09-transforms-effects-b · Backdrop-filter, blend modes, clip-path, mask, opacity, pointer-events, touch-action, cursor. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 2849
+   "zlib": 2837
   },
   {
    "widget": "auto/10-css-animations.html",
@@ -564,7 +574,7 @@
    "height": 0,
    "caption": "auto/10-css-animations · CSS animations (@keyframes, timing, direction, iteration, fill-mode, play-state), transitions (incl. negative delay), steps() easing, animation and transition events. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3524
+   "zlib": 3512
   },
   {
    "widget": "auto/11-web-animations.html",
@@ -572,7 +582,7 @@
    "height": 0,
    "caption": "auto/11-web-animations · Web Animations: Element.animate, pause and seek, keyframe offsets and easing, getAnimations, finished, cancel, timeline; control of CSS animations through getAnimations (needs the webAnimations feature, D5). the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3617
+   "zlib": 3605
   },
   {
    "widget": "auto/12-canvas-a.html",
@@ -580,7 +590,7 @@
    "height": 0,
    "caption": "auto/12-canvas-a · Canvas 2D (1/2): rectangles, paths, line styles, gradients (conic out), measureText, hit testing, HiDPI backing store; WebGL and read-back out. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3633
+   "zlib": 3619
   },
   {
    "widget": "auto/12-canvas-b.html",
@@ -588,7 +598,7 @@
    "height": 0,
    "caption": "auto/12-canvas-b · Canvas 2D (2/2): patterns, transforms, clipping, text, alpha, compositing, shadows, ctx.filter, Path2D, drawImage, ImageData. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3619
+   "zlib": 3604
   },
   {
    "widget": "auto/13-svg-a.html",
@@ -596,7 +606,7 @@
    "height": 0,
    "caption": "auto/13-svg-a · Inline SVG (1/2): shapes with presentation attributes, g/use/symbol/viewBox, text, gradients, CSS on SVG; SVG geometry queries. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3248
+   "zlib": 3236
   },
   {
    "widget": "auto/13-svg-b.html",
@@ -604,7 +614,7 @@
    "height": 0,
    "caption": "auto/13-svg-b · Inline SVG (2/2): clipPath/mask, filters, SMIL, <image>, foreignObject out. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 2465
+   "zlib": 2453
   },
   {
    "widget": "auto/14-dom-layout-api-a.html",
@@ -612,7 +622,7 @@
    "height": 0,
    "caption": "auto/14-dom-layout-api-a · DOM and layout APIs (1/2): DOM building, CSSOM, events. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3223
+   "zlib": 3211
   },
   {
    "widget": "auto/14-dom-layout-api-b.html",
@@ -620,7 +630,7 @@
    "height": 0,
    "caption": "auto/14-dom-layout-api-b · DOM and layout APIs (2/2): DOM queries; layout queries answered by the renderer: rects, boxes, computed style (incl. shorthands), matchMedia, ResizeObserver, IntersectionObserver, elementFromPoint, measureText. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3520
+   "zlib": 3506
   },
   {
    "widget": "auto/15-js-runtime-a.html",
@@ -628,7 +638,7 @@
    "height": 0,
    "caption": "auto/15-js-runtime-a · JS runtime: timers, frames, microtasks, storage (16 KB quota). the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3066
+   "zlib": 3053
   },
   {
    "widget": "auto/15-js-runtime-b.html",
@@ -636,7 +646,7 @@
    "height": 0,
    "caption": "auto/15-js-runtime-b · JS runtime: Intl, locale, crypto, built-ins, eval, CSS.supports from the profile, visibility, bundled libraries. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3384
+   "zlib": 3372
   },
   {
    "widget": "auto/15-js-runtime-c.html",
@@ -644,7 +654,7 @@
    "height": 0,
    "caption": "auto/15-js-runtime-c · JS runtime: network, navigation, dialogs, device APIs, shadow DOM, blobs, fullscreen, View Transitions out. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3003
+   "zlib": 2991
   },
   {
    "widget": "auto/16-sdk-taps-a.html",
@@ -652,15 +662,15 @@
    "height": 0,
    "caption": "auto/16-sdk-taps-a · openLink: taps (click, pointer and mouse events), external and prevented links, a call from a timer, the URL rules and the 256-character limit. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3653
+   "zlib": 3640
   },
   {
    "widget": "auto/16-sdk-taps-b.html",
    "width": 0,
    "height": 0,
-   "caption": "auto/16-sdk-taps-b · Taps: details toggle, #fragment links, :active; double tap, context menu, keyboard and wheel stay out. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
+   "caption": "auto/16-sdk-taps-b · Taps: details toggle, #fragment links, :active; a double tap is the widget's (dblclick), the context menu stays out on touch-action: auto (auto/23 has none); keyboard and wheel stay out. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3179
+   "zlib": 3251
   },
   {
    "widget": "auto/16-sdk-taps-c.html",
@@ -668,15 +678,15 @@
    "height": 0,
    "caption": "auto/16-sdk-taps-c · TelegramWidget SDK v1: ready, colorScheme, themeParams, isActive, onEvent, openTelegramLink with its URL rules, haptics, profile, no sendMessage. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3480
+   "zlib": 3468
   },
   {
    "widget": "auto/17-drag-hover.html",
    "width": 0,
    "height": 0,
-   "caption": "auto/17-drag-hover · Drag (pointer events with capture), hover events and :hover (desktop pointers), pointer-events: none, touch events on touch clients, no text selection. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
+   "caption": "auto/17-drag-hover · Drag (pointer events with capture), hover events and :hover (desktop), pointer-events: none, touch events on touch clients, no text selection. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3798
+   "zlib": 3785
   },
   {
    "widget": "auto/18-out-of-profile.html",
@@ -684,7 +694,7 @@
    "height": 0,
    "caption": "auto/18-out-of-profile · Elements out of the profile: form controls, dialog and popover (top layer), media, embedded content, MathML; they must be neutralised the same way everywhere. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3566
+   "zlib": 3554
   },
   {
    "widget": "auto/19-limits.html",
@@ -692,7 +702,7 @@
    "height": 0,
    "caption": "auto/19-limits · Strict limits: 64 KB text values, the complex-script budget, the 256-timer cap, budgets over data-* attributes, attr() under strict. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 2818
+   "zlib": 2803
   },
   {
    "widget": "auto/20-client-behaviour.html",
@@ -700,7 +710,7 @@
    "height": 0,
    "caption": "auto/20-client-behaviour · What the client does around the widget: live theme switch, off-screen pause (no frames, timers at 1 Hz, visibilitychange), auto height with a hard clip at the cap. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3774
+   "zlib": 3762
   },
   {
    "widget": "auto/21-no-keyboard.html",
@@ -708,7 +718,7 @@
    "height": 0,
    "caption": "auto/21-no-keyboard · No keyboard (D4): key events never reach the widget, Enter/Space do not activate buttons or links, focus() does not take the focus from the chat input, a key press is not a user gesture for the bridge. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3130
+   "zlib": 3118
   },
   {
    "widget": "auto/22-ua-defaults.html",
@@ -716,7 +726,23 @@
    "height": 0,
    "caption": "auto/22-ua-defaults · The UA layer: the root on the text tokens over the bubble, text defaults, author CSS wins. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
    "photos": [],
-   "gzip": 3768
+   "zlib": 3754
+  },
+  {
+   "widget": "auto/23-gestures.html",
+   "width": 0,
+   "height": 0,
+   "caption": "auto/23-gestures · Who gets a press: a double tap is always the widget's (dblclick, on every element); a hold on touch-action: none is the widget's (contextmenu), on auto the bubble's (pointercancel); a vertical drag is always the chat's, on none and pan-x too; the leading 20 px take no claim. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
+   "photos": [],
+   "zlib": 3379
+  },
+  {
+   "widget": "auto/24-resize-anchor.html",
+   "width": 0,
+   "height": 0,
+   "caption": "auto/24-resize-anchor · TelegramWidget.setResizeAnchor (v0.1.3): the method exists, takes 'top' and 'bottom', throws TypeError on anything else; the widget grows and shrinks with either anchor. the widget checks itself: its result line at the bottom must say \"done\" and show no \"fail\" (each failure is listed under it)",
+   "photos": [],
+   "zlib": 2459
   }
  ]
 }

@@ -191,6 +191,19 @@ final class NativeCoreTests: MessageWidgetTestCase {
         XCTAssertGreaterThan(self.number(instance, "String(window.n)") - shown, 5)
     }
 
+    /// widget-sandbox v0.1.2: timers a hidden widget sets run in the order of their delays, as a browser's throttled
+    /// background tab runs them, though the hidden widget fires its due timers only at its 1 Hz wake.
+    func testAHiddenWidgetsTimersRunInTheOrderOfTheirDelays() {
+        let (instance, _) = self.booted(NativeCoreTests.page + "<div>t</div><script>window.order = [];"
+            + " window.schedule = () => { for (const ms of [20, 10, 0]) setTimeout(() => window.order.push(ms), ms); return 'ok'; };"
+            + "</script></body></html>")
+        instance.setVisible(false)
+        self.pump(0.05)
+        XCTAssertEqual(instance.evaluateForTesting("window.schedule()"), "ok")
+        self.pump(2.5)
+        XCTAssertEqual(instance.evaluateForTesting("window.order.join(',')"), "0,10,20")
+    }
+
     /// Task 8 review I1: a widget that keeps a task runnable (an unhandledrejection handler that rejects again, each
     /// pass ~4M units) is not run 256 times in one core task: a drain stops once it has spent a task's budget, and the
     /// rest runs on later wakes, so the widget's queue never holds a pool thread for long.

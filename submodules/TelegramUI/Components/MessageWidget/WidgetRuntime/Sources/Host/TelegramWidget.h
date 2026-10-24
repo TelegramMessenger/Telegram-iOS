@@ -57,6 +57,10 @@ public:
     void offEvent(JSContext* ctx, std::optional<Value> type, std::optional<Value> handler);
     void openLink(JSContext* ctx, std::optional<Value> url);
     void openTelegramLink(JSContext* ctx, std::optional<Value> url);
+    /// SDK v1 §2.12, §5.6 (widget-sandbox v0.1.3): which edge of the bubble stays put when the widget's height changes,
+    /// kept for the host (HostState::resizeAnchor); exactly 'top' or 'bottom' (the SDK policy's checkResizeAnchor), else
+    /// a TypeError. No tap needed, and nothing reaches the bridge: it is no action.
+    void setResizeAnchor(JSContext* ctx, std::optional<Value> edge);
     wr::HapticFeedback* HapticFeedback(JSContext* ctx);
     void ready(JSContext* ctx);
     /// Deprecated alias of onEvent('themeChanged') whose callback gets the colour scheme, at once and on every change.

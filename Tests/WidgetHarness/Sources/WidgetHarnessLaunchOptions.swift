@@ -13,6 +13,8 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public var set: WidgetHarnessSet = .conformance
     /// Only the posts whose widget path contains this.
     public var postFilter: String?
+    /// Only these posts, by their whole paths, in this order (oldest first): a chat laid out for one measurement.
+    public var posts: [String]?
     /// The server's kill switch (`MessageWidgetKillSwitch`, the app configuration's
     /// `ios_killswitch_disable_message_widgets`): engaged, every widget message shows the pill.
     public var killSwitch: Bool = false
@@ -31,13 +33,14 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public init() {}
 
     public static func ==(lhs: WidgetHarnessLaunchOptions, rhs: WidgetHarnessLaunchOptions) -> Bool {
-        return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.killSwitch == rhs.killSwitch
+        return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.posts == rhs.posts && lhs.killSwitch == rhs.killSwitch
             && lhs.anchors?.width == rhs.anchors?.width && lhs.anchors?.height == rhs.anchors?.height && lhs.useDarkTheme == rhs.useDarkTheme
             && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions && lhs.holdsMenu == rhs.holdsMenu
             && lhs.copyProtected == rhs.copyProtected
     }
 
-    /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-kill-switch on|off`,
+    /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-posts <path>,<path>,…`,
+    /// `-widget-kill-switch on|off`,
     /// `-widget-anchors <W>x<H>`, `-widget-caption off`, `-harness-theme dark`, `-harness-side incoming`.
     public static func parse(_ arguments: [String]) -> WidgetHarnessLaunchOptions {
         func value(_ key: String) -> String? {
@@ -51,6 +54,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
             options.set = set
         }
         options.postFilter = value("-widget-post")
+        options.posts = value("-widget-posts").map { $0.split(separator: ",").map(String.init) }
         options.killSwitch = value("-widget-kill-switch") == "on"
         if let anchors = value("-widget-anchors") {
             let parts = anchors.split(separator: "x").compactMap { Int32($0) }

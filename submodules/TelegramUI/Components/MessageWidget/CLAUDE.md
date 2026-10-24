@@ -1,12 +1,15 @@
 # Message widgets (`messageMediaWidget`)
 
 A widget message carries `messageMediaWidget width:int height:int payload:bytes` (layer 233): a bot's size anchors and
-the widget's HTML, gzipped by the server. It is the only way widgets are delivered. TelegramCore stores it as
-`TelegramMediaWidget` (Postbox keys `w`, `h`, `p`; `html()` gunzips with no size check of its own);
+the widget's HTML, compressed by the server: a zlib stream (PHP's `gzcompress($html, 9)`; gzip before widget-sandbox
+v0.1.3). It is the only way widgets are delivered. TelegramCore stores it as `TelegramMediaWidget` (Postbox keys `w`,
+`h`, `p`; `html()` inflates zlib or gzip, checking the header first, with no size check of its own; a local message is
+compressed as the server does, zlib at level 9, through the SDK's `zlib`, never Compression's `COMPRESSION_ZLIB`, which
+is raw deflate);
 `ChatMessageWidgetBubbleContentNode` draws it as a live widget in a bubble of its own, the message's text as its
-caption below. The authority is widget-sandbox, vendored at tag v0.1.1 in `third-party/widget-sandbox` (`corpus/`,
+caption below. The authority is widget-sandbox, vendored at tag v0.1.3 in `third-party/widget-sandbox` (`corpus/`,
 `conformance/`); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`
-(milestones V1–V6; §8 holds this client's v0.1.1 decisions). The runtime, `WidgetRuntime`, has its own record:
+(milestones V1–V6; §8, §9 and §10 hold this client's v0.1.1, v0.1.2 and v0.1.3 decisions). The runtime, `WidgetRuntime`, has its own record:
 [`docs/message-widgets-native-runtime.md`](../../../../docs/message-widgets-native-runtime.md). Code:
 `submodules/TelegramUI/Components/MessageWidget/{MessageWidget,MessageWidgetRendering,WidgetRuntimeIOS,WidgetRuntime}`
 and `…/Chat/ChatMessageWidgetBubbleContentNode`.
@@ -23,11 +26,33 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 
 - **Size** (`MessageWidgetBubbleSize`). Width 0 is the bubble's width; any other width is clamped to 200…the
   bubble's. Height 0 is the widget's own: 160 pt until it reports, then the reported height clamped to 50…600 and
-  cached per message (`MessageWidgetHeightCache`, 4,096 messages) so scrolling back does not jump; any other height is
+  cached per message with its resize anchor (`MessageWidgetHeightCache`, 4,096 messages) so scrolling back does not
+  jump; any other height is
   clamped to 50…600 and clips the widget. The runtime clamps what it reports to 50…600 too (`WidgetTreeRenderer`), and
   to a fixed height under it: the node passes it on every main-thread pass (`MessageWidgetRegistry.maximumHeight` →
   `MessageWidgetInstance.maximumHeight`, applied on its next `layout`; an anchor edit keeps the runtime and changes
   it), so the document ends at the clip and a stopped widget's badge, drawn at the document's bottom, stays visible.
+- **Which edge stays put** (`TelegramWidget.setResizeAnchor`, sdk-v1 §2.12 and §5.6, integration.md; widget-sandbox
+  v0.1.3). A widget chooses the edge of its bubble that stays put on screen when its auto height changes: `top`, the
+  default, grows the bubble downward (what is below it moves), `bottom` upward (what is above it moves). The runtime
+  keeps the latest (`HostState::resizeAnchor`, checked by the vendored SDK policy's `checkResizeAnchor`) and the
+  snapshot carries it with the size (`MessageWidgetInstance.resizeAnchor`, `MessageWidgetRegistry.resizeAnchor`).
+  **The chat keeps that edge everywhere, at its bottom too** (the user: "The anchor should win if scrolled to bottom
+  too"): a top-anchored newest widget that grows leaves the chat scrolled up by its growth. Three rules around it,
+  also the user's: a widget's **first height** after the 160 pt placeholder with nothing cached is placed as any new
+  message is (at the bottom the chat stays at its bottom); the list **clamps at its ends** (a shrink that would need
+  space past the end moves the edge instead); a bubble **off screen** leaves the screen still. The path: the widget
+  node's `resizeAnchor` (nil for the first height and a fixed height; the live widget's, else the cached one) →
+  `ChatMessageItemView.resizeAnchor` → `ChatHistoryListViewUpdateItem.resizeAnchor` (from
+  `ChatHistoryListNode.requestMessageUpdate`, not when it scrolls to the message) → the CoreList backend's
+  `keepingEdge(of:anchor:)`, a pass-scoped scroll target placed from the row's new height. The list keeps what is on
+  the screen-bottom side of a changed row by itself, so a bottom anchor needs nothing on screen and a top anchor the
+  target; a row below the screen keeps the lowest visible row; none while the user drags. A held jump yields to it.
+  ListViewImpl ignores it. **While the height animates** the widget's clip, mask and tail follow the bubble's own
+  animation (the widget never shows past the bubble's edge), a bottom-anchored widget's view rides the clip's bottom,
+  and its old tiles sit on the anchored edge until the new ones are drawn (`MessageWidgetView.tileOffset`). A chat that
+  fits the screen cannot scroll, so there the list's own placement decides. `WidgetHarnessResizeTests` (Tier 1,
+  `Fixtures/resize/`) and `testTheFaqsQuestionStaysUnderTheFinger` (Tier 2) cover it.
 - **The widget fills its bubble** (sdk-v1 §5.1): the bubble adds no padding
   (`ChatMessageWidgetBubbleContentNode.bubbleInset` = 0; the widget's body margin, the text tokens' padding, is the
   inset), clips at its own radii (`chatBubbleCorners`, the auxiliary radius where merged) and is square where the tail
@@ -225,24 +250,43 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 - **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +
   source; a new message stable id destroys it; a widget that failed to start is remembered, not re-booted). Height
   changes ride the layout (`reportedHeight`, then the height cache) and `requestMessageUpdate`.
-- **Touches.** A tap on something a live widget handles is the widget's at once, as on a message button: each press
-  answers `takesTaps` (`TapState::takesTaps`: a click, pointer, touch or mouse down/up listener on the event's path, the
-  document's and the window's included, an element with activation behaviour outside a disabled control, or a drag
-  claim), and there `tapActionAtPoint` answers `.ignore` (keeping `hasLongTapAction`), so the bubble takes neither a
-  double tap nor a long press: a held press stays the widget's and its release clicks (the user, 2026-10-22; sdk-v1
-  §5.5 gives every long press to the bubble). Anywhere else it answers `.none`: the bubble waits for a double tap (the
-  quick reaction), a long press opens the message's menu, and the widget's recognizer fails at the touch's end, leaving
-  the touch to the bubble. The bubble asks before the widget's recognizer has the touch, and UIKit decides which of the
-  touch's recognizers hears it first: a question that finds no press starts it there and the recognizer adopts it
-  (`MessageWidgetView.pressTakesTaps`, `MessageWidgetTouchRecognizer.pressAnswerOrBegin`), and while the touch is down
-  its press answers wherever the question comes from (the press animation scales the bubble, so a held finger's point
-  drifts). Both had read as the widget's, so on K3 no long press opened the menu. When the menu takes the bubble
-  (`willUpdateIsExtractedToContextPreview(true)`) the node cancels the widget's touch (`MessageWidgetView.cancelTouches`),
-  or lifting the finger would also click (`testALongPressOpensTheMenuAndDoesNotClick`). **The widget view takes touches
+- **Touches** follow widget-sandbox's shared gesture policy (sdk-v1 §5.5; the C++ copy, `twidget/gesture_policy.h`
+  in `third-party/widget-sandbox/gesture/`, whose `claimOf` and `GestureArbiter` the runtime runs, thresholds included:
+  slop 10 px, hold 500 ms, double tap 300 ms / 40 px, a 20 px leading strip). **Every tap and double tap over a live
+  widget is the widget's**, on every element: `tapActionAtPoint` answers `.ignore`, so the bubble's tap recognizer fails
+  at the down, and the quick reaction stays outside the widget (the caption, the time); the runtime sends `dblclick`
+  after the second click. **A hold is by touch-action**: a press whose target or an ancestor up to `<html>` is
+  `touch-action: none` claims it (`MessageWidgetPress.hold`): `hasLongTapAction` keeps the bubble's context gesture
+  off, and the runtime sends `contextmenu` at 500 ms. Any other press's hold is the message's menu, at the chat's own
+  timing (`ContextGesture`, not the policy's 500 ms: the user, "it should be as it is now"), and the menu taking the
+  bubble (`willUpdateIsExtractedToContextPreview(true)`) ends the widget's touch with `pointercancel`
+  (`MessageWidgetView.cancelTouches`); a press held 500 ms within the slop makes no click either way. A press starting
+  in the widget's leading 20 pt claims nothing, whatever its touch-action. `takesTaps` (`TapState::takesTaps`: a
+  listener on the press's path, the document's and the window's included, activation behaviour outside a disabled
+  control, or a drag claim) now decides only whether the widget's recognizer recognizes at the touch's end, which fails
+  the chat's own taps waiting on it (the keyboard's dismissal). The context gesture asks only at the touch's down,
+  before the widget's recognizer has the touch, and UIKit decides which of the touch's recognizers hears it first: a
+  question that finds no press starts it there and the recognizer adopts it (`MessageWidgetView.pressClaimsHold`,
+  `MessageWidgetTouchRecognizer.pressAnswerOrBegin`), and while the touch is down its press answers wherever the
+  question comes from (the press animation scales the bubble, so a held finger's point drifts). **The widget view takes touches
   through `MessageWidgetTouchRecognizer`, never `touchesEnded`:** a recognizer above the bubble recognizes every tap
   and cancels the touched view's touches, so a view-level widget sees began → cancelled and never clicks. The
   recognizer cannot be prevented by a tap, can be by a pan, and recognizes on the touch's end. A tap makes no `click`
   on or inside a disabled form control, as in browsers.
+- **iPad pointers** (a trackpad or mouse: the user, "we should include it if possible for iPads with a trackpad"). A
+  `UITouch` of type `.indirectPointer` presses as the policy's mouse (`MessageWidgetPointerKind`: `pointerType:
+  'mouse'`, `mousedown`/`mouseup`, its button from `UIEvent.buttonMask`): there is no hold menu and no swipe, so its
+  press answers `hold` and the horizontal claim whatever its touch-action (`MessageWidgetCore.touch`), and a press that
+  claims its hold takes the touches at its down, failing the context gesture and the swipes above; a vertical drag
+  still scrolls the chat. A secondary click claims holds only where a finger would (`none`: the widget's
+  `contextmenu`); elsewhere its end opens the message's menu (`MessageWidgetView.onSecondaryClick` →
+  `ChatMessageBubbleContentNode.secondaryTap` → the bubble's own secondary-tap path), since the bubble's tap
+  recognizer, which handles secondary clicks elsewhere, fails over a live widget. The bubble's questions carry no
+  touch: where the pointer last hovered (a pointer-only `UIHoverGestureRecognizer`) they get the mouse's answer and
+  start nothing (`MessageWidgetPress.pointer`), so the press starts with the pointer's touch and its real button;
+  elsewhere they start a finger's press, which a pointer's touch cancels before pressing again. A press the widget did not answer in time (`.unanswered`, a busy game) claims its hold. No
+  hover events reach the widget. XCUITest has no pointer: `TouchRecognizerTests` and `WidgetHarnessGestureTests` cover the host's side, a
+  device the rest.
 - **Several fingers** (the user: a game played with two thumbs). Each finger is its own pointer, up to five
   (`MessageWidgetTouchRecognizer.maximumTouches`, the runtime's `kMaxPointers`; another is ignored whole): its own
   pointer id (counting up per press), `pointerdown`, moves and `pointerup`/`pointercancel`, the first finger down while
@@ -250,8 +294,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   defaults, `:active` entry (`UserActions`, removed by its own press's end or its element leaving the document; `:hover`
   follows the primary) and activation (`HostState::endPress` forgets a press's, so fingers can lift in any order).
   With one finger everything above holds unchanged. With two or more, the rules are the user's:
-  - **The chat steps back**: a finger that lands while another is down, when either is on something the widget
-    handles, takes the touches for the widget until every finger has lifted: the recognizers above fail (as for a
+  - **The chat steps back**: a finger that lands while another is down, when either press claims its hold
+    (`touch-action: none`, a game's control), takes the touches for the widget until every finger has lifted: the recognizers above fail (as for a
     claimed drag, but the chat's own pans until a finger moves sideways: see "The chat always scrolls" below), and every
     question the bubble asks meanwhile answers as the widget's (`tookTouches`, forgotten when
     the host takes the touches). `TapLongTapOrDoubleTapGestureRecognizer`, set to `.failed`, ends its highlight and stops
@@ -264,8 +308,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     that begins while fingers are on the widget ends them as cancelled (the widget's recognizer on its next move; the
     lock for a held control, which may not move). Only a pan is a drag (`isChatDrag`): the bubble's tap waiting for a
     double tap leaves a single finger as it always was.
-  - **A held control makes the rest of the chat inert**: while a finger holds something a widget handles, the widget
-    holds `MessageWidgetTouchLock`, and `MessageWidgetChatLockRecognizer` on `ChatControllerNode`'s view (the history,
+  - **A held control makes the rest of the chat inert**: while a finger's press claims its hold, the widget holds
+    `MessageWidgetTouchLock`, and `MessageWidgetChatLockRecognizer` on `ChatControllerNode`'s view (the history,
     the panels and the top bar) makes every finger landing elsewhere in the chat inert until it lifts, even after the
     control's finger lifts: it fails what the finger reaches (cancels what has already begun there; the chat's own pans
     only once the finger moves sideways, so it still scrolls the chat), cancels it in its view and delays its
@@ -293,8 +337,11 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   within 4 pt of a word's glyphs hits it. Harness: `-harness-menu hold`, the `selectionMenu`/`copy` events,
   `WidgetHarnessUITests`' selection tests and `WidgetHarnessSelectionTests`.
 - **The chat always scrolls** (the user, 2026-10-23: "widgets should not be able to prevent vertical scrolling,
-  ever"). A vertical drag is never a widget's, whatever it declares (`MessageWidgetCore` drops the runtime's `y`), and
-  nothing on the widget's side stops one. When the widget takes the touches (two fingers) or the lock takes a finger,
+  ever"; widget-sandbox v0.1.3's decision G2 since). A vertical drag is never a widget's, whatever it declares: the
+  shared policy's `claimOf` never claims `y`, and its arbiter gives a vertical move to the chat even after a hold the
+  widget won (`MessageWidgetCore` keeps only `x` regardless), and
+  nothing on the widget's side stops one. When the widget takes the touches (a second finger, or a pointer press that
+  claims its hold) or the lock takes a finger,
   every recognizer above fails as before but the pans inside the chat's view (`MessageWidgetTouchLock.chatView`, the
   lock recognizer's: the history's scroll, a bubble's swipe-to-reply); those wait for each finger's first 4 pt
   (`claimDistance`): sideways, they fail too (swipe-to-reply needs 10 pt), vertically they are left to begin
@@ -308,14 +355,19 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   claim fails the chat's pans with the rest, so after a finger went sideways the chat does not scroll until every
   finger lifts (UIKit fails a recognizer for the whole touch sequence): direction is decided by the first movement.
 - **Drags are decided per press** (sdk-v1 §5.5). The runtime answers each press's claim once its down task has run
-  (`TapState::claim`, `WRSession.gestureClaim`): `x` when the touch-action of the target or an ancestor below
-  `<html>` forbids horizontal panning, `y` vertical, both when the widget cancels the press's `pointerdown` or
-  `touchstart`; touch-action is read before the handlers run, as browsers fix it at touchstart. The host takes `x`
-  only (above). Without it, a drag is the chat's (the list scrolls, swipe-to-reply and the back swipe work) and the
-  widget's touch ends as cancelled. A horizontal drag on a claimed press begins the recognizer at 4 pt
-  (`claimDistance`, under the chat's 10 pt pans), which fails every recognizer still possible above it but the pans:
-  exclusion alone does not, because `ContextGesture` recognizes alongside anything that is not a pan. **The back swipe begins at 2 pt and asks in its own `touchesBegan`, before the widget's recognizer
-  has the touch**, so `interactiveTransitionGestureRecognizerTest` starts the press itself
+  (`TapState::claim`, `WRSession.gestureClaim`), by the policy's `claimOf` over the touch-action of the target and its
+  ancestors up to `<html>`: `none` anywhere claims `x` and the hold, a value without a horizontal pan `x` (`pan-x`
+  claims nothing), never `y`; a canceled `pointerdown` or `touchstart` claims `x`, never the hold; a press in the
+  leading 20 pt nothing. Touch-action is read before the handlers run, as browsers fix it at touchstart. The host takes
+  `x` and the hold only (above). Without `x`, a drag is the chat's (the list scrolls, swipe-to-reply and the back swipe
+  work) and the widget's touch ends as cancelled. A horizontal drag on a claimed press begins the recognizer at 4 pt
+  (`claimDistance`), which fails every recognizer still possible above it but the pans: exclusion alone does not,
+  because `ContextGesture` recognizes alongside anything that is not a pan. **4 pt, not the policy's 10:** the list's
+  pan begins at about 10 pt and took a claimed drag whose decision came there too
+  (`testAClaimedHorizontalDragIsTheWidgets`); the runtime still tells a tap from a drag by the 10 px slop, whoever holds
+  the touch. **The back swipe and swipe-to-reply ask in their own `touchesBegan`, before the widget's recognizer has the
+  touch**: `interactiveTransitionGestureRecognizerTest` and swipe-to-reply's `shouldBegin`
+  (`ChatMessageBubbleContentNode.claimsHorizontalDrag(at:)`) start the press themselves
   (`MessageWidgetView.claimsHorizontalDrag(at:)`) and the recognizer adopts it; a claimed press keeps the back swipe to
   the screen's edge. Swipe-to-reply cancels the bubble's long press when it begins
   (`ChatMessageBubbleItemNode.swipeToReplyGesture`): its beginning does not fail `ContextGesture`, and on the CoreList

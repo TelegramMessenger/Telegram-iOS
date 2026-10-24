@@ -533,13 +533,18 @@ static WRStepResult stepOf(wr::StepResult result) {
 }
 
 - (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary {
+    [self pointer:phase at:point pointerId:pointerId primary:primary mouse:NO button:0];
+}
+
+- (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary mouse:(BOOL)mouse button:(NSInteger)button {
     WR_GUARD(, {
         if (_runtime) {
             static const wr::PointerPhase kPhases[] = {wr::PointerPhase::Down, wr::PointerPhase::Move,
                                                        wr::PointerPhase::Up, wr::PointerPhase::Cancel};
             JSContext* ctx = _runtime->context();
             wr::HostState::of(ctx).pointer(ctx, kPhases[std::clamp<NSInteger>(phase, 0, 3)], point.x, point.y,
-                                           pointerId, primary);
+                                           pointerId, primary, mouse ? twidget::PointerKind::Mouse : twidget::PointerKind::Touch,
+                                           int16_t(std::clamp<NSInteger>(button, 0, 4)));
             // Queuing the task can latch a memory stop, which drops the runtime as a step's does.
             [self noteTree];
         }
@@ -552,7 +557,7 @@ static WRStepResult stepOf(wr::StepResult result) {
         return 0;
     }
     const wr::GestureClaim claim = wr::HostState::of(_runtime->context()).gestureClaim();
-    return (claim.x ? WRGestureAxesHorizontal : 0) | (claim.y ? WRGestureAxesVertical : 0);
+    return (claim.x ? WRGestureAxesHorizontal : 0) | (claim.y ? WRGestureAxesVertical : 0) | (claim.hold ? WRGestureAxesHold : 0);
 }
 
 - (BOOL)pressTakesTaps {
@@ -561,6 +566,14 @@ static WRStepResult stepOf(wr::StepResult result) {
         return NO;
     }
     return wr::HostState::of(_runtime->context()).pressTakesTaps();
+}
+
+- (WRResizeAnchor)resizeAnchor {
+    std::lock_guard<std::recursive_mutex> guard(_lock);
+    if (_failed || !_runtime) {
+        return WRResizeAnchorTop;
+    }
+    return wr::HostState::of(_runtime->context()).resizeAnchor() == wr::ResizeAnchor::Bottom ? WRResizeAnchorBottom : WRResizeAnchorTop;
 }
 
 - (WRStopReason)stopReason {

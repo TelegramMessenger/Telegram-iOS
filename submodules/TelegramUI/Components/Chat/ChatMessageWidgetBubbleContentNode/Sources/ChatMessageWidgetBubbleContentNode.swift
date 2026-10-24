@@ -69,6 +69,10 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private var tailOnLeft: Bool?
     /// What `chatMessageWidgetRenderingEnabled` answered in the last applied layout; nil before the first.
     private var laidOutEnabled: Bool?
+    /// What the last applied layout showed, for the resize anchor of the next height change (`resizeAnchor`): whether
+    /// the height is the widget's own (no fixed height anchor), whether it was the placeholder (nothing reported or
+    /// cached yet), and the widget's source and cache key to read the anchor by.
+    private var laidOutResize: (autoHeight: Bool, placeholder: Bool, source: String, heightKey: AnyHashable)?
     private var availabilityObserver: NSObjectProtocol?
     private let hapticFeedback = HapticFeedback()
 
@@ -247,6 +251,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 // or fixed height and shows no widget until a main-thread pass.
                 let isMainThreadPass = Thread.isMainThread
                 var reported: CGFloat?
+                var reportedAnchor: MessageWidgetResizeAnchor = .top
                 var cached: CGFloat?
                 var failedToStart = false
                 if isMainThreadPass {
@@ -290,13 +295,14 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                         registry.maximumHeight = anchors.height > 0 ? MessageWidgetBubbleSize.height(anchors: anchors, reported: nil, cached: nil) : MessageWidgetBubbleSize.maximumHeight
                         if registry.size(path: ChatMessageWidgetBubbleContentNode.path, source: source, width: widgetWidth) != nil {
                             reported = registry.reportedHeight(path: ChatMessageWidgetBubbleContentNode.path, source: source)
+                            reportedAnchor = registry.resizeAnchor(path: ChatMessageWidgetBubbleContentNode.path, source: source) ?? .top
                         } else {
                             failedToStart = true
                         }
                     }
                     registry.endPass()
                     if anchors.height <= 0, let reported {
-                        MessageWidgetHeightCache.shared.set(reported, for: heightKey)
+                        MessageWidgetHeightCache.shared.set(reported, anchor: reportedAnchor, for: heightKey)
                     }
                     cached = MessageWidgetHeightCache.shared.height(for: heightKey)
                 }
@@ -310,6 +316,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 )
                 let pillLayout = UnsupportedContentPill.layout(strings: pillStrings, colors: pillColors, constrainedWidth: maximumWidgetWidth)
                 let widgetHeight = showsPill ? pillLayout.size.height : MessageWidgetBubbleSize.height(anchors: anchors, reported: reported, cached: cached)
+                let showsPlaceholder = !showsPill && anchors.height <= 0 && reported == nil && cached == nil
 
                 let statusType: ChatMessageDateAndStatusType?
                 if case .customChatContents = item.associatedData.subject {
@@ -430,10 +437,14 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                         }
                         self.item = item
                         self.laidOutEnabled = enabled
+                        self.laidOutResize = (anchors.height <= 0, showsPlaceholder, source, heightKey)
 
-                        self.clipView.frame = widgetFrame
-                        self.clipMask.frame = CGRect(origin: CGPoint(), size: widgetFrame.size)
-                        self.clipMask.path = ChatMessageWidgetBubbleContentNode.roundedPath(size: widgetFrame.size, corners: corners, drawsTail: drawsTail)
+                        // The clip follows the bubble's own height animation, so the widget never shows past the bubble's
+                        // edge while the bubble grows or shrinks.
+                        let previousClipHeight = self.clipView.bounds.height
+                        animation.animator.updateFrame(layer: self.clipView.layer, frame: widgetFrame, completion: nil)
+                        animation.animator.updateFrame(layer: self.clipMask, frame: CGRect(origin: CGPoint(), size: widgetFrame.size), completion: nil)
+                        animation.animator.updateShapeLayerPath(layer: self.clipMask, path: ChatMessageWidgetBubbleContentNode.roundedPath(size: widgetFrame.size, corners: corners, drawsTail: drawsTail), completion: nil)
                         self.clipView.isHidden = showsPill
                         self.pillView.isHidden = !showsPill
                         self.tailOnLeft = tailImage == nil ? nil : tailOnLeft
@@ -441,7 +452,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                             // The image's body edge is 6 pt in from its tail side (mediaBubbleCornerImage).
                             let size = tailImage.size
                             let x = tailOnLeft ? widgetFrame.minX - (size.width - bubbleCorners.mainRadius - 1.0) : widgetFrame.maxX - (bubbleCorners.mainRadius + 1.0)
-                            self.tailLayer.frame = CGRect(x: x, y: widgetFrame.maxY - size.height, width: size.width, height: size.height)
+                            animation.animator.updateFrame(layer: self.tailLayer, frame: CGRect(x: x, y: widgetFrame.maxY - size.height, width: size.width, height: size.height), completion: nil)
                             self.tailMask.frame = CGRect(origin: CGPoint(), size: size)
                             self.tailMask.contentsScale = tailImage.scale
                             self.tailMask.contents = tailImage.cgImage
@@ -462,6 +473,13 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                                 (live as? MessageWidgetView)?.onBottomCornerColorsChange = { [weak self] _, _ in
                                     self?.updateTailColor()
                                 }
+                                // An iPad pointer's secondary click on a part that claims no holds: the message's menu.
+                                (live as? MessageWidgetView)?.onSecondaryClick = { [weak self, weak live] point in
+                                    guard let self, let live else {
+                                        return
+                                    }
+                                    self.secondaryTap?(self.view.convert(point, from: live))
+                                }
                                 if let widgetView = live as? MessageWidgetView, widgetView.interactiveTransitionGestureRecognizerTest == nil {
                                     // SDK v1 §5.5: a press that takes horizontal drags for the widget keeps the back swipe
                                     // to the screen's edge; it begins after 2 pt, before the widget's own drag does.
@@ -470,7 +488,16 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                                     }
                                 }
                                 // Laid out at its own width; its height is the content's, which the clip cuts at the bubble's.
-                                live.frame = CGRect(origin: CGPoint(), size: CGSize(width: widgetWidth, height: max(widgetHeight, reported ?? 0.0)))
+                                let liveFrame = CGRect(origin: CGPoint(), size: CGSize(width: widgetWidth, height: max(widgetHeight, reported ?? 0.0)))
+                                // widget-sandbox v0.1.3 (integration.md "Which edge stays put"): while the height animates, a
+                                // bottom-anchored widget rides the clip's bottom, so its picture stays on the edge that stays put; a
+                                // top-anchored one is laid from the clip's top anyway.
+                                if animation.isAnimated, previousClipHeight > 0.0, abs(previousClipHeight - widgetFrame.height) > 0.5, registry.resizeAnchor(path: ChatMessageWidgetBubbleContentNode.path, source: source) == .bottom {
+                                    live.frame = liveFrame.offsetBy(dx: 0.0, dy: previousClipHeight - widgetFrame.height)
+                                    animation.animator.updateFrame(layer: live.layer, frame: liveFrame, completion: nil)
+                                } else {
+                                    live.frame = liveFrame
+                                }
                                 if self.isExtracted && self.extractedWidgetView !== live {
                                     // Lifted, and the widget was replaced (an edit's new HTML): its selection goes with it.
                                     self.tearDownTextSelection(animated: false)
@@ -742,18 +769,48 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
             }
             return ChatMessageBubbleContentTapAction(content: .none)
         }
-        // A live widget takes its own touches (MessageWidgetView) where it handles them, as a message button does: the tap
-        // is the widget's at once (the bubble waits for no double tap there) and so is a long press, whose release clicks
-        // (`.ignore` keeps `hasLongTapAction`, which stops the bubble's context gesture). Anywhere else the bubble has a
-        // double tap, its quick reaction (sdk-v1 §5.5), and a long press, its context menu. A stopped widget leaves
-        // everything to the bubble.
+        // A live widget takes its own touches (MessageWidgetView): every tap and double tap over it is the widget's
+        // (widget-sandbox v0.1.2), so the bubble's tap recognizer fails there (`.ignore`) and the double-tap reaction stays
+        // outside the widget (the caption, the time). A hold is by the press's touch-action: one that claims it (none) is
+        // the widget's (`hasLongTapAction` stops the bubble's context gesture), any other opens the message's menu, which
+        // ends the widget's touch. A secondary click's menu is asked after its press ended (`onSecondaryClick`). A
+        // stopped widget leaves everything to the bubble.
         if self.clipView.frame.contains(point) && self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path) {
-            if let widgetView = self.clipView.subviews.first as? MessageWidgetView, widgetView.pressTakesTaps(at: self.view.convert(point, to: widgetView), duringTouch: isEstimating) {
-                return ChatMessageBubbleContentTapAction(content: .ignore)
+            if case .secondaryTap = gesture {
+                return ChatMessageBubbleContentTapAction(content: .ignore, hasLongTapAction: false)
             }
-            return ChatMessageBubbleContentTapAction(content: .none)
+            let widgetView = self.clipView.subviews.first as? MessageWidgetView
+            let hold = widgetView.map { $0.pressClaimsHold(at: self.view.convert(point, to: $0), duringTouch: isEstimating) } ?? false
+            return ChatMessageBubbleContentTapAction(content: .ignore, hasLongTapAction: hold)
         }
         return ChatMessageBubbleContentTapAction(content: .none)
+    }
+
+    /// widget-sandbox v0.1.3 (integration.md "Which edge stays put"): the edge the widget asked to stay put, for an auto
+    /// height on its next change: the live widget's anchor, else the one cached with its height (a widget gone to the
+    /// pill). None for the first height after the placeholder, which is placed as any new message is (the user's
+    /// decision), nor for a fixed height, which no report changes.
+    override public var resizeAnchor: ListViewItemResizeAnchor? {
+        guard let laidOut = self.laidOutResize, laidOut.autoHeight, !laidOut.placeholder else {
+            return nil
+        }
+        let anchor = self.registry.resizeAnchor(path: ChatMessageWidgetBubbleContentNode.path, source: laidOut.source)
+            ?? MessageWidgetHeightCache.shared.entry(for: laidOut.heightKey)?.anchor
+        switch anchor {
+        case .top:
+            return .top
+        case .bottom:
+            return .bottom
+        case nil:
+            return nil
+        }
+    }
+
+    override public func claimsHorizontalDrag(at point: CGPoint) -> Bool {
+        guard self.pillView.isHidden, self.clipView.frame.contains(point), self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path), let widgetView = self.clipView.subviews.first as? MessageWidgetView else {
+            return false
+        }
+        return widgetView.claimsHorizontalDrag(at: self.view.convert(point, to: widgetView))
     }
 
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {

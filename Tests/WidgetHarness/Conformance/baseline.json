@@ -349,11 +349,15 @@
     },
     "auto\/09-transforms-effects-a\/light" : {
       "css.filter.blur-brightness-drop-shadow · filter functions are kept" : "pass",
+      "css.transform.2d · a transform set from script (style.transform, calc())" : "fail",
       "css.transform.2d · rotate(90deg) swaps the bounding box" : "pass",
       "css.transform.2d · scale(2) with transform-origin 0 0" : "pass",
       "css.transform.2d · the translate property" : "pass",
+      "css.transform.2d · translateX(150%) is a share of the box's own width" : "pass",
       "css.transform.2d · translateX(30px) moves the box" : "pass",
-      "css.transform.3d · rotateY(60deg) is dropped: the box keeps its width" : "pass"
+      "css.transform.3d · rotateY(60deg) is dropped: the box keeps its width" : "pass",
+      "css.value.math · calc(% + px) inside translateX()" : "fail",
+      "css.value.math · calc() with * and nested parentheses inside translateX()" : "fail"
     },
     "auto\/09-transforms-effects-b\/light" : {
       "css.cursor · cursor reaches the renderer" : "pass",
@@ -531,9 +535,9 @@
     "auto\/16-sdk-taps-b\/light" : {
       "html.el.a-fragment · tapping a #fragment link does not leave the widget" : "pass",
       "html.el.details · tapping summary opens details (toggle event)" : "pass",
-      "input.dblclick · no dblclick reaches the widget (the double tap stays with the bubble)" : "skip",
+      "input.dblclick · a double tap on touch-action: auto reaches the widget as dblclick (the reaction stays outside the widget)" : "pass",
       "input.keyboard · no keydown reaches the widget" : "skip",
-      "input.long-press · no contextmenu event reaches the widget" : "skip",
+      "input.long-press · no contextmenu reaches the widget from touch-action: auto (the hold or right click is the message menu)" : "skip",
       "input.wheel-scroll · no wheel event reaches the widget" : "skip",
       "sel.active · :active applies while pressed" : "pass"
     },
@@ -559,11 +563,11 @@
     },
     "auto\/17-drag-hover\/light" : {
       "css.pointer-events · a tap through a pointer-events: none overlay hits the button below" : "pass",
-      "input.drag · movementX adds up to the distance" : "pass",
+      "input.drag · movementX sums to the distance" : "pass",
       "input.drag · pointerdown → pointermove (buttons=1) → pointerup moves the knob" : "pass",
-      "input.drag · setPointerCapture keeps moves coming past the element" : "pass",
+      "input.drag · setPointerCapture keeps moves coming past the track" : "pass",
       "input.hover-events · pointerenter, pointerover, mouseenter reach the widget" : "skip",
-      "input.touch-events · no touch events reach the widget on a touch client: pointer events only (profile 1: out)" : "skip",
+      "input.touch-events · no touch events on a touch client, pointer events only" : "skip",
       "sel.hover · :hover applies under a pointer" : "skip"
     },
     "auto\/18-out-of-profile\/light" : {
@@ -633,6 +637,23 @@
       "tw.theme-params · a[href]: link colour, no underline; <a> without href: text colour" : "pass",
       "tw.theme-params · figcaption is --tg-theme-hint-color" : "pass",
       "tw.theme-params · root: no background (the bubble is the canvas), the text colour" : "pass"
+    },
+    "auto\/23-gestures\/light" : {
+      "behaviour.gesture-claim · a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel" : "fail",
+      "behaviour.gesture-claim · the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel" : "pass",
+      "input.dblclick · a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel" : "pass",
+      "input.dblclick · a double tap on touch-action: none: both clicks, then dblclick" : "pass",
+      "input.long-press · a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger" : "pass"
+    },
+    "auto\/24-resize-anchor\/light" : {
+      "tw.resize-anchor · anything but exactly 'top' or 'bottom' throws TypeError" : "pass",
+      "tw.resize-anchor · setResizeAnchor('bottom') and ('top') return undefined and throw nothing" : "pass",
+      "tw.resize-anchor · typeof TelegramWidget.setResizeAnchor is \"function\"" : "pass",
+      "tw.resize-anchor · with 'bottom' the widget grows: three lines are 60 px" : "pass",
+      "tw.resize-anchor · with 'top' it shrinks back to 0 px" : "pass"
     },
     "visual\/01-boxes\/light" : {
       "load · loads" : "pass"
@@ -755,6 +776,9 @@
       "load · loads" : "pass"
     },
     "visual\/sdk\/17-size-hint\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/18-resize-anchor\/light" : {
       "load · loads" : "pass"
     }
   }

@@ -32,7 +32,7 @@ public struct EngineLocalWidgetPost: Equatable {
     }
 }
 
-/// One message per post (text = caption, media = the widget gzipped as the server does), then one per photo (a local
+/// One message per post (text = caption, media = the widget compressed as the server does), then one per photo (a local
 /// image over `photoResources[post][photo]`), in order, timestamps one second apart ending at `lastTimestamp`. Local,
 /// outgoing, by the account; in Saved Messages, in the account's own thread (My Notes).
 func _internal_localWidgetStoreMessages(posts: [EngineLocalWidgetPost], photoResources: [[LocalFileMediaResource]], peerId: PeerId, accountPeerId: PeerId, lastTimestamp: Int32) -> [StoreMessage] {

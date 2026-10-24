@@ -1437,18 +1437,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         recognizer.secondaryTap = { [weak self] point, recognizer in
-            guard let strongSelf = self, let item = strongSelf.item else {
-                return
-            }
-
-            if let action = strongSelf.gestureRecognized(gesture: .secondaryTap, location: point, recognizer: recognizer) {
-                switch action {
-                case .action, .optionalAction:
-                    break
-                case let .openContextMenu(openContextMenu):
-                    item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, strongSelf, openContextMenu.subFrame, nil, point)
-                }
-            }
+            self?.secondaryTapped(at: point, recognizer: recognizer)
         }
         recognizer.highlight = { [weak self] point in
             if let strongSelf = self, strongSelf.selectionNode == nil {
@@ -1488,9 +1477,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
             self.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         }
-        replyRecognizer.shouldBegin = { [weak self] in
+        replyRecognizer.shouldBegin = { [weak self, weak replyRecognizer] in
             if let strongSelf = self, let item = strongSelf.item {
                 if strongSelf.selectionNode != nil {
+                    return false
+                }
+                // A drag the content claims for itself (a message widget's touch-action) is not a swipe.
+                if let location = replyRecognizer?.location(in: strongSelf.view), strongSelf.contentNodes.contains(where: { $0.claimsHorizontalDrag(at: strongSelf.view.convert(location, to: $0.view)) }) {
                     return false
                 }
                 for media in item.content.firstMessage.media {
@@ -5138,6 +5131,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         
                         strongSelf.internalUpdateLayout()
                     }
+                    contentNode.secondaryTap = { [weak strongSelf, weak contentNode] point in
+                        guard let strongSelf, let contentNode else {
+                            return
+                        }
+                        strongSelf.secondaryTapped(at: strongSelf.view.convert(point, from: contentNode.view), recognizer: nil)
+                    }
                     contentNode.requestFullUpdate = { [weak strongSelf] customTransition in
                         guard let strongSelf, let item = strongSelf.item else {
                             return
@@ -7300,6 +7299,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     private var playedSwipeToReplyHaptic = false
+    /// A secondary click at `point`: the bubble's own recognizer's, or one a content node took itself
+    /// (`ChatMessageBubbleContentNode.secondaryTap`).
+    private func secondaryTapped(at point: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) {
+        guard let item = self.item else {
+            return
+        }
+        if let action = self.gestureRecognized(gesture: .secondaryTap, location: point, recognizer: recognizer) {
+            switch action {
+            case .action, .optionalAction:
+                break
+            case let .openContextMenu(openContextMenu):
+                item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, point)
+            }
+        }
+    }
+
     @objc private func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
         var leftOffset: CGFloat = 0.0
@@ -7557,6 +7572,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview || !self.disablesComments
     }
     
+    override public var resizeAnchor: ListViewItemResizeAnchor? {
+        return self.contentNodes.lazy.compactMap(\.resizeAnchor).first
+    }
+
     override public func openMessageContextMenu() {
         guard let item = self.item else {
             return

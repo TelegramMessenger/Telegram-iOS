@@ -68,8 +68,9 @@ One leading dash (`--widget-set` is ignored silently).
 
 | Argument | Values | Default |
 |---|---|---|
-| `-widget-set` | `conformance` (widget-sandbox v0.1.1's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`) | `conformance` |
+| `-widget-set` | `conformance` (widget-sandbox v0.1.3's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
 | `-widget-post` | a part of a widget path; only matching posts | all |
+| `-widget-posts` | whole widget paths, comma-separated: only these posts, in this order (oldest first), e.g. `fixture/tall-box.html,fixture/resize/grow-top.html` | all |
 | `-widget-kill-switch` | `on` (the app config's `ios_killswitch_disable_message_widgets` engaged: every widget a pill) | `off` |
 | `-widget-anchors` | `<W>x<H>`, overriding every post's anchors | the post's |
 | `-widget-caption` | `off` (the widget alone in its bubble: its corners, the tail, the date over it) | on |
@@ -105,7 +106,11 @@ contextMenuEnded fixture/open-link.html
   `MessageWidgetView.documentElementAttribute` (each read waits for the widget's queue, so only the harness's own
   fixtures are read). `Fixtures/multitouch.html` logs each pointer event at its buttons (a finger's first move only) as
   `<down|move|up|cancel>:<left|right>:<finger>:<P|S>`, the finger a letter by its pointer's first appearance, `P` the
-  primary pointer.
+  primary pointer; `double-tap.html`, `touch-drag.html` and `hold-none.html` log `<event type>:<element id>` for the
+  gesture events their tests read (`click`, `dblclick`, `pointercancel`, `contextmenu`).
+- `conformance <path> <json>`: an automatic conformance test's (`auto/…`) `<html data-conformance>`, its harness's own
+  result (status, checks, published targets), for a Tier 2 run of the test through the real bubble
+  (`testAuto23ThroughTheRealBubble`).
 - Events: `openLink <url>` (the bubble asked to open a link; the chat would show "Open link?" — ` (not concealed)` is
   appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`,
   `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction: a double tap the bubble took),
@@ -116,19 +121,20 @@ contextMenuEnded fixture/open-link.html
   that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
 - Changing the format means changing every test that parses it.
 
-## The conformance set (widget-sandbox v0.1.1, `conformance/CLIENTS.md`)
+## The conformance set (widget-sandbox v0.1.3, `conformance/CLIENTS.md`)
 
 The widget-sandbox author's rule: take the widgets from the tag (vendored in `third-party/widget-sandbox`), together
 with `manifest.json`, never from the chat; run and report as CLIENTS.md says. `ConformanceSetTests.testTheAutomaticSet`
-runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (41 runs), through
+runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (43 runs), through
 `MessageWidgetInstance` with the app's pool and wait policy at width 390, on the app's own theme for an incoming bubble
 of the default chat theme (`ConformanceRunner.theme`, `messageWidgetTheme`: CLIENTS.md step 1, "as in production"),
-then the visual set loaded only (41 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
+then the visual set loaded only (42 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
 "the report then shows whether each widget loads"), one at a time (`ConformanceRunner.runAll`:
 widgets run together share the pool's two threads, and 10-css-animations' iteration check failed whenever the
 filter-heavy 09 pages ran beside it), each view in the window so it gets its frames, a stand-in chat input focused
 before loading. A run reads the widget's `<html data-conformance>` from the live DOM (`MessageWidgetInstance.documentElementAttribute`), waits at most 20 s for
-`done` (or `awaiting` when it has actions), records what the host saw and crops the manifest's stages at 2×
+`done` (or `awaiting` when it has actions, which it then performs 350 ms apart through the widget's instance: taps,
+double taps, presses and drags), records what the host saw and crops the manifest's stages at 2×
 (`documentImage`). It writes into the test's undeclared outputs (`conformance/`): the run file
 (`ios-telegram-native.json`, `run.schema.json`), `crops/` and `baseline.new.json`.
 
@@ -154,6 +160,26 @@ regression: fix it. Actions the runner cannot perform for real go into `skippedA
 error of the run instead, and its checks stay as the widget left them. The manifest's host checks are in the baseline
 too, as `host · <id> · <name>`, judged from what the host saw exactly as `report.mjs` judges them (a bridge call's
 count, the bubble's height, the chat input's focus).
+
+**Who gets a press is the bubble's, so Tier 1 cannot pass it all.** The runner injects below the bubble, so the checks
+only the bubble can satisfy fail there and stay `fail` in the baseline, as CLIENTS.md says such a runner reports:
+`auto/23-gestures`' hold on `auto` (the menu's `pointercancel`), vertical drags on `none` and `pan-x` (the chat's
+scroll's) and drag from the leading 20 px (the back swipe's). `WidgetHarnessUITests.testAuto23ThroughTheRealBubble` runs
+that test through the real bubble (XCUITest presses at the targets the readout's `conformance` line publishes; no
+caption and an older post above, so its probes are below the status bar and the chat can scroll) and holds every check
+to `pass`.
+
+## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
+
+The fixtures under `Fixtures/resize/` set their resize anchor first, then change by 120 pt once: on their first click
+(`grow-top`, `grow-bottom`, `shrink-top`) or 2.5 s after loading (`timer-top`, `timer-bottom`). They are loaded only
+by `-widget-posts` (`WidgetHarnessLaunchOptions.posts`), so their timers never run in the all-fixtures set the other
+tests lay out. Tier 1 lays out a chat of exactly the posts a measurement needs, clicks a fixture through its widget's
+own pointer path (`WidgetHarnessListHost.widgetView(path:)`, `MessageWidgetInstance.pointer`) and compares the readout's
+frames once the list settles. **Give each chat older filler posts so it is taller than the screen**
+(`fixture/tall-box.html`): a chat that fits the screen cannot scroll, so no edge can be kept there but the list's own.
+The list host updates a message as the chat does (animated, with the bubble's `resizeAnchor`), and
+`resizeAnchor(path:)` reads what a bubble answers.
 
 ## Which tier
 

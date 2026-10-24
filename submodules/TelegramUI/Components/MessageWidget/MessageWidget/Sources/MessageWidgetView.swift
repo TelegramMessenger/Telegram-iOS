@@ -12,17 +12,31 @@ struct MessageWidgetGestureClaim: OptionSet {
     static let horizontal = MessageWidgetGestureClaim(rawValue: 1 << 0)
 }
 
-/// What a press answered when it went down (SDK v1 §5.5): the drags it claims for the widget, and whether it landed on
-/// something the widget handles. There the tap is the widget's at once and the bubble takes no double tap, as on a
-/// message button; elsewhere the bubble waits for a double tap, its quick reaction.
+/// What a press answered when it went down (SDK v1 §5.5): the drags it claims for the widget, whether it landed on
+/// something the widget handles, and whether its hold is the widget's (`touch-action: none`: the widget gets
+/// `contextmenu`, the bubble opens no menu), else the bubble's (a hold opens the message's menu).
 struct MessageWidgetPress: Equatable {
     var claim: MessageWidgetGestureClaim
     var takesTaps: Bool
+    var hold: Bool = false
 
     /// No live widget answered (none booted, or it stopped: a stopped widget is a picture): the bubble's.
     static let none = MessageWidgetPress(claim: [], takesTaps: false)
-    /// The widget did not answer within the wait: its taps are taken at once, its drags are the chat's.
-    static let unanswered = MessageWidgetPress(claim: [], takesTaps: true)
+    /// The widget did not answer within the wait (a busy game): its taps and its hold are taken for it (no menu, the
+    /// chat's lock and step-back), its drags are the chat's.
+    static let unanswered = MessageWidgetPress(claim: [], takesTaps: true, hold: true)
+    /// An iPad pointer's press, as the policy's mouse answers it whatever its touch-action: its holds and sideways drags
+    /// are the widget's (`MessageWidgetCore.touch`).
+    static let pointer = MessageWidgetPress(claim: .horizontal, takesTaps: true, hold: true)
+}
+
+/// What presses a widget's pointer, as the gesture policy tells them apart: a finger or a pencil is a touch; an iPad's
+/// trackpad or mouse (a `UITouch` of type `.indirectPointer`) is a mouse, with its button (0 primary, 2 secondary).
+struct MessageWidgetPointerKind: Equatable {
+    var mouse: Bool
+    var button: Int
+
+    static let touch = MessageWidgetPointerKind(mouse: false, button: 0)
 }
 
 /// The widget's pixels: one CALayer per 128 pt tile, whose `contents` is the image the widget's core drew for it
@@ -42,7 +56,7 @@ public final class MessageWidgetView: UIView {
         return context?.makeImage()
     }()
 
-    weak var instance: MessageWidgetInstance?
+    public private(set) weak var instance: MessageWidgetInstance?
     /// Keyed by `WidgetFrame.key(row:column:)`. Sublayers of `contentLayer`.
     private var tiles: [Int: CALayer] = [:]
     private let contentLayer = CALayer()
@@ -68,38 +82,54 @@ public final class MessageWidgetView: UIView {
         self.layer.addSublayer(self.canvasLayer)
         self.layer.addSublayer(self.contentLayer)
         let touchRecognizer = MessageWidgetTouchRecognizer()
-        touchRecognizer.onTouch = { [weak self] phase, point, pointer, primary in
-            return self?.handleTouch(phase: phase, at: point, pointer: pointer, primary: primary) ?? .none
+        touchRecognizer.onTouch = { [weak self] phase, point, pointer, primary, kind in
+            return self?.handleTouch(phase: phase, at: point, pointer: pointer, primary: primary, kind: kind) ?? .none
+        }
+        touchRecognizer.onSecondaryClick = { [weak self] point in
+            self?.onSecondaryClick?(point)
         }
         self.addGestureRecognizer(touchRecognizer)
         self.touchRecognizer = touchRecognizer
+        // An iPad pointer hovers before it clicks: where it is tells the bubble's questions, which come before the
+        // pointer's touch reaches the recognizer, that a press there is a mouse's. A pencil's hover is left out.
+        let hoverRecognizer = UIHoverGestureRecognizer(target: self, action: #selector(self.pointerHovered(_:)))
+        hoverRecognizer.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+        self.addGestureRecognizer(hoverRecognizer)
     }
 
     private weak var touchRecognizer: MessageWidgetTouchRecognizer?
 
+    @objc private func pointerHovered(_ recognizer: UIHoverGestureRecognizer) {
+        self.touchRecognizer?.pointerHovered(at: recognizer.location(in: self))
+    }
+
+    /// An iPad pointer's secondary click on a part that claims no holds, at its point in the view: the chat's, for the
+    /// message's menu, as a secondary click elsewhere on the message opens it.
+    public var onSecondaryClick: ((CGPoint) -> Void)?
+
     /// Whether the press at `point` takes horizontal drags for the widget (SDK v1 §5.5), for the host's back swipe
-    /// (`interactiveTransitionGestureRecognizerTest`), which begins after 2 pt, before the widget's drag does. The swipe
-    /// asks in its own touchesBegan, which UIKit calls before the widget's recognizer has the touch (measured, 2026-10-22),
-    /// so the answer starts the press: the recognizer adopts it when the touch reaches it.
+    /// (`interactiveTransitionGestureRecognizerTest`), which begins after 2 pt, and the bubble's swipe to reply, which
+    /// begins at about the widget's own slop: each asks at its start rather than racing the widget's drag. They ask in
+    /// their own touchesBegan, which UIKit calls before the widget's recognizer has the touch (measured, 2026-10-22), so
+    /// the answer starts the press: the recognizer adopts it when the touch reaches it.
     public func claimsHorizontalDrag(at point: CGPoint) -> Bool {
         return self.touchRecognizer?.beginPressEarly(at: point).claim.contains(.horizontal) ?? false
     }
 
-    /// Whether the press at `point` takes taps for the widget, for the bubble (`tapActionAtPoint`): where it does, the tap
-    /// is the widget's at once and so is a long press; elsewhere the bubble waits for a double tap, its quick reaction, and
-    /// a long press opens its menu. The bubble's tap recognizer asks at the touch's down and up (`duringTouch`), before the
-    /// widget's own recognizer has the touch, so its question starts the press, as `claimsHorizontalDrag(at:)` does. Its
-    /// context gesture asks too, at the down and again while the touch is held, and UIKit may tell it about the touch
-    /// before anyone else: its question reads the press under way, or one that went down there, and starts the press when
-    /// there is none yet (`pressAnswerOrBegin`), so a long press on a part the widget does not handle always gets its menu.
-    public func pressTakesTaps(at point: CGPoint, duringTouch: Bool) -> Bool {
+    /// Whether the press at `point` claims its hold for the widget (`MessageWidgetPress.hold`, touch-action: none), for
+    /// the bubble (`tapActionAtPoint`), whose context gesture opens the message's menu on a hold everywhere else over the
+    /// widget. The bubble's tap recognizer asks at the touch's down and up (`duringTouch`), before the widget's own
+    /// recognizer has the touch, so its question starts the press, as `claimsHorizontalDrag(at:)` does. Its context
+    /// gesture asks at the down too, and UIKit may tell it about the touch before anyone else: its question reads the
+    /// press under way, or one that went down there, and starts the press when there is none yet (`pressAnswerOrBegin`).
+    public func pressClaimsHold(at point: CGPoint, duringTouch: Bool) -> Bool {
         guard let recognizer = self.touchRecognizer else {
             return false
         }
         if duringTouch {
-            return recognizer.beginPressEarly(at: point).takesTaps
+            return recognizer.beginPressEarly(at: point).hold
         }
-        return recognizer.pressAnswerOrBegin(at: point).takesTaps
+        return recognizer.pressAnswerOrBegin(at: point).hold
     }
 
     /// Ends every finger of the widget's as cancelled, so lifting one later clicks nothing: the host took the touches (a
@@ -193,13 +223,26 @@ public final class MessageWidgetView: UIView {
         }
     }
 
+    /// Where the tiles of a document drawn `drawnHeight` tall go while the widget reports `reportedHeight`: a widget whose
+    /// height changed shows its old tiles until the new ones are drawn, and a bottom-anchored one keeps them on its
+    /// bubble's bottom edge, which stays put (widget-sandbox v0.1.3, integration.md "Which edge stays put"); otherwise
+    /// they are laid from the top.
+    static func tileOffset(anchor: MessageWidgetResizeAnchor, reportedHeight: CGFloat?, drawnHeight: CGFloat) -> CGFloat {
+        guard anchor == .bottom, let reportedHeight, abs(reportedHeight - drawnHeight) > 0.5 else {
+            return 0.0
+        }
+        return reportedHeight - drawnHeight
+    }
+
     /// Shows `frame`: a layer per tile, laid over the frame's size. A tile whose image is unchanged keeps its contents.
     func apply(_ frame: WidgetFrame) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        self.contentLayer.frame = CGRect(origin: .zero, size: frame.size)
-        // The tiles paint the canvas over the document; below it, as tall as the bubble makes the view, this layer does.
-        let canvasTop = min(max(frame.canvasTop, 0.0), self.bounds.height)
+        let offset = MessageWidgetView.tileOffset(anchor: self.instance?.resizeAnchor ?? .top, reportedHeight: self.instance?.reportedHeight, drawnHeight: frame.size.height)
+        self.contentLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: offset), size: frame.size)
+        // The tiles paint the canvas over the document; below it, as tall as the bubble makes the view, this layer does
+        // (and above old tiles held on the bottom edge).
+        let canvasTop = offset > 0.0 ? 0.0 : min(max(frame.canvasTop, 0.0), self.bounds.height)
         self.canvasLayer.frame = CGRect(x: 0.0, y: canvasTop, width: self.bounds.width, height: self.bounds.height - canvasTop)
         self.canvasLayer.backgroundColor = frame.canvasColor
         for (key, image) in frame.tiles {
@@ -233,9 +276,10 @@ public final class MessageWidgetView: UIView {
 
     // MARK: touches
 
-    /// One finger's phase: `pointer` its id, `primary` whether it went down while none of the view's other fingers was.
+    /// One finger's phase: `pointer` its id, `primary` whether it went down while none of the view's other fingers was,
+    /// `kind` what presses it.
     @discardableResult
-    func handleTouch(phase: TouchPhase, at point: CGPoint, pointer: Int32 = 0, primary: Bool = true) -> MessageWidgetPress {
+    func handleTouch(phase: TouchPhase, at point: CGPoint, pointer: Int32 = 0, primary: Bool = true, kind: MessageWidgetPointerKind = .touch) -> MessageWidgetPress {
         let action: Int32
         switch phase {
         case .began:
@@ -247,7 +291,7 @@ public final class MessageWidgetView: UIView {
         case .cancelled:
             action = 3
         }
-        return self.instance?.touch(action: action, at: point, pointer: pointer, primary: primary) ?? .none
+        return self.instance?.touch(action: action, at: point, pointer: pointer, primary: primary, mouse: kind.mouse, button: kind.button) ?? .none
     }
 }
 
@@ -262,26 +306,33 @@ public final class MessageWidgetView: UIView {
 ///   a horizontal one swipes to reply), and the widget's touches end as cancelled.
 /// A drag the press claims (SDK v1 §5.5) is the widget's: once the touch has moved `claimDistance` along a claimed axis
 /// the recognizer begins and fails every recognizer still possible above it, as the bubble's long press does when it
-/// takes a touch. A touch on something the widget handles (`MessageWidgetPress.takesTaps`) is the widget's, held or not, so
-/// the recognizer recognizes on the last touch's end; a sequence of touches none of which did fails it there, which
-/// leaves it to the chat's taps and the bubble's double tap, and a long press there is the bubble's context menu.
-/// Several fingers (multitouch design §2, §5.2): a finger that lands while another is down, when either is on something
-/// the widget handles, takes the touches for the widget the same way, until every finger has lifted; a finger that lands
-/// while the chat drags (a recognizer above has begun) starts nothing.
+/// takes a touch. A tap on something the widget handles (`MessageWidgetPress.takesTaps`) is the widget's, so the
+/// recognizer recognizes on the last touch's end; a sequence of touches none of which did fails it there, which leaves
+/// it to the chat's own taps (the bubble's never wait on a live widget). A hold is the bubble's context menu unless the
+/// press claims it (`MessageWidgetPress.hold`).
+/// Several fingers (multitouch design §2, §5.2): a finger that lands while another is down, when either press claims
+/// its hold, takes the touches for the widget the same way, until every finger has lifted; a finger that lands while the
+/// chat drags (a recognizer above has begun) starts nothing.
 /// It never cancels or delays the touches of a view, its own included.
 final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     /// How far a touch moves before a claimed drag takes it: past a resting finger's drift, short of the chat's own
-    /// drags (swipe-to-reply and the list's pan begin at about 10 pt).
+    /// drags (the list's pan and swipe-to-reply begin at about 10 pt, and the list's took the touch when the widget's
+    /// decision came at 10 pt too). Well short of the gesture policy's 10 px slop, which the runtime still applies: a
+    /// press that stops before it is a tap, whoever holds the touch.
     static let claimDistance: CGFloat = 4.0
     /// At most this many fingers at once (the runtime's kMaxPointers); another is ignored whole.
     static let maximumTouches = 5
 
-    /// A finger's phase: its point, its pointer id and whether it is the primary pointer.
-    var onTouch: ((MessageWidgetView.TouchPhase, CGPoint, Int32, Bool) -> MessageWidgetPress)?
+    /// A finger's phase: its point, its pointer id, whether it is the primary pointer, and what presses it.
+    var onTouch: ((MessageWidgetView.TouchPhase, CGPoint, Int32, Bool, MessageWidgetPointerKind) -> MessageWidgetPress)?
+    /// A pointer's secondary click whose press claims no holds ended, at its point: the chat's menu.
+    var onSecondaryClick: ((CGPoint) -> Void)?
     /// Tests: whether the chat is dragging; nil reads the recognizers above the view.
     var chatIsDragging: (() -> Bool)?
     /// Tests: where a touch is; nil is its location in the view.
     var touchLocation: ((UITouch) -> CGPoint)?
+    /// Tests: what presses a touch; nil reads its type and the event's buttons.
+    var touchKind: ((UITouch, UIEvent) -> MessageWidgetPointerKind)?
 
     /// A finger the widget is following: its pointer, what its press answered, where it went down and last was, and
     /// whether its direction is decided (a claimed drag is taken, or it moved past `claimDistance` along an axis its press
@@ -290,6 +341,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         let touch: UITouch
         let pointer: Int32
         let primary: Bool
+        let kind: MessageWidgetPointerKind
         let press: MessageWidgetPress
         let downLocation: CGPoint
         var lastLocation: CGPoint
@@ -298,18 +350,21 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     private var tracked: [Tracked] = []
     /// Whether a press of the current sequence took taps: the recognizer then ends at the last touch's end, else fails.
     private var sequenceTakesTaps = false
-    /// Whether a second finger took the sequence's touches for the widget (`takeTouches`): until every finger has
-    /// lifted, every question is the widget's, since a recognizer failed from outside can still act on a timer (the
-    /// bubble's long tap does) and asks then.
-    private var tookTouches = false
+    /// Whether the widget took the sequence's touches (`takeTouches`: a second finger, or a pointer press that claims its
+    /// hold): until every finger has lifted, every question is the widget's, since a recognizer failed from outside can
+    /// still act on a timer (the bubble's long tap does) and asks then.
+    private(set) var tookTouches = false
     /// A finger went sideways (a claimed drag, or one of the touches the widget took): UIKit's exclusion keeps the pans
     /// out from then on (`canPrevent`). Until then none, so the chat's scroll survives the widget taking the touches.
     private var preventsPans = false
     /// Pointer ids count up, one per press.
     private var nextPointer: Int32 = 1
-    /// A press started before its touch reached the recognizer (`beginPressEarly`): adopted by the touch that begins at
-    /// its point, else cancelled on the next run-loop turn.
+    /// A press started before its touch reached the recognizer (`beginPressEarly`), always a finger's (a question
+    /// carries no touch, and where a pointer hovers none starts): adopted by a finger that begins at its point, else
+    /// cancelled, by a pointer's touch there or on the next run-loop turn.
     private var earlyPress: (location: CGPoint, pointer: Int32, primary: Bool, press: MessageWidgetPress)?
+    /// Where an iPad pointer last hovered over the view, until a finger touches it.
+    private var hoverLocation: CGPoint?
     /// The last press that went down, kept after it ends for the bubble's questions about its tap (`pressAnswer(near:)`).
     private var lastPress: (location: CGPoint, press: MessageWidgetPress)?
 
@@ -322,6 +377,16 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
 
     private func location(of touch: UITouch) -> CGPoint {
         return self.touchLocation?(touch) ?? touch.location(in: self.view)
+    }
+
+    private func kind(of touch: UITouch, in event: UIEvent) -> MessageWidgetPointerKind {
+        if let touchKind = self.touchKind {
+            return touchKind(touch, event)
+        }
+        guard touch.type == .indirectPointer else {
+            return .touch
+        }
+        return MessageWidgetPointerKind(mouse: true, button: event.buttonMask.contains(.secondary) ? 2 : 0)
     }
 
     private func takePointer() -> Int32 {
@@ -369,10 +434,10 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         return true
     }
 
-    /// The chat's lock (`MessageWidgetTouchLock`) is held while a finger is on a part the widget handles.
+    /// The chat's lock (`MessageWidgetTouchLock`) is held while a finger's press claims its hold (a game's control).
     private func updateHolding() {
         if let view = self.view {
-            MessageWidgetTouchLock.setHolding(view, self.tracked.contains(where: { $0.press.takesTaps }))
+            MessageWidgetTouchLock.setHolding(view, self.tracked.contains(where: { $0.press.hold }))
         }
     }
 
@@ -402,24 +467,34 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
                 continue
             }
             let location = self.location(of: touch)
+            let kind = self.kind(of: touch, in: event)
             let pointer: Int32
             let primary: Bool
             let press: MessageWidgetPress
-            if let early = self.earlyPress, MessageWidgetTouchRecognizer.isNear(early.location, location) {
+            if kind == .touch {
+                self.hoverLocation = nil
+            }
+            if kind == .touch, let early = self.earlyPress, MessageWidgetTouchRecognizer.isNear(early.location, location) {
                 self.earlyPress = nil
                 (pointer, primary, press) = (early.pointer, early.primary, early.press)
             } else {
                 self.cancelEarlyPress()
                 pointer = self.takePointer()
                 primary = self.tracked.isEmpty
-                press = self.onTouch?(.began, location, pointer, primary) ?? .none
+                press = self.onTouch?(.began, location, pointer, primary, kind) ?? .none
                 self.lastPress = (location, press)
             }
             let others = self.tracked
-            self.tracked.append(Tracked(touch: touch, pointer: pointer, primary: primary, press: press, downLocation: location, lastLocation: location))
+            self.tracked.append(Tracked(touch: touch, pointer: pointer, primary: primary, kind: kind, press: press, downLocation: location, lastLocation: location))
             self.sequenceTakesTaps = self.sequenceTakesTaps || press.takesTaps
-            // The chat steps back (multitouch design §5.2): a second finger, and a part the widget handles under either.
-            if !others.isEmpty && (press.takesTaps || others.contains(where: { $0.press.takesTaps })) {
+            // The chat steps back (multitouch design §5.2): a second finger, and a press that claims its hold under
+            // either.
+            if !others.isEmpty && (press.hold || others.contains(where: { $0.press.hold })) {
+                self.takeTouches()
+            }
+            // A pointer has no hold menu and no swipes (the policy's mouse): a press that claims its hold is the widget's
+            // whole, whatever the bubble's questions at its down were told.
+            if kind.mouse && press.hold {
                 self.takeTouches()
             }
         }
@@ -441,7 +516,8 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     }
 
     /// Starts the press at `point` for a touch the recognizer has not seen yet, and answers it; while a finger is down,
-    /// its press answers instead (the nearest one's when there are several), and while the chat drags nothing starts.
+    /// its press answers instead (the nearest one's when there are several), while the chat drags nothing starts, and
+    /// where an iPad pointer hovers nothing starts either and the mouse's answer is given (`MessageWidgetPress.pointer`).
     func beginPressEarly(at point: CGPoint) -> MessageWidgetPress {
         if self.startsNothing() {
             return .none
@@ -455,9 +531,14 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
             }
             self.cancelEarlyPress()
         }
+        // Where an iPad pointer hovers the press is its, and its button is not known until its touch arrives: the answer
+        // is the mouse's, and the touch starts the widget's press, with its real button.
+        if self.hoverLocation.map({ MessageWidgetTouchRecognizer.isNear($0, point) }) == true {
+            return .pointer
+        }
         let pointer = self.takePointer()
         let primary = self.tracked.isEmpty
-        let press = self.onTouch?(.began, point, pointer, primary) ?? .none
+        let press = self.onTouch?(.began, point, pointer, primary, .touch) ?? .none
         self.earlyPress = (point, pointer, primary, press)
         self.lastPress = (point, press)
         DispatchQueue.main.async { [weak self] in
@@ -473,7 +554,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     /// menu); with several, the press of the finger nearest `point`.
     private func trackedPress(near point: CGPoint) -> MessageWidgetPress? {
         if self.tookTouches, let first = self.tracked.first {
-            return MessageWidgetPress(claim: first.press.claim, takesTaps: true)
+            return MessageWidgetPress(claim: first.press.claim, takesTaps: true, hold: true)
         }
         if self.tracked.count <= 1 {
             return self.tracked.first?.press
@@ -509,8 +590,13 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     private func cancelEarlyPress() {
         if let early = self.earlyPress {
             self.earlyPress = nil
-            _ = self.onTouch?(.cancelled, early.location, early.pointer, early.primary)
+            _ = self.onTouch?(.cancelled, early.location, early.pointer, early.primary, .touch)
         }
+    }
+
+    /// An iPad pointer hovers at `point` over the view.
+    func pointerHovered(at point: CGPoint) {
+        self.hoverLocation = point
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -528,7 +614,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
             let location = self.location(of: touch)
             self.tracked[index].lastLocation = location
             let finger = self.tracked[index]
-            _ = self.onTouch?(.moved, location, finger.pointer, finger.primary)
+            _ = self.onTouch?(.moved, location, finger.pointer, finger.primary, finger.kind)
             // The callback may have ended the touches (the host's cancel): the finger is looked up again.
             guard let current = self.tracked.firstIndex(where: { $0.touch === touch }) else {
                 continue
@@ -596,8 +682,12 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
                 continue
             }
             let finger = self.tracked.remove(at: index)
-            _ = self.onTouch?(.ended, self.location(of: touch), finger.pointer, finger.primary)
+            let location = self.location(of: touch)
+            _ = self.onTouch?(.ended, location, finger.pointer, finger.primary, finger.kind)
             ended = true
+            if finger.kind.mouse && finger.kind.button == 2 && !finger.press.hold {
+                self.onSecondaryClick?(location)
+            }
         }
         self.updateHolding()
         if ended && self.tracked.isEmpty {
@@ -613,7 +703,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
                 continue
             }
             let finger = self.tracked.remove(at: index)
-            _ = self.onTouch?(.cancelled, finger.lastLocation, finger.pointer, finger.primary)
+            _ = self.onTouch?(.cancelled, finger.lastLocation, finger.pointer, finger.primary, finger.kind)
             cancelled = true
         }
         self.updateHolding()
@@ -635,7 +725,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         }
         self.updateHolding()
         for finger in fingers {
-            _ = self.onTouch?(.cancelled, finger.lastLocation, finger.pointer, finger.primary)
+            _ = self.onTouch?(.cancelled, finger.lastLocation, finger.pointer, finger.primary, finger.kind)
         }
     }
 

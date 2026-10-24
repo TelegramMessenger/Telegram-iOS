@@ -139,7 +139,8 @@ final class MessageWidgetCore {
         self.meter = nil
         self.sequence += 1
         let wantsFrame = self.state == .live && self.session?.wantsAnimationFrame() == true
-        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
+        let resizeAnchor: MessageWidgetResizeAnchor = self.session?.resizeAnchor == .bottom ? .bottom : .top
+        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, resizeAnchor: resizeAnchor, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
         self.exportedSelection = (nil, false)
         self.bridgeCalls.removeAll()
         if !self.storageCommits.isEmpty {
@@ -241,7 +242,7 @@ final class MessageWidgetCore {
     /// before it. The press's permission for a link call is the runtime's (SDK v1 §2.5: one call per press, from the
     /// press's own events only). A press's down answers what the press is to the widget (SDK v1 §5.5).
     @discardableResult
-    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) -> MessageWidgetPress {
+    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool, mouse: Bool = false, button: Int = 0) -> MessageWidgetPress {
         guard self.state == .live, let session = self.session else {
             return .none
         }
@@ -261,15 +262,23 @@ final class MessageWidgetCore {
         guard self.state == .live, !self.isStopped(session) else {
             return .none
         }
-        session.pointer(phase, at: point, pointerId: pointer, primary: primary)
+        session.pointer(phase, at: point, pointerId: pointer, primary: primary, mouse: mouse, button: button)
         self.drain(at: now)
         // Every finger's down answers, not only the primary's (multitouch design §5.1).
         guard phase == .down else {
             return .none
         }
-        // A vertical claim is dropped: the chat always scrolls (`MessageWidgetGestureClaim`).
-        let claim: MessageWidgetGestureClaim = session.gestureClaim.contains(.horizontal) ? .horizontal : []
-        return MessageWidgetPress(claim: claim, takesTaps: session.pressTakesTaps)
+        let axes = session.gestureClaim
+        if mouse {
+            // The policy's mouse: no hold menu and no swipes, so its holds and sideways drags are the widget's whatever
+            // the touch-action (a vertical drag still scrolls the chat). Its secondary click claims holds where a touch
+            // would (the widget's contextmenu), else it is the chat's menu.
+            return MessageWidgetPress(claim: .horizontal, takesTaps: session.pressTakesTaps, hold: button != 2 || axes.contains(.hold))
+        }
+        // Only the horizontal axis: the chat always scrolls (`MessageWidgetGestureClaim`; widget-sandbox v0.1.3's G2,
+        // whose policy never claims the vertical one).
+        let claim: MessageWidgetGestureClaim = axes.contains(.horizontal) ? .horizontal : []
+        return MessageWidgetPress(claim: claim, takesTaps: session.pressTakesTaps, hold: axes.contains(.hold))
     }
 
     /// One animation frame, while the widget is visible and wants one.

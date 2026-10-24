@@ -30,7 +30,7 @@ final class ConformanceRecordTests: XCTestCase {
         XCTAssertEqual(Set(file.keys), ["platform", "renderer", "engine", "framework", "commit", "policy", "features", "date", "runs"])
         XCTAssertEqual(file["platform"] as? String, "ios")
         XCTAssertEqual(file["renderer"] as? String, "telegram-native")
-        XCTAssertEqual(file["framework"] as? String, "v0.1.1")
+        XCTAssertEqual(file["framework"] as? String, "v0.1.3")
         XCTAssertEqual(file["policy"] as? String, "strict")
         XCTAssertEqual(file["features"] as? [String], ["webAnimations"])
         let runs = try XCTUnwrap(file["runs"] as? [[String: Any]])

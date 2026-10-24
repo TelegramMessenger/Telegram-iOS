@@ -138,6 +138,8 @@ cc_library(
         "//third-party/gumbo",
         # Selectors parse with litehtml's CSS Syntax tokenizer (Sources/DOM/Selectors.cpp), the policy layer's.
         "//third-party/twidget:litehtml_fork",
+        "//third-party/widget-sandbox:GesturePolicy",
+        "//third-party/widget-sandbox:SdkPolicy",
     ],
     # The system ICU's public part only (Sources/Host/ICU.h): URL's IDNA, case mapping, the bidi classes.
     linkopts = ["-licucore"],

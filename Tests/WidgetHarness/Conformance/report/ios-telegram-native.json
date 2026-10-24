@@ -5,18 +5,18 @@
   "platform": "ios",
   "renderer": "telegram-native",
   "engine": "iOS 26.5, iPhone18,3 simulator",
-  "framework": "v0.1.1",
+  "framework": "v0.1.3",
   "policy": "strict",
   "features": [
    "webAnimations"
   ],
-  "date": "2026-10-22T04:59:55Z",
-  "commit": "e9654cab"
+  "date": "2026-10-24T15:25:57Z",
+  "commit": "11aacec5"
  },
  "summary": {
   "in": {
-   "pass": 162,
-   "partial": 1,
+   "pass": 163,
+   "partial": 4,
    "fail": 0,
    "xfail": 0,
    "xpass": 0,
@@ -38,7 +38,7 @@
    "fail": 0,
    "xfail": 0,
    "xpass": 0,
-   "skip": 6,
+   "skip": 4,
    "untested": 0
   }
  },
@@ -3385,9 +3385,10 @@
   },
   "css.transform.2d": {
    "status": "in",
-   "verdict": "pass",
+   "verdict": "partial",
    "counts": {
-    "pass": 5
+    "pass": 6,
+    "fail": 1
    },
    "evidence": [
     {
@@ -3423,6 +3424,24 @@
      "name": "the translate property",
      "status": "pass",
      "detail": "160,5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "translateX(150%) is a share of the box's own width",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "a transform set from script (style.transform, calc())",
+     "status": "fail",
+     "detail": "got 0, want 30 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3808,9 +3827,10 @@
   },
   "css.value.math": {
    "status": "in",
-   "verdict": "pass",
+   "verdict": "partial",
    "counts": {
-    "pass": 5
+    "pass": 5,
+    "fail": 2
    },
    "evidence": [
     {
@@ -3855,6 +3875,24 @@
      "name": "calc() with var()",
      "status": "pass",
      "detail": "got 22, want 22 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "calc(% + px) inside translateX()",
+     "status": "fail",
+     "detail": "got 0, want 30 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "calc() with * and nested parentheses inside translateX()",
+     "status": "fail",
+     "detail": "got 0, want 30 ±0.5",
      "theme": "light",
      "width": 390
     }
@@ -5349,7 +5387,7 @@
      "kind": "check",
      "name": "document.timeline.currentTime is a number",
      "status": "pass",
-     "detail": "65.73037493228912",
+     "detail": "78.15691666305065",
      "theme": "light",
      "width": 390
     },
@@ -6393,7 +6431,7 @@
      "kind": "check",
      "name": "requestAnimationFrame: three frames with increasing timestamps",
      "status": "pass",
-     "detail": "33,50,66",
+     "detail": "24,41,57",
      "theme": "light",
      "width": 390
     }
@@ -7164,6 +7202,60 @@
     }
    ]
   },
+  "tw.resize-anchor": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 5
+   },
+   "evidence": [
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "typeof TelegramWidget.setResizeAnchor is \"function\"",
+     "status": "pass",
+     "detail": "function",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "setResizeAnchor('bottom') and ('top') return undefined and throw nothing",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "anything but exactly 'top' or 'bottom' throws TypeError",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "with 'bottom' the widget grows: three lines are 60 px",
+     "status": "pass",
+     "detail": "60 px",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "with 'top' it shrinks back to 0 px",
+     "status": "pass",
+     "detail": "0 px",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
   "tw.open-link": {
    "status": "in",
    "verdict": "pass",
@@ -7381,7 +7473,7 @@
     {
      "test": "auto/17-drag-hover",
      "kind": "check",
-     "name": "no touch events reach the widget on a touch client: pointer events only (profile 1: out)",
+     "name": "no touch events on a touch client, pointer events only",
      "status": "skip",
      "detail": "no touch input here",
      "theme": "light",
@@ -7401,23 +7493,23 @@
      "kind": "check",
      "name": "pointerdown → pointermove (buttons=1) → pointerup moves the knob",
      "status": "pass",
-     "detail": "10 moves, knob at 160, dx 160",
+     "detail": "12 moves, knob at 160, dx 160",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/17-drag-hover",
      "kind": "check",
-     "name": "setPointerCapture keeps moves coming past the element",
+     "name": "setPointerCapture keeps moves coming past the track",
      "status": "pass",
-     "detail": "9 moves past the track",
+     "detail": "11 moves past the track",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/17-drag-hover",
      "kind": "check",
-     "name": "movementX adds up to the distance",
+     "name": "movementX sums to the distance",
      "status": "pass",
      "detail": "movementX 160 vs 160",
      "theme": "light",
@@ -7444,36 +7536,64 @@
    ]
   },
   "input.dblclick": {
-   "status": "out",
-   "verdict": "skip",
+   "status": "in",
+   "verdict": "pass",
    "counts": {
-    "skip": 1
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/16-sdk-taps-b",
      "kind": "check",
-     "name": "no dblclick reaches the widget (the double tap stays with the bubble)",
-     "status": "skip",
-     "detail": "input not deliverable on this renderer",
+     "name": "a double tap on touch-action: auto reaches the widget as dblclick (the reaction stays outside the widget)",
+     "status": "pass",
+     "detail": "1 events",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a double tap on touch-action: none: both clicks, then dblclick",
+     "status": "pass",
+     "detail": "2 clicks",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel",
+     "status": "pass",
+     "detail": "2 clicks",
      "theme": "light",
      "width": 390
     }
    ]
   },
   "input.long-press": {
-   "status": "out",
-   "verdict": "skip",
+   "status": "in",
+   "verdict": "pass",
    "counts": {
-    "skip": 1
+    "skip": 1,
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/16-sdk-taps-b",
      "kind": "check",
-     "name": "no contextmenu event reaches the widget",
+     "name": "no contextmenu reaches the widget from touch-action: auto (the hold or right click is the message menu)",
      "status": "skip",
      "detail": "input not deliverable on this renderer",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger",
+     "status": "pass",
+     "detail": "touch, 1 contextmenu",
      "theme": "light",
      "width": 390
     }
@@ -7839,7 +7959,7 @@
      "kind": "check",
      "name": "visibilitychange: hidden, then visible again",
      "status": "pass",
-     "detail": "2.2 s hidden",
+     "detail": "2.9 s hidden",
      "theme": "light",
      "width": 390
     },
@@ -7848,7 +7968,7 @@
      "kind": "check",
      "name": "no animation frames while hidden",
      "status": "pass",
-     "detail": "0 frames in 2.2 s",
+     "detail": "0 frames in 2.9 s",
      "theme": "light",
      "width": 390
     },
@@ -7857,7 +7977,7 @@
      "kind": "check",
      "name": "timers run at most once per second while hidden",
      "status": "pass",
-     "detail": "3 ticks of a 50 ms interval in 2.2 s",
+     "detail": "3 ticks of a 50 ms interval in 2.9 s",
      "theme": "light",
      "width": 390
     }
@@ -7907,9 +8027,58 @@
   },
   "behaviour.gesture-claim": {
    "status": "in",
-   "verdict": "untested",
-   "counts": {},
-   "evidence": []
+   "verdict": "partial",
+   "counts": {
+    "fail": 4,
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)",
+     "status": "fail",
+     "detail": "touch: pointerup",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)",
+     "status": "fail",
+     "detail": "touch: pointerup after 9 moves",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel",
+     "status": "fail",
+     "detail": "touch: pointerup after 9 moves",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)",
+     "status": "fail",
+     "detail": "touch: pointerup",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures",
+     "kind": "check",
+     "name": "the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel",
+     "status": "pass",
+     "detail": "10 moves",
+     "theme": "light",
+     "width": 390
+    }
+   ]
   },
   "behaviour.storage-persist": {
    "status": "in",
@@ -7924,6 +8093,12 @@
    "evidence": []
   },
   "behaviour.message-edit": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "behaviour.resize-anchor": {
    "status": "in",
    "verdict": "untested",
    "counts": {},
@@ -8431,7 +8606,8 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 6
+    "pass": 7,
+    "fail": 3
    },
    "stages": [
     {
@@ -8934,14 +9110,13 @@
    "errors": [],
    "harnessErrors": [],
    "skippedActions": [
-    3,
     4,
     6,
     7
    ],
    "counts": {
-    "pass": 3,
-    "skip": 4
+    "pass": 4,
+    "skip": 3
    },
    "stages": [],
    "host": []
@@ -9103,6 +9278,41 @@
    "skippedActions": [],
    "counts": {
     "pass": 17
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/23-gestures",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 4,
+    "fail": 4
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/24-resize-anchor",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 5
    },
    "stages": [],
    "host": []
@@ -9709,6 +9919,21 @@
   },
   {
    "id": "visual/sdk/17-size-hint",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/18-resize-anchor",
    "set": "visual",
    "theme": "light",
    "width": 390,

@@ -48,6 +48,17 @@ class InstanceTests: MessageWidgetTestCase {
         XCTAssertEqual(instance.layoutVersion, 0)
     }
 
+    /// widget-sandbox v0.1.3: the instance keeps the anchor of the latest snapshot it applied, 'bottom' from the boot and
+    /// 'top' from a later timer.
+    func testTheInstanceKeepsTheLatestAnchor() throws {
+        let instance = self.make("<!doctype html><body><p>a</p><script>TelegramWidget.setResizeAnchor('bottom');"
+            + " setTimeout(() => TelegramWidget.setResizeAnchor('top'), 200);</script></body>")
+        _ = instance.layout(width: 360.0)
+        XCTAssertEqual(instance.resizeAnchor, .bottom)
+        self.pump(0.6)
+        XCTAssertEqual(instance.resizeAnchor, .top)
+    }
+
     func testTapThatGrowsTheWidgetBumpsTheVersion() throws {
         let instance = self.make(self.fixture("03-faq-accordion"))
         let before = instance.layout(width: 360.0)

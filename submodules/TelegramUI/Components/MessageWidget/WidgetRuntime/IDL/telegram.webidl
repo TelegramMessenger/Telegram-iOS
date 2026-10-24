@@ -20,6 +20,8 @@ interface TelegramWidget {
   [SameObject] readonly attribute HapticFeedback HapticFeedback;
   undefined ready();
   undefined onTheme(TelegramThemeCallback callback);
+  // SDK v1 §2.12 (widget-sandbox v0.1.3): `edge` is `any` so that anything but exactly 'top' or 'bottom' is a TypeError.
+  undefined setResizeAnchor(optional any edge);
 };
 
 // SDK v1 §2.6 (V2a plan, Task 6): Mini Apps' HapticFeedback; each method returns the object for chaining. `style` and

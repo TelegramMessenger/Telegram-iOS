@@ -46,6 +46,19 @@ final class BubbleSizeTests: XCTestCase {
         XCTAssertNil(cache.height(for: AnyHashable("B")))
     }
 
+    /// widget-sandbox v0.1.3 (integration.md, "Which edge stays put"): the anchor is kept next to the height, for a bubble
+    /// re-created from the cache before its widget reports.
+    func testTheCacheKeepsTheAnchorWithTheHeight() {
+        let cache = MessageWidgetHeightCache()
+        cache.set(100.0, anchor: .bottom, for: AnyHashable("A"))
+        XCTAssertEqual(cache.entry(for: AnyHashable("A"))?.height, 100.0)
+        XCTAssertEqual(cache.entry(for: AnyHashable("A"))?.anchor, .bottom)
+        XCTAssertEqual(cache.height(for: AnyHashable("A")), 100.0)
+        cache.set(140.0, anchor: .top, for: AnyHashable("A"))
+        XCTAssertEqual(cache.entry(for: AnyHashable("A"))?.anchor, .top)
+        XCTAssertNil(cache.entry(for: AnyHashable("B")))
+    }
+
     /// Every layout pass sets its message's height again: that must not grow the cache's bookkeeping (task 7 review M2).
     func testSettingTheSameKeysAgainKeepsTheCacheBounded() {
         let cache = MessageWidgetHeightCache(capacity: 2)

@@ -11,7 +11,7 @@ For any client it answers the question: which profile features does it support?
 | | |
 |---|---|
 | [`catalogue.json`](catalogue.json) / [`catalogue.md`](catalogue.md) | 255 profile features with stable IDs (`css.display.grid`, `canvas.filter`, `tw.profile`, …). Each is marked in / out / candidate, with the decision it comes from (D3a, D3b, D4, D18, D23, the invariants, or `proposed` for the catalogue's own proposals), what the pipeline of the tag does with it (`today`: kept, stripped, replaced, resolved, … with profile 1 enforced and SDK v1; the legend is at the end of `catalogue.md`), and the keys a validator table would match. Profile 1 is frozen in `packages/core/profile.json` (2026-10-17), which is the source: the catalogue takes its statuses, decisions and neutralisations, so profile 1 has no candidates. `profile.json` lists the same 255 IDs, the SDK v1 limits and client behaviours included. The source is `scripts/conformance/catalogue.ts`; `emit-catalogue.ts` overlays `profile.json` when the branch has it. |
-| [`auto/`](auto) | **Automatic set**, 39 dense widgets for runners and CI (a topic too large for one mini-widget is split into parts: `03-layout-a`, `-b`, …). Each one asserts layout, computed style, APIs and events itself and publishes the result. Pixel stages are diffed against reference PNGs. |
+| [`auto/`](auto) | **Automatic set**, 40 dense widgets for runners and CI (a topic too large for one mini-widget is split into parts: `03-layout-a`, `-b`, …). Each one asserts layout, computed style, APIs and events itself and publishes the result. Pixel stages are diffed against reference PNGs. |
 | [`visual/`](visual) | **Visual set**, 20 readable widgets for people (the shared Telegram test channel). Each row shows a group of features drawn live, with a one-line caption; the reference picture of the whole widget (`refs/visual/<widget>.png`, `.dark.png` for theme-dependent ones) is posted as a photo next to it. Interactive rows carry a one-line instruction. Numbered in reading order; a topic too tall for one bubble is split into parts (`03-text-a`, `-b`). |
 | [`visual/sdk/`](visual/sdk) | **Client SDK group**, 17 widgets for what each client implements of SDK v1. Their reference pictures are `refs/visual/sdk/<widget>.png`, posted next to them; [`visual/sdk/README.md`](visual/sdk/README.md) is the post list. They use the mini harness (`harness/mini.js`). |
 | [`channel.json`](channel.json) | The test channel in posting order: per message the widget, its size anchors, the caption and the reference photos. A test bot sends them as layer-233 messages. |
@@ -26,7 +26,7 @@ Coverage: the automatic set covers 245 of the 255 catalogue IDs. The other ten a
 
 ## How a widget reports
 
-Every widget is one self-contained HTML file: no external resources, `data:` images only. Every widget is a mini-widget, like a product widget (at most 4 KB after gzip and 32 KB uncompressed, `docs/tgw-format.md`): the build keeps each one under 3800 bytes of gzip at levels 6 and 9, since the server's level is unknown, and fails otherwise. A test bot sends every widget as a layer-233 message with its reference picture posted next to it, in the order of `channel.json`.
+Every widget is one self-contained HTML file: no external resources, `data:` images only. Every widget is a mini-widget, like a product widget (at most 4 KB compressed and 32 KB uncompressed, `docs/tgw-format.md`): the build keeps each one under 3800 bytes of gzip at levels 6 and 9, since the server's level is unknown, and fails otherwise. A test bot sends every widget as a layer-233 message with its reference picture posted next to it, in the order of `channel.json`.
 
 The harness writes the result as JSON into the `data-conformance` attribute of `<html>`. Any host reads it from its own validated ops: it is the `attr` op on the element that the `el` op adopted as `html`.
 
@@ -78,7 +78,7 @@ The steps are in this order:
 
 ## The test group
 
-`scripts/conformance/publish-channel.ts` fills a Telegram forum supergroup with the set through a test bot, in the order of `channel.json`. Each part gets its own topic: Visual, Client SDK and Auto, and Defaults for the example widgets of `corpus/defaults` (v0.1.1, no pictures; their description is the file's `idea:` line). The corpora that fit a mini-widget (`showcase`, `common`, `generated`) are optional topics, posted only with `--topic`. A bot may send a widget only into its private chat with a user, so each post puts three things into its topic, in this order:
+`scripts/conformance/publish-channel.ts` fills a Telegram forum supergroup with the set through a test bot, in the order of `channel.json`. Each part gets its own topic: Visual, Client SDK and Auto, and Defaults for the example widgets of `corpus/defaults` (v0.1.1, no pictures; their description is the file's `idea:` line). The corpora that fit a mini-widget (`showcase`, `common`, `generated`, and `gestures`: what breaks if widgets cannot claim vertical drags) are optional topics, posted only with `--topic`. A bot may send a widget only into its private chat with a user, so each post puts three things into its topic, in this order:
 
 1. The description, from the caption.
 2. The widget, sent as an HTML document. A bot may send a widget only into its private chat with a user, so by default the widget goes to the tester's private chat and is forwarded from there. A copy would be a new send, which the server refuses in a group. A test bot allowed to post widgets into any chat (`TW_BOT_DIRECT=1`) sends it straight into the topic.
@@ -124,7 +124,7 @@ The script sends at most 20 messages a minute into the group, so the full set ta
   | `T.target(name, el)` | Publishes a tap or drag target. |
   | `T.run({awaitInput, deadline})` | Starts the widget. |
 
-  Options: `opts.xfail: 'reason'` for known gaps, `opts.sandboxOnly` for what a plain browser cannot do. Also `T.rect`, `T.cs`, `T.color`, `T.stage`, `T.skip`, `T.sandbox`, `T.mode`. The build inlines only the functions a widget calls, minified, so the harness costs about 0.9 KB of gzip in a visual widget and 1.3–1.6 KB in an automatic one.
+  Options: `opts.xfail: 'reason'` for known gaps, `opts.sandboxOnly` for what a plain browser cannot do. Also `T.rect`, `T.cs`, `T.color`, `T.stage`, `T.skip`, `T.sandbox`, `T.mode`. The build inlines only the functions a widget calls, minified, so the harness costs about 0.9 KB compressed in a visual widget and 1.3–1.6 KB in an automatic one.
 - Pixel stages are `<div data-stage="name" data-covers="ids" [data-themes] [data-max-diff] [data-colors] [data-xfail]>` with fixed colours on the white stage:
   - auto set: an 80×60 grid at the top;
   - visual set: 150×90, in flow.

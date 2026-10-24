@@ -185,13 +185,36 @@ public final class WidgetHarnessListHost {
         }
     }
 
-    /// Scrolls so the message at `index` (0 = the first post, the top of the chat; past the end, the newest) is visible.
-    public func scrollTo(messageIndex index: Int) {
+    /// Scrolls so the message at `index` (0 = the first post, the top of the chat; past the end, the newest) is visible;
+    /// `hold` keeps it there as the chat's jump to a message does (`.always`), until a drag.
+    public func scrollTo(messageIndex index: Int, hold: ListViewScrollHold = .none) {
         let listIndex = max(0, self.items.count - 1 - index)
         guard listIndex < self.items.count else {
             return
         }
-        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .center(.bottom), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateOpaqueState: nil)
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .center(.bottom), animated: false, curve: .Default(duration: nil), directionHint: .Up, hold: hold), updateOpaqueState: nil)
+    }
+
+    /// The edge the bubble of the post at `path` keeps on its next height change, while its bubble is loaded.
+    public func resizeAnchor(path: String) -> ListViewItemResizeAnchor? {
+        guard let id = self.paths.first(where: { $0.value == path })?.key else {
+            return nil
+        }
+        return self.bubbleNode(for: id)?.resizeAnchor
+    }
+
+    /// The live widget view of the post at `path`, while its bubble is loaded.
+    public func widgetView(path: String) -> MessageWidgetView? {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let node = self.bubbleNode(for: id) else {
+            return nil
+        }
+        func find(_ view: UIView) -> MessageWidgetView? {
+            if let view = view as? MessageWidgetView {
+                return view
+            }
+            return view.subviews.lazy.compactMap(find).first
+        }
+        return find(node.view)
     }
 
     /// The list item's stable id, the backend's identity: its message's (index 0 is the newest message).
@@ -219,7 +242,10 @@ public final class WidgetHarnessListHost {
         let listIndex = self.messages.count - 1 - messageIndex
         let item = self.makeItem(self.messages[messageIndex])
         self.items[listIndex] = item
-        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil)], options: [.Synchronous, .LowLatency], updateOpaqueState: nil)
+        // As the chat's history updates a message (`ChatHistoryListNode.requestMessageUpdate`): animated, keeping the
+        // edge the message asks for (a widget's resize anchor).
+        let resizeAnchor = self.bubbleNode(for: id)?.resizeAnchor
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil, resizeAnchor: resizeAnchor)], options: [.AnimateInsertion, .Synchronous], updateOpaqueState: nil)
     }
 
     private func bubbleNode(for id: EngineMessage.Id) -> ChatMessageBubbleItemNode? {
@@ -359,6 +385,10 @@ public final class WidgetHarnessListHost {
             // The harness's own fixtures only: each read waits for the widget's queue.
             if path.hasPrefix("fixture/"), let widgetView, let log = widgetView.documentElementAttribute("data-log"), !log.isEmpty {
                 logs.append((frame.minY, "log \(path) \(log)"))
+            }
+            // An automatic conformance test's own result, for a Tier 2 run of it through the real bubble.
+            if path.hasPrefix("auto/"), let widgetView, let result = widgetView.documentElementAttribute("data-conformance"), !result.isEmpty {
+                logs.append((frame.minY, "conformance \(path) \(result)"))
             }
             // Another content node in the bubble is the caption's text.
             let caption = node.contentNodes.count > 1 ? " +caption" : ""

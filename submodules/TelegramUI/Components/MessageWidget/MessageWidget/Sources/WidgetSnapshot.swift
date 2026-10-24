@@ -34,6 +34,8 @@ struct WidgetSnapshot {
     let width: CGFloat
     /// The document's size after the task; nil without a renderer (a start that failed).
     let size: CGSize?
+    /// The edge the widget asked to stay put when its height changes (sdk-v1 §5.6), reported with the size.
+    let resizeAnchor: MessageWidgetResizeAnchor
     /// The tiles a `.draw` task drew (nil for every other kind, and without a renderer).
     let frame: WidgetFrame?
     /// The task left tiles to draw: main queues a `.draw` task when it applies this snapshot.

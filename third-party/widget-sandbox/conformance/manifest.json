@@ -23,9 +23,9 @@
   }
  },
  "coverage": {
-  "auto": 245,
-  "visual": 114,
-  "catalogue": 255,
+  "auto": 247,
+  "visual": 116,
+  "catalogue": 257,
   "external": {
    "limit.nodes": "corpus/attacks (pnpm test:attacks): node flood",
    "limit.cpu": "corpus/attacks and tests/lifecycle.spec.ts: CPU quota, deferral, kill",
@@ -36,6 +36,7 @@
    "behaviour.storage-persist": "visual/sdk/07, 08, 09 (client behaviour)",
    "behaviour.storage-forward": "visual/sdk/15-storage-forward (client behaviour)",
    "behaviour.message-edit": "visual/sdk/16-bot-edit (client behaviour)",
+   "behaviour.resize-anchor": "visual/sdk/18-resize-anchor (client behaviour)",
    "behaviour.size-hint": "visual/sdk/17-size-hint (client behaviour)"
   },
   "notInAuto": [],
@@ -175,8 +176,7 @@
    ],
    "stages": [],
    "bytes": 7747,
-   "gzip": 3505,
-   "gzip6": 3506
+   "zlib": 3493
   },
   {
    "id": "auto/01-html-elements-b",
@@ -319,8 +319,7 @@
    ],
    "stages": [],
    "bytes": 6873,
-   "gzip": 3225,
-   "gzip6": 3225
+   "zlib": 3213
   },
   {
    "id": "auto/01-html-elements-c",
@@ -494,8 +493,7 @@
    ],
    "stages": [],
    "bytes": 8050,
-   "gzip": 3513,
-   "gzip6": 3517
+   "zlib": 3501
   },
   {
    "id": "auto/02-attributes-images-a",
@@ -656,8 +654,7 @@
    ],
    "stages": [],
    "bytes": 8018,
-   "gzip": 3436,
-   "gzip6": 3437
+   "zlib": 3424
   },
   {
    "id": "auto/02-attributes-images-b",
@@ -779,8 +776,7 @@
     }
    ],
    "bytes": 9014,
-   "gzip": 3504,
-   "gzip6": 3510
+   "zlib": 3492
   },
   {
    "id": "auto/03-layout-a",
@@ -980,8 +976,7 @@
     }
    ],
    "bytes": 10072,
-   "gzip": 3588,
-   "gzip6": 3597
+   "zlib": 3576
   },
   {
    "id": "auto/03-layout-b",
@@ -1188,8 +1183,7 @@
     }
    ],
    "bytes": 8497,
-   "gzip": 3458,
-   "gzip6": 3461
+   "zlib": 3446
   },
   {
    "id": "auto/03-layout-c",
@@ -1371,8 +1365,7 @@
     }
    ],
    "bytes": 9306,
-   "gzip": 3651,
-   "gzip6": 3653
+   "zlib": 3639
   },
   {
    "id": "auto/04-values-units",
@@ -1630,8 +1623,7 @@
    ],
    "stages": [],
    "bytes": 9391,
-   "gzip": 3744,
-   "gzip6": 3746
+   "zlib": 3732
   },
   {
    "id": "auto/05-colour-backgrounds-a",
@@ -1810,8 +1802,7 @@
     }
    ],
    "bytes": 6957,
-   "gzip": 2834,
-   "gzip6": 2836
+   "zlib": 2822
   },
   {
    "id": "auto/05-colour-backgrounds-b",
@@ -1931,7 +1922,7 @@
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-b/clip-text.chromium.png"
      },
-     "nativeVsTemplate": 0.5998
+     "nativeVsTemplate": 0.5997
     },
     {
      "name": "linear",
@@ -2074,8 +2065,7 @@
     }
    ],
    "bytes": 8321,
-   "gzip": 3207,
-   "gzip6": 3206
+   "zlib": 3195
   },
   {
    "id": "auto/06-text-fonts-a",
@@ -2226,8 +2216,7 @@
    ],
    "stages": [],
    "bytes": 7968,
-   "gzip": 3211,
-   "gzip6": 3212
+   "zlib": 3199
   },
   {
    "id": "auto/06-text-fonts-b",
@@ -2395,8 +2384,7 @@
    ],
    "stages": [],
    "bytes": 8395,
-   "gzip": 3362,
-   "gzip6": 3364
+   "zlib": 3350
   },
   {
    "id": "auto/06-text-fonts-c",
@@ -2594,8 +2582,7 @@
     }
    ],
    "bytes": 7215,
-   "gzip": 3171,
-   "gzip6": 3173
+   "zlib": 3159
   },
   {
    "id": "auto/07-selectors-a",
@@ -2734,8 +2721,7 @@
    ],
    "stages": [],
    "bytes": 5981,
-   "gzip": 2617,
-   "gzip6": 2619
+   "zlib": 2605
   },
   {
    "id": "auto/07-selectors-b",
@@ -2912,8 +2898,7 @@
    ],
    "stages": [],
    "bytes": 8471,
-   "gzip": 3473,
-   "gzip6": 3473
+   "zlib": 3461
   },
   {
    "id": "auto/08-at-rules",
@@ -3120,8 +3105,7 @@
    ],
    "stages": [],
    "bytes": 9580,
-   "gzip": 3698,
-   "gzip6": 3701
+   "zlib": 3686
   },
   {
    "id": "auto/09-transforms-effects-a",
@@ -3137,7 +3121,8 @@
     "css.filter.other",
     "css.filter.url",
     "css.transform.2d",
-    "css.transform.3d"
+    "css.transform.3d",
+    "css.value.math"
    ],
    "themes": [
     "light"
@@ -3183,6 +3168,34 @@
      "name": "rotateY(60deg) is dropped: the box keeps its width",
      "native": {
       "chromium": "fail"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "translateX(150%) is a share of the box's own width",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.math",
+     "name": "calc(% + px) inside translateX()",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.math",
+     "name": "calc() with * and nested parentheses inside translateX()",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "a transform set from script (style.transform, calc())",
+     "native": {
+      "chromium": "pass"
      }
     },
     {
@@ -3337,9 +3350,8 @@
      "nativeVsTemplate": 0.3036
     }
    ],
-   "bytes": 8727,
-   "gzip": 3285,
-   "gzip6": 3284
+   "bytes": 9784,
+   "zlib": 3505
   },
   {
    "id": "auto/09-transforms-effects-b",
@@ -3515,8 +3527,7 @@
     }
    ],
    "bytes": 6996,
-   "gzip": 2849,
-   "gzip6": 2849
+   "zlib": 2837
   },
   {
    "id": "auto/10-css-animations",
@@ -3772,8 +3783,7 @@
     }
    ],
    "bytes": 9205,
-   "gzip": 3524,
-   "gzip6": 3524
+   "zlib": 3512
   },
   {
    "id": "auto/11-web-animations",
@@ -4004,8 +4014,7 @@
     }
    ],
    "bytes": 9372,
-   "gzip": 3617,
-   "gzip6": 3617
+   "zlib": 3605
   },
   {
    "id": "auto/12-canvas-a",
@@ -4227,8 +4236,7 @@
     }
    ],
    "bytes": 8883,
-   "gzip": 3631,
-   "gzip6": 3633
+   "zlib": 3619
   },
   {
    "id": "auto/12-canvas-b",
@@ -4534,8 +4542,7 @@
     }
    ],
    "bytes": 9148,
-   "gzip": 3616,
-   "gzip6": 3619
+   "zlib": 3604
   },
   {
    "id": "auto/13-svg-a",
@@ -4724,8 +4731,7 @@
     }
    ],
    "bytes": 7146,
-   "gzip": 3248,
-   "gzip6": 3248
+   "zlib": 3236
   },
   {
    "id": "auto/13-svg-b",
@@ -4877,8 +4883,7 @@
     }
    ],
    "bytes": 5531,
-   "gzip": 2465,
-   "gzip6": 2464
+   "zlib": 2453
   },
   {
    "id": "auto/14-dom-layout-api-a",
@@ -5005,8 +5010,7 @@
    ],
    "stages": [],
    "bytes": 7405,
-   "gzip": 3223,
-   "gzip6": 3221
+   "zlib": 3211
   },
   {
    "id": "auto/14-dom-layout-api-b",
@@ -5181,8 +5185,7 @@
    ],
    "stages": [],
    "bytes": 8094,
-   "gzip": 3518,
-   "gzip6": 3520
+   "zlib": 3506
   },
   {
    "id": "auto/15-js-runtime-a",
@@ -5305,8 +5308,7 @@
    ],
    "stages": [],
    "bytes": 7159,
-   "gzip": 3065,
-   "gzip6": 3066
+   "zlib": 3053
   },
   {
    "id": "auto/15-js-runtime-b",
@@ -5558,8 +5560,7 @@
    ],
    "stages": [],
    "bytes": 7773,
-   "gzip": 3384,
-   "gzip6": 3384
+   "zlib": 3372
   },
   {
    "id": "auto/15-js-runtime-c",
@@ -5670,8 +5671,7 @@
    ],
    "stages": [],
    "bytes": 6735,
-   "gzip": 3003,
-   "gzip6": 3002
+   "zlib": 2991
   },
   {
    "id": "auto/16-sdk-taps-a",
@@ -5825,14 +5825,13 @@
    ],
    "stages": [],
    "bytes": 8503,
-   "gzip": 3652,
-   "gzip6": 3653
+   "zlib": 3640
   },
   {
    "id": "auto/16-sdk-taps-b",
    "set": "auto",
    "file": "auto/16-sdk-taps-b.html",
-   "title": "Taps: details toggle, #fragment links, :active; double tap, context menu, keyboard and wheel stay out",
+   "title": "Taps: details toggle, #fragment links, :active; a double tap is the widget's (dblclick), the context menu stays out on touch-action: auto (auto/23 has none); keyboard and wheel stay out",
    "hint": "Tap “summary” and “frag”, press and hold “active”, then double-tap “dbl”, long-press or right-click “ctx”, tap “kbd” and press a key, scroll over “wheel”, tap Finish.",
    "kind": [
     "self",
@@ -5944,16 +5943,16 @@
     },
     {
      "id": "input.dblclick",
-     "name": "no dblclick reaches the widget (the double tap stays with the bubble)",
+     "name": "a double tap on touch-action: auto reaches the widget as dblclick (the reaction stays outside the widget)",
      "native": {
-      "chromium": "fail"
+      "chromium": "pass"
      }
     },
     {
      "id": "input.long-press",
-     "name": "no contextmenu event reaches the widget",
+     "name": "no contextmenu reaches the widget from touch-action: auto (the hold or right click is the message menu)",
      "native": {
-      "chromium": "fail"
+      "chromium": "skip"
      }
     },
     {
@@ -5972,9 +5971,8 @@
     }
    ],
    "stages": [],
-   "bytes": 7156,
-   "gzip": 3177,
-   "gzip6": 3179
+   "bytes": 7363,
+   "zlib": 3251
   },
   {
    "id": "auto/16-sdk-taps-c",
@@ -6138,15 +6136,14 @@
    ],
    "stages": [],
    "bytes": 8296,
-   "gzip": 3480,
-   "gzip6": 3480
+   "zlib": 3468
   },
   {
    "id": "auto/17-drag-hover",
    "set": "auto",
    "file": "auto/17-drag-hover.html",
-   "title": "Drag (pointer events with capture), hover events and :hover (desktop pointers), pointer-events: none, touch events on touch clients, no text selection",
-   "hint": "Hover “hover”, drag the knob to the right end, drag it again past the track, tap the striped overlay, drag across the stage text, tap Finish.",
+   "title": "Drag (pointer events with capture), hover events and :hover (desktop), pointer-events: none, touch events on touch clients, no text selection",
+   "hint": "Hover “hover”, drag the knob to the right end and again past the track, tap the striped overlay, drag across the stage text (on touch: the chat's swipe), tap Finish.",
    "kind": [
     "self",
     "pixel",
@@ -6188,7 +6185,8 @@
      "by": true,
      "steps": 12,
      "ids": [
-      "input.drag"
+      "input.drag",
+      "behaviour.gesture-claim"
      ]
     },
     {
@@ -6246,14 +6244,14 @@
     },
     {
      "id": "input.drag",
-     "name": "setPointerCapture keeps moves coming past the element",
+     "name": "setPointerCapture keeps moves coming past the track",
      "native": {
       "chromium": "pass"
      }
     },
     {
      "id": "input.drag",
-     "name": "movementX adds up to the distance",
+     "name": "movementX sums to the distance",
      "native": {
       "chromium": "pass"
      }
@@ -6267,7 +6265,7 @@
     },
     {
      "id": "input.touch-events",
-     "name": "no touch events reach the widget on a touch client: pointer events only (profile 1: out)",
+     "name": "no touch events on a touch client, pointer events only",
      "native": {
       "chromium": "skip"
      }
@@ -6300,9 +6298,8 @@
      "nativeVsTemplate": 0
     }
    ],
-   "bytes": 8830,
-   "gzip": 3797,
-   "gzip6": 3798
+   "bytes": 8832,
+   "zlib": 3785
   },
   {
    "id": "auto/18-out-of-profile",
@@ -6466,8 +6463,7 @@
    ],
    "stages": [],
    "bytes": 8510,
-   "gzip": 3566,
-   "gzip6": 3566
+   "zlib": 3554
   },
   {
    "id": "auto/19-limits",
@@ -6553,8 +6549,7 @@
    ],
    "stages": [],
    "bytes": 6014,
-   "gzip": 2815,
-   "gzip6": 2818
+   "zlib": 2803
   },
   {
    "id": "auto/20-client-behaviour",
@@ -6705,8 +6700,7 @@
    ],
    "stages": [],
    "bytes": 8684,
-   "gzip": 3774,
-   "gzip6": 3774
+   "zlib": 3762
   },
   {
    "id": "auto/21-no-keyboard",
@@ -6822,8 +6816,7 @@
    ],
    "stages": [],
    "bytes": 6724,
-   "gzip": 3130,
-   "gzip6": 3130
+   "zlib": 3118
   },
   {
    "id": "auto/22-ua-defaults",
@@ -6977,8 +6970,234 @@
    ],
    "stages": [],
    "bytes": 8611,
-   "gzip": 3766,
-   "gzip6": 3768
+   "zlib": 3754
+  },
+  {
+   "id": "auto/23-gestures",
+   "set": "auto",
+   "file": "auto/23-gestures.html",
+   "title": "Who gets a press: a double tap is always the widget's (dblclick, on every element); a hold on touch-action: none is the widget's (contextmenu), on auto the bubble's (pointercancel); a vertical drag is always the chat's, on none and pan-x too; the leading 20 px take no claim",
+   "hint": "Hold “none” and “auto” for a second each, double-tap “none ×2” and “auto ×2”, drag “none ↕” and “pan-x ↕” down (the chat scrolls), drag the pad to the right from its red strip and then from its green mark, tap Finish.",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "behaviour.gesture-claim",
+    "input.dblclick",
+    "input.long-press"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "press": "none",
+     "ms": 700,
+     "ids": [
+      "input.long-press"
+     ]
+    },
+    {
+     "press": "auto",
+     "ms": 700,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "dblclick": "nonedbl",
+     "ids": [
+      "input.dblclick"
+     ]
+    },
+    {
+     "dblclick": "autodbl",
+     "ids": [
+      "input.dblclick"
+     ]
+    },
+    {
+     "drag": "vnone",
+     "to": [
+      0,
+      60
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "drag": "vpanx",
+     "to": [
+      0,
+      60
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "drag": "edge",
+     "to": [
+      120,
+      0
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "drag": "mid",
+     "to": [
+      120,
+      0
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "tap": "finish"
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "input.long-press",
+     "name": "a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "input.dblclick",
+     "name": "a double tap on touch-action: none: both clicks, then dblclick",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "input.dblclick",
+     "name": "a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 8817,
+   "zlib": 3379
+  },
+  {
+   "id": "auto/24-resize-anchor",
+   "set": "auto",
+   "file": "auto/24-resize-anchor.html",
+   "title": "TelegramWidget.setResizeAnchor (v0.1.3): the method exists, takes 'top' and 'bottom', throws TypeError on anything else; the widget grows and shrinks with either anchor",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.resize-anchor"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.resize-anchor",
+     "name": "typeof TelegramWidget.setResizeAnchor is \"function\"",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "setResizeAnchor('bottom') and ('top') return undefined and throw nothing",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "anything but exactly 'top' or 'bottom' throws TypeError",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "with 'bottom' the widget grows: three lines are 60 px",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "with 'top' it shrinks back to 0 px",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 5239,
+   "zlib": 2459
   },
   {
    "id": "visual/01-boxes",
@@ -7086,8 +7305,7 @@
     }
    ],
    "bytes": 4666,
-   "gzip": 2010,
-   "gzip6": 2010,
+   "zlib": 1998,
    "refImages": {
     "light": "refs/visual/01-boxes.png"
    },
@@ -7216,8 +7434,7 @@
     }
    ],
    "bytes": 5521,
-   "gzip": 2471,
-   "gzip6": 2472,
+   "zlib": 2459,
    "refImages": {
     "light": "refs/visual/02-colours-gradients.png"
    },
@@ -7300,8 +7517,7 @@
     }
    ],
    "bytes": 4864,
-   "gzip": 2114,
-   "gzip6": 2115,
+   "zlib": 2102,
    "refImages": {
     "light": "refs/visual/03-text-a.png"
    },
@@ -7350,7 +7566,7 @@
      "refs": {
       "chromium": "refs/visual/03-text-b/ellipsis.chromium.png"
      },
-     "nativeVsTemplate": 0.2213
+     "nativeVsTemplate": 0.2212
     },
     {
      "name": "scripts",
@@ -7383,12 +7599,11 @@
      "refs": {
       "chromium": "refs/visual/03-text-b/text-shadow.chromium.png"
      },
-     "nativeVsTemplate": 0.3384
+     "nativeVsTemplate": 0.3382
     }
    ],
    "bytes": 5297,
-   "gzip": 2314,
-   "gzip6": 2314,
+   "zlib": 2302,
    "refImages": {
     "light": "refs/visual/03-text-b.png"
    },
@@ -7504,12 +7719,11 @@
      "refs": {
       "chromium": "refs/visual/04-layout/float-columns.chromium.png"
      },
-     "nativeVsTemplate": 0.1241
+     "nativeVsTemplate": 0.1246
     }
    ],
    "bytes": 6322,
-   "gzip": 2436,
-   "gzip6": 2438,
+   "zlib": 2424,
    "refImages": {
     "light": "refs/visual/04-layout.png"
    },
@@ -7589,15 +7803,30 @@
      "refs": {
       "chromium": "refs/visual/05-transforms-effects-a/filters.chromium.png"
      }
+    },
+    {
+     "name": "transform-units",
+     "rect": null,
+     "size": [
+      150,
+      90
+     ],
+     "covers": [],
+     "themes": [
+      "light"
+     ],
+     "reftest": false,
+     "refs": {
+      "chromium": "refs/visual/05-transforms-effects-a/transform-units.chromium.png"
+     }
     }
    ],
-   "bytes": 4690,
-   "gzip": 2072,
-   "gzip6": 2078,
+   "bytes": 5655,
+   "zlib": 2317,
    "refImages": {
     "light": "refs/visual/05-transforms-effects-a.png"
    },
-   "height": 352
+   "height": 470
   },
   {
    "id": "visual/05-transforms-effects-b",
@@ -7679,8 +7908,7 @@
     }
    ],
    "bytes": 5653,
-   "gzip": 2144,
-   "gzip6": 2145,
+   "zlib": 2132,
    "refImages": {
     "light": "refs/visual/05-transforms-effects-b.png"
    },
@@ -7813,8 +8041,7 @@
     }
    ],
    "bytes": 8068,
-   "gzip": 2901,
-   "gzip6": 2902,
+   "zlib": 2889,
    "refImages": {
     "light": "refs/visual/06-css-animations.png"
    },
@@ -7920,8 +8147,7 @@
     }
    ],
    "bytes": 7452,
-   "gzip": 2670,
-   "gzip6": 2673,
+   "zlib": 2658,
    "refImages": {
     "light": "refs/visual/07-web-animations.png"
    },
@@ -8009,8 +8235,7 @@
     }
    ],
    "bytes": 6055,
-   "gzip": 2679,
-   "gzip6": 2679,
+   "zlib": 2667,
    "refImages": {
     "light": "refs/visual/08-canvas-a.png"
    },
@@ -8098,8 +8323,7 @@
     }
    ],
    "bytes": 5621,
-   "gzip": 2625,
-   "gzip6": 2625,
+   "zlib": 2613,
    "refImages": {
     "light": "refs/visual/08-canvas-b.png"
    },
@@ -8182,8 +8406,7 @@
     }
    ],
    "bytes": 4913,
-   "gzip": 2386,
-   "gzip6": 2386,
+   "zlib": 2374,
    "refImages": {
     "light": "refs/visual/09-svg-a.png"
    },
@@ -8264,12 +8487,11 @@
      "refs": {
       "chromium": "refs/visual/09-svg-b/smil.chromium.png"
      },
-     "nativeVsTemplate": 0.7266
+     "nativeVsTemplate": 0.7191
     }
    ],
    "bytes": 5218,
-   "gzip": 2356,
-   "gzip6": 2357,
+   "zlib": 2344,
    "refImages": {
     "light": "refs/visual/09-svg-b.png"
    },
@@ -8371,8 +8593,7 @@
     }
    ],
    "bytes": 9297,
-   "gzip": 3155,
-   "gzip6": 3160,
+   "zlib": 3143,
    "refImages": {
     "light": "refs/visual/10-images.png"
    },
@@ -8457,8 +8678,7 @@
    ],
    "stages": [],
    "bytes": 7103,
-   "gzip": 3142,
-   "gzip6": 3142,
+   "zlib": 3130,
    "refImages": {
     "light": "refs/visual/11-interaction.png"
    },
@@ -8513,8 +8733,7 @@
     }
    ],
    "bytes": 4036,
-   "gzip": 1978,
-   "gzip6": 1978,
+   "zlib": 1966,
    "refImages": {
     "light": "refs/visual/12-theme.png",
     "dark": "refs/visual/12-theme.dark.png"
@@ -8570,7 +8789,7 @@
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/forms.chromium.png"
      },
-     "nativeVsTemplate": 0.6194
+     "nativeVsTemplate": 0.6196
     },
     {
      "name": "scroll-sticky",
@@ -8604,7 +8823,7 @@
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/fonts.chromium.png"
      },
-     "nativeVsTemplate": 0.3812
+     "nativeVsTemplate": 0.3802
     },
     {
      "name": "three-d",
@@ -8625,8 +8844,7 @@
     }
    ],
    "bytes": 6382,
-   "gzip": 2622,
-   "gzip6": 2622,
+   "zlib": 2610,
    "refImages": {
     "light": "refs/visual/13-out-of-profile.png"
    },
@@ -8665,8 +8883,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3049,
-   "gzip": 1670,
-   "gzip6": 1670,
+   "zlib": 1658,
    "refImages": {
     "light": "refs/visual/14-unstyled-document.png",
     "dark": "refs/visual/14-unstyled-document.dark.png"
@@ -8698,8 +8915,7 @@
    "checks": [],
    "stages": [],
    "bytes": 2391,
-   "gzip": 1360,
-   "gzip6": 1360,
+   "zlib": 1348,
    "refImages": {
     "light": "refs/visual/15-body-background.png",
     "dark": "refs/visual/15-body-background.dark.png"
@@ -8730,8 +8946,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3317,
-   "gzip": 1762,
-   "gzip6": 1762,
+   "zlib": 1750,
    "refImages": {
     "light": "refs/visual/16-selection.png"
    },
@@ -8761,8 +8976,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3436,
-   "gzip": 1746,
-   "gzip6": 1746,
+   "zlib": 1734,
    "refImages": {
     "light": "refs/visual/sdk/01-link-external.png"
    },
@@ -8794,8 +9008,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3209,
-   "gzip": 1581,
-   "gzip6": 1581,
+   "zlib": 1569,
    "refImages": {
     "light": "refs/visual/sdk/02-link-telegram.png"
    },
@@ -8904,8 +9117,7 @@
    ],
    "stages": [],
    "bytes": 4110,
-   "gzip": 1897,
-   "gzip6": 1897,
+   "zlib": 1885,
    "refImages": {
     "light": "refs/visual/sdk/03-link-rejected.png"
    },
@@ -8938,8 +9150,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3174,
-   "gzip": 1551,
-   "gzip6": 1551,
+   "zlib": 1539,
    "refImages": {
     "light": "refs/visual/sdk/04-link-timer.png"
    },
@@ -8971,8 +9182,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3341,
-   "gzip": 1631,
-   "gzip6": 1631,
+   "zlib": 1619,
    "refImages": {
     "light": "refs/visual/sdk/05-haptics.png"
    },
@@ -9005,8 +9215,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3413,
-   "gzip": 1693,
-   "gzip6": 1693,
+   "zlib": 1681,
    "refImages": {
     "light": "refs/visual/sdk/06-haptics-rate.png"
    },
@@ -9040,8 +9249,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3300,
-   "gzip": 1579,
-   "gzip6": 1580,
+   "zlib": 1567,
    "refImages": {
     "light": "refs/visual/sdk/07-storage-recreate.png"
    },
@@ -9075,8 +9283,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3141,
-   "gzip": 1526,
-   "gzip6": 1526,
+   "zlib": 1514,
    "refImages": {
     "light": "refs/visual/sdk/08-storage-restart.png"
    },
@@ -9108,8 +9315,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3177,
-   "gzip": 1584,
-   "gzip6": 1584,
+   "zlib": 1572,
    "refImages": {
     "light": "refs/visual/sdk/09-storage-delete.png"
    },
@@ -9166,8 +9372,7 @@
    ],
    "stages": [],
    "bytes": 3357,
-   "gzip": 1665,
-   "gzip6": 1665,
+   "zlib": 1653,
    "refImages": {
     "light": "refs/visual/sdk/10-storage-quota.png"
    },
@@ -9199,8 +9404,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3232,
-   "gzip": 1592,
-   "gzip6": 1592,
+   "zlib": 1580,
    "refImages": {
     "light": "refs/visual/sdk/11-crash-restart.png"
    },
@@ -9213,8 +9417,8 @@
    "id": "visual/sdk/12-drag-gestures",
    "set": "visual",
    "file": "visual/sdk/12-drag-gestures.html",
-   "title": "Drag inside the widget versus the bubble's gestures",
-   "hint": "Drag the knob left and right: no swipe-to-reply, the list does not scroll. Swipe left on the grey area: swipe-to-reply. Double tap: the reaction appears. Long press: the bubble menu. The counters stay 0.",
+   "title": "Who gets a press: double taps always, holds and horizontal drags by touch-action, vertical drags never, and the edge strip",
+   "hint": "Blue (touch-action: none): drag the knob sideways, hold “Hold me” (it counts the time); no swipe-to-reply, no menu, the counters move. Drag up or down over blue: the chat scrolls, “to the chat” counts it. Striped (auto): long press = the message menu, swipe = reply; “cancelled” counts each one. Double-tap anywhere in the widget: no reaction, the widget counts the double taps. Bottom pad: a drag from the red strip is the back gesture, from the rest it moves the green mark.",
    "kind": [],
    "covers": [
     "behaviour.gesture-claim",
@@ -9234,15 +9438,14 @@
    "host": [],
    "checks": [],
    "stages": [],
-   "bytes": 4276,
-   "gzip": 1966,
-   "gzip6": 1966,
+   "bytes": 7181,
+   "zlib": 2819,
    "refImages": {
     "light": "refs/visual/sdk/12-drag-gestures.png"
    },
-   "height": 259,
+   "height": 452,
    "group": "sdk",
-   "expect": "The widget claims horizontal drags of the knob (touch-action: none, preventDefault); elsewhere the chat keeps swipe-to-reply and scrolling; double tap and long press stay with the bubble and never reach the widget.",
+   "expect": "A double tap over the widget is always the widget's: both clicks and dblclick, on every element, and the client's reaction stays on the bubble outside the widget. A vertical drag is always the chat's: the list scrolls and the widget gets pointercancel, on touch-action: none too (v0.1.3). touch-action: none gives the widget horizontal drags (on both axes once a drag started sideways) and holds (it gets contextmenu, no message menu); on auto the bubble takes holds and swipes and the widget gets pointercancel; a press in the leading 20 px of the widget is never the widget's (system back). The client follows the shared gesture policy (gesture-policy.ts: 500 ms hold, 300 ms / 40 px double tap, 10 px slop, 20 px edge strip).",
    "contract": "docs/sdk-v1.md §3.5, §5.5"
   },
   {
@@ -9268,8 +9471,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3094,
-   "gzip": 1591,
-   "gzip6": 1591,
+   "zlib": 1579,
    "refImages": {
     "light": "refs/visual/sdk/13-max-height.png"
    },
@@ -9305,8 +9507,7 @@
    "checks": [],
    "stages": [],
    "bytes": 4135,
-   "gzip": 1912,
-   "gzip6": 1913,
+   "zlib": 1900,
    "refImages": {
     "light": "refs/visual/sdk/14-theme-palette.png",
     "dark": "refs/visual/sdk/14-theme-palette.dark.png"
@@ -9339,8 +9540,7 @@
    "checks": [],
    "stages": [],
    "bytes": 2871,
-   "gzip": 1428,
-   "gzip6": 1428,
+   "zlib": 1416,
    "refImages": {
     "light": "refs/visual/sdk/15-storage-forward.png"
    },
@@ -9372,8 +9572,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3076,
-   "gzip": 1514,
-   "gzip6": 1514,
+   "zlib": 1502,
    "refImages": {
     "light": "refs/visual/sdk/16-bot-edit.png"
    },
@@ -9406,8 +9605,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3002,
-   "gzip": 1514,
-   "gzip6": 1514,
+   "zlib": 1502,
    "refImages": {
     "light": "refs/visual/sdk/17-size-hint.png"
    },
@@ -9415,6 +9613,49 @@
    "group": "sdk",
    "expect": "Width 0 = the bubble's width, W = a fixed width clamped to [200, max]; height 0 = auto (placeholder, then the reported 240 clamped to [50, 600], cached per message), H = a fixed clamp(H, 50, 600) that the content does not change.",
    "contract": "docs/sdk-v1.md §5.6"
+  },
+  {
+   "id": "visual/sdk/18-resize-anchor",
+   "set": "visual",
+   "file": "visual/sdk/18-resize-anchor.html",
+   "title": "The resize anchor: the edge the widget chose stays put when its height changes",
+   "hint": "Anchor bottom (the start): tap + line a few times: the buttons stay under your finger, the bubble grows upward and the messages above it move up; − line shrinks it back the same way. Tap the anchor button for top: now + line keeps the bubble's top still and pushes the buttons and the messages below down. Try both with the bubble near the top and near the bottom of the screen.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.resize-anchor",
+    "tw.resize-anchor"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.resize-anchor",
+     "name": "setResizeAnchor exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4579,
+   "zlib": 2061,
+   "refImages": {
+    "light": "refs/visual/sdk/18-resize-anchor.png"
+   },
+   "height": 202,
+   "group": "sdk",
+   "expect": "With every height the host reports the widget's anchor (setResizeAnchor, v0.1.3); the chat list keeps that edge of the bubble in place on screen: bottom, the content above moves and the bubble's bottom edge does not; top (the default), the content below moves. No jump of the anchored edge while the height animates. A bubble off screen keeps what is on screen in place.",
+   "contract": "docs/sdk-v1.md §2.12, §5.6"
   }
  ]
 }

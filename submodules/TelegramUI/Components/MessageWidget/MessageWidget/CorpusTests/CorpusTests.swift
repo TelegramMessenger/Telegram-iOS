@@ -4,7 +4,7 @@ import XCTest
 
 /// widget-sandbox's corpus (every folder but `attacks`, which InstanceTests scans) through the whole pipeline.
 final class CorpusTests: MessageWidgetTestCase {
-    static let folders = ["common", "compat", "defaults", "generated", "htmlbubbles-ported", "out-of-profile", "showcase"]
+    static let folders = ["common", "compat", "defaults", "generated", "gestures", "htmlbubbles-ported", "out-of-profile", "resize", "showcase"]
     /// Deliberate misbehaviour, by widget-sandbox's own README (htmlbubbles-ported, "Status"): the Hang button runs
     /// `for (;;) {}` (the tap grid presses it) and the Buggy button throws on purpose.
     static let runaways: Set<String> = ["htmlbubbles-ported/11-live-scripts/15-pixel-bare.html"]

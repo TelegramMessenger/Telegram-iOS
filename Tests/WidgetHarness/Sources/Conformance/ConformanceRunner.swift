@@ -223,19 +223,32 @@ public final class ConformanceRunner {
     }
 
     /// CLIENTS.md step 6, in order: a target name is the centre of `targets[name]` in the latest published value, a pair
-    /// is a point; both in CSS px from the widget's top-left. Taps, presses and drags go through the widget's own touch
-    /// path (`MessageWidgetInstance.pointer`, the phases its view's recognizer delivers), so a tap carries its permission.
-    /// What this runner cannot perform for real goes into `skippedActions`: hover (a touch platform), a key (no
-    /// keyboard, D4), a wheel, and a double tap or a right click (the bubble's, which a widget instance alone cannot
-    /// reach). A tap, press or drag whose target the widget has not published is the widget's failure, not input the
+    /// is a point; both in CSS px from the widget's top-left. Taps, double taps, presses and drags go through the
+    /// widget's own touch path (`MessageWidgetInstance.pointer`, the phases its view's recognizer delivers), so a tap
+    /// carries its permission; a double tap over the widget is the widget's (v0.1.2), two taps 100 ms apart. They are
+    /// injected below the bubble, so what only the bubble does (a hold on auto opening the menu, a drag from the leading
+    /// strip going back) fails here, as CLIENTS.md says such a runner reports; `testAuto23ThroughTheRealBubble` runs
+    /// them through it. What this runner cannot perform for real goes into `skippedActions`: hover (a touch platform), a
+    /// key (no keyboard, D4), a wheel, and a right click (the bubble's, which a widget instance alone cannot reach). A
+    /// tap, double tap, press or drag whose target the widget has not published is the widget's failure, not input the
     /// runner cannot deliver: it is an error, and its checks are judged as the widget left them.
     private func perform(_ active: Active, instance: MessageWidgetInstance) {
         for (index, action) in active.test.actions.enumerated() {
+            // About 350 ms between actions (CLIENTS.md step 6): two taps in a row are not a double tap.
+            if index > 0 {
+                self.pump(milliseconds: 350.0)
+            }
             _ = self.read(instance, into: &active.run)
-            if let kind = ["tap", "press", "drag"].first(where: { action[$0] != nil }), let target = action[kind], self.point(target, in: active.run) == nil || (kind == "drag" && self.dragEnd(action, from: .zero, in: active.run) == nil) {
+            if let kind = ["tap", "dblclick", "press", "drag"].first(where: { action[$0] != nil }), let target = action[kind], self.point(target, in: active.run) == nil || (kind == "drag" && self.dragEnd(action, from: .zero, in: active.run) == nil) {
                 let missing = self.point(target, in: active.run) == nil ? target : (action["to"] ?? "(no end)")
                 active.run.errors.append("runner: action \(index) (\(kind)): target \(missing) was not published")
             } else if let target = action["tap"], let point = self.point(target, in: active.run) {
+                instance.pointer(.down, at: point)
+                instance.pointer(.up, at: point)
+            } else if let target = action["dblclick"], let point = self.point(target, in: active.run) {
+                instance.pointer(.down, at: point)
+                instance.pointer(.up, at: point)
+                self.pump(milliseconds: 100.0)
                 instance.pointer(.down, at: point)
                 instance.pointer(.up, at: point)
             } else if let target = action["press"], let point = self.point(target, in: active.run) {
@@ -244,8 +257,9 @@ public final class ConformanceRunner {
                 instance.pointer(.up, at: point)
             } else if let target = action["drag"], let from = self.point(target, in: active.run), let to = self.dragEnd(action, from: from, in: active.run) {
                 instance.pointer(.down, at: from)
-                for step in 1 ... 10 {
-                    let t = CGFloat(step) / 10.0
+                let steps = max(1, (action["steps"] as? NSNumber)?.intValue ?? 10)
+                for step in 1 ... steps {
+                    let t = CGFloat(step) / CGFloat(steps)
                     instance.pointer(.move, at: CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t))
                     self.pump(milliseconds: 16.0)
                 }

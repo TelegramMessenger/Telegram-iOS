@@ -208,18 +208,18 @@ final class WidgetHarnessSizingTests: XCTestCase {
         options.set = .conformance
         let root = try self.root()
         // Its boot has reported a height (until then the bubble is the 160 pt placeholder).
-        let first = try self.load(options, until: { lines in lines.contains { $0.contains("auto/21-no-keyboard") && $0.contains(" widget") && !$0.contains("x160 ") } })
-        let before = try XCTUnwrap(first.first { $0.contains("auto/21-no-keyboard") }.map(self.parse))
+        let first = try self.load(options, until: { lines in lines.contains { $0.contains("auto/23-gestures") && $0.contains(" widget") && !$0.contains("x160 ") } })
+        let before = try XCTUnwrap(first.first { $0.contains("auto/23-gestures") }.map(self.parse), first.joined(separator: "\n"))
         XCTAssertNotEqual(before.height, 160)
         let host = try XCTUnwrap(root.listHost)
         host.scrollTo(messageIndex: 0)
         root.view.layoutIfNeeded()
         let farAway = root.readoutLines().filter { $0.hasPrefix("bubble ") }
-        XCTAssertFalse(farAway.contains { $0.contains("auto/21-no-keyboard") }, "still on screen: \(farAway)")
+        XCTAssertFalse(farAway.contains { $0.contains("auto/23-gestures") }, "still on screen: \(farAway)")
         host.scrollTo(messageIndex: Int.max)
         root.view.layoutIfNeeded()
         let back = root.readoutLines().filter { $0.hasPrefix("bubble ") }
-        let after = try XCTUnwrap(back.first { $0.contains("auto/21-no-keyboard") }.map(self.parse), back.joined(separator: "\n"))
+        let after = try XCTUnwrap(back.first { $0.contains("auto/23-gestures") }.map(self.parse), back.joined(separator: "\n"))
         XCTAssertEqual(after.height, before.height)
     }
 }

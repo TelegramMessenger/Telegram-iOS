@@ -3,7 +3,7 @@ import UIKit.UIGestureRecognizerSubclass
 
 /// While a widget control is held, the rest of the chat is inert (the user, 2026-10-23; multitouch design §2): a finger
 /// that lands anywhere else in the chat does nothing, no scroll, tap, long press, menu or back swipe, until it lifts. A
-/// widget view holds the lock while one of its presses takes taps (`MessageWidgetTouchRecognizer`); the chat's
+/// widget view holds the lock while one of its presses claims its hold (`MessageWidgetTouchRecognizer`); the chat's
 /// `MessageWidgetChatLockRecognizer` reads it. Main thread only.
 enum MessageWidgetTouchLock {
     private struct Holder {

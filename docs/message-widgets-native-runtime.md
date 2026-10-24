@@ -142,18 +142,30 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   `:active` live in `UserActions` (`:active` one entry per press, removed by that press's end or by its element leaving
   the document, so a second finger on an element holds it after the first lifts, even when the element left and came
   back between their downs; `:hover` the primary pointer's); a change to them rebuilds the render tree, and only when the build's
-  `<style>` text names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild. Every press also
-  decides its gesture claim (sdk-v1 §5.5; `TapState::claim`, read by the host through `WRSession.gestureClaim` once the down
-  task has run): the axes the computed touch-action of the target and its ancestors below `<html>` forbids panning on,
-  read from the layout the press was hit-tested on before its handlers run, or both when the widget cancels the
-  press's `pointerdown` or `touchstart` (the reference learns that from the previous press; ours dispatches before it
-  answers). The client takes only the horizontal axis: a vertical drag always scrolls the chat (the message widgets
-  guide, "The chat always scrolls"). It answers too whether the press lands on something the widget handles (`TapState::takesTaps`,
-  `WRSession.pressTakesTaps`): a listener for a press's events on the event's path, an element with activation
-  behaviour outside a disabled control, or a drag claim; the client gives the widget the tap and the long press there,
-  as on a message button, and the double tap and the long press (the reaction and the menu) to the bubble anywhere
-  else. The client's side is the message widgets guide's (`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`)
-  "Touches" and "Drags are decided per press".
+  `<style>` text names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild.
+- **Who gets a press (widget-sandbox's shared gesture policy, v0.1.2 and v0.1.3).** The policy's C++ copy is vendored
+  (`third-party/widget-sandbox/gesture/`, the `GesturePolicy` library, its fixture run by the host `GesturePolicyTests`),
+  and `TapState` runs it rather than restating it. Every press decides its claim at its down task (sdk-v1 §5.5;
+  `TapState::claim`, read by the host through `WRSession.gestureClaim`): `claimOf` over the computed touch-action of
+  the target and its ancestors up to `<html>`, read from the layout the press was hit-tested on before its handlers
+  run (`none` anywhere: `x` and `hold`; a value without a horizontal pan `x`; never `y`, v0.1.3's G2), `x` but never
+  `hold` when the widget cancels the press's `pointerdown` or `touchstart` (the reference learns that from the previous
+  press; ours dispatches before it answers), and nothing for a touch starting in the leading 20 px. A vertical move
+  past the slop is the chat's even after a hold the widget won (the arbiter's).
+  The primary pointer's press feeds a `GestureArbiter`, so the thresholds are the policy's (slop 10 px, hold 500 ms,
+  double tap 300 ms / 40 px): a press still within the slop at 500 ms is held and makes no click at its up, and on a
+  `hold` claim it gets a cancelable `contextmenu` at its target then (a press-scoped task on the loop's own clock,
+  `EventLoop::queueTaskAt`; button 0 and buttons 1 from a finger); the second tap of a double tap dispatches `dblclick`
+  after its click, on every element, only when that click was dispatched. A mouse press (`PointerKind::Mouse`, an iPad
+  pointer) carries `pointerType: 'mouse'` and its button, with `mousedown`/`mousemove`/`mouseup` of its own, goes to
+  its hit target unless captured, has no edge strip and no hold; its secondary button gets `contextmenu` at its down on
+  a `hold` claim. The client takes `x` and `hold`: a vertical drag always scrolls the chat (the message widgets guide,
+  "The chat always scrolls"). The press also answers whether it lands on something the widget handles
+  (`TapState::takesTaps`, `WRSession.pressTakesTaps`): a listener for a press's events on the event's path, an element
+  with activation behaviour outside a disabled control, or a drag claim; the client then recognizes the touch for the
+  widget at its end. The client's side is the message widgets guide's
+  (`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`) "Touches", "iPad pointers" and "Drags are decided per
+  press".
 - **The SDK (V2a, widget-sandbox v0.1.0 `docs/sdk-v1.md`).** `window.TelegramWidget` (unforgeable) is SDK v1, and the
   runtime applies its policy itself; the app's core only passes the calls on. Calls reach `wr::Host::bridgeCall` as a
   method and a JSON array of strings: `ready`, `openLink`, `openTelegramLink` and `haptic`.
@@ -162,6 +174,12 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     handlers per type, a handler added once, unknown types and non-functions ignored; `this` is the widget), and the
     deprecated `onTheme`, whose 16 callbacks are a list of their own, called at once and after `themeChanged`'s with
     the scheme. `activated`/`deactivated` fire after `visibilitychange`. `sendMessage` and `on` are gone.
+  - *Resize anchor* (widget-sandbox v0.1.3, sdk-v1 §2.12, §5.6): `setResizeAnchor(edge)` takes exactly `'top'` or
+    `'bottom'` (the vendored SDK policy's `checkResizeAnchor`, `third-party/widget-sandbox/gesture/sdk_policy.cpp`, its
+    fixture run by the host `SdkPolicyTests`; only a 16-byte prefix of the string is converted), anything else is a
+    `TypeError`; it needs no tap, posts nothing to the bridge, and sets `HostState::resizeAnchor` (top until set), which
+    the host reads with the height (`WRSession.resizeAnchor`). The client's side is the message widgets guide's "Which
+    edge stays put".
   - *Theme* (`ThemeParams.cpp`, sdk-v1 §2.3): `themeParams` has every Mini Apps key as lowercase `#rrggbb`, the host's
     palette (`HostState::setThemeParams`, checked as the reference's `checkThemeParams`) over `DEFAULT_THEME_PARAMS`
     for the scheme; one frozen object until the next change. The root gets `--tg-theme-<key>` and `--tg-color-scheme`

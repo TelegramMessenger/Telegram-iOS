@@ -28,13 +28,17 @@ public struct ChatHistoryListViewUpdateItem {
     public let stableId: UInt64
     public let item: ListViewItem
     public let directionHint: ListViewItemOperationDirectionHint?
+    /// The edge of the item that stays put on screen if its height changes (a message widget's resize anchor), while it
+    /// is on screen; nil leaves the list's own placement.
+    public let resizeAnchor: ListViewItemResizeAnchor?
     
-    public init(index: Int, previousIndex: Int, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
+    public init(index: Int, previousIndex: Int, stableId: UInt64, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?, resizeAnchor: ListViewItemResizeAnchor? = nil) {
         self.index = index
         self.previousIndex = previousIndex
         self.stableId = stableId
         self.item = item
         self.directionHint = directionHint
+        self.resizeAnchor = resizeAnchor
     }
 }
 

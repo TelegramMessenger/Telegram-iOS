@@ -88,6 +88,63 @@ class CoreTests: MessageWidgetTestCase {
         XCTAssertTrue(press.takesTaps)
     }
 
+    /// SDK v1 §5.5 (v0.1.2): touch-action: none claims the press's holds for the widget (it gets contextmenu, and the
+    /// bubble opens no menu); pan-y and a button do not.
+    func testANoneElementClaimsHolds() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div style='touch-action:none;height:40px'></div>"
+            + "<div style='touch-action:pan-y;height:40px'></div><button style='display:block;width:200px;height:40px'>b</button></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let holds = [20.0, 60.0, 100.0].map { y -> Bool in
+            var press: MessageWidgetPress = .none
+            _ = self.task(core, .touch) {
+                press = core.touch(action: 0, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true)
+                core.touch(action: 3, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true)
+            }
+            return press.hold
+        }
+        XCTAssertEqual(holds, [true, false, false])
+    }
+
+    /// An iPad pointer presses as the policy's mouse: its holds and sideways drags are the widget's whatever the
+    /// touch-action (a pointer has no hold menu; a vertical drag still scrolls the chat). A secondary click claims holds
+    /// only where touch-action: none does (the widget's contextmenu); elsewhere it is the chat's menu.
+    func testAPointerPressClaimsHoldsAndSidewaysDrags() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div style='height:40px'></div>"
+            + "<div style='touch-action:none;height:40px'></div></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let presses = [(20.0, 0), (20.0, 2), (60.0, 2)].map { (y, button) -> MessageWidgetPress in
+            var press: MessageWidgetPress = .none
+            _ = self.task(core, .touch) {
+                press = core.touch(action: 0, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true, mouse: true, button: button)
+                core.touch(action: 3, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true, mouse: true, button: button)
+            }
+            return press
+        }
+        XCTAssertEqual(presses.map(\.claim), [[.horizontal], [.horizontal], [.horizontal]])
+        XCTAssertEqual(presses.map(\.hold), [true, false, true])
+    }
+
+    /// widget-sandbox v0.1.3 (sdk-v1 §5.6): a task's snapshot carries the widget's resize anchor beside its size, top
+    /// until the widget sets one.
+    func testABootThatSetsBottomReportsIt() throws {
+        let core = self.makeCore("<!doctype html><body><p>up</p><script>TelegramWidget.setResizeAnchor('bottom')</script></body>")
+        let other = self.makeCore("<!doctype html><body><p>down</p></body>")
+        defer {
+            self.onWorker {
+                core.teardown()
+                other.teardown()
+            }
+        }
+        XCTAssertEqual(self.boot(core).resizeAnchor, .bottom)
+        XCTAssertEqual(self.boot(other).resizeAnchor, .top)
+    }
+
     func testAStoppedWidgetIsFrozenWithItsReason() throws {
         let core = self.makeCore("<!doctype html><p>x</p><script>for (;;) {}</script>")
         defer {

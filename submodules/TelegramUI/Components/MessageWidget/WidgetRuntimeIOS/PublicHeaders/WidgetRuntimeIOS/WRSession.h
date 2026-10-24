@@ -34,7 +34,16 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
 /// The drag axes a press takes for the widget (sdk-v1 §5.5).
 typedef NS_OPTIONS(NSUInteger, WRGestureAxes) {
     WRGestureAxesHorizontal = 1 << 0,
+    /// Never set since widget-sandbox v0.1.3 (G2: vertical drags are the chat's); kept as upstream keeps `y`.
     WRGestureAxesVertical = 1 << 1,
+    /// The press's hold (touch-action: none): no message menu, the widget's `contextmenu`.
+    WRGestureAxesHold = 1 << 2,
+};
+
+/// The edge of the widget's bubble that stays put when its height changes (sdk-v1 §5.6, widget-sandbox v0.1.3).
+typedef NS_ENUM(NSInteger, WRResizeAnchor) {
+    WRResizeAnchorTop,
+    WRResizeAnchorBottom,
 };
 
 @class WRSession;
@@ -156,8 +165,10 @@ typedef struct {
 /// the boot.
 - (void)setLocale:(NSString *)locale;
 - (void)setVisible:(BOOL)visible;
-/// One phase of a tap at `point` (CSS px), queued as a task.
+/// One phase of a tap at `point` (CSS px), queued as a task: a touch's.
 - (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary;
+/// The same for a mouse (`mouse`: an iPad pointer) pressing `button` (0 primary, 2 secondary), or a touch.
+- (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary mouse:(BOOL)mouse button:(NSInteger)button;
 /// sdk-v1 §5.5: the drags the last primary press takes for the widget (the touch-action of its target and the target's
 /// ancestors, or a canceled pointerdown or touchstart), once a step has run its down task; none without a runtime.
 @property (nonatomic, readonly) WRGestureAxes gestureClaim;
@@ -165,6 +176,9 @@ typedef struct {
 /// button, a checkbox, a label, a summary, or a drag claim), once a step has run its down task; NO without a runtime.
 /// The client takes a tap there at once and waits for a double tap anywhere else (sdk-v1 §5.5).
 @property (nonatomic, readonly) BOOL pressTakesTaps;
+/// The edge the widget asked to stay put when its height changes (`TelegramWidget.setResizeAnchor`), reported with the
+/// height; Top until it asks, and without a runtime.
+@property (nonatomic, readonly) WRResizeAnchor resizeAnchor;
 
 @property (nonatomic, readonly) WRStopReason stopReason;
 @property (nonatomic, readonly) uint64_t workUnits;

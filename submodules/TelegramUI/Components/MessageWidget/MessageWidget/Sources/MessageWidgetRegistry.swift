@@ -171,6 +171,11 @@ public final class MessageWidgetRegistry {
         return self.instances[Key(path: path, source: source)]?.reportedHeight
     }
 
+    /// The edge the widget at `path` asked to stay put when its height changes (sdk-v1 §5.6), nil without a widget.
+    public func resizeAnchor(path: [Int], source: String) -> MessageWidgetResizeAnchor? {
+        return self.instances[Key(path: path, source: source)]?.resizeAnchor
+    }
+
     public func isLive(path: [Int]) -> Bool {
         return self.instances.contains { $0.key.path == path && $0.value.deadReason == nil }
     }
