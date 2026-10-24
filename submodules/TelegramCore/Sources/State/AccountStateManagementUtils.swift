@@ -1971,6 +1971,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.readStories(peerId: updateReadStoriesData.peer.peerId, maxId: updateReadStoriesData.maxId)
             case let .updateStoriesStealthMode(updateStoriesStealthModeData):
                 updatedState.updateStoryStealthMode(updateStoriesStealthModeData.stealthMode)
+            case let .updateNewStoryReaction(updateNewStoryReactionData):
+                if let reaction = MessageReaction.Reaction(apiReaction: updateNewStoryReactionData.reaction) {
+                    updatedState.addStoryReactionNotification(StoryReactionNotification(storyId: updateNewStoryReactionData.storyId, reactionAuthorId: updateNewStoryReactionData.peer.peerId, reaction: reaction))
+                }
             case let .updateSentStoryReaction(updateSentStoryReactionData):
                 updatedState.updateStorySentReaction(peerId: updateSentStoryReactionData.peer.peerId, id: updateSentStoryReactionData.storyId, reaction: updateSentStoryReactionData.reaction)
             case let .updateNewAuthorization(updateNewAuthorizationData):
