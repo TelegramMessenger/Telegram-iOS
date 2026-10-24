@@ -16,6 +16,51 @@ import GZip
 import HierarchyTrackingLayer
 import TelegramUIPreferences
 
+/// The badges `EmojiStatusComponent` draws itself, drawn once per look rather than once per view: list and feed rows
+/// create a view per row as they scroll in, and every draw decoded the asset-catalog masks on the main thread.
+private enum EmojiStatusBadgeKey: Hashable {
+    case verified(fillColor: UIColor, foregroundColor: UIColor, imageNamePrefix: String)
+    case text(color: UIColor, string: String)
+}
+
+private let emojiStatusBadgeCache = Atomic<[EmojiStatusBadgeKey: UIImage]>(value: [:])
+
+private func cachedEmojiStatusBadge(_ key: EmojiStatusBadgeKey, generate: () -> UIImage?) -> UIImage? {
+    if let image = emojiStatusBadgeCache.with({ $0[key] }) {
+        return image
+    }
+    guard let image = generate() else {
+        return nil
+    }
+    let _ = emojiStatusBadgeCache.modify { current in
+        var current = current
+        // Keys follow theme and peer colours: only a handful are live at a time, so a full cache is simply dropped.
+        if current.count >= 64 {
+            current.removeAll()
+        }
+        current[key] = image
+        return current
+    }
+    return image
+}
+
+/// The Premium star, a template the layer tints with the status colour.
+private let emojiStatusPremiumBadge: UIImage? = {
+    guard let sourceImage = UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon") else {
+        return nil
+    }
+    return generateImage(sourceImage.size, contextGenerator: { size, context in
+        if let cgImage = sourceImage.cgImage {
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            let imageSize = CGSize(width: sourceImage.size.width - 8.0, height: sourceImage.size.height - 8.0)
+            context.clip(to: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize), mask: cgImage)
+
+            context.setFillColor(UIColor.white.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+    }, opaque: false)?.withRenderingMode(.alwaysTemplate)
+}()
+
 public final class EmojiStatusComponent: Component {
     public typealias EnvironmentType = Empty
     
@@ -330,20 +375,7 @@ public final class EmojiStatusComponent: Component {
                     if case .premium = self.component?.content, let image = self.iconLayerImage {
                         iconImage = image
                     } else {
-                        if let sourceImage = UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon") {
-                            iconImage = generateImage(sourceImage.size, contextGenerator: { size, context in
-                                if let cgImage = sourceImage.cgImage {
-                                    context.clear(CGRect(origin: CGPoint(), size: size))
-                                    let imageSize = CGSize(width: sourceImage.size.width - 8.0, height: sourceImage.size.height - 8.0)
-                                    context.clip(to: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize), mask: cgImage)
-                                    
-                                    context.setFillColor(UIColor.white.cgColor)
-                                    context.fill(CGRect(origin: CGPoint(), size: size))
-                                }
-                            }, opaque: false)?.withRenderingMode(.alwaysTemplate)
-                        } else {
-                            iconImage = nil
-                        }
+                        iconImage = emojiStatusPremiumBadge
                     }
                 case let .topic(title, color, realSize):
                     let colors = topicIconColors(for: color)
@@ -364,8 +396,11 @@ public final class EmojiStatusComponent: Component {
                         imageNamePrefix = "Peer Info/VerifiedIcon"
                     }
                     
-                    if let backgroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Background"), let foregroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Foreground") {
-                        iconImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
+                    iconImage = cachedEmojiStatusBadge(.verified(fillColor: fillColor, foregroundColor: foregroundColor, imageNamePrefix: imageNamePrefix), generate: {
+                        guard let backgroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Background"), let foregroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Foreground") else {
+                            return nil
+                        }
+                        return generateImage(backgroundImage.size, contextGenerator: { size, context in
                             if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
                                 context.clear(CGRect(origin: CGPoint(), size: size))
                                 context.saveGState()
@@ -374,36 +409,36 @@ public final class EmojiStatusComponent: Component {
                                 context.setFillColor(fillColor.cgColor)
                                 context.fill(CGRect(origin: CGPoint(), size: size))
                                 context.restoreGState()
-                                
+
                                 context.setBlendMode(.copy)
                                 context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
                                 context.setFillColor(foregroundColor.cgColor)
                                 context.fill(CGRect(origin: CGPoint(), size: size))
                             }
                         }, opaque: false)
-                    } else {
-                        iconImage = nil
-                    }
+                    })
                 case let .text(color, string):
-                    let titleString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
-                    let stringRect = titleString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
-                    
-                    iconImage = generateImage(CGSize(width: floor(stringRect.width) + 11.0, height: 16.0), contextGenerator: { size, context in
-                        let bounds = CGRect(origin: CGPoint(), size: size)
-                        context.clear(bounds)
-                        
-                        context.setFillColor(color.cgColor)
-                        context.setStrokeColor(color.cgColor)
-                        context.setLineWidth(1.0)
-                        
-                        context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
-                        context.strokePath()
-                        
-                        let titlePath = CGMutablePath()
-                        titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
-                        let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
-                        let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
-                        CTFrameDraw(titleFrame, context)
+                    iconImage = cachedEmojiStatusBadge(.text(color: color, string: string), generate: {
+                        let titleString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
+                        let stringRect = titleString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+
+                        return generateImage(CGSize(width: floor(stringRect.width) + 11.0, height: 16.0), contextGenerator: { size, context in
+                            let bounds = CGRect(origin: CGPoint(), size: size)
+                            context.clear(bounds)
+
+                            context.setFillColor(color.cgColor)
+                            context.setStrokeColor(color.cgColor)
+                            context.setLineWidth(1.0)
+
+                            context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
+                            context.strokePath()
+
+                            let titlePath = CGMutablePath()
+                            titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
+                            let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
+                            let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
+                            CTFrameDraw(titleFrame, context)
+                        })
                     })
                 case let .animation(animationContent, size, placeholderColor, themeColor, loopMode):
                     iconImage = nil
