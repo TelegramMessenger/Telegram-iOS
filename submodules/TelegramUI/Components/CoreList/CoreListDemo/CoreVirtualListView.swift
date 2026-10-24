@@ -586,26 +586,34 @@ public final class CoreVirtualListView: UIView {
     /// natural newest edge and drops a short reply's pin slack in one jump. And like a drag's start
     /// (`engine.onWillBeginDragging`) it releases the pin latch and the scroll hold, which would otherwise
     /// own placement and leave the bounds pinned around their row.
+    ///
+    /// A step that cannot move (held against an edge, called every frame) changes nothing, as ListViewImpl
+    /// writes nothing when it cannot scroll: the latch and hold stay, and a spring-back keeps playing.
     @discardableResult
     public func scroll(by distance: CGFloat) -> Bool {
         guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
+        // Never further past an edge than the offset already is, and never pulled back from overscroll.
+        func target(from current: CGFloat) -> CGFloat {
+            var target = current - distance
+            if let minimum = declaredEdges.min {
+                target = max(target, min(minimum, current))
+            }
+            if let maximum = declaredEdges.max {
+                target = min(target, max(maximum, current))
+            }
+            return target
+        }
+        // The presented position, so a keyframe flight is judged where it is on screen.
+        engine.syncToPresentedPosition()
+        guard abs(target(from: engine.offset) - engine.offset) > 1e-6 else { return false }
         holdsPinnedRow = false
         heldRow = nil
-        // Before the `engine.offset` read, so a keyframe flight is caught where it is presented. Only when
-        // something moves: a step held against an edge is called every frame and must leave a spring-back
-        // alone, as ListViewImpl writes nothing when it cannot scroll.
         if engine.isDecelerating || activeScrollFlight != nil {
+            // Ending a flight retires hold slack, which can move an edge, so the target is taken after it.
             engine.haltMotionInPlace()
         }
         let current = engine.offset
-        var target = current - distance
-        // Never further past an edge than the offset already is, and never pulled back from overscroll.
-        if let minimum = declaredEdges.min {
-            target = max(target, min(minimum, current))
-        }
-        if let maximum = declaredEdges.max {
-            target = min(target, max(maximum, current))
-        }
+        let target = target(from: current)
         guard abs(target - current) > 1e-6 else { return false }
         // `previousOffset` is refreshed only by drag frames and rebases, never by a pass, so it can be
         // stale here; the step must be measured from where the list is.

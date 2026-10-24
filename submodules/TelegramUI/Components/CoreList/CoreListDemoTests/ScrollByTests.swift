@@ -170,6 +170,46 @@ final class ScrollByTests: XCTestCase {
         XCTAssertEqual(fixture.engine.liveViewportOffset, caught + 15, accuracy: 1e-6)
     }
 
+    /// A step against an edge is called every frame while the fingers rest there, so when it cannot move it
+    /// must change nothing: an overscroll's spring-back keeps playing. A step back into content moves from
+    /// where the overscroll is, rather than snapping onto the edge first.
+    func testAStepFurtherPastAnEdgeLeavesTheSpringBackAlone() {
+        let fixture = PhysicsListFixture(itemCount: 200, itemHeight: 50, viewport: viewport)
+        let rest = fixture.offset
+        fixture.beginDrag()
+        fixture.drag(translation: 120, velocity: 0)
+        fixture.endDrag()
+        fixture.tick(dt: 1.0 / 60)
+        XCTAssertLessThan(fixture.offset, rest - 1, "non-vacuity: overscrolled past the newest edge")
+        XCTAssertTrue(fixture.engine.isDecelerating, "non-vacuity: springing back")
+        let overscrolled = fixture.offset
+
+        XCTAssertFalse(fixture.listView.scroll(by: 15))
+
+        XCTAssertTrue(fixture.engine.isDecelerating, "the spring-back keeps playing")
+        XCTAssertEqual(fixture.offset, overscrolled, accuracy: 1e-6)
+
+        XCTAssertTrue(fixture.listView.scroll(by: -15))
+
+        XCTAssertEqual(fixture.offset, overscrolled + 15, accuracy: 1e-6)
+    }
+
+    /// A step that cannot move leaves the scroll hold armed.
+    func testAStepThatCannotMoveKeepsTheHold() {
+        let fixture = VirtualListFixture(itemCount: 20, itemHeight: 50, viewport: viewport)
+        fixture.listView.applyChanges(
+            scrollTo: CoreListScrollTarget(index: 0,
+                                           hold: CoreListScrollHold(edge: .topInset,
+                                                                    rowPoint: { _, _ in 0 }),
+                                           resolve: { _, _ in 0 }),
+            transition: .easeInOut(duration: 0))
+        XCTAssertTrue(fixture.listView.isHoldingScrollTarget)
+
+        XCTAssertFalse(fixture.listView.scroll(by: 15))
+
+        XCTAssertTrue(fixture.listView.isHoldingScrollTarget)
+    }
+
     /// The chat runs on the physics core; its offset must take the step too, and stop at the newest edge.
     func testStepsMoveThePhysicsEngineAndStopAtTheNewestEdge() {
         let fixture = PhysicsListFixture(itemCount: 200, itemHeight: 50, viewport: viewport)

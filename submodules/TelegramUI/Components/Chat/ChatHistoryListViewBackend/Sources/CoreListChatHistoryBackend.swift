@@ -1775,6 +1775,9 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // accumulates the auto-scroll into `trackingOffset`. The one consumer of the witness
     // (`ChatControllerNode`'s keyboard snap-back) also needs `dismissedInputByDragging`, which a
     // selection cannot produce, so the two agree in effect.
+    //
+    // A step that catches a momentum flight ends it, which reports `didEndScrolling` as any caught flight
+    // does. Rare in practice: the fingers landing already caught the motion (`noteTouchDown`).
     func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
         let didMoveContentDuringDrag = self.didMoveContentDuringDrag
         defer {
