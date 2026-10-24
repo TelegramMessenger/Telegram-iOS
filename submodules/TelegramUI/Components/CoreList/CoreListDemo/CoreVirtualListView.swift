@@ -574,6 +574,42 @@ public final class CoreVirtualListView: UIView {
         heldRow = nil
     }
 
+    /// A scroll the user drives without dragging the list: the chat's two-finger message selection
+    /// auto-scrolls while the fingers hold near an edge (`ListViewImpl.scrollWithDirection` on the other
+    /// backend). Moves content by `distance` points, positive DOWN as for `additionalScrollDistance`,
+    /// stopping at the declared edges, and returns whether it moved.
+    ///
+    /// It is a drag frame without the finger: the offset write goes through `handleUserScroll`, exactly as
+    /// `engine.onScroll` does, so the window rebalances, slack retires and `onVisibleWindowChanged` fires
+    /// as they do under a drag (including its one-viewport cap per call). A mutation pass with
+    /// `additionalScrollDistance` is NOT equivalent: once the pin latch is released it re-anchors onto the
+    /// natural newest edge and drops a short reply's pin slack in one jump. And like a drag's start
+    /// (`engine.onWillBeginDragging`) it releases the pin latch and the scroll hold, which would otherwise
+    /// own placement and leave the bounds pinned around their row.
+    @discardableResult
+    public func scroll(by distance: CGFloat) -> Bool {
+        guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
+        holdsPinnedRow = false
+        heldRow = nil
+        engine.haltMotionInPlace()
+        let current = engine.offset
+        var target = current - distance
+        // Never further past an edge than the offset already is, and never pulled back from overscroll.
+        if let minimum = declaredEdges.min {
+            target = max(target, min(minimum, current))
+        }
+        if let maximum = declaredEdges.max {
+            target = min(target, max(maximum, current))
+        }
+        guard abs(target - current) > 1e-6 else { return false }
+        // `previousOffset` is refreshed only by drag frames and rebases, never by a pass, so it can be
+        // stale here; the step must be measured from where the list is.
+        previousOffset = current
+        engine.setOffset(target)
+        handleUserScroll(engine.offset)
+        return true
+    }
+
     /// The settled screen Y of a hold's edge under the CURRENT geometry.
     private func holdEdgeY(_ edge: CoreListScrollHold.Edge) -> CGFloat {
         switch edge {

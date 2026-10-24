@@ -1759,7 +1759,22 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     func isStrictlyScrolledToPinToEdgeItem() -> Bool {
         return self.coreList.isStrictlyPinnedToBottomEdge
     }
-    func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool { return false }
+    // Parity with ListViewImpl.scrollWithDirection (Display/Source/ListView.swift:5436). Its one chat
+    // caller is the two-finger selection's edge auto-scroll (`ChatHistoryListNodeImpl
+    // .setupSelectionScrolling`); a hard `false` here, left from the PoC, stopped that selection at the
+    // rows already on screen. `.up` lowers ListViewImpl's contentOffset, towards index 0, which is content
+    // moving DOWN in CoreList's space: `scroll(by:)`'s positive sign.
+    //
+    // `scroll(by:)` runs as a drag frame, so `onVisibleWindowChanged` makes the reports a scroll owes
+    // (range, content offset, trailing space). It also marks the drag witness, and this is no drag: the
+    // witness keeps what the last real drag left, as ListViewImpl's `trackingOffset` does.
+    func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
+        let didMoveContentDuringDrag = self.didMoveContentDuringDrag
+        defer {
+            self.didMoveContentDuringDrag = didMoveContentDuringDrag
+        }
+        return self.coreList.scroll(by: direction == .up ? distance : -distance)
+    }
 }
 
 // A CoreListItem wrapping a ListViewItem.
