@@ -152,6 +152,24 @@ final class ScrollByTests: XCTestCase {
         XCTAssertFalse(fixture.engine.isDecelerating)
     }
 
+    /// The chat's engine plays momentum as a keyframe flight: the step catches it where it is presented
+    /// and moves on from there.
+    func testAStepCatchesAKeyframeFlightWhereItIsAndStepsFromThere() {
+        let fixture = PhysicsListFixture(itemCount: 200, itemHeight: 50, viewport: viewport,
+                                         decelerationMode: .keyframe)
+        fixture.simulateFlick(offsetVelocity: 2_000)
+        for _ in 0 ..< 5 {
+            fixture.tick(dt: 1.0 / 60)
+        }
+        XCTAssertTrue(fixture.listView.isScrollFlightActive, "non-vacuity: a flight is in the air")
+        let caught = fixture.engine.liveViewportOffset
+
+        XCTAssertTrue(fixture.listView.scroll(by: -15))
+
+        XCTAssertFalse(fixture.listView.isScrollFlightActive)
+        XCTAssertEqual(fixture.engine.liveViewportOffset, caught + 15, accuracy: 1e-6)
+    }
+
     /// The chat runs on the physics core; its offset must take the step too, and stop at the newest edge.
     func testStepsMoveThePhysicsEngineAndStopAtTheNewestEdge() {
         let fixture = PhysicsListFixture(itemCount: 200, itemHeight: 50, viewport: viewport)

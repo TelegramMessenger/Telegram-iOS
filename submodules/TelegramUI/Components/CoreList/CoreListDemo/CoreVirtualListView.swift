@@ -591,7 +591,12 @@ public final class CoreVirtualListView: UIView {
         guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
         holdsPinnedRow = false
         heldRow = nil
-        engine.haltMotionInPlace()
+        // Before the `engine.offset` read, so a keyframe flight is caught where it is presented. Only when
+        // something moves: a step held against an edge is called every frame and must leave a spring-back
+        // alone, as ListViewImpl writes nothing when it cannot scroll.
+        if engine.isDecelerating || activeScrollFlight != nil {
+            engine.haltMotionInPlace()
+        }
         let current = engine.offset
         var target = current - distance
         // Never further past an edge than the offset already is, and never pulled back from overscroll.

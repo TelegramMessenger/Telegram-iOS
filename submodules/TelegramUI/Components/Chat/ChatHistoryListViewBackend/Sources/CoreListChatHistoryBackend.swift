@@ -1766,8 +1766,15 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // moving DOWN in CoreList's space: `scroll(by:)`'s positive sign.
     //
     // `scroll(by:)` runs as a drag frame, so `onVisibleWindowChanged` makes the reports a scroll owes
-    // (range, content offset, trailing space). It also marks the drag witness, and this is no drag: the
-    // witness keeps what the last real drag left, as ListViewImpl's `trackingOffset` does.
+    // (range, content offset, trailing space), and the date headers flash and the bubbles tilt as under a
+    // drag. ListViewImpl does neither here (its scroller is not dragging), which is a deliberate
+    // difference: the dates show while a selection crosses days.
+    //
+    // That callback also marks the drag witness, which is restored: no drag moved the content. This
+    // diverges from ListViewImpl, whose tracking pan also begins on the two-finger selection and so
+    // accumulates the auto-scroll into `trackingOffset`. The one consumer of the witness
+    // (`ChatControllerNode`'s keyboard snap-back) also needs `dismissedInputByDragging`, which a
+    // selection cannot produce, so the two agree in effect.
     func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
         let didMoveContentDuringDrag = self.didMoveContentDuringDrag
         defer {
