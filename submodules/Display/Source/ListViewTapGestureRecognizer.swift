@@ -4,9 +4,9 @@ import UIKit.UIGestureRecognizerSubclass
 
 public final class ListViewTapGestureRecognizer: UITapGestureRecognizer {
     /// How far a touch may travel and still be a tap: the same 2pt `TapLongTapOrDoubleTapGestureRecognizer` allows a
-    /// message bubble. A plain `UITapGestureRecognizer` tolerates far more than the list's pan needs to begin
-    /// scrolling (10pt), so a slight swipe that started on the floating date pill used to land as a tap on it and jump
-    /// the chat to that date.
+    /// message bubble. A plain `UITapGestureRecognizer` tolerates more movement than a list's pan needs to begin
+    /// scrolling, so a slight swipe that started on the floating date pill and stayed under that threshold used to land
+    /// as a tap on it and jump the chat to that date.
     static let allowableMovement: CGFloat = 2.0
 
     private var touchStartLocation: CGPoint?
