@@ -1586,12 +1586,17 @@ let v2TableCornerRadius: CGFloat = 10.0
 // padding (v2TableCellInsets.left + .right), leaving ~34pt of text. Below this a column
 // is too narrow to read, so the table scrolls horizontally instead.
 let v2TableMinCompressedColumnWidth: CGFloat = 60.0
+// A column's compress-to-fit floor is its widest unbreakable word (plus padding), but at most
+// this fraction of the table's content width: one very long token (a URL) then wraps instead of
+// widening its column past half the bubble, so at least two columns are always in view.
+let v2TableMaxColumnFloorFraction: CGFloat = 0.5
 
 /// Second-pass column solver for a table whose columns' minimum (maximally-wrapped)
 /// widths overflow `target`. Compresses columns proportionally to their natural
-/// (`maxColumnWidths`) widths, clamping any column that would fall below `floor`
-/// (a column narrower than the floor keeps its natural width) and redistributing the
-/// remaining shrink among the still-scalable columns (water-filling).
+/// (`maxColumnWidths`) widths, clamping any column that would fall below its `floors` entry
+/// (a column narrower than its floor keeps its natural width) and redistributing the
+/// remaining shrink among the still-scalable columns (water-filling). Floors must be whole
+/// points: scaled widths are rounded down, which then can never cross one.
 ///
 /// Returns the per-column widths plus whether they fit within `target`:
 /// - `fits == true`: the widths sum exactly to `target` (caller shows a non-scrolling table).
@@ -1603,7 +1608,7 @@ private func compressTableColumnsToFit(
     maxColumnWidths: [Int: CGFloat],
     columnCount: Int,
     target: CGFloat,
-    floor: CGFloat
+    floors: [Int: CGFloat]
 ) -> (widths: [Int: CGFloat], fits: Bool)? {
     if columnCount <= 0 {
         return nil
@@ -1614,7 +1619,7 @@ private func compressTableColumnsToFit(
     var flooredTotal: CGFloat = 0.0
     for i in 0 ..< columnCount {
         let natural = maxColumnWidths[i] ?? 1.0
-        let f = min(floor, natural)
+        let f = min(floors[i] ?? 0.0, natural)
         effectiveFloor[i] = f
         flooredTotal += f
     }
@@ -1633,7 +1638,7 @@ private func compressTableColumnsToFit(
         var scalableNatural: CGFloat = 0.0
         for i in 0 ..< columnCount {
             if pinned.contains(i) {
-                fixedWidth += effectiveFloor[i] ?? floor
+                fixedWidth += effectiveFloor[i] ?? 0.0
             } else {
                 scalableNatural += maxColumnWidths[i] ?? 1.0
             }
@@ -1645,7 +1650,7 @@ private func compressTableColumnsToFit(
         var newlyPinned = Set<Int>()
         for i in 0 ..< columnCount where !pinned.contains(i) {
             let natural = maxColumnWidths[i] ?? 1.0
-            if natural * scale < (effectiveFloor[i] ?? floor) {
+            if natural * scale < (effectiveFloor[i] ?? 0.0) {
                 newlyPinned.insert(i)
             }
         }
@@ -1660,7 +1665,7 @@ private func compressTableColumnsToFit(
     var scalableNatural: CGFloat = 0.0
     for i in 0 ..< columnCount {
         if pinned.contains(i) {
-            fixedWidth += effectiveFloor[i] ?? floor
+            fixedWidth += effectiveFloor[i] ?? 0.0
         } else {
             scalableNatural += maxColumnWidths[i] ?? 1.0
         }
@@ -1673,18 +1678,18 @@ private func compressTableColumnsToFit(
     for i in 0 ..< columnCount {
         let width: CGFloat
         if pinned.contains(i) {
-            width = effectiveFloor[i] ?? floor
+            width = effectiveFloor[i] ?? 0.0
         } else {
-            width = round((maxColumnWidths[i] ?? 1.0) * scale)
+            width = floor((maxColumnWidths[i] ?? 1.0) * scale)
             lastScalableIndex = i
         }
         result[i] = width
         assigned += width
     }
 
-    // Correct sub-pixel rounding drift so the widths sum to exactly `target`. Dump it on
-    // the last scalable column (well above its floor) so no pinned column is pushed below
-    // the floor; fall back to the last column if every column was pinned.
+    // Correct sub-pixel rounding drift so the widths sum to exactly `target`. Rounding down
+    // makes it non-negative, so dumping it on the last scalable column never pushes any column
+    // below its floor; fall back to the last column if every column was pinned.
     let drift = target - assigned
     let driftIndex = lastScalableIndex ?? (columnCount - 1)
     if drift != 0.0, let current = result[driftIndex] {
@@ -1692,6 +1697,81 @@ private func compressTableColumnsToFit(
     }
 
     return (result, true)
+}
+
+/// Width allocation for a V2 table: per-column widths and the resulting grid width (`totalWidth`,
+/// borders included), from the columns' minimum (maximally-wrapped) and natural widths after the
+/// colspan constraints. `totalWidth > contentBoundingWidth` means the table scrolls horizontally.
+func v2TableColumnWidths(
+    minColumnWidths: [Int: CGFloat],
+    maxColumnWidths: [Int: CGFloat],
+    columnCount: Int,
+    contentBoundingWidth: CGFloat,
+    borderWidth: CGFloat,
+    minCompressedColumnWidth: CGFloat
+) -> (widths: [Int: CGFloat], totalWidth: CGFloat) {
+    let maxContentWidth = contentBoundingWidth - borderWidth
+    var availableWidth = maxContentWidth
+    var maxTotalWidth: CGFloat = 0.0
+    for i in 0 ..< columnCount {
+        availableWidth -= minColumnWidths[i] ?? 0.0
+        maxTotalWidth += maxColumnWidths[i] ?? 0.0
+    }
+
+    // Compress-to-fit floor per column: its widest unbreakable word plus padding (the minimum
+    // width), at least `minCompressedColumnWidth` and at most the cap. Whole points, so the
+    // solver's rounding cannot leave a column a fraction short of its word.
+    let floorCap = contentBoundingWidth * v2TableMaxColumnFloorFraction
+    var compressedFloors: [Int: CGFloat] = [:]
+    for i in 0 ..< columnCount {
+        compressedFloors[i] = ceil(max(minCompressedColumnWidth, min(minColumnWidths[i] ?? 0.0, floorCap)))
+    }
+
+    var totalWidth: CGFloat
+    var finalColumnWidths: [Int: CGFloat]
+    if availableWidth > 0 {
+        // Case A: the columns' minimum widths fit; grow them from min toward their
+        // natural width (proportional to maxWidth) to fill the available width.
+        finalColumnWidths = minColumnWidths
+        var distributedWidth = availableWidth
+        for i in 0 ..< finalColumnWidths.count {
+            var width = finalColumnWidths[i]!
+            let maxWidth = maxColumnWidths[i]!
+            let growth = min(round(availableWidth * maxWidth / maxTotalWidth), distributedWidth)
+            width += growth
+            distributedWidth -= growth
+            finalColumnWidths[i] = width
+        }
+        totalWidth = contentBoundingWidth
+    } else if let compressed = compressTableColumnsToFit(
+        maxColumnWidths: maxColumnWidths,
+        columnCount: columnCount,
+        target: maxContentWidth,
+        floors: compressedFloors
+    ) {
+        // Case B, second pass: the minimum (maximally-wrapped) widths overflow, so compress
+        // columns proportionally down to their floors: each column's widest word (capped), so
+        // the table scrolls rather than break words mid-word.
+        finalColumnWidths = compressed.widths
+        if compressed.fits {
+            // Fits after compression → fill the content width, no horizontal scroll.
+            totalWidth = contentBoundingWidth
+        } else {
+            // Even at their floors the columns overflow: scroll at the floored width, every
+            // word whole, rather than at the wider natural widths.
+            var compressedTotal: CGFloat = 0.0
+            for i in 0 ..< columnCount {
+                compressedTotal += compressed.widths[i] ?? 0.0
+            }
+            totalWidth = compressedTotal + borderWidth
+        }
+    } else {
+        // Degenerate table with no columns: keep natural widths (unchanged behavior).
+        finalColumnWidths = maxColumnWidths
+        totalWidth = maxTotalWidth + borderWidth
+    }
+
+    return (finalColumnWidths, totalWidth)
 }
 
 private func layoutTable(
@@ -1815,11 +1895,8 @@ private func layoutTable(
     }
 
     // Aggregate column min/max across all rows.
-    let maxContentWidth = contentBoundingWidth - borderWidth
-    var availableWidth = maxContentWidth
     var minColumnWidths: [Int: CGFloat] = [:]
     var maxColumnWidths: [Int: CGFloat] = [:]
-    var maxTotalWidth: CGFloat = 0.0
     for i in 0 ..< columnCount {
         var minWidth: CGFloat = 1.0
         var maxWidth: CGFloat = 1.0
@@ -1829,8 +1906,6 @@ private func layoutTable(
         }
         minColumnWidths[i] = minWidth
         maxColumnWidths[i] = maxWidth
-        availableWidth -= minWidth
-        maxTotalWidth += maxWidth
     }
 
     // Apply colspan constraints.
@@ -1848,7 +1923,6 @@ private func layoutTable(
                 if let w = minColumnWidths[i] {
                     let growth = floor(delta / CGFloat(range.count))
                     minColumnWidths[i] = w + growth
-                    availableWidth -= growth
                 }
             }
         }
@@ -1858,55 +1932,19 @@ private func layoutTable(
                 if let w = maxColumnWidths[i] {
                     let growth = round(delta / CGFloat(range.count))
                     maxColumnWidths[i] = w + growth
-                    maxTotalWidth += growth
                 }
             }
         }
     }
 
-    // Width allocation: choose per-column widths and the resulting grid width.
-    var totalWidth: CGFloat
-    var finalColumnWidths: [Int: CGFloat]
-    if availableWidth > 0 {
-        // Case A: the columns' minimum widths fit; grow them from min toward their
-        // natural width (proportional to maxWidth) to fill the available width.
-        finalColumnWidths = minColumnWidths
-        var distributedWidth = availableWidth
-        for i in 0 ..< finalColumnWidths.count {
-            var width = finalColumnWidths[i]!
-            let maxWidth = maxColumnWidths[i]!
-            let growth = min(round(availableWidth * maxWidth / maxTotalWidth), distributedWidth)
-            width += growth
-            distributedWidth -= growth
-            finalColumnWidths[i] = width
-        }
-        totalWidth = contentBoundingWidth
-    } else if let compressed = compressTableColumnsToFit(
+    let (finalColumnWidths, totalWidth) = v2TableColumnWidths(
+        minColumnWidths: minColumnWidths,
         maxColumnWidths: maxColumnWidths,
         columnCount: columnCount,
-        target: maxContentWidth,
-        floor: minCompressedColumnWidth
-    ) {
-        // Case B, second pass: the minimum (maximally-wrapped) widths overflow, so compress
-        // columns proportionally down to the floor.
-        finalColumnWidths = compressed.widths
-        if compressed.fits {
-            // Fits after compression → fill the content width, no horizontal scroll.
-            totalWidth = contentBoundingWidth
-        } else {
-            // Even at the floor the columns overflow: still scroll, but at the compressed
-            // (floored) width — far narrower than the natural widths.
-            var compressedTotal: CGFloat = 0.0
-            for i in 0 ..< columnCount {
-                compressedTotal += compressed.widths[i] ?? 0.0
-            }
-            totalWidth = compressedTotal + borderWidth
-        }
-    } else {
-        // Degenerate table with no columns: keep natural widths (unchanged behavior).
-        finalColumnWidths = maxColumnWidths
-        totalWidth = maxTotalWidth + borderWidth
-    }
+        contentBoundingWidth: contentBoundingWidth,
+        borderWidth: borderWidth,
+        minCompressedColumnWidth: minCompressedColumnWidth
+    )
 
     // Pass 2 & 3: produce per-cell frames + sub-layouts.
     // Private struct to hold an in-progress cell before row height is known.
