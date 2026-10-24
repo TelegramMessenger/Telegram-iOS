@@ -132,8 +132,9 @@ public enum CoreListAnchorMode: Equatable {
 /// Released when a drag begins (`ScrollEngine.onWillBeginDragging`: under `PhysicsScrollEngine` the
 /// pan's `.began` — after its movement hysteresis, or at once for a finger landing on moving content —
 /// and under `UIKitScrollEngine`, `scrollViewWillBeginDragging`; a tap that never becomes a drag keeps
-/// it), by a `scroll(by:)` that moves, by any later `scrollTo` (a holding one arms a new hold), by the
-/// row leaving the collection, by a full replace, and by `releaseScrollHold()`.
+/// it), by a `scroll(by:)` that can move at the presented position, by any later `scrollTo` (a holding
+/// one arms a new hold), by the row leaving the collection, by a full replace, and by
+/// `releaseScrollHold()`.
 public struct CoreListScrollHold {
     public enum Edge {
         /// `viewportInsets.top` — under the chat's π rotation, the input-panel edge.
@@ -541,8 +542,9 @@ public final class CoreVirtualListView: UIView {
     /// re-derived per pass, so there is nothing here to go stale.
     ///
     /// Engaged by an explicit `scrollTo` at the pinned index; released on finger-down, by a `scroll(by:)`
-    /// that moves, on the pinned row leaving the collection, and on a full replace. Release is PERMANENT for that pin —
-    /// scrolling back to the edge does not re-engage it, matching `ListViewImpl`.
+    /// that can move at the presented position, on the pinned row leaving the collection, and on a full
+    /// replace. Release is PERMANENT for that pin — scrolling back to the edge does not re-engage it,
+    /// matching `ListViewImpl`.
     ///
     /// This answers WHERE the pinned row goes. `bottomEdgePinSlack` answers whether the list has
     /// scroll ROOM to rest there, and is deliberately independent of this flag.
@@ -624,8 +626,8 @@ public final class CoreVirtualListView: UIView {
         let current = engine.offset
         let target = target(from: current)
         guard abs(target - current) > 1e-6 else { return false }
-        // `previousOffset` is refreshed only by drag frames and rebases, never by a pass, so it can be
-        // stale here; the step must be measured from where the list is.
+        // The presented-position sync and the halt above move the engine offset without a scroll frame, so
+        // `previousOffset` can trail it; the step must be measured from where the list is.
         previousOffset = current
         engine.setOffset(target)
         handleUserScroll(engine.offset)
