@@ -92,7 +92,7 @@ final class InstantPageV2TableColumnWidthTests: XCTestCase {
         XCTAssertGreaterThan(result.totalWidth, 300.0)
     }
 
-    /// End to end: at the widths the allocation gives, CoreText wraps every cell only where the
+    /// From the allocation down: at the widths it gives, CoreText wraps every cell only where the
     /// tokenizer saw a break opportunity, so no segment the floor measured is split. Latin, Chinese and
     /// Thai, in a table that overflows the bubble.
     func testCellsWrapOnlyAtSegmentBoundariesAtTheAllocatedWidths() {
@@ -102,7 +102,9 @@ final class InstantPageV2TableColumnWidthTests: XCTestCase {
         ]
         let (minWidths, maxWidths, unbreakableWidths) = columns(table)
         let result = widths(min: minWidths, max: maxWidths, unbreakable: unbreakableWidths, contentWidth: 300.0)
+        XCTAssertGreaterThan(result.totalWidth, 300.0)
 
+        var wrappedCells = 0
         for row in table {
             for (i, text) in row.enumerated() {
                 let cfText = text as CFString
@@ -113,11 +115,15 @@ final class InstantPageV2TableColumnWidthTests: XCTestCase {
                     boundaries.insert(range.location + range.length)
                 }
                 let item = layoutTextItem(string(text), boundingWidth: result.widths[i]! - padding, offset: CGPoint()).0!
+                if item.lines.count > 1 {
+                    wrappedCells += 1
+                }
                 for line in item.lines.dropLast() {
                     XCTAssertTrue(boundaries.contains(line.range.upperBound), "\"\(text)\" wrapped inside a segment at \(line.range.upperBound)")
                 }
             }
         }
+        XCTAssertGreaterThan(wrappedCells, 2, "the table must be narrow enough for cells to wrap, or nothing is checked")
     }
 
     /// A Chinese table of short sentences still compresses to the bubble and wraps between
