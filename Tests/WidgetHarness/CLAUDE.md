@@ -173,7 +173,7 @@ to `pass`.
 ## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
 
 The fixtures under `Fixtures/resize/` set their resize anchor first, then change by 120 pt once: on their first click
-(`grow-top`, `grow-bottom`, `shrink-top`) or 2.5 s after loading (`timer-top`, `timer-bottom`); `toggle-top` changes
+(`grow-top`, `grow-bottom`, `shrink-top`) or 2.5 s after loading (`timer-top`); `toggle-top` changes
 every 50 ms from its first pointerdown, 60 times, logging the count (a swipe that starts on it flings past a resizing
 widget, `testAFlingPastAResizingWidgetKeepsItsMomentum`). They are loaded only
 by `-widget-posts` (`WidgetHarnessLaunchOptions.posts`), so their timers never run in the all-fixtures set the other
@@ -182,8 +182,11 @@ own pointer path (`WidgetHarnessListHost.widgetView(path:)`, `MessageWidgetInsta
 frames once the list settles. **Give each chat older filler posts so it is taller than the screen**
 (`fixture/tall-box.html`): a chat that fits the screen cannot scroll, so no edge can be kept there but the list's own.
 The list host updates a message as the chat does (animated, with the bubble's `resizeAnchor`; `updateMessage(path:)`
-asks for one as a bubble would), records the anchor each update carried (`updateAnchors`) and tells whether the list
-holds a jump (`isHoldingScrollTarget`, after `scrollTo(messageIndex:hold:)`).
+asks for one as a bubble would), records the anchor each update carried (`updateAnchors`) and each transaction's size
+(`updateTransactions`), and tells whether the list holds a jump (`isHoldingScrollTarget`, after
+`scrollTo(messageIndex:hold:)`). `holdsUpdates` keeps the bubbles' requests until `flushUpdates()` sends them as one
+transaction, so several widgets change height in one list pass (`heldUpdateCount`: a widget asks on the main-queue turn
+after its new height is set); `holdOverscroll(distance:)` holds the newest edge open as an overscroll action does.
 
 ## Which tier
 

@@ -176,6 +176,19 @@ public final class MessageWidgetRegistry {
         return self.instances[Key(path: path, source: source)]?.resizeAnchor
     }
 
+    /// The widget at `path` as its bubble's next update reads it (`MessageWidgetBubbleSize.resizeAnchor`): its report,
+    /// its edge and whether it failed to start (late, or found by a pass); nil without one.
+    public func runState(path: [Int], source: String) -> MessageWidgetRunState? {
+        let key = Key(path: path, source: source)
+        if let instance = self.instances[key] {
+            return MessageWidgetRunState(reportedHeight: instance.reportedHeight, resizeAnchor: instance.resizeAnchor, failedToStart: instance.failedToStart)
+        }
+        if self.failedKeys.contains(key) {
+            return MessageWidgetRunState(reportedHeight: nil, resizeAnchor: .top, failedToStart: true)
+        }
+        return nil
+    }
+
     public func isLive(path: [Int]) -> Bool {
         return self.instances.contains { $0.key.path == path && $0.value.deadReason == nil }
     }

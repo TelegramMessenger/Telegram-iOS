@@ -42,8 +42,10 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   also the user's: a widget's **first height** after the 160 pt placeholder with nothing cached is placed as any new
   message is (at the bottom the chat stays at its bottom); the list **clamps at its ends** (a shrink that would need
   space past the end moves the edge instead); a bubble **off screen** leaves the screen still. The path: the widget
-  node's `resizeAnchor` (the live widget's, else the cached one; nil for the first height, a fixed height and an update
-  that leaves the height as it is) → `ChatMessageItemView.resizeAnchor` → `ChatHistoryListViewUpdateItem.resizeAnchor`
+  node's `resizeAnchor`, decided by `MessageWidgetBubbleSize.resizeAnchor` from the last layout and the registry's
+  `runState` (the widget's own edge once it has reported, else the cached one: a widget that has not run never chose;
+  nil for the first height, a fixed height and an update that leaves the height as it is; a start that failed is a
+  change, to the pill) → `ChatMessageItemView.resizeAnchor` → `ChatHistoryListViewUpdateItem.resizeAnchor`
   (from `ChatHistoryListNode.requestMessageUpdate`, not when it scrolls to the message) → the CoreList backend's
   `keepingEdge(of:anchor:)`, a pass-scoped scroll target placed from the row's new height. The list keeps what is on
   the screen-bottom side of a changed row by itself, a bottom anchor's edge; the target is set for both anchors, since

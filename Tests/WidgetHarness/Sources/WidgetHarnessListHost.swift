@@ -211,12 +211,35 @@ public final class WidgetHarnessListHost {
 
     /// Every message update the bubbles asked for, in order: the post's path and the edge the update carried.
     public private(set) var updateAnchors: [(path: String, anchor: ListViewItemResizeAnchor?)] = []
+    /// The number of messages each update transaction carried, in order.
+    public private(set) var updateTransactions: [Int] = []
+    /// While true, the bubbles' update requests wait for `flushUpdates()`, which sends them as one transaction (one list
+    /// pass), as the chat's history does when several messages change in one view update.
+    public var holdsUpdates = false
+    private var heldUpdates: [EngineMessage.Id] = []
+    /// The number of messages whose update requests wait for `flushUpdates()`.
+    public var heldUpdateCount: Int {
+        return self.heldUpdates.count
+    }
+
+    /// Sends the update requests held since `holdsUpdates` was set, in one transaction.
+    public func flushUpdates() {
+        let ids = self.heldUpdates
+        self.heldUpdates = []
+        self.sendUpdates(ids)
+    }
 
     /// Updates the post at `path` as its bubble asking would (`requestMessageUpdate`).
     public func updateMessage(path: String) {
         if let id = self.paths.first(where: { $0.value == path })?.key {
             self.requestUpdate(id)
         }
+    }
+
+    /// Holds the chat's newest edge `distance` beyond its resting place, as an overscroll action does (the next
+    /// channel's pull), the content moving with it; 0 releases it.
+    public func holdOverscroll(distance: CGFloat) {
+        self.listView.holdOverscrollAction(distance: distance, movesContent: true)
     }
 
     /// Whether the list holds a scrolled-to row (`scrollTo(messageIndex:hold:)`) until a drag.
@@ -257,17 +280,35 @@ public final class WidgetHarnessListHost {
     // MARK: - What the bubbles ask for
 
     private func requestUpdate(_ id: EngineMessage.Id) {
-        guard let messageIndex = self.messages.firstIndex(where: { $0.id == id }) else {
+        if self.holdsUpdates {
+            if !self.heldUpdates.contains(id) {
+                self.heldUpdates.append(id)
+            }
             return
         }
-        let listIndex = self.messages.count - 1 - messageIndex
-        let item = self.makeItem(self.messages[messageIndex])
-        self.items[listIndex] = item
-        // As the chat's history updates a message (`ChatHistoryListNode.requestMessageUpdate`): animated, keeping the
-        // edge the message asks for (a widget's resize anchor).
-        let resizeAnchor = self.bubbleNode(for: id)?.resizeAnchor
-        self.updateAnchors.append((self.paths[id] ?? "?", resizeAnchor))
-        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil, resizeAnchor: resizeAnchor)], options: [.AnimateInsertion, .Synchronous], updateOpaqueState: nil)
+        self.sendUpdates([id])
+    }
+
+    private func sendUpdates(_ ids: [EngineMessage.Id]) {
+        var updates: [ChatHistoryListViewUpdateItem] = []
+        for id in ids {
+            guard let messageIndex = self.messages.firstIndex(where: { $0.id == id }) else {
+                continue
+            }
+            let listIndex = self.messages.count - 1 - messageIndex
+            let item = self.makeItem(self.messages[messageIndex])
+            self.items[listIndex] = item
+            // As the chat's history updates a message (`ChatHistoryListNode.requestMessageUpdate`): animated, keeping
+            // the edge the message asks for (a widget's resize anchor).
+            let resizeAnchor = self.bubbleNode(for: id)?.resizeAnchor
+            self.updateAnchors.append((self.paths[id] ?? "?", resizeAnchor))
+            updates.append(ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil, resizeAnchor: resizeAnchor))
+        }
+        guard !updates.isEmpty else {
+            return
+        }
+        self.updateTransactions.append(updates.count)
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: updates, options: [.AnimateInsertion, .Synchronous], updateOpaqueState: nil)
     }
 
     private func bubbleNode(for id: EngineMessage.Id) -> ChatMessageBubbleItemNode? {

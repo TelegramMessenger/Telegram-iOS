@@ -69,10 +69,9 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private var tailOnLeft: Bool?
     /// What `chatMessageWidgetRenderingEnabled` answered in the last applied layout; nil before the first.
     private var laidOutEnabled: Bool?
-    /// What the last applied layout showed, for the resize anchor of the next height change (`resizeAnchor`): whether
-    /// the height is the widget's own (no fixed height anchor), whether it was the placeholder (nothing reported or
-    /// cached yet) or the pill, the widget area's height, and the widget's source and cache key to read the anchor by.
-    private var laidOutResize: (autoHeight: Bool, placeholder: Bool, pill: Bool, height: CGFloat, source: String, heightKey: AnyHashable)?
+    /// What the last applied layout showed, for the resize anchor of the next height change (`resizeAnchor`), and the
+    /// widget's source and cache key to read the anchor by.
+    private var laidOutResize: (height: MessageWidgetLaidOutHeight, source: String, heightKey: AnyHashable)?
     private var availabilityObserver: NSObjectProtocol?
     private let hapticFeedback = HapticFeedback()
 
@@ -437,7 +436,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                         }
                         self.item = item
                         self.laidOutEnabled = enabled
-                        self.laidOutResize = (anchors.height <= 0, showsPlaceholder, showsPill, widgetHeight, source, heightKey)
+                        self.laidOutResize = (MessageWidgetLaidOutHeight(autoHeight: anchors.height <= 0, placeholder: showsPlaceholder, pill: showsPill, widgetsEnabled: enabled, height: widgetHeight), source, heightKey)
 
                         // The clip follows the bubble's own height animation, so the widget never shows past the bubble's
                         // edge while the bubble grows or shrinks.
@@ -786,32 +785,14 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         return ChatMessageBubbleContentTapAction(content: .none)
     }
 
-    /// widget-sandbox v0.1.3 (integration.md "Which edge stays put"): the edge the widget asked to stay put, for an auto
-    /// height on its next change: the live widget's anchor, else the one cached with its height (a widget gone to the
-    /// pill). None for the first height after the placeholder, which is placed as any new message is (the user's
-    /// decision), nor for a fixed height, which no report changes, nor for an update that leaves the height as it is:
-    /// the chat's scroll target for it would end a held jump and stop a fling for nothing. The height changes when the
-    /// widget goes to the pill or back (widgets switched off or on) or reported one other than the one laid out.
+    /// widget-sandbox v0.1.3 (integration.md "Which edge stays put"): the edge the next update keeps, decided by
+    /// `MessageWidgetBubbleSize.resizeAnchor` from the last layout and the widget as the registry has it now.
     override public var resizeAnchor: ListViewItemResizeAnchor? {
-        guard let laidOut = self.laidOutResize, laidOut.autoHeight, !laidOut.placeholder else {
+        guard let laidOut = self.laidOutResize else {
             return nil
         }
-        let changesHeight: Bool
-        if chatMessageWidgetRenderingEnabled() != self.laidOutEnabled {
-            changesHeight = true
-        } else if laidOut.pill {
-            changesHeight = false
-        } else if let reported = self.registry.reportedHeight(path: ChatMessageWidgetBubbleContentNode.path, source: laidOut.source) {
-            changesHeight = abs(MessageWidgetBubbleSize.height(anchors: MessageWidgetAnchors(width: 0, height: 0), reported: reported, cached: nil) - laidOut.height) > 0.5
-        } else {
-            changesHeight = false
-        }
-        guard changesHeight else {
-            return nil
-        }
-        let anchor = self.registry.resizeAnchor(path: ChatMessageWidgetBubbleContentNode.path, source: laidOut.source)
-            ?? MessageWidgetHeightCache.shared.entry(for: laidOut.heightKey)?.anchor
-        switch anchor {
+        let widget = self.registry.runState(path: ChatMessageWidgetBubbleContentNode.path, source: laidOut.source)
+        switch MessageWidgetBubbleSize.resizeAnchor(laidOut: laidOut.height, widgetsEnabled: chatMessageWidgetRenderingEnabled(), widget: widget, cachedAnchor: MessageWidgetHeightCache.shared.entry(for: laidOut.heightKey)?.anchor) {
         case .top:
             return .top
         case .bottom:

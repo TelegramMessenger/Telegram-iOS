@@ -567,7 +567,8 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             return nil
         }
         let frame = self.coreList.settledFrame(of: view)
-        let insetTop = self.currentInsets.top
+        // A target is measured from the top inset CoreList was given, which carries the overscroll hold.
+        let insetTop = self.coreListInsets.top
         // On screen is the whole viewport: content under the chat's bars (the input panel, the navigation bar) shows
         // through them.
         let visibleMinY: CGFloat = 0.0

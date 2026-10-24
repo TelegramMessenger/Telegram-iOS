@@ -151,6 +151,29 @@ class RegistryTests: MessageWidgetTestCase {
         XCTAssertEqual(calls, 3)
     }
 
+    /// A bubble's next update reads its widget as the registry has it: the report and the edge once it has run (the
+    /// edge from its script), and a start that failed, which the next layout turns into the pill.
+    func testTheRunStateFollowsTheWidget() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><script>TelegramWidget.setResizeAnchor('bottom')</script><div style=\"height:120px\"></div>"
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNil(registry.runState(path: [], source: source))
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        XCTAssertEqual(registry.runState(path: [], source: source), MessageWidgetRunState(reportedHeight: 136.0, resizeAnchor: .bottom, failedToStart: false))
+        registry.endPass()
+        registry.destroyAll()
+    }
+
+    func testAFailedStartIsInTheRunState() {
+        self.lowerTheParseCeiling()
+        let registry = self.makeRegistry()
+        let source = self.unstartableSource("<!doctype html><p>one</p>")
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNil(registry.size(path: [0], source: source, width: 360.0))
+        XCTAssertEqual(registry.runState(path: [0], source: source), MessageWidgetRunState(reportedHeight: nil, resizeAnchor: .top, failedToStart: true))
+        registry.endPass()
+    }
+
     func testNilFromTheFactoryIsNotRetriedEveryPass() {
         var calls = 0
         let registry = MessageWidgetRegistry(factory: { _, _, _, _, _, _, _ in

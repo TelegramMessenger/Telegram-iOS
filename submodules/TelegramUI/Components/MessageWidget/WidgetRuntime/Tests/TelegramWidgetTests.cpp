@@ -122,6 +122,18 @@ WR_TEST(testSetResizeAnchorThrowsTypeErrorOnAnythingElse) {
     CHECK(wr::HostState::of(env.ctx()).resizeAnchor() == wr::ResizeAnchor::Bottom);
 }
 
+/// A string is the edge only whole: one longer than either edge is neither however it starts (only a 16-byte prefix is
+/// converted, so a megabyte costs nothing), and one with a NUL is not the edge before it.
+WR_TEST(testSetResizeAnchorRefusesLongAndNulStrings) {
+    HostEnv env;
+    env.eval("TelegramWidget.setResizeAnchor('bottom'); 1");
+    CHECK_EQ(env.eval("['top' + ' '.repeat(13), 'top' + 'x'.repeat(1 << 20), 'bottom' + 'm'.repeat(10), 'top\\0', 'bottom\\0', '\\0top']"
+                      ".filter(v => { try { TelegramWidget.setResizeAnchor(v); return true; } catch (e) { return e.name !== 'TypeError'; } })"
+                      ".length"),
+             std::string("0"));
+    CHECK(wr::HostState::of(env.ctx()).resizeAnchor() == wr::ResizeAnchor::Bottom);
+}
+
 /// The anchor is no action: it needs no tap and nothing reaches the bridge.
 WR_TEST(testSetResizeAnchorPostsNoBridgeCall) {
     HostEnv env;

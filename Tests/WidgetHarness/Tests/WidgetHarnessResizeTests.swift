@@ -23,7 +23,6 @@ final class WidgetHarnessResizeTests: XCTestCase {
     private static let growBottom = "fixture/resize/grow-bottom.html"
     private static let shrinkTop = "fixture/resize/shrink-top.html"
     private static let timerTop = "fixture/resize/timer-top.html"
-    private static let timerBottom = "fixture/resize/timer-bottom.html"
     private static let text = "fixture/text.html"
     private static let box = "fixture/box-240.html"
     private static let tall = "fixture/tall-box.html"
@@ -140,6 +139,19 @@ final class WidgetHarnessResizeTests: XCTestCase {
         XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
     }
 
+    /// With the chat's newest edge held open (an overscroll action), the anchored edge stays put all the same: the hold
+    /// is extra inset the list is given, which the target is measured from.
+    func testTheAnchorWinsWithTheNewestEdgeHeld() throws {
+        let (root, _) = try self.load([Self.tall, Self.box, Self.text, Self.growTop])
+        root.listHost?.holdOverscroll(distance: 80.0)
+        let before = self.settle(root) { _ in true }
+        try self.click(root, Self.growTop)
+        let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
+        let message = "before \(before), after \(after)"
+        XCTAssertNear(after[Self.growTop]?.minY, before[Self.growTop]?.minY, message)
+        XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
+    }
+
     /// Decision 3: a top-anchored newest widget that shrinks at the chat's bottom would leave space below it; the list
     /// clamps, so its bottom stays at the end and what is above it moves down.
     func testAShrinkAtTheBottomClamps() throws {
@@ -202,19 +214,32 @@ final class WidgetHarnessResizeTests: XCTestCase {
         XCTAssertTrue(host.isHoldingScrollTarget, "a no-op update ended the held jump")
     }
 
-    /// Review Focus 2: two widgets on screen grow in one pass with different anchors; each keeps its own edge, and the
-    /// post between them stays.
-    func testTwoBubblesResizingTogether() throws {
-        let (root, before) = try self.load([Self.tall, Self.timerBottom, Self.text, Self.timerTop, Self.box])
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 2.0))
-        let after = self.settle(root) { frames in
-            (frames[Self.timerTop]?.height ?? 0.0) > (before[Self.timerTop]?.height ?? 0.0) + 100.0
-                && (frames[Self.timerBottom]?.height ?? 0.0) > (before[Self.timerBottom]?.height ?? 0.0) + 100.0
+    /// Review Focus 2: two widgets on screen change height in one list pass with different anchors: each keeps its own
+    /// edge, and the post between them stays. The list host holds both bubbles' update requests (each widget asks once
+    /// it has reported its new height), then sends them as one transaction.
+    func testTwoBubblesResizingInOnePass() throws {
+        let (root, before) = try self.load([Self.tall, Self.growBottom, Self.text, Self.growTop, Self.box])
+        let host = try XCTUnwrap(root.listHost)
+        host.holdsUpdates = true
+        try self.click(root, Self.growBottom)
+        try self.click(root, Self.growTop)
+        let deadline = Date(timeIntervalSinceNow: 10.0)
+        while Date() < deadline && host.heldUpdateCount < 2 {
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05))
         }
+        XCTAssertEqual(host.heldUpdateCount, 2, "the widgets did not both ask")
+        let transactions = host.updateTransactions.count
+        host.holdsUpdates = false
+        host.flushUpdates()
+        let after = self.settle(root) { frames in
+            (frames[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0
+                && (frames[Self.growBottom]?.height ?? 0.0) > (before[Self.growBottom]?.height ?? 0.0) + 100.0
+        }
+        XCTAssertEqual(Array(host.updateTransactions.dropFirst(transactions).prefix(1)), [2], "not one pass: \(host.updateTransactions)")
         let message = "before \(before), after \(after)"
-        XCTAssertNear(after[Self.timerBottom]?.maxY, before[Self.timerBottom]?.maxY, message)
+        XCTAssertNear(after[Self.growBottom]?.maxY, before[Self.growBottom]?.maxY, message)
         XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
-        XCTAssertNear(after[Self.timerTop]?.minY, before[Self.timerTop]?.minY, message)
+        XCTAssertNear(after[Self.growTop]?.minY, before[Self.growTop]?.minY, message)
     }
 
     /// Review Focus 3: a widget turning into the pill (the kill switch engaged) is a height change by its anchor too:
