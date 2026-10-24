@@ -559,6 +559,33 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertEqual(after.centre.dy - afterHeight / 2.0, top, accuracy: 1.0, "before \(before), after \(after)")
     }
 
+    /// A widget's height change during a fling leaves the fling alone: the list's own placement keeps what is on the
+    /// screen-bottom side of the bubble, where a scroll target keeping its anchored edge would end the momentum (the
+    /// rest of the fling jumped to its destination). The swipe starts on a 300 pt post: `toggle-top` changes height
+    /// every 50 ms from that pointerdown while on screen, `touch-drag` stays still; the momentum after the lift (the
+    /// readout's `scrollEnded`) must be as long past the one as past the other.
+    func testAFlingPastAResizingWidgetKeepsItsMomentum() throws {
+        func momentum(swipingOn post: String) throws -> Double {
+            let posts = ["fixture/text.html", "fixture/tall-box.html", "fixture/multitouch.html", post, "fixture/storage-counter.html", "fixture/hold-none.html", "fixture/double-tap.html", "fixture/open-link.html"]
+            let app = self.launch(["-widget-set", "fixture", "-widget-posts", posts.joined(separator: ","), "-widget-caption", "off"])
+            let ready = self.waitForReadout(app) { $0.contains("open-link.html") && $0.contains(" widget") && $0.contains(post) }
+            self.pumpReadout(app, for: 1.0)
+            let centre = try XCTUnwrap(self.centre(of: post, in: self.readout(app)), ready)
+            // 300 pt down at 2000 pt/s, from the post's top part: a fling to the chat's top.
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let from = origin.withOffset(CGVector(dx: centre.dx, dy: centre.dy - 100.0))
+            from.press(forDuration: 0.01, thenDragTo: from.withOffset(CGVector(dx: 0.0, dy: 300.0)), withVelocity: XCUIGestureVelocity(rawValue: 2000.0), thenHoldForDuration: 0.0)
+            let after = self.waitForReadout(app, timeout: 10.0) { $0.contains("scrollEnded ") }
+            self.attachScreenshot(app, "after the fling from \(post)")
+            let line = try XCTUnwrap(after.split(separator: "\n").last(where: { $0.hasPrefix("scrollEnded ") }), after)
+            return try XCTUnwrap(Double(line.dropFirst("scrollEnded ".count)), after)
+        }
+        let still = try momentum(swipingOn: "fixture/touch-drag.html")
+        XCTAssertGreaterThan(still, 0.3, "the swipe does not fling")
+        let resizing = try momentum(swipingOn: "fixture/resize/toggle-top.html")
+        XCTAssertGreaterThan(resizing, still * 0.75, "the fling's momentum ended early: \(resizing) s against \(still) s")
+    }
+
     // MARK: conformance through the real bubble (CLIENTS.md: press and drag performed as a person would)
 
     /// The readout's `conformance <path> <json>` line for `path`: the widget's `data-conformance`.

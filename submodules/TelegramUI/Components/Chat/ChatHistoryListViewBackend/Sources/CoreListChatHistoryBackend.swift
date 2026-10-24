@@ -1072,7 +1072,10 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             }
         }
 
-        if scrollTo == nil, !self.isTracking, let resize = updateIndicesAndItems.first(where: { $0.resizeAnchor != nil }), let anchor = resize.resizeAnchor {
+        // Not under the finger, nor during momentum: there a target ends the fling (its settled frames are the
+        // flight's destination, so the rest of it jumps there), and the list's own placement keeps the screen-bottom
+        // side of the row instead.
+        if scrollTo == nil, !self.isTracking, !self.coreList.isScrollDecelerating, let resize = updateIndicesAndItems.first(where: { $0.resizeAnchor != nil }), let anchor = resize.resizeAnchor {
             scrollTo = self.keepingEdge(of: resize.index, anchor: anchor)
         }
 

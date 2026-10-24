@@ -58,6 +58,8 @@ public final class WidgetHarnessListHost {
     /// <titles>` / `selectionMenuDismissed` (a text selection's menu), `copy <text>` (its Copy, `\n` for a newline); and
     /// `back` (the root's stand-in back swipe began).
     public private(set) var events: [String] = []
+    /// When the list's last drag ended, until its scrolling ends (the `scrollEnded` event).
+    private var dragEndedAt: CFTimeInterval?
     /// When each bubble's press (its context gesture's shrink) was first seen, for the `pressed` event.
     private var pressedSince: [EngineMessage.Id: CFTimeInterval] = [:]
 
@@ -86,6 +88,18 @@ public final class WidgetHarnessListHost {
         // The `listDrag` event: the list's pan began, the chat scrolls (one post only rubber-bands, so no position shows it).
         self.listView.beganInteractiveDragging = { [weak self] _ in
             self?.events.append("listDrag")
+        }
+        // The `scrollEnded <seconds>` event: the list came to rest that long after the finger lifted (its momentum's
+        // length; 0 without momentum).
+        self.listView.endedInteractiveDragging = { [weak self] _ in
+            self?.dragEndedAt = CACurrentMediaTime()
+        }
+        self.listView.didEndScrolling = { [weak self] _ in
+            guard let self, let since = self.dragEndedAt else {
+                return
+            }
+            self.dragEndedAt = nil
+            self.events.append("scrollEnded " + String(format: "%.2f", CACurrentMediaTime() - since))
         }
     }
 
@@ -195,12 +209,19 @@ public final class WidgetHarnessListHost {
         self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .center(.bottom), animated: false, curve: .Default(duration: nil), directionHint: .Up, hold: hold), updateOpaqueState: nil)
     }
 
-    /// The edge the bubble of the post at `path` keeps on its next height change, while its bubble is loaded.
-    public func resizeAnchor(path: String) -> ListViewItemResizeAnchor? {
-        guard let id = self.paths.first(where: { $0.value == path })?.key else {
-            return nil
+    /// Every message update the bubbles asked for, in order: the post's path and the edge the update carried.
+    public private(set) var updateAnchors: [(path: String, anchor: ListViewItemResizeAnchor?)] = []
+
+    /// Updates the post at `path` as its bubble asking would (`requestMessageUpdate`).
+    public func updateMessage(path: String) {
+        if let id = self.paths.first(where: { $0.value == path })?.key {
+            self.requestUpdate(id)
         }
-        return self.bubbleNode(for: id)?.resizeAnchor
+    }
+
+    /// Whether the list holds a scrolled-to row (`scrollTo(messageIndex:hold:)`) until a drag.
+    public var isHoldingScrollTarget: Bool {
+        return self.listView.isHoldingScrollTarget
     }
 
     /// The live widget view of the post at `path`, while its bubble is loaded.
@@ -245,6 +266,7 @@ public final class WidgetHarnessListHost {
         // As the chat's history updates a message (`ChatHistoryListNode.requestMessageUpdate`): animated, keeping the
         // edge the message asks for (a widget's resize anchor).
         let resizeAnchor = self.bubbleNode(for: id)?.resizeAnchor
+        self.updateAnchors.append((self.paths[id] ?? "?", resizeAnchor))
         self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil, resizeAnchor: resizeAnchor)], options: [.AnimateInsertion, .Synchronous], updateOpaqueState: nil)
     }
 

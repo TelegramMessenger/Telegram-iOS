@@ -42,17 +42,21 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   also the user's: a widget's **first height** after the 160 pt placeholder with nothing cached is placed as any new
   message is (at the bottom the chat stays at its bottom); the list **clamps at its ends** (a shrink that would need
   space past the end moves the edge instead); a bubble **off screen** leaves the screen still. The path: the widget
-  node's `resizeAnchor` (nil for the first height and a fixed height; the live widget's, else the cached one) →
-  `ChatMessageItemView.resizeAnchor` → `ChatHistoryListViewUpdateItem.resizeAnchor` (from
-  `ChatHistoryListNode.requestMessageUpdate`, not when it scrolls to the message) → the CoreList backend's
+  node's `resizeAnchor` (the live widget's, else the cached one; nil for the first height, a fixed height and an update
+  that leaves the height as it is) → `ChatMessageItemView.resizeAnchor` → `ChatHistoryListViewUpdateItem.resizeAnchor`
+  (from `ChatHistoryListNode.requestMessageUpdate`, not when it scrolls to the message) → the CoreList backend's
   `keepingEdge(of:anchor:)`, a pass-scoped scroll target placed from the row's new height. The list keeps what is on
-  the screen-bottom side of a changed row by itself, so a bottom anchor needs nothing on screen and a top anchor the
-  target; a row below the screen keeps the lowest visible row; none while the user drags. A held jump yields to it.
-  ListViewImpl ignores it. **While the height animates** the widget's clip, mask and tail follow the bubble's own
+  the screen-bottom side of a changed row by itself, a bottom anchor's edge; the target is set for both anchors, since
+  a held jump re-places its own row instead. A row below the screen keeps the lowest visible row. **A target ends a
+  held jump and stops momentum**, so there is none while the finger is down or the list decelerates (during a flight
+  the settled frames are its destination: the rest of the fling would jump there), the list's own placement deciding
+  then, and none for an update that changes no height (the bubble's re-layouts). A real change on screen releases a
+  held jump; its row moves with its side. ListViewImpl ignores it. **While the height animates** the widget's clip, mask and tail follow the bubble's own
   animation (the widget never shows past the bubble's edge), a bottom-anchored widget's view rides the clip's bottom,
   and its old tiles sit on the anchored edge until the new ones are drawn (`MessageWidgetView.tileOffset`). A chat that
   fits the screen cannot scroll, so there the list's own placement decides. `WidgetHarnessResizeTests` (Tier 1,
-  `Fixtures/resize/`) and `testTheFaqsQuestionStaysUnderTheFinger` (Tier 2) cover it.
+  `Fixtures/resize/`), `testTheFaqsQuestionStaysUnderTheFinger` and `testAFlingPastAResizingWidgetKeepsItsMomentum`
+  (Tier 2) cover it.
 - **The widget fills its bubble** (sdk-v1 §5.1): the bubble adds no padding
   (`ChatMessageWidgetBubbleContentNode.bubbleInset` = 0; the widget's body margin, the text tokens' padding, is the
   inset), clips at its own radii (`chatBubbleCorners`, the auxiliary radius where merged) and is square where the tail

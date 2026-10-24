@@ -186,6 +186,22 @@ final class WidgetHarnessResizeTests: XCTestCase {
         XCTAssertNear(after[Self.text]?.minY, before[Self.text].map { $0.minY + 120.0 }, message)
     }
 
+    /// An update that changes no height (a widget re-laid out at the height it has) carries no anchor: a scroll target
+    /// would end the chat's held jump, and stop a fling, for nothing.
+    func testAnUpdateThatChangesNoHeightKeepsAHeldJump() throws {
+        let (root, _) = try self.load([Self.tall, Self.growTop, Self.text, Self.box])
+        let host = try XCTUnwrap(root.listHost)
+        host.scrollTo(messageIndex: 2, hold: .always)
+        _ = self.settle(root) { _ in true }
+        XCTAssertTrue(host.isHoldingScrollTarget, "the jump is not held")
+        let since = host.updateAnchors.count
+        host.updateMessage(path: Self.growTop)
+        _ = self.settle(root) { _ in true }
+        let updates = host.updateAnchors.dropFirst(since).filter { $0.path == Self.growTop }.map(\.anchor)
+        XCTAssertEqual(updates, [nil])
+        XCTAssertTrue(host.isHoldingScrollTarget, "a no-op update ended the held jump")
+    }
+
     /// Review Focus 2: two widgets on screen grow in one pass with different anchors; each keeps its own edge, and the
     /// post between them stays.
     func testTwoBubblesResizingTogether() throws {
@@ -202,14 +218,16 @@ final class WidgetHarnessResizeTests: XCTestCase {
     }
 
     /// Review Focus 3: a widget turning into the pill (the kill switch engaged) is a height change by its anchor too:
-    /// gone, its bubble answers the anchor cached with its height. The kill switch turns every widget into the pill at
-    /// once, so the edge itself is the other tests' to measure.
+    /// the update that lays the pill out carries the widget's anchor. The kill switch turns every widget into the pill
+    /// at once, so the edge itself is the other tests' to measure.
     func testThePillKeepsTheAnchoredEdge() throws {
         let (root, _) = try self.load([Self.text, Self.growBottom])
-        XCTAssertEqual(root.listHost?.resizeAnchor(path: Self.growBottom), .bottom)
+        let host = try XCTUnwrap(root.listHost)
+        let since = host.updateAnchors.count
         MessageWidgetKillSwitch.isEngaged = true
         _ = self.settle(root) { _ in root.readoutLines().contains { $0.contains(Self.growBottom) && $0.contains(" pill") } }
-        XCTAssertEqual(root.listHost?.resizeAnchor(path: Self.growBottom), .bottom)
+        let updates = host.updateAnchors.dropFirst(since).filter { $0.path == Self.growBottom }.map(\.anchor)
+        XCTAssertEqual(updates.first ?? nil, .bottom, "\(updates)")
     }
 
     /// Review Focus 1: a bubble whose anchored top is above the screen keeps it there; what is on screen below it moves.

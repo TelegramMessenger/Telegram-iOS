@@ -115,7 +115,8 @@ contextMenuEnded fixture/open-link.html
   appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`,
   `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction: a double tap the bubble took),
   `back` (the root's back swipe began), `listDrag` (the list's pan began: the chat scrolls, though one post only
-  rubber-bands back), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
+  rubber-bands back), `scrollEnded <seconds>` (the list came to rest that long after the drag's lift: its momentum,
+  0 without), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
   joined by `,`; each is a button `harness.menu.<title>` under the readout), `selectionMenuDismissed` (that menu went
   away), `copy <text>` (its Copy, a newline written `\n`) and `pressed <path> <seconds>` (a bubble's press ended after
   that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
@@ -172,14 +173,17 @@ to `pass`.
 ## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
 
 The fixtures under `Fixtures/resize/` set their resize anchor first, then change by 120 pt once: on their first click
-(`grow-top`, `grow-bottom`, `shrink-top`) or 2.5 s after loading (`timer-top`, `timer-bottom`). They are loaded only
+(`grow-top`, `grow-bottom`, `shrink-top`) or 2.5 s after loading (`timer-top`, `timer-bottom`); `toggle-top` changes
+every 50 ms from its first pointerdown, 60 times, logging the count (a swipe that starts on it flings past a resizing
+widget, `testAFlingPastAResizingWidgetKeepsItsMomentum`). They are loaded only
 by `-widget-posts` (`WidgetHarnessLaunchOptions.posts`), so their timers never run in the all-fixtures set the other
 tests lay out. Tier 1 lays out a chat of exactly the posts a measurement needs, clicks a fixture through its widget's
 own pointer path (`WidgetHarnessListHost.widgetView(path:)`, `MessageWidgetInstance.pointer`) and compares the readout's
 frames once the list settles. **Give each chat older filler posts so it is taller than the screen**
 (`fixture/tall-box.html`): a chat that fits the screen cannot scroll, so no edge can be kept there but the list's own.
-The list host updates a message as the chat does (animated, with the bubble's `resizeAnchor`), and
-`resizeAnchor(path:)` reads what a bubble answers.
+The list host updates a message as the chat does (animated, with the bubble's `resizeAnchor`; `updateMessage(path:)`
+asks for one as a bubble would), records the anchor each update carried (`updateAnchors`) and tells whether the list
+holds a jump (`isHoldingScrollTarget`, after `scrollTo(messageIndex:hold:)`).
 
 ## Which tier
 
