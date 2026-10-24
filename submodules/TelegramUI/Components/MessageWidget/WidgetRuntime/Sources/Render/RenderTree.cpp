@@ -2326,6 +2326,16 @@ void RenderTree::setTheme(JSContext* ctx, Theme theme, std::string rootDeclarati
     m_journal.markRebuild();
 }
 
+void RenderTree::setReducedMotion(JSContext* ctx, bool reduced) {
+    if (Runtime::from(ctx).stopReason() != StopReason::None || reduced == m_container.options().reducedMotion) {
+        return;
+    }
+    RenderOptions options = m_container.options();
+    options.reducedMotion = reduced;
+    m_container.setOptions(std::move(options));
+    m_journal.markRebuild();
+}
+
 void RenderTree::canvasPainted(const Element& canvas) {
     if (this->rendered(&canvas)) {
         m_journal.markRebuild();

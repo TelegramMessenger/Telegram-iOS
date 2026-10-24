@@ -88,8 +88,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   parallel (`WidgetTileDrawer`), so a size change can show the old tiles for a frame. A boot not done is the offered
   width × 160 pt (`MessageWidgetInstance.placeholderHeight`); its late snapshot moves `layoutVersion` so the bubble
   lays out again (a late start failure too, which then shows the pill). Taps always wait and carry their permission;
-  timer ticks and frames wait unless the widget is hidden or demoted (a timer, wake or frame task past 1,000,000 units
-  demotes it for good; boots and taps never do). Keyed tasks (`timer-<id>`, `wake`, `frame`, `visibility`, `width`,
+  timer ticks and frames wait unless the widget is hidden or demoted (a timer, wake or frame task past 1,000,000 units,
+  its whole drain, which is what main waits for, demotes it for good; boots and taps never do). Keyed tasks (`timer-<id>`, `wake`, `frame`, `visibility`, `width`,
   `draw`) replace one still queued, and one frame task is in flight at a time. Tests run each widget on a pool of its
   own with `.unbounded` (each wait ends with its task); background-path tests pass a capped policy and hold a task
   with `gateNextTaskForTesting()` (never with `.unbounded`: main would wait for a task that waits for main).
@@ -157,6 +157,10 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   follows its view's `didMoveToWindow` and `MessageWidgetApplicationState`, fed by one subscription to
   `applicationBindings.applicationIsActive` (`feedMessageWidgetApplicationState`). Hidden, a widget gets no frames and
   1 Hz timers.
+- **Reduce Motion is the system's.** `MessageWidgetInstance` reads `UIAccessibility.isReduceMotionEnabled` when it is
+  made and follows `reduceMotionStatusDidChangeNotification`; the runtime answers `prefers-reduced-motion` in `@media`
+  and `matchMedia` from it (`WRSession.setReducedMotion:`, set before the boot for the first layout;
+  `HostState::setReducedMotion` after it, which reports the lists whose answer flipped).
 - **The renderer is twidget's litehtml fork** (Telegram for macOS's renderer, vendored in `third-party/twidget/`).
   `:litehtml_fork` (not `:litehtml`: APFS case collision with `:LiteHTML`) lays out the document `WidgetRuntime`'s
   `RenderTree` builds from its DOM. The ObjC++ `LiteHTML` layer is reused only through `LHHostSupport.h`
@@ -165,10 +169,10 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   numbered in `third-party/twidget/VENDOR.md`. Re-syncing: re-copy from twidget, re-apply VENDOR.md's edits, run both
   suites.
 - **Rendering follows Chromium's answers, as widget-sandbox's conformance set encodes them**, held by the harness's
-  ratchet. Its one partly is upstream's: a `data:` PNG in `auto/05-colour-backgrounds-b` has a bad CRC, which Chromium
-  draws and ImageIO refuses. Right-to-left covers `direction`, `dir` (`auto` included) and each line's bidi order from
-  our UAX #9 (`WidgetRuntime/Sources/Render/Bidi.cpp`, `document_container::bidi_levels`), not floats, absolutely
-  positioned static positions or table columns. A
+  ratchet. Its one partly is upstream's: a `data:` PNG in `auto/05-colour-backgrounds-b` is corrupt from its sixth row,
+  which Chromium leaves transparent and ImageIO draws black. Right-to-left covers `direction`, `dir` (`auto`
+  included) and each line's bidi order from our UAX #9 (`WidgetRuntime/Sources/Render/Bidi.cpp`,
+  `document_container::bidi_levels`), not floats, absolutely positioned static positions or table columns. A
   `calc()` mixing a percentage with a length is a counted tree in `css_length` (16 bytes) of at most 64 nodes, because
   a cached declaration's one tree is evaluated for every element it styles at every layout. What still differs: the
   runtime record's "Rendering fidelity".

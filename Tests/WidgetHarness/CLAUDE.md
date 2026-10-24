@@ -78,6 +78,7 @@ One leading dash (`--widget-set` is ignored silently).
 | `-harness-side` | `incoming` (the posts come from the other side of the chat) | outgoing |
 | `-harness-menu` | `hold` (the stand-in context menu stays open until `harness.endMenu`; `harness.openMenu` opens it on the newest widget bubble without a long press) | ends after 2 s |
 | `-harness-copy-protected` | `on` (the chat forbids copying: `isCopyProtectionEnabled`) | off |
+| `-harness-text-size` | Settings ▸ Appearance ▸ Text Size as `PresentationFontSize`'s raw value (0 extra small … 4 extra large, 5 extra large ×2, 6 medium) | the context's |
 
 A hosted (Tier 1) test calls `WidgetHarnessRootViewController.reload(options:)` instead.
 

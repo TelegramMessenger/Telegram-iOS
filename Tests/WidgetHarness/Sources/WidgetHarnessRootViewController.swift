@@ -111,6 +111,9 @@ public final class WidgetHarnessRootViewController: UIViewController {
         self.listHost = host
         self.view.insertSubview(host.node.view, belowSubview: self.readoutLabel)
         self.layoutList()
+        if let raw = self.options.textSize, let textSize = PresentationFontSize(rawValue: raw) {
+            host.setFontSize(textSize)
+        }
         host.load(posts: WidgetHarnessPosts.load(self.options), incoming: self.options.incoming)
         self.updateOpenMenuButton(menuOpen: false)
         self.updateReadout()

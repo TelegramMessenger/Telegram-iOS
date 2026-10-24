@@ -19,8 +19,8 @@ Since V4 (2026-10-21) profile 1 is enforced on the renderer's copy of the docume
 enforcement (V4)", below, which replaces M1c's "there is no validator"; "Divergences from widget-sandbox v0.1.0" lists
 where it differs from the reference on purpose.
 The old runtime (widget-sandbox's JavaScript shim and trusted validator, `MessageWidgetEngine`, `WidgetDOM` and the
-ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14). Until M2 to M4, a widget that needs what is not
-built yet renders or behaves less well than it did: "What regresses until M2 to M4", below. M1a built:
+ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14); what the corpus still trips on is below. M1a
+built:
 - the QuickJS fork changes for engine built-in interfaces (changes 3–5);
 - the WebIDL binding generator;
 - the core DOM (nodes, tree algorithms, attributes, collections);
@@ -437,8 +437,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   starts the count again.
 - **matchMedia** (V3b, `DOM/MediaQueries.cpp`): a query is evaluated by litehtml's own media query parser against the
   container's media features (`RenderTree::matchesMedia`), exactly what `@media` sees, so the two agree:
-  `prefers-color-scheme` follows the theme, `hover`, `pointer` and `prefers-reduced-motion` are unknown features and
-  never match, `print` never applies. After every task's and frame's microtasks the loop reports changes
+  `prefers-color-scheme` follows the theme and `prefers-reduced-motion` the system's Reduce Motion
+  (`HostState::setReducedMotion`), `hover` and `pointer` are unknown features and never match, `print` never applies. After every task's and frame's microtasks the loop reports changes
   (`Window::reportMediaChanges`): a list with a change listener whose answer flipped gets a `MediaQueryListEvent`. Such
   a list is held by the window (`EventTarget::listenersChanged`); one without listeners is not tracked and, when it
   gains one, takes its previous answer from the media features the last report kept. A media keyword is looked up
@@ -722,7 +722,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   declaration, else its shorthand's entries, times in seconds. Otherwise a property reads the element's own
   declaration as written, `var()` substituted (twidget edits 45, 51 keep the raw declarations), an inherited property
   from the nearest ancestor that declares it, else the property's initial value; a declaration whose `var()` never
-  resolved reads as unset. Edit 51's copies add 360,096 bytes (3.0%, 1.5 KB a document) to the 11.9 MB of style
+  resolved reads as unset, a shorthand's longhands too (in layout as well: twidget edit 57). Edit 51's copies add 360,096 bytes (3.0%, 1.5 KB a document) to the 11.9 MB of style
   bytes the corpus's 243 documents charge (`testCorpusRenders` prints the total; the heaviest document charges
   981,904 bytes of its 16 MiB budget). The positional shorthands are serialized from their longhands, the complex ones
   canonically ("What still differs", below). A read is charged its serialization's length plus a node visit per
@@ -850,13 +850,14 @@ group; the corpus checks that no honest document reaches a text or node limit (`
 profile image types and the placeholder reach the host; `//third-party/twidget:TwidgetProfileHooksTests`; and the
 conformance ratchet, which runs the set one widget at a time (`Tests/WidgetHarness/CLAUDE.md`).
 
-## Rendering fidelity (widget-sandbox v0.1.1's conformance set)
+## Rendering fidelity (widget-sandbox's conformance set)
 
-The fidelity plan (2026-10-22) took the renderer from 130 pass / 24 partly / 8 fail of v0.1.0's in-profile catalogue
-to **162 / 1 / 0 of v0.1.1's 174** (out of profile 75 neutralised / 0 / 0), judged by the harness's conformance ratchet
-(`Tests/WidgetHarness/CLAUDE.md`) against Chromium's expectations, which the conformance set encodes. The renderer's
-side is twidget edits 30 to 40 and 46 to 48 (`third-party/twidget/VENDOR.md`; 41 to 45 are the v0.1.1 update's); the
-runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for litehtml, `fork_test.cpp`.
+Of widget-sandbox v0.1.3's in-profile catalogue the renderer passes **165, 2 partly, 0 failing of 178** (out of profile
+75 neutralised / 0 / 0), judged by the harness's conformance ratchet (`Tests/WidgetHarness/CLAUDE.md`) against
+Chromium's expectations, which the conformance set encodes. The two partly are `css.background.basic` (upstream's bad
+PNG, below) and `behaviour.gesture-claim`, whose checks only the real bubble can satisfy and the Tier 2 run holds to
+pass. The renderer's side is twidget edits 30 to 40, 46 to 48, 56 and 57 (`third-party/twidget/VENDOR.md`; 41 to 45
+are the v0.1.1 update's); the runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for litehtml, `fork_test.cpp`.
 
 - **What a widget reads back** (edit 30): `getComputedStyle` answers `filter`, SVG `fill`/`stroke`/`stroke-width`,
   `touch-action`, the background longhands per layer (a gradient layer reads `none`: litehtml keeps no gradient text),
@@ -894,9 +895,16 @@ runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for
   first line.
 
 What still differs, on purpose or for now (none is measured by a conformance check today):
-- **`css.background.basic` stays partly:** the first `data:` PNG of `auto/05-colour-backgrounds-b` (widget-sandbox
-  v0.1.1) has a bad IDAT CRC. Chromium draws it; ImageIO refuses it, so that stage's background is missing (71.7 % of
-  its ink differs). A decoder that ignores CRCs is not one to ship for hostile input; the fix is upstream's.
+- **`css.background.basic` stays partly:** the tiled `data:` PNG of `auto/05-colour-backgrounds-b` (also the tiled row
+  of `visual/02-colours-gradients`; widget-sandbox v0.1.1) is corrupt: its IDAT inflates, but from the sixth of its 20
+  rows the filter bytes are invalid, and its Adler-32 and CRC are wrong. ImageIO calls it complete and draws those rows
+  black; the reference (Chromium) keeps the first five rows and leaves the rest transparent, so the tile is black
+  where the reference is white (71.7 % of the stage's ink differs). Matching a browser's partial decode is not worth
+  a decoder of our own; the fix is upstream's.
+- **`visual/13-out-of-profile` shows its popover, with a white button label:** the profile drops the popover
+  attributes, so the div is drawn where it stands (`auto/18-out-of-profile` checks that), while the reference picture
+  hides it. The page's button sets only a background, and the bubble passes `button_text_color` as the button text
+  token (sdk-v1 §2.4), so the label is white on `#dde` where the picture, drawn with no token, has it dark.
 - **Right-to-left is the line's order only:** floats, the static position of an absolutely positioned box and table
   column order stay left-to-right, and the UA layer's `padding-inline-*` stay dropped (`css.box.logical` is out of the
   profile), so an RTL list indents on the left. Inside one text piece the order is the text engine's; in a reversed
@@ -1102,8 +1110,8 @@ wall time, printed and not asserted):
   p95 8.4 ms, max 17.9 ms (`showcase/commerce/04-flash-sale.html`); until the tiles land, 2.2, 9.8 and 21.8 ms. A 5 s
   tap seen before was the process's first `CADisplayLink` (5,014 ms in a headless test simulator; the tap itself
   1.6 ms); `testThePollsTapsAreFast` warms it up and holds each of the poll's taps under 500 ms.
-- **The corpus**: all 230 files boot, none stops, and 23 end with an uncaught error ("What regresses until M2 to M4",
-  below). With every budget lifted to 200,000,000, only the deliberate runaway stops, and every other widget's boot
+- **The corpus**: every file boots and none stops; the uncaught errors left are by design ("What the corpus still
+  trips on", below). With every budget lifted to 200,000,000, only the deliberate runaway stops, and every other widget's boot
   and largest later task stay under a quarter of their budgets.
 
 Units and KB are deterministic on one platform: the same on every run and, since quickjs-ng change 12, in every build
@@ -1204,38 +1212,13 @@ What V4 does differently from the reference validator and sandbox at v0.1.0, on 
     behaviour there is not established); a `<style>` whose text or strings do not fit is not applied and counts
     nothing (the reference blanks the sheet and keeps its text charged).
 
-## What regresses until M2 to M4
+## What the corpus still trips on
 
-The cost of the spec's D14 (the switch now, with no flag): a widget that needs what is not built yet renders or
-behaves less well than on the old runtime until it is. At the end of M1d, after `element.style` came forward from M2
-(it alone was 79 of the 103 corpus documents with failures in M1b's count, and the corpus went from 92 files with an
-uncaught error to 23), `CorpusTests.testEveryCorpusWidgetStartsAndFetchesNothing` boots all 230 corpus files with no
-crash and no stop, and 23 end with an uncaught error. `CorpusTests.knownGaps` lists them, so they print rather than
-fail:
-- `TypeError: not a function` (7): `canvas.getContext` in 5 (`compat/webgl.html` asks for WebGL first; Canvas 2D is
-  M3), `window.matchMedia` in `compat/dark-mode.html` and SVG `getBBox` in `compat/svg-chart.html` (M2);
-- `Intl is not defined` (5, M2);
-- `Chart is not defined` (5) and `d3 is not defined` (2) (M3). The app installs no script loader, so all 9 files that
-  load Chart.js or D3 by URL get `script-skipped`, and 2 of them throw nothing; `compat/three-js.html` loads three.js,
-  which was never bundled;
-- `localStorage is not defined` (3; Web Storage came in V2a, persisted by the client since V2b);
-- `fetch is not defined` (1): never, since a widget cannot fetch.
-
-CSS transitions and animations do not run (V5f; `element.animate()` runs since V5e), and the observers are absent (M2; the geometry queries and
-`getComputedStyle` came in V3); none of these is among the corpus's uncaught errors. On the simulator (K3) the corpus messages already in
-Saved Messages render on the new runtime, every widget fully drawn from its first frame while the chat opens and is
-flung, and taps on the stock card, the live poll and the hotel booking update them. The re-post of the corpus at
-`widget-runtime-m1d-1` was queued but failed to send, because the account stayed offline the whole session; it is still
-owed.
-
-The tests that pinned the old runtime are deleted or rewritten (M1d's carry-over, in `feature/message-widgets`' history, lists every case): `EngineTests`,
-`ValidatorTests` and `RendererTests` whole, twidget's `PatchLogTests` and `WidgetDOMFuzzTests`, and the engine- and
-validator-specific cases of `CoreTests`, `DeterminismTests`, `LimitsTests` and `ViewTests`. Kept tests whose
-observation changed read the new core: tap helpers use `WRSession.borderBoxForTesting:` until M2's
-`getBoundingClientRect`, frozen checks read the renderer's badge, the failed-start tests use a source past the 256 KiB
-cap, and the attack and corpus scans assert that no URL-loading request is made (a URL now reaches `WidgetContainer`
-and is refused there). The three tests skipped for the CSSOM in Task 9 run again since `element.style`; nothing is
-skipped now.
+`CorpusTests.testEveryCorpusWidgetStartsAndFetchesNothing` boots every corpus file but `attacks` with no crash and no
+stop. The uncaught errors it allows (`CorpusTests.knownGaps`) are all by design: `Chart is not defined` and
+`d3 is not defined` (profile 1 bundles no library and the app installs no script loader, so a library loaded by URL is
+`script-skipped`) and `fetch is not defined` (a widget never fetches). The Hang and Buggy buttons are not honest widgets
+(`throwsOnPurpose`).
 
 ## Tests
 
@@ -1322,31 +1305,24 @@ Three manual programs run with `-c opt`:
 
 The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox:CorpusFiles`).
 
-## Next
+## Open
 
-- M1a to M1d are done (the status above).
-- **M1e: the gates, and what M1c left** (spec §13):
-  - WPT rendering: reftests and `check-layout-th.js` tests through litehtml, with their own ratcheting expectations;
-  - the corpus gates and goldens (spec §9), the goldens in deterministic mode with `TZ` pinned, because local-time
-    `Date` output (`toString`, `getHours`, `getTimezoneOffset`) reads the process time zone;
-  - Task 10c, an incremental render subtree in the fork, so that structural and non-neutral attribute patches stop
-    publishing `Reset`;
-  - the sub-pixel gap of moved nodes, the SVG `<image>` the fork never loads, and a `list-style-image` over 1 KiB on a
-    `<ul>` (spec §10.3);
-  - the corpus re-post at `widget-runtime-m1d-1`, which failed to send in M1d's simulator run.
-- **M2:** the rest of the profile (spec §13), with `innerWidth` and `innerHeight`; `Intl`, which is new
-  (`IntlBridge.swift` went with the old engine; V5 in the widgets v0.1.0 plan); and the layout queries over
-  `flushForQuery` (the geometry ones, with the accumulated changed rects, came in V3; `getComputedStyle` in V3,
-  `matchMedia` in V3b, storage in V2a). Also the
-  captioned-table cell boxes, which mis-hit in `nodeAt` and `RenderTree::borderBox`.
-- **M3:** Canvas 2D, Chart.js and D3, and a script loader for the bundled libraries: the app installs none
-  (`WRProductionHost` does not override `scriptLoader()`).
-- **M4:** CSS transitions and animations came in V5f (Web Animations in V5e); computed values and the omissions listed
-  under them remain.
-- **M5:** the corpus goldens recorded again once M2 to M4 are in, and the boot measured against the allowance on a
-  device.
+- **V6, the release checks** (the client spec's §5). The pass by eye of the visual conformance set is done on the
+  simulator (light, dark, incoming, the largest text size, every widget re-created by scrolling): every row matches
+  its picture but `visual/02`'s tiled row and `visual/13`'s popover and button label, both the set's ("Rendering
+  fidelity"). Open: what needs a device or real messages: rotation, right-to-left, the bot's real layer-233 messages
+  end to end (forward, edit, delete), the SDK group's interactive rows (links, haptics, an app restart), the feed
+  bench on a low-end device, an iPad trackpad, and a resize during a drag.
+- **After V6** (the spec's §5): WPT rendering (reftests and `check-layout-th.js` tests through litehtml, with their own
+  ratcheting expectations); the corpus goldens, in deterministic mode with `TZ` pinned, because local-time `Date`
+  output (`toString`, `getHours`, `getTimezoneOffset`) reads the process time zone; Task 10c, an incremental render
+  subtree in the fork, so that structural and non-neutral attribute patches stop publishing `Reset`; the boot measured
+  against the allowance on a device.
+- Recorded open and not checked again since: the sub-pixel gap of moved nodes, the SVG `<image>` the fork never
+  loads, a `list-style-image` over 1 KiB on a `<ul>`, and captioned-table cell boxes mis-hitting in `nodeAt` and
+  `RenderTree::borderBox`.
 
-What M1a and M1b owed M1d, and how the app keeps M1b's and M1c's host contract (all done in M1d):
+The host contract the app keeps (`MessageWidgetCore`, `WRProductionHost`, `CoreTextRenderHost`):
 - the loop is stepped with `now`, `CACurrentMediaTime()` in milliseconds, which is also the clock `WRProductionHost`
   reports to the runtime;
 - `MessageWidgetCore` reads `stopReason` and `failed` after every task (`publish`), so a stopped widget freezes
@@ -1354,15 +1330,9 @@ What M1a and M1b owed M1d, and how the app keeps M1b's and M1c's host contract (
 - moves reach the runtime's tasks only when the widget listens for them, which `Taps.cpp` decides from
   `ListenedTypes` itself: the host does not call `takeIfChanged`;
 - a width or theme change is `setWidth:` or `setDark:`, each followed by a flush; a stopped widget meets a new width
-  by being clipped, not reflowed;
+  by being clipped, not reflowed, and the view paints the canvas colour right of a narrower picture;
 - `CoreTextRenderHost` never throws and never calls back into the runtime, and its fonts and images (`IOSHostFont`,
   `IOSHostImage`) outlive it;
 - out-of-memory is fatal at the facade, and the 256 KiB source cap is `WRSession`'s;
+- a tile the renderer cannot draw keeps the last frame up and leaves a `tile-draw-failed` diagnostic;
 - taps, the UI events and the activation behaviour are built, and `TapTests` and `ActivationTests` pin their order.
-
-Open from M1d (its carry-over's deferred items): a widget frozen by a width task can show a blank strip at a later,
-wider width; a tile that fails to draw leaves the last frame with no diagnostic; nothing at the core level refuses a
-bridge call after a stop; demotion judges a whole drain; the DEBUG slow-task log line went with the old engine; and
-`borderBoxForTesting:` sits in the production header.
-
-The milestones' carry-over files, in `feature/message-widgets`' history, list them all.

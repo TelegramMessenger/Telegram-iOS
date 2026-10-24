@@ -243,6 +243,10 @@ public final class MessageWidgetInstance {
     /// hide the widget: the bubble's visibility decides then.
     private var windowAttached = true
     private var applicationObserver: NSObjectProtocol?
+    /// The system's Reduce Motion, which the widget reads as prefers-reduced-motion: read at creation (on main) and
+    /// followed through `UIAccessibility.reduceMotionStatusDidChangeNotification`.
+    private var reducedMotion = UIAccessibility.isReduceMotionEnabled
+    private var reduceMotionObserver: NSObjectProtocol?
     private var displayLink: CADisplayLink?
     private var viewStorage: MessageWidgetView?
     public private(set) var diagnostics: [(kind: String, detail: String)] = []
@@ -279,6 +283,9 @@ public final class MessageWidgetInstance {
         self.applicationObserver = NotificationCenter.default.addObserver(forName: MessageWidgetApplicationState.didChangeNotification, object: nil, queue: nil, using: { [weak self] _ in
             self?.updateVisibility()
         })
+        self.reduceMotionObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            self?.setReducedMotion(UIAccessibility.isReduceMotionEnabled)
+        })
     }
 
     deinit {
@@ -290,6 +297,9 @@ public final class MessageWidgetInstance {
         self.displayLink?.invalidate()
         if let applicationObserver = self.applicationObserver {
             NotificationCenter.default.removeObserver(applicationObserver)
+        }
+        if let reduceMotionObserver = self.reduceMotionObserver {
+            NotificationCenter.default.removeObserver(reduceMotionObserver)
         }
     }
 
@@ -402,6 +412,20 @@ public final class MessageWidgetInstance {
 
     /// The bubble's visibility. The widget is visible only while this is true, its view is in a window and the app
     /// is active (`MessageWidgetApplicationState`).
+    /// The system's Reduce Motion changed (the observer's; tests call it): the widget's prefers-reduced-motion follows.
+    func setReducedMotion(_ reduced: Bool) {
+        guard self.reducedMotion != reduced else {
+            return
+        }
+        self.reducedMotion = reduced
+        guard self.bootQueued, !self.destroyed else {
+            return
+        }
+        self.perform(.theme, wait: true) { core in
+            core.setReducedMotion(reduced)
+        }
+    }
+
     public func setVisible(_ visible: Bool) {
         guard self.hostVisible != visible else {
             return
@@ -620,9 +644,10 @@ public final class MessageWidgetInstance {
         self.requestedWidth = width
         // Read here, on main: a test clears it in a `defer` that may run before a boot it did not wait for.
         let theme = self.theme, visible = self.visible, budgets = MessageWidgetCore.budgetsForTesting, maximumHeight = self.maximumHeight
+        let reducedMotion = self.reducedMotion
         self.requestedMaximumHeight = maximumHeight
         self.perform(.boot, wait: true) { core in
-            core.boot(width: width, maximumHeight: maximumHeight, theme: theme, visible: visible, budgets: budgets)
+            core.boot(width: width, maximumHeight: maximumHeight, theme: theme, visible: visible, reducedMotion: reducedMotion, budgets: budgets)
         }
     }
 

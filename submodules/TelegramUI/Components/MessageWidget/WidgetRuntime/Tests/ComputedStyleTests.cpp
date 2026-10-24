@@ -440,8 +440,10 @@ WR_TEST(testOffsetsAndOriginsUseTheirBoxes) {
                   "#bb{box-sizing:border-box;width:100px;height:40px;padding:10px}"
                   "#t{width:100px;height:40px;padding:10px;transform:translate(-50%,-50%)}"
                   "#tc{width:100px;height:40px;padding:10px;transform:translate(calc(50% + 4px),calc(-1 * (50% + 1px)))}"
-                  "</style></head><body><div id=cb><div id=a>a</div><div id=pc>p</div></div>"
-                  "<div id=o>o</div><div id=bb>b</div><div id=t>t</div><div id=tc>c</div>"
+                  "#rc{position:relative;left:calc(10% + 5px);top:calc(50% - 2px);width:10px;height:10px}"
+                  "#oc{width:100px;height:40px;padding:10px;transform-origin:calc(50% + 4px) calc(100% - 10px)}"
+                  "</style></head><body><div id=cb><div id=a>a</div><div id=pc>p</div><div id=rc>r</div></div>"
+                  "<div id=o>o</div><div id=bb>b</div><div id=t>t</div><div id=tc>c</div><div id=oc>c</div>"
                   "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;"
                   "window.all = (e, ps) => ps.map(p => getComputedStyle(e).getPropertyValue(p)).join('|');</script></body></html>");
     // The containing block's padding box is 220 x 120; #a's margin box 32 x 22.
@@ -452,6 +454,10 @@ WR_TEST(testOffsetsAndOriginsUseTheirBoxes) {
     CHECK_JS_EQ(env.env(), "getComputedStyle(t).transform", "matrix(1, 0, 0, 1, -60, -30)");
     // A translation's calc() mixing a percentage with a length (twidget edit 56): the share of the border box plus it.
     CHECK_JS_EQ(env.env(), "getComputedStyle(tc).transform", "matrix(1, 0, 0, 1, 64, -31)");
+    // A calc() mixing a percentage with a length, in a relative offset (the containing block's 200 x 100 content box)
+    // and in transform-origin (the border box): its share plus the length.
+    CHECK_JS_EQ(env.env(), "all(rc, ['left', 'top'])", "25px|48px");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(oc).transformOrigin", "64px 50px");
 }
 
 /// Final review I2: an animation or transition longhand reads what the runtime runs (animationSpecs, transitionSpecs):
@@ -542,11 +548,16 @@ WR_TEST(testAnUnresolvedVarIsInvalidAtComputedTime) {
     RenderEnv env("<!doctype html><html><head><style>"
                   "#u{unicode-bidi:var(--nope)}#p{font-feature-settings:\"liga\" 0}#c{font-feature-settings:var(--nope)}"
                   "#g{grid-auto-flow:var(--nope)}"
+                  "#f{display:flex}#s{flex-grow:3;flex:var(--nope)}#m{margin-left:10px;margin:var(--nope)}"
                   "</style></head><body><div id=u>u</div><div id=p><div id=c>c</div></div><div id=g>g</div>"
+                  "<div id=f><div id=s>s</div></div><div id=m>m</div>"
                   "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
     CHECK_JS_EQ(env.env(), "getComputedStyle(u).unicodeBidi", "normal");
     CHECK_JS_EQ(env.env(), "getComputedStyle(c).fontFeatureSettings", "\"liga\" 0");
     CHECK_JS_EQ(env.env(), "getComputedStyle(g).gridAutoFlow", "row");
+    // A shorthand's too (twidget edit 57): its longhands are unset, over the earlier flex-grow and margin-left.
+    CHECK_JS_EQ(env.env(), "getComputedStyle(s).flexGrow", "0");
+    CHECK_JS_EQ(env.env(), "getComputedStyle(m).marginLeft", "0px");
 }
 
 /// Spellings as CSSOM writes them: aspect-ratio as declared (16 / 9, not its float over 1), a flex shorthand's omitted

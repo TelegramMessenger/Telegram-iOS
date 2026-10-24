@@ -155,6 +155,9 @@ typedef struct {
 /// A width or theme change rebuilds and flushes now; a theme change also queues the TelegramWidget.onTheme callbacks.
 - (void)setWidth:(CGFloat)width;
 - (void)setDark:(BOOL)dark;
+/// The system's Reduce Motion (prefers-reduced-motion): the render tree rebuilds, and a task runs after which the media
+/// query lists whose answer flipped report a change. Before the boot it sets the first layout's.
+- (void)setReducedMotion:(BOOL)reduced;
 /// The scheme, the palette, the button and the text tokens at once: one theme change (one themeChanged) when anything
 /// differs, a text-size change alone included.
 - (void)setDark:(BOOL)dark
@@ -216,7 +219,8 @@ typedef struct {
 /// completion value as a string, or nil when there is no runtime or the script stopped it.
 - (nullable NSString *)evaluateForTesting:(NSString *)code;
 /// Tests only: the border box (CSS px) of the first element `selector` matches, at the current layout; CGRectNull when
-/// nothing matches, the selector does not parse, or the element has no box.
+/// nothing matches, the selector does not parse, or the element has no box. Public, as evaluateForTesting: is, because
+/// MessageWidget's test support reaches it through MessageWidgetCore across the module boundary.
 - (CGRect)borderBoxForTesting:(NSString *)selector;
 
 @end

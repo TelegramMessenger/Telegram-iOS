@@ -493,6 +493,24 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
+- (void)setReducedMotion:(BOOL)reduced {
+    WR_GUARD(, {
+        if (_runtime) {
+            JSContext* ctx = _runtime->context();
+            if (!_booted) {
+                // The first build's option: nothing is built yet to flush, nor listening to report to.
+                if (wr::RenderTree* render = wr::HostState::of(ctx).render()) {
+                    render->setReducedMotion(ctx, reduced);
+                }
+            } else {
+                wr::HostState::of(ctx).setReducedMotion(ctx, reduced);
+                wr::HostState::of(ctx).flushRender(ctx);
+                [self noteTree];
+            }
+        }
+    });
+}
+
 - (void)setDark:(BOOL)dark
      themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
     buttonTokens:(NSDictionary<NSString*, id>*)tokens

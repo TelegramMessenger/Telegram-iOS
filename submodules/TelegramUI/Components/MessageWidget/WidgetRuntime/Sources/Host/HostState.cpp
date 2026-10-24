@@ -219,6 +219,23 @@ void HostState::applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, Th
     }
 }
 
+void HostState::setReducedMotion(JSContext* ctx, bool reduced) {
+    if (Runtime::from(ctx).stopReason() != StopReason::None) {
+        return;
+    }
+    try {
+        if (m_render) {
+            m_render->setReducedMotion(ctx, reduced);
+        }
+        m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [](JSContext*) {}));
+    } catch (...) {
+        try {
+            abortForCaughtException(ctx);
+        } catch (const Aborted&) {
+        }
+    }
+}
+
 void HostState::setWidth(JSContext* ctx, double width) {
     if (Runtime::from(ctx).stopReason() != StopReason::None) {
         return;

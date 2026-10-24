@@ -270,6 +270,8 @@ public:
     void setWidth(JSContext* ctx, double width);
     /// The scheme, with the root's theme declarations (RenderOptions::rootDeclarations): either changed marks a rebuild.
     void setTheme(JSContext* ctx, Theme theme, std::string rootDeclarations);
+    /// prefers-reduced-motion (RenderOptions::reducedMotion): a change rebuilds at the next flush. Never throws.
+    void setReducedMotion(JSContext* ctx, bool reduced);
     /// The options a build uses now: the construction's, with the width and theme set since.
     const RenderOptions& options() const { return m_container.options(); }
 

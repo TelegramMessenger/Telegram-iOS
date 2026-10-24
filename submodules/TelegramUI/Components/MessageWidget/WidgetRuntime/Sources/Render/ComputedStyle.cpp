@@ -1202,8 +1202,9 @@ std::string offset(const Source& s, char side) {
             const litehtml::position p = parent->get_render_item()->pos();
             base = vertical ? toDouble(p.height) : toDouble(p.width);
         }
+        // A percentage, or a calc() tree mixing one with a length (twidget edit 48), is a share of the base.
         const auto resolve = [&](const litehtml::css_length& length) {
-            return length.units() == litehtml::css_units_percentage ? base * length.val() / 100.0 : double(length.val());
+            return toDouble(length.calc_percent(litehtml::pixel_t(float(base))));
         };
         const litehtml::css_length& own = declared(side);
         if (!own.is_predefined()) {
@@ -1258,7 +1259,7 @@ std::string transformOrigin(const Source& s) {
         height = box.height;
     }
     const auto resolve = [](const litehtml::css_length& length, double size) {
-        return length.units() == litehtml::css_units_percentage ? size * length.val() / 100.0 : double(length.val());
+        return toDouble(length.calc_percent(litehtml::pixel_t(float(size))));
     };
     return px(resolve(s.css.get_transform_origin_x(), width)) + " " + px(resolve(s.css.get_transform_origin_y(), height));
 }

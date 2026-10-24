@@ -65,6 +65,9 @@ public final class MessageWidgetView: UIView {
     private let contentLayer = CALayer()
     /// Under the tiles: the canvas colour from the document's bottom to the view's (WidgetFrame.canvasColor).
     private let canvasLayer = CALayer()
+    /// The canvas colour right of a document narrower than the view, above `canvasLayer`: a stopped widget is clipped,
+    /// not laid out again, at a wider width.
+    private let canvasSideLayer = CALayer()
     /// The colours at the view's bottom-left and bottom-right corners as it shows them: the drawn corner pixels, or the
     /// canvas colour where the view runs below the document. A bubble continues them into its tail.
     public private(set) var bottomCornerColors: (left: CGColor?, right: CGColor?) = (nil, nil)
@@ -82,7 +85,9 @@ public final class MessageWidgetView: UIView {
         self.layer.contents = MessageWidgetView.transparentContents
         self.contentLayer.actions = ["position": NSNull(), "bounds": NSNull()]
         self.canvasLayer.actions = ["position": NSNull(), "bounds": NSNull(), "backgroundColor": NSNull()]
+        self.canvasSideLayer.actions = ["position": NSNull(), "bounds": NSNull(), "backgroundColor": NSNull()]
         self.layer.addSublayer(self.canvasLayer)
+        self.layer.addSublayer(self.canvasSideLayer)
         self.layer.addSublayer(self.contentLayer)
         let touchRecognizer = MessageWidgetTouchRecognizer()
         touchRecognizer.onTouch = { [weak self] phase, point, pointer, primary, kind in
@@ -248,6 +253,8 @@ public final class MessageWidgetView: UIView {
         let canvasTop = offset > 0.0 ? 0.0 : min(max(frame.canvasTop, 0.0), self.bounds.height)
         self.canvasLayer.frame = CGRect(x: 0.0, y: canvasTop, width: self.bounds.width, height: self.bounds.height - canvasTop)
         self.canvasLayer.backgroundColor = frame.canvasColor
+        self.canvasSideLayer.frame = CGRect(x: frame.size.width, y: 0.0, width: max(0.0, self.bounds.width - frame.size.width), height: canvasTop)
+        self.canvasSideLayer.backgroundColor = frame.canvasColor
         for (key, image) in frame.tiles {
             let layer: CALayer
             if let existing = self.tiles[key] {

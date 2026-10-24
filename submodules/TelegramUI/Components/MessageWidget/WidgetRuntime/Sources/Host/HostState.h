@@ -131,6 +131,9 @@ public:
     /// resize and intersection observations): a width change is told to an idle widget (the V3b review's I4). The
     /// host's, as themeChanged is: it never throws.
     void setWidth(JSContext* ctx, double width);
+    /// The system's Reduce Motion, which prefers-reduced-motion answers: the render tree rebuilds at the next flush, and a
+    /// task runs, after which the media query lists whose answer flipped report a change. Never throws.
+    void setReducedMotion(JSContext* ctx, bool reduced);
     /// The chat's theme as the host last reported it (installRender's options first).
     Theme theme() const { return m_theme; }
     /// TelegramWidget.themeParams' values: the palette completed for the scheme.

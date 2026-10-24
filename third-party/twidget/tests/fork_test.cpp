@@ -35,6 +35,17 @@ struct GradientContainer : litehtml_test::TestContainer {
     void draw_conic_gradient(litehtml::uint_ptr, const litehtml::background_layer&, const litehtml::background_layer::conic_gradient& g) override { record(g); }
 };
 
+// Records the fill colour of every path the document draws, as "r,g,b" joined by spaces.
+struct PathContainer : litehtml_test::TestContainer {
+    std::string fills;
+    void draw_path(litehtml::uint_ptr, const litehtml::vector_path& path) override {
+        if (!path.fill) return;
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%s%d,%d,%d", fills.empty() ? "" : " ", path.fill_color.red, path.fill_color.green, path.fill_color.blue);
+        fills += buf;
+    }
+};
+
 // Text pieces (el_text, el_space) reachable from `el`, ::before/::after content included.
 static int text_pieces(const litehtml::element::ptr& el) {
     int count = el->is_text() ? 1 : 0;
@@ -571,6 +582,47 @@ int main() {
         const bool ok = g.groups.size() == 1 && std::abs(g.groups[0].tx - 30.0f) < 0.01f && std::abs(g.groups[0].ty) < 0.01f;
         if (!ok) std::printf("  %s: %zu groups, tx %g ty %g\n", style, g.groups.size(), g.groups.empty() ? 0.0 : double(g.groups[0].tx), g.groups.empty() ? 0.0 : double(g.groups[0].ty));
         CHECK(ok);
+    }
+
+    // Edit 57: a declaration whose var() never resolves is invalid at computed-value time, so the property is unset: a
+    // shorthand's longhands too, over earlier ones (it left them in force), while a longhand written after it stands and
+    // a fallback still applies.
+    {
+        auto doc = litehtml_test::layout(c, "<html><body style='margin:0'><div style='display:flex'>"
+                                            "<div id=f1 style='flex-grow:3;flex:var(--nope)'>a</div>"
+                                            "<div id=f2 style='flex:var(--nope);flex-grow:2'>b</div>"
+                                            "<div id=f3 style='flex-grow:3;flex:var(--nope, 4)'>c</div></div>"
+                                            "<div id=m style='margin-left:10px;margin:var(--nope)'>m</div>"
+                                            "<div id=b style='border-top:5px solid red;border:var(--nope)'>b</div>"
+                                            "</body></html>", 300);
+        const auto grow = [&](const char* id) { auto el = by_id(doc, id); return el ? el->css().get_flex_grow() : -1.0f; };
+        CHECK(grow("f1") == 0.0f);
+        CHECK(grow("f2") == 2.0f);
+        CHECK(grow("f3") == 4.0f);
+        const auto m = by_id(doc, "m");
+        CHECK(m && float(m->get_placement().x) == 0.0f);
+        const auto b = by_id(doc, "b");
+        CHECK(b && b->css().get_borders().top.style == litehtml::border_style_none);
+        if (grow("f1") != 0.0f || grow("f2") != 2.0f || grow("f3") != 4.0f)
+            std::printf("  unresolved var(): flex-grow %g %g %g\n", grow("f1"), grow("f2"), grow("f3"));
+    }
+
+    // Edit 58: a <use>'s instance inherits from the use, not from where its target sits: a symbol's path with no fill of
+    // its own takes each use's fill, while a fill set inside the symbol stands.
+    {
+        PathContainer p;
+        auto doc = litehtml_test::layout(p, "<body style='margin:0'><svg width='100' height='50' viewBox='0 0 100 50'><defs>"
+                                            "<symbol id='s' viewBox='0 0 10 10'><path d='M0 0H10V10Z'/></symbol>"
+                                            "<symbol id='k' viewBox='0 0 10 10'><path fill='#00ff00' d='M0 0H10V10Z'/></symbol></defs>"
+                                            "<use href='#s' width='10' height='10' fill='#ff0000'/>"
+                                            "<use href='#s' x='20' width='10' height='10' fill='#0000ff'/>"
+                                            "<use href='#k' x='40' width='10' height='10' fill='#ff0000'/>"
+                                            "<symbol id='c' viewBox='0 0 10 10'><path fill='currentColor' d='M0 0H10V10Z'/></symbol>"
+                                            "<use href='#c' x='60' width='10' height='10' style='color:#ff00ff'/></svg></body>");
+        doc->draw(0, litehtml::pixel_t(0.0f), litehtml::pixel_t(0.0f), nullptr);
+        // currentColor too: the use's colour.
+        if (p.fills != "255,0,0 0,0,255 0,255,0 255,0,255") std::printf("  use fills: %s\n", p.fills.c_str());
+        CHECK(p.fills == "255,0,0 0,0,255 0,255,0 255,0,255");
     }
 
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }

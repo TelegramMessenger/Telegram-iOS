@@ -62,6 +62,19 @@ WR_TEST(testAWidthQueryMatchesTheLayoutWidth) {
     CHECK_EQ(env.env().eval("matchMedia('screen') !== matchMedia('screen')"), std::string("true"));
 }
 
+/// The host's reduce-motion setting (the system's Reduce Motion): @media and matchMedia follow it, and a list whose answer
+/// flipped reports a change after the task that set it.
+WR_TEST(testReducedMotionFollowsTheHost) {
+    RenderEnv env(kProbes);
+    CHECK_EQ(env.env().eval("window.events = []; window.q = matchMedia('(prefers-reduced-motion: reduce)');"
+                            " q.addEventListener('change', e => events.push(e.matches)); q.matches + ',' + getComputedStyle(r).color"),
+             std::string("false,rgb(0, 0, 1)"));
+    wr::HostState::of(env.ctx()).setReducedMotion(env.ctx(), true);
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[q.matches, getComputedStyle(r).color, agree(r, '(prefers-reduced-motion: reduce)'), events.join()].join('|')"),
+             std::string("true|rgb(0, 0, 2)|true|true"));
+}
+
 WR_TEST(testMediaIsTheQuery) {
     RenderEnv env(kEmpty);
     CHECK_EQ(env.env().eval("matchMedia('(min-width: 1px)').media.replace(/\\s/g, '')"), std::string("(min-width:1px)"));

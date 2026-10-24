@@ -15,6 +15,10 @@ public final class WidgetTreeRenderer {
     /// One more for every publish, freeze and width change: what the drawer draws since.
     public private(set) var generation: UInt64 = 0
     private var tree: WRTree?
+    /// Whether a tree was published (a widget made stopped draws its badge alone).
+    public var hasTree: Bool {
+        return self.tree != nil
+    }
     /// The width the session is laid out at (a frozen widget: the width it froze at stays its layout's).
     private var width: CGFloat
     private var frozenWidth: CGFloat?

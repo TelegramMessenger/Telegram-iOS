@@ -16,6 +16,18 @@ class EventTests: MessageWidgetTestCase {
     }
 
     /// Fails first: every tick was waited for.
+    /// The system's Reduce Motion reaches the widget as prefers-reduced-motion: set before the widget boots, its first
+    /// layout's; changed later, its media queries follow.
+    func testReduceMotionReachesTheWidget() {
+        let instance = self.make("<!doctype html><p>x</p>")
+        instance.setReducedMotion(true)
+        _ = instance.layout(width: 300.0)
+        XCTAssertEqual(instance.evaluateForTesting("String(matchMedia('(prefers-reduced-motion: reduce)').matches)"), "true")
+        instance.setReducedMotion(false)
+        XCTAssertEqual(instance.evaluateForTesting("String(matchMedia('(prefers-reduced-motion: reduce)').matches)"), "false")
+        instance.destroy()
+    }
+
     func testAHiddenWidgetsTimersAreNotWaitedFor() {
         let instance = self.make(EventTests.ticker)
         _ = instance.layout(width: 360.0)

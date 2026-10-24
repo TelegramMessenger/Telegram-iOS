@@ -29,6 +29,9 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public var holdsMenu: Bool = false
     /// `-harness-copy-protected on`: the chat forbids copying.
     public var copyProtected: Bool = false
+    /// `-harness-text-size <n>`: Settings ▸ Appearance ▸ Text Size, `PresentationFontSize`'s raw value (0 extra small …
+    /// 5 extra large ×2, 6 medium).
+    public var textSize: Int32?
 
     public init() {}
 
@@ -36,7 +39,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
         return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.posts == rhs.posts && lhs.killSwitch == rhs.killSwitch
             && lhs.anchors?.width == rhs.anchors?.width && lhs.anchors?.height == rhs.anchors?.height && lhs.useDarkTheme == rhs.useDarkTheme
             && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions && lhs.holdsMenu == rhs.holdsMenu
-            && lhs.copyProtected == rhs.copyProtected
+            && lhs.copyProtected == rhs.copyProtected && lhs.textSize == rhs.textSize
     }
 
     /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-posts <path>,<path>,…`,
@@ -67,6 +70,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
         options.captions = value("-widget-caption") != "off"
         options.holdsMenu = value("-harness-menu") == "hold"
         options.copyProtected = value("-harness-copy-protected") == "on"
+        options.textSize = value("-harness-text-size").flatMap { Int32($0) }
         return options
     }
 }

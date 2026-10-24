@@ -3,12 +3,12 @@ import XCTest
 
 /// Spec 2026-10-15 D2/D4: the core runs one task at a time and leaves what main needs in the task's snapshot.
 class CoreTests: MessageWidgetTestCase {
-    private func makeCore(_ source: String) -> MessageWidgetCore {
+    private func makeCore(_ source: String, scale: CGFloat = 1.0) -> MessageWidgetCore {
         let timers = MessageWidgetTimers()
         timers.fire = { [unowned self] _, body in
             self.onWorker(body)
         }
-        return MessageWidgetCore(source: source, stoppedLabel: "Widget stopped", maxMessageLength: 4096, timers: timers, scale: 1.0)
+        return MessageWidgetCore(source: source, stoppedLabel: "Widget stopped", maxMessageLength: 4096, timers: timers, scale: scale)
     }
 
     private func task(_ core: MessageWidgetCore, _ kind: WidgetSnapshot.Kind, _ body: @escaping () -> Void) -> WidgetSnapshot {
@@ -21,6 +21,21 @@ class CoreTests: MessageWidgetTestCase {
         return self.task(core, .boot) {
             core.boot(width: 300.0, theme: .light, visible: true, budgets: nil)
         }
+    }
+
+    /// A tile that cannot be drawn though the widget has published (its bitmap past the renderer's pixel cap here, a
+    /// refused allocation on a device) keeps the last frame up, as the drawer always has, and says so in the diagnostics.
+    func testATileThatCannotBeDrawnIsADiagnostic() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div style='height:40px;background:#f00'></div></body>", scale: 40.0)
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let draw = self.task(core, .draw) {
+            core.draw(request: 1)
+        }
+        XCTAssertEqual(draw.frame?.tiles.count, 0)
+        XCTAssertTrue(draw.diagnostics.contains { $0.kind == "tile-draw-failed" }, "\(draw.diagnostics)")
     }
 
     func testABootPublishesItsSizeTilesAndState() throws {

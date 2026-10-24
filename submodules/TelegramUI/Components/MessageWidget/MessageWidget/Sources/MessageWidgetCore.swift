@@ -130,6 +130,11 @@ final class MessageWidgetCore {
         if kind == .draw {
             let drawStart = CACurrentMediaTime()
             frame = self.renderer.map { self.drawer.draw($0) }
+            // A tile the renderer could not draw though it has a tree (a bitmap past its pixel cap, a refused
+            // allocation): the drawer keeps the last frame up, and the diagnostics say why it is stale.
+            if let renderer = self.renderer, renderer.hasTree, self.drawer.needsDraw(renderer) {
+                self.appendDiag("tile-draw-failed", "the last frame stays at \(Int(renderer.documentSize.width))x\(Int(renderer.documentSize.height))")
+            }
             self.lastDrawMilliseconds = (CACurrentMediaTime() - drawStart) * 1000.0
         } else {
             self.lastStepMilliseconds = (CACurrentMediaTime() - stepStart) * 1000.0
@@ -161,7 +166,7 @@ final class MessageWidgetCore {
     /// Creates the session and runs the widget's parse and boot. A session that cannot be made or a boot that does not
     /// start (a C++ failure, a parse past its ceiling) is `.failedToStart`; a boot its scripts stopped is `.frozen`, as at
     /// any other time, with its parsed markup.
-    func boot(width: CGFloat, maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight, theme: MessageWidgetInstance.Theme, visible: Bool, budgets: (parse: UInt64, boot: UInt64, task: UInt64)?) {
+    func boot(width: CGFloat, maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight, theme: MessageWidgetInstance.Theme, visible: Bool, reducedMotion: Bool = false, budgets: (parse: UInt64, boot: UInt64, task: UInt64)?) {
         self.width = width
         self.visible = visible
         if let budgets {
@@ -184,6 +189,8 @@ final class MessageWidgetCore {
         }
         self.sessionDelegate = delegate
         session.setLocale(self.locale)
+        // The first layout's prefers-reduced-motion: the render tree exists already, the boot builds it.
+        session.setReducedMotion(reducedMotion)
         session.setStoragePreloadLocal(self.storage.local.map { [$0.key, $0.value] }, session: self.storage.session.map { [$0.key, $0.value] })
         self.session = session
         self.renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
@@ -235,6 +242,17 @@ final class MessageWidgetCore {
         }
         session.setWorkLimitAfter(self.taskBudget)
         session.setDark(theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary)
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// The system's Reduce Motion changed: prefers-reduced-motion follows, and the media query lists whose answer flipped
+    /// report a change.
+    func setReducedMotion(_ reduced: Bool) {
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setWorkLimitAfter(self.taskBudget)
+        session.setReducedMotion(reduced)
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 

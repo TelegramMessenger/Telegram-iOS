@@ -25,6 +25,23 @@ class ViewTests: MessageWidgetTestCase {
         XCTAssertEqual(MessageWidgetView.tileOffset(anchor: .bottom, reportedHeight: nil, drawnHeight: 100.0), 0.0)
     }
 
+    /// A stopped widget is a picture, clipped rather than laid out again at a new width: at a wider one, the strip right
+    /// of its document shows the canvas colour, as the view does below a short document, not the bubble through a gap.
+    func testTheCanvasCoversTheStripRightOfAStoppedWidget() throws {
+        MessageWidgetCore.budgetsForTesting = (parse: MessageWidgetCore.parseWorkUnits, boot: 100_000, task: MessageWidgetCore.taskWorkUnits)
+        defer {
+            MessageWidgetCore.budgetsForTesting = nil
+        }
+        let (instance, view) = self.booted("<!doctype html><body style='margin:0;background:#f00'><div style='height:60px'></div><script>for (;;) {}</script></body>", width: 300.0)
+        self.settle(instance)
+        XCTAssertNotNil(instance.deadReason, "the widget did not stop")
+        _ = instance.layout(width: 360.0)
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 360.0, height: view.bounds.height)
+        let image = self.render(view)
+        XCTAssertEqual("\(self.pixel(image, 330, 20))", "\((r: 255, g: 0, b: 0))")
+        XCTAssertEqual("\(self.pixel(image, 150, 20))", "\((r: 255, g: 0, b: 0))")
+    }
+
     func testHugeShadowKeepsBackingWithinTheTileBound() throws {
         for css in ["box-shadow:0 0 0 2000px #000", "box-shadow:0 0 0 9999px rgba(0,0,0,.5)", "text-indent:-9999px"] {
             let (_, view) = self.booted("<!doctype html><div style='margin:40px;width:100px;height:100px;background:#fff;\(css)'>text</div>", scale: 3.0)

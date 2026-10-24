@@ -1462,6 +1462,23 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     painter already evaluate a translation with `calc_percent` against the border box. Pinned by `fork_test.cpp`
     ("Edit 56") and widget-sandbox v0.1.3's `auto/09-transforms-effects-a`.
 
+57. **A var() that never resolves unsets the property** (`style.cpp` `style::subst_vars`). A declaration whose `var()`
+    has no such custom property and no fallback (or is a cycle) is invalid at computed-value time: the property is
+    `unset` (edit 33's marker), a shorthand's longhands with it through `global_keyword_property`, while a longhand
+    written after the shorthand keeps its value. litehtml re-added the unparsable value, which dropped the declaration,
+    so an earlier longhand stood (`flex-grow: 3; flex: var(--nope)` grew 3; Chrome 0). Custom properties keep their
+    tokens: a `var()` reading one fails where it is read. The replaced call is under `#if 0`. Pinned by `fork_test.cpp`
+    ("Edit 57") and WidgetRuntime's `testAnUnresolvedVarIsInvalidAtComputedTime`.
+
+58. **A `<use>`'s instance inherits from the use** (`el_svg.cpp`, SVG 2 §5.6.3). The instance draws its target's own
+    elements (edit 38), whose inherited presentation properties came from where the target sits (a `<symbol>` in
+    `<defs>`), so `<use href="#star" fill="#e83">` drew a fill-less symbol's path black. While `draw_use` draws an
+    instance it holds the target and the use on a thread-local stack (`use_instance_scope`: tiles are drawn in parallel),
+    and `svg_property`'s inheritance walk goes from the target to the use (`svg_inheritance_parent`); `currentColor`
+    takes the nearest `color` declared along that chain, else the use's own computed colour (`svg_current_color`).
+    The replaced loop head is under `#if 0`. Pinned by `fork_test.cpp` ("Edit 58") and widget-sandbox's
+    `visual/09-svg-a` (the two stars, orange and purple).
+
 ## The iOS font resolver
 
 `ResolveFont`'s twin keeps the macOS resolution order and generic-family names verbatim: each
