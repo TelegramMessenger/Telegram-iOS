@@ -12,8 +12,7 @@ final class InstantPageV2TableColumnWidthTests: XCTestCase {
     private let borderWidth: CGFloat = 2.0 / 3.0
     private let baseFloor: CGFloat = 60.0
 
-    /// A cell's (min, max) width exactly as `layoutTable` measures it: the maximally-wrapped and the
-    /// single-line text widths, plus the cell padding, at the chat table's 15pt face.
+    /// The chat table's 15pt face.
     private func string(_ text: String) -> NSAttributedString {
         return NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 15.0)])
     }
@@ -91,6 +90,34 @@ final class InstantPageV2TableColumnWidthTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(result.widths[i]!, unbreakableWidths[i]!, "column \(i) is narrower than its widest word")
         }
         XCTAssertGreaterThan(result.totalWidth, 300.0)
+    }
+
+    /// End to end: at the widths the allocation gives, CoreText wraps every cell only where the
+    /// tokenizer saw a break opportunity, so no segment the floor measured is split. Latin, Chinese and
+    /// Thai, in a table that overflows the bubble.
+    func testCellsWrapOnlyAtSegmentBoundariesAtTheAllocatedWidths() {
+        let table = [
+            ["Device", "Account", "Conversion, before", "东京都的人口很多", "ภาษาไทยเป็นภาษาที่สวยงาม"],
+            ["Non-premium", "115.2 s", "2024-10-24", "高级会员账户", "สวัสดีครับ"],
+        ]
+        let (minWidths, maxWidths, unbreakableWidths) = columns(table)
+        let result = widths(min: minWidths, max: maxWidths, unbreakable: unbreakableWidths, contentWidth: 300.0)
+
+        for row in table {
+            for (i, text) in row.enumerated() {
+                let cfText = text as CFString
+                let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, cfText, CFRangeMake(0, CFStringGetLength(cfText)), kCFStringTokenizerUnitLineBreak, nil)!
+                var boundaries = Set<Int>()
+                while !CFStringTokenizerAdvanceToNextToken(tokenizer).isEmpty {
+                    let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+                    boundaries.insert(range.location + range.length)
+                }
+                let item = layoutTextItem(string(text), boundingWidth: result.widths[i]! - padding, offset: CGPoint()).0!
+                for line in item.lines.dropLast() {
+                    XCTAssertTrue(boundaries.contains(line.range.upperBound), "\"\(text)\" wrapped inside a segment at \(line.range.upperBound)")
+                }
+            }
+        }
     }
 
     /// A Chinese table of short sentences still compresses to the bubble and wraps between

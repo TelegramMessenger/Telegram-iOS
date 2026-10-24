@@ -1793,10 +1793,10 @@ func v2WidestUnbreakableSegmentWidth(_ string: NSAttributedString) -> CGFloat {
     guard length > 0, let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, text, CFRangeMake(0, length), kCFStringTokenizerUnitLineBreak, nil) else {
         return 0.0
     }
+    let typesetter = CTTypesetterCreateWithAttributedString(string)
     var widest: CGFloat = 0.0
     while !CFStringTokenizerAdvanceToNextToken(tokenizer).isEmpty {
-        let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
-        let line = CTLineCreateWithAttributedString(string.attributedSubstring(from: NSRange(location: range.location, length: range.length)))
+        let line = CTTypesetterCreateLine(typesetter, CFStringTokenizerGetCurrentTokenRange(tokenizer))
         let width = CTLineGetTypographicBounds(line, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(line)
         widest = max(widest, CGFloat(width))
     }
