@@ -235,7 +235,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             )]
         } else if let results = params.interfaceState.search?.resultsState {
             let displayTotalCount = results.completed ? results.messageIndices.count : Int(results.totalCount)
-            if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
+            if let position = chatSearchResultsPosition(messageIndices: results.messageIndices, currentId: results.currentId) {
                 canChangeListMode = true
                 
                 if self.alwaysShowTotalMessagesCount {
@@ -255,13 +255,11 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                         1: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(displayTotalCount)))
                     ])
                 } else {
-                    let adjustedIndex = results.messageIndices.count - 1 - index
-                    
                     resultsTextString = AnimatedTextComponent.extractAnimatedTextString(string: params.interfaceState.strings.Items_NOfM(
                         ".",
                         "."
                     ), id: "position", mapping: [
-                        0: .number(adjustedIndex + 1, minDigits: 1),
+                        0: .number(position, minDigits: 1),
                         1: .number(displayTotalCount, minDigits: 1)
                     ])
                 }

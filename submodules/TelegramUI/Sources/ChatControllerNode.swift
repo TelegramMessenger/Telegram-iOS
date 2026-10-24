@@ -3350,6 +3350,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                                 var state = state
                                 state = state.updatedDisplayHistoryFilterAsList(false)
+                                if let search = state.search, let resultsState = search.resultsState, let currentId = chatSearchResultsCurrentId(selecting: message.id, in: resultsState.messageIndices) {
+                                    state = state.updatedSearch(search.withUpdatedResultsState(ChatSearchResultsState(messageIndices: resultsState.messageIndices, currentId: currentId, state: resultsState.state, totalCount: resultsState.totalCount, completed: resultsState.completed)))
+                                }
                                 if let channel = state.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     state = state.updatedSearch(nil)
                                 }
