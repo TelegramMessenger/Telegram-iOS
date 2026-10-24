@@ -450,8 +450,9 @@ public final class MessageWidgetInstance {
         guard self.bootQueued, !self.destroyed, self.deadReason == nil else {
             return .none
         }
-        // Lifted, the widget takes no input; only a cancel, which ends a press the lift interrupted, still reaches it.
-        if self.extracted && action != 3 {
+        // Lifted, the widget takes no input; only a cancel or a retraction, which end a press the lift interrupted, still
+        // reach it.
+        if self.extracted && action != 3 && action != 4 {
             return .none
         }
         var press: MessageWidgetPress = .none

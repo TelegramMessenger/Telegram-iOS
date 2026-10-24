@@ -545,14 +545,16 @@ WR_TEST(testAMousePressIsAMouse) {
     CHECK_EQ(env.env().eval("p.join(' ')"), std::string("mouse,0,1,true"));
 }
 
-/// The secondary button's press is the mouse's too, with button 2 and buttons 2, and makes no click.
+/// The secondary button's press is the mouse's too, with button 2 and buttons 2, and makes no click. Where no hold is
+/// claimed it is the message's menu (the policy's bubble verdict at the down), so the widget's press ends there with the
+/// verdict's cancel: pointercancel, and nothing more of it.
 WR_TEST(testASecondaryMouseButtonClicksNot) {
     RenderEnv env(kBoxes);
     CHECK_EQ(env.env().eval("window.p = []; document.getElementById('a').addEventListener('pointerdown', e => "
                             "p.push([e.pointerType, e.button, e.buttons].join())); 1"),
              std::string("1"));
     mousePress(env, 40, 40, 40, 2);
-    CHECK_EQ(log(env), std::string("pointerdown:a mousedown:a pointerup:a mouseup:a"));
+    CHECK_EQ(log(env), std::string("pointerdown:a mousedown:a pointercancel:a"));
     CHECK_EQ(env.env().eval("p.join(' ')"), std::string("mouse,2,2"));
 }
 
@@ -674,6 +676,29 @@ WR_TEST(testASecondFingersHoldGetsNoContextmenu) {
     host.pointer(env.ctx(), PointerPhase::Up, 50, 20, 7, true);
     env.env().drain();
     CHECK_EQ(drained(env), std::string(""));
+}
+
+/// The host retracts a press it started for the bubble's question when a pointer's touch presses there instead (the hover
+/// hint missed): the widget's press ends as a cancel, but the double click it came between goes on. A cancel proper
+/// still ends it (the policy: no double tap continues a cancelled press).
+WR_TEST(testARetractedPressKeepsADoubleClick) {
+    RenderEnv env(kGestures);
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    mousePress(env, 50, 20, 50, 0);
+    env.env().advance(100);
+    host.pointer(env.ctx(), PointerPhase::Down, 50, 20, 4, true);
+    host.pointer(env.ctx(), PointerPhase::Retract, 50, 20, 4, true);
+    env.env().drain();
+    mousePress(env, 50, 20, 50, 0);
+    CHECK_EQ(drained(env), std::string("click:a:1 click:a:2 dblclick:a:2"));
+    env.env().advance(1000);
+    mousePress(env, 50, 20, 50, 0);
+    env.env().advance(100);
+    host.pointer(env.ctx(), PointerPhase::Down, 50, 20, 5, true);
+    host.pointer(env.ctx(), PointerPhase::Cancel, 50, 20, 5, true);
+    env.env().drain();
+    mousePress(env, 50, 20, 50, 0);
+    CHECK_EQ(drained(env), std::string("click:a:1 click:a:1"));
 }
 
 /// A mouse's secondary click on touch-action: none is the widget's contextmenu, right away; elsewhere it is the

@@ -904,8 +904,9 @@ What still differs, on purpose or for now (none is measured by a conformance che
   character or an RLM/RLE/RLO/RLI.
 - **`HTMLElement.dir` reflects as written** (a plain `[Reflect]`): `dir=RTL` reads `"RTL"`, not `"rtl"`.
 - **Nested intrinsic widths:** a keyword box more than 8 keyword boxes deep lays out as `auto` (Limits).
-- **Math:** a tree holds at most 64 nodes (Limits); a table column whose width is a calc with a percentage lays out as
-  `auto`; `CSS.supports` answers from the property's value grammar, so it can say true for a product the renderer
+- **Math:** a tree holds at most 64 nodes (Limits); a translation's math function is a tree too (twidget edit 56), its
+  percentage the border box's, but every other transform argument (an angle, a scale) folds to one unit or is refused;
+  a table column whose width is a calc with a percentage lays out as `auto`; `CSS.supports` answers from the property's value grammar, so it can say true for a product the renderer
   refuses (`calc(50% * 10px)`).
 - **Kept but not drawn:** `word-break: keep-all` breaks as `normal`; `font-feature-settings` other than `tnum`;
   `quotes` on `<q>` and `open-quote`/`close-quote`; an SVG shape's `translate`/`rotate`/`scale` without `transform`.

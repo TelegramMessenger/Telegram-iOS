@@ -252,6 +252,25 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertEqual(self.pointerLog("touch-drag", in: after), "pointercancel:pany", after)
     }
 
+    /// A hold on pan-y after the finger drifted 7 pt sideways (past the 4 pt that begins the widget's claimed drag, within
+    /// the policy's 10 px slop) is still the bubble's menu: the widget's recognizer spares the menu's long press until a
+    /// drag passes the slop.
+    func testAHoldOnPanYAfterASmallSidewaysDriftOpensTheMenu() throws {
+        let fixture = try self.launchDrag()
+        let widget = try XCTUnwrap(self.bubble("touch-drag.html", in: fixture.ready), fixture.ready)
+        let size = widget.size.split(separator: "x").compactMap { Double($0) }
+        let top = widget.centre.dy - (size.count == 2 ? size[1] : 300.0) / 2.0
+        let from = CGPoint(x: widget.centre.dx, y: top + 250.0)
+        // 7 pt to the right over 0.2 s, then still: the synthesizer moves a finger along its path between points, so a
+        // last point at the same place holds it there.
+        let moves = (1 ... 7).map { step in (CGPoint(x: from.x + Double(step), y: from.y), 0.05 + 0.03 * Double(step)) } + [(CGPoint(x: from.x + 7.0, y: from.y), 1.4)]
+        try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 1.5)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+        self.attachScreenshot(fixture.app, "after a hold on #pany that drifted 7 pt")
+        XCTAssertTrue(after.contains("contextMenu fixture/touch-drag.html"), after)
+        XCTAssertEqual(self.pointerLog("touch-drag", in: after), "pointercancel:pany", after)
+    }
+
     /// widget-sandbox v0.1.2: a press in the widget's leading 20 pt claims nothing, whatever its touch-action, so a
     /// rightward drag from there on #claim is the chat's back swipe (the policy's own check for the strip).
     func testADragFromTheLeadingStripSwipesBack() throws {

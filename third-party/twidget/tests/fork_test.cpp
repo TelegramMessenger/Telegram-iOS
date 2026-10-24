@@ -560,6 +560,19 @@ int main() {
         CHECK(f && std::abs(float(f->css().get_font_size()) - 22.0f) < 0.01f);
     }
 
+    // Edit 56: a translation whose length mixes a percentage with a length (calc(), nested with a product, and through
+    // the translate property) is its share of the box's own size plus the length, as a width's calc is; the fold of one
+    // unit refused it, and the whole transform was dropped.
+    for (const char* style : {"transform:translateX(calc(100% + 10px))", "transform:translateX(calc(50% - 1 * (100% + 10px) + 50px))",
+                              "translate:calc(100% + 10px) 0", "transform:translate(min(150%, 30px), calc(50% - 4px))"}) {
+        GroupContainer g;
+        auto doc = litehtml_test::layout(g, std::string("<body style='margin:0'><div style='width:20px;height:8px;") + style + "'></div></body>");
+        doc->draw(0, litehtml::pixel_t(0.0f), litehtml::pixel_t(0.0f), nullptr);
+        const bool ok = g.groups.size() == 1 && std::abs(g.groups[0].tx - 30.0f) < 0.01f && std::abs(g.groups[0].ty) < 0.01f;
+        if (!ok) std::printf("  %s: %zu groups, tx %g ty %g\n", style, g.groups.size(), g.groups.empty() ? 0.0 : double(g.groups[0].tx), g.groups.empty() ? 0.0 : double(g.groups[0].ty));
+        CHECK(ok);
+    }
+
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }
     std::printf("twidget fork: OK\n");
     return 0;

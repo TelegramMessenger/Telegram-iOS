@@ -290,7 +290,11 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   recognizer, which handles secondary clicks elsewhere, fails over a live widget. The bubble's questions carry no
   touch: where the pointer last hovered (a pointer-only `UIHoverGestureRecognizer`) they get the mouse's answer and
   start nothing (`MessageWidgetPress.pointer`), so the press starts with the pointer's touch and its real button;
-  elsewhere they start a finger's press, which a pointer's touch cancels before pressing again. A press the widget did not answer in time (`.unanswered`, a busy game) claims its hold. No
+  elsewhere they start a finger's press, which a pointer's touch retracts before pressing again (`.retracted`,
+  `WRPointerPhaseRetract`: a cancel to the widget, while the runtime restores its gesture arbiter as it was before that
+  press, so a double click it came between is still one; a cancel proper ends a double tap, as the policy says). A
+  mouse's secondary click where no hold is claimed is the message's menu from its down: the widget's press ends there
+  with `pointercancel` (the policy's verdict's cancel, which a touch gets from the host's own recognizers). A press the widget did not answer in time (`.unanswered`, a busy game) claims its hold. No
   hover events reach the widget. XCUITest has no pointer: `TouchRecognizerTests` and `WidgetHarnessGestureTests` cover the host's side, a
   device the rest.
 - **Several fingers** (the user: a game played with two thumbs). Each finger is its own pointer, up to five
@@ -368,7 +372,10 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   `x` and the hold only (above). Without `x`, a drag is the chat's (the list scrolls, swipe-to-reply and the back swipe
   work) and the widget's touch ends as cancelled. A horizontal drag on a claimed press begins the recognizer at 4 pt
   (`claimDistance`), which fails every recognizer still possible above it but the pans: exclusion alone does not,
-  because `ContextGesture` recognizes alongside anything that is not a pan. **4 pt, not the policy's 10:** the list's
+  because `ContextGesture` recognizes alongside anything that is not a pan. For a press that leaves its hold to the
+  bubble (`pan-y`) the non-pans, the menu's long press among them, fail only once the finger passes the policy's 10 pt
+  slop (`dragSlop`, `sparesUntilSlop`), so a hold that drifted short of it is still the message's menu
+  (`testAHoldOnPanYAfterASmallSidewaysDriftOpensTheMenu`). **4 pt, not the policy's 10:** the list's
   pan begins at about 10 pt and took a claimed drag whose decision came there too
   (`testAClaimedHorizontalDragIsTheWidgets`); the runtime still tells a tap from a drag by the 10 px slop, whoever holds
   the touch. **The back swipe and swipe-to-reply ask in their own `touchesBegan`, before the widget's recognizer has the

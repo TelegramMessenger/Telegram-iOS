@@ -29,6 +29,9 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
     WRPointerPhaseMove,
     WRPointerPhaseUp,
     WRPointerPhaseCancel,
+    /// A press the host started before its touch arrived that no touch took up: a cancel to the widget, and a press that
+    /// never was to its double tap.
+    WRPointerPhaseRetract,
 };
 
 /// The drag axes a press takes for the widget (sdk-v1 §5.5).

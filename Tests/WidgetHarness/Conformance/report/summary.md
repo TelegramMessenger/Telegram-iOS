@@ -1,6 +1,6 @@
 # Conformance results
 
-Generated 2026-10-24 15:26 UTC by `packages/conformance/tools/report.mjs` (profile 1; ios telegram-native — iOS 26.5, iPhone18,3 simulator @ 11aacec5; policy strict, features webAnimations).
+Generated 2026-10-24 19:02 UTC by `packages/conformance/tools/report.mjs` (profile 1; ios telegram-native — iOS 26.5, iPhone18,3 simulator @ 11aacec5; policy strict, features webAnimations).
 
 Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail, ⏳ expected to fail (not implemented yet: D23, the profile in the validator, …), ❗ passes although expected to fail, – not applicable here, · not tested. For **out** features "pass" means *neutralised as the profile says*. The native columns are a plain browser engine without the pipeline: a reference for the tests, not an expectation.
 
@@ -8,7 +8,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 
 | Renderer | in (178) ✅ / ◐ / ❌ / ⏳ | out (79) neutralised ✅ / not yet ⏳ / ❌ | auto runs loaded | errors |
 |---|---|---|---|---|
-| ios telegram-native | 163 / 4 / 0 / 0 | 75 / 0 / 0 | 43 / 43 | 0 |
+| ios telegram-native | 165 / 2 / 0 / 0 | 75 / 0 / 0 | 43 / 43 | 0 |
 
 ## In the profile
 
@@ -81,7 +81,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `css.text.rtl` | ✅ | ✅ |
 | `css.text.emoji` | ✅ | ✅ |
 | `css.text.selection` | ✅ | ✅ |
-| `css.transform.2d` | ◐ | ✅ |
+| `css.transform.2d` | ✅ | ✅ |
 | `css.filter.blur-brightness-drop-shadow` * | ✅ | ✅ |
 | `css.backdrop-filter` * | ✅ | · |
 | `css.pointer-events` | ✅ | ✅ |
@@ -89,7 +89,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `css.cursor` | ✅ | ✅ |
 | `css.value.units` | ✅ | ✅ |
 | `css.value.vw` | ✅ | ✅ |
-| `css.value.math` | ◐ | ✅ |
+| `css.value.math` | ✅ | ✅ |
 | `css.value.custom-properties` | ✅ | ✅ |
 | `css.value.keywords` | ✅ | ✅ |
 | `css.value.content` | ✅ | ✅ |
@@ -282,8 +282,6 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 ## ios telegram-native: in-profile failures
 
 - `css.background.basic`: 05-colour-backgrounds-b: background (diff 71.7 % of ink (max 5 %))
-- `css.transform.2d`: 09-transforms-effects-a: a transform set from script (style.transform, calc()) (got 0, want 30 ±0.5)
-- `css.value.math`: 09-transforms-effects-a: calc(% + px) inside translateX() (got 0, want 30 ±0.5); 09-transforms-effects-a: calc() with * and nested parentheses inside translateX() (got 0, want 30 ±0.5)
 - `behaviour.gesture-claim`: 23-gestures: a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's) (touch: pointerup); 23-gestures: a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's) (touch: pointerup after 9 moves); 23-gestures: a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel (touch: pointerup after 9 moves); 23-gestures: a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's) (touch: pointerup)
 
 ## Visual set

@@ -279,6 +279,6 @@ G2, which this client already kept), and a widget chooses which edge of its bubb
   moves the edge instead.
 - The new run's anchor governs its own reports; the cached anchor serves before the first report and for a widget gone
   to the pill. A held jump yields to the anchor. No compensation while the user drags the chat.
-- Conformance: the Tier 2 run of `auto/23-gestures` performs the new vertical drags; `calc()` inside `translateX()` is
-  recorded failing, for a later renderer pass.
+- Conformance: the Tier 2 run of `auto/23-gestures` performs the new vertical drags; `calc()` inside a translation is
+  a length's tree (twidget edit 56), as in a width.
 - Not taken: upstream's other platforms and demo apps.

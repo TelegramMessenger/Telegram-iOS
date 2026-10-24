@@ -540,9 +540,10 @@ static WRStepResult stepOf(wr::StepResult result) {
     WR_GUARD(, {
         if (_runtime) {
             static const wr::PointerPhase kPhases[] = {wr::PointerPhase::Down, wr::PointerPhase::Move,
-                                                       wr::PointerPhase::Up, wr::PointerPhase::Cancel};
+                                                       wr::PointerPhase::Up, wr::PointerPhase::Cancel,
+                                                       wr::PointerPhase::Retract};
             JSContext* ctx = _runtime->context();
-            wr::HostState::of(ctx).pointer(ctx, kPhases[std::clamp<NSInteger>(phase, 0, 3)], point.x, point.y,
+            wr::HostState::of(ctx).pointer(ctx, kPhases[std::clamp<NSInteger>(phase, 0, 4)], point.x, point.y,
                                            pointerId, primary, mouse ? twidget::PointerKind::Mouse : twidget::PointerKind::Touch,
                                            int16_t(std::clamp<NSInteger>(button, 0, 4)));
             // Queuing the task can latch a memory stop, which drops the runtime as a step's does.

@@ -254,6 +254,8 @@ final class MessageWidgetCore {
             phase = .move
         case 2:
             phase = .up
+        case 4:
+            phase = .retract
         default:
             phase = .cancel
         }

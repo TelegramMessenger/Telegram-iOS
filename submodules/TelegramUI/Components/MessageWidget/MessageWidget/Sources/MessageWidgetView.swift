@@ -47,6 +47,9 @@ public final class MessageWidgetView: UIView {
         case moved
         case ended
         case cancelled
+        /// A press started for the bubble's question that no touch took up (`beginPressEarly`): a cancel to the widget,
+        /// and a press that never was to its double tap.
+        case retracted
     }
 
     /// One fully transparent pixel, shared by every widget view's own layer.
@@ -290,6 +293,8 @@ public final class MessageWidgetView: UIView {
             action = 2
         case .cancelled:
             action = 3
+        case .retracted:
+            action = 4
         }
         return self.instance?.touch(action: action, at: point, pointer: pointer, primary: primary, mouse: kind.mouse, button: kind.button) ?? .none
     }
@@ -320,6 +325,8 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
     /// decision came at 10 pt too). Well short of the gesture policy's 10 px slop, which the runtime still applies: a
     /// press that stops before it is a tap, whoever holds the touch.
     static let claimDistance: CGFloat = 4.0
+    /// The gesture policy's slop (10 px): a press that moves no further is a tap or a hold, whoever holds the touch.
+    static let dragSlop: CGFloat = 10.0
     /// At most this many fingers at once (the runtime's kMaxPointers); another is ignored whole.
     static let maximumTouches = 5
 
@@ -348,6 +355,10 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         var directionDecided = false
     }
     private var tracked: [Tracked] = []
+    /// The finger whose claimed drag began the recognizer while its press leaves the hold to the bubble: the recognizers
+    /// above that are not pans (the bubble's long press, the message's menu) fail only once it passes `dragSlop`, so a
+    /// hold short of the slop is still the menu, as the policy has it.
+    private var sparesUntilSlop: UITouch?
     /// Whether a press of the current sequence took taps: the recognizer then ends at the last touch's end, else fails.
     private var sequenceTakesTaps = false
     /// Whether the widget took the sequence's touches (`takeTouches`: a second finger, or a pointer press that claims its
@@ -586,11 +597,12 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         return abs(a.x - b.x) < 1.0 && abs(a.y - b.y) < 1.0
     }
 
-    /// Ends a press no touch adopted as cancelled.
+    /// Retracts a press no touch adopted: the widget sees it cancelled, its double tap never sees it (a pointer's click
+    /// after the bubble's question there still makes a double click).
     private func cancelEarlyPress() {
         if let early = self.earlyPress {
             self.earlyPress = nil
-            _ = self.onTouch?(.cancelled, early.location, early.pointer, early.primary, .touch)
+            _ = self.onTouch?(.retracted, early.location, early.pointer, early.primary, .touch)
         }
     }
 
@@ -628,7 +640,13 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
                     // same event (swipe-to-reply on a fast drag) out; failing it from here does not hold within the event.
                     self.preventsPans = true
                     self.state = .began
-                    self.failRecognizersAbove(pans: true)
+                    let down = self.tracked[current].downLocation
+                    if self.tracked[current].press.hold || hypot(location.x - down.x, location.y - down.y) > MessageWidgetTouchRecognizer.dragSlop {
+                        self.failRecognizersAbove(pans: true)
+                    } else {
+                        self.sparesUntilSlop = touch
+                        self.failRecognizersAbove(pans: true, sparingOthers: true)
+                    }
                 }
             case .began, .changed:
                 // The widget holds the touches: a finger moving sideways first takes the chat's pans off them too, one
@@ -636,6 +654,14 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
                 if sideways == true {
                     self.preventsPans = true
                     self.failRecognizersAbove(pans: true)
+                }
+                // Past the slop the claimed drag is a drag: the menu's long press goes too.
+                if self.sparesUntilSlop === touch {
+                    let down = self.tracked[current].downLocation
+                    if hypot(location.x - down.x, location.y - down.y) > MessageWidgetTouchRecognizer.dragSlop {
+                        self.sparesUntilSlop = nil
+                        self.failRecognizersAbove(pans: true)
+                    }
                 }
                 self.state = .changed
             default:
@@ -662,12 +688,12 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
 
     /// The touches are the widget's: the bubble's taps and long press, swipe-to-reply, the back swipe fail (the window's
     /// own recognizers are the system's and are left alone). `pans`: a finger went sideways, so the pans inside the
-    /// chat's view (`failsAbove`) go too.
-    private func failRecognizersAbove(pans: Bool) {
+    /// chat's view (`failsAbove`) go too. `sparingOthers`: only the pans fail (`sparesUntilSlop`).
+    private func failRecognizersAbove(pans: Bool, sparingOthers: Bool = false) {
         let chat = MessageWidgetTouchLock.chatView(of: self.view)
         var view = self.view?.superview
         while let current = view, !(current is UIWindow) {
-            for recognizer in current.gestureRecognizers ?? [] where recognizer !== self && MessageWidgetTouchRecognizer.failsAbove(recognizer, pans: pans, chat: chat) && recognizer.state == .possible {
+            for recognizer in current.gestureRecognizers ?? [] where recognizer !== self && (!sparingOthers || recognizer is UIPanGestureRecognizer) && MessageWidgetTouchRecognizer.failsAbove(recognizer, pans: pans, chat: chat) && recognizer.state == .possible {
                 recognizer.state = .failed
             }
             view = current.superview
@@ -735,6 +761,7 @@ final class MessageWidgetTouchRecognizer: UIGestureRecognizer {
         self.sequenceTakesTaps = false
         self.tookTouches = false
         self.preventsPans = false
+        self.sparesUntilSlop = nil
         self.cancelTrackedTouches()
     }
 
