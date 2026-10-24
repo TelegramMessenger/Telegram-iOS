@@ -206,7 +206,8 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
   `scrollWithDirection`). A drag frame without the finger: if the step can move (judged at the presented
   position, clamped to the declared edges, never pulled back from overscroll), it releases the pin latch and
   the hold, halts momentum, writes the offset and runs `handleUserScroll` (rebalance, slack retirement,
-  `onVisibleWindowChanged`; at most one viewport per call); otherwise it changes nothing. Not an `additionalScrollDistance`
+  `onVisibleWindowChanged`; at most `preloadMargin` per call, so it cannot pass an edge not yet declared);
+  a step that cannot move at the presented position changes nothing. Not an `additionalScrollDistance`
   pass, which after the latch's release re-anchors on the natural newest edge and drops a short reply's pin
   slack in one jump. `ScrollByTests`.
 - `isScrollDecelerating` (at `didEndDragging`, every mode); `isScrollFlightActive` (`.keyframe` only);

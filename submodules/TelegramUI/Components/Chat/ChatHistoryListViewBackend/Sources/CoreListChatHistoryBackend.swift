@@ -1776,8 +1776,9 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     // (`ChatControllerNode`'s keyboard snap-back) also needs `dismissedInputByDragging`, which a
     // selection cannot produce, so the two agree in effect.
     //
-    // A step that catches a momentum flight ends it, which reports `didEndScrolling` as any caught flight
-    // does. Rare in practice: the fingers landing already caught the motion (`noteTouchDown`).
+    // A step that catches a momentum flight ends it, unbraked, which reports `didEndScrolling` as any
+    // caught flight does. Rare: the fingers landing catch the motion (`noteTouchDown`), and what remains is
+    // an overscroll bounce relaunched when the scroll pan fails to the two-finger selection.
     func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
         let didMoveContentDuringDrag = self.didMoveContentDuringDrag
         defer {

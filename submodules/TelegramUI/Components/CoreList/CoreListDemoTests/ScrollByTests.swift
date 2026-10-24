@@ -7,8 +7,8 @@ import UIKit
 /// (`ChatHistoryListNodeImpl.setupSelectionScrolling` → `scrollWithDirection`). It moves content by
 /// a caller-chosen step, clipped at the loaded edges, and reports whether anything moved — the
 /// `ListViewImpl.scrollWithDirection` contract. Being the user's scroll, it releases what a drag's
-/// start releases (the pin latch and the scroll hold); otherwise each step would be re-placed onto
-/// the held position by the next one and the selection would never travel.
+/// start releases (the pin latch and the scroll hold); otherwise the next mutation pass (every
+/// selection toggle runs one) would put the held row back, undoing the steps before it.
 ///
 /// Fixture convention as in `ScrollHoldTests`: 50pt rows, index 0 is the newest and rests on the top
 /// inset edge (the chat's π rotation shows it at the screen bottom).
@@ -79,7 +79,7 @@ final class ScrollByTests: XCTestCase {
         XCTAssertEqual(try y(fixture, identity) + 50, 400, accuracy: 1e-6)
     }
 
-    /// A held row would otherwise be re-placed on its edge by every step, cancelling the step before.
+    /// A held row would otherwise be put back on its edge by the next mutation pass, undoing the steps.
     func testAStepReleasesTheScrollHoldSoStepsAccumulate() throws {
         let fixture = VirtualListFixture(itemCount: 20, itemHeight: 50, viewport: viewport)
         let identity = fixture.listView.items[5].identity
@@ -94,12 +94,14 @@ final class ScrollByTests: XCTestCase {
         XCTAssertTrue(fixture.listView.scroll(by: -15))
         XCTAssertTrue(fixture.listView.scroll(by: -15))
 
+        fixture.listView.applyChanges(items: fixture.listView.items, transition: .easeInOut(duration: 0))
+
         XCTAssertFalse(fixture.listView.isHoldingScrollTarget)
-        XCTAssertEqual(try y(fixture, identity), 70, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, identity), 70, accuracy: 1e-6, "the pass after the steps keeps them")
     }
 
-    /// The bot-reply pin latch, armed the way `ScrollHoldTests` arms it, places its row on every pass
-    /// in the same way a hold does.
+    /// The bot-reply pin latch, armed the way `ScrollHoldTests` arms it, puts its row back on every
+    /// pass in the same way a hold does.
     func testAStepReleasesThePinLatchSoStepsAccumulate() throws {
         let ids = (0 ..< 20).map { _ in UUID() }
         func items(pinned: Bool) -> [CoreListItem] {
@@ -124,13 +126,15 @@ final class ScrollByTests: XCTestCase {
         XCTAssertTrue(fixture.listView.scroll(by: -15))
         XCTAssertTrue(fixture.listView.scroll(by: -15))
 
+        fixture.listView.applyChanges(items: items(pinned: true), transition: .easeInOut(duration: 0))
+
         XCTAssertFalse(fixture.listView.isStrictlyPinnedToBottomEdge)
-        XCTAssertEqual(try y(fixture, ids[1]), before - 30, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, ids[1]), before - 30, accuracy: 1e-6, "the pass after the steps keeps them")
     }
 
-    /// A drag frame's cap: one call never travels more than a viewport, as `handleUserScroll` clamps a
-    /// user frame, so a step cannot skip rows the window has not loaded.
-    func testAStepTravelsAtMostOneViewport() throws {
+    /// One call travels at most the preload margin: loaded content always reaches that far past the
+    /// viewport, so a step can never pass an edge the window has not loaded and declared yet.
+    func testAStepTravelsAtMostThePreloadMargin() throws {
         let fixture = VirtualListFixture(itemCount: 100, itemHeight: 50, viewport: viewport)
         fixture.scroll(to: 500)
         let identity = fixture.listView.items[12].identity
@@ -138,7 +142,20 @@ final class ScrollByTests: XCTestCase {
 
         XCTAssertTrue(fixture.listView.scroll(by: -10_000))
 
-        XCTAssertEqual(try y(fixture, identity), before - viewport.height, accuracy: 1e-6)
+        XCTAssertEqual(try y(fixture, identity), before - fixture.listView.preloadMargin, accuracy: 1e-6)
+    }
+
+    /// 14 rows at the newest edge: the oldest ones are not loaded, so the far edge is still open when the
+    /// step is clamped. A step past the margin would land beyond the edge the rebalance then declares.
+    func testALargeStepNeverOverscrollsAnUnloadedEdge() {
+        let fixture = VirtualListFixture(itemCount: 14, itemHeight: 50, viewport: viewport)
+        XCTAssertNil(fixture.declaredEdges.max, "non-vacuity: the oldest edge is not loaded yet")
+
+        while fixture.listView.scroll(by: -10_000) {
+            XCTAssertEqual(fixture.listView.overscrollDistance, 0, accuracy: 1e-6)
+        }
+
+        XCTAssertEqual(fixture.listView.overscrollDistance, 0, accuracy: 1e-6)
     }
 
     func testAStepHaltsMomentum() {

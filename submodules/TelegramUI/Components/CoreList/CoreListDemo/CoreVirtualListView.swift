@@ -577,21 +577,27 @@ public final class CoreVirtualListView: UIView {
     /// A scroll the user drives without dragging the list: the chat's two-finger message selection
     /// auto-scrolls while the fingers hold near an edge (`ListViewImpl.scrollWithDirection` on the other
     /// backend). Moves content by `distance` points, positive DOWN as for `additionalScrollDistance`,
-    /// stopping at the declared edges, and returns whether it moved.
+    /// stopping at the declared edges, and returns whether it moved. One call travels at most
+    /// `preloadMargin`, the distance loaded content always reaches past the viewport, so a step cannot pass
+    /// an edge the window has not loaded and declared yet.
     ///
     /// It is a drag frame without the finger: the offset write goes through `handleUserScroll`, exactly as
     /// `engine.onScroll` does, so the window rebalances, slack retires and `onVisibleWindowChanged` fires
-    /// as they do under a drag (including its one-viewport cap per call). A mutation pass with
+    /// as they do under a drag. A mutation pass with
     /// `additionalScrollDistance` is NOT equivalent: once the pin latch is released it re-anchors onto the
     /// natural newest edge and drops a short reply's pin slack in one jump. And like a drag's start
     /// (`engine.onWillBeginDragging`) it releases the pin latch and the scroll hold, which would otherwise
     /// own placement and leave the bounds pinned around their row.
     ///
-    /// A step that cannot move (held against an edge, called every frame) changes nothing, as ListViewImpl
-    /// writes nothing when it cannot scroll: the latch and hold stay, and a spring-back keeps playing.
+    /// A step that cannot move at the presented position (held against an edge, called every frame)
+    /// changes nothing, as ListViewImpl writes nothing when it cannot scroll: the latch and hold stay, and a
+    /// spring-back keeps playing. A step INTO content from an overscroll does halt the spring-back, and
+    /// nothing restarts it if the steps stop while still overscrolled (until the next touch); accepted, as
+    /// the chat's selection rarely starts inside a bounce.
     @discardableResult
     public func scroll(by distance: CGFloat) -> Bool {
         guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
+        let distance = max(-preloadMargin, min(preloadMargin, distance))
         // Never further past an edge than the offset already is, and never pulled back from overscroll.
         func target(from current: CGFloat) -> CGFloat {
             var target = current - distance
