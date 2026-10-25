@@ -15,6 +15,7 @@
 
 #include "CoreTextRenderHost.h"
 #include "LayerTreePainter.h"
+#include "third-party/twidget/LiteHTML/LHHostSupport.h"
 #include "Generated/Bindings.h"
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/Boot.h"
@@ -128,6 +129,10 @@ public:
     __weak id<WRSessionDelegate> delegate;
 };
 
+@interface WREffectStore ()
+- (LHEffectStore*)store;
+@end
+
 @interface WRTree () {
 @public
     std::shared_ptr<const wr::LayerTree> _tree;
@@ -153,6 +158,27 @@ public:
 
 @end
 
+@implementation WREffectStore {
+    std::unique_ptr<LHEffectStore> _store;
+}
+
+- (instancetype)init {
+    if ((self = [super init])) {
+        _store = std::make_unique<LHEffectStore>();
+    }
+    return self;
+}
+
+- (NSUInteger)made {
+    return _store->made();
+}
+
+- (LHEffectStore*)store {
+    return _store.get();
+}
+
+@end
+
 @implementation WRTree
 
 - (instancetype)initWithTree:(std::shared_ptr<const wr::LayerTree>)tree {
@@ -171,9 +197,9 @@ public:
     return uint32_t(color.red) << 24 | uint32_t(color.green) << 16 | uint32_t(color.blue) << 8 | uint32_t(color.alpha);
 }
 
-- (CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale {
+- (CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale effects:(WREffectStore*)effects {
     try {
-        return wr::ios::LayerTreePainter::copyImage(*_tree, rect, scale);
+        return wr::ios::LayerTreePainter::copyImage(*_tree, rect, scale, [effects store]);
     } catch (...) {
         return nullptr;
     }

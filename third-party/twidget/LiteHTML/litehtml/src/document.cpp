@@ -1529,6 +1529,7 @@ namespace litehtml
     bool document::replace_text_renderers(const std::vector<element::ptr>& current,
                                           const elements_list& replacement)
     {
+#if 0
         if(current.empty() || replacement.empty())
             return false;
         auto owner = current.front()->parent();
@@ -1578,6 +1579,107 @@ namespace litehtml
         target->mark_layout_dirty();
         m_render_tree_serial++;
         return true;
+    #else
+        // Telegram (VENDOR.md edit 16, amended): the old pieces' renderers are a run among the children of their owner's
+        // render item, which is the owner's inline context (a <p>'s text) or an inline element's own item (a <span>'s, a
+        // <b>'s, whose pieces its inline context lays out), beside other children or not (an element, a ::before). The
+        // run is replaced, nothing else; the owner's children, which hold the replacement already, must match the item's
+        // children one for one afterwards.
+        if(current.empty() || replacement.empty())
+            return false;
+        auto owner = current.front()->parent();
+        if(!owner)
+            return false;
+        std::shared_ptr<render_item>                          target;
+        std::list<std::shared_ptr<render_item>>::iterator run;
+        owner->run_on_renderers([&](const std::shared_ptr<render_item>& item) {
+            auto root = item;
+            while(auto parent = root->parent())
+                root = parent;
+            if(root != m_root_render || item->src_el() != owner)
+                return true;
+            // An inline context, or an inline element's own item, which its inline context lays out: nothing else.
+            if(!std::dynamic_pointer_cast<render_item_inline_context>(item) &&
+               !(owner->css().get_display() == display_inline && std::dynamic_pointer_cast<render_item_inline>(item)))
+                return true;
+            auto& kids = item->children();
+            for(auto at = kids.begin(); at != kids.end(); ++at)
+            {
+                auto probe = at;
+                auto old   = current.begin();
+                while(probe != kids.end() && old != current.end() && (*probe)->src_el() == *old)
+                {
+                    ++probe;
+                    ++old;
+                }
+                if(old == current.end())
+                {
+                    target = item;
+                    run    = at;
+                    return false;
+                }
+            }
+            return true;
+        });
+        if(!target)
+            return false;
+        auto& kids = target->children();
+        // One for one: the item's children before the run, the replacement, and those after it are the owner's.
+        if(kids.size() - current.size() + replacement.size() != owner->children().size())
+            return false;
+        {
+            auto el = owner->children().begin();
+            for(auto at = kids.begin(); at != run; ++at, ++el)
+            {
+                if((*at)->src_el() != *el)
+                    return false;
+            }
+            for(const auto& piece : replacement)
+            {
+                if(*el++ != piece)
+                    return false;
+            }
+            auto after = run;
+            std::advance(after, current.size());
+            for(auto at = after; at != kids.end(); ++at, ++el)
+            {
+                if((*at)->src_el() != *el)
+                    return false;
+            }
+        }
+        auto after = run;
+        std::advance(after, current.size());
+        for(auto at = run; at != after; ++at)
+            m_layout_marked.erase(std::remove(m_layout_marked.begin(), m_layout_marked.end(), at->get()), m_layout_marked.end());
+        // Telegram (VENDOR.md edit 20): the run's old pieces go, its new ones come, and the item's text was replaced.
+        if(m_render_observer)
+        {
+            for(auto at = run; at != after; ++at)
+            {
+                m_observed.erase(std::remove(m_observed.begin(), m_observed.end(), at->get()), m_observed.end());
+                m_render_observer->item_removed(at->get());
+            }
+        }
+        std::vector<std::shared_ptr<render_item>> added;
+        added.reserve(replacement.size());
+        auto at = kids.erase(run, after);
+        for(const auto& child : replacement)
+        {
+            auto item = child->create_render_item(target)->init();
+            item->parent(target);
+            kids.insert(at, item);
+            added.push_back(item);
+        }
+        if(m_render_observer)
+        {
+            for(const auto& item : added)
+                m_render_observer->item_added(item);
+            m_render_observer->text_replaced(target.get());
+        }
+        target->mark_layout_dirty();
+        m_render_tree_serial++;
+        return true;
+#endif
     }
 
     void document::restyle_after_patch(const std::vector<element::ptr>& restyle, const std::vector<element::ptr>& new_text,
@@ -1894,6 +1996,9 @@ namespace litehtml
         for(auto& property : changed_declarations(style_before, style_after))
             animated.push_back(std::move(property));
 #endif
+        // Telegram (VENDOR.md edit 63): an inline element's geometry is its line's, which a kept tree does not lay out
+        // again: only a box that is not inline keeps the tree for it.
+        geometry = geometry && el->css().get_display() != display_inline;
         for(const auto& property : animated)
         {
 #if 0

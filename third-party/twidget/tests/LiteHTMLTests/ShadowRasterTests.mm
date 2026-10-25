@@ -38,6 +38,7 @@ static LHDocument *ShadowDocument(NSString *style)
 - (void)tearDown
 {
     unsetenv("LH_NO_SHADOW_SLICES");
+    unsetenv("LH_EXACT_SHADOWS");
     [LHDocument purgeCaches];
     [super tearDown];
 }
@@ -134,6 +135,56 @@ static LHDocument *ShadowDocument(NSString *style)
         XCTAssertNotEqualObjects(before, warm);
         XCTAssertEqualObjects(warm, cold);
     }
+}
+
+// Telegram (VENDOR.md edit 65): a blur past 24 device pixels is drawn from one low-resolution raster, laid out on the
+// shadow's own ink whatever its sub-pixel position or rotation, so a moving or turning shadow keeps its cache entry.
+// ShadowDocument's shadow is 0 10px 30px: 60 device pixels of blur at 2x.
+- (void)testABlurredShadowKeepsOneRasterWhenItMoves
+{
+    [LHDocument purgeCaches];
+    RenderShadow(ShadowDocument(@"transform:translate(.3px,.1px)"), CGRectMake(0, 0, 640, 420), 2);
+    NSUInteger bytes = [LHDocument rasterCacheBytes];
+    XCTAssertGreaterThan(bytes, 0u);
+    RenderShadow(ShadowDocument(@"transform:translate(.7px,.45px)"), CGRectMake(0, 0, 640, 420), 2);
+    XCTAssertEqual([LHDocument rasterCacheBytes], bytes);
+}
+
+- (void)testABlurredShadowKeepsOneRasterWhenItTurns
+{
+    [LHDocument purgeCaches];
+    RenderShadow(ShadowDocument(@"transform:rotate(1deg)"), CGRectMake(0, 0, 640, 420), 2);
+    NSUInteger bytes = [LHDocument rasterCacheBytes];
+    XCTAssertGreaterThan(bytes, 0u);
+    RenderShadow(ShadowDocument(@"transform:translate(.2px,.6px) rotate(-2.5deg)"), CGRectMake(0, 0, 640, 420), 2);
+    XCTAssertEqual([LHDocument rasterCacheBytes], bytes);
+}
+
+// The low-resolution raster against the exact one (LH_EXACT_SHADOWS: full resolution, as before edit 65), for a still, a
+// moved, a turned, an inset, a spread, a rounded and a layered shadow: 2 levels apart at most for the plain one, and up
+// to 8 in the gradients of the others, where CoreGraphics' blur is shaped slightly differently at 24 px than at its full
+// radius. With the raster clipped to the box, the largest difference was 112.
+- (void)testBlurredShadowsStayCloseToTheExactOnes
+{
+    NSUInteger maximum = 0;
+    for(CGFloat scale : {2.0, 3.0})
+        for(NSString *variant in @[@"", @"transform:translate(.3px,.7px)", @"transform:rotate(3deg)", @"box-shadow:0 6px 40px #0008 inset;background:#fff", @"box-shadow:0 0 55px 6px #e0267480", @"border-radius:80% 20% / 30% 65%;box-shadow:12px -9px 28px #1686c8", @"background:#751778;box-shadow:0 0 25px #e0267480,0 0 55px #e0267440,0 12px 25px #0008"])
+        {
+            LHDocument *document = ShadowDocument(variant);
+            setenv("LH_EXACT_SHADOWS", "1", 1);
+            NSData *expected = RenderShadow(document, CGRectMake(0, 0, 640, 420), scale);
+            unsetenv("LH_EXACT_SHADOWS");
+            NSData *actual = RenderShadow(document, CGRectMake(0, 0, 640, 420), scale);
+            XCTAssertEqual(expected.length, actual.length);
+            const uint8_t *a = (const uint8_t *)expected.bytes, *b = (const uint8_t *)actual.bytes;
+            NSUInteger frameMaximum = 0;
+            for(NSUInteger i = 0; i < actual.length; i++)
+                frameMaximum = MAX(frameMaximum, (NSUInteger)abs((int)a[i] - (int)b[i]));
+            maximum = MAX(maximum, frameMaximum);
+            NSLog(@"DOWNSAMPLED_SHADOW scale %g %@: max %lu", scale, variant, (unsigned long)frameMaximum);
+            XCTAssertLessThanOrEqual(frameMaximum, 8u, @"scale %g %@", scale, variant);
+        }
+    NSLog(@"DOWNSAMPLED_SHADOW_PARITY max=%lu", (unsigned long)maximum);
 }
 
 @end

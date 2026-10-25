@@ -11,6 +11,7 @@
 
 #include "../Sources/CoreTextRenderHost.h"
 #include "../Sources/LayerTreePainter.h"
+#include "third-party/twidget/LiteHTML/LHHostSupport.h"
 #include "Generated/Bindings.h"
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/Boot.h"
@@ -308,6 +309,108 @@ size_t paintedPixels(CGImageRef image) {
     CGImageRef image = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(0, 0, 300, tree->height()), 2);
     XCTAssertTrue(image != nullptr);
     CGImageRelease(image);
+}
+
+// Twidget edit 64: the tiles of one draw share an LHEffectStore, so a filter or a backdrop is made once however many
+// tiles show it, and not for a tile it misses. Here the blurred box covers 20…220 and 24 px of blur around it, the
+// backdrop 100…160: both show in each of the four tiles of 0…256.
+static const char* const kEffectsPage = "<!doctype html><html><head></head><body style=\"margin:0\">"
+    "<div style=\"position:absolute;left:20px;top:20px;width:200px;height:200px;background:#f00;filter:blur(8px)\"></div>"
+    "<div style=\"position:absolute;left:100px;top:100px;width:60px;height:60px;backdrop-filter:blur(4px)\"></div>"
+    "</body></html>";
+
+- (void)testADrawMakesEachEffectOnce {
+    Booted booted(kEffectsPage, 3);
+    std::shared_ptr<const wr::LayerTree> tree = booted.tree();
+    XCTAssertTrue(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    LHEffectStore effects;
+    for (int ty = 0; ty < 2; ty++) {
+        for (int tx = 0; tx < 2; tx++) {
+            CGImageRef tile = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(tx * 128, ty * 128, 128, 128), 3, &effects);
+            XCTAssertTrue(tile != nullptr);
+            CGImageRelease(tile);
+        }
+    }
+    XCTAssertEqual(effects.made(), 2u);
+}
+
+- (void)testATileAnEffectMissesDoesNotMakeIt {
+    Booted booted(kEffectsPage, 3);
+    std::shared_ptr<const wr::LayerTree> tree = booted.tree();
+    XCTAssertTrue(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    LHEffectStore effects;
+    CGImageRef tile = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(256, 256, 128, 128), 3, &effects);
+    CGImageRelease(tile);
+    XCTAssertEqual(effects.made(), 0u);
+    // Inside the blur's reach, past the backdrop: the filter alone.
+    tile = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(170, 170, 60, 60), 3, &effects);
+    CGImageRelease(tile);
+    XCTAssertEqual(effects.made(), 1u);
+}
+
+// Tiles drawn at once wait for the one making an effect they share, a backdrop inside a filter and a backdrop over one
+// included: the green box and its inner backdrop show in the top two tiles, the blue box and the backdrop over it in the
+// bottom two. Four effects, each made once, and no tile waits forever.
+- (void)testTilesDrawnTogetherShareTheirEffects {
+    Booted booted("<!doctype html><html><head></head><body style=\"margin:0\">"
+                  "<div style=\"position:absolute;left:16px;top:16px;width:224px;height:100px;background:#0a0;filter:blur(2px)\">"
+                  "<div style=\"position:absolute;left:40px;top:20px;width:150px;height:40px;backdrop-filter:blur(3px)\"></div></div>"
+                  "<div style=\"position:absolute;left:16px;top:140px;width:224px;height:100px;background:#00a;filter:blur(2px)\"></div>"
+                  "<div style=\"position:absolute;left:60px;top:160px;width:120px;height:60px;backdrop-filter:blur(3px)\"></div>"
+                  "</body></html>",
+                  3);
+    std::shared_ptr<const wr::LayerTree> tree = booted.tree();
+    XCTAssertTrue(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    LHEffectStore effects;
+    // A block copies what it captures: the store goes in by its address.
+    LHEffectStore* store = &effects;
+    dispatch_group_t group = dispatch_group_create();
+    dispatch_group_async(group, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        dispatch_apply(4, DISPATCH_APPLY_AUTO, ^(size_t i) {
+            CGImageRef tile = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(CGFloat(i % 2) * 128, CGFloat(i / 2) * 128, 128, 128), 3, store);
+            CGImageRelease(tile);
+        });
+    });
+    XCTAssertEqual(dispatch_group_wait(group, dispatch_time(DISPATCH_TIME_NOW, 20 * NSEC_PER_SEC)), 0);
+    XCTAssertEqual(effects.made(), 4u);
+}
+
+// A paint allows its first 8 backdrops in tree order (LHContainer's kMaxBackdrops), whichever it shows: a tile the green
+// box misses still counts the two backdrops inside it, so it allows b3…b8 and not b9 and b10, as every other tile does.
+- (void)testEveryTileAllowsTheSameBackdrops {
+    std::string html = "<!doctype html><html><head></head><body style=\"margin:0\">"
+                       "<div style=\"position:absolute;left:8px;top:8px;width:100px;height:100px;background:#0a0;filter:blur(1px)\">"
+                       "<div style=\"position:absolute;left:10px;top:10px;width:20px;height:20px;backdrop-filter:blur(2px)\"></div>"
+                       "<div style=\"position:absolute;left:50px;top:10px;width:20px;height:20px;backdrop-filter:blur(2px)\"></div></div>";
+    for (int i = 0; i < 8; i++) {
+        html += "<div style=\"position:absolute;left:140px;top:" + std::to_string(8 + i * 12) +
+                "px;width:100px;height:10px;backdrop-filter:blur(2px)\"></div>";
+    }
+    html += "</body></html>";
+    Booted booted(html, 3);
+    std::shared_ptr<const wr::LayerTree> tree = booted.tree();
+    XCTAssertTrue(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    LHEffectStore right;
+    CGImageRef tile = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(128, 0, 128, 128), 3, &right);
+    CGImageRelease(tile);
+    XCTAssertEqual(right.made(), 6u);
+    // The box and the two backdrops inside it.
+    LHEffectStore left;
+    tile = wr::ios::LayerTreePainter::copyImage(*tree, CGRectMake(0, 0, 128, 128), 3, &left);
+    CGImageRelease(tile);
+    XCTAssertEqual(left.made(), 3u);
 }
 
 @end

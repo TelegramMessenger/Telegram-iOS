@@ -615,9 +615,12 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        `append_text` splits it (`split_text`'s words, one `el_space` per whitespace character; always new pieces, even
        at the same count), through `element::m_children` as `replace_children` does. It re-points `m_over_element`
        and `m_active_element` away from a replaced piece to the parent, tries `replace_text_renderers` (the render tree
-       is kept only when the parent's whole content is this one run inside an inline context; otherwise the session is
-       marked to rebuild the render tree at commit, which is always correct), and collects the new pieces for
-       `commit_patch`. `pieces` is assigned.
+       is kept when the run's renderers are a run among the children of the parent's render item, which is its inline
+       context or, for an inline element, its own item (a `<span>`'s pieces, which its inline context lays out), beside
+       other children or not; only that run is replaced, the original under `#if 0`; otherwise the session is marked to
+       rebuild the render tree at commit, which is always correct), and collects the new pieces for `commit_patch`.
+       `pieces` is assigned. WidgetRuntime's mirror then re-captures the inline context's runs (an inline element's
+       through `ItemInfo::runOf`), and publishes anew where a paint group in the line holds a run of its own.
     2. **`can_replace_text`** is the single predicate, so a caller can plan before it changes anything: false for a
        raw-text parent (`<style>`, `<script>`), a parent inside a `select`, `option`, `optgroup`, `datalist`,
        `textarea`, `button`, `input`, `progress`, `meter` or `svg` (their generated content or drawing reads the
@@ -633,14 +636,17 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     Pinned by `tests/external_test.cpp` (`:TwidgetExternalTests`), which did not compile before the edit (none of the
     three existed): `testReplaceTextMatchesFresh` (same piece count, more words wrapping, fewer words, whitespace only
     both ways, inside `pre`, `li`, `div`, and two replacements in one session; each patched document's placements,
-    height and draw calls equal a fresh build of the final text), `testReplaceTextBesideElements` (the render tree
-    rebuilt when the run is not all of its parent), `testReplaceTextRefusals` (`<style>`, a `select`'s `option`, a
+    height and draw calls equal a fresh build of the final text), `testReplaceTextBesideElements` (a run beside
+    elements equals a fresh build), `testReplaceTextRefusals` (`<style>`, a `select`'s `option`, a
     `button`, a run out of range or not text, and the cap with `pending_growth` and a session that replaces and grows;
     each refusal leaves the document and `pieces` as they were) and `testReplaceTextRepointsHover`. Mutation checks:
     keeping the tree when `replace_text_renderers` fails fails `testReplaceTextBesideElements`; restyling nothing at
-    commit fails `testReplaceTextMatchesFresh`.
-    **macOS effect:** none; the entry points have no caller in the Objective-C++ layer, and the new members are only
-    read by them.
+    commit fails `testReplaceTextMatchesFresh`. WidgetRuntime's `testTextInAnInlineElementKeepsTheTree` pins the
+    kept tree in a `<span>`, a `<b>`, beside an `<i>` and a `::before`, and the new mirror where a paint group follows.
+    **macOS effect:** the entry points have no caller in the Objective-C++ layer, and the new members are only read by
+    them; `replace_text_renderers` is also the template path's (a text hole), which since the amendment keeps the render
+    tree for a hole in an inline element or beside other children (`TwidgetRenderingTests`' random text runs equal a
+    fresh layout).
 
 17. **Attributes and inline style patched in place** (2026-10-18, M1c Task 8 and its fix round; both platforms, insertions
     plus two `#if 0`/`#else` pairs). The flush of edit 16 extends to an attribute change. Fork `document.h` gains
@@ -1557,7 +1563,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `display`, `position`, `float`, `list-style-type`, `white-space` and `flex-direction`; a box's size (`width`,
     `height` and their `min-`/`max-`), margins, padding, offsets (`top` … `left`, `inset`), gaps and flex sizes
     (`flex-grow`, `-shrink`, `-basis`) only layout reads, so a change of only those and paint-only properties keeps the
-    tree: the restyle marks the box's layout dirty up to its relayout boundary (`compute_styles` → `mark_layout_dirty`),
+    tree for a box that is not `display: inline` (an inline element's geometry is its line's, which a kept tree did not
+    lay out again: the padding of a `<span>` left the line as it was; it rebuilds): the restyle marks the box's layout dirty up to its relayout boundary (`compute_styles` → `mark_layout_dirty`),
     the next `render()` lays it out again, and edit 20 reports every box that moved or resized, exactly. A progress bar
     whose script sets `style.width` on every frame no longer re-creates the tree. Pinned by `external_test.cpp`
     (a `padding` style patch keeps the tree and reports what it moved; `float` rebuilds) and WidgetRuntime's
@@ -1568,6 +1575,44 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     (`update_document` → `apply_retag`) reuses the last layout whenever it keeps the tree, so a geometry change kept
     there drew the old layout (`TwidgetRenderingTests`' random text-and-class and structure runs, and the rebuild memory
     run, fail with it); it does not pass `geometry`.
+64. **A filter's and a backdrop's result: made only where it shows, and once for a host's paints** (`LHContainer.mm`
+    `draw_filtered`, `draw_backdrop`, `allow_backdrops`, `EffectKey`; `LHHostSupport.h` `LHEffectStore`,
+    `LHHostContainer::setEffectStore`, `allowBackdrops`). A filter's result draws inside its target and a backdrop's
+    inside its box, so a paint whose clip misses it (a tile of WidgetRuntime's painter) makes neither: the cull comes
+    after `FilterTargetFor` succeeds (its fallback paints the content unfiltered and unclipped) and, for a backdrop,
+    after `backdrop_allowed`. A host's paints can share an `LHEffectStore`: each result is made once per key (the
+    effect's owner and steps, the colour space, the target's rect rounded to a millionth of a pixel, its scales,
+    orientation and reduction) by the first paint to ask, and one asking meanwhile waits; the entry is marked ready on
+    every way out, a throw included. Past 32 MiB kept, a result is made where it is drawn and not kept. A backdrop's
+    source paint gets no store, so no making waits for one that may be waiting for it. A culled or shared filter's
+    inner backdrops are not drawn by every paint, so the host registers a paint's backdrops in tree order first
+    (`allow_backdrops`): every paint allows the same 8 (`kMaxBackdrops`), as drawing them all in order did. In the
+    widget harness's app, a 360 × 260 widget with a pulsing blurred glow, a backdrop counter and a rotating card drew a
+    frame (9 tiles at 3×) in 137 ms before and 81–87 ms after; without the card's box shadows, 117 ms and 17 ms. Pinned
+    by WidgetRuntimeIOS's `LayerTreePainterTests` (a filter and a backdrop across four tiles made once each; none for a
+    tile they miss; tiles drawn together wait for and share them, a backdrop inside a filter included; every tile
+    allows the same backdrops past the limit) and the widget harness's `WidgetHarnessEffectTests` (in the app process,
+    where Core Image paints: each tile painted through a draw's store equals it painted alone). Without
+    `allow_backdrops` a tile the filter misses allows 8 backdrops, not 6; without the culls a tile makes effects it
+    does not show. **macOS effect:** none visible: LHDocument sets no store, and the culls skip only work its clip
+    would discard.
+65. **A box shadow's blur past 24 device pixels: one low-resolution raster, through any transform** (`LHContainer.mm`
+    `draw_box_shadow`, `DrawDownsampled`, `DeviceScale`, `paint_box_shadow`'s `clip`). Such a shadow takes the
+    downsampled path first (it was the exact path's fallback): its raster spans the shadow's own ink and three of its
+    pixels more (so that an inset shadow has raster on both sides of the box's edge), is keyed by the shadow alone, with
+    no sub-pixel phase, and is not clipped to the box, whose edge the clip at full resolution draws, so scaling it up
+    darkens no ring along it (with the raster clipped, the parity test's largest difference was 112 levels).
+    `DrawDownsampled` takes any CTM: the raster is in user space, sized by the CTM's columns and drawn through it, so a
+    text shadow under a rotation is downsampled too. A smaller blur keeps the exact, sliced raster, which no longer
+    falls back to the downsampled one (it never succeeds there). `LH_EXACT_SHADOWS` draws a big blur at full resolution,
+    as before, for the parity test. A shadow that moves by fractions of a pixel or turns keeps one cache entry, where it
+    painted a full-resolution Core Graphics blur in every tile it reached, every frame: the widget harness's widget with
+    a rotating card under three 25–55 px shadows drew a frame in 81–87 ms before and 18 ms after. Pinned by
+    `ShadowRasterTests` (a moved and a turned shadow keep one raster; against `LH_EXACT_SHADOWS` at 2× and 3×, a plain
+    shadow still, moved and turned is within 2 levels, an inset, a spread, a rounded and a layered one within 8, in
+    their gradients, where CoreGraphics' blur is shaped slightly differently at 24 px than at its full radius); its
+    slice-parity and cache tests hold unchanged. **macOS effect:** LHDocument draws such shadows the same way, within 8
+    levels of before.
 
 ## The iOS font resolver
 

@@ -85,6 +85,8 @@ using LHGPUOp       = lhx::RenderOp;
 using LHGlyphSlot   = lhx::AtlasSlot;
 using LHGPURecorder = lhx::RenderRecorder;
 
+class LHEffectStore;
+
 class LHContainer : public litehtml::document_container
 {
   public:
@@ -178,6 +180,10 @@ class LHContainer : public litehtml::document_container
     void draw_filtered(litehtml::uint_ptr hdc, const litehtml::filter_paint& filter, const std::function<void(litehtml::uint_ptr)>& paint) override;
     void draw_backdrop(litehtml::uint_ptr hdc, const litehtml::filter_paint& filter) override;
     std::function<CGImageRef(const void* owner, CGRect rect, CGFloat scaleX, CGFloat scaleY, bool flipped)> backdrop_source;
+    // Telegram (VENDOR.md edit 64): the store a host's paints share their filter and backdrop results through, and the
+    // backdrops a paint allows, registered in tree order before it draws.
+    LHEffectStore* effect_store = nullptr;
+    void           allow_backdrops(const std::vector<const void*>& owners);
     bool draw_cached(litehtml::uint_ptr hdc, const litehtml::position& box, uint64_t key, const std::function<void(litehtml::uint_ptr)>& paint) override;
     void draw_isolated(litehtml::uint_ptr hdc, const litehtml::position& box, const std::function<void(litehtml::uint_ptr)>& paint) override;
     bool sanitize_element(std::string& tag, bool svg, litehtml::string_map& attrs) override;
@@ -276,7 +282,7 @@ class LHContainer : public litehtml::document_container
     lhx::Painter*   m_painter = nullptr;
     void apply_clips(CGContextRef ctx, CGRect bounds) const;
     void record_op(OpHash& hash, CGRect ink, bool capture = true);
-    void paint_box_shadow(CGContextRef ctx, CGRect r, const litehtml::border_radiuses& radius, const litehtml::shadow_paint& shadow);
+    void paint_box_shadow(CGContextRef ctx, CGRect r, const litehtml::border_radiuses& radius, const litehtml::shadow_paint& shadow, bool clip = true);
     void flush_capture();
     bool record_solid(const litehtml::background_layer& layer, const litehtml::web_color& color);
     bool record_rounded(CGRect rect, const litehtml::border_radiuses& radius, const litehtml::web_color& color);

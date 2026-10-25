@@ -914,6 +914,12 @@ What still differs, on purpose or for now (none is measured by a conformance che
   profile), so an RTL list indents on the left. Inside one text piece the order is the text engine's; in a reversed
   span the start padding sits on the inside. A left-to-right line is reordered only when it holds a right-to-left
   character or an RLM/RLE/RLO/RLI.
+- **A blur past 24 device pixels** (a box or text shadow) is drawn from a raster of at most 24 px of blur and scaled up
+  (twidget edit 65), as Skia's GPU blur scales its source down until sigma is at most 4: within 8 levels of a
+  full-resolution blur (`ShadowRasterTests`).
+- **Filters and backdrops under a transform:** a `filter` on content drawn under a rotation or skew paints the content
+  unfiltered (`FilterTargetFor` takes only an axis-aligned CTM), and a `backdrop-filter` under any scale, rotation or
+  skew draws no backdrop (`draw_backdrop` takes only a translation of its group).
 - **`HTMLElement.dir` reflects as written** (a plain `[Reflect]`): `dir=RTL` reads `"RTL"`, not `"rtl"`.
 - **Nested intrinsic widths:** a keyword box more than 8 keyword boxes deep lays out as `auto` (Limits).
 - **Math:** a tree holds at most 64 nodes (Limits); a translation's math function is a tree too (twidget edit 56), its
@@ -1029,6 +1035,7 @@ reader select of the published layout, built on the widget's queue while its bub
 | Diagnostics | 500 per core | `MessageWidgetCore` | dropped | the old core's |
 | `data:` images | profile 1's types only (V4); a body of at most 24 MiB; PNG, JPEG, GIF or WebP as ImageIO sniffs it, at most 4,096 px a side and 16 Mpx; the placeholder's SVG through `LHCreateSVGImage` (the only SVG the host is handed) | `LHContainer.mm` (`kMaxDataImageBytes`, `TelegramImageSourceAllowed`), reached through `LHHostContainer::createImage` | refused: not drawn | `LHContainer`'s policy, unchanged |
 | Tiles | 128 pt; one image each, at most 4,096 px a side; a size change redraws every tile | `WidgetFrame.swift`, `LayerTreePainter.mm` | — | as before |
+| Effects a draw's tiles share | 32 MiB of filter and backdrop results kept for the draw | `LHEffectStore::kMaxBytes` (twidget edit 64) | made where it is drawn and not kept | the tiles made one copy each, nine at once; the cap bounds a draw of many distinct effects |
 | Text value (V4) | 65,536 UTF-16 units: a Text's data, a text attribute (`alt label placeholder title value`, `data-*`, `aria-*`), the strings of a `style` or a sheet | `Builder.h` `kMaxTextValueUnits` | the Text renders nothing (`text-node`); the attribute or style is left out (`text-budget`) | profile 1 strict `MAX_TEXT` |
 | Document text (V4) | 262,144 UTF-16 units, of which 8,192 complex-script (>= U+0590) | `kTextBudgetUnits`, `kComplexTextBudgetUnits` | what does not fit in tree order renders nothing (`text-budget`) | profile 1 strict `TEXT_BUDGET`, `COMPLEX_TEXT_BUDGET` |
 | Nodes (V4) | 50,000: the document node, every element, Text and Comment, rendered or not, a `<script>`'s children aside | `kMaxRenderNodes` | the walk stops (`nodes`) | profile 1 `MAX_NODES` |
@@ -1135,6 +1142,28 @@ the host's fake render host and run through 120 frames, thread CPU time, best of
   357 ms → under 45 ms, `htmlbubbles-ported/09-code-review/01-leo-bare` 324 → 118 ms. What still builds: text inside a
   `<button>` (the text path refuses text a form control reads), structure beside a kept node's own change (a mixed
   journal), and structure under `::before`/`::after` content.
+
+Paint cost per frame (2026-10-26; one widget, 360 × 260: a card floating by `translateY` and `rotate(±1deg)` under
+three box shadows of 25–55 px, over a glow pulsing in `opacity` and `scale` with `filter: blur(45px)`, and a counter
+with `backdrop-filter: blur(4px)`; in the widget harness's app process on the iPhone 17 / 26.5 simulator, a debug build,
+tiles at 3×, frames from the real display link):
+- **What a frame costs:** the `.draw` task 137 ms, 7 frames/s, at first; 81–87 ms (11 frames/s) once a draw's tiles
+  shared their filter and backdrop results (twidget edit 64); 17.6–18.2 ms (45–49 frames/s) once a big box shadow
+  was drawn from one low-resolution raster (edit 65). Now without the backdrop 11 ms, without the glow's filter
+  8.3 ms, without both and the shadows 6 ms (60 frames/s). The frame task (script, animations, layout, publish) is
+  0.6 ms (a test process). Timed on a loaded machine (load average 10–16).
+- **What it was:** every tile, and each of the two 1×1 corner-colour samples `WidgetTileDrawer.draw` took, computed every
+  filter (`LHContainer::draw_filtered`) and backdrop (`draw_backdrop`) in the tree whole, whether it showed them or
+  not: a 128 pt tile cost 23.5 ms, a corner sample 10.5 ms. And a moving box shadow missed its raster cache, whose key
+  carried the box's sub-pixel phase, while a rotated one was never cached (neither cached path took a rotated CTM), so
+  every tile it reached painted a full-resolution Core Graphics blur every frame: one shadow of 55 px cost 44 ms a
+  frame, of 25 px 14 ms, of 8 px 5 ms (a test process).
+- **What is left:** the glow's filter and the backdrop are made once a frame, since the glow scales every frame and
+  what is behind the backdrop changes with it; the backdrop's source paint makes the glow's filter again.
+- **Where to measure paint cost:** in the widget harness's app process (a Tier 1 test). The hostless test processes
+  (`MessageWidgetTests`, `MessageWidgetCorpusTests`, `WidgetRuntimeIOSTests`) have no Metal device, and there a CSS
+  filter or backdrop paints nothing, so their timings leave filters out. The simulator's Core Image runs on the Mac's
+  GPU; the cost on a device is unmeasured.
 
 Units and KB are deterministic on one platform: the same on every run and, since quickjs-ng change 12, in every build
 configuration (before it, a build without `NDEBUG` charged more for every string). Another platform's allocator can

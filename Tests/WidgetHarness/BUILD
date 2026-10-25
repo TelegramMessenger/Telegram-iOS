@@ -159,6 +159,8 @@ swift_library(
         # TapLongTapOrDoubleTapGestureRecognizer's long-tap policy, for the gesture tests.
         "//submodules/Display",
         "//submodules/TextSelectionNode",
+        # WRSession and WREffectStore, for the effect tests (CSS filters paint only where there is a Metal device).
+        "//submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS",
     ],
 )
 

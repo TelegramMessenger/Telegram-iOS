@@ -9,6 +9,7 @@
 #import <ImageIO/ImageIO.h>
 
 #include "LHContainer.h"
+#include "LHHostSupport.h"
 #include "render_item.h"
 #include "LHFilters.h"
 #include "LHSimpleText.h"
@@ -17,6 +18,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <condition_variable>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -793,24 +795,33 @@ static const CGFloat kMaxTextShadowOffset = 400;
 static const size_t kMaxBackdrops = 8;
 static const size_t kMaxTextShadows = 8;
 
+// Device pixels per user unit along the CTM's longer axis (its columns' length: rotated or skewed too).
+static CGFloat DeviceScale(CGContextRef ctx)
+{
+    CGAffineTransform m = CGContextGetCTM(ctx);
+    return std::max(std::hypot(m.a, m.b), std::hypot(m.c, m.d));
+}
+
 static bool DrawDownsampled(CGContextRef ctx, CGRect r, std::string key, CGFloat blur, const std::function<void(CGContextRef)>& paint)
 {
     CGAffineTransform m = CGContextGetCTM(ctx);
-    if(std::fabs(m.b) > 1e-9 || std::fabs(m.c) > 1e-9 || r.size.width <= 0 || r.size.height <= 0)
+    if(r.size.width <= 0 || r.size.height <= 0)
         return false;
-    CGRect device = CGContextConvertRectToDeviceSpace(ctx, r);
-    CGFloat sx = std::fabs(m.a), sy = std::fabs(m.d);
-    CGFloat pixels = device.size.width * device.size.height;
+    // Telegram (VENDOR.md edit 65): any CTM, rotated or skewed too: the raster is r in user space, sx device pixels a
+    // user unit along x and sy along y (the CTM's columns), and is drawn through the CTM.
+    CGFloat sx = std::hypot(m.a, m.b), sy = std::hypot(m.c, m.d);
+    CGFloat pixels = r.size.width * sx * r.size.height * sy;
     CGFloat k = std::min<CGFloat>(1, 24 / std::max<CGFloat>(blur * std::max(sx, sy), 1));
     if(k >= 0.999 || !(k > 0))
         return false;
     k = std::min<CGFloat>(k, std::sqrt((1 << 20) / std::max<CGFloat>(pixels, 1)));
-    size_t pw = (size_t)std::max<double>(1, std::ceil(device.size.width * k)), ph = (size_t)std::max<double>(1, std::ceil(device.size.height * k));
+    size_t pw = (size_t)std::max<double>(1, std::ceil(r.size.width * sx * k)), ph = (size_t)std::max<double>(1, std::ceil(r.size.height * sy * k));
     CGFloat kx = pw / std::max<CGFloat>(r.size.width, 1e-6), ky = ph / std::max<CGFloat>(r.size.height, 1e-6);
     AppendNumber(key, (double)pw);
     AppendNumber(key, (double)ph);
-    AppendNumber(key, sx);
-    AppendNumber(key, sy);
+    // Rounded: a turned CTM's column lengths carry float noise.
+    AppendNumber(key, std::round(sx * 1e6) / 1e6);
+    AppendNumber(key, std::round(sy * 1e6) / 1e6);
     AppendNumber(key, m.d < 0 ? -1 : 1);
     CGColorSpaceRef space = CGBitmapContextGetColorSpace(ctx);
     if(!space || CGColorSpaceGetModel(space) != kCGColorSpaceModelRGB)
@@ -4065,7 +4076,42 @@ void LHContainer::draw_box_shadow(lh::uint_ptr hdc, const lh::position& box, con
     auto ctx = reinterpret_cast<CGContextRef>(hdc);
     if(!ctx || r.size.width <= 0 || r.size.height <= 0)
         return;
-    if(!m_capture)
+    // Telegram (VENDOR.md edit 65): a blur past 24 device pixels never needs full resolution (Skia's GPU blur scales its
+    // source down until sigma is at most 4). Its raster is laid out on the shadow's own ink, so its key holds no
+    // sub-pixel phase, and is drawn through the CTM, rotated or skewed too: a moving or turning shadow keeps one cache
+    // entry. LH_EXACT_SHADOWS draws it at full resolution, as before, for the parity tests.
+    if(!m_capture && blur * DeviceScale(ctx) > 24 && !getenv("LH_EXACT_SHADOWS"))
+    {
+        std::string key = "shadowdown:";
+        for(CGFloat v : {r.size.width, r.size.height, dx, dy, blur, spread})
+            AppendNumber(key, v);
+        for(auto v : {radius.top_left_x, radius.top_left_y, radius.top_right_x, radius.top_right_y, radius.bottom_right_x, radius.bottom_right_y, radius.bottom_left_x, radius.bottom_left_y})
+            AppendNumber(key, F(v));
+        AppendInteger(key, (shadow.color.red << 24) | (shadow.color.green << 16) | (shadow.color.blue << 8) | shadow.color.alpha);
+        AppendInteger(key, shadow.inset);
+        // Three of the raster's pixels (blur / 24 each) past the ink, so that an inset shadow's raster has its own pixels
+        // on both sides of the box's edge.
+        CGRect area = CGRectInset(ink, -blur / 8, -blur / 8);
+        CGContextSaveGState(ctx);
+        apply_clips(ctx, ink);
+        CGMutablePathRef clip = CGPathCreateMutable();
+        if(!shadow.inset)
+            CGPathAddRect(clip, nullptr, CGRectInset(area, -1, -1));
+        AddRoundedRect(clip, r, radius);
+        CGContextAddPath(ctx, clip);
+        if(shadow.inset)
+            CGContextClip(ctx);
+        else
+            CGContextEOClip(ctx);
+        CGPathRelease(clip);
+        // The raster is not clipped to the box: the box's edge is the clip above, at full resolution, and the raster has
+        // shadow on both sides of it, so scaling it up darkens no ring along the box.
+        bool drawn = DrawDownsampled(ctx, area, key, blur, [&](CGContextRef bitmap) { paint_box_shadow(bitmap, r, radius, shadow, false); });
+        CGContextRestoreGState(ctx);
+        if(drawn)
+            return;
+    }
+    else if(!m_capture)
     {
         CGRect device = CGRectIntegral(CGContextConvertRectToDeviceSpace(ctx, ink));
         CGRect aligned = CGContextConvertRectToUserSpace(ctx, device);
@@ -4106,22 +4152,6 @@ void LHContainer::draw_box_shadow(lh::uint_ptr hdc, const lh::position& box, con
         AppendInteger(key, stretchX > 0);
         AppendInteger(key, stretchY > 0);
         bool drawn = DrawRasterized(ctx, aligned, key, [&](CGContextRef bitmap) { paint_box_shadow(bitmap, compact, radius, copy); }, true, stretchX, stretchY);
-        if(!drawn)
-        {
-            CGContextSaveGState(ctx);
-            CGMutablePathRef clip = CGPathCreateMutable();
-            if(!shadow.inset)
-                CGPathAddRect(clip, nullptr, CGRectInset(ink, -1, -1));
-            AddRoundedRect(clip, r, radius);
-            CGContextAddPath(ctx, clip);
-            if(shadow.inset)
-                CGContextClip(ctx);
-            else
-                CGContextEOClip(ctx);
-            CGPathRelease(clip);
-            drawn = DrawDownsampled(ctx, aligned, key + "|down", blur, [&](CGContextRef bitmap) { paint_box_shadow(bitmap, r, radius, copy); });
-            CGContextRestoreGState(ctx);
-        }
         CGContextRestoreGState(ctx);
         if(drawn)
             return;
@@ -4132,7 +4162,7 @@ void LHContainer::draw_box_shadow(lh::uint_ptr hdc, const lh::position& box, con
     CGContextRestoreGState(ctx);
 }
 
-void LHContainer::paint_box_shadow(CGContextRef ctx, CGRect r, const lh::border_radiuses& radius, const lh::shadow_paint& shadow)
+void LHContainer::paint_box_shadow(CGContextRef ctx, CGRect r, const lh::border_radiuses& radius, const lh::shadow_paint& shadow, bool clip)
 {
     CGFloat dx = F(shadow.x), dy = F(shadow.y), blur = F(shadow.blur), spread = F(shadow.spread);
     CGFloat reach = blur + std::fabs(spread) + std::max(std::fabs(dx), std::fabs(dy)) + 2;
@@ -4153,25 +4183,32 @@ void LHContainer::paint_box_shadow(CGContextRef ctx, CGRect r, const lh::border_
     CGContextSaveGState(ctx);
     CGFloat far = CGRectGetWidth(ink) + reach * 4 + 1000;
     CGMutablePathRef path = CGPathCreateMutable();
+    // Telegram (VENDOR.md edit 65): without `clip` (a downsampled raster), the caller clips to the box.
     if(shadow.inset)
     {
-        CGMutablePathRef clip = CGPathCreateMutable();
-        AddRoundedRect(clip, r, radius);
-        CGContextAddPath(ctx, clip);
-        CGContextClip(ctx);
-        CGPathRelease(clip);
+        if(clip)
+        {
+            CGMutablePathRef box = CGPathCreateMutable();
+            AddRoundedRect(box, r, radius);
+            CGContextAddPath(ctx, box);
+            CGContextClip(ctx);
+            CGPathRelease(box);
+        }
         CGRect frame = CGRectInset(r, -reach * 2, -reach * 2);
         CGPathAddRect(path, nullptr, CGRectOffset(frame, far, 0));
         if(shape.size.width > 0 && shape.size.height > 0)
             AddRoundedRect(path, CGRectOffset(shape, far, 0), shape_radius);
     } else
     {
-        CGMutablePathRef clip = CGPathCreateMutable();
-        CGPathAddRect(clip, nullptr, CGRectInset(ink, -1, -1));
-        AddRoundedRect(clip, r, radius);
-        CGContextAddPath(ctx, clip);
-        CGContextEOClip(ctx);
-        CGPathRelease(clip);
+        if(clip)
+        {
+            CGMutablePathRef outside = CGPathCreateMutable();
+            CGPathAddRect(outside, nullptr, CGRectInset(ink, -1, -1));
+            AddRoundedRect(outside, r, radius);
+            CGContextAddPath(ctx, outside);
+            CGContextEOClip(ctx);
+            CGPathRelease(outside);
+        }
         AddRoundedRect(path, CGRectOffset(shape, far, 0), shape_radius);
     }
     CGAffineTransform ctm    = shadow_transform(ctx);
@@ -4592,6 +4629,27 @@ static CGColorSpaceRef FilterSpace(CGContextRef ctx)
     return space;
 }
 
+// Telegram (VENDOR.md edit 64): an effect store's key, everything a filter's or a backdrop's image is made from: the
+// effect (its owner in the painted tree, its steps), the colour space, and the target's rect (`offset` into document
+// space; rounded to a millionth of a pixel, so that float noise between tiles misses), scales and orientation.
+static std::string EffectKey(char kind, const void* owner, const lh::filter_vector& steps, CGColorSpaceRef space, const FilterTarget& t,
+                             CGPoint offset)
+{
+    std::string key(1, kind);
+    AppendInteger(key, reinterpret_cast<intptr_t>(owner));
+    AppendInteger(key, static_cast<int64_t>(FilterHash(steps, 0x64)));
+    AppendInteger(key, reinterpret_cast<intptr_t>(space));
+    AppendInteger(key, t.flipped);
+    AppendInteger(key, t.reduced);
+    AppendInteger(key, static_cast<int64_t>(t.pw));
+    AppendInteger(key, static_cast<int64_t>(t.ph));
+    for(CGFloat v : {t.user.origin.x + offset.x, t.user.origin.y + offset.y, t.user.size.width, t.user.size.height})
+        AppendInteger(key, std::llround(v * 1e6));
+    for(CGFloat v : {t.sx, t.sy})
+        AppendInteger(key, std::llround(v * 1e9));
+    return key;
+}
+
 void LHContainer::draw_filtered(lh::uint_ptr hdc, const lh::filter_paint& filter, const std::function<void(lh::uint_ptr)>& paint)
 {
     if(lh::g_paint_trace)
@@ -4626,6 +4684,10 @@ void LHContainer::draw_filtered(lh::uint_ptr hdc, const lh::filter_paint& filter
         paint(hdc);
         return;
     }
+    // Telegram (VENDOR.md edit 64): the result draws inside its target only, so a paint whose clip (a tile) the target
+    // misses makes none.
+    if(!CGRectIntersectsRect(target.user, CGContextGetClipBoundingBox(ctx)))
+        return;
     ReduceForBlur(target, *filter.steps);
     CGColorSpaceRef space  = FilterSpace(ctx);
     if(m_backdrop_source_depth > 0 && m_source_filter_scope && s_source_filter_cache.load(std::memory_order_relaxed))
@@ -4687,20 +4749,33 @@ void LHContainer::draw_filtered(lh::uint_ptr hdc, const lh::filter_paint& filter
             return;
         }
     }
-    CGContextRef    bitmap = CreateFilterBitmap(target, space);
-    if(!bitmap)
+    // Telegram (VENDOR.md edit 64): made once per key when a host's paints share a store. A bitmap that cannot be made
+    // paints the content unfiltered where there is no store; with one, every paint draws nothing for it alike.
+    bool unfiltered = false;
+    auto make       = [&]() -> CGImageRef {
+        CGContextRef bitmap = CreateFilterBitmap(target, space);
+        if(!bitmap)
+        {
+            unfiltered = true;
+            return nullptr;
+        }
+        auto saved = m_clips;
+        m_clips.clear();
+        paint(reinterpret_cast<lh::uint_ptr>(bitmap));
+        m_clips = saved;
+        CGImageRef source = CGBitmapContextCreateImage(bitmap);
+        CGContextRelease(bitmap);
+        CGImageRef image = LHCreateFilteredImage(source, *filter.steps, std::max(target.sx, target.sy), target.flipped, false, space);
+        CGImageRelease(source);
+        return image;
+    };
+    const bool shared   = effect_store && filter.owner;
+    CGImageRef filtered = shared ? effect_store->image(EffectKey('f', filter.owner, *filter.steps, space, target, CGPointZero), make) : make();
+    if(unfiltered && !shared)
     {
         paint(hdc);
         return;
     }
-    auto saved = m_clips;
-    m_clips.clear();
-    paint(reinterpret_cast<lh::uint_ptr>(bitmap));
-    m_clips = saved;
-    CGImageRef source = CGBitmapContextCreateImage(bitmap);
-    CGContextRelease(bitmap);
-    CGImageRef filtered = LHCreateFilteredImage(source, *filter.steps, std::max(target.sx, target.sy), target.flipped, false, space);
-    CGImageRelease(source);
     if(filtered)
     {
         CGContextSaveGState(ctx);
@@ -4709,6 +4784,12 @@ void LHContainer::draw_filtered(lh::uint_ptr hdc, const lh::filter_paint& filter
         CGContextRestoreGState(ctx);
         CGImageRelease(filtered);
     }
+}
+
+void LHContainer::allow_backdrops(const std::vector<const void*>& owners)
+{
+    for(const void* owner : owners)
+        backdrop_allowed(owner);
 }
 
 bool LHContainer::backdrop_allowed(const void* owner)
@@ -4753,16 +4834,27 @@ void LHContainer::draw_backdrop(lh::uint_ptr hdc, const lh::filter_paint& filter
     FilterTarget target;
     if(!ctx || m_hidden_depth > 0 || !backdrop_source || !FilterTargetFor(ctx, box, target))
         return;
+    // Telegram (VENDOR.md edit 64): a backdrop draws inside its box only, so a paint whose clip (a tile) the box misses
+    // makes none. After backdrop_allowed: every paint allows the same backdrops.
+    if(!CGRectIntersectsRect(target.user, CGContextGetClipBoundingBox(ctx)))
+        return;
     ReduceForBlur(target, *filter.steps);
     const CGAffineTransform placed = group_matrix();
     if(std::fabs(placed.a - 1) > 1e-6 || std::fabs(placed.d - 1) > 1e-6 || std::fabs(placed.b) > 1e-6 || std::fabs(placed.c) > 1e-6)
         return;
-    CGImageRef source = backdrop_source(filter.owner, CGRectOffset(target.user, placed.tx, placed.ty), target.sx, target.sy, target.flipped);
-    if(!source)
-        return;
-    CGColorSpaceRef space    = FilterSpace(ctx);
-    CGImageRef      filtered = LHCreateFilteredImage(source, *filter.steps, std::max(target.sx, target.sy), target.flipped, true, space);
-    CGImageRelease(source);
+    CGColorSpaceRef space = FilterSpace(ctx);
+    // Telegram (VENDOR.md edit 64): made once per key when a host's paints share a store.
+    auto make = [&]() -> CGImageRef {
+        CGImageRef source = backdrop_source(filter.owner, CGRectOffset(target.user, placed.tx, placed.ty), target.sx, target.sy, target.flipped);
+        if(!source)
+            return nullptr;
+        CGImageRef image = LHCreateFilteredImage(source, *filter.steps, std::max(target.sx, target.sy), target.flipped, true, space);
+        CGImageRelease(source);
+        return image;
+    };
+    CGImageRef filtered = effect_store && filter.owner
+                              ? effect_store->image(EffectKey('b', filter.owner, *filter.steps, space, target, CGPointMake(placed.tx, placed.ty)), make)
+                              : make();
     if(!filtered)
         return;
     CGContextSaveGState(ctx);
@@ -4826,7 +4918,6 @@ void LHContainer::get_language(std::string& language, std::string& culture) cons
 }
 
 // LHHostSupport.h (M1d plan, Task 5): one LHContainer, driven without an LHDocument by WidgetRuntime's iOS host.
-#include "LHHostSupport.h"
 
 struct LHHostContainer::Impl
 {
@@ -4989,4 +5080,94 @@ void LHHostContainer::drawListMarkerImage(CGContextRef ctx, const lh::list_marke
 void LHHostContainer::setBackdropSource(std::function<CGImageRef(const void*, CGRect, CGFloat, CGFloat, bool)> source)
 {
     m_impl->container.backdrop_source = std::move(source);
+}
+
+void LHHostContainer::setEffectStore(LHEffectStore* store)
+{
+    m_impl->container.effect_store = store;
+}
+
+void LHHostContainer::allowBackdrops(const std::vector<const void*>& owners)
+{
+    m_impl->container.allow_backdrops(owners);
+}
+
+// Telegram (VENDOR.md edit 64).
+struct LHEffectStore::Entry
+{
+    std::mutex              lock;
+    std::condition_variable done;
+    bool                    ready = false;
+    CGImageRef              image = nullptr;
+};
+
+LHEffectStore::LHEffectStore() = default;
+
+LHEffectStore::~LHEffectStore()
+{
+    for(auto& entry : m_entries)
+    {
+        if(entry.second->image)
+            CGImageRelease(entry.second->image);
+    }
+}
+
+CGImageRef LHEffectStore::image(const std::string& key, const std::function<CGImageRef()>& make)
+{
+    std::shared_ptr<Entry> entry;
+    bool                   maker = false;
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+        auto found = m_entries.find(key);
+        if(found != m_entries.end())
+            entry = found->second;
+        else
+        {
+            m_made++;
+            if(m_bytes < kMaxBytes)
+            {
+                entry = std::make_shared<Entry>();
+                m_entries.emplace(key, entry);
+                maker = true;
+            }
+        }
+    }
+    if(!entry)
+        return make();
+    if(maker)
+    {
+        // Ready on every way out, a throw included: a paint waiting for this entry must never wait forever.
+        struct Publish
+        {
+            Entry* entry;
+            ~Publish()
+            {
+                {
+                    std::lock_guard<std::mutex> guard(entry->lock);
+                    entry->ready = true;
+                }
+                entry->done.notify_all();
+            }
+        } publish{entry.get()};
+        CGImageRef image = make();
+        {
+            std::lock_guard<std::mutex> guard(entry->lock);
+            entry->image = image;
+        }
+        if(image)
+        {
+            std::lock_guard<std::mutex> guard(m_lock);
+            m_bytes += CGImageGetBytesPerRow(image) * CGImageGetHeight(image);
+        }
+        return image ? CGImageRetain(image) : nullptr;
+    }
+    std::unique_lock<std::mutex> wait(entry->lock);
+    entry->done.wait(wait, [&] { return entry->ready; });
+    return entry->image ? CGImageRetain(entry->image) : nullptr;
+}
+
+size_t LHEffectStore::made() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_made;
 }

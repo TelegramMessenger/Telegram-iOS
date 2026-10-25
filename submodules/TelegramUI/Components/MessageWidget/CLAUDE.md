@@ -199,6 +199,13 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   base CTM, which a layer backing context at 2x/3x lacks (shadows vanish). Tile memory follows the widget's area
   (≤ ~8 MB for 360×600 pt at 3x), whatever the CSS. The view's own layer has transparent 1x1 contents so touches
   arrive on iOS 26/27 (see "iOS 26/27 windows and touch delivery" in the root `CLAUDE.md`).
+  A tile paints the whole tree clipped to its rect. **A draw's tiles share one `WREffectStore`** (twidget edit 64):
+  each filter and backdrop result is made once per draw, only for the tiles it touches, and the bottom corners'
+  colours are read from the drawn tiles (`WidgetTileDrawer.draw`); a store kept past its draw keeps its images. A box
+  shadow with a blur past 24 device pixels is one low-resolution raster, whatever its sub-pixel position or rotation
+  (edit 65); a smaller one is painted by every tile its ink reaches. On an animated widget, blurred effects are still
+  the frame's cost (the runtime record's "Measured", paint cost per frame). **Measure paint cost in the widget
+  harness's app process**: the hostless test processes have no Metal device and paint no CSS filter.
 - **No network, ever.** A widget can never cause a network request from the device, and `openLink` always prompts.
   - **One way out.** Widget JS reaches native code only through the generated bindings, none of which resolves a URL.
     The only way out is the bridge: `openLink` behind its prompt, one per tap (`MessageWidgetCore.bridge`). SDK v1 has

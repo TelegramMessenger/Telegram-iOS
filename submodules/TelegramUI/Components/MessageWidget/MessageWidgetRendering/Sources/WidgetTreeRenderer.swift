@@ -125,12 +125,13 @@ public final class WidgetTreeRenderer {
         return rects
     }
 
-    /// Pixels of `rect` (document coordinates) at `scale`: the tree, and the badge where it covers the rect.
-    public func image(rect: CGRect, scale: CGFloat) -> CGImage? {
+    /// Pixels of `rect` (document coordinates) at `scale`: the tree, and the badge where it covers the rect. The tiles of
+    /// one draw pass one `effects`, so that each filter and backdrop result they show is made once.
+    public func image(rect: CGRect, scale: CGFloat, effects: WREffectStore? = nil) -> CGImage? {
         guard let tree = self.tree, scale.isFinite, scale > 0.0, rect.minX.isFinite, rect.minY.isFinite, rect.width.isFinite, rect.height.isFinite, rect.width > 0.0, rect.height > 0.0, rect.width * scale * rect.height * scale <= WidgetTreeRenderer.maximumImagePixels else {
             return nil
         }
-        guard let base = tree.copyImage(of: rect, scale: scale) else {
+        guard let base = tree.copyImage(of: rect, scale: scale, effects: effects) else {
             return nil
         }
         guard let label = self.badge, let badge = self.badgeRect(), badge.intersects(rect) else {

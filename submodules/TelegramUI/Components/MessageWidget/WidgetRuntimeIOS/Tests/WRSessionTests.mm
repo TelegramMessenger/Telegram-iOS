@@ -62,7 +62,7 @@ double now() {
 
 // The colour (RGBA) at a CSS px point of a tree painted at 2×.
 std::vector<uint8_t> colourAt(WRTree* tree, CGFloat x, CGFloat y) {
-    CGImageRef image = [tree copyImageOfRect:CGRectMake(x, y, 1, 1) scale:2];
+    CGImageRef image = [tree copyImageOfRect:CGRectMake(x, y, 1, 1) scale:2 effects:nil];
     std::vector<uint8_t> pixel(4 * 4, 0);
     if (!image) {
         return pixel;
@@ -432,7 +432,7 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     // The runtime is gone, not only stopped: a stopped one would still answer.
     XCTAssertNil([session evaluateForTesting:@"1"]);
     XCTAssertEqual([session runNextTaskAt:now()], WRStepResultStopped);
-    CGImageRef image = [[session tree] copyImageOfRect:CGRectMake(0, 0, 100, 20) scale:2];
+    CGImageRef image = [[session tree] copyImageOfRect:CGRectMake(0, 0, 100, 20) scale:2 effects:nil];
     XCTAssertTrue(image != nullptr);
     CGImageRelease(image);
 }

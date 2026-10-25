@@ -68,6 +68,13 @@ typedef NS_ENUM(NSInteger, WRResizeAnchor) {
 - (NSString *)session:(WRSession *)session intl:(NSString *)requestJson;
 @end
 
+/// What the tiles of one draw share (twidget edit 64): each filter and backdrop result they show is made once, by the
+/// first tile to ask for it, and kept until the store goes. Pass one to every tile of a draw, then let it go.
+@interface WREffectStore : NSObject
+/// How many results it made.
+@property (nonatomic, readonly) NSUInteger made;
+@end
+
 /// A published layer tree: immutable, and readable on any thread. It outlives its session.
 @interface WRTree : NSObject
 - (instancetype)init NS_UNAVAILABLE;
@@ -77,8 +84,8 @@ typedef NS_ENUM(NSInteger, WRResizeAnchor) {
 /// neither sets one. The tree paints it over the document only; a host view taller than the document paints it below.
 @property (nonatomic, readonly) uint32_t canvasColor;
 /// The tree's `rect` (CSS px) painted at `scale`: a premultiplied BGRA image of ceil(size × scale) pixels, at most
-/// 4096 a side; nil past that or for an empty rect.
-- (nullable CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale CF_RETURNS_RETAINED;
+/// 4096 a side; nil past that or for an empty rect. The tiles of one draw pass one `effects`.
+- (nullable CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale effects:(nullable WREffectStore *)effects CF_RETURNS_RETAINED;
 @end
 
 /// One run of a selectable text: a drawn word, or part of one, in a layout box.

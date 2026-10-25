@@ -25,12 +25,14 @@
 //
 // Updating: the mirror is the document's render_observer. What the fork reports between two publishes is applied at the
 // next publish(), as operations:
-// - a text replacement (edit 16) re-captures its inline context's runs (Content); the pieces it added and removed belong
-//   to those runs;
+// - a text replacement (edit 16) re-captures its inline context's runs (Content), an inline element's through
+//   ItemInfo::runOf; the pieces it added and removed belong to those runs. A line that changed (text, a restyle, a
+//   reflow) and holds an inline element's paint group, whose run is its own context's, is not placed: publish declines;
 // - layout's changed boxes (reported at the write, edit 20): a move gives a Frame to every node whose origin depends on
 //   the item in its context (its own nodes, its descendants' up to the sub-contexts, the sub-contexts themselves) and a
 //   Clip to those a moved clipper clips; a resize re-captures its Box (Content) and gives a Clip to what it clips; an
-//   inline context's re-flowed content re-captures its runs. Nodes that merely moved are never re-captured;
+//   inline context's re-flowed content re-captures its runs. Nodes that merely moved are re-captured only when they moved
+//   by a fraction of a pixel, any fraction (painting rounds to the pixel and the snap grid in document coordinates);
 // - a restyle with the render tree kept (edit 17): its subtree's Boxes and runs are re-captured (Content); an item that
 //   becomes or stops being a paint group gets a Context inserted or removed and its subtree's nodes moved (Move, Frame,
 //   Clip), placed by the placement rule below; a group whose parameters changed gets Group;

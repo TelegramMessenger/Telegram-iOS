@@ -11,8 +11,38 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
+
+/// Edit 64: what the paints of one draw (its tiles) share, so that each filter and backdrop result they show is made
+/// once. LHContainer's draw_filtered and draw_backdrop take their images from it by a key of everything an image is made
+/// from (the effect, its steps, the rect, scales, orientation and colour space it is made at); the first paint to ask
+/// makes it, and one asking meanwhile waits for it. Past kMaxBytes kept, an image is made where it is drawn and not
+/// kept, as without a store. Thread-safe; it keeps its images until it goes.
+class LHEffectStore
+{
+  public:
+    static constexpr size_t kMaxBytes = 32u << 20;
+
+    LHEffectStore();
+    ~LHEffectStore();
+    LHEffectStore(const LHEffectStore&)            = delete;
+    LHEffectStore& operator=(const LHEffectStore&) = delete;
+
+    /// The image for `key` (+1, or nullptr): what `make` (+1 or nullptr) returned the first time it was asked for.
+    CGImageRef image(const std::string& key, const std::function<CGImageRef()>& make);
+    /// How many images it made.
+    size_t made() const;
+
+  private:
+    struct Entry;
+    mutable std::mutex                                      m_lock;
+    std::unordered_map<std::string, std::shared_ptr<Entry>> m_entries;
+    size_t                                                  m_bytes = 0;
+    size_t                                                  m_made  = 0;
+};
 
 class LHHostContainer
 {
@@ -54,6 +84,12 @@ class LHHostContainer
     /// draw_backdrop's source: what was painted behind a backdrop (owner: the backdrop's identity), as LHDocument's
     /// backdropLockedForOwner gives it. +1 or nullptr.
     void setBackdropSource(std::function<CGImageRef(const void* owner, CGRect rect, CGFloat sx, CGFloat sy, bool flipped)> source);
+    /// Edit 64: the store this container's filter and backdrop results go through (nullptr, the default: each is made
+    /// where it is drawn). It must outlive the paint.
+    void setEffectStore(LHEffectStore* store);
+    /// Edit 64: the paint's backdrops (their owners, in tree order), allowed before any is drawn: the first
+    /// kMaxBackdrops, as drawing them in order allows, whichever of them the paint draws or takes from a store.
+    void allowBackdrops(const std::vector<const void*>& owners);
 
   private:
     struct Impl;

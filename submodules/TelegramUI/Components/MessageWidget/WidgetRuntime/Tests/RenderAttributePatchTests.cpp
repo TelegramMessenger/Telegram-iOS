@@ -446,7 +446,8 @@ WR_TEST(testAGeometryChangeKeepsTheTree) {
                   "<div id=box style='position:relative;left:0'>box <b>text</b></div><p id=p>after</p>"
                   "<div id=flex style='display:flex;gap:2px'><span id=f1>a</span><span>b</span></div>"
                   "<div style='display:flex;width:20px'><div id=a style='width:10px;flex:none'></div>"
-                  "<div style='flex:1;overflow:hidden;border-radius:2px;background:#ccc'>c</div></div></body>");
+                  "<div style='flex:1;overflow:hidden;border-radius:2px;background:#ccc'>c</div></div>"
+                  "<p><span id=k>k</span> then <span style='opacity:.5'>faded</span> end</p></body>");
     const uint64_t builds = env.render().buildCount();
     uint64_t resets = env.render().treeRebuildResets();
     auto kept = [&](const std::string& script, const char* what) {
@@ -472,6 +473,9 @@ WR_TEST(testAGeometryChangeKeepsTheTree) {
     kept("const p = document.getElementById('p'); p.style.marginTop = '12px'; p.style.paddingLeft = '9px'", "margin and padding");
     kept("document.getElementById('flex').style.gap = '11px'; document.getElementById('f1').style.flexGrow = '1'", "gap and flex-grow");
     kept("document.getElementById('p').className = 'wide'", "a class whose rule sets width and padding");
+    // An inline element's geometry is its line's: the tree is built again (the line is laid out anew), a paint group after
+    // it in the line included.
+    rebuilt("document.getElementById('k').style.paddingLeft = '20px'", "an inline element's padding before a paint group");
     rebuilt("document.getElementById('p').className = 'gone'", "a class whose rule sets display");
     rebuilt("document.getElementById('box').style.position = 'absolute'", "position");
     rebuilt("document.getElementById('bar').style.width = '20px'; document.getElementById('bar').style.cssFloat = 'left'", "width beside float");
