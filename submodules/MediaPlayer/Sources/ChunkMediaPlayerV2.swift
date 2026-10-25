@@ -1263,6 +1263,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             continue outer
                         }
                     }
+                    if !isVideo {
+                        sampleBuffer = ChunkMediaPlayerV2.normalizeAudioSampleBuffer(
+                            sampleBuffer,
+                            state: &loadedPartsMediaData.audioBufferTimingState
+                        )
+                    }
                     /*if isVideo {
                         print("Enqueue video \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value)")
                     }*/
