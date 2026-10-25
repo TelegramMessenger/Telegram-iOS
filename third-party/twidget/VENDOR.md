@@ -860,8 +860,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     layout; drawing is unaffected, the placements of the rows and of the cells under them move with them, and so does hit
     testing by reading: `render_item::get_element_by_point` subtracts each level's `m_pos` before it descends
     (`render_item.cpp`, the `el_pos.x = x - el_pos.x` lines), so a point inside a captioned table's rows is matched against
-    the cells at a different offset than before. A cell's placement is still one caption height below where it is drawn
-    (rows and cells are each shifted); that is litehtml's, and it was left for WidgetRuntime's boxes (Task 10), which did not do it: OPEN, an M2 item (it mis-hits in `nodeAt` as well as in `borderBox`: a cell is drawn at y=41 while `get_placement` says y=81). Item 7: an element at
+    the cells at a different offset than before. Edit 59 stops shifting the rows themselves, so a cell's placement is
+    where it is drawn. Item 7: an element at
     `font-size: 0` on a kept render tree (Telegram-Mac's template-hole patches can restyle one) gets no line height, as
     a fresh one does; a fresh document is unchanged (the same holds for the iOS renderer's `LHDocument.mm` restyles, item
     7). Items 8 and 9: the gate is unset on macOS, and the bounds and creators have no caller there.
@@ -989,8 +989,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     - **Inherited strings are bounded at one helper** (Ruling E50; `css_properties.cpp` `bound_inherited_string`). A value
       an element inherits as a `std::string` is copied into every descendant's computed style, which no charge on the
       declaring element bounds (16 KiB on `html` over 9,000 elements held +176 MB each). Every inherited string member of
-      `css_properties` (`cursor`, `list-style-image` and its base URL, `font-family`, `text-emphasis-style`,
-      `font-variant-numeric`) is passed through it after `get_property<std::string>(..., true, ...)`: an element that
+      `css_properties` (`cursor`, the base URL of `list-style-image`, `font-family`, `text-emphasis-style`,
+      `font-variant-numeric`; `list-style-image` itself is shared and charged instead, edit 60) is passed through it after `get_property<std::string>(..., true, ...)`: an element that
       declares a string itself (`html_tag::declares_value`: the stored value is a `std::string`, exactly what
       `get_property<std::string>` tests, so `inherit` and an unresolved or refused `var()` do not count) keeps it (it is
       charged), and the copy a descendant inherits is cut at 1 KiB (at a comma
@@ -1478,6 +1478,41 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     takes the nearest `color` declared along that chain, else the use's own computed colour (`svg_current_color`).
     The replaced loop head is under `#if 0`. Pinned by `fork_test.cpp` ("Edit 58") and widget-sandbox's
     `visual/09-svg-a` (the two stars, orange and purple).
+59. **A top caption moves a table's cells once** (`render_table.cpp` `render_item_table::_render`). Upstream moves each
+    row and each cell under it down by the captions' height. A cell's position is the table's (drawing adds it to the
+    table's own, `draw_children`), but placement and hit testing add the row's on the way down (`get_placement`,
+    `get_element_by_point`), so a cell under a 40 px caption drawn at y=40 was placed, and hit, at y=80. The row now
+    stays at the table's top, as in a table without a caption; its boxes come from its cells (`for_inline_boxes`), so
+    its background is drawn where it was. Pinned by `fork_test.cpp` ("Edit 59") and WidgetRuntime's
+    `testACaptionedTablesCellsAreWhereTheyAreDrawn` (boxes and hits against the same table under a 40 px block).
+60. **An image bullet set on a list reaches its items** (`css_properties.cpp` `computed_list_style_image`,
+    `charge_inherited_list_style_image`; `html_tag.cpp` `charge_inherited`, `refund_inherited`; `document.h`
+    `style_charge_bullet`, `style_budget_epoch`). Edit 21 dropped an inherited `list-style-image` over 1 KiB, so
+    `ul { list-style: url(data:…) }` lost its bullets when the URL was longer. `m_list_style_image` is now one
+    `shared_ptr<const std::string>`: an element that declares the URL makes it, the elements that inherit it share their
+    parent's, and the shared-style table and the class-swap cache copy a pointer. Only a list item reads the URL (it
+    hashes and copies it as it lays out and paints its marker, and only it calls `load_image`), so a list item that
+    inherits a URL over 1 KiB is charged its length to the style budget (`style_charge_bullet`), as is one that takes
+    such a style from the shared-style table. Bullets take at most half the budget, so the declarations keep the
+    rest: past it, an item falls back to its type and nothing latches or is reported. The element gives the charge back
+    before it is computed again (`compute_styles`), unless the budget restarted from zero in between
+    (`refresh_all_styles` counts its restarts). A class flip (`flip_class`, Telegram for macOS's template patches)
+    restores cached styles without computing them and so keeps the charges of each element's last compute; WidgetRuntime
+    never patches templates, and its attribute patches forget the flips (`set_element_attributes`).
+    `get_list_style_image` is defined in `css_properties.cpp`: its empty string, a static in a header's inline
+    function, was constant-initialized in read-only memory by a C++20 caller (WidgetRuntime) and then constructed at
+    run time by the fork's gnu++17 code, which crashed. Pinned by `external_test.cpp` (`testInheritedUrlsAreSharedAndCharged`:
+    one string, the charge per list item, the refund, a refresh, a template's class changes back and forth; 9,000 list
+    items stay under half the budget, 0.1 MB over a document without the rule) and WidgetRuntime's
+    `testAListsLongImageBulletReachesItsItems`.
+61. **A table's rows and row groups have a box** (`render_table.h`/`.cpp` `render_item_table::part_placement`, new). The
+    table keeps its cells in its grid and never `init()`s a row or a row group, so neither registers a render item with
+    its element and `getBoundingClientRect` had nothing to measure (0×0). `part_placement` gives a row's border box from
+    the grid, across the columns (the first's left to the last's right) over the row's top to bottom, and a group's over
+    its rows, placed as the cells are (a row's `get_placement`, then the top captions' height). WidgetRuntime's
+    `elementClientRects` asks the nearest table for an element of a row or row-group display that has no render item.
+    Pinned by `fork_test.cpp` ("Edit 61") and WidgetRuntime's `testATableRowsAndGroupsHaveTheirBoxes` (rows, a row a
+    cell spans into, a header group and a body group, under a caption).
 
 ## The iOS font resolver
 

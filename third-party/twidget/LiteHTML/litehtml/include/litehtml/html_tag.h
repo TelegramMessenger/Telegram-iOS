@@ -39,6 +39,10 @@ namespace litehtml
 #else
         mutable size_t         m_style_charged  = 0; // Telegram (VENDOR.md edit 21): what add_style charged this element
 #endif
+        // Telegram (VENDOR.md edit 60): what the inherited bullet URL this element holds charged the style budget, and
+        // the budget's epoch then (a full refresh charges from zero, so an earlier charge is not given back).
+        mutable size_t         m_inherited_charged = 0;
+        mutable uint32_t       m_inherited_epoch   = 0;
         bool m_anonymous_style = false;
         string_map             m_attrs;
         std::vector<string_id> m_pseudo_classes;
@@ -154,6 +158,10 @@ namespace litehtml
         const css_token_vector* find_custom_property(string_id name) const;
         // Charges a var() splice of `bytes` to the style-byte budget (and to this element, for refresh); false if refused.
         bool        charge_splice(size_t bytes) const;
+        // Telegram (VENDOR.md edit 60): charges the inherited bullet URL this list item holds (false if refused), and gives
+        // back what it charged, before the element is computed again.
+        bool        charge_inherited(size_t bytes) const;
+        void        refund_inherited() const;
         // Telegram (VENDOR.md edit 33): the master sheet's cascaded value of `name` for this element (nullptr if it
         // declares none): its matched master rules that style the element itself, in the order they applied. Edit 50:
         // with `layer` (revert-layer), the master's @layer rules' value when they set one, else the engine's.

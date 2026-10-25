@@ -735,6 +735,29 @@ namespace litehtml
                                 [this](size_t bytes) { return bytes == 0 || charge_splice(bytes); });
     }
 
+    bool html_tag::charge_inherited(size_t bytes) const
+    {
+        const auto doc = get_document();
+        size_t charged = 0;
+        if(!doc->style_charge_bullet(bytes, charged))
+            return false;
+        if(m_inherited_epoch != doc->style_budget_epoch())
+        {
+            m_inherited_epoch   = doc->style_budget_epoch();
+            m_inherited_charged = 0;
+        }
+        m_inherited_charged += charged;
+        return true;
+    }
+
+    void html_tag::refund_inherited() const
+    {
+        const auto doc = get_document();
+        if(m_inherited_epoch == doc->style_budget_epoch())
+            doc->style_refund(m_inherited_charged);
+        m_inherited_charged = 0;
+    }
+
     bool html_tag::charge_splice(size_t bytes) const
     {
         size_t charged = 0;
@@ -850,6 +873,7 @@ namespace litehtml
         document::ptr doc = get_document();
         doc->note_style_change();
         mark_layout_dirty();
+        refund_inherited(); // Telegram (VENDOR.md edit 60)
 
         bool        eligible = false;
         bool        shared   = false;
@@ -891,6 +915,7 @@ namespace litehtml
             {
                 m_css  = *hit;
                 shared = true;
+                m_css.charge_inherited_list_style_image(this); // Telegram (VENDOR.md edit 60)
             }
         }
 

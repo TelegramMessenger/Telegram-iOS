@@ -166,6 +166,15 @@ WR_TEST(testListStyleTakesAnImage) {
     checkEval(env, "getComputedStyle(document.querySelector('li')).listStyleType", "disc");
 }
 
+/// D2: an image bullet set on the list reaches its items however long its URL (twidget edit 60): they share the list's
+/// copy, where an inherited URL over 1 KiB was dropped.
+WR_TEST(testAListsLongImageBulletReachesItsItems) {
+    const std::string url = std::string(kPng3x2) + "#" + std::string(2000, 'a');
+    RenderEnv env(page("ul{list-style:url(" + url + ") inside}", "<ul><li>a</li><li>b <b>c</b></li></ul>"));
+    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
+    CHECK(tree && imageMarkers(tree->root()) == 2);
+}
+
 /// html.attr.global: :lang() matches the language an element's own or an ancestor's lang attribute gives (Selectors 4:
 /// case-insensitive, a prefix up to a hyphen), never the container's default; a lang change re-matches as a rebuild.
 WR_TEST(testLangFollowsTheAttribute) {

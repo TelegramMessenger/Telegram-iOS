@@ -995,7 +995,7 @@ reader select of the published layout, built on the widget's queue while its bub
 | List-valued CSS | 8 layers, shadows or transform/filter functions; 32 colour stops or points | `css_parser.h` (twidget edit 15) | later entries dropped | each element copies its lists, each entry paints (100 shadows: 105 MB per 1,000 divs) |
 | CSS nesting | 64 blocks | `css_parser.h` (twidget edit 14) | the deeper block is parsed as empty | litehtml's componentizer recursed once per block |
 | Pseudo-elements | none nest; `content` keeps 32 items; they count against the element cap | twidget edit 19 | not created | unbounded recursion, and 1,002,004 elements from 1,000 divs |
-| Style bytes | 16 MiB of heap payload copied into styles; an inherited string (one the element does not declare as a string, an unresolved `var()` included) 1 KiB | `document.h` `max_style_bytes` (twidget edit 21) | declarations holding heap payload are dropped in document order; `style-bytes` | 16 KiB on `*` over 9,000 elements held 353.6 MB |
+| Style bytes | 16 MiB of heap payload copied into styles; an inherited string (one the element does not declare as a string, an unresolved `var()` included) 1 KiB, but for the bullet URL, which is shared and charged per list item up to half the budget | `document.h` `max_style_bytes`, `style_charge_bullet` (twidget edits 21, 60) | declarations holding heap payload are dropped in document order; `style-bytes`. A bullet past half the budget falls back to the type, latching nothing | 16 KiB on `*` over 9,000 elements held 353.6 MB |
 | Journal | 4,096 distinct nodes | `Journal.h` | the flush rebuilds | bounds the journal |
 | `TelegramWidget` handlers | 16 per `onEvent` type, and 16 `onTheme` callbacks | `TelegramWidget.h` `kMaxHandlersPerEvent` | ignored, no exception | sdk-policy.ts `MAX_HANDLERS_PER_EVENT` |
 | Link URLs | 256 UTF-8 bytes as given and 256 characters normalised; one link call per press | `Links.h` `kMaxLinkLength` | `TypeError`; a second call is `activation-blocked` | sdk-policy.ts `MAX_LINK_LENGTH` |
@@ -1113,6 +1113,14 @@ wall time, printed and not asserted):
 - **The corpus**: every file boots and none stops; the uncaught errors left are by design ("What the corpus still
   trips on", below). With every budget lifted to 200,000,000, only the deliberate runaway stops, and every other widget's boot
   and largest later task stay under a quarter of their budgets.
+
+Pool contention (V6; the widget harness's Tier 1 process in the iPhone 17 / 26.5 test simulator, a debug build, wall
+time read by sampling the widget's tiles on main, measured and not asserted):
+- **`visual/06-css-animations` alone** shows its first tiles 42–66 ms after the chat is laid out, then a new frame
+  every 17 ms (the longest gap 19 ms).
+- **Beside `visual/05-transforms-effects-a` and `-b`**, all three on screen, its first tiles come at 213–519 ms: the
+  pool's two threads take the widgets' tasks in the order they were queued, so they wait for the other two's first
+  draws, which take about 200–500 ms with their blurs at 3×. From then on it keeps 60 fps (the longest gap 35 ms).
 
 Units and KB are deterministic on one platform: the same on every run and, since quickjs-ng change 12, in every build
 configuration (before it, a build without `NDEBUG` charged more for every string). Another platform's allocator can
@@ -1318,9 +1326,6 @@ The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox
   output (`toString`, `getHours`, `getTimezoneOffset`) reads the process time zone; Task 10c, an incremental render
   subtree in the fork, so that structural and non-neutral attribute patches stop publishing `Reset`; the boot measured
   against the allowance on a device.
-- Recorded open and not checked again since: the sub-pixel gap of moved nodes, the SVG `<image>` the fork never
-  loads, a `list-style-image` over 1 KiB on a `<ul>`, and captioned-table cell boxes mis-hitting in `nodeAt` and
-  `RenderTree::borderBox`.
 
 The host contract the app keeps (`MessageWidgetCore`, `WRProductionHost`, `CoreTextRenderHost`):
 - the loop is stepped with `now`, `CACurrentMediaTime()` in milliseconds, which is also the clock `WRProductionHost`

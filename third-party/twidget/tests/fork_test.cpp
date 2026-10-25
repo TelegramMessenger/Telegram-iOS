@@ -2,6 +2,7 @@
 
 #include <litehtml/css_parser.h>
 #include <litehtml/render_item.h>
+#include <litehtml/render_table.h>
 
 #include <chrono>
 #include <cmath>
@@ -623,6 +624,42 @@ int main() {
         // currentColor too: the use's colour.
         if (p.fills != "255,0,0 0,0,255 0,255,0 255,0,255") std::printf("  use fills: %s\n", p.fills.c_str());
         CHECK(p.fills == "255,0,0 0,0,255 0,255,0 255,0,255");
+    }
+
+    // Edit 59: a top caption moves a table's rows down by its height once: the cells' positions carry it, so a cell's
+    // placement, and a hit where it is drawn, are those of the same table under a block as tall as the caption.
+    {
+        const std::string rows = "<tr><td id=c style='height:30px;width:60px;padding:0'>x</td></tr></table></body>";
+        auto captioned = litehtml_test::layout(c, "<body style='margin:0'><table style='border-spacing:0'>"
+                                                  "<caption style='height:40px;padding:0'>c</caption>" + rows);
+        auto block = litehtml_test::layout(c, "<body style='margin:0'><div style='height:40px'></div><table style='border-spacing:0'>" + rows);
+        const float y = float(by_id(captioned, "c")->get_placement().y), expected = float(by_id(block, "c")->get_placement().y);
+        if (y != expected) std::printf("  captioned cell y %g, under a block %g\n", y, expected);
+        CHECK(y == expected);
+        const auto any = [](const std::shared_ptr<litehtml::render_item>&) { return true; };
+        const litehtml::pixel_t x(40.0f), at(expected + 15.0f);
+        const auto hit = captioned->root_render()->get_element_by_point(x, at, x, at, any);
+        CHECK(hit && hit == by_id(captioned, "c"));
+    }
+
+    // Edit 61: a row and a row group have a box, from the table's grid, placed as their cells are: a row across the
+    // columns over its height, a group over its rows.
+    {
+        auto doc = litehtml_test::layout(c, "<body style='margin:0'><table id=t style='border-spacing:0'>"
+                                            "<caption style='height:40px;padding:0'>c</caption><tbody id=g>"
+                                            "<tr id=r1><td id=a style='height:30px;width:60px;padding:0'>x</td><td id=b style='width:20px;padding:0'>y</td></tr>"
+                                            "<tr id=r2><td id=d style='height:20px;padding:0'>z</td><td style='padding:0'>w</td></tr></tbody></table></body>");
+        const auto table = std::dynamic_pointer_cast<litehtml::render_item_table>(by_id(doc, "t")->get_render_item());
+        litehtml::position r1, g;
+        CHECK(table && table->part_placement(by_id(doc, "r1").get(), r1) && table->part_placement(by_id(doc, "g").get(), g));
+        const auto a = by_id(doc, "a")->get_placement(), b = by_id(doc, "b")->get_placement(), d = by_id(doc, "d")->get_placement();
+        if (float(r1.y) != float(a.y) || float(r1.x) != float(a.x) || float(r1.width) != float(b.right() - a.x) || float(r1.height) != float(a.height))
+            std::printf("  row box %g,%g %gx%g\n", float(r1.x), float(r1.y), float(r1.width), float(r1.height));
+        CHECK(float(r1.x) == float(a.x) && float(r1.y) == float(a.y));
+        CHECK(float(r1.width) == float(b.right() - a.x) && float(r1.height) == float(a.height));
+        CHECK(float(g.y) == float(a.y) && float(g.bottom()) == float(d.bottom()) && float(g.width) == float(r1.width));
+        litehtml::position none;
+        CHECK(table && !table->part_placement(by_id(doc, "a").get(), none));
     }
 
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }

@@ -28,6 +28,11 @@ namespace litehtml
                               int zindex) override;
         pixel_t get_draw_vertical_offset() override;
         std::shared_ptr<render_item> init() override;
+        // Telegram (VENDOR.md edit 61): the border box of one of this table's rows or row groups, placed as its cells are
+        // (get_placement): across the grid's columns, over the row's height (a group: from its first row's top to its last
+        // row's bottom); false for anything else. The grid keeps the cells, and the rows are never init()ed, so a row or a
+        // group has no render item of its own to place.
+        bool part_placement(const element* part, position& out) const;
     };
 
     class render_item_table_part : public render_item

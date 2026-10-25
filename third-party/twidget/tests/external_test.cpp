@@ -2261,22 +2261,23 @@ static void testRefreshAfterTheLimitEqualsARebuild() {
 static void testInheritedStringsAreBounded() {
     const int kElements = 9000;
     const std::string a(16 * 1024, 'a');
-    struct Case { const char* name; std::string css; };
+    // `bullet`: the list's image URL, kept and charged instead (edit 60, testInheritedUrlsAreSharedAndCharged).
+    struct Case { const char* name; std::string css; bool bullet = false; };
     const Case cases[] = {
         {"cursor", "html{cursor:" + a + "}"},
         {"cursor url", "html{cursor:url(" + a + "),auto}"},
         {"text-emphasis-style", "html{text-emphasis-style:\"" + a + "\"}"},
         {"text-emphasis shorthand", "html{text-emphasis:\"" + a + "\" red}"},
         {"font-variant-numeric", "html{font-variant-numeric:" + a + "}"},
-        {"list-style-image", "html{list-style-image:url(" + a + ")}"},
-        {"list-style shorthand", "html{list-style:url(" + a + ")}"},
+        {"list-style-image", "html{list-style-image:url(" + a + ")}", true},
+        {"list-style shorthand", "html{list-style:url(" + a + ")}", true},
         {"font-family", "html{font-family:" + a + "}"},
         {"font shorthand", "html{font:12px " + a + "}"},
         // An unresolved var() leaves a token list, not a string: the element declares no string, so it inherits (cut).
         {"cursor var(--nope)", "html{cursor:" + a + "} *{cursor:var(--nope)}"},
         {"text-emphasis-style var(--nope)", "html{text-emphasis-style:\"" + a + "\"} *{text-emphasis-style:var(--nope)}"},
         {"font-variant-numeric var(--nope)", "html{font-variant-numeric:" + a + "} *{font-variant-numeric:var(--nope)}"},
-        {"list-style-image var(--nope)", "html{list-style-image:url(" + a + ")} *{list-style-image:var(--nope)}"},
+        {"list-style-image var(--nope)", "html{list-style-image:url(" + a + ")} *{list-style-image:var(--nope)}", true},
     };
     const std::string body = many_elements(kElements);
     size_t baseline = 0;
@@ -2300,7 +2301,8 @@ static void testInheritedStringsAreBounded() {
         CHECK(b != nullptr);
         if (b) {
             CHECK(b->css().get_cursor().size() <= 1024);
-            CHECK(b->css().get_list_style_image().size() <= 1024);
+            if (!k.bullet)
+                CHECK(b->css().get_list_style_image().size() <= 1024);
             CHECK(b->css().get_text_emphasis_style().size() <= 1024);
             CHECK(b->css().font_family().size() <= 1024);
         }
@@ -2320,6 +2322,89 @@ static void testInheritedStringsAreBounded() {
             CHECK(b->css().get_text_emphasis_style() == "filled");
             CHECK(b->css().font_family() == "Foo,Bar" || b->css().font_family() == "Foo, Bar");
         }
+    }
+}
+
+// Edit 60: an inherited URL over 1 KiB (an image bullet set on a list) is kept: the elements holding it share one
+// string, and each list item among them (only a marker reads the URL) is charged its length to the style budget, given
+// back when it is computed again. Past half the budget an item falls back to no image, and the budget does not latch.
+static void testInheritedUrlsAreSharedAndCharged() {
+    const std::string url = "data:image/png;base64," + std::string(16 * 1024, 'A');
+    const std::string css = "<style>html{list-style:url(" + url + ")} b{display:list-item}</style>";
+    {
+        LimitContainer c;
+        auto doc = litehtml::document::createFromString(litehtml::estring(css + many_elements(100)), &c,
+                                                        litehtml::telegram_master_css());
+        doc->render(litehtml::pixel_t(300.0f));
+        const litehtml::elements_list bs = doc->root()->select_all("b");
+        CHECK(bs.size() == 100);
+        if (bs.size() == 100) {
+            CHECK(bs.front()->css().get_list_style_image() == url);
+            CHECK(&bs.front()->css().get_list_style_image() == &bs.back()->css().get_list_style_image());
+        }
+        CHECK(c.limits.empty());
+        const size_t charged = doc->style_bytes_charged();
+        // html's own declaration and the 100 <b>s, which are list items; head and body hold the string uncharged.
+        if (charged < 101 * url.size() || charged >= 102 * url.size()) std::printf("inherited url: %zu bytes charged\n", charged);
+        CHECK(charged >= 101 * url.size() && charged < 102 * url.size());
+        CHECK(doc->root()->select_one("body")->css().get_list_style_image() == url);
+        doc->root()->compute_styles();
+        CHECK(doc->style_bytes_charged() == charged);
+        doc->refresh_all_styles();
+        doc->root()->compute_styles();
+        CHECK(doc->style_bytes_charged() == charged);
+    }
+    {
+        const std::string body = many_elements(9000);
+        size_t baseline = 0;
+        {
+            LimitContainer c;
+            const size_t before = heap_in_use();
+            auto doc = litehtml::document::createFromString(litehtml::estring("<style>b{display:list-item}</style>" + body), &c,
+                                                            litehtml::telegram_master_css());
+            doc->render(litehtml::pixel_t(300.0f));
+            baseline = heap_in_use() - before;
+        }
+        LimitContainer c;
+        const size_t before = heap_in_use();
+        auto doc = litehtml::document::createFromString(litehtml::estring(css + body), &c, litehtml::telegram_master_css());
+        doc->render(litehtml::pixel_t(300.0f));
+        const double over = double(heap_in_use() - before) - double(baseline);
+        std::printf("inherited url over 9000 elements: +%.1f MB over the baseline, %zu bytes charged\n", over / 1048576,
+                    doc->style_bytes_charged());
+        // One shared string: the copies cost a pointer each.
+        CHECK(over < 2.0 * 1048576);
+        CHECK(c.limits.empty() && !doc->style_bytes_limited());
+        CHECK(doc->style_bytes_charged() <= litehtml::document::max_style_bytes / 2);
+        const litehtml::elements_list bs = doc->root()->select_all("b");
+        CHECK(!bs.empty() && bs.front()->css().get_list_style_image() == url);
+        CHECK(!bs.empty() && bs.back()->css().get_list_style_image().empty());
+    }
+    // A template document's class changes, back and forth: each turn charges the items' bullet and gives it back alike.
+    {
+        LimitContainer c;
+        const auto page = [&](const char* cls) {
+            return "<style>.on{list-style:url(" + url + ")}</style><body><ul class=\"" + std::string(cls) +
+                   "\"><li></li><li></li></ul></body>";
+        };
+        auto doc = litehtml::document::createUpdatableFromString(page("off"), &c, litehtml::telegram_master_css());
+        doc->render(litehtml::pixel_t(300.0f));
+        const size_t off = doc->style_bytes_charged();
+        size_t on = 0;
+        for (int i = 0; i < 3; i++) {
+            bool changed = false;
+            doc->update_from_string(page("on"), &changed);
+            doc->render(litehtml::pixel_t(300.0f));
+            if (i == 0)
+                on = doc->style_bytes_charged();
+            if (doc->style_bytes_charged() != on) std::printf("class change %d on: %zu charged, first %zu\n", i, doc->style_bytes_charged(), on);
+            CHECK(doc->style_bytes_charged() == on);
+            doc->update_from_string(page("off"), &changed);
+            doc->render(litehtml::pixel_t(300.0f));
+            if (doc->style_bytes_charged() != off) std::printf("class change %d off: %zu charged, first %zu\n", i, doc->style_bytes_charged(), off);
+            CHECK(doc->style_bytes_charged() == off);
+        }
+        CHECK(on >= off + 2 * url.size());
     }
 }
 
@@ -2354,6 +2439,7 @@ int main() {
     testStyleBudgetIsDeterministic();
     testVarSplicesAreBudgeted();
     testInheritedStringsAreBounded();
+    testInheritedUrlsAreSharedAndCharged();
     testRefreshAfterTheLimitEqualsARebuild();
     if (failures) {
         std::printf("%d failure(s)\n", failures);

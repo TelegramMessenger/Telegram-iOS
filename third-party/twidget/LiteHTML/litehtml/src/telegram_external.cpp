@@ -561,6 +561,7 @@ namespace litehtml
         }
         m_style_bytes   = 0;
         m_style_limited = false;
+        m_style_budget_epoch++; // Telegram (VENDOR.md edit 60)
         root->refresh_clear_styles();
         root->refresh_replay_styles(0);
         root->parse_attributes();

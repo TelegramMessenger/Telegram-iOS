@@ -219,6 +219,7 @@ namespace litehtml
         // Telegram (VENDOR.md edit 21): the style-byte budget. Charged while an author or user sheet is applied.
         size_t                                  m_style_bytes    = 0;
         bool                                    m_style_limited  = false;
+        uint32_t                                m_style_budget_epoch = 0; // Telegram (VENDOR.md edit 60)
         bool                                    m_style_charging = false;
         int                                     m_style_sheet    = 0;
         mutable long long                       m_style_rule_bytes = -1; // the payload of the largest value of each property in the author and user sheets
@@ -528,6 +529,20 @@ namespace litehtml
         // the container is told sanitizer_limit("style-bytes") once.
         static constexpr size_t max_style_bytes = 16u * 1024u * 1024u;
         size_t style_bytes_charged() const { return m_style_bytes; }
+        // Telegram (VENDOR.md edit 60): counts the budget's restarts from zero (refresh_all_styles), which no charge made
+        // before one survives.
+        uint32_t style_budget_epoch() const { return m_style_budget_epoch; }
+        // Telegram (VENDOR.md edit 60): charges a list item's inherited bullet URL, up to half the budget (the declarations
+        // keep the rest); false, charging nothing and latching nothing, past it or once the budget was passed.
+        bool   style_charge_bullet(size_t bytes, size_t& charged)
+        {
+            charged = 0;
+            if(m_style_limited || bytes > max_style_bytes / 2 || m_style_bytes + bytes > max_style_bytes / 2)
+                return false;
+            m_style_bytes += bytes;
+            charged = bytes;
+            return true;
+        }
         bool   style_bytes_limited() const { return m_style_limited; }
         bool   style_charging() const { return m_style_charging; }
         void   set_style_charging(bool on) { m_style_charging = on; }
