@@ -259,6 +259,14 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     accessoryItems.append(.commands)
                 }
                 
+                // TSupport: dedicated accessory icon opening the full template browser
+                // (D29). Gated the same way as the rest of TSupport's chat-input changes:
+                // isSupportUser plus "1:1 chat with a non-bot TelegramUser" - unreachable
+                // for regular accounts and for bot chats.
+                if isTextEmpty, context.isSupportUser, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo == nil, !hasForward {
+                    accessoryItems.append(.supportTemplates)
+                }
+                
                 if !canSendTextMessages {
                     if stickersEnabled && !stickersAreEmoji && !hasForward {
                         accessoryItems.append(.input(isEnabled: true, inputMode: .stickers))

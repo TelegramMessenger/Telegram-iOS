@@ -25,6 +25,10 @@ enum SettingsSection: Int, CaseIterable {
     case payment
     case extra
     case support
+    // TSupport: volunteer-only settings (currently just Templates). Distinct from `.support`
+    // above, which is the regular Ask a Question/FAQ/Tips section (hidden for support
+    // accounts, D5) and is unrelated to this feature.
+    case tsupport
     case logout
 }
 
@@ -336,6 +340,14 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }))
         items[.support]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_Tips, icon: PresentationResourcesSettings.tips, action: {
             interaction.openSettings(.tips)
+        }))
+    }
+    
+    // TSupport: volunteer-only settings row, straight to Templates (owner reverted the
+    // intermediate "Support" home screen - no other support-only setting exists yet).
+    if isSupportUser {
+        items[.tsupport]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.SupportTemplates_Title, icon: PresentationResourcesSettings.tsupport, action: {
+            interaction.openSettings(.tsupportTemplates)
         }))
     }
     

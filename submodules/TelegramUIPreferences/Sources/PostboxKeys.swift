@@ -9,6 +9,11 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case mediaAutoSaveSettings = 20
     case ageVerificationState = 21
     case textProcessingEditingState = 22
+    // TSupport: persisted per-account "my template language" preference (D35). Support
+    // accounts only; unused (never read or written) for regular accounts.
+    case supportTemplateSettings = 23
+    // TSupport: local-only User Templates collection (D33, Round B). Support accounts only.
+    case supportUserTemplates = 24
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -18,6 +23,8 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let widgetSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.widgetSettings.rawValue)
     public static let mediaAutoSaveSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.mediaAutoSaveSettings.rawValue)
     public static let ageVerificationState: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.ageVerificationState.rawValue)
+    public static let supportTemplateSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.supportTemplateSettings.rawValue)
+    public static let supportUserTemplates: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.supportUserTemplates.rawValue)
     
     public static func textProcessingEditingState(peerId: EnginePeer.Id) -> EngineDataBuffer {
         let key = EngineDataBuffer(length: 4 + 8)
@@ -94,6 +101,9 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case shareWithPeersState = 13
     case webAppPermissionsState = 14
     case richTextArticleDrafts = 15
+    // TSupport: one entry per language, holding that language's parsed official templates
+    // (D32). Support accounts only.
+    case supportTemplateCache = 16
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -110,7 +120,9 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let shareWithPeersState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.shareWithPeersState.rawValue)
     public static let webAppPermissionsState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.webAppPermissionsState.rawValue)
     public static let richTextArticleDrafts = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.richTextArticleDrafts.rawValue)
+    public static let supportTemplateCache = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.supportTemplateCache.rawValue)
 }
+
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case localThemes = 3

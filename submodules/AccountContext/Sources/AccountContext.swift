@@ -1464,6 +1464,11 @@ public protocol SharedAccountContext: AnyObject {
     func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError>
     func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController
     func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
+    // TSupport: canned-reply templates (D28-D37). Support accounts only.
+    func makeSupportTemplatesBrowserController(context: AccountContext, selectTemplate: @escaping (SupportTemplate) -> Void) -> ViewController
+    // TSupport: Templates Settings entry (owner reverted the intermediate "Support" home
+    // screen - Settings links straight to Templates).
+    func makeSupportTemplatesSettingsController(context: AccountContext) -> ViewController
     func makeBusinessIntroSetupScreen(context: AccountContext, initialData: BusinessIntroSetupScreenInitialData) -> ViewController
     func makeBusinessIntroSetupScreenInitialData(context: AccountContext) -> Signal<BusinessIntroSetupScreenInitialData, NoError>
     func makeBusinessLinksSetupScreen(context: AccountContext, initialData: BusinessLinksSetupScreenInitialData) -> ViewController

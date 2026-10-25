@@ -21,6 +21,7 @@ private enum CommandChatInputContextPanelEntryStableId: Hashable {
     case editShortcuts
     case command(PeerCommand)
     case shortcut(Int32)
+    case template(String)
 }
 
 private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
@@ -71,6 +72,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                 } else {
                     return .shortcut(0)
                 }
+            case let .template(template):
+                return .template(template.normalizedQuestion)
             }
         }
     }
@@ -255,6 +258,10 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     hiddenOffset: false,
                     interaction: chatListNodeInteraction
                 )
+            case let .template(template):
+                return SupportTemplateChatInputPanelItem(presentationData: ItemListPresentationData(presentationData), template: template, templateSelected: { template in
+                    commandSelected(.template(template), false)
+                })
             }
         }
     }
@@ -397,6 +404,47 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                 if let shortcutId = shortcut.id {
                     interfaceInteraction.sendShortcut(shortcutId)
                 }
+            case let .template(template):
+                // The matched range from textInputStateContextQueryRangeAndType starts
+                // right after the "/" (it never includes the slash itself - confirmed by
+                // reading ChatContextQuery.swift's slashScalar branch, which does
+                // `index += 1` before setting the range's start). Bot commands intentionally
+                // keep the "/" as part of the inserted command syntax; templates should
+                // not, so the replacement range here is extended one character to the left
+                // to also consume it.
+                func fullQueryRange(_ textInputState: ChatTextInputState) -> NSRange? {
+                    for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
+                        if type == [.command], range.location > 0 {
+                            return NSRange(location: range.location - 1, length: range.length + 1)
+                        }
+                    }
+                    return nil
+                }
+                switch template.value {
+                case let .text(valueText):
+                    interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
+                        if let range = fullQueryRange(textInputState) {
+                            let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
+                            inputText.replaceCharacters(in: range, with: valueText)
+                            let selectionPosition = range.lowerBound + (valueText as NSString).length
+                            return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
+                        }
+                        return (textInputState, inputMode)
+                    }
+                case .contact:
+                    // The contact card itself is sent only after an explicit confirm step
+                    // (D31) - clear the typed "/key" token from the draft now so it doesn't
+                    // linger while that sheet is up.
+                    interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
+                        if let range = fullQueryRange(textInputState) {
+                            let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
+                            inputText.replaceCharacters(in: range, with: "")
+                            return (ChatTextInputState(inputText: inputText, selectionRange: range.lowerBound ..< range.lowerBound), inputMode)
+                        }
+                        return (textInputState, inputMode)
+                    }
+                    interfaceInteraction.sendSupportTemplateContact(template)
+                }
             }
         }, openEditShortcuts: { [weak self] in
             guard let self, let interfaceInteraction = self.interfaceInteraction else {
@@ -482,6 +530,8 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                         itemHeight = MentionChatInputPanelItemNode.itemHeight
                     case .shortcut:
                         itemHeight = 58.0
+                    case .template:
+                        itemHeight = SupportTemplateChatInputPanelItemNode.itemHeight
                     }
                 }
                 if indexLimit >= 4 && i == indexLimit {

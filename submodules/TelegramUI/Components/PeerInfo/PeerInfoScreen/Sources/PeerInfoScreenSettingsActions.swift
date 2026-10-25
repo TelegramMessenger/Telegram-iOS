@@ -192,6 +192,8 @@ extension PeerInfoScreenNode {
             self.openFaq()
         case .tips:
             self.openTips()
+        case .tsupportTemplates:
+            push(self.context.sharedContext.makeSupportTemplatesSettingsController(context: self.context))
         case .phoneNumber:
             guard let controller = self.controller, !controller.presentAccountFrozenInfoIfNeeded() else {
                 return

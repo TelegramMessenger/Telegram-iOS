@@ -244,14 +244,32 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
             }
             
+            // TSupport: canned-reply templates (D28). Same gate as the Quick Reply branch
+            // above (1:1 chat with a non-bot TelegramUser) plus isSupportUser, so this is a
+            // no-op for every regular account regardless of peer shape. Round B merges in
+            // User Templates, with the official-vs-user override from D34/D8 applied via
+            // the shared collision engine (yours wins outright on an exact key match).
+            var templates: Signal<[SupportTemplate], NoError> = .single([])
+            if context.isSupportUser, peer is TelegramUser {
+                let officialTemplates = supportTemplateLanguageSetting(context: context)
+                |> mapToSignal { language -> Signal<[SupportTemplate], NoError> in
+                    return supportTemplates(context: context, language: language)
+                }
+                templates = combineLatest(officialTemplates, supportUserTemplates(context: context))
+                |> map { official, user -> [SupportTemplate] in
+                    return SupportTemplateCollisions.mergedStripTemplates(official: official, user: user, normalizedQuery: normalizeSupportTemplateQuestion(normalizedQuery))
+                }
+            }
+            
             let commands = combineLatest(
                 context.engine.peers.peerCommands(id: peer.id),
                 shortcuts,
+                templates,
                 context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
                 )
             )
-            |> map { commands, shortcuts, accountPeer -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+            |> map { commands, shortcuts, templates, accountPeer -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let filteredCommands = commands.commands.filter { command in
                     if command.command.text.hasPrefix(normalizedQuery) {
                         return true
@@ -262,6 +280,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 if !shortcuts.isEmpty && sortedCommands.isEmpty {
                     for shortcut in shortcuts {
                         sortedCommands.append(.shortcut(shortcut))
+                    }
+                }
+                if !templates.isEmpty && sortedCommands.isEmpty {
+                    for template in templates {
+                        sortedCommands.append(.template(template))
                     }
                 }
                 return { _ in return .commands(ChatInputQueryCommandsResult(

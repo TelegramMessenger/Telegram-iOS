@@ -153,6 +153,11 @@ final class AccessoryItemIconButton: HighlightTrackingButton, GlassBackgroundVie
                 }
             case .commands:
                 return (PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), nil, strings.VoiceOver_BotCommands, 1.0, UIEdgeInsets())
+            case .supportTemplates:
+                // Reuses the commands glyph (D29): same metaphor (insert predefined
+                // content), and the two accessories never show at once - bot chats vs.
+                // support (1:1 user) chats are mutually exclusive.
+                return (PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), nil, "Templates", 1.0, UIEdgeInsets())
             case let .silentPost(value):
                 if value {
                     return (PresentationResourcesChat.chatInputTextFieldSilentPostOnImage(theme), nil, strings.VoiceOver_SilentPostOn, 1.0, UIEdgeInsets())
@@ -176,7 +181,7 @@ final class AccessoryItemIconButton: HighlightTrackingButton, GlassBackgroundVie
     
     private static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
-        case .input, .botInput, .silentPost, .commands, .scheduledMessages, .gift, .suggestPost:
+        case .input, .botInput, .silentPost, .commands, .scheduledMessages, .gift, .suggestPost, .supportTemplates:
             return 32.0
         case let .messageAutoremoveTimeout(timeout):
             var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)

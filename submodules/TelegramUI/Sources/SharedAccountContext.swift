@@ -2874,6 +2874,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return QuickReplySetupScreen.initialData(context: context)
     }
     
+    public func makeSupportTemplatesBrowserController(context: AccountContext, selectTemplate: @escaping (SupportTemplate) -> Void) -> ViewController {
+        return supportTemplatesController(context: context, mode: .chat(selectTemplate: selectTemplate))
+    }
+    
+    public func makeSupportTemplatesSettingsController(context: AccountContext) -> ViewController {
+        return supportTemplatesController(context: context, mode: .settings)
+    }
+
     public func makeBusinessIntroSetupScreen(context: AccountContext, initialData: BusinessIntroSetupScreenInitialData) -> ViewController {
         return BusinessIntroSetupScreen(context: context, initialData: initialData as! BusinessIntroSetupScreen.InitialData)
     }

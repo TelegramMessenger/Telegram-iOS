@@ -952,6 +952,9 @@ public enum ChatControllerPresentationMode: Equatable {
 public enum ChatInputTextCommand: Equatable {
     case command(PeerCommand)
     case shortcut(ShortcutMessageList.Item)
+    // TSupport: canned-reply template match, support accounts only (gated at the one call
+    // site that produces this case). See ai-docs/tsupport/50-templates-design.md.
+    case template(SupportTemplate)
 }
 
 public struct ChatInputQueryCommandsResult: Equatable {

@@ -314,6 +314,9 @@ public struct PresentationResourcesSettings {
     public static let support = renderSettingsIcon(name: "Item List/Icons/Support", backgroundColors: [colorOrange])
     public static let faq = renderSettingsIcon(name: "Item List/Icons/Faq", backgroundColors: [colorLightBlue])
     public static let tips = renderSettingsIcon(name: "Item List/Icons/Tips", backgroundColors: [UIColor(rgb: 0xffcc02)])
+    // TSupport: volunteer-only settings row (Templates). Distinct tint from `support` above
+    // (that's the regular-account Ask a Question row, hidden for support accounts).
+    public static let tsupport = renderSettingsIcon(name: "Item List/Icons/Support", backgroundColors: [colorViolet])
         
     public static let changePhoneNumber = renderSettingsIcon(name: "Item List/Icons/ChangePhone", backgroundColors: [colorPurple])
     public static let deleteAddAccount = renderSettingsIcon(name: "Item List/Icons/Member", backgroundColors: [colorBlue])

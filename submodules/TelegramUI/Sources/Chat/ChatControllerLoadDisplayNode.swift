@@ -1674,6 +1674,61 @@ extension ChatControllerImpl {
             strongSelf.window?.presentInGlobalOverlay(controller)
         }
         
+        // TSupport templates (D28-D37): extracted to explicitly-typed locals, not inline
+        // trailing closures - the surrounding ChatPanelInterfaceInteraction(...) call
+        // already has 100+ closure arguments, and adding two more inline pushed Swift's
+        // type-checker over its complexity budget ("unable to type-check this expression
+        // in reasonable time").
+        let openSupportTemplatesBrowserImpl: () -> Void = { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = self.context.sharedContext.makeSupportTemplatesBrowserController(context: self.context, selectTemplate: { [weak self] template in
+                guard let self else {
+                    return
+                }
+                switch template.value {
+                case let .text(text):
+                    self.interfaceInteraction?.updateTextInputStateAndMode { _, inputMode in
+                        return (ChatTextInputState(inputText: NSAttributedString(string: text)), inputMode)
+                    }
+                case .contact:
+                    self.interfaceInteraction?.sendSupportTemplateContact(template)
+                }
+            })
+            self.push(controller)
+        }
+        
+        let sendSupportTemplateContactImpl: (SupportTemplate) -> Void = { [weak self] template in
+            guard let self, case let .contact(phone, name, precedingText) = template.value else {
+                return
+            }
+            let presentationData = self.presentationData
+            var previewText = "👤 \(name)\n\(phone)"
+            if !precedingText.isEmpty {
+                previewText = precedingText + "\n\n" + previewText
+            }
+            self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: presentationData.strings.SupportTemplates_ShareContactTitle, text: previewText, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.ShareMenu_Send, action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    var messages: [EnqueueMessage] = []
+                    if !precedingText.isEmpty {
+                        var attributes: [MessageAttribute] = []
+                        let entities = generateTextEntities(precedingText, enabledTypes: .all)
+                        if !entities.isEmpty {
+                            attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                        }
+                        messages.append(.message(text: precedingText, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: self.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                    }
+                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaContact(firstName: name, lastName: "", phoneNumber: phone, peerId: nil, vCardData: nil)), threadId: self.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                    self.sendMessages(messages)
+                })
+            ]), in: .window(.root))
+        }
+        
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId, innerSubject, completion in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
@@ -4854,7 +4909,7 @@ extension ChatControllerImpl {
             }
         }, chatController: { [weak self] in
             return self
-        }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
+        }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()), openSupportTemplatesBrowser: openSupportTemplatesBrowserImpl, sendSupportTemplateContact: sendSupportTemplateContactImpl)
         
         self.interfaceInteraction = interfaceInteraction
         

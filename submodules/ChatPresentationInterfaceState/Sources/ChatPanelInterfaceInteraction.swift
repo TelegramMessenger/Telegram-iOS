@@ -201,6 +201,11 @@ public final class ChatPanelInterfaceInteraction {
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
+    // TSupport: canned-reply templates (D28-D37). Defaulted to no-ops so the four other
+    // construction sites of this struct (attachment panel, recent-actions log, peer
+    // selection, peer-info selection panel) need no changes at all.
+    public let openSupportTemplatesBrowser: () -> Void
+    public let sendSupportTemplateContact: (SupportTemplate) -> Void
         
     public init(
         setupReplyMessage: @escaping (EngineMessage.Id?, EngineMessageReplyInnerSubject?, @escaping (ContainedViewLayoutTransition, @escaping () -> Void) -> Void) -> Void,
@@ -333,7 +338,9 @@ public final class ChatPanelInterfaceInteraction {
         updateDisplayHistoryFilterAsList: @escaping (Bool) -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
         chatController: @escaping () -> ViewController?,
-        statuses: ChatPanelInterfaceInteractionStatuses?
+        statuses: ChatPanelInterfaceInteractionStatuses?,
+        openSupportTemplatesBrowser: @escaping () -> Void = {},
+        sendSupportTemplateContact: @escaping (SupportTemplate) -> Void = { _ in }
     ) {
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
@@ -467,6 +474,8 @@ public final class ChatPanelInterfaceInteraction {
 
         self.chatController = chatController
         self.statuses = statuses
+        self.openSupportTemplatesBrowser = openSupportTemplatesBrowser
+        self.sendSupportTemplateContact = sendSupportTemplateContact
     }
     
     public convenience init(

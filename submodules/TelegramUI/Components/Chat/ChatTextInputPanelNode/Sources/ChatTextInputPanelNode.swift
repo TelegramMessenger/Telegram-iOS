@@ -5765,6 +5765,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     self.interfaceInteraction?.updateTextInputStateAndMode { _, inputMode in
                         return (ChatTextInputState(inputText: NSAttributedString(string: "/")), .text)
                     }
+                case .supportTemplates:
+                    self.interfaceInteraction?.openSupportTemplatesBrowser()
                 case .silentPost:
                     self.interfaceInteraction?.toggleSilentPost()
                 case .messageAutoremoveTimeout:

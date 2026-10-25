@@ -175,6 +175,9 @@ enum PeerInfoSettingsSection {
     case support
     case faq
     case tips
+    // TSupport: Settings entry straight to Templates (owner reverted the intermediate
+    // "Support" home screen).
+    case tsupportTemplates
     case phoneNumber
     case username
     case addAccount
