@@ -193,7 +193,7 @@ public final class FFMpegMediaDataReaderV1: MediaDataReader {
             }
             self.audioSource = nil
         } else {
-            let audioSource = SoftwareAudioSource(path: filePath, ignoreEditList: ignoreEditList)
+            let audioSource = SoftwareAudioSource(path: filePath, ignoreEditList: ignoreEditList, isPlayback: true)
             if audioSource.hasStream {
                 self.audioSource = audioSource
             } else {
