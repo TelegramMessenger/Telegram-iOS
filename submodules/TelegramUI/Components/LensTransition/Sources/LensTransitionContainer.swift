@@ -27,7 +27,7 @@ public final class LensTransitionContainer: UIView {
     }
     private var cornerRadius: CGFloat = 30.0
     private var sourceLease: ContextMenuSourceLease?
-    private var sourceTake: CrossWindowSourceTake?
+    private var sourceTake: CrossWindowSourceTake.Claim?
     private var replacementVisibilityAssertion: AnyObject?
 
     public static var isMorphSupported: Bool {
@@ -81,7 +81,7 @@ public final class LensTransitionContainer: UIView {
             self.fadeIn(alongsideAnimations: alongsideAnimations)
             return
         }
-        self.sourceTake = CrossWindowSourceTake(source: sourceView, into: self)
+        self.sourceTake = CrossWindowSourceTake.claim(source: sourceView, into: self)
         let parameters = Self.previewParameters(sourceView: sourceView, sourceRect: sourceRect, sourcePath: sourcePath)
         self.originalSourceView = sourceView
         self.sourceSizeAtOpen = (sourceView as? ContextExtractableContainer)?.normalState.size
@@ -259,13 +259,47 @@ public final class LensTransitionContainer: UIView {
 /// and it stays hidden after the close until UIKit completes the morph, about a second later. So, as the context
 /// controller takes an extracted source into its own hierarchy, the source moves into the menu's window for the menu's
 /// lifetime, just below the menu and at the same place on screen, and goes back to its parent when the menu is gone.
+///
+/// A menu that opens from the source while another one from it is still closing finds the source already in its window,
+/// and shares the take: the source goes back only when the last of the menus is gone, not from under the newer one.
 private final class CrossWindowSourceTake {
+    /// One menu's hold on a source's take.
+    final class Claim {
+        private let take: CrossWindowSourceTake
+
+        fileprivate init(take: CrossWindowSourceTake) {
+            self.take = take
+            take.claims += 1
+        }
+
+        deinit {
+            self.take.claims -= 1
+            if self.take.claims == 0 {
+                self.take.restore()
+            }
+        }
+    }
+
+    static func claim(source: UIView, into menuView: UIView) -> Claim? {
+        if let take = objc_getAssociatedObject(source, &crossWindowSourceTakeKey) as? CrossWindowSourceTake {
+            // A menu in another window leaves the source where it is: taking it again would hand the source to a host
+            // that the first take then removes.
+            return take.host.window === menuView.window ? Claim(take: take) : nil
+        }
+        guard let take = CrossWindowSourceTake(source: source, into: menuView) else {
+            return nil
+        }
+        objc_setAssociatedObject(source, &crossWindowSourceTakeKey, take, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return Claim(take: take)
+    }
+
     private weak var source: UIView?
     private weak var originalParent: UIView?
     private let originalIndex: Int
     private let host = UIView()
+    private var claims = 0
 
-    init?(source: UIView, into menuView: UIView) {
+    private init?(source: UIView, into menuView: UIView) {
         guard let parent = source.superview, let sourceWindow = source.window, let menuWindow = menuView.window, sourceWindow !== menuWindow, sourceWindow.screen !== menuWindow.screen || sourceWindow.windowScene !== menuWindow.windowScene else {
             return nil
         }
@@ -290,13 +324,18 @@ private final class CrossWindowSourceTake {
         self.host.addSubview(source)
     }
 
-    deinit {
-        if let source = self.source, source.superview === self.host {
-            source.removeFromSuperview()
-            if let parent = self.originalParent {
-                parent.insertSubview(source, at: min(self.originalIndex, parent.subviews.count))
+    private func restore() {
+        if let source = self.source {
+            objc_setAssociatedObject(source, &crossWindowSourceTakeKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            if source.superview === self.host {
+                source.removeFromSuperview()
+                if let parent = self.originalParent {
+                    parent.insertSubview(source, at: min(self.originalIndex, parent.subviews.count))
+                }
             }
         }
         self.host.removeFromSuperview()
     }
 }
+
+private var crossWindowSourceTakeKey: UInt8 = 0

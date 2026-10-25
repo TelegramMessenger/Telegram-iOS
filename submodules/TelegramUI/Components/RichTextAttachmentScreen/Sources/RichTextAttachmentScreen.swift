@@ -1435,7 +1435,9 @@ final class RichTextAttachmentScreenComponent: Component {
         
         /// A menu opened from an item of the bottom action bar morphs out of the whole bar.
         private func actionBarMenuSourceView(_ sourceView: UIView) -> UIView {
-            if let actionBarView = self.actionBar.view as? RichTextActionBarComponent.View, sourceView.isDescendant(of: actionBarView) {
+            // Asked of the glass, not the bar: a menu over the keyboard takes the glass, items and all, into the
+            // keyboard's window until it has closed, so an item tapped meanwhile is in the glass but not in the bar.
+            if let actionBarView = self.actionBar.view as? RichTextActionBarComponent.View, sourceView.isDescendant(of: actionBarView.menuSourceView) {
                 return actionBarView.menuSourceView
             }
             return sourceView

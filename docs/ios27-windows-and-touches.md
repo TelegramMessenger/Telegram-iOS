@@ -124,6 +124,14 @@ hidden until UIKit completed the morph, 1.2 s later. `LensTransitionContainer` n
 window for the menu's lifetime (`CrossWindowSourceTake`: below the menu, at the same place on screen, back in its
 parent when the menu is gone), as the context controller does with an extracted source.
 
+The source stays taken until UIKit completes the close, about 1.4 s after it starts, so a second menu can open from it
+in the meantime. Two things followed from that. Code that recognises its source by where it sits in its own hierarchy
+no longer recognises it: the article editor found the bar's glass by asking whether the tapped item was inside the bar,
+and while the glass was in the keyboard's window the menu opened from the item, which does not morph, with the plain
+scale animation. It now asks whether the item is inside the glass. And the second menu found its source already in its
+window and took nothing, so the first menu's cleanup would have moved the source back to the app's window under it;
+overlapping menus now share the source's take, which ends with the last of them.
+
 ## A layer that renders nothing receives no touches
 
 **`-hitTest:` is not the whole story.** A view whose layer renders nothing at all — `backgroundColor`
