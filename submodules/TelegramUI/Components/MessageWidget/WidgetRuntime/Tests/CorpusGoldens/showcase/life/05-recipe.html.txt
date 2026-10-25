@@ -1,0 +1,227 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="hero"><span class="emoji">🍝</span><h3>Cacio e pepe</h3><div class="meta"><span>⏱ 20 min</span><span>🔥 Easy</span><span>★ 4.8 · 1.2k</span></div></div>
+  <div class="tabs" id="tabs"><button class="on" data-t="0" role="button">Ingredients</button><button data-t="1" role="button">Steps</button><span class="ink" id="ink" style="left:18px;width:84px"></span></div>
+  <div class="pane on" id="p0">
+    <div class="serv"><span>Servings</span><span class="stepper"><button id="minus" aria-label="fewer">−</button><b id="servN">2</b><button id="plus" aria-label="more">+</button></span></div>
+    <div id="ings"><div class="ing" data-i="0"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="nm">Spaghetti or tonnarelli</span><span class="q">200 g</span></div><div class="ing" data-i="1"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="nm">Pecorino Romano, finely grated</span><span class="q">100 g</span></div><div class="ing" data-i="2"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="nm">Black pepper, whole</span><span class="q">2 tsp</span></div><div class="ing" data-i="3"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="nm">Salt for the water</span><span class="q">1 tbsp</span></div><div class="ing" data-i="4"><span class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="nm">Pasta water, reserved</span><span class="q">150 ml</span></div></div>
+  </div>
+  <div class="pane" id="p1">
+    <div class="prog"><i id="prog" style="width: 20%;"></i></div>
+    <div class="deck"><div class="track" id="track" style="transform: translateX(0%);"><div class="step cur"><div class="n">STEP 1 OF 5</div><p>Toast the pepper. Crush the peppercorns coarsely and toast them in a dry pan over medium heat until fragrant.</p><button class="tm" data-i="0"><svg viewBox="0 0 28 28"><circle class="t" cx="14" cy="14" r="11"></circle><circle class="p" cx="14" cy="14" r="11" style="stroke-dasharray:69.1 69.1;stroke-dashoffset:0"></circle></svg><span>Start 2 min timer</span></button></div><div class="step"><div class="n">STEP 2 OF 5</div><p>Boil the pasta in slightly less salted water than usual — the cheese is salty. Cook 1 minute short of al dente.</p><button class="tm" data-i="1"><svg viewBox="0 0 28 28"><circle class="t" cx="14" cy="14" r="11"></circle><circle class="p" cx="14" cy="14" r="11" style="stroke-dasharray:69.1 69.1;stroke-dashoffset:0"></circle></svg><span>Start 9 min timer</span></button></div><div class="step"><div class="n">STEP 3 OF 5</div><p>Make the paste. Mix the pecorino with a few spoons of warm (not boiling) pasta water into a thick cream. No lumps.</p></div><div class="step"><div class="n">STEP 4 OF 5</div><p>Combine off the heat. Pasta into the pepper pan, then the cheese cream. Toss hard, add water a splash at a time until glossy.</p><button class="tm" data-i="3"><svg viewBox="0 0 28 28"><circle class="t" cx="14" cy="14" r="11"></circle><circle class="p" cx="14" cy="14" r="11" style="stroke-dasharray:69.1 69.1;stroke-dashoffset:0"></circle></svg><span>Start 1 min timer</span></button></div><div class="step"><div class="n">STEP 5 OF 5</div><p>Serve at once with more pepper and a little pecorino on top. The sauce waits for no one.</p></div></div></div>
+    <div class="nav"><button id="prev" disabled="">‹ Back</button><button class="next" id="next">Next ›</button></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 453.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 453.7
+    div 0 0 360 453.7
+      div 18 16 324 98
+        span 342 14 0 0
+        h3 18 67.3 324 27.5
+        div 18 97.8 324 16.2
+          span 18 97.8 80 16.2
+          span 110 97.8 72 16.2
+          span 194 97.8 120 16.2
+      div 18 130 324 42.9
+        button 18 142 88 18.9
+        button 124 142 40 18.9
+        span 18 171.9 84 2
+      div 18 187.9 324 249.8
+        div 18 187.9 324 30
+          span 18 194.125 64 17.55
+          span 242 187.9 100 30
+            button 257 196.9 0 12
+            b 284 194.125 16 17.55
+            button 327 196.9 0 12
+        div 18 227.9 324 209.8
+          div 18 235.9 324 22
+            span 20 237.9 18 18
+              svg 23 240.9 12 12
+                path 0 0 0 0
+            span 50 237.45 218 18.9
+            span 278 237.45 64 18.9
+          div 18 274.9 324 37.8
+            span 20 284.8 18 18
+              svg 23 287.8 12 12
+                path 0 0 0 0
+            span 50 274.9 218 37.8
+            span 278 284.35 64 18.9
+          div 18 329.7 324 22
+            span 20 331.7 18 18
+              svg 23 334.7 12 12
+                path 0 0 0 0
+            span 50 331.25 218 18.9
+            span 278 331.25 64 18.9
+          div 18 368.7 324 22
+            span 20 370.7 18 18
+              svg 23 373.7 12 12
+                path 0 0 0 0
+            span 50 370.25 218 18.9
+            span 278 370.25 64 18.9
+          div 18 407.7 324 22
+            span 20 409.7 18 18
+              svg 23 412.7 12 12
+                path 0 0 0 0
+            span 50 409.25 218 18.9
+            span 278 409.25 64 18.9
+      div 0 0 0 0
+        div 0 0 0 0
+          i 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              p 0 0 0 0
+              button 0 0 0 0
+                svg 0 0 0 0
+                  circle 0 0 0 0
+                  circle 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              p 0 0 0 0
+              button 0 0 0 0
+                svg 0 0 0 0
+                  circle 0 0 0 0
+                  circle 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              p 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              p 0 0 0 0
+              button 0 0 0 0
+                svg 0 0 0 0
+                  circle 0 0 0 0
+                  circle 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              p 0 0 0 0
+        div 0 0 0 0
+          button 0 0 0 0
+          button 0 0 0 0
+
+== paint
+root 360x453.7 items=85
+  solid-fill bounds=(0,0,360,454) layer=(border=(0,0,360,454),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,454),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,453.7) pos=(0,0,360,453.7) radius=(0,0,0,0,0,0,0,0)
+  solid-fill bounds=(242,188,30,30) layer=(border=(242,188,30,30),radius=(8,8,8,8,8,8,8,8),clip=(242,188,30,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(242,188,30,30) borders=(left=(1,4,#00000014),top=(1,4,#00000014),right=(1,4,#00000014),bottom=(1,4,#00000014),radius=(8,8,8,8,8,8,8,8)) pos=(242,188,30,30) root=0
+  solid-fill bounds=(312,188,30,30) layer=(border=(312,188,30,30),radius=(8,8,8,8,8,8,8,8),clip=(312,188,30,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(312,188,30,30) borders=(left=(1,4,#00000014),top=(1,4,#00000014),right=(1,4,#00000014),bottom=(1,4,#00000014),radius=(8,8,8,8,8,8,8,8)) pos=(312,188,30,30) root=0
+  borders bounds=(18,228,324,39) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(18,228,324,39) root=0
+  borders bounds=(18,236,22,22) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(11,11,11,11,11,11,11,11)) pos=(18,236,22,22) root=0
+  set-clip bounds=(23,240.9,12,12) pos=(23,240.9,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,240.9,12,12)
+    group opacity=1 matrix=(0.5,0,0,0.5,23,240.9) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(18,267,324,55) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(18,267,324,55) root=0
+  borders bounds=(18,283,22,22) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(11,11,11,11,11,11,11,11)) pos=(18,283,22,22) root=0
+  set-clip bounds=(23,287.8,12,12) pos=(23,287.8,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,287.8,12,12)
+    group opacity=1 matrix=(0.5,0,0,0.5,23,287.8) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(18,322,324,39) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(18,322,324,39) root=0
+  borders bounds=(18,330,22,22) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(11,11,11,11,11,11,11,11)) pos=(18,330,22,22) root=0
+  set-clip bounds=(23,334.7,12,12) pos=(23,334.7,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,334.7,12,12)
+    group opacity=1 matrix=(0.5,0,0,0.5,23,334.7) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(18,361,324,39) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(18,361,324,39) root=0
+  borders bounds=(18,369,22,22) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(11,11,11,11,11,11,11,11)) pos=(18,369,22,22) root=0
+  set-clip bounds=(23,373.7,12,12) pos=(23,373.7,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,373.7,12,12)
+    group opacity=1 matrix=(0.5,0,0,0.5,23,373.7) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(18,408,22,22) borders=(left=(2,4,#00000014),top=(2,4,#00000014),right=(2,4,#00000014),bottom=(2,4,#00000014),radius=(11,11,11,11,11,11,11,11)) pos=(18,408,22,22) root=0
+  set-clip bounds=(23,412.7,12,12) pos=(23,412.7,12,12) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,412.7,12,12)
+    group opacity=1 matrix=(0.5,0,0,0.5,23,412.7) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-2,0.5,28,23.5) ops=(0,1,1) points=(5,12.5,9.5,17,19,7.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ffffffff stroke-width=3 cap=1 join=1 miter=4 dashes=(24,24) dash-offset=24 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,453.7) pos=(0,0,360,453.7) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(10,186,80,32) pos=(18,194,64,16) color=#6e6e73ff text="Servings" font=f1 glyphs=8 advance=64
+  text bounds=(249,190,40,32) pos=(257,198,24,16) color=#0a0a0aff text="−" font=f2 glyphs=3 advance=24
+  text bounds=(280,186,24,32) pos=(288,194,8,16) color=#6e6e73ff text="2" font=f3 glyphs=1 advance=8
+  text bounds=(319,190,24,32) pos=(327,198,8,16) color=#0a0a0aff text="+" font=f2 glyphs=1 advance=8
+  text bounds=(42,230,88,32) pos=(50,238,72,16) color=#0a0a0aff text="Spaghetti" font=f4 glyphs=9 advance=72
+  text bounds=(122,230,32,32) pos=(130,238,16,16) color=#0a0a0aff text="or" font=f4 glyphs=2 advance=16
+  text bounds=(146,230,96,32) pos=(154,238,80,16) color=#0a0a0aff text="tonnarelli" font=f4 glyphs=10 advance=80
+  text bounds=(294,230,40,32) pos=(302,238,24,16) color=#0a0a0aff text="200" font=f5 glyphs=3 advance=24
+  text bounds=(326,230,24,32) pos=(334,238,8,16) color=#0a0a0aff text="g" font=f5 glyphs=1 advance=8
+  text bounds=(42,268,80,32) pos=(50,276,64,16) color=#0a0a0aff text="Pecorino" font=f4 glyphs=8 advance=64
+  text bounds=(114,268,72,32) pos=(122,276,56,16) color=#0a0a0aff text="Romano," font=f4 glyphs=7 advance=56
+  text bounds=(178,268,64,32) pos=(186,276,48,16) color=#0a0a0aff text="finely" font=f4 glyphs=6 advance=48
+  text bounds=(42,287,64,32) pos=(50,295,48,16) color=#0a0a0aff text="grated" font=f4 glyphs=6 advance=48
+  text bounds=(294,277,40,32) pos=(302,285,24,16) color=#0a0a0aff text="100" font=f5 glyphs=3 advance=24
+  text bounds=(326,277,24,32) pos=(334,285,8,16) color=#0a0a0aff text="g" font=f5 glyphs=1 advance=8
+  text bounds=(42,324,56,32) pos=(50,332,40,16) color=#0a0a0aff text="Black" font=f4 glyphs=5 advance=40
+  text bounds=(90,324,72,32) pos=(98,332,56,16) color=#0a0a0aff text="pepper," font=f4 glyphs=7 advance=56
+  text bounds=(154,324,56,32) pos=(162,332,40,16) color=#0a0a0aff text="whole" font=f4 glyphs=5 advance=40
+  text bounds=(294,324,24,32) pos=(302,332,8,16) color=#0a0a0aff text="2" font=f5 glyphs=1 advance=8
+  text bounds=(310,324,40,32) pos=(318,332,24,16) color=#0a0a0aff text="tsp" font=f5 glyphs=3 advance=24
+  text bounds=(42,363,48,32) pos=(50,371,32,16) color=#0a0a0aff text="Salt" font=f4 glyphs=4 advance=32
+  text bounds=(82,363,40,32) pos=(90,371,24,16) color=#0a0a0aff text="for" font=f4 glyphs=3 advance=24
+  text bounds=(114,363,40,32) pos=(122,371,24,16) color=#0a0a0aff text="the" font=f4 glyphs=3 advance=24
+  text bounds=(146,363,56,32) pos=(154,371,40,16) color=#0a0a0aff text="water" font=f4 glyphs=5 advance=40
+  text bounds=(286,363,24,32) pos=(294,371,8,16) color=#0a0a0aff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(302,363,48,32) pos=(310,371,32,16) color=#0a0a0aff text="tbsp" font=f5 glyphs=4 advance=32
+  text bounds=(42,402,56,32) pos=(50,410,40,16) color=#0a0a0aff text="Pasta" font=f4 glyphs=5 advance=40
+  text bounds=(90,402,64,32) pos=(98,410,48,16) color=#0a0a0aff text="water," font=f4 glyphs=6 advance=48
+  text bounds=(146,402,80,32) pos=(154,410,64,16) color=#0a0a0aff text="reserved" font=f4 glyphs=8 advance=64
+  text bounds=(286,402,40,32) pos=(294,410,24,16) color=#0a0a0aff text="150" font=f5 glyphs=3 advance=24
+  text bounds=(318,402,32,32) pos=(326,410,16,16) color=#0a0a0aff text="ml" font=f5 glyphs=2 advance=16
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,453.7) pos=(0,0,360,453.7) radius=(0,0,0,0,0,0,0,0)
+  linear-gradient bounds=(0,0,360,130) layer=(border=(0,0,360,130),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,130),origin=(0,0,360,130),attachment=0,repeat=0,root=0) points=((0,#c94b2bff,-),(0.6,#e07a2fff,-),(1,#f2b05eff,-)) space=0 hue=0 start=(57.5,-57.5) end=(302.5,187.5)
+  radial-gradient bounds=(0,0,360,130) layer=(border=(0,0,360,130),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,130),origin=(0,0,360,130),attachment=0,repeat=0,root=0) points=((0,#ffd89bff,-),(0.45,#ffd89b00,-),(0.45,#00000000,-),(1,#00000000,-)) space=0 hue=0 position=(288,26) radius=(306.203,306.203)
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(8,87.8,336,36) exact=1
+    text bounds=(10,90,40,32) pos=(18,98,24,16) color=#ffffffff text="⏱" font=f6 glyphs=3 advance=24
+    text bounds=(42,90,32,32) pos=(50,98,16,16) color=#ffffffff text="20" font=f6 glyphs=2 advance=16
+    text bounds=(66,90,40,32) pos=(74,98,24,16) color=#ffffffff text="min" font=f6 glyphs=3 advance=24
+    text bounds=(102,90,48,32) pos=(110,98,32,16) color=#ffffffff text="🔥" font=f6 glyphs=4 advance=32
+    text bounds=(142,90,48,32) pos=(150,98,32,16) color=#ffffffff text="Easy" font=f6 glyphs=4 advance=32
+    text bounds=(186,90,40,32) pos=(194,98,24,16) color=#ffffffff text="★" font=f6 glyphs=3 advance=24
+    text bounds=(218,90,40,32) pos=(226,98,24,16) color=#ffffffff text="4.8" font=f6 glyphs=3 advance=24
+    text bounds=(250,90,32,32) pos=(258,98,16,16) color=#ffffffff text="·" font=f6 glyphs=2 advance=16
+    text bounds=(274,90,48,32) pos=(282,98,32,16) color=#ffffffff text="1.2k" font=f6 glyphs=4 advance=32
+  text bounds=(10,64,56,32) pos=(18,72,40,16) color=#ffffffff text="Cacio" font=f7 glyphs=5 advance=40
+  text bounds=(58,64,24,32) pos=(66,72,8,16) color=#ffffffff text="e" font=f7 glyphs=1 advance=8
+  text bounds=(74,64,48,32) pos=(82,72,32,16) color=#ffffffff text="pepe" font=f7 glyphs=4 advance=32
+  group opacity=1 matrix=(0.99918,0.0404806,-0.0404806,0.99918,0.894012,-14.9919) backface=0 bounds=(306,-22,72,72) exact=0
+    filter steps=((drop-shadow,amount=0,x=0px,y=6px,radius=10px,color=#00000040)) box=(338,10,8,8)
+      text bounds=(338,10,8,8) pos=(342,14,0,0) color=#ffffffff text="🍝" font=f8 glyphs=4 advance=32
+  borders bounds=(0,130,360,44) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(0,130,360,44) root=0
+  text bounds=(10,135,104,32) pos=(18,143,88,16) color=#0a0a0aff text="Ingredients" font=f9 glyphs=11 advance=88
+  text bounds=(116,135,56,32) pos=(124,143,40,16) color=#6e6e73ff text="Steps" font=f9 glyphs=5 advance=40
+  solid-fill bounds=(18,172,84,2) layer=(border=(18,172,84,2),radius=(0,0,0,0,0,0,0,0),clip=(18,172,84,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#e07a2fff
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=18,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=22,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.22,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=54,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

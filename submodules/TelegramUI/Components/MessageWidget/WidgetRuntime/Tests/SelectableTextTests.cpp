@@ -165,6 +165,19 @@ WR_TEST(testRunsCarryTheirTextNodeAndOffset) {
     CHECK_EQ(text.runs[1].start, uint32_t(3));
 }
 
+/// A Text that `textContent` replaces is a new node with a new key, even when the text and its place are the same (the
+/// text patch swaps it in: RenderTree::textSwaps), so a selection boundary named by the old one is gone.
+WR_TEST(testAReplacedTextIsANewNode) {
+    RenderEnv env(page("", "<p id=p style=\"user-select:text\">ab cd</p>"));
+    const uint64_t before = exported(env).runs.at(0).node;
+    const uint64_t patches = env.render().patchCount();
+    env.env().eval("document.getElementById('p').textContent = 'ab cd'; 1");
+    const wr::SelectableText after = exported(env);
+    CHECK_EQ(env.render().patchCount(), patches + 1);
+    CHECK_EQ(utf8(after.text), std::string("ab cd"));
+    CHECK(!after.runs.empty() && after.runs[0].node != 0 && after.runs[0].node != before);
+}
+
 /// Review Focus 5: text the widget's clip hides (below the bubble's height) cannot be selected.
 WR_TEST(testTextBelowTheVisibleHeightIsNotSelectable) {
     RenderEnv env(page("", "<p style=\"user-select:text\">top</p><p style=\"user-select:text;margin-top:700px\">x</p>"));

@@ -1,0 +1,78 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar System Quiz</title>
+<style></style>
+</head>
+<body>
+<div class="quiz" id="quiz">
+  <h2>🪐 Solar System Quiz</h2>
+  <div class="progress" id="progress">Question 1 of 5</div>
+  <div class="question" id="question">Which planet is closest to the Sun?</div>
+  <div id="options"><button class="option">Venus</button><button class="option">Mercury</button><button class="option">Earth</button><button class="option">Mars</button></div>
+  <button class="next" id="next" style="display: none;">Next →</button>
+</div>
+<div class="quiz score" id="result" style="display:none"></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 358.35
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 16 328 326.35
+    div 16 16 328 316.35
+      h2 16 16 328 25
+      div 16 45 328 17.55
+      div 16 78.55 328 23.8
+      div 16 118.35 328 214
+        button 32 132.35 296 18
+        button 32 188.35 296 18
+        button 32 244.35 296 18
+        button 32 300.35 296 18
+      button 0 0 0 0
+    div 0 0 0 0
+
+== paint
+root 360x358.35 items=28
+  linear-gradient bounds=(0,0,360,358) layer=(border=(0,0,360,358),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,358),origin=(0,0,360,358),attachment=0,repeat=0,root=1) points=((0,#0f172aff,-),(1,#1e293bff,-)) space=0 hue=0 start=(0.5,-0.5) end=(359.5,358.5)
+  solid-fill bounds=(16,118,328,46) layer=(border=(16,118,328,46),radius=(8,8,8,8,8,8,8,8),clip=(16,118,328,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#334155ff
+  borders bounds=(16,118,328,46) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(16,118,328,46) root=0
+  solid-fill bounds=(16,174,328,46) layer=(border=(16,174,328,46),radius=(8,8,8,8,8,8,8,8),clip=(16,174,328,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#334155ff
+  borders bounds=(16,174,328,46) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(16,174,328,46) root=0
+  solid-fill bounds=(16,230,328,46) layer=(border=(16,230,328,46),radius=(8,8,8,8,8,8,8,8),clip=(16,230,328,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#334155ff
+  borders bounds=(16,230,328,46) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(16,230,328,46) root=0
+  solid-fill bounds=(16,286,328,46) layer=(border=(16,286,328,46),radius=(8,8,8,8,8,8,8,8),clip=(16,286,328,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#334155ff
+  borders bounds=(16,286,328,46) borders=(left=(2,4,#00000000),top=(2,4,#00000000),right=(2,4,#00000000),bottom=(2,4,#00000000),radius=(8,8,8,8,8,8,8,8)) pos=(16,286,328,46) root=0
+  text bounds=(8,12,48,32) pos=(16,20,32,16) color=#f1f5f9ff text="🪐" font=f1 glyphs=4 advance=32
+  text bounds=(48,12,56,32) pos=(56,20,40,16) color=#f1f5f9ff text="Solar" font=f1 glyphs=5 advance=40
+  text bounds=(96,12,64,32) pos=(104,20,48,16) color=#f1f5f9ff text="System" font=f1 glyphs=6 advance=48
+  text bounds=(152,12,48,32) pos=(160,20,32,16) color=#f1f5f9ff text="Quiz" font=f1 glyphs=4 advance=32
+  text bounds=(8,37,80,32) pos=(16,45,64,16) color=#94a3b8ff text="Question" font=f2 glyphs=8 advance=64
+  text bounds=(80,37,24,32) pos=(88,45,8,16) color=#94a3b8ff text="1" font=f2 glyphs=1 advance=8
+  text bounds=(96,37,32,32) pos=(104,45,16,16) color=#94a3b8ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(120,37,24,32) pos=(128,45,8,16) color=#94a3b8ff text="5" font=f2 glyphs=1 advance=8
+  text bounds=(8,74,56,32) pos=(16,82,40,16) color=#f1f5f9ff text="Which" font=f3 glyphs=5 advance=40
+  text bounds=(56,74,64,32) pos=(64,82,48,16) color=#f1f5f9ff text="planet" font=f3 glyphs=6 advance=48
+  text bounds=(112,74,32,32) pos=(120,82,16,16) color=#f1f5f9ff text="is" font=f3 glyphs=2 advance=16
+  text bounds=(136,74,72,32) pos=(144,82,56,16) color=#f1f5f9ff text="closest" font=f3 glyphs=7 advance=56
+  text bounds=(200,74,32,32) pos=(208,82,16,16) color=#f1f5f9ff text="to" font=f3 glyphs=2 advance=16
+  text bounds=(224,74,40,32) pos=(232,82,24,16) color=#f1f5f9ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(256,74,48,32) pos=(264,82,32,16) color=#f1f5f9ff text="Sun?" font=f3 glyphs=4 advance=32
+  text bounds=(24,125,56,32) pos=(32,133,40,16) color=#f1f5f9ff text="Venus" font=f4 glyphs=5 advance=40
+  text bounds=(24,181,72,32) pos=(32,189,56,16) color=#f1f5f9ff text="Mercury" font=f4 glyphs=7 advance=56
+  text bounds=(24,237,56,32) pos=(32,245,40,16) color=#f1f5f9ff text="Earth" font=f4 glyphs=5 advance=40
+  text bounds=(24,293,48,32) pos=(32,301,32,16) color=#f1f5f9ff text="Mars" font=f4 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=20,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=15,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

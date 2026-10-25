@@ -1,0 +1,170 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p style="text-align: center; border-bottom: 1px solid rgba(127,127,127,0.3); padding-bottom: 4px">text-align: center</p>
+<p style="text-align: right">text-align: right</p>
+<p style="text-align: justify">text-align: justify — Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+<p style="white-space: nowrap">white-space: nowrap — this line will not wrap no matter how narrow the bubble gets…</p>
+<div style="white-space: pre; font-family: monospace; font-size: 12px">white-space: pre   keeps    the     spaces
+  and  newlines</div>
+<p style="line-height: 2">line-height: 2 — airy lines of text that wrap so you can see the spacing between them clearly.</p>
+<p style="text-indent: 28px">text-indent: 28px — the first line of this paragraph is indented, like a printed book.</p>
+<p>vertical-align: x<sup>sup</sup> x<sub>sub</sub> · <svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align: middle"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#ffcc00"></path></svg> middle · <svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align: top"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#ffcc00"></path></svg> top</p>
+</body></html>
+
+== layout
+html 0 0 360 388.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 388.4
+    p 0 0 360 18.2
+    p 0 31.2 360 18.2
+    p 0 57.4 360 72.8
+    p 0 138.2 360 18.2
+    div 0 164.4 360 31.2
+    p 0 195.6 360 84
+    p 0 287.6 360 54.6
+    p 0 350.2 360 38.2
+      sup 0 350.2 0 0
+      sub 0 350.2 0 0
+      svg 232 350.2 20 20
+        path 0 0 0 0
+      svg 340 350.2 20 20
+        path 0 0 0 0
+
+== paint
+root 696x388.4 items=122
+  borders bounds=(0,0,360,23) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#7f7f7f4d),radius=(0,0,0,0,0,0,0,0)) pos=(0,0,360,23) root=0
+  text bounds=(100,-7,56,32) pos=(108,1,40,16) color=#000000ff text="text-" font=f1 glyphs=5 advance=40
+  text bounds=(140,-7,64,32) pos=(148,1,48,16) color=#000000ff text="align:" font=f1 glyphs=6 advance=48
+  text bounds=(196,-7,64,32) pos=(204,1,48,16) color=#000000ff text="center" font=f1 glyphs=6 advance=48
+  text bounds=(216,24,56,32) pos=(224,32,40,16) color=#000000ff text="text-" font=f1 glyphs=5 advance=40
+  text bounds=(256,24,64,32) pos=(264,32,48,16) color=#000000ff text="align:" font=f1 glyphs=6 advance=48
+  text bounds=(312,24,56,32) pos=(320,32,40,16) color=#000000ff text="right" font=f1 glyphs=5 advance=40
+  text bounds=(-8,50,56,32) pos=(0,58,40,16) color=#000000ff text="text-" font=f1 glyphs=5 advance=40
+  text bounds=(32,50,64,32) pos=(40,58,48,16) color=#000000ff text="align:" font=f1 glyphs=6 advance=48
+  text bounds=(88,50,72,32) pos=(96,58,56,16) color=#000000ff text="justify" font=f1 glyphs=7 advance=56
+  text bounds=(152,50,40,32) pos=(160,58,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(184,50,56,32) pos=(192,58,40,16) color=#000000ff text="Lorem" font=f1 glyphs=5 advance=40
+  text bounds=(232,50,56,32) pos=(240,58,40,16) color=#000000ff text="ipsum" font=f1 glyphs=5 advance=40
+  text bounds=(280,50,56,32) pos=(288,58,40,16) color=#000000ff text="dolor" font=f1 glyphs=5 advance=40
+  text bounds=(328,50,40,32) pos=(336,58,24,16) color=#000000ff text="sit" font=f1 glyphs=3 advance=24
+  text bounds=(-8,69,56,32) pos=(0,77,40,16) color=#000000ff text="amet," font=f1 glyphs=5 advance=40
+  text bounds=(46.4,69,104,32) pos=(54.4,77,88,16) color=#000000ff text="consectetur" font=f1 glyphs=11 advance=88
+  text bounds=(148.8,69,96,32) pos=(156.8,77,80,16) color=#000000ff text="adipiscing" font=f1 glyphs=10 advance=80
+  text bounds=(243.2,69,56,32) pos=(251.2,77,40,16) color=#000000ff text="elit," font=f1 glyphs=5 advance=40
+  text bounds=(297.6,69,40,32) pos=(305.6,77,24,16) color=#000000ff text="sed" font=f1 glyphs=3 advance=24
+  text bounds=(336,69,32,32) pos=(344,77,16,16) color=#000000ff text="do" font=f1 glyphs=2 advance=16
+  text bounds=(-8,87,72,32) pos=(0,95,56,16) color=#000000ff text="eiusmod" font=f1 glyphs=7 advance=56
+  text bounds=(56,87,64,32) pos=(64,95,48,16) color=#000000ff text="tempor" font=f1 glyphs=6 advance=48
+  text bounds=(112,87,96,32) pos=(120,95,80,16) color=#000000ff text="incididunt" font=f1 glyphs=10 advance=80
+  text bounds=(200,87,32,32) pos=(208,95,16,16) color=#000000ff text="ut" font=f1 glyphs=2 advance=16
+  text bounds=(224,87,64,32) pos=(232,95,48,16) color=#000000ff text="labore" font=f1 glyphs=6 advance=48
+  text bounds=(280,87,32,32) pos=(288,95,16,16) color=#000000ff text="et" font=f1 glyphs=2 advance=16
+  text bounds=(304,87,64,32) pos=(312,95,48,16) color=#000000ff text="dolore" font=f1 glyphs=6 advance=48
+  text bounds=(-8,105,56,32) pos=(0,113,40,16) color=#000000ff text="magna" font=f1 glyphs=5 advance=40
+  text bounds=(40,105,72,32) pos=(48,113,56,16) color=#000000ff text="aliqua." font=f1 glyphs=7 advance=56
+  text bounds=(-8,131,64,32) pos=(0,139,48,16) color=#000000ff text="white-" font=f1 glyphs=6 advance=48
+  text bounds=(40,131,64,32) pos=(48,139,48,16) color=#000000ff text="space:" font=f1 glyphs=6 advance=48
+  text bounds=(96,131,64,32) pos=(104,139,48,16) color=#000000ff text="nowrap" font=f1 glyphs=6 advance=48
+  text bounds=(152,131,40,32) pos=(160,139,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(184,131,48,32) pos=(192,139,32,16) color=#000000ff text="this" font=f1 glyphs=4 advance=32
+  text bounds=(224,131,48,32) pos=(232,139,32,16) color=#000000ff text="line" font=f1 glyphs=4 advance=32
+  text bounds=(264,131,48,32) pos=(272,139,32,16) color=#000000ff text="will" font=f1 glyphs=4 advance=32
+  text bounds=(304,131,40,32) pos=(312,139,24,16) color=#000000ff text="not" font=f1 glyphs=3 advance=24
+  text bounds=(336,131,48,32) pos=(344,139,32,16) color=#000000ff text="wrap" font=f1 glyphs=4 advance=32
+  text bounds=(376,131,32,32) pos=(384,139,16,16) color=#000000ff text="no" font=f1 glyphs=2 advance=16
+  text bounds=(400,131,64,32) pos=(408,139,48,16) color=#000000ff text="matter" font=f1 glyphs=6 advance=48
+  text bounds=(456,131,40,32) pos=(464,139,24,16) color=#000000ff text="how" font=f1 glyphs=3 advance=24
+  text bounds=(488,131,64,32) pos=(496,139,48,16) color=#000000ff text="narrow" font=f1 glyphs=6 advance=48
+  text bounds=(544,131,40,32) pos=(552,139,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(576,131,64,32) pos=(584,139,48,16) color=#000000ff text="bubble" font=f1 glyphs=6 advance=48
+  text bounds=(632,131,72,32) pos=(640,139,56,16) color=#000000ff text="gets…" font=f1 glyphs=7 advance=56
+  text bounds=(-8,156,64,32) pos=(0,164,48,16) color=#000000ff text="white-" font=f2 glyphs=6 advance=48
+  text bounds=(40,156,64,32) pos=(48,164,48,16) color=#000000ff text="space:" font=f2 glyphs=6 advance=48
+  text bounds=(88,156,24,32) pos=(96,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(96,156,40,32) pos=(104,164,24,16) color=#000000ff text="pre" font=f2 glyphs=3 advance=24
+  text bounds=(120,156,24,32) pos=(128,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(128,156,24,32) pos=(136,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(136,156,24,32) pos=(144,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(144,156,56,32) pos=(152,164,40,16) color=#000000ff text="keeps" font=f2 glyphs=5 advance=40
+  text bounds=(184,156,24,32) pos=(192,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(192,156,24,32) pos=(200,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(200,156,24,32) pos=(208,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(208,156,24,32) pos=(216,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(216,156,40,32) pos=(224,164,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(240,156,24,32) pos=(248,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(248,156,24,32) pos=(256,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(256,156,24,32) pos=(264,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(264,156,24,32) pos=(272,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(272,156,24,32) pos=(280,164,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(280,156,64,32) pos=(288,164,48,16) color=#000000ff text="spaces" font=f2 glyphs=6 advance=48
+  text bounds=(-8,172,24,32) pos=(0,180,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(0,172,24,32) pos=(8,180,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(8,172,40,32) pos=(16,180,24,16) color=#000000ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(32,172,24,32) pos=(40,180,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(40,172,24,32) pos=(48,180,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(48,172,80,32) pos=(56,180,64,16) color=#000000ff text="newlines" font=f2 glyphs=8 advance=64
+  text bounds=(-8,194,56,32) pos=(0,202,40,16) color=#000000ff text="line-" font=f1 glyphs=5 advance=40
+  text bounds=(32,194,72,32) pos=(40,202,56,16) color=#000000ff text="height:" font=f1 glyphs=7 advance=56
+  text bounds=(96,194,24,32) pos=(104,202,8,16) color=#000000ff text="2" font=f1 glyphs=1 advance=8
+  text bounds=(112,194,40,32) pos=(120,202,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(144,194,48,32) pos=(152,202,32,16) color=#000000ff text="airy" font=f1 glyphs=4 advance=32
+  text bounds=(184,194,56,32) pos=(192,202,40,16) color=#000000ff text="lines" font=f1 glyphs=5 advance=40
+  text bounds=(232,194,32,32) pos=(240,202,16,16) color=#000000ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(256,194,48,32) pos=(264,202,32,16) color=#000000ff text="text" font=f1 glyphs=4 advance=32
+  text bounds=(296,194,48,32) pos=(304,202,32,16) color=#000000ff text="that" font=f1 glyphs=4 advance=32
+  text bounds=(-8,222,48,32) pos=(0,230,32,16) color=#000000ff text="wrap" font=f1 glyphs=4 advance=32
+  text bounds=(32,222,32,32) pos=(40,230,16,16) color=#000000ff text="so" font=f1 glyphs=2 advance=16
+  text bounds=(56,222,40,32) pos=(64,230,24,16) color=#000000ff text="you" font=f1 glyphs=3 advance=24
+  text bounds=(88,222,40,32) pos=(96,230,24,16) color=#000000ff text="can" font=f1 glyphs=3 advance=24
+  text bounds=(120,222,40,32) pos=(128,230,24,16) color=#000000ff text="see" font=f1 glyphs=3 advance=24
+  text bounds=(152,222,40,32) pos=(160,230,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(184,222,72,32) pos=(192,230,56,16) color=#000000ff text="spacing" font=f1 glyphs=7 advance=56
+  text bounds=(248,222,72,32) pos=(256,230,56,16) color=#000000ff text="between" font=f1 glyphs=7 advance=56
+  text bounds=(312,222,48,32) pos=(320,230,32,16) color=#000000ff text="them" font=f1 glyphs=4 advance=32
+  text bounds=(-8,250,80,32) pos=(0,258,64,16) color=#000000ff text="clearly." font=f1 glyphs=8 advance=64
+  text bounds=(20,281,56,32) pos=(28,289,40,16) color=#000000ff text="text-" font=f1 glyphs=5 advance=40
+  text bounds=(60,281,72,32) pos=(68,289,56,16) color=#000000ff text="indent:" font=f1 glyphs=7 advance=56
+  text bounds=(124,281,48,32) pos=(132,289,32,16) color=#000000ff text="28px" font=f1 glyphs=4 advance=32
+  text bounds=(164,281,40,32) pos=(172,289,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(196,281,40,32) pos=(204,289,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(228,281,56,32) pos=(236,289,40,16) color=#000000ff text="first" font=f1 glyphs=5 advance=40
+  text bounds=(276,281,48,32) pos=(284,289,32,16) color=#000000ff text="line" font=f1 glyphs=4 advance=32
+  text bounds=(316,281,32,32) pos=(324,289,16,16) color=#000000ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(-8,299,48,32) pos=(0,307,32,16) color=#000000ff text="this" font=f1 glyphs=4 advance=32
+  text bounds=(32,299,88,32) pos=(40,307,72,16) color=#000000ff text="paragraph" font=f1 glyphs=9 advance=72
+  text bounds=(112,299,32,32) pos=(120,307,16,16) color=#000000ff text="is" font=f1 glyphs=2 advance=16
+  text bounds=(136,299,88,32) pos=(144,307,72,16) color=#000000ff text="indented," font=f1 glyphs=9 advance=72
+  text bounds=(216,299,48,32) pos=(224,307,32,16) color=#000000ff text="like" font=f1 glyphs=4 advance=32
+  text bounds=(256,299,24,32) pos=(264,307,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(272,299,72,32) pos=(280,307,56,16) color=#000000ff text="printed" font=f1 glyphs=7 advance=56
+  text bounds=(-8,317,56,32) pos=(0,325,40,16) color=#000000ff text="book." font=f1 glyphs=5 advance=40
+  text bounds=(-8,343,88,32) pos=(0,351,72,16) color=#000000ff text="vertical-" font=f1 glyphs=9 advance=72
+  text bounds=(64,343,64,32) pos=(72,351,48,16) color=#000000ff text="align:" font=f1 glyphs=6 advance=48
+  text bounds=(120,343,24,32) pos=(128,351,8,16) color=#000000ff text="x" font=f1 glyphs=1 advance=8
+  text bounds=(160,343,24,32) pos=(168,351,8,16) color=#000000ff text="x" font=f1 glyphs=1 advance=8
+  text bounds=(200,343,32,32) pos=(208,351,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  set-clip bounds=(232,350.2,20,20) pos=(232,350.2,20,20) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(232,350.2,20,20)
+    group opacity=1 matrix=(0.833333,0,0,0.833333,232,350.2) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1.2,1,21.6,20.6) ops=(0,1,1,1,1,1,1,1,1,1,4) points=(12,2,14.9,8.3,21.8,9.1,16.7,13.8,18.1,20.6,12,17.2,5.9,20.6,7.3,13.8,2.2,9.1,9.1,8.3) fill=1 fill-color=#ffcc00ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(252,343,64,32) pos=(260,351,48,16) color=#000000ff text="middle" font=f1 glyphs=6 advance=48
+  text bounds=(308,343,32,32) pos=(316,351,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  set-clip bounds=(340,350.2,20,20) pos=(340,350.2,20,20) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(340,350.2,20,20)
+    group opacity=1 matrix=(0.833333,0,0,0.833333,340,350.2) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1.2,1,21.6,20.6) ops=(0,1,1,1,1,1,1,1,1,1,4) points=(12,2,14.9,8.3,21.8,9.1,16.7,13.8,18.1,20.6,12,17.2,5.9,20.6,7.3,13.8,2.2,9.1,9.1,8.3) fill=1 fill-color=#ffcc00ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(-8,363,40,32) pos=(0,371,24,16) color=#000000ff text="top" font=f1 glyphs=3 advance=24
+  text bounds=(128,338,40,32) pos=(136,346,24,16) color=#000000ff text="sup" font=f3 glyphs=3 advance=24
+  text bounds=(168,346,40,32) pos=(176,354,24,16) color=#000000ff text="sub" font=f3 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=10.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

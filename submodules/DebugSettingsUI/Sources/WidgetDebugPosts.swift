@@ -45,13 +45,3 @@ func widgetGamesDebugPosts() -> [EngineLocalWidgetPost] {
     }
 }
 
-/// widget-sandbox v0.1.0's corpus but the attacks, each file a widget with auto anchors and its path as caption. Empty
-/// without `WidgetCorpus.bundle`.
-func widgetCorpusDebugPosts() -> [EngineLocalWidgetPost] {
-    guard let root = widgetDebugBundleRoot("WidgetCorpus") else {
-        return []
-    }
-    return MessageWidgetCorpusListing.items(in: root).map { item in
-        return EngineLocalWidgetPost(html: item.source, width: 0, height: 0, caption: item.path, photos: [])
-    }
-}

@@ -124,7 +124,7 @@ plist_fragment(
     """
 )
 
-# DEBUG app builds only (Debug Settings' widget corpus insertion): every folder but the attacks, at <folder>/….
+# The widget harness's corpus (Tests/WidgetHarness): every folder but the attacks, at <folder>/…. Never in the app.
 apple_resource_bundle(
     name = "WidgetCorpusBundle",
     bundle_name = "WidgetCorpus",

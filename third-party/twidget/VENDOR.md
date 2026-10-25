@@ -661,17 +661,25 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        `style` whose old or new value holds `--`, `var(` or `counter`; and the two caps a fresh build enforces where a
        match or a layout makes things:
        - **pseudo-element content.** Matching again makes the element's `::before`/`::after` content, asking
-         `text_element_allowed()` for each word; a fresh build makes all of it in document order, with each element's old
-         and new content alive together, so near `max_text_elements` a patch and a rebuild cut at different words (bounds
-         on the pieces were tried and fell to function-name case and spacing, `ATTR(`, `attr (`, and to overlap with
-         other elements' rules). The rule is a flag instead: `pseudo_content_possible()`, computed once per document from
-         the selectors as litehtml parsed them (a pseudo-element `before`/`after` in the rightmost compound and a
-         `content` declaration that is not empty or `none`; a rule naming a tag counts only when the document has an
-         element with that tag, so the master sheet's `summary::before` and `details[open] > summary::before`, which
-         declare content, matter only in a document with a `<summary>`). A rule for an `lh-*` part (a form control's generated parts: `lh-range-thumb`, also reached as `input::-webkit-slider-thumb`) counts wherever the document has an `input`, `select` or `textarea`, since a patch can make the part. The answer is recomputed on the first query after each `commit_patch` (the walk of the tree is O(elements); WidgetRuntime charges the build's element count first). While it is true, `can_set_element_attributes`
-         and edit 16's `can_replace_text` refuse. `text_element_allowed` (under `#if 0`/`#else`) also counts logically in
-         a patch session (not the pieces the session replaced or forgot, kept alive in `m_patch_hold` until
-         `commit_patch`); with the flag set no patch runs, so this only guards text patches without pseudo content.
+         `text_element_allowed()` for each word; a build makes all of it after the text, in document order, so at
+         `max_text_elements` (or the pseudo-element cap) a patch and a rebuild cut at different words: the patch cuts the
+         element it matched again, a build the later element's content (bounds on the pieces were tried and fell to
+         function-name case and spacing, `ATTR(`, `attr (`, and to overlap with other elements' rules). So the cut is
+         found after the fact: `pseudo_content_possible()`, computed from the selectors as litehtml parsed them (a
+         pseudo-element `before`/`after` in the rightmost compound and a `content` declaration that is not empty or
+         `none`; a rule naming a tag counts only when the document has an element with that tag, so the master sheet's
+         `summary::before` and `details[open] > summary::before`, which declare content, matter only in a document with
+         a `<summary>`), says whether one can happen, and a patch that reaches a cap posts its limit (`text_limited()`,
+         `pseudo_limited()`), after which the caller must replace the patched document by a fresh build. While it is
+         true, `can_set_element_attributes` and edit 16's `can_replace_text` refuse once a cap has been reached (freed
+         pieces would go to later content in a fresh build). A rule for an `lh-*` part (a form control's generated parts:
+         `lh-range-thumb`, also reached as `input::-webkit-slider-thumb`), or a `*` rule, counts wherever the document has
+         an `input`, `select` or `textarea`, since a patch can make the part; such content refuses every patch
+         (`part_content_possible()`, bit 2 of the same answer), because a build counts the parts' content beyond what it
+         keeps and so near the cap cuts where a patch, which posts nothing, does not. The answer is recomputed on the
+         first query after each `commit_patch` (the walk of the tree is O(elements); WidgetRuntime charges the build's
+         element count first). `text_element_allowed` (under `#if 0`/`#else`) also counts logically in a patch session
+         (not the pieces the session replaced or forgot, kept alive in `m_patch_hold` until `commit_patch`).
        - **table cells.** A `colspan`/`rowspan` change that raises the cell product (clamped to 1000 each, as
          `table_grid::add_cell` reads them) is refused when `m_table_cells` plus the rise and the caller's
          `pending.cells` passes `max_table_cells`. This is defence in depth: `restyle_after_patch` rebuilds the render tree
@@ -698,13 +706,15 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `var(`, `counter`, table, textarea, button, an element outside the document, null and empty names) and
     `testSetAttributeFixRound` (`a:link span` both ways; href x, y, x, y keeps `:link`; one re-match for a map; the svg
     element, body's `style`, `viewBox`, `xlink:title`, `Fill`; five sheets with pseudo content (plain, `ATTR(`, `attr (`,
-    the overlap shape, `:after`) refused for attributes and for text at 0 to 5,004 filler words; sheets whose pseudo rules
-    make no content (`color` only, `content:none`, content on a real element, `::first-line`) still patch near the cap
-    and equal a fresh build, limits included; the master's `summary::before` refuses only in a document with a
-    `<summary>`; the table-cell cap, with `pending`). Mutation checks: keeping the generated parts
+    the overlap shape, `:after`) at 0 to 5,004 filler words: an attribute and then a text patch equal a fresh build
+    where no cap is reached, and both are refused once a build has reached one; sheets whose pseudo rules make no
+    content (`color` only, `content:none`, content on a real element, `::first-line`) patch near the cap and equal a
+    fresh build, limits included; the master's `summary::before` is pseudo content only in a document with a
+    `<summary>`, which patches; a `type` change to `range` and a text patch refused near the cap under an `lh-*` part
+    rule; the table-cell cap, with `pending`). Mutation checks: keeping the generated parts
     of an input, not resetting `:link`, keeping the tree always, dropping the scope check, dropping the epoch bump (only
-    the href round trip sees it), dropping `:link` from `collect_ancestor_names`, dropping the pseudo-content flag and the
-    cell refusal each fail their cases.
+    the href round trip sees it), dropping `:link` from `collect_ancestor_names`, dropping the refusal after a reached
+    cap, dropping the part-content refusal and the cell refusal each fail their cases.
     **macOS effect:** none; the entry points have no caller in the Objective-C++ layer, and the new members are only
     read by them. `text_element_allowed` counts as before outside a patch session (`m_patch_released` is 0).
 
@@ -940,8 +950,10 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
          write: an item saves its box (position, size, padding, borders; an inline context also its inline content's
          boxes, inline boxes and fragments, which layout writes without `render()`; a table its parts' and rows') the first
          time the running layout writes it (`render()`'s entry, `forget_positions` before it zeroes them, a table's
-         `render()` for its rows), and `document::render` compares those, and only those, with what it leaves. The layout
-         cache's dirty roots bound what is written.
+         `render()` for its rows), and `document::render` compares those, and only those, with what it leaves, exactly
+         (`observed_change`'s `same`: not within litehtml's pixel epsilon, since a layout on a kept render tree can move
+         a box by less than 0.0001 px, and the mirror must hold what a fresh walk records; on macOS, which registers no
+         render observer, nothing changes). The layout cache's dirty roots bound what is written.
     Pinned by `tests/external_test.cpp`: `testWalkVisitsWhatDrawPaints` (for Task 4's fixture and a second one with
     floats, positioned items at -1 and 2, an inline-block and a table: a walk that paints every visit makes draw()'s calls
     in draw()'s order, one that paints none makes only the traversal's own calls, every paint call is a visit's, in visit
@@ -1010,8 +1022,13 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       property the author and user sheets declare (plus up to 64 `var()` uses of the largest custom property value) could
       reach the budget. The cached sum is reset when the sheets are parsed or added. W abandons a patch that passes the budget anyway (Ruling E51: `RenderTree.cpp` records `style_bytes_limited()` before
       mutating and throws `abandoned: the style budget was passed` after the selector-step check, for both the attribute and
-      the structure patch), because the estimate cannot see inline styles. It joins `attribute_change_allowed` (n = every
-      element), `structure_insertable` (n = 3 x the elements inserted), `structure_removable` (n = 0: a limit-cut document
+      the structure patch), because the estimate cannot see inline styles. It joins `attribute_change_allowed` (n = the
+      element and its subtree, what `restyle_after_patch` restyles: WidgetRuntime's `testPatchPastTheStyleBudgetMatchesRebuild`
+      patches a leaf's class near the budget and not the body's; only WidgetRuntime calls it, so macOS is unchanged. The
+      subtree is walked only when the whole document could pass the budget, and no further than it takes to know; each
+      element visited counts in `predicate_steps()`, which WidgetRuntime charges, twice, since `set_element_attributes`
+      asks again at the commit),
+      `structure_insertable` (n = 3 x the elements inserted), `structure_removable` (n = 0: a limit-cut document
       is never patched) and `retag_allowed` (n = every element; `class_change_allowed` and the template path go through
       it). A refusal makes the caller rebuild. The cumulative count only makes a patch refuse earlier; it never makes one
       diverge from a rebuild, which charges at most what the patch sequence did.
@@ -1117,8 +1134,9 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `apply_retag` treats it as it treats `class` rather than as any other attribute, which always rebuilds the render
     tree. It sets the two texts aside before comparing the rest, and keeps the tree when every property whose
     declaration differs between them (`changed_declarations`) is a `paint_only_property`: so `transform`, `opacity`,
-    colours and the rest of that list are restyled in place and republished as mirror operations, while a layout
-    property (`width`, `left`, …) still rebuilds. The changed properties feed the region as a changed rule's do, and
+    colours and the rest of that list are restyled in place and republished as mirror operations (and, since edit 63,
+    a box's geometry), while a property that shapes the render tree (`display`, `position`, …) still rebuilds. The
+    changed properties feed the region as a changed rule's do, and
     one of `paint_order_property`'s six (the list edit 20 tests a rule against, now one helper) tells the render
     observer that paint order may have changed. Pinned by `AnimationRenderTests` (`testAPaintOnlyFrameKeepsTheTree`:
     no tree rebuild on any frame, and on an in-flow block no Reset at all).
@@ -1187,7 +1205,13 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     - **31.5** `:empty` (`string_id.h` `_empty_`, `html_tag.cpp`): no children but `::before`/`::after`, a text piece of
       any data counting. A sheet using it sets `selector_scope()` bit 8 (`uses_empty`, `document.cpp`): insertion and
       removal were refused for any scope already, and `can_replace_children` and `update_structure` now refuse for
-      bit 8 too, since a change of an element's children changes how the element itself matches.
+      bit 8 too, since a change of an element's children changes how the element itself matches. Matched again in place
+      (`document::apply_retag` sets the element's children aside, so that matching makes only its `::before`/`::after`),
+      `:empty` reads the children set aside (`html_tag::set_children_for_matching`, cleared by a scope guard): an
+      attribute patch on an element with children never makes it `:empty`. Pinned by `testSetAttributeMatchesFresh` (a
+      `span` and a `p` with text under `span:empty` and `p:not(:empty)`; not setting the children fails both). **macOS
+      effect:** the template path (`update_document` → `apply_retag`) matched `:empty` on every element it re-matched;
+      it now reads the element's children there too.
 
 32. **Text properties litehtml lacked** (2026-10-22, fidelity plan, Task 5; string ids `_word_break_`,
     `_word_spacing_`, `_font_feature_settings_`, `_quotes_`).
@@ -1513,6 +1537,37 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `elementClientRects` asks the nearest table for an element of a row or row-group display that has no render item.
     Pinned by `fork_test.cpp` ("Edit 61") and WidgetRuntime's `testATableRowsAndGroupsHaveTheirBoxes` (rows, a row a
     cell spans into, a header group and a body group, under a caption).
+62. **An inline style change keeps the render tree when it changes only paint** (`document.cpp` `apply_retag` and
+    `changed_declarations`). A script that animates by writing `el.style.transform` on every frame changed the `style`
+    attribute, which `apply_retag` never called neutral, so every frame re-created the render tree. `apply_retag` now
+    sets the `style` texts aside as it does the animated declarations (edit 27; the old comparison under `#if 0`), and
+    their changed properties join the animated ones: the tree is kept when every one is a `paint_only_property`, with
+    their regions and paint order told as a changed rule's, and a property that shapes the tree still rebuilds it.
+    `changed_declarations` compares values without the whitespace around them, since CSSOM writes the whole attribute
+    again (`width: 40px;` for `width:40px`) the first time a script sets one property. Pinned by WidgetRuntime's
+    `testAPaintOnlyInlineStyleKeepsTheTree` (`transform`, `opacity` and `color` frames keep the tree from the first;
+    `display`, and `float` beside `transform`, rebuild it; each equal to a rebuild); comparing the style texts as before,
+    and comparing untrimmed values, each fail it. **macOS effect:** the template path (`update_document` →
+    `apply_retag`) keeps the render tree for a patch whose inline style changes only paint-only properties, where it
+    re-created it; the restyle and layout are the same code, but no macOS test covers it in this repo.
+63. **A change of a box's geometry alone keeps the render tree** (`document.cpp` `geometry_only_property`, read by
+    `apply_retag` beside `paint_only_property` for an inline style's, an animated declarations' and a changed rule's
+    properties when its new `geometry` argument is true, which only `set_element_attributes` passes; the two
+    `paint_only_property` tests it joins under `#if 0`, as is the old call). Creating and initialising render items reads
+    `display`, `position`, `float`, `list-style-type`, `white-space` and `flex-direction`; a box's size (`width`,
+    `height` and their `min-`/`max-`), margins, padding, offsets (`top` … `left`, `inset`), gaps and flex sizes
+    (`flex-grow`, `-shrink`, `-basis`) only layout reads, so a change of only those and paint-only properties keeps the
+    tree: the restyle marks the box's layout dirty up to its relayout boundary (`compute_styles` → `mark_layout_dirty`),
+    the next `render()` lays it out again, and edit 20 reports every box that moved or resized, exactly. A progress bar
+    whose script sets `style.width` on every frame no longer re-creates the tree. Pinned by `external_test.cpp`
+    (a `padding` style patch keeps the tree and reports what it moved; `float` rebuilds) and WidgetRuntime's
+    `testAGeometryChangeKeepsTheTree` (widths, a relative box's `left`, margin and padding, `gap` and `flex-grow`, a
+    class whose rule sets `width` and `padding`, and a resize below the pixel epsilon kept; `display`, `position`, and
+    `width` beside `float` rebuilt; each equal to a rebuild). Comparing geometry within the epsilon fails the resize
+    below it; not testing `geometry_only_property` fails every kept step. **macOS effect:** none. The template path
+    (`update_document` → `apply_retag`) reuses the last layout whenever it keeps the tree, so a geometry change kept
+    there drew the old layout (`TwidgetRenderingTests`' random text-and-class and structure runs, and the rebuild memory
+    run, fail with it); it does not pass `geometry`.
 
 ## The iOS font resolver
 

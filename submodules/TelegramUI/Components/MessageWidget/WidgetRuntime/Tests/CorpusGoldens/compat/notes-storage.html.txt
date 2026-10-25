@@ -1,0 +1,90 @@
+stop -
+drive idle
+storage local notes-widget:visits=1 notes-widget=[{"text":"Buy milk","done":false},{"text":"Call Sam","done":false}]
+refused-loads 0
+
+== dom
+<html><head><meta charset="utf-8"><style></style></head><body>
+<div class="presets" id="presets">
+  <button id="add-milk">Buy milk</button><button id="add-sam">Call Sam</button><button id="add-tests">Write tests</button><button id="add-flights">Book flights</button><button id="add-plants">Water plants</button>
+</div>
+<ul id="list"><li><span class="text">Buy milk</span><button class="del">✕</button></li><li><span class="text">Call Sam</span><button class="del">✕</button></li></ul>
+<div class="foot"><span id="meta">2 notes · visit #1 · 99 B of 16 KB</span><button id="clear">Clear</button></div>
+<script></script>
+
+</body></html>
+
+== layout
+html 0 0 360 210.9
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 182.9
+    div 14 14 332 66
+      button 25 21 64 16
+      button 117 21 64 16
+      button 209 21 88 16
+      button 25 57 96 16
+      button 149 57 96 16
+    ul 14 90 332 66.5
+      li 22 96 316 20.25
+        span 22 96 276 20.25
+        button 306 98.925 24 14.4
+      li 22 129.25 316 20.25
+        span 22 129.25 276 20.25
+        button 306 132.175 24 14.4
+    div 14 164.5 332 32.4
+      span 14 164.5 272 32.4
+      button 296 173.5 40 14.4
+
+== paint
+root 360x210.9 items=44
+  solid-fill bounds=(0,0,360,211) layer=(border=(0,0,360,211),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,211),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  solid-fill bounds=(14,14,86,30) layer=(border=(14,14,86,30),radius=(8,8,8,8,8,8,8,8),clip=(14,14,86,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef5fcff
+  borders bounds=(14,14,86,30) borders=(left=(1,4,#cfe0f1ff),top=(1,4,#cfe0f1ff),right=(1,4,#cfe0f1ff),bottom=(1,4,#cfe0f1ff),radius=(8,8,8,8,8,8,8,8)) pos=(14,14,86,30) root=0
+  solid-fill bounds=(106,14,86,30) layer=(border=(106,14,86,30),radius=(8,8,8,8,8,8,8,8),clip=(106,14,86,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef5fcff
+  borders bounds=(106,14,86,30) borders=(left=(1,4,#cfe0f1ff),top=(1,4,#cfe0f1ff),right=(1,4,#cfe0f1ff),bottom=(1,4,#cfe0f1ff),radius=(8,8,8,8,8,8,8,8)) pos=(106,14,86,30) root=0
+  solid-fill bounds=(198,14,110,30) layer=(border=(198,14,110,30),radius=(8,8,8,8,8,8,8,8),clip=(198,14,110,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef5fcff
+  borders bounds=(198,14,110,30) borders=(left=(1,4,#cfe0f1ff),top=(1,4,#cfe0f1ff),right=(1,4,#cfe0f1ff),bottom=(1,4,#cfe0f1ff),radius=(8,8,8,8,8,8,8,8)) pos=(198,14,110,30) root=0
+  solid-fill bounds=(14,50,118,30) layer=(border=(14,50,118,30),radius=(8,8,8,8,8,8,8,8),clip=(14,50,118,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef5fcff
+  borders bounds=(14,50,118,30) borders=(left=(1,4,#cfe0f1ff),top=(1,4,#cfe0f1ff),right=(1,4,#cfe0f1ff),bottom=(1,4,#cfe0f1ff),radius=(8,8,8,8,8,8,8,8)) pos=(14,50,118,30) root=0
+  solid-fill bounds=(138,50,118,30) layer=(border=(138,50,118,30),radius=(8,8,8,8,8,8,8,8),clip=(138,50,118,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#eef5fcff
+  borders bounds=(138,50,118,30) borders=(left=(1,4,#cfe0f1ff),top=(1,4,#cfe0f1ff),right=(1,4,#cfe0f1ff),bottom=(1,4,#cfe0f1ff),radius=(8,8,8,8,8,8,8,8)) pos=(138,50,118,30) root=0
+  borders bounds=(14,90,332,33) borders=(left=(0,0,#222222ff),top=(0,0,#222222ff),right=(0,0,#222222ff),bottom=(1,4,#eeeeeeff),radius=(0,0,0,0,0,0,0,0)) pos=(14,90,332,33) root=0
+  solid-fill bounds=(298,97,40,18) layer=(border=(298,97,40,18),radius=(8,8,8,8,8,8,8,8),clip=(298,97,40,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef4444ff
+  borders bounds=(14,123,332,34) borders=(left=(0,0,#222222ff),top=(0,0,#222222ff),right=(0,0,#222222ff),bottom=(1,4,#eeeeeeff),radius=(0,0,0,0,0,0,0,0)) pos=(14,123,332,34) root=0
+  solid-fill bounds=(298,130,40,19) layer=(border=(298,130,40,19),radius=(8,8,8,8,8,8,8,8),clip=(298,130,40,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef4444ff
+  solid-fill bounds=(286,170,60,22) layer=(border=(286,170,60,22),radius=(8,8,8,8,8,8,8,8),clip=(286,170,60,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ec1f
+  text bounds=(17,13,40,32) pos=(25,21,24,16) color=#1f6fb2ff text="Buy" font=f1 glyphs=3 advance=24
+  text bounds=(49,13,48,32) pos=(57,21,32,16) color=#1f6fb2ff text="milk" font=f1 glyphs=4 advance=32
+  text bounds=(109,13,48,32) pos=(117,21,32,16) color=#1f6fb2ff text="Call" font=f1 glyphs=4 advance=32
+  text bounds=(149,13,40,32) pos=(157,21,24,16) color=#1f6fb2ff text="Sam" font=f1 glyphs=3 advance=24
+  text bounds=(201,13,56,32) pos=(209,21,40,16) color=#1f6fb2ff text="Write" font=f1 glyphs=5 advance=40
+  text bounds=(249,13,56,32) pos=(257,21,40,16) color=#1f6fb2ff text="tests" font=f1 glyphs=5 advance=40
+  text bounds=(17,49,48,32) pos=(25,57,32,16) color=#1f6fb2ff text="Book" font=f1 glyphs=4 advance=32
+  text bounds=(57,49,72,32) pos=(65,57,56,16) color=#1f6fb2ff text="flights" font=f1 glyphs=7 advance=56
+  text bounds=(141,49,56,32) pos=(149,57,40,16) color=#1f6fb2ff text="Water" font=f1 glyphs=5 advance=40
+  text bounds=(189,49,64,32) pos=(197,57,48,16) color=#1f6fb2ff text="plants" font=f1 glyphs=6 advance=48
+  text bounds=(14,90,40,32) pos=(22,98,24,16) color=#222222ff text="Buy" font=f2 glyphs=3 advance=24
+  text bounds=(46,90,48,32) pos=(54,98,32,16) color=#222222ff text="milk" font=f2 glyphs=4 advance=32
+  text bounds=(298,91,40,32) pos=(306,99,24,16) color=#ffffffff text="✕" font=f3 glyphs=3 advance=24
+  text bounds=(14,123,48,32) pos=(22,131,32,16) color=#222222ff text="Call" font=f2 glyphs=4 advance=32
+  text bounds=(54,123,40,32) pos=(62,131,24,16) color=#222222ff text="Sam" font=f2 glyphs=3 advance=24
+  text bounds=(298,124,40,32) pos=(306,132,24,16) color=#ffffffff text="✕" font=f3 glyphs=3 advance=24
+  text bounds=(6,157,24,32) pos=(14,165,8,16) color=#666666ff text="2" font=f4 glyphs=1 advance=8
+  text bounds=(22,157,56,32) pos=(30,165,40,16) color=#666666ff text="notes" font=f4 glyphs=5 advance=40
+  text bounds=(70,157,32,32) pos=(78,165,16,16) color=#666666ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(94,157,56,32) pos=(102,165,40,16) color=#666666ff text="visit" font=f4 glyphs=5 advance=40
+  text bounds=(142,157,32,32) pos=(150,165,16,16) color=#666666ff text="#1" font=f4 glyphs=2 advance=16
+  text bounds=(166,157,32,32) pos=(174,165,16,16) color=#666666ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(190,157,32,32) pos=(198,165,16,16) color=#666666ff text="99" font=f4 glyphs=2 advance=16
+  text bounds=(214,157,24,32) pos=(222,165,8,16) color=#666666ff text="B" font=f4 glyphs=1 advance=8
+  text bounds=(230,157,32,32) pos=(238,165,16,16) color=#666666ff text="of" font=f4 glyphs=2 advance=16
+  text bounds=(254,157,32,32) pos=(262,165,16,16) color=#666666ff text="16" font=f4 glyphs=2 advance=16
+  text bounds=(6,173,32,32) pos=(14,181,16,16) color=#666666ff text="KB" font=f4 glyphs=2 advance=16
+  text bounds=(288,166,56,32) pos=(296,174,40,16) color=#222222ff text="Clear" font=f3 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

@@ -1,0 +1,68 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p><span style="text-decoration: underline dotted">dotted</span> · <span style="text-decoration: underline dashed">dashed</span> · <span style="text-decoration: underline wavy #ff3b30">wavy red</span> · <span style="text-decoration: underline double">double</span> · <span style="text-decoration: overline">overline</span> · <span style="text-decoration: line-through #ff3b30">struck</span> · <span style="text-decoration: underline overline line-through">all three</span> · <span style="text-decoration-line: underline; text-decoration-thickness: 3px; text-decoration-color: #007aff">thick blue</span></p>
+<p style="text-transform: uppercase">text-transform: uppercase · <span style="text-transform: lowercase">LOWERCASE</span> · <span style="text-transform: capitalize">capitalize every word</span></p>
+</body></html>
+
+== layout
+html 0 0 360 80.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 80.8
+    p 0 0 360 36.4
+      span 0 0 0 0
+      span 0 0 0 0
+      span 0 0 0 0
+      span 0 0 0 0
+      span 0 0 0 0
+      span 0 0 0 0
+      span 0 0 0 0
+      span 0 0 0 0
+    p 0 44.4 360 36.4
+      span 0 44.4 0 0
+      span 0 44.4 0 0
+
+== paint
+root 360x80.8 items=27
+  text bounds=(-8,-7,64,32) pos=(0,1,48,16) color=#000000ff text="dotted" font=f1 glyphs=6 advance=48
+  text bounds=(48,-7,32,32) pos=(56,1,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(72,-7,64,32) pos=(80,1,48,16) color=#000000ff text="dashed" font=f3 glyphs=6 advance=48
+  text bounds=(128,-7,32,32) pos=(136,1,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(152,-7,48,32) pos=(160,1,32,16) color=#000000ff text="wavy" font=f4 glyphs=4 advance=32
+  text bounds=(192,-7,40,32) pos=(200,1,24,16) color=#000000ff text="red" font=f4 glyphs=3 advance=24
+  text bounds=(224,-7,32,32) pos=(232,1,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(248,-7,64,32) pos=(256,1,48,16) color=#000000ff text="double" font=f5 glyphs=6 advance=48
+  text bounds=(304,-7,32,32) pos=(312,1,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(-8,11,80,32) pos=(0,19,64,16) color=#000000ff text="overline" font=f6 glyphs=8 advance=64
+  text bounds=(64,11,32,32) pos=(72,19,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(88,11,64,32) pos=(96,19,48,16) color=#000000ff text="struck" font=f7 glyphs=6 advance=48
+  text bounds=(144,11,32,32) pos=(152,19,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(168,11,40,32) pos=(176,19,24,16) color=#000000ff text="all" font=f8 glyphs=3 advance=24
+  text bounds=(200,11,56,32) pos=(208,19,40,16) color=#000000ff text="three" font=f8 glyphs=5 advance=40
+  text bounds=(248,11,32,32) pos=(256,19,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(272,11,56,32) pos=(280,19,40,16) color=#000000ff text="thick" font=f9 glyphs=5 advance=40
+  text bounds=(320,11,48,32) pos=(328,19,32,16) color=#000000ff text="blue" font=f9 glyphs=4 advance=32
+  text bounds=(-8,37,56,32) pos=(0,45,40,16) color=#000000ff text="TEXT-" font=f2 glyphs=5 advance=40
+  text bounds=(32,37,96,32) pos=(40,45,80,16) color=#000000ff text="TRANSFORM:" font=f2 glyphs=10 advance=80
+  text bounds=(120,37,88,32) pos=(128,45,72,16) color=#000000ff text="UPPERCASE" font=f2 glyphs=9 advance=72
+  text bounds=(200,37,32,32) pos=(208,45,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(224,37,88,32) pos=(232,45,72,16) color=#000000ff text="lowercase" font=f2 glyphs=9 advance=72
+  text bounds=(304,37,32,32) pos=(312,45,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(-8,56,96,32) pos=(0,64,80,16) color=#000000ff text="Capitalize" font=f2 glyphs=10 advance=80
+  text bounds=(80,56,56,32) pos=(88,64,40,16) color=#000000ff text="Every" font=f2 glyphs=5 advance=40
+  text bounds=(128,56,48,32) pos=(136,64,32,16) color=#000000ff text="Word" font=f2 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(1,predef0,2,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(1,predef0,3,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(1,predef0,4,#ff3b30ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(1,predef0,1,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(2,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(4,predef0,0,#ff3b30ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(7,predef0,0,#000000ff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(1,3px,0,#007affff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

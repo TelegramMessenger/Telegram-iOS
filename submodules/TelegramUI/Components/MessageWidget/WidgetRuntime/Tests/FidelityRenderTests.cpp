@@ -276,6 +276,23 @@ WR_TEST(testWordBreakBreakAll) {
     checkEval(env, "$('nb').getBoundingClientRect().height", "16");
 }
 
+/// The fake host breaks between code points, never inside one (CoreTextRenderHost between composed character
+/// sequences): a word of three-byte characters broken anywhere in a box narrower than one paints each whole, one per line.
+WR_TEST(testABreakAnywhereKeepsCharactersWhole) {
+    RenderEnv env(page("#wb{width:20px;font:16px/16px serif;word-break:break-all}", "<div id=wb>−−−</div>"));
+    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
+    CHECK(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    size_t pieces = 0;
+    for (const wr::TextItem* item : wr_test::textItems(*tree)) {
+        CHECK_EQ(item->text, std::string("−"));
+        pieces++;
+    }
+    CHECK_EQ(pieces, size_t(3));
+}
+
 /// Fidelity plan, Task 6 (css.value.keywords, html.el.structure): initial, unset and revert, through the profile.
 WR_TEST(testTheCSSWideKeywords) {
     RenderEnv env(page("p{margin-top:0;margin-bottom:2px} #marg p{margin:revert} #initial{display:initial}"

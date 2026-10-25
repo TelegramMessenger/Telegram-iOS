@@ -46,6 +46,7 @@ namespace litehtml
         bool m_anonymous_style = false;
         string_map             m_attrs;
         std::vector<string_id> m_pseudo_classes;
+        const elements_list*   m_children_for_matching = nullptr; // Telegram (VENDOR.md edit 31.5)
 
         struct match_memo
         {
@@ -124,6 +125,9 @@ namespace litehtml
         // Drops everything stylesheets and attributes contributed, including ::before and ::after, so the
         // element can be matched again exactly like a freshly built one.
         void forget_matched_styles();
+        // Telegram (VENDOR.md edit 31.5): the children :empty reads while document::apply_retag matches this element
+        // again with them set aside (null: its own).
+        void set_children_for_matching(const elements_list* children) { m_children_for_matching = children; }
 
         bool is_white_space() const override;
         bool is_body() const override;

@@ -1269,9 +1269,9 @@ namespace litehtml
 #endif
             break;
         // Telegram (VENDOR.md edit 31.5): :empty, no children but generated content (::before, ::after). A text piece of
-        // any data counts, whitespace included, as Blink has it.
+        // any data counts, whitespace included, as Blink has it. Matched again in place, the children set aside count.
         case _empty_:
-            for(const auto& child : children())
+            for(const auto& child : m_children_for_matching ? *m_children_for_matching : children())
             {
                 if(child->tag() != __tag_before_ && child->tag() != __tag_after_)
                 {

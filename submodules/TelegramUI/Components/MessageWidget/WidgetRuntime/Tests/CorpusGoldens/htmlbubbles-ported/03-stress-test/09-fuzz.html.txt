@@ -1,0 +1,53 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><b>Malformed:</b> <b>bold <i>bold-italic</i></b><i> italic?</i> <p>unclosed p </p><div>div inside p <span>unclosed span &amp; stray &amp;amp; © ♥ 😀 &amp;unknown; <a href="https://example.com">unclosed link
+</a></span></div></body></html>
+
+== layout
+html 0 0 360 80.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 80.8
+    b 0 0 0 0
+    b 0 0 0 0
+      i 0 0 0 0
+    i 0 0 0 0
+    p 0 18.2 360 18.2
+    div 0 44.4 360 36.4
+      span 0 44.4 0 0
+        a 0 44.4 0 0
+
+== paint
+root 360x80.8 items=21
+  text bounds=(-8,-7,96,32) pos=(0,1,80,16) color=#000000ff text="Malformed:" font=f1 glyphs=10 advance=80
+  text bounds=(80,-7,48,32) pos=(88,1,32,16) color=#000000ff text="bold" font=f1 glyphs=4 advance=32
+  text bounds=(120,-7,56,32) pos=(128,1,40,16) color=#000000ff text="bold-" font=f2 glyphs=5 advance=40
+  text bounds=(160,-7,64,32) pos=(168,1,48,16) color=#000000ff text="italic" font=f2 glyphs=6 advance=48
+  text bounds=(216,-7,72,32) pos=(224,1,56,16) color=#000000ff text="italic?" font=f3 glyphs=7 advance=56
+  text bounds=(-8,11,80,32) pos=(0,19,64,16) color=#000000ff text="unclosed" font=f4 glyphs=8 advance=64
+  text bounds=(64,11,24,32) pos=(72,19,8,16) color=#000000ff text="p" font=f4 glyphs=1 advance=8
+  text bounds=(-8,37,40,32) pos=(0,45,24,16) color=#000000ff text="div" font=f4 glyphs=3 advance=24
+  text bounds=(24,37,64,32) pos=(32,45,48,16) color=#000000ff text="inside" font=f4 glyphs=6 advance=48
+  text bounds=(80,37,24,32) pos=(88,45,8,16) color=#000000ff text="p" font=f4 glyphs=1 advance=8
+  text bounds=(96,37,80,32) pos=(104,45,64,16) color=#000000ff text="unclosed" font=f4 glyphs=8 advance=64
+  text bounds=(168,37,48,32) pos=(176,45,32,16) color=#000000ff text="span" font=f4 glyphs=4 advance=32
+  text bounds=(208,37,24,32) pos=(216,45,8,16) color=#000000ff text="&" font=f4 glyphs=1 advance=8
+  text bounds=(224,37,56,32) pos=(232,45,40,16) color=#000000ff text="stray" font=f4 glyphs=5 advance=40
+  text bounds=(272,37,56,32) pos=(280,45,40,16) color=#000000ff text="&amp;" font=f4 glyphs=5 advance=40
+  text bounds=(320,37,32,32) pos=(328,45,16,16) color=#000000ff text="©" font=f4 glyphs=2 advance=16
+  text bounds=(-8,56,40,32) pos=(0,64,24,16) color=#000000ff text="♥" font=f4 glyphs=3 advance=24
+  text bounds=(24,56,48,32) pos=(32,64,32,16) color=#000000ff text="😀" font=f4 glyphs=4 advance=32
+  text bounds=(64,56,88,32) pos=(72,64,72,16) color=#000000ff text="&unknown;" font=f4 glyphs=9 advance=72
+  text bounds=(144,56,80,32) pos=(152,64,64,16) color=#007affff text="unclosed" font=f5 glyphs=8 advance=64
+  text bounds=(216,56,48,32) pos=(224,64,32,16) color=#007affff text="link" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=1,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(-2147483648,predef0,0,#007affff),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

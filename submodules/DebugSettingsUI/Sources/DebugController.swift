@@ -736,7 +736,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case springSendAnimation(Bool)
     case fakeWalletTransfers(Bool)
     case insertWidgetConformanceSet
-    case insertWidgetCorpus
     case insertWidgetGames
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
@@ -791,7 +790,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetCorpus, .insertWidgetGames:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetGames:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -952,8 +951,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 74
         case .insertWidgetConformanceSet:
             return 76
-        case .insertWidgetCorpus:
-            return 77
         case .insertWidgetGames:
             return 78
         case .disableVideoAspectScaling:
@@ -1466,19 +1463,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case .insertWidgetConformanceSet, .insertWidgetCorpus, .insertWidgetGames:
+        case .insertWidgetConformanceSet, .insertWidgetGames:
             let title: String
             let posts: () -> [EngineLocalWidgetPost]
             switch self {
             case .insertWidgetConformanceSet:
                 title = "Insert widget conformance set"
                 posts = widgetConformanceDebugPosts
-            case .insertWidgetGames:
+            default:
                 title = "Insert widget games"
                 posts = widgetGamesDebugPosts
-            default:
-                title = "Insert widget corpus"
-                posts = widgetCorpusDebugPosts
             }
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -2029,7 +2023,6 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
             entries.append(.fakeWalletTransfers(experimentalSettings.fakeWalletTransfers))
         }
         entries.append(.insertWidgetConformanceSet)
-        entries.append(.insertWidgetCorpus)
         entries.append(.insertWidgetGames)
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))

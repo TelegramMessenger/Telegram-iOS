@@ -1,0 +1,113 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="hero">
+    <div class="tiny" style="color: rgba(255,255,255,0.75)">Berlin · local time</div>
+    <div class="clock" id="clock">01:00:01</div>
+    <div class="zones"><div>Lisbon<b id="z0">00:00</b></div><div>New York<b id="z1">19:00</b></div><div>Tbilisi<b id="z2">03:00</b></div><div>Tokyo<b id="z3">08:00</b></div></div>
+  </div>
+  <div class="row between" style="margin-top: 12px"><span class="bold">Kit v2 launch</span><span class="tiny muted">1 Dec 2026, 10:00</span></div>
+  <div class="cd"><div><b id="d">334</b><span>days</span></div><div><b id="h">08</b><span>hours</span></div><div><b id="m">59</b><span>min</span></div><div><b id="s">59</b><span>sec</span></div></div>
+  <div class="bar"><div id="prog" style="width: 0.0%;"></div></div>
+  <div class="tiny muted" style="margin-top: 4px" id="note">0.0% of the countdown elapsed</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 294
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 294
+    div 15 13 330 268
+      div 29 27 302 98.1
+        div 29 27 302 14.3
+        div 29 41.3 302 40
+        div 29 91.3 302 33.8
+          div 29 91.3 75.5 33.8
+            b 29 105.6 75.5 19.5
+          div 104.5 91.3 75.5 33.8
+            b 104.5 105.6 75.5 19.5
+          div 180 91.3 75.5 33.8
+            b 180 105.6 75.5 19.5
+          div 255.5 91.3 75.5 33.8
+            b 255.5 105.6 75.5 19.5
+      div 15 151.1 330 18.2
+        span 15 151.1 104 18.2
+        span 209 153.05 136 14.3
+      div 15 181.3 330 65.4
+        div 15 189.3 78 49.4
+          b 15 189.3 78 31.2
+          span 15 220.5 0 0
+        div 99 189.3 78 49.4
+          b 99 189.3 78 31.2
+          span 99 220.5 0 0
+        div 183 189.3 78 49.4
+          b 183 189.3 78 31.2
+          span 183 220.5 0 0
+        div 267 189.3 78 49.4
+          b 267 189.3 78 31.2
+          span 267 220.5 0 0
+      div 15 256.7 330 6
+        div 15 256.7 0 6
+      div 15 266.7 330 14.3
+
+== paint
+root 360x294 items=45
+  solid-fill bounds=(0,0,360,294) layer=(border=(0,0,360,294),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,294),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,294) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,294) root=0
+  linear-gradient bounds=(15,13,330,126) layer=(border=(15,13,330,126),radius=(12,12,12,12,12,12,12,12),clip=(15,13,330,126),origin=(15,13,330,126),attachment=0,repeat=0,root=0) points=((0,#0b1b3aff,-),(0.6,#1a3a7aff,-),(1,#3b6fd6ff,-)) space=0 hue=0 start=(66,-38) end=(294,190)
+  solid-fill bounds=(15,181,78,66) layer=(border=(15,181,78,66),radius=(10,10,10,10,10,10,10,10),clip=(15,181,78,66),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(99,181,78,66) layer=(border=(99,181,78,66),radius=(10,10,10,10,10,10,10,10),clip=(99,181,78,66),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(183,181,78,66) layer=(border=(183,181,78,66),radius=(10,10,10,10,10,10,10,10),clip=(183,181,78,66),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(267,181,78,66) layer=(border=(267,181,78,66),radius=(10,10,10,10,10,10,10,10),clip=(267,181,78,66),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,257,330,6) layer=(border=(15,257,330,6),radius=(3,3,3,3,3,3,3,3),clip=(15,257,330,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(15,256.7,330,6) pos=(15,256.7,330,6) radius=(3,3,3,3,3,3,3,3)
+  solid-fill bounds=(15,257,0,6) layer=(border=(15,257,0,6),radius=(0,0,0,0,0,0,0,0),clip=(15,257,0,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  del-clip bounds=(0,0,0,0)
+  text bounds=(21,19,64,32) pos=(29,27,48,16) color=#ffffffbf text="Berlin" font=f1 glyphs=6 advance=48
+  text bounds=(77,19,32,32) pos=(85,27,16,16) color=#ffffffbf text="·" font=f1 glyphs=2 advance=16
+  text bounds=(101,19,56,32) pos=(109,27,40,16) color=#ffffffbf text="local" font=f1 glyphs=5 advance=40
+  text bounds=(149,19,48,32) pos=(157,27,32,16) color=#ffffffbf text="time" font=f1 glyphs=4 advance=32
+  text bounds=(21,45,80,32) pos=(29,53,64,16) color=#ffffffff text="01:00:01" font=f2 glyphs=8 advance=64
+  text bounds=(21,83,64,32) pos=(29,91,48,16) color=#ffffffbf text="Lisbon" font=f1 glyphs=6 advance=48
+  text bounds=(21,99,56,32) pos=(29,107,40,16) color=#ffffffff text="00:00" font=f3 glyphs=5 advance=40
+  text bounds=(96.5,83,40,32) pos=(104.5,91,24,16) color=#ffffffbf text="New" font=f1 glyphs=3 advance=24
+  text bounds=(128.5,83,48,32) pos=(136.5,91,32,16) color=#ffffffbf text="York" font=f1 glyphs=4 advance=32
+  text bounds=(96.5,99,56,32) pos=(104.5,107,40,16) color=#ffffffff text="19:00" font=f3 glyphs=5 advance=40
+  text bounds=(172,83,72,32) pos=(180,91,56,16) color=#ffffffbf text="Tbilisi" font=f1 glyphs=7 advance=56
+  text bounds=(172,99,56,32) pos=(180,107,40,16) color=#ffffffff text="03:00" font=f3 glyphs=5 advance=40
+  text bounds=(247.5,83,56,32) pos=(255.5,91,40,16) color=#ffffffbf text="Tokyo" font=f1 glyphs=5 advance=40
+  text bounds=(247.5,99,56,32) pos=(255.5,107,40,16) color=#ffffffff text="08:00" font=f3 glyphs=5 advance=40
+  text bounds=(7,144,40,32) pos=(15,152,24,16) color=#000000ff text="Kit" font=f4 glyphs=3 advance=24
+  text bounds=(39,144,32,32) pos=(47,152,16,16) color=#000000ff text="v2" font=f4 glyphs=2 advance=16
+  text bounds=(63,144,64,32) pos=(71,152,48,16) color=#000000ff text="launch" font=f4 glyphs=6 advance=48
+  text bounds=(201,145,24,32) pos=(209,153,8,16) color=#6e6e73ff text="1" font=f1 glyphs=1 advance=8
+  text bounds=(217,145,40,32) pos=(225,153,24,16) color=#6e6e73ff text="Dec" font=f1 glyphs=3 advance=24
+  text bounds=(249,145,56,32) pos=(257,153,40,16) color=#6e6e73ff text="2026," font=f1 glyphs=5 advance=40
+  text bounds=(297,145,56,32) pos=(305,153,40,16) color=#6e6e73ff text="10:00" font=f1 glyphs=5 advance=40
+  text bounds=(34,188,40,32) pos=(42,196,24,16) color=#000000ff text="334" font=f5 glyphs=3 advance=24
+  text bounds=(30,214,48,32) pos=(38,222,32,16) color=#6e6e73ff text="DAYS" font=f6 glyphs=4 advance=32
+  text bounds=(122,188,32,32) pos=(130,196,16,16) color=#000000ff text="08" font=f5 glyphs=2 advance=16
+  text bounds=(110,214,56,32) pos=(118,222,40,16) color=#6e6e73ff text="HOURS" font=f6 glyphs=5 advance=40
+  text bounds=(206,188,32,32) pos=(214,196,16,16) color=#000000ff text="59" font=f5 glyphs=2 advance=16
+  text bounds=(202,214,40,32) pos=(210,222,24,16) color=#6e6e73ff text="MIN" font=f6 glyphs=3 advance=24
+  text bounds=(290,188,32,32) pos=(298,196,16,16) color=#000000ff text="59" font=f5 glyphs=2 advance=16
+  text bounds=(286,214,40,32) pos=(294,222,24,16) color=#6e6e73ff text="SEC" font=f6 glyphs=3 advance=24
+  text bounds=(7,259,48,32) pos=(15,267,32,16) color=#6e6e73ff text="0.0%" font=f1 glyphs=4 advance=32
+  text bounds=(47,259,32,32) pos=(55,267,16,16) color=#6e6e73ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(71,259,40,32) pos=(79,267,24,16) color=#6e6e73ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(103,259,88,32) pos=(111,267,72,16) color=#6e6e73ff text="countdown" font=f1 glyphs=9 advance=72
+  text bounds=(183,259,72,32) pos=(191,267,56,16) color=#6e6e73ff text="elapsed" font=f1 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="ui-monospace,monospace",size=40,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=14,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="ui-monospace,monospace",size=24,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

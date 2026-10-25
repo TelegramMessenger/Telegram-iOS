@@ -570,6 +570,9 @@ static void testSetAttributeMatchesFresh() {
                         "[hidden]{display:none} a:link{color:#909} input:checked{outline:1px solid #f00}";
     // A class toggle (added, swapped, removed) and an id change.
     attributePatchedMatchesFresh(sheet, "p", {}, "class", "a");
+    // Edit 31.5: matched again in place, an element with text is still not :empty.
+    attributePatchedMatchesFresh("span:empty{padding:9px} p:not(:empty){margin:7px} .k{color:#c00}", "span", {}, "class", "k");
+    attributePatchedMatchesFresh("span:empty{padding:9px} p:not(:empty){margin:7px} .k{color:#c00}", "p", {}, "class", "k");
     attributePatchedMatchesFresh(sheet, "div", {{"class", "a"}}, "class", "b");
     attributePatchedMatchesFresh(sheet, "div", {{"class", "a"}}, "class", "a c");
     attributePatchedMatchesFresh(sheet, "div", {{"class", "b"}}, "class", nullptr);
@@ -700,9 +703,11 @@ static void testSetAttributeFixRound() {
     attributePatchedMatchesFresh("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}}, "xlink:title", "t");
     attributePatchedMatchesFresh("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}, {"Fill", "red"}}, "Fill", "blue");
 
-    // I2: while a ::before or ::after rule with content could match, no patch is made: near the text-piece cap a patch and
-    // a rebuild cut at different words. The shapes that got past a byte bound: function name case and spacing, and a
-    // second element's rule whose content overlaps in a fresh build.
+    // I2: with a ::before or ::after rule with content, a patch is made unless a cap has been reached (freed pieces would
+    // go to later content in a fresh build). A build makes pseudo-element content after all text, in document order, so a
+    // patch whose content reaches a cap cut it where a build would cut other content: it posts the limit, and the caller
+    // rebuilds. Below the caps the patched document equals a fresh build. The shapes that got past a byte bound: function
+    // name case and spacing, and a second element's rule whose content overlaps in a fresh build.
     {
         const char* sheets[] = {
             ".x::before{content:\"a b c d\"} .x{color:#c00}",
@@ -711,22 +716,52 @@ static void testSetAttributeFixRound() {
             "[title]::before{content:attr(title)} .k::before{content:attr(title)} .x::before{content:\"a b c d\"}",
             ".x:after{content:\"a b c d\"}",
         };
+        const litehtml::string_map title = {{"title", "t t t t t t t t t t"}};
+        int compared = 0, refused = 0;
         for (const char* sheet : sheets) {
             for (int words : {0, 4000, 4990, 5004}) {
                 fillerWords = words;
-                PaintContainer c;
-                element::ptr target;
-                auto doc = attrDocument(c, sheet, "div", {{"title", "t t t t t t t t t t"}}, target);
+                PaintContainer c, fresh, textFresh;
+                element::ptr target, expected, textExpected;
+                auto doc = attrDocument(c, sheet, "div", title, target);
+                litehtml::string_map classed = title;
+                classed["class"] = "x";
+                auto reference = attrDocument(fresh, sheet, "div", classed, expected);
+                beforeText = "other words";
+                auto textReference = attrDocument(textFresh, sheet, "div", classed, textExpected);
+                beforeText = "before";
                 CHECK(doc->pseudo_content_possible());
-                if (doc->can_set_element_attribute(target, "class", "x")) std::printf("  accepted with pseudo content: %s\n", sheet);
-                CHECK(!doc->can_set_element_attribute(target, "class", "x"));
-                CHECK(!doc->set_element_attribute(target, "class", "x"));
-                // The same for a text patch (edit 16).
+                auto p = doc->root()->select_one("p");
+                if (doc->text_limited() || doc->pseudo_limited()) {
+                    CHECK(!doc->can_set_element_attribute(target, "class", "x"));
+                    CHECK(!doc->set_element_attribute(target, "class", "x"));
+                    CHECK(!doc->can_replace_text(p, 0, p->children().size(), "other words"));
+                    refused++;
+                    continue;
+                }
+                const size_t posted = c.limits.size();
+                CHECK(doc->set_element_attribute(target, "class", "x"));
+                doc->commit_patch();
+                doc->render(litehtml::pixel_t(160.0f));
+                if (c.limits.size() != posted) {
+                    continue;   // a cap reached: the caller rebuilds
+                }
+                CHECK(dump_of(doc) == dump_of(reference));
+                CHECK(painted(c, doc) == painted(fresh, reference));
+                // Then a text patch (edit 16), below the caps too.
                 std::vector<element::ptr> pieces;
-                CHECK(!doc->can_replace_text(target, 0, target->children().size(), "other words"));
-                CHECK(!doc->replace_text(target, 0, target->children().size(), "other words", pieces));
+                CHECK(doc->can_replace_text(p, 0, p->children().size(), "other words"));
+                CHECK(doc->replace_text(p, 0, p->children().size(), "other words", pieces));
+                doc->commit_patch();
+                doc->render(litehtml::pixel_t(160.0f));
+                CHECK(c.limits.size() == posted);
+                CHECK(dump_of(doc) == dump_of(textReference));
+                CHECK(painted(c, doc) == painted(textFresh, textReference));
+                compared++;
             }
         }
+        CHECK(compared > 0);
+        CHECK(refused > 0);
         fillerWords = 0;
         // What is not content does not count: a pseudo-element rule without `content`, with `content:none`, and content
         // on a real element; and then patches work near the cap and equal a fresh build, limits included.
@@ -776,14 +811,15 @@ static void testSetAttributeFixRound() {
             doc->finalize_from_external_root(root, litehtml::telegram_master_css());
             doc->render(litehtml::pixel_t(160.0f));
             CHECK(doc->pseudo_content_possible());
-            CHECK(!doc->can_set_element_attribute(p, "class", "x"));
-            CHECK(!doc->can_replace_text(p, 0, 1, "other"));
+            CHECK(doc->can_set_element_attribute(p, "class", "x"));
+            CHECK(doc->can_replace_text(p, 0, 1, "other"));
         }
     }
 
-    // A control makes its lh-* parts when it is matched again: a rule for one counts wherever a control could make it, and the
-    // flag is read afresh after each commit. type text -> range in one patch, then a text patch near the cap: whatever
-    // is accepted equals a fresh build with the same text.
+    // A control makes its lh-* parts when it is matched again: a rule for one counts wherever a control could make it, and
+    // a build counts the parts' content beyond what it keeps, so with such a rule nothing patches (part_content_possible).
+    // type text -> range in one patch, then a text patch near the cap: whatever is accepted equals a fresh build with the
+    // same text.
     {
         const char* sheet = "lh-range-thumb::before{content:\"B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20\"}"
                             " input lh-range-thumb::before{content:\"q\"}";
@@ -797,6 +833,7 @@ static void testSetAttributeFixRound() {
             beforeText = newText;
             auto reference = attrDocument(fresh, sheet, "input", {{"type", "range"}}, expected);
             beforeText = "before";
+            CHECK(doc->part_content_possible());
             if (doc->set_element_attribute(target, "type", "range")) {
                 typed++;
                 doc->commit_patch();
@@ -816,7 +853,7 @@ static void testSetAttributeFixRound() {
         }
         fillerWords = 0;
         std::printf("  range shape: %d type patches, %d text patches accepted\n", typed, texted);
-        CHECK(typed == 0 && texted == 0);   // the flag is set from the start: the document has a control
+        CHECK(typed == 0 && texted == 0);   // the document has a control and a part rule from the start
     }
 
     // The table-cell cap: a span change that would take the cells past 200,000 is refused; below it, equal to fresh.
@@ -2092,10 +2129,27 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(observer.rebuilt == 1);
         CHECK(observer.added.empty() && observer.removed.empty());
         observer.clear();
-        CHECK(doc->set_element_attribute(childAt(body, 1), "style", "padding:4px"));
+        CHECK(doc->set_element_attribute(childAt(body, 1), "style", "float:left"));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
         CHECK(observer.rebuilt == 1);
+        doc->set_render_observer(nullptr);
+    }
+    // Edit 63: a style patch of a box's geometry alone keeps the render tree, and the layout reports every box it moved
+    // or resized, the ones after it included.
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, {el("p", "one"), el("div", "x"), el("p", "two")}, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        const auto before = renderItems(doc);
+        const auto was = geometryOf(before);
+        CHECK(doc->set_element_attribute(childAt(body, 1), "style", "padding:4px"));
+        doc->commit_patch();
+        doc->render(litehtml::pixel_t(200.0f));
+        CHECK(observer.rebuilt == 0);
+        checkReports(doc, observer, before, was, "padding style patch");
         doc->set_render_observer(nullptr);
     }
 }

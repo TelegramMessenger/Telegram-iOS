@@ -513,6 +513,19 @@ namespace litehtml
         return paint.count(name) != 0;
     }
 
+    // Telegram (VENDOR.md edit 63): a property only layout reads: a box's size, margins, padding, offsets, gaps and flex
+    // sizes. Creating and initialising render items reads display, position, float, list-style-type, white-space and
+    // flex-direction, never these, so a change of them keeps the render tree; the restyle marks the box's layout dirty.
+    static bool geometry_only_property(const std::string& name)
+    {
+        static const std::unordered_set<std::string>& geometry = *new std::unordered_set<std::string>{
+            "width", "height", "min-width", "min-height", "max-width", "max-height", "margin", "margin-top", "margin-right",
+            "margin-bottom", "margin-left", "padding", "padding-top", "padding-right", "padding-bottom", "padding-left",
+            "top", "right", "bottom", "left", "inset", "gap", "row-gap", "column-gap", "flex-grow", "flex-shrink",
+            "flex-basis"};
+        return geometry.count(name) != 0;
+    }
+
     // Telegram (VENDOR.md edit 27): whether a change of the property can change paint order or start or end a paint
     // group (commit_patch tells the render observer).
     static bool paint_order_property(const std::string& property)
@@ -525,11 +538,17 @@ namespace litehtml
     // another value.
     static std::vector<std::string> changed_declarations(const std::string& before, const std::string& after)
     {
+        // Telegram (VENDOR.md edit 62): a value without the whitespace around it, so that a re-serialization (CSSOM
+        // writes `width: 40px;` for `width:40px`) changes nothing.
+        auto trimmed = [](const std::string& value) {
+            const size_t a = value.find_first_not_of(" \t\n");
+            return a == std::string::npos ? std::string() : value.substr(a, value.find_last_not_of(" \t\n") - a + 1);
+        };
         std::map<std::string, std::string> left, right;
         for(const auto& d : split_style_declarations(before))
-            left[d.first] = d.second;
+            left[d.first] = trimmed(d.second);
         for(const auto& d : split_style_declarations(after))
-            right[d.first] = d.second;
+            right[d.first] = trimmed(d.second);
         std::vector<std::string> changed;
         for(const auto& d : left)
         {
@@ -1785,7 +1804,7 @@ namespace litehtml
         return true;
     }
 
-    bool document::apply_retag(const element::ptr& el, const string_map& attrs, bool check, int* region)
+    bool document::apply_retag(const element::ptr& el, const string_map& attrs, bool check, int* region, bool geometry)
     {
         if(region)
             *region = 0;
@@ -1817,7 +1836,16 @@ namespace litehtml
         elements_list children;
         children.swap(tag->m_children);
         const css* sheets[3] = {&m_master_css, &m_styles, &m_user_css};
-        tag->apply_matching(sheets, m_match_epoch);
+        {
+            // Telegram (VENDOR.md edit 31.5): :empty reads the children set aside, not the empty list matching sees.
+            struct Aside
+            {
+                html_tag& tag;
+                ~Aside() { tag.set_children_for_matching(nullptr); }
+            } aside{*tag};
+            tag->set_children_for_matching(&children);
+            tag->apply_matching(sheets, m_match_epoch);
+        }
         elements_list pseudo;
         pseudo.swap(tag->m_children);
         for(const auto& child : pseudo)
@@ -1844,12 +1872,36 @@ namespace litehtml
         };
         const std::string animated_before = take_animated(attrs_before);
         const std::string animated_after  = take_animated(attrs_after);
+#if 0
         if(attrs_before != attrs_after)
             return false;
         const std::vector<std::string> animated = changed_declarations(animated_before, animated_after);
+#else
+        // Telegram (VENDOR.md edit 62): a script's inline style changes on every frame too (an rAF loop setting
+        // el.style.transform), and keeps the tree on the same terms: its changed properties join the animated ones.
+        auto take_style = [](string_map& attrs) {
+            auto        it   = attrs.find("style");
+            std::string text = it == attrs.end() ? std::string() : it->second;
+            if(it != attrs.end())
+                attrs.erase(it);
+            return text;
+        };
+        const std::string style_before = take_style(attrs_before);
+        const std::string style_after  = take_style(attrs_after);
+        if(attrs_before != attrs_after)
+            return false;
+        std::vector<std::string> animated = changed_declarations(animated_before, animated_after);
+        for(auto& property : changed_declarations(style_before, style_after))
+            animated.push_back(std::move(property));
+#endif
         for(const auto& property : animated)
         {
+#if 0
             if(!paint_only_property(property))
+#else
+            // Telegram (VENDOR.md edit 63): or one only layout reads, for a caller that lays out again.
+            if(!paint_only_property(property) && !(geometry && geometry_only_property(property)))
+#endif
                 return false;
         }
         const auto                                        rules_after = used_rules();
@@ -1859,12 +1911,16 @@ namespace litehtml
         int kind = 1;
         for(const auto& rule : changed)
         {
-            if(!rule.first->m_style || !rule.first->m_style->only_declares([&kind](string_id name) {
+            if(!rule.first->m_style || !rule.first->m_style->only_declares([&kind, geometry](string_id name) {
                    const std::string& text     = _s(name);
                    const std::string  property = text.compare(0, 8, "-lh-raw-") == 0 ? text.substr(8) : text;
                    const int          declared = declared_region(property);
                    kind                        = declared == 0 ? 0 : (kind == 0 ? 0 : std::max(kind, declared));
+#if 0
                    return paint_only_property(property);
+#else
+                   return paint_only_property(property) || (geometry && geometry_only_property(property)); // edit 63
+#endif
                }))
                 return false;
         }

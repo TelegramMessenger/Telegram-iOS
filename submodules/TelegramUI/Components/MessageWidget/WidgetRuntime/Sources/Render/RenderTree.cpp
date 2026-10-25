@@ -696,7 +696,7 @@ void RenderTree::flush(JSContext* ctx) {
         if (animation::AnimationState* animations = animation::AnimationState::find(ctx)) {
             animations->collectRenderChanges(ctx, *this);
         }
-        if (!m_journal.dirty()) {
+        if (!m_journal.dirty() && m_paintedCanvases.empty()) {
             break;
         }
         animation::StyleChange change;
@@ -787,12 +787,25 @@ animation::StyleChange RenderTree::pendingStyleChange(JSContext* ctx) {
 
 void RenderTree::publishJournal(JSContext* ctx) {
     SnapScope snap(m_container.options().pixelSnapScale);
+    struct Repainted {
+        RenderTree& tree;
+        ~Repainted() {
+            tree.m_paintedCanvasSet.clear();
+            tree.m_paintedCanvases.clear();
+        }
+    } repainted{*this};
+    if (!m_journal.dirty()) {
+        this->publishRepaints(ctx);
+        return;
+    }
     // Ruling 8: a full rebuild is always correct and is the oracle the in-place paths are held to. A journal with a
     // structural entry goes to the structure path (Task 9), any other to the text and attribute path (Tasks 7 and 8).
     constexpr JournalKinds kStructural = journalBit(JournalKind::Inserted) | journalBit(JournalKind::Removed) |
                                          journalBit(JournalKind::Children);
-    const PatchResult result =
-        (m_journal.kinds() & kStructural) != 0 ? this->flushStructure(ctx) : this->flushPatch(ctx);
+    std::unordered_map<Node*, Node*> swaps;
+    const PatchResult result = (m_journal.kinds() & kStructural) != 0 && !this->textSwaps(ctx, swaps)
+                                   ? this->flushStructure(ctx)
+                                   : this->flushPatch(ctx, swaps);
     if (result == PatchResult::Patched) {
         return;
     }
@@ -802,11 +815,45 @@ void RenderTree::publishJournal(JSContext* ctx) {
     this->rebuild(ctx);
 }
 
+// A bitmap's pixels change no box, so nothing is laid out: the mirror captures each painted canvas's box again.
+void RenderTree::publishRepaints(JSContext* ctx) {
+    if (!m_current.document || m_flushing) {
+        return;
+    }
+    m_flushing = true;
+    struct Flushing {
+        bool& flag;
+        ~Flushing() { flag = false; }
+    } flushing{m_flushing};
+    MirrorPublish published;
+    try {
+        this->reportRepaints();
+        published = publishPatch(*m_current.document);
+    } catch (...) {
+        abortForCaughtException(ctx);
+    }
+    installPatch(published);
+}
+
+void RenderTree::reportRepaints() noexcept {
+    if (!m_mirror) {
+        return;
+    }
+    for (const Ref<Element>& canvas : m_paintedCanvases) {
+        auto found = m_current.nodes.find(canvas.get());
+        if (found != m_current.nodes.end() && found->second.element) {
+            m_mirror->element_restyled(found->second.element.get(), false);
+        }
+    }
+}
+
 namespace {
 
 struct TextPlan {
     Node* node = nullptr;
     RenderEntry* entry = nullptr;
+    /// A Text swap's old Text, whose entry (`entry`) the new one (`node`) takes over at the commit.
+    Node* replaced = nullptr;
     litehtml::element::ptr parent;
     std::string utf8;
     /// The text as the render input carries it; only when the options keep it.
@@ -921,9 +968,69 @@ size_t childIndex(const litehtml::element::ptr& parent, const litehtml::element*
 
 } // namespace
 
-RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
+bool RenderTree::textSwaps(JSContext* ctx, std::unordered_map<Node*, Node*>& swaps) {
+    constexpr JournalKinds kStructural = journalBit(JournalKind::Inserted) | journalBit(JournalKind::Removed) |
+                                         journalBit(JournalKind::Children);
+    if (m_journal.rebuildPending() || !m_current.document) {
+        return false;
+    }
+    std::unordered_map<Node*, Node*> inserted;   // parent → its new Text
+    std::unordered_map<Node*, Node*> removed;    // parent → the Text that went
+    std::unordered_set<Node*> dirty;
+    for (const JournalEntry& journaled : m_journal.entries()) {
+        charge(ctx, work::kNodeVisit);
+        const JournalKinds kinds = journaled.kinds & kStructural;
+        Node* node = journaled.node.get();
+        if (kinds == 0) {
+            continue;
+        }
+        if (kinds == journalBit(JournalKind::Children)) {
+            dirty.insert(node);
+            continue;
+        }
+        if (node->type() != NodeType::Text) {
+            return false;
+        }
+        if (kinds == journalBit(JournalKind::Inserted)) {
+            Node* parent = node->parent();
+            if (!parent || !parent->isElement() || parent->childCount() != 1 || !inserted.emplace(parent, node).second) {
+                return false;
+            }
+            continue;
+        }
+        if (kinds != journalBit(JournalKind::Removed)) {
+            return false;
+        }
+        // Where its pieces were: the parent element's litehtml element, mapped back to the DOM.
+        auto found = m_current.nodes.find(node);
+        if (found == m_current.nodes.end() || found->second.pieces.empty() || !found->second.pieces[0]->parent()) {
+            return false;
+        }
+        auto parent = m_current.elements.find(found->second.pieces[0]->parent().get());
+        if (parent == m_current.elements.end() || !removed.emplace(parent->second, node).second) {
+            return false;
+        }
+    }
+    if (dirty.empty() || dirty.size() != inserted.size() || dirty.size() != removed.size()) {
+        return false;
+    }
+    for (Node* parent : dirty) {
+        auto in = inserted.find(parent);
+        auto out = removed.find(parent);
+        auto entry = m_current.nodes.find(parent);
+        // The root element's text is the document's own structure.
+        if (in == inserted.end() || out == removed.end() || entry == m_current.nodes.end() || !entry->second.element ||
+            !entry->second.element->parent()) {
+            return false;
+        }
+        swaps.emplace(in->second, out->second);
+    }
+    return true;
+}
+
+RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx, const std::unordered_map<Node*, Node*>& swaps) {
     constexpr JournalKinds kPatchable = journalBit(JournalKind::Text) | journalBit(JournalKind::Attribute);
-    if (m_journal.rebuildPending() || (m_journal.kinds() & ~kPatchable) != 0 || !m_current.document ||
+    if (m_journal.rebuildPending() || ((m_journal.kinds() & ~kPatchable) != 0 && swaps.empty()) || !m_current.document ||
         !m_current.limits.empty() || m_flushing) {
         return this->refused("a rebuild pending, no build, or a limit hit");
     }
@@ -934,23 +1041,23 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
         ~Flushing() { flag = false; }
     } flushing{m_flushing};
     litehtml::document& document = *m_current.document;
-    // A ::before or ::after rule with content: a patch and a rebuild cut at different words near the text-piece cap.
-    // The answer is recomputed after every commit by a walk of the element tree, paid for first (all of the build's
-    // elements and pieces, as the layout pre-charge counts them), before anything is touched.
+    // Whether a ::before or ::after rule with content could match (twidget edit 17): the answer is recomputed after every
+    // commit by a walk of the element tree, paid for first (all of the build's elements and pieces, as the layout
+    // pre-charge counts them), before anything is touched.
     try {
         charge(ctx, m_current.boxes * work::kRenderNode);
     } catch (...) {
         abortForCaughtException(ctx);
     }
-    if (document.pseudo_content_possible()) {
-        return this->refused("pseudo-element content");
-    }
+    const bool pseudoContent = document.pseudo_content_possible();
     JSRuntime* rt = JS_GetRuntime(ctx);
     const bool keepInput = m_container.options().keepRenderInput;
 
     std::vector<TextPlan> plans;
     std::vector<AttributePlan> attributePlans;
     std::vector<InputPatch> patches;
+    // The swapped Texts' old roots: released when the flush returns, never inside the commit.
+    std::vector<Ref<Node>> retired;
     RenderString newInput{JSAllocator<char>(rt)};
     std::vector<RenderElementMap::node_type> pool;
     int64_t stepBound = 0;
@@ -978,6 +1085,11 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
         for (const JournalEntry& journaled : entries) {
             charge(ctx, work::kRenderNode);
             Node& node = *journaled.node;
+            // A Text swap (textSwaps): its parent's child-list change and the old Text's removal are the new Text's plan.
+            if ((journaled.kinds & journalBit(JournalKind::Removed)) ||
+                (journaled.kinds & ~journalBit(JournalKind::Children)) == 0) {
+                continue;
+            }
             if (node.isElement()) {
                 // An attribute change (a mixed entry cannot be: an element has no data and a Text node no attributes).
                 Element& element = static_cast<Element&>(node);
@@ -1027,9 +1139,13 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
                 plan.changed = comparable != plan.wanted;
                 if (plan.changed) {
                     // The element is matched again: the per-element share of the layout pre-charge, then the fork's
-                    // predicate (which also refuses, whatever the change, while a pseudo-element can make content).
+                    // predicate, and a node visit for each element of the subtree it walked (its style bound), twice:
+                    // set_element_attributes asks it again at the commit, where nothing is charged.
                     charge(ctx, work::kLayoutBox);
-                    if (!document.can_set_element_attributes(entry.element, plan.wanted, &attributeGrowth)) {
+                    const uint64_t walked = document.predicate_steps();
+                    const bool allowed = document.can_set_element_attributes(entry.element, plan.wanted, &attributeGrowth);
+                    charge(ctx, 2 * (document.predicate_steps() - walked) * work::kNodeVisit);
+                    if (!allowed) {
                         return this->refused("refused by can_set_element_attributes");
                     }
                 }
@@ -1045,7 +1161,9 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
             if (node.type() != NodeType::Text) {
                 return this->refused("not a Text");
             }
-            auto found = m_current.nodes.find(&node);
+            auto swapped = swaps.find(&node);
+            Node* const swappedOut = swapped == swaps.end() ? nullptr : swapped->second;
+            auto found = m_current.nodes.find(swappedOut ? swappedOut : &node);
             // Text no build reads (inside an element the profile drops, or a <script>): its change renders nothing, as
             // an unrendered element's attribute change does (V4 plan, Task 4: profile 1 drops every form control).
             if (found == m_current.nodes.end() && !this->readByABuild(ctx, node)) {
@@ -1107,6 +1225,7 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
             }
             plan.node = &node;
             plan.entry = &entry;
+            plan.replaced = swappedOut;
             plan.parent = std::move(parent);
             plans.push_back(std::move(plan));
         }
@@ -1144,11 +1263,13 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
         if (keepInput) {
             charge(ctx, uint64_t(m_current.nodes.size()) * work::kRenderNode);
         }
-        // Everything the patch will allocate. Pieces: reserved per plan and in each entry.
+        // Everything the patch will allocate. Pieces: reserved per plan and in each entry; and a place for each swapped
+        // Text's old root, released after the flush.
         for (TextPlan& plan : plans) {
             plan.pieces.reserve(plan.newCount);
             plan.entry->pieces.reserve(plan.newCount);
         }
+        retired.reserve(swaps.size());
         // The element map: the new pieces take over the nodes of the old ones, and the surplus has spares made now.
         m_current.elements.reserve(m_current.elements.size() + surplus);
         pool.reserve(surplus + replaced);
@@ -1251,6 +1372,17 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
             }
             entry.bytes = plan.utf8.size();
             entry.units = plan.units;
+            if (plan.replaced) {
+                // The new Text takes the old one's entry and its place (a map node moves, its value does not), and a key
+                // of its own when it is next asked for, as a build gives a new node: what named the old one (a selection
+                // boundary) does not name it.
+                auto handle = m_current.nodes.extract(plan.replaced);
+                handle.key() = plan.node;
+                retired.push_back(std::move(handle.mapped().node));
+                handle.mapped().node = Ref<Node>::retain(ctx, plan.node);
+                handle.mapped().key = 0;
+                m_current.nodes.insert(std::move(handle));
+            }
         }
         for (AttributePlan& plan : attributePlans) {
             if (plan.changed && !document.set_element_attributes(plan.element, plan.wanted)) {
@@ -1272,6 +1404,11 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
         }
         if (!styleLimitedBefore && document.style_bytes_limited()) {
             throw Abandon{"abandoned: the style budget was passed"};
+        }
+        // Pseudo-element content the re-match made reached a cap: the patch cut it where a fresh build, which makes it in
+        // document order, would have cut what follows it.
+        if (pseudoContent && (document.text_limited() || document.pseudo_limited())) {
+            throw Abandon{"abandoned: pseudo-element content at a cap"};
         }
         if (used > 0) {
             charge(ctx, uint64_t(used) * work::kSimpleSelectorTest);
@@ -1316,7 +1453,8 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
         m_current.naturalWidth =
             double(document.render(litehtml::pixel_t(float(m_container.options().width))).value());
         collectContainerLimits(m_container, limits);
-        // Task 10b: the operations the fork's reports give, or a new mirror and Reset.
+        // Task 10b: the operations the fork's reports give, or a new mirror and Reset; the painted canvases with them.
+        this->reportRepaints();
         published = publishPatch(document);
     } catch (const Abandon& abandon) {
         m_refusal = abandon.why;
@@ -1334,6 +1472,7 @@ RenderTree::PatchResult RenderTree::flushPatch(JSContext* ctx) {
     }
     installPatch(published);
     m_patchCount++;
+    m_swappedTexts += retired.size();
     m_journal.clear();
     for (const std::string& kind : limits) {
         m_current.limits.push_back(kind);
@@ -1408,7 +1547,8 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
         ~Flushing() { flag = false; }
     } flushing{m_flushing};
     litehtml::document& document = *m_current.document;
-    // The pseudo-content walk (flushPatch says why), paid for first.
+    // Pseudo-element content: an inserted subtree's would be made in the patch's order, not a fresh build's (twidget edit
+    // 18), so a structure patch is not made where it could match. The walk, paid for first.
     try {
         charge(ctx, m_current.boxes * work::kRenderNode);
     } catch (...) {
@@ -2098,7 +2238,9 @@ RenderTree::PatchResult RenderTree::flushStructure(JSContext* ctx) {
         m_current.naturalWidth =
             double(document.render(litehtml::pixel_t(float(m_container.options().width))).value());
         collectContainerLimits(m_container, limits);
-        // Task 10b: the fork rebuilt its render tree (every structural patch does), so a new mirror and Reset.
+        // Task 10b: the fork rebuilt its render tree (every structural patch does), so a new mirror and Reset, which
+        // captures the painted canvases as they are.
+        this->reportRepaints();
         published = publishPatch(document);
     } catch (const Abandon& abandon) {
         m_refusal = abandon.why;
@@ -2337,8 +2479,18 @@ void RenderTree::setReducedMotion(JSContext* ctx, bool reduced) {
 }
 
 void RenderTree::canvasPainted(const Element& canvas) {
-    if (this->rendered(&canvas)) {
-        m_journal.markRebuild();
+    if (!this->rendered(&canvas) || m_journal.rebuildPending()) {
+        return;
+    }
+    if (m_paintedCanvasSet.count(&canvas) != 0) {
+        return;
+    }
+    try {
+        charge(m_ctx, work::kJournalEntry);
+        m_paintedCanvases.push_back(Ref<Element>::retain(m_ctx, const_cast<Element*>(&canvas)));
+        m_paintedCanvasSet.insert(&canvas);
+    } catch (...) {
+        abortForCaughtException(m_ctx);
     }
 }
 

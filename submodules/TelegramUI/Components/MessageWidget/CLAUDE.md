@@ -392,9 +392,9 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (`Fixtures/touch-drag.html`).
 - **Local widget messages, for development** (DEBUG builds). Debug Settings ▸ "Insert widget conformance set" posts
   widget-sandbox's conformance channel (`conformance/channel.json`, parsed by `MessageWidgetChannel`, each widget
-  followed by its reference pictures) to Saved Messages, and "Insert widget corpus" the corpus, as Local-namespace
-  messages through `engine.messages.debugInsertLocalWidgetMessages(peerId:posts:)` (`LocalWidgetMessages.swift`:
-  nothing is sent, pictures are tagged like sent ones). "Insert widget games" posts the client's game examples
+  followed by its reference pictures) to Saved Messages as Local-namespace messages through
+  `engine.messages.debugInsertLocalWidgetMessages(peerId:posts:)` (`LocalWidgetMessages.swift`: nothing is sent,
+  pictures are tagged like sent ones). "Insert widget games" posts the client's game examples
   (`Fixtures/11-tetris` to `14-pacman`, `WidgetGamesBundle`), to play with several fingers. Replying to or forwarding
   such a message is not supported (its local id and local media mean nothing to the server).
 - **The widget harness** (`Tests/WidgetHarness`, its own [`CLAUDE.md`](../../../../Tests/WidgetHarness/CLAUDE.md))

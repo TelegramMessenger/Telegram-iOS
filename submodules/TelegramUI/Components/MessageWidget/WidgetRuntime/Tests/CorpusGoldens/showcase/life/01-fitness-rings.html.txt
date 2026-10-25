@@ -1,0 +1,226 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="hd"><h3 id="title">Today</h3><span id="date">Thu 21 May</span></div>
+  <div class="top">
+    <div class="rings"><svg viewBox="0 0 150 150">
+      <circle class="tr" cx="75" cy="75" r="66"></circle><circle class="tr" cx="75" cy="75" r="50"></circle><circle class="tr" cx="75" cy="75" r="34"></circle>
+      <circle class="mv" id="rm" cx="75" cy="75" r="66" style="stroke-dasharray: 414.6902302738527 414.6902302738527; stroke-dashoffset: 89.94692217482856;"></circle><circle class="ex" id="re" cx="75" cy="75" r="50" style="stroke-dasharray: 314.1592653589793 314.1592653589793; stroke-dashoffset: 64.68824733043084;"></circle><circle class="st" id="rs" cx="75" cy="75" r="34" style="stroke-dasharray: 213.62830044410595 213.62830044410595; stroke-dashoffset: 57.31421702117934;"></circle>
+    </svg></div>
+    <div class="stats">
+      <div class="stat"><span class="l"><i style="background:var(--move)"></i>Move</span><b><span id="vm">479</span><small>/620 kcal</small></b></div>
+      <div class="stat"><span class="l"><i style="background:var(--ex)"></i>Exercise</span><b><span id="ve">24</span><small>/30 min</small></b></div>
+      <div class="stat"><span class="l"><i style="background:var(--stand)"></i>Stand</span><b><span id="vs">9</span><small>/12 h</small></b></div>
+    </div>
+  </div>
+  <div class="steps"><b id="stepsV">{"kind":"number" "locale":"en-US" "opts":{} "value":6317}</b><div class="goal"><i id="goal" style="width: 80.125%;"></i></div><span><span id="km">4.7</span> km · goal 8 000</span></div>
+  <div class="week" id="week"><div class="day" data-i="0" role="button"><div class="b m" style="height: 23px;"></div><div class="b e" style="height: 10px;"></div><div class="b s" style="height: 8px;"></div><span>F</span></div><div class="day" data-i="1" role="button"><div class="b m" style="height: 26px;"></div><div class="b e" style="height: 14px;"></div><div class="b s" style="height: 10px;"></div><span>S</span></div><div class="day" data-i="2" role="button"><div class="b m" style="height: 16px;"></div><div class="b e" style="height: 4px;"></div><div class="b s" style="height: 6px;"></div><span>S</span></div><div class="day" data-i="3" role="button"><div class="b m" style="height: 26px;"></div><div class="b e" style="height: 14px;"></div><div class="b s" style="height: 10px;"></div><span>M</span></div><div class="day" data-i="4" role="button"><div class="b m" style="height: 26px;"></div><div class="b e" style="height: 14px;"></div><div class="b s" style="height: 9px;"></div><span>T</span></div><div class="day" data-i="5" role="button"><div class="b m" style="height: 26px;"></div><div class="b e" style="height: 14px;"></div><div class="b s" style="height: 10px;"></div><span>W</span></div><div class="day on" data-i="6" role="button"><div class="b m" style="height: 20px;"></div><div class="b e" style="height: 11px;"></div><div class="b s" style="height: 8px;"></div><span>T</span></div></div>
+  <div class="badge"><i>🔥</i><span id="streak">Move goal met 4 days in a row</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 469.1
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 469.1
+    div 18 16 324 437.1
+      div 18 16 324 22.5
+        h3 18 16 40 22.5
+        span 262 19 80 16.2
+      div 18 50.5 324 150
+        div 18 50.5 150 150
+          svg 18 50.5 150 150
+            circle 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+            circle 0 0 0 0
+        div 184 72.075 158 106.85
+          div 184 78.075 158 22.95
+            span 184 81.075 46 16.2
+              i 184 85.075 8 8
+            b 246 78.075 96 22.95
+              span 246 78.075 0 0
+              small 246 78.075 0 0
+          div 184 114.025 158 22.95
+            span 184 117.025 78 16.2
+              i 184 121.025 8 8
+            b 270 114.025 72 22.95
+              span 270 114.025 0 0
+              small 270 114.025 0 0
+          div 184 149.975 158 22.95
+            span 184 152.975 54 16.2
+              i 184 156.975 8 8
+            b 294 149.975 48 22.95
+              span 294 149.975 0 0
+              small 294 149.975 0 0
+      div 18 227.5 324 113.4
+        b 18 227.5 184.302 113.4
+        div 216.302 281.2 0 6
+          i 216.302 281.2 0 6
+        span 230.302 237.5 111.698 32.4
+          span 230.302 237.5 0 0
+      div 18 354.9 324 70
+        div 18 354.9 41.1429 70
+          div 33.5714 361.4 10 23
+          div 33.5714 386.4 10 10
+          div 33.5714 398.4 10 8
+          span 34.5714 411.4 8 13.5
+        div 65.1429 354.9 41.1429 70
+          div 80.7143 354.9 10 24.7
+          div 80.7143 381.6 10 13.3
+          div 80.7143 396.9 10 9.5
+          span 81.7143 411.4 8 13.5
+        div 112.286 354.9 41.1429 70
+          div 127.857 376.4 10 16
+          div 127.857 394.4 10 4
+          div 127.857 400.4 10 6
+          span 128.857 411.4 8 13.5
+        div 159.429 354.9 41.1429 70
+          div 175 354.9 10 24.7
+          div 175 381.6 10 13.3
+          div 175 396.9 10 9.5
+          span 176 411.4 8 13.5
+        div 206.571 354.9 41.1429 70
+          div 222.143 354.9 10 25.2041
+          div 222.143 382.104 10 13.5714
+          div 222.143 397.676 10 8.72449
+          span 223.143 411.4 8 13.5
+        div 253.714 354.9 41.1429 70
+          div 269.286 354.9 10 24.7
+          div 269.286 381.6 10 13.3
+          div 269.286 396.9 10 9.5
+          span 270.286 411.4 8 13.5
+        div 300.857 354.9 41.1429 70
+          div 316.429 363.4 10 20
+          div 316.429 385.4 10 11
+          div 316.429 398.4 10 8
+          span 317.429 411.4 8 13.5
+      div 18 436.9 270 16.2
+        i 18 436.9 32 16.2
+        span 56 436.9 232 16.2
+
+== paint
+root 360x469.1 items=85
+  solid-fill bounds=(0,0,360,469) layer=(border=(0,0,360,469),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,469),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,469.1) pos=(0,0,360,469.1) radius=(0,0,0,0,0,0,0,0)
+  borders bounds=(184,72,158,36) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(184,72,158,36) root=0
+  borders bounds=(184,108,158,36) borders=(left=(0,0,#0a0a0aff),top=(0,0,#0a0a0aff),right=(0,0,#0a0a0aff),bottom=(1,4,#00000014),radius=(0,0,0,0,0,0,0,0)) pos=(184,108,158,36) root=0
+  borders bounds=(18,215,324,126) borders=(left=(0,0,#0a0a0aff),top=(1,4,#00000014),right=(0,0,#0a0a0aff),bottom=(0,0,#0a0a0aff),radius=(0,0,0,0,0,0,0,0)) pos=(18,215,324,126) root=0
+  solid-fill bounds=(216,281,0,6) layer=(border=(216,281,0,6),radius=(0,0,0,0,0,0,0,0),clip=(216,281,0,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(31.5714,359.4,14,27) exact=1
+    solid-fill bounds=(34,361,10,23) layer=(border=(34,361,10,23),radius=(5,5,5,5,5,5,5,5),clip=(34,361,10,23),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(31.5714,384.4,14,14) exact=1
+    solid-fill bounds=(34,386,10,10) layer=(border=(34,386,10,10),radius=(5,5,5,5,5,5,5,5),clip=(34,386,10,10),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(31.5714,396.4,14,12) exact=1
+    solid-fill bounds=(34,398,10,8) layer=(border=(34,398,10,8),radius=(4,4,4,4,4,4,4,4),clip=(34,398,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(78.7143,352.9,14,28.7) exact=1
+    solid-fill bounds=(81,355,10,25) layer=(border=(81,355,10,25),radius=(5,5,5,5,5,5,5,5),clip=(81,355,10,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(78.7143,379.6,14,17.3) exact=1
+    solid-fill bounds=(81,382,10,13) layer=(border=(81,382,10,13),radius=(5,5,5,5,5,5,5,5),clip=(81,382,10,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(78.7143,394.9,14,13.5) exact=1
+    solid-fill bounds=(81,397,10,9) layer=(border=(81,397,10,9),radius=(4.75,4.75,4.75,4.75,4.75,4.75,4.75,4.75),clip=(81,397,10,9),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(125.857,374.4,14,20) exact=1
+    solid-fill bounds=(128,376,10,16) layer=(border=(128,376,10,16),radius=(5,5,5,5,5,5,5,5),clip=(128,376,10,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(125.857,392.4,14,8) exact=1
+    solid-fill bounds=(128,394,10,4) layer=(border=(128,394,10,4),radius=(2,2,2,2,2,2,2,2),clip=(128,394,10,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(125.857,398.4,14,10) exact=1
+    solid-fill bounds=(128,400,10,6) layer=(border=(128,400,10,6),radius=(3,3,3,3,3,3,3,3),clip=(128,400,10,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(173,352.9,14,28.7) exact=1
+    solid-fill bounds=(175,355,10,25) layer=(border=(175,355,10,25),radius=(5,5,5,5,5,5,5,5),clip=(175,355,10,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(173,379.6,14,17.3) exact=1
+    solid-fill bounds=(175,382,10,13) layer=(border=(175,382,10,13),radius=(5,5,5,5,5,5,5,5),clip=(175,382,10,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(173,394.9,14,13.5) exact=1
+    solid-fill bounds=(175,397,10,9) layer=(border=(175,397,10,9),radius=(4.75,4.75,4.75,4.75,4.75,4.75,4.75,4.75),clip=(175,397,10,9),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(220.143,352.9,14,29.2041) exact=1
+    solid-fill bounds=(222,355,10,25) layer=(border=(222,355,10,25),radius=(5,5,5,5,5,5,5,5),clip=(222,355,10,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(220.143,380.104,14,17.5714) exact=1
+    solid-fill bounds=(222,382,10,14) layer=(border=(222,382,10,14),radius=(5,5,5,5,5,5,5,5),clip=(222,382,10,14),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(220.143,395.676,14,12.7245) exact=1
+    solid-fill bounds=(222,398,10,8) layer=(border=(222,398,10,8),radius=(4.36225,4.36225,4.36225,4.36225,4.36225,4.36225,4.36225,4.36225),clip=(222,398,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(267.286,352.9,14,28.7) exact=1
+    solid-fill bounds=(269,355,10,25) layer=(border=(269,355,10,25),radius=(5,5,5,5,5,5,5,5),clip=(269,355,10,25),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(267.286,379.6,14,17.3) exact=1
+    solid-fill bounds=(269,382,10,13) layer=(border=(269,382,10,13),radius=(5,5,5,5,5,5,5,5),clip=(269,382,10,13),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(267.286,394.9,14,13.5) exact=1
+    solid-fill bounds=(269,397,10,9) layer=(border=(269,397,10,9),radius=(4.75,4.75,4.75,4.75,4.75,4.75,4.75,4.75),clip=(269,397,10,9),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  solid-fill bounds=(301,351,41,74) layer=(border=(301,351,41,74),radius=(8,8,8,8,8,8,8,8),clip=(301,351,41,74),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  solid-fill bounds=(316,363,10,20) layer=(border=(316,363,10,20),radius=(5,5,5,5,5,5,5,5),clip=(316,363,10,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(316,385,10,11) layer=(border=(316,385,10,11),radius=(5,5,5,5,5,5,5,5),clip=(316,385,10,11),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  solid-fill bounds=(316,398,10,8) layer=(border=(316,398,10,8),radius=(4,4,4,4,4,4,4,4),clip=(316,398,10,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,469.1) pos=(0,0,360,469.1) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(10,11,56,32) pos=(18,19,40,16) color=#0a0a0aff text="Today" font=f1 glyphs=5 advance=40
+  text bounds=(254,11,40,32) pos=(262,19,24,16) color=#6e6e73ff text="Thu" font=f2 glyphs=3 advance=24
+  text bounds=(286,11,32,32) pos=(294,19,16,16) color=#6e6e73ff text="21" font=f2 glyphs=2 advance=16
+  text bounds=(310,11,40,32) pos=(318,19,24,16) color=#6e6e73ff text="May" font=f2 glyphs=3 advance=24
+  group opacity=1 matrix=(-4.37114e-08,-1,1,-4.37114e-08,-32.5,218.5) backface=0 bounds=(18,50.5,150,150) exact=0
+    set-clip bounds=(18,50.5,150,150) pos=(18,50.5,150,150) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(18,50.5,150,150)
+      group opacity=1 matrix=(1,0,0,1,18,50.5) backface=0 bounds=(0,0,150,150) exact=0
+        path bounds=(-18,-18,186,186) ops=(0,3,3,3,3,4) points=(141,75,141,111.451,111.451,141,75,141,38.5492,141,9,111.451,9,75,9,38.5492,38.5492,9,75,9,111.451,9,141,38.5492,141,75) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#00000012 stroke-width=13 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(-2,-2,154,154) ops=(0,3,3,3,3,4) points=(125,75,125,102.614,102.614,125,75,125,47.3858,125,25,102.614,25,75,25,47.3858,47.3858,25,75,25,102.614,25,125,47.3858,125,75) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#00000012 stroke-width=13 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(14,14,122,122) ops=(0,3,3,3,3,4) points=(109,75,109,93.7777,93.7777,109,75,109,56.2223,109,41,93.7777,41,75,41,56.2223,56.2223,41,75,41,93.7777,41,109,56.2223,109,75) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#00000012 stroke-width=13 cap=1 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(-18,-18,186,186) ops=(0,3,3,3,3,4) points=(141,75,141,111.451,111.451,141,75,141,38.5492,141,9,111.451,9,75,9,38.5492,38.5492,9,75,9,111.451,9,141,38.5492,141,75) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ff2d55ff stroke-width=13 cap=1 join=0 miter=4 dashes=(414.69,414.69) dash-offset=89.9469 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(-2,-2,154,154) ops=(0,3,3,3,3,4) points=(125,75,125,102.614,102.614,125,75,125,47.3858,125,25,102.614,25,75,25,47.3858,47.3858,25,75,25,102.614,25,125,47.3858,125,75) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#a8ff04ff stroke-width=13 cap=1 join=0 miter=4 dashes=(314.159,314.159) dash-offset=64.6882 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(14,14,122,122) ops=(0,3,3,3,3,4) points=(109,75,109,93.7777,93.7777,109,75,109,56.2223,109,41,93.7777,41,75,41,56.2223,56.2223,41,75,41,93.7777,41,109,56.2223,109,75) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#00d5ffff stroke-width=13 cap=1 join=0 miter=4 dashes=(213.628,213.628) dash-offset=57.3142 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(184,85,8,8) layer=(border=(184,85,8,8),radius=(4,4,4,4,4,4,4,4),clip=(184,85,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  text bounds=(190,73,48,32) pos=(198,81,32,16) color=#0a0a0aff text="Move" font=f3 glyphs=4 advance=32
+  text bounds=(238,73,40,32) pos=(246,81,24,16) color=#0a0a0aff text="479" font=f4 glyphs=3 advance=24
+  text bounds=(262,73,48,32) pos=(270,81,32,16) color=#6e6e73ff text="/620" font=f5 glyphs=4 advance=32
+  text bounds=(302,73,48,32) pos=(310,81,32,16) color=#6e6e73ff text="kcal" font=f5 glyphs=4 advance=32
+  solid-fill bounds=(184,121,8,8) layer=(border=(184,121,8,8),radius=(4,4,4,4,4,4,4,4),clip=(184,121,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#a8ff04ff
+  text bounds=(190,109,80,32) pos=(198,117,64,16) color=#0a0a0aff text="Exercise" font=f3 glyphs=8 advance=64
+  text bounds=(262,109,32,32) pos=(270,117,16,16) color=#0a0a0aff text="24" font=f4 glyphs=2 advance=16
+  text bounds=(278,109,40,32) pos=(286,117,24,16) color=#6e6e73ff text="/30" font=f5 glyphs=3 advance=24
+  text bounds=(310,109,40,32) pos=(318,117,24,16) color=#6e6e73ff text="min" font=f5 glyphs=3 advance=24
+  solid-fill bounds=(184,157,8,8) layer=(border=(184,157,8,8),radius=(4,4,4,4,4,4,4,4),clip=(184,157,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#00d5ffff
+  text bounds=(190,145,56,32) pos=(198,153,40,16) color=#0a0a0aff text="Stand" font=f3 glyphs=5 advance=40
+  text bounds=(286,145,24,32) pos=(294,153,8,16) color=#0a0a0aff text="9" font=f4 glyphs=1 advance=8
+  text bounds=(294,145,40,32) pos=(302,153,24,16) color=#6e6e73ff text="/12" font=f5 glyphs=3 advance=24
+  text bounds=(326,145,24,32) pos=(334,153,8,16) color=#6e6e73ff text="h" font=f5 glyphs=1 advance=8
+  text bounds=(10,230,144,32) pos=(18,238,128,16) color=#0a0a0aff text="{\"kind\":\"number\"" font=f6 glyphs=16 advance=128
+  text bounds=(10,267,120,32) pos=(18,275,104,16) color=#0a0a0aff text="\"locale\":\"en-" font=f6 glyphs=13 advance=104
+  text bounds=(114,267,40,32) pos=(122,275,24,16) color=#0a0a0aff text="US\"" font=f6 glyphs=3 advance=24
+  text bounds=(10,305,88,32) pos=(18,313,72,16) color=#0a0a0aff text="\"opts\":{}" font=f6 glyphs=9 advance=72
+  text bounds=(90,305,120,32) pos=(98,313,104,16) color=#0a0a0aff text="\"value\":6317}" font=f6 glyphs=13 advance=104
+  text bounds=(222.302,230,40,32) pos=(230.302,238,24,16) color=#6e6e73ff text="4.7" font=f2 glyphs=3 advance=24
+  text bounds=(254.302,230,32,32) pos=(262.302,238,16,16) color=#6e6e73ff text="km" font=f2 glyphs=2 advance=16
+  text bounds=(278.302,230,32,32) pos=(286.302,238,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(222.302,246,48,32) pos=(230.302,254,32,16) color=#6e6e73ff text="goal" font=f2 glyphs=4 advance=32
+  text bounds=(262.302,246,24,32) pos=(270.302,254,8,16) color=#6e6e73ff text="8" font=f2 glyphs=1 advance=8
+  text bounds=(278.302,246,40,32) pos=(286.302,254,24,16) color=#6e6e73ff text="000" font=f2 glyphs=3 advance=24
+  text bounds=(26.5714,402,24,32) pos=(34.5714,410,8,16) color=#6e6e73ff text="F" font=f7 glyphs=1 advance=8
+  text bounds=(73.7143,402,24,32) pos=(81.7143,410,8,16) color=#6e6e73ff text="S" font=f7 glyphs=1 advance=8
+  text bounds=(120.857,402,24,32) pos=(128.857,410,8,16) color=#6e6e73ff text="S" font=f7 glyphs=1 advance=8
+  text bounds=(168,402,24,32) pos=(176,410,8,16) color=#6e6e73ff text="M" font=f7 glyphs=1 advance=8
+  text bounds=(215.143,402,24,32) pos=(223.143,410,8,16) color=#6e6e73ff text="T" font=f7 glyphs=1 advance=8
+  text bounds=(262.286,402,24,32) pos=(270.286,410,8,16) color=#6e6e73ff text="W" font=f7 glyphs=1 advance=8
+  text bounds=(309.429,402,24,32) pos=(317.429,410,8,16) color=#0a0a0aff text="T" font=f7 glyphs=1 advance=8
+  text bounds=(10,429,48,32) pos=(18,437,32,16) color=#6e6e73ff text="🔥" font=f3 glyphs=4 advance=32
+  text bounds=(48,429,48,32) pos=(56,437,32,16) color=#6e6e73ff text="Move" font=f3 glyphs=4 advance=32
+  text bounds=(88,429,48,32) pos=(96,437,32,16) color=#6e6e73ff text="goal" font=f3 glyphs=4 advance=32
+  text bounds=(128,429,40,32) pos=(136,437,24,16) color=#6e6e73ff text="met" font=f3 glyphs=3 advance=24
+  text bounds=(160,429,24,32) pos=(168,437,8,16) color=#6e6e73ff text="4" font=f3 glyphs=1 advance=8
+  text bounds=(176,429,48,32) pos=(184,437,32,16) color=#6e6e73ff text="days" font=f3 glyphs=4 advance=32
+  text bounds=(216,429,32,32) pos=(224,437,16,16) color=#6e6e73ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(240,429,24,32) pos=(248,437,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(256,429,40,32) pos=(264,437,24,16) color=#6e6e73ff text="row" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.34,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.34,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=28,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.84,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f7 (family="system-ui,sans-serif",size=10,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

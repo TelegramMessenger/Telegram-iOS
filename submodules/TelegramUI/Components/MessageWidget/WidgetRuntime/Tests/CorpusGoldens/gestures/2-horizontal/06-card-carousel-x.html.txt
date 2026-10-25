@@ -1,0 +1,165 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Weekend trips</title>
+<style></style>
+</head><body><p class="ta"><code>touch-action: pan-y</code> · swipe sideways through the cards, tap one to pick it; up or down scrolls the chat</p>
+<div id="vp"><div id="tr" class="" style="transform: translateX(calc(11% - 0 * (78% + 10px) + 0px));"><div class="card" style="background: linear-gradient(135deg, #5c6bc0, #26a69a);"><div class="e">🏔️</div><h3>Dolomites</h3><p>2 nights · hiking · from €240</p></div><div class="card" style="background: linear-gradient(135deg, #1e88e5, #00acc1);"><div class="e">🌊</div><h3>Lisbon</h3><p>3 nights · surf and tiles · from €310</p></div><div class="card" style="background: linear-gradient(135deg, #d81b60, #8e24aa);"><div class="e">🏯</div><h3>Kyoto</h3><p>4 nights · temples · from €890</p></div><div class="card" style="background: linear-gradient(135deg, #455a64, #ef6c00);"><div class="e">🌋</div><h3>Reykjavík</h3><p>3 nights · hot springs · from €520</p></div><div class="card" style="background: linear-gradient(135deg, #6d4c41, #c62828);"><div class="e">🍷</div><h3>Tbilisi</h3><p>2 nights · food and wine · from €190</p></div></div></div>
+<div id="dots"><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div>
+<p class="st"><span id="pk">No trip picked</span> · presses taken by the chat: <b id="tk">0</b></p>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 326.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 310.75
+    p 12 8 336 52.65
+      code 12 8 0 0
+    div 20 68.65 320 190
+      div 20 68.65 320 190
+        div 34 82.65 221.6 162
+          div 34 82.65 221.6 41.8
+          h3 34 142.45 221.6 22.5
+          p 34 166.95 221.6 35.1
+        div 293.6 82.65 221.6 162
+          div 293.6 82.65 221.6 41.8
+          h3 293.6 142.45 221.6 22.5
+          p 293.6 166.95 221.6 35.1
+        div 553.2 82.65 221.6 162
+          div 553.2 82.65 221.6 41.8
+          h3 553.2 142.45 221.6 22.5
+          p 553.2 166.95 221.6 35.1
+        div 812.8 82.65 221.6 162
+          div 812.8 82.65 221.6 41.8
+          h3 812.8 142.45 221.6 22.5
+          p 812.8 166.95 221.6 35.1
+        div 1072.4 82.65 221.6 162
+          div 1072.4 82.65 221.6 41.8
+          h3 1072.4 142.45 221.6 22.5
+          p 1072.4 166.95 221.6 35.1
+    div 12 268.65 336 7
+      i 150.5 268.65 7 7
+      i 163.5 268.65 7 7
+      i 176.5 268.65 7 7
+      i 189.5 268.65 7 7
+      i 202.5 268.65 7 7
+    p 12 283.65 336 35.1
+      span 12 283.65 0 0
+      b 12 283.65 0 0
+
+== paint
+root 360x326.75 items=93
+  set-clip bounds=(20,68.65,320,190) pos=(20,68.65,320,190) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(1,0,0,1,35.2,0) backface=0 bounds=(20,68.65,1288,190) exact=0
+    linear-gradient bounds=(20,69,250,190) layer=(border=(20,69,250,190),radius=(14,14,14,14,14,14,14,14),clip=(20,69,250,190),origin=(20,69,250,190),attachment=0,repeat=0,root=0) points=((0,#5c6bc0ff,-),(1,#26a69aff,-)) space=0 hue=0 start=(35,54) end=(255,274)
+    group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(24,156.95,236,53.55) exact=1
+      text bounds=(26,159,24,32) pos=(34,167,8,16) color=#ffffffff text="2" font=f1 glyphs=1 advance=8
+      text bounds=(42,159,64,32) pos=(50,167,48,16) color=#ffffffff text="nights" font=f1 glyphs=6 advance=48
+      text bounds=(98,159,32,32) pos=(106,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(122,159,64,32) pos=(130,167,48,16) color=#ffffffff text="hiking" font=f1 glyphs=6 advance=48
+      text bounds=(178,159,32,32) pos=(186,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(202,159,48,32) pos=(210,167,32,16) color=#ffffffff text="from" font=f1 glyphs=4 advance=32
+      text bounds=(26,177,64,32) pos=(34,185,48,16) color=#ffffffff text="€240" font=f1 glyphs=6 advance=48
+    linear-gradient bounds=(280,69,249,190) layer=(border=(280,69,249,190),radius=(14,14,14,14,14,14,14,14),clip=(280,69,249,190),origin=(280,69,249,190),attachment=0,repeat=0,root=0) points=((0,#1e88e5ff,-),(1,#00acc1ff,-)) space=0 hue=0 start=(294.75,54.25) end=(514.25,273.75)
+    group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(283.6,156.95,236,53.55) exact=1
+      text bounds=(285.6,159,24,32) pos=(293.6,167,8,16) color=#ffffffff text="3" font=f1 glyphs=1 advance=8
+      text bounds=(301.6,159,64,32) pos=(309.6,167,48,16) color=#ffffffff text="nights" font=f1 glyphs=6 advance=48
+      text bounds=(357.6,159,32,32) pos=(365.6,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(381.6,159,48,32) pos=(389.6,167,32,16) color=#ffffffff text="surf" font=f1 glyphs=4 advance=32
+      text bounds=(421.6,159,40,32) pos=(429.6,167,24,16) color=#ffffffff text="and" font=f1 glyphs=3 advance=24
+      text bounds=(453.6,159,56,32) pos=(461.6,167,40,16) color=#ffffffff text="tiles" font=f1 glyphs=5 advance=40
+      text bounds=(285.6,177,32,32) pos=(293.6,185,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(309.6,177,48,32) pos=(317.6,185,32,16) color=#ffffffff text="from" font=f1 glyphs=4 advance=32
+      text bounds=(349.6,177,64,32) pos=(357.6,185,48,16) color=#ffffffff text="€310" font=f1 glyphs=6 advance=48
+    linear-gradient bounds=(539,69,250,190) layer=(border=(539,69,250,190),radius=(14,14,14,14,14,14,14,14),clip=(539,69,250,190),origin=(539,69,250,190),attachment=0,repeat=0,root=0) points=((0,#d81b60ff,-),(1,#8e24aaff,-)) space=0 hue=0 start=(554,54) end=(774,274)
+    group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(543.2,156.95,236,53.55) exact=1
+      text bounds=(545.2,159,24,32) pos=(553.2,167,8,16) color=#ffffffff text="4" font=f1 glyphs=1 advance=8
+      text bounds=(561.2,159,64,32) pos=(569.2,167,48,16) color=#ffffffff text="nights" font=f1 glyphs=6 advance=48
+      text bounds=(617.2,159,32,32) pos=(625.2,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(641.2,159,72,32) pos=(649.2,167,56,16) color=#ffffffff text="temples" font=f1 glyphs=7 advance=56
+      text bounds=(705.2,159,32,32) pos=(713.2,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(729.2,159,48,32) pos=(737.2,167,32,16) color=#ffffffff text="from" font=f1 glyphs=4 advance=32
+      text bounds=(545.2,177,64,32) pos=(553.2,185,48,16) color=#ffffffff text="€890" font=f1 glyphs=6 advance=48
+    linear-gradient bounds=(799,69,249,190) layer=(border=(799,69,249,190),radius=(14,14,14,14,14,14,14,14),clip=(799,69,249,190),origin=(799,69,249,190),attachment=0,repeat=0,root=0) points=((0,#455a64ff,-),(1,#ef6c00ff,-)) space=0 hue=0 start=(813.75,54.25) end=(1033.25,273.75)
+    group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(802.8,156.95,236,53.55) exact=1
+      text bounds=(804.8,159,24,32) pos=(812.8,167,8,16) color=#ffffffff text="3" font=f1 glyphs=1 advance=8
+      text bounds=(820.8,159,64,32) pos=(828.8,167,48,16) color=#ffffffff text="nights" font=f1 glyphs=6 advance=48
+      text bounds=(876.8,159,32,32) pos=(884.8,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(900.8,159,40,32) pos=(908.8,167,24,16) color=#ffffffff text="hot" font=f1 glyphs=3 advance=24
+      text bounds=(932.8,159,72,32) pos=(940.8,167,56,16) color=#ffffffff text="springs" font=f1 glyphs=7 advance=56
+      text bounds=(996.8,159,32,32) pos=(1004.8,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(804.8,177,48,32) pos=(812.8,185,32,16) color=#ffffffff text="from" font=f1 glyphs=4 advance=32
+      text bounds=(844.8,177,64,32) pos=(852.8,185,48,16) color=#ffffffff text="€520" font=f1 glyphs=6 advance=48
+    linear-gradient bounds=(1058,69,250,190) layer=(border=(1058,69,250,190),radius=(14,14,14,14,14,14,14,14),clip=(1058,69,250,190),origin=(1058,69,250,190),attachment=0,repeat=0,root=0) points=((0,#6d4c41ff,-),(1,#c62828ff,-)) space=0 hue=0 start=(1073,54) end=(1293,274)
+    group opacity=0.9 matrix=(1,0,0,1,0,0) backface=0 bounds=(1062.4,156.95,233.6,53.55) exact=1
+      text bounds=(1064.4,159,24,32) pos=(1072.4,167,8,16) color=#ffffffff text="2" font=f1 glyphs=1 advance=8
+      text bounds=(1080.4,159,64,32) pos=(1088.4,167,48,16) color=#ffffffff text="nights" font=f1 glyphs=6 advance=48
+      text bounds=(1136.4,159,32,32) pos=(1144.4,167,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(1160.4,159,48,32) pos=(1168.4,167,32,16) color=#ffffffff text="food" font=f1 glyphs=4 advance=32
+      text bounds=(1200.4,159,40,32) pos=(1208.4,167,24,16) color=#ffffffff text="and" font=f1 glyphs=3 advance=24
+      text bounds=(1232.4,159,48,32) pos=(1240.4,167,32,16) color=#ffffffff text="wine" font=f1 glyphs=4 advance=32
+      text bounds=(1064.4,177,32,32) pos=(1072.4,185,16,16) color=#ffffffff text="·" font=f1 glyphs=2 advance=16
+      text bounds=(1088.4,177,48,32) pos=(1096.4,185,32,16) color=#ffffffff text="from" font=f1 glyphs=4 advance=32
+      text bounds=(1128.4,177,64,32) pos=(1136.4,185,48,16) color=#ffffffff text="€190" font=f1 glyphs=6 advance=48
+    text bounds=(26,87,72,32) pos=(34,95,56,16) color=#ffffffff text="🏔️" font=f2 glyphs=7 advance=56
+    text bounds=(26,137,88,32) pos=(34,145,72,16) color=#ffffffff text="Dolomites" font=f3 glyphs=9 advance=72
+    text bounds=(285.6,87,48,32) pos=(293.6,95,32,16) color=#ffffffff text="🌊" font=f2 glyphs=4 advance=32
+    text bounds=(285.6,137,64,32) pos=(293.6,145,48,16) color=#ffffffff text="Lisbon" font=f3 glyphs=6 advance=48
+    text bounds=(545.2,87,48,32) pos=(553.2,95,32,16) color=#ffffffff text="🏯" font=f2 glyphs=4 advance=32
+    text bounds=(545.2,137,56,32) pos=(553.2,145,40,16) color=#ffffffff text="Kyoto" font=f3 glyphs=5 advance=40
+    text bounds=(804.8,87,48,32) pos=(812.8,95,32,16) color=#ffffffff text="🌋" font=f2 glyphs=4 advance=32
+    text bounds=(804.8,137,96,32) pos=(812.8,145,80,16) color=#ffffffff text="Reykjavík" font=f3 glyphs=10 advance=80
+    text bounds=(1064.4,87,48,32) pos=(1072.4,95,32,16) color=#ffffffff text="🍷" font=f2 glyphs=4 advance=32
+    text bounds=(1064.4,137,72,32) pos=(1072.4,145,56,16) color=#ffffffff text="Tbilisi" font=f3 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(151,269,7,7) layer=(border=(151,269,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(151,269,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(161.5,266.65,11,11) exact=1
+    solid-fill bounds=(164,269,7,7) layer=(border=(164,269,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(164,269,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(174.5,266.65,11,11) exact=1
+    solid-fill bounds=(177,269,7,7) layer=(border=(177,269,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(177,269,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(187.5,266.65,11,11) exact=1
+    solid-fill bounds=(190,269,7,7) layer=(border=(190,269,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(190,269,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  group opacity=0.4 matrix=(1,0,0,1,0,0) backface=0 bounds=(200.5,266.65,11,11) exact=1
+    solid-fill bounds=(203,269,7,7) layer=(border=(203,269,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(203,269,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#707579ff
+  text bounds=(4,0,64,32) pos=(12,8,48,16) color=#707579ff text="touch-" font=f4 glyphs=6 advance=48
+  text bounds=(52,0,72,32) pos=(60,8,56,16) color=#707579ff text="action:" font=f4 glyphs=7 advance=56
+  text bounds=(116,0,48,32) pos=(124,8,32,16) color=#707579ff text="pan-" font=f4 glyphs=4 advance=32
+  text bounds=(148,0,24,32) pos=(156,8,8,16) color=#707579ff text="y" font=f4 glyphs=1 advance=8
+  text bounds=(164,0,32,32) pos=(172,8,16,16) color=#707579ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(188,0,56,32) pos=(196,8,40,16) color=#707579ff text="swipe" font=f1 glyphs=5 advance=40
+  text bounds=(236,0,80,32) pos=(244,8,64,16) color=#707579ff text="sideways" font=f1 glyphs=8 advance=64
+  text bounds=(4,18,72,32) pos=(12,26,56,16) color=#707579ff text="through" font=f1 glyphs=7 advance=56
+  text bounds=(68,18,40,32) pos=(76,26,24,16) color=#707579ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(100,18,64,32) pos=(108,26,48,16) color=#707579ff text="cards," font=f1 glyphs=6 advance=48
+  text bounds=(156,18,40,32) pos=(164,26,24,16) color=#707579ff text="tap" font=f1 glyphs=3 advance=24
+  text bounds=(188,18,40,32) pos=(196,26,24,16) color=#707579ff text="one" font=f1 glyphs=3 advance=24
+  text bounds=(220,18,32,32) pos=(228,26,16,16) color=#707579ff text="to" font=f1 glyphs=2 advance=16
+  text bounds=(244,18,48,32) pos=(252,26,32,16) color=#707579ff text="pick" font=f1 glyphs=4 advance=32
+  text bounds=(284,18,40,32) pos=(292,26,24,16) color=#707579ff text="it;" font=f1 glyphs=3 advance=24
+  text bounds=(316,18,32,32) pos=(324,26,16,16) color=#707579ff text="up" font=f1 glyphs=2 advance=16
+  text bounds=(4,35,32,32) pos=(12,43,16,16) color=#707579ff text="or" font=f1 glyphs=2 advance=16
+  text bounds=(28,35,48,32) pos=(36,43,32,16) color=#707579ff text="down" font=f1 glyphs=4 advance=32
+  text bounds=(68,35,72,32) pos=(76,43,56,16) color=#707579ff text="scrolls" font=f1 glyphs=7 advance=56
+  text bounds=(132,35,40,32) pos=(140,43,24,16) color=#707579ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(164,35,48,32) pos=(172,43,32,16) color=#707579ff text="chat" font=f1 glyphs=4 advance=32
+  text bounds=(4,276,32,32) pos=(12,284,16,16) color=#000000ff text="No" font=f1 glyphs=2 advance=16
+  text bounds=(28,276,48,32) pos=(36,284,32,16) color=#000000ff text="trip" font=f1 glyphs=4 advance=32
+  text bounds=(68,276,64,32) pos=(76,284,48,16) color=#000000ff text="picked" font=f1 glyphs=6 advance=48
+  text bounds=(124,276,32,32) pos=(132,284,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(148,276,72,32) pos=(156,284,56,16) color=#000000ff text="presses" font=f1 glyphs=7 advance=56
+  text bounds=(212,276,56,32) pos=(220,284,40,16) color=#000000ff text="taken" font=f1 glyphs=5 advance=40
+  text bounds=(260,276,32,32) pos=(268,284,16,16) color=#000000ff text="by" font=f1 glyphs=2 advance=16
+  text bounds=(284,276,40,32) pos=(292,284,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(4,293,56,32) pos=(12,301,40,16) color=#000000ff text="chat:" font=f1 glyphs=5 advance=40
+  text bounds=(52,293,24,32) pos=(60,301,8,16) color=#000000ff text="0" font=f5 glyphs=1 advance=8
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=38,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=11.7,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

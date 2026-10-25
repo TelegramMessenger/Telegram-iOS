@@ -48,11 +48,12 @@
 // in no build, so a change to its attributes renders nothing and is ignored; any other unmapped element (cut by a limit,
 // or a <style>'s child) rebuilds. An element's entry keeps the budget its attributes use and the place of its start tag
 // in the render input, which the patch replaces as it does a text's. A tag, a form control's count and the element count
-// cannot change with an attribute, so those limits are not asked again. A re-match can move the text-piece cap through
-// pseudo-element content (a fresh build makes all of it in document order with the old and new of each alive together,
-// so near the cap a patch and a rebuild cut at different words): while any ::before or ::after rule that declares
-// `content` could match an element of the document (document::pseudo_content_possible, read from the selectors as
-// litehtml parsed them), neither the attribute nor the text path patches, and the flush rebuilds. The table-cell cap
+// cannot change with an attribute, so those limits are not asked again. A re-match makes its element's pseudo-element
+// content again, which a build makes after the text in document order, so at the text-piece or pseudo-element cap a
+// patch and a rebuild cut at different words: where a ::before or ::after rule that declares `content` could match an
+// element of the document (document::pseudo_content_possible, read from the selectors as litehtml parsed them), a patch
+// that reached a cap is abandoned after its commit and the flush rebuilds, and the fork refuses once a build has reached
+// one, or always for content a form control's parts could take (document::part_content_possible). The table-cell cap
 // needs no refusal for agreement (restyle_after_patch recounts the cells from the root, as a build does); the fork's
 // predicate refuses a rise past it all the same, as defence in depth. Each
 // changed element is applied in one call with all its attributes (document::set_element_attributes), one re-match, and
@@ -60,7 +61,14 @@
 // (text and attributes together), and the plan is exact: a refusal after the first mutation is a bug and aborts.
 //
 // Task 9, structure (Ruling 8; twidget edit 18). A journal with a structural entry (Inserted, Removed, Children) goes to
-// flushStructure, any other to flushPatch: that is the selection rule across the three paths. The structure path takes
+// flushStructure, any other to flushPatch: that is the selection rule across the three paths, with one exception. A Text
+// swap, the `textContent = …` idiom (a mapped element whose only child is a Text inserted since the flush, and the one
+// mapped Text with pieces that went from under it; textSwaps), is a text replacement: when every structural entry
+// belongs to one, flushPatch plans the new Text against the old one's entry (its pieces, its place in the render
+// input, its budgets), replaces the pieces as a data change does, so litehtml keeps its render tree, and at the commit
+// gives the new Text that entry, with a new NodeKey (a new node's, as a build gives it); the old one's root is released
+// after the flush. Beside it the
+// journal's attribute and text changes on kept nodes patch as usual. The structure path takes
 // Text and Attribute entries only on nodes it builds or removes (they are read with their subtree) and on nodes no build
 // reads (outside the main document, or under an element Ruling 4 leaves out); a kept node's own change beside structure
 // (a mixed journal) rebuilds, and so does one on any other node with no entry (Ruling E25: an element a parent's
@@ -275,8 +283,11 @@ public:
     /// The options a build uses now: the construction's, with the width and theme set since.
     const RenderOptions& options() const { return m_container.options(); }
 
-    /// A canvas's bitmap changed (V5d plan, Task 4): when the canvas is rendered, the next flush republishes it, today
-    /// as a full rebuild (its box is the only rect that changes). An unrendered canvas changes nothing.
+    /// A canvas's bitmap changed (V5d plan, Task 4): when the canvas is rendered, the next flush republishes its box
+    /// alone, which the mirror captures again (Content) with the bitmap's current snapshot, beside the patch that flush
+    /// publishes or with none; nothing is laid out or rebuilt for it. An unrendered canvas changes nothing. Charges
+    /// work::kJournalEntry the first time a canvas is painted between two flushes; throws Aborted when that stops the
+    /// widget.
     void canvasPainted(const Element& canvas);
     /// An <img>'s source decoded, kept nowhere (WidgetContainer::decodeImageUncached).
     std::optional<DecodedImage> decodeImageUncached(std::string_view src) { return m_container.decodeImageUncached(src); }
@@ -388,6 +399,8 @@ public:
     uint64_t buildCount() const { return m_buildCount; }
     /// Flushes that patched the published document in place and published its tree, without a build (tests).
     uint64_t patchCount() const { return m_patchCount; }
+    /// Texts those patches swapped in for a Text that went (textSwaps), for tests.
+    uint64_t swappedTexts() const { return m_swappedTexts; }
     /// Distinct nodes the journal recorded since the last flush; 0 while a full rebuild is pending (tests).
     size_t journalNodes() const { return m_journal.nodes(); }
     /// Why the last flush that could not patch rebuilt instead (an in-place path's refusal), for tests' reports.
@@ -456,17 +469,27 @@ private:
     /// What an in-place path did: patched and published; refused, having changed nothing; or abandoned after changing the
     /// published document (Ruling E20: a can't-happen, or a matching cut), which the caller replaces by a rebuild.
     enum class PatchResult { Refused, Patched, Abandoned };
-    /// The in-place fast path (Tasks 7 and 8). Throws Aborted when the widget stops while planning, with the published
-    /// state untouched.
-    PatchResult flushPatch(JSContext* ctx);
-    /// The journal applied: patched in place, else rebuilt (the body flush ran before V5f).
+    /// The in-place fast path (Tasks 7 and 8), and the Text swaps it takes for structure (textSwaps). Throws Aborted when
+    /// the widget stops while planning, with the published state untouched.
+    PatchResult flushPatch(JSContext* ctx, const std::unordered_map<Node*, Node*>& swaps);
+    /// Whether every structural entry of the journal belongs to a Text swap, the `textContent = …` idiom: a mapped
+    /// element whose only child is a Text inserted since the last flush, and the one mapped Text with pieces under it that
+    /// went. Fills `swaps` (the new Text → the old one) when it answers true. Charges work::kNodeVisit per entry.
+    bool textSwaps(JSContext* ctx, std::unordered_map<Node*, Node*>& swaps);
+    /// The journal applied: patched in place, else rebuilt (the body flush ran before V5f); with no journal, the painted
+    /// canvases alone (publishRepaints).
     void publishJournal(JSContext* ctx);
+    /// The painted canvases' boxes captured again and published, nothing else changed.
+    void publishRepaints(JSContext* ctx);
+    /// Reports each painted canvas the published build maps to the mirror as restyled in place, so the next publish
+    /// captures its box again. Never throws.
+    void reportRepaints() noexcept;
     /// What applying the journal resolves styles for again (V5f plan, Task 2): everything when a rebuild is pending; else
     /// the elements whose DOM attributes changed and every element of each inserted subtree. Read before the journal
     /// is applied; charged a node visit per entry and per subtree node.
     animation::StyleChange pendingStyleChange(JSContext* ctx);
-    /// The structure fast path (Task 9; twidget edit 18), for a journal with a structural entry. Throws Aborted as
-    /// flushPatch does.
+    /// The structure fast path (Task 9; twidget edit 18), for a journal with a structural entry other than Text swaps.
+    /// Throws Aborted as flushPatch does.
     PatchResult flushStructure(JSContext* ctx);
     /// Ruling E22: what rebuildEstimate reads of a document: the walk (RenderBuild::walkCharge), the maps' entries and
     /// the render input's length, the boxes and text bytes, the filter loop's elements (RenderBuild::matched).
@@ -517,6 +540,10 @@ private:
     uint64_t m_mediaReports = 0;
     /// The published build: its document, its maps and its render input.
     RenderBuild m_current;
+    /// The rendered canvases painted since the last flush (canvasPainted), each once, held as a journal entry holds its
+    /// node; and the set of them, for the once.
+    std::vector<Ref<Element>> m_paintedCanvases;
+    std::unordered_set<const Element*> m_paintedCanvasSet;
     /// Elements whose DOM attributes changed since the last flush (attributeChanged; not the animated layer's changes):
     /// what an attribute patch resolved styles for again. Compared, never dereferenced.
     std::unordered_set<const Element*> m_domAttributeChanges;
@@ -543,6 +570,7 @@ private:
     uint64_t m_unplaceableResets = 0;
     uint64_t m_buildCount = 0;
     uint64_t m_patchCount = 0;
+    uint64_t m_swappedTexts = 0;
     /// Set while a build runs: a flush or rebuild entered then returns at once.
     bool m_flushing = false;
     /// The style-change step is running (V5f): script it runs (a promise's `then` getter) cannot flush again, so the step

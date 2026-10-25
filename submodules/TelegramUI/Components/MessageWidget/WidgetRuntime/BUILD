@@ -155,6 +155,7 @@ cc_test(
         "Tests/BuilderHtml5libTests.cpp",
         "Tests/CorpusBootTests.cpp",
         "Tests/RenderCorpusTests.cpp",
+        "Tests/CorpusGoldenTests.cpp",
         "Tests/NoIOScanTests.cpp",
         "Tests/URLDataTests.cpp",
         "Tests/IntlCasesTests.cpp",
@@ -404,6 +405,33 @@ cc_test(
     ],
     copts = WR_COPTS,
     data = ["//third-party/widget-sandbox:CorpusFiles"],
+    env = {"WR_CORPUS_FILES": "$(locations //third-party/widget-sandbox:CorpusFiles)"},
+    deps = [
+        ":WidgetRuntime",
+        ":WidgetRuntimeTestSupport",
+    ],
+)
+
+# The corpus goldens (spec section 9 item 2): every non-attack corpus document's results in deterministic mode, compared
+# with Tests/CorpusGoldens/. `WR_GOLDENS_UPDATE=1 bazel run` this target to record them (the header of the source).
+cc_test(
+    name = "WidgetRuntimeCorpusGoldenTests",
+    size = "large",
+    srcs = [
+        "Tests/CorpusGoldenTests.cpp",
+        "Tests/DOMHarness.cpp",
+        "Tests/DOMHarness.h",
+        "Tests/FakeRenderHost.cpp",
+        "Tests/FakeRenderHost.h",
+        "Tests/HostHarness.cpp",
+        "Tests/HostHarness.h",
+        "Tests/RenderHarness.cpp",
+        "Tests/RenderHarness.h",
+        "Tests/VirtualTime.cpp",
+        "Tests/VirtualTime.h",
+    ],
+    copts = WR_COPTS,
+    data = ["//third-party/widget-sandbox:CorpusFiles"] + glob(["Tests/CorpusGoldens/**"], allow_empty = True),
     env = {"WR_CORPUS_FILES": "$(locations //third-party/widget-sandbox:CorpusFiles)"},
     deps = [
         ":WidgetRuntime",

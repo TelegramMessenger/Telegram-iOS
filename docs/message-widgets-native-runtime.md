@@ -323,7 +323,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `Math.random` from the runtime's seed.
   - A virtual host clock therefore makes a run deterministic. The WPT runner and the corpus boot both use one.
     Local-time `Date` output (`toString`, `getHours`, `getTimezoneOffset`) still reads the process time zone, so a
-    deterministic run also pins `TZ`; M1e's corpus goldens must.
+    deterministic run also pins `TZ`, as the corpus goldens do.
 
 ### M1c's invariants (rendering)
 
@@ -524,7 +524,9 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     shaped advances, never through the layout's measure, which on iOS keeps every text it sees in a process-wide cache.
   - Drawing: litehtml lays a `<canvas>` out as an image, with a `twcanvas:<serial>:<w>:<h>` source the builder gives it
     (its width and height are its intrinsic size, not dimension properties); the container draws the bitmap's current
-    snapshot there, a copy-on-write `HostImage`. A paint of a rendered canvas republishes it, today as a full rebuild.
+    snapshot there, a copy-on-write `HostImage`. A paint of a rendered canvas republishes its box alone
+    (`RenderTree::canvasPainted`): the mirror captures it again (`Content`) with the current snapshot, beside the
+    flush's patch or with none, and nothing is laid out or rebuilt for it.
   - The context keeps two states: the interpreter's (what draws) and what the IDL reads back, saved and restored
     together. Profile 1's out features are API-visible and inert: `createConicGradient`/`createPattern` paint nothing,
     `globalCompositeOperation`, shadows, `filter` and the text-rendering attributes read back and never apply,
@@ -573,7 +575,9 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     (`collectRenderChanges`), and one is journaled only when its declarations' text changed: a seek is visible in the
     same task, and a paused or filling animation costs no relayout per frame. A change of only paint-only properties
     (`transform`, `opacity`, colours, `filter`, `visibility`, …) keeps litehtml's render tree and republishes as mirror
-    operations, as a class change does; a layout property (`width`, `left`, …) rebuilds it. The mirror still publishes
+    operations, as a class change does, and so does one of a box's geometry (`width`, `left`, margins, padding:
+    twidget edit 63); a property that shapes the render tree (`display`, `position`, `float`, …) rebuilds it, as it does
+    in an inline style or a class's rules. The mirror still publishes
     its own `Reset` when a positioned element becomes or stops being a paint group (an animation's first and last
     frames): it places a new group only for an in-flow block. A property's underlying value is what the animations
     below give, else the element's inline declaration, else the reference renderer's initial table (`opacity` 1,
@@ -1122,6 +1126,16 @@ time read by sampling the widget's tiles on main, measured and not asserted):
   pool's two threads take the widgets' tasks in the order they were queued, so they wait for the other two's first
   draws, which take about 200–500 ms with their blurs at 3×. From then on it keeps 60 fps (the longest gap 35 ms).
 
+Per-frame publishes (2026-10-26; the 254 corpus documents and the client's 14 fixtures, each booted at a width of 360 on
+the host's fake render host and run through 120 frames, thread CPU time, best of three, under a load of about 30):
+- **What a frame publishes:** before the patch paths' refusals were narrowed (canvas repaints, `::before`/`::after`
+  content, `textContent` swaps, paint-only and geometry-only styles, the style bound per subtree), 4,105 whole-document
+  builds and 1,702 render-tree `Reset`s per 2 s over all documents; after, about 480 builds and 2,683 `Reset`s.
+- **CPU:** 6,901 ms → 3,131 ms over all documents (JS included); the heaviest, `showcase/travel/01-boarding-pass`,
+  357 ms → under 45 ms, `htmlbubbles-ported/09-code-review/01-leo-bare` 324 → 118 ms. What still builds: text inside a
+  `<button>` (the text path refuses text a form control reads), structure beside a kept node's own change (a mixed
+  journal), and structure under `::before`/`::after` content.
+
 Units and KB are deterministic on one platform: the same on every run and, since quickjs-ng change 12, in every build
 configuration (before it, a build without `NDEBUG` charged more for every string). Another platform's allocator can
 move them: QuickJS counts a block over 512 B at the allocator's usable size (`js_arena_usable_size`), which the memory
@@ -1311,6 +1325,22 @@ Three manual programs run with `-c opt`:
 - `:WidgetRuntimeCorpusBootTests`: every corpus document booted headless, with the render tree since M1c; the §6.2
   boot numbers, the first flush's, and the failures by missing global (M2's list).
 
+The corpus goldens, `:WidgetRuntimeCorpusGoldenTests` (size large, seconds), hold every non-attack corpus document's
+results, so that a change in the runtime or the renderer shows as a diff to fix or to accept: how the run ended, the
+render limits, what the host was told (diagnostics, console, bridge calls, storage commits, refused loads), the DOM
+without its scripts' and style sheets' text, the layout dump and the paint (`LayerTree::dump`, each font description
+printed once), in `WidgetRuntime/Tests/CorpusGoldens/<path under corpus/>.txt`. Each document boots at width 360 to
+idle, runs one virtual second and is flushed, in deterministic mode: the host's virtual clock (its wall clock at
+2026-01-01T00:00:00Z), random seed 1, `FakeRenderHost`'s metrics (8 px a byte, breaking only between code points), Intl
+answered by `echoIntl` (the request itself) and `TZ` pinned to Asia/Tokyo by the test (an offset, so a local-time and
+UTC mix-up shows; no daylight saving). Animations are kept; work units and memory are never recorded. Accepting a
+change, or re-vendoring the corpus, records them again (and removes the goldens of documents the corpus no longer has):
+
+```sh
+WR_GOLDENS_UPDATE=1 ./build-input/bazel-9.2.0-darwin-arm64 run \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeCorpusGoldenTests
+```
+
 The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox:CorpusFiles`).
 
 ## Open
@@ -1322,9 +1352,9 @@ The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox
   end to end (forward, edit, delete), the SDK group's interactive rows (links, haptics, an app restart), the feed
   bench on a low-end device, an iPad trackpad, and a resize during a drag.
 - **After V6** (the spec's §5): WPT rendering (reftests and `check-layout-th.js` tests through litehtml, with their own
-  ratcheting expectations); the corpus goldens, in deterministic mode with `TZ` pinned, because local-time `Date`
-  output (`toString`, `getHours`, `getTimezoneOffset`) reads the process time zone; Task 10c, an incremental render
-  subtree in the fork, so that structural and non-neutral attribute patches stop publishing `Reset`; the boot measured
+  ratcheting expectations); the rest of Task 10c, an incremental render subtree in the fork, so that a structural patch
+  other than a Text swap, and a change of a property that shapes the render tree (`display`, `position`, `float`, …),
+  stop re-creating litehtml's render tree and publishing `Reset` ("Measured", per-frame publishes); the boot measured
   against the allowance on a device.
 
 The host contract the app keeps (`MessageWidgetCore`, `WRProductionHost`, `CoreTextRenderHost`):
