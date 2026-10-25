@@ -27,6 +27,7 @@ public final class LensTransitionContainer: UIView {
     }
     private var cornerRadius: CGFloat = 30.0
     private var sourceLease: ContextMenuSourceLease?
+    private var sourceTake: CrossWindowSourceTake?
     private var replacementVisibilityAssertion: AnyObject?
 
     public static var isMorphSupported: Bool {
@@ -56,6 +57,7 @@ public final class LensTransitionContainer: UIView {
 
     private func restoreSourceViews() {
         self.sourceLease = nil
+        self.sourceTake = nil
     }
 
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor = .init(kind: .panel), transition: ComponentTransition) {
@@ -79,6 +81,7 @@ public final class LensTransitionContainer: UIView {
             self.fadeIn(alongsideAnimations: alongsideAnimations)
             return
         }
+        self.sourceTake = CrossWindowSourceTake(source: sourceView, into: self)
         let parameters = Self.previewParameters(sourceView: sourceView, sourceRect: sourceRect, sourcePath: sourcePath)
         self.originalSourceView = sourceView
         self.sourceSizeAtOpen = (sourceView as? ContextExtractableContainer)?.normalState.size
@@ -93,7 +96,7 @@ public final class LensTransitionContainer: UIView {
         }
         let menu = self.makeMenuPreview()
         self.sourcePreview = source
-        let sourceAttachment = source.target.container.convert(source.target.center, to: self)
+        let sourceAttachment = source.target.container.convertAcrossWindows(CGRect(origin: source.target.center, size: CGSize()), to: self).origin
         let morph = LiquidMorphTransition()
         self.morph = morph
         self.isPresenting = true
@@ -147,7 +150,7 @@ public final class LensTransitionContainer: UIView {
            let destination = LiquidMorphTransition.sourcePreview(for: replacement ?? source.view, parameters: self.closingParameters(source.parameters, sourceView: replacement ?? originalSourceView, currentSource: currentSource), usePresentationTransform: true) {
             // Resolve the visible shape in its current parent, including any live
             // source transform, as UIKit does for its dismissal preview.
-            let attachment = destination.target.container.convert(destination.target.center, to: self)
+            let attachment = destination.target.container.convertAcrossWindows(CGRect(origin: destination.target.center, size: CGSize()), to: self).origin
             let menu = self.makeMenuPreview()
             let blurRadius = self.nativeBlurRadius
             GlassBackgroundView.morphBlurRadius = blurRadius
@@ -248,5 +251,52 @@ public final class LensTransitionContainer: UIView {
             self.backgroundView.alpha = 1.0
             alongsideAnimations()
         }
+    }
+}
+
+/// A menu over the keyboard is in the keyboard's window, a scene of its own on a `UIScreen` object of its own, and
+/// UIKit's morph cannot use a source in the app's window from there: the source is missing from the morph at both ends,
+/// and it stays hidden after the close until UIKit completes the morph, about a second later. So, as the context
+/// controller takes an extracted source into its own hierarchy, the source moves into the menu's window for the menu's
+/// lifetime, just below the menu and at the same place on screen, and goes back to its parent when the menu is gone.
+private final class CrossWindowSourceTake {
+    private weak var source: UIView?
+    private weak var originalParent: UIView?
+    private let originalIndex: Int
+    private let host = UIView()
+
+    init?(source: UIView, into menuView: UIView) {
+        guard let parent = source.superview, let sourceWindow = source.window, let menuWindow = menuView.window, sourceWindow !== menuWindow, sourceWindow.screen !== menuWindow.screen || sourceWindow.windowScene !== menuWindow.windowScene else {
+            return nil
+        }
+        // The menu's ancestor at the top of its window, so that the source stays below the menu.
+        var menuRoot: UIView = menuView
+        while let superview = menuRoot.superview, superview !== menuWindow {
+            menuRoot = superview
+        }
+        guard menuRoot.superview === menuWindow else {
+            return nil
+        }
+        self.source = source
+        self.originalParent = parent
+        self.originalIndex = parent.subviews.firstIndex(of: source) ?? parent.subviews.count
+
+        // The host stands in for the parent, so the frames its owner keeps setting on the source stay right.
+        self.host.isUserInteractionEnabled = false
+        self.host.frame = parent.convertAcrossWindows(parent.bounds, to: menuWindow)
+        self.host.bounds = parent.bounds
+        menuWindow.insertSubview(self.host, belowSubview: menuRoot)
+        source.removeFromSuperview()
+        self.host.addSubview(source)
+    }
+
+    deinit {
+        if let source = self.source, source.superview === self.host {
+            source.removeFromSuperview()
+            if let parent = self.originalParent {
+                parent.insertSubview(source, at: min(self.originalIndex, parent.subviews.count))
+            }
+        }
+        self.host.removeFromSuperview()
     }
 }

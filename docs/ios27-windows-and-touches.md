@@ -113,6 +113,17 @@ came back as (inf, inf), so the preview and its actions sprang in from an infini
 stayed empty until the 0.42 s spring ended, and the menu then appeared at its final place at once. Those three
 sites use `convertAcrossWindows` now.
 
+The fourth was a morph: a context menu that morphs out of its source (`LensTransitionContainer`, UIKit's liquid
+morph), opened with the keyboard up, as the article editor's bottom-bar menus are. Two things fail between the two
+windows. The morph's attachment point, the source's centre converted into the menu, came back as (inf, inf), so
+`LiquidMorphTransition.animate` refused the morph and the menu faded in and out next to the bar instead. And UIKit
+draws the source inside the morph through a portal, which does not render from the app's window into the keyboard's
+scene: with the point fixed, the morph started and ended on an empty shape, and after the close the source stayed
+hidden until UIKit completed the morph, 1.2 s later. `LensTransitionContainer` now converts with
+`convertAcrossWindows`, and while its menu is in another window than its source it moves the source into the menu's
+window for the menu's lifetime (`CrossWindowSourceTake`: below the menu, at the same place on screen, back in its
+parent when the menu is gone), as the context controller does with an extracted source.
+
 ## A layer that renders nothing receives no touches
 
 **`-hitTest:` is not the whole story.** A view whose layer renders nothing at all — `backgroundColor`
