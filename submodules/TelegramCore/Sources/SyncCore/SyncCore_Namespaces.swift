@@ -353,6 +353,7 @@ private enum PreferencesKeyValues: Int32 {
     case webBrowserSettings = 49
     case communitiesState = 50
     case unreadCounterTagsState = 51
+    case stateSyncDebugSettings = 52
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -639,6 +640,13 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.emojiGameInfo.rawValue)
         return key
     }
+    
+    /// `StateSyncDebugSettings`: Debug Settings for state sync, honoured only in DEBUG builds.
+    public static let stateSyncDebugSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.stateSyncDebugSettings.rawValue)
+        return key
+    }()
 }
 
 private enum SharedDataKeyValues: Int32 {

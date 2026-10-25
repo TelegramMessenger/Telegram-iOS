@@ -183,6 +183,11 @@ subsystem from elsewhere.
 - **Opening chats, history fills** (holes, poll gate, forum topics and skeletons, News feed opens, non-member read
   state): `submodules/TelegramCore/Sources/State/CLAUDE.md`; a post's comments:
   `submodules/TelegramCore/Sources/TelegramEngine/Messages/CLAUDE.md`.
+- **Account state sync** (`AccountStateManager`, `Sources/State/Sync/`: updates, getDifference, the
+  `differenceTooLong` reset, history fills confirming stored messages; `Tests/StateSync`): the same
+  `submodules/TelegramCore/Sources/State/CLAUDE.md`, and the map [`docs/state-sync.md`](docs/state-sync.md). **The
+  rule is that nothing in it gives up on an error** (logout aside; the guide names today's exceptions), and the
+  notification extension never resets the account.
 - **Rich-text messages, InstantPage V2**: `submodules/InstantPageUI/CLAUDE.md`,
   [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md).
 - **Message widgets** (incl. `ChatMessageWidgetBubbleContentNode`):

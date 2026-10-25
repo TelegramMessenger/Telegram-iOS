@@ -1351,9 +1351,7 @@ public class Account {
         
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         
-        self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
-            self?.contactSyncManager?.addIsContactUpdates(updates)
-        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods, ignoresShortSentMessages: supplementary)
+        self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods, ignoresShortSentMessages: supplementary)
         
         self.viewTracker = AccountViewTracker(account: self)
         self.viewTracker.resetPeerHoleManagement = { [weak self] peerId in
@@ -1924,8 +1922,6 @@ public func standaloneStateManager(
                                         postbox: postbox,
                                         network: network,
                                         callSessionManager: nil,
-                                        addIsContactUpdates: { _ in
-                                        },
                                         shouldKeepOnlinePresence: .single(false),
                                         peerInputActivityManager: nil,
                                         auxiliaryMethods: auxiliaryMethods,

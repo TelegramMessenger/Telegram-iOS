@@ -1591,3 +1591,45 @@ func makeCloudDataContext(encryptionProvider: EncryptionProvider) -> CloudDataCo
     }
 }
 #endif
+
+extension Network {
+    /// A network carried by `engine` alone, for tests that script the server (`Tests/StateSync`).
+    ///
+    /// The `MTContext` is real but never connects: no keychain (nothing is read or persisted), no seed
+    /// or backup addresses, no backup-address discovery, and no MTProto session is ever made on it,
+    /// because the main session and every worker come from `engine`. Telemetry is off, so requests reach
+    /// `engine` unwrapped. Construction itself touches no file and starts no connection; the only calls
+    /// it makes on the main session are `setPaused(true)` and `setOnline(false)`, later, on the network's
+    /// queue. Set `Logger.setSharedLogger` first: that pause is logged, and `Logger.shared` asserts
+    /// when no logger is set.
+    static func makeForTesting(engine: NetworkEngine, basePath: String, encryptionProvider: EncryptionProvider, datacenterId: Int = 2) -> Network {
+        let context = MTContext(serialization: Serialization(), encryptionProvider: encryptionProvider, apiEnvironment: MTApiEnvironment(deviceModelName: nil), isTestingEnvironment: true, useTempAuthKeys: true)
+        engine.activate()
+        let connectionStatus = Promise<ConnectionStatus>(.waitingForNetwork)
+        let mainSessionDelegate = NetworkMainSessionDelegate(connectionStatus: connectionStatus)
+        let mainSession = engine.makeSession(datacenterId: datacenterId, role: .main, usageCalculationInfo: nil, delegate: mainSessionDelegate)
+        return Network(
+            queue: Queue(),
+            datacenterId: datacenterId,
+            context: context,
+            engine: engine,
+            switchingEngine: nil,
+            engineFactory: nil,
+            rustEngineDisabled: false,
+            rustEngineWaitsForWebProxy: false,
+            mainSession: mainSession,
+            mainSessionDelegate: mainSessionDelegate,
+            telemetry: nil,
+            _connectionStatus: connectionStatus,
+            basePath: basePath,
+            appDataDisposable: EmptyDisposable,
+            encryptionProvider: encryptionProvider,
+            useRequestTimeoutTimers: false,
+            useBetaFeatures: false,
+            useExperimentalFeatures: false,
+            baseTcpConnectionInterfaceFactory: nil,
+            isAppExtension: false,
+            initialWebProxyActive: false
+        )
+    }
+}
