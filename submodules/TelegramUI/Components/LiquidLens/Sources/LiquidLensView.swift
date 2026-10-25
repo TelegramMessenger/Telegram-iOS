@@ -89,16 +89,16 @@ private func lensMoveCurve(_ animation: ComponentTransition.Animation) -> (durat
             let spring = makeSpringAnimation("position", duration: duration)
             return (duration, { springAnimationValueAt(spring, CGFloat($0)) })
         } else {
-            return (duration, { bezierPoint(0.380, 0.700, 0.125, 1.000, CGFloat($0)) })
+            return (duration, { liquidLensBezierProgress(0.380, 0.700, 0.125, 1.000, $0) })
         }
     case .easeInOut:
-        return (duration, { bezierPoint(0.42, 0.0, 0.58, 1.0, CGFloat($0)) })
+        return (duration, { liquidLensBezierProgress(0.42, 0.0, 0.58, 1.0, $0) })
     case .easeIn:
-        return (duration, { bezierPoint(0.42, 0.0, 1.0, 1.0, CGFloat($0)) })
+        return (duration, { liquidLensBezierProgress(0.42, 0.0, 1.0, 1.0, $0) })
     case .linear:
         return (duration, { CGFloat($0) })
     case let .custom(c1x, c1y, c2x, c2y):
-        return (duration, { bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), CGFloat($0)) })
+        return (duration, { liquidLensBezierProgress(Double(c1x), Double(c1y), Double(c2x), Double(c2y), $0) })
     case let .bounce(stiffness, damping):
         let spring = makeSpringBounceAnimation("position", 0.0, damping)
         spring.stiffness = stiffness
@@ -202,6 +202,11 @@ public final class LiquidLensView: UIView {
     /// of its lift and unlift springs (damping ratio 1).
     private static let lensHangTime: Double = 0.22
     private static let liftSpringResponse: Double = 0.25
+    /// The finger's velocity is its displacement over the immediate updates of this long before the move starts; a
+    /// longer window than one touch event, because events arrive in bursts after the main thread stalls.
+    private static let immediateVelocityWindow: Double = 0.1
+    private static let minImmediateVelocityInterval: Double = 0.03
+    private static let maxCarriedSpeed: CGFloat = 3000.0
 
     private var params: Params?
     private var appliedLensParams: LensParams?
@@ -220,6 +225,8 @@ public final class LiquidLensView: UIView {
     private var lensPlan: LiquidLensMotionPlan?
     private var isLensMoving: Bool = false
     private var lensMoveID: Int = 0
+    /// The lens's recent immediate positions (the finger's), newest last.
+    private var immediateLensPositions: [(time: Double, position: CGPoint)] = []
 
     public var selectionOrigin: CGPoint? {
         return self.params?.selectionOrigin
@@ -628,9 +635,12 @@ public final class LiquidLensView: UIView {
             let current = self.lensSegment?.position(at: now) ?? lensView.center
             let segment: LiquidLensPositionSegment
             if let curve = lensMoveCurve(transition.animation), current != center {
-                segment = LiquidLensPositionSegment(from: current, to: center, startTime: now, duration: curve.duration, progress: curve.progress)
+                segment = LiquidLensPositionSegment(from: current, to: center, startTime: now, duration: curve.duration, progress: curve.progress, initialVelocity: self.lensVelocity(at: now))
+                self.immediateLensPositions.removeAll()
             } else {
                 segment = .resting(at: center, time: now)
+                self.immediateLensPositions.append((now, center))
+                self.immediateLensPositions.removeAll(where: { now - $0.time > LiquidLensView.immediateVelocityWindow })
             }
             self.lensSegment = segment
             UIView.performWithoutAnimation {
@@ -642,6 +652,29 @@ public final class LiquidLensView: UIView {
         if movesLens || replans {
             self.replanLens(now: now, resetsMotion: resetsMotion, resetsFlex: resetsFlex)
         }
+    }
+
+    /// How fast the lens moves at `time`: along its current move, or, right after it followed the finger (immediate
+    /// updates), as fast as the finger moved it. A new move starts with this velocity.
+    private func lensVelocity(at time: Double) -> CGPoint {
+        var velocity = CGPoint()
+        if let segment = self.lensSegment, time < segment.endTime {
+            velocity = segment.velocity(at: time)
+        } else {
+            let recent = self.immediateLensPositions.filter { time - $0.time <= LiquidLensView.immediateVelocityWindow }
+            if let first = recent.first, let last = recent.last, time - last.time <= LiquidLensView.immediateVelocityWindow * 0.5 {
+                // Over at least a few frames, so that a lone jump (a relayout) or a burst of events is not a speed.
+                let interval = max(last.time - first.time, LiquidLensView.minImmediateVelocityInterval)
+                if recent.count > 1 {
+                    velocity = CGPoint(x: (last.position.x - first.position.x) / CGFloat(interval), y: (last.position.y - first.position.y) / CGFloat(interval))
+                }
+            }
+        }
+        let speed = sqrt(velocity.x * velocity.x + velocity.y * velocity.y)
+        if speed > LiquidLensView.maxCarriedSpeed {
+            velocity = CGPoint(x: velocity.x * LiquidLensView.maxCarriedSpeed / speed, y: velocity.y * LiquidLensView.maxCarriedSpeed / speed)
+        }
+        return velocity
     }
 
     private func replanLens(now: Double, resetsMotion: Bool = false, resetsFlex: Bool = false) {

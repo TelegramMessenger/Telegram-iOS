@@ -182,6 +182,50 @@ final class LiquidLensMotionPlanTests: XCTestCase {
         XCTAssertFalse(plan.hasFlex)
     }
 
+    func testBezierProgressMatchesTheCurve() {
+        let cases: [(x1: Double, y1: Double, x2: Double, y2: Double, fraction: Double, progress: CGFloat)] = [
+            (0.42, 0.0, 0.58, 1.0, 0.25, 0.129161931),
+            (0.42, 0.0, 0.58, 1.0, 0.5, 0.5),
+            (0.38, 0.7, 0.125, 1.0, 0.1, 0.205670047),
+            (0.38, 0.7, 0.125, 1.0, 0.5, 0.930837858),
+            (0.38, 0.7, 0.125, 1.0, 0.99, 0.999986803),
+        ]
+        for item in cases {
+            XCTAssertEqual(liquidLensBezierProgress(item.x1, item.y1, item.x2, item.y2, item.fraction), item.progress, accuracy: 0.000001)
+        }
+    }
+
+    /// A move that interrupts another starts with its velocity and still ends where and when the curve does.
+    func testRetargetCarriesVelocity() {
+        let first = LiquidLensPositionSegment(from: CGPoint(x: 0.0, y: 0.0), to: CGPoint(x: 140.0, y: 0.0), startTime: 0.0, duration: 0.4, progress: { liquidLensBezierProgress(0.380, 0.700, 0.125, 1.000, $0) })
+        let time = 0.08
+        let velocity = first.velocity(at: time)
+        XCTAssertGreaterThan(velocity.x, 300.0)
+
+        let second = LiquidLensPositionSegment(from: first.position(at: time), to: CGPoint(x: -70.0, y: 0.0), startTime: time, duration: 0.4, progress: { liquidLensBezierProgress(0.380, 0.700, 0.125, 1.000, $0) }, initialVelocity: velocity)
+        XCTAssertEqual(second.position(at: time).x, first.position(at: time).x, accuracy: 0.0001)
+        XCTAssertEqual(second.velocity(at: time).x, velocity.x, accuracy: abs(velocity.x) * 0.01)
+        XCTAssertEqual(second.velocity(at: time).y, 0.0, accuracy: 0.0001)
+        // It keeps going right for a moment before it turns back.
+        XCTAssertGreaterThan(second.position(at: time + 0.02).x, second.position(at: time).x)
+        XCTAssertEqual(second.position(at: second.endTime - 0.000001).x, -70.0, accuracy: 0.01)
+        XCTAssertEqual(second.position(at: second.endTime).x, -70.0)
+        XCTAssertLessThan(abs(second.velocity(at: second.endTime - 0.001).x), 0.5)
+
+        let still = LiquidLensPositionSegment(from: first.position(at: time), to: CGPoint(x: -70.0, y: 0.0), startTime: time, duration: 0.4, progress: { liquidLensBezierProgress(0.380, 0.700, 0.125, 1.000, $0) })
+        XCTAssertLessThan(still.position(at: time + 0.02).x, still.position(at: time).x)
+    }
+
+    func testCarriedVelocityIsMirrored() {
+        let progress: (Double) -> CGFloat = { liquidLensBezierProgress(0.380, 0.700, 0.125, 1.000, $0) }
+        let right = LiquidLensPositionSegment(from: CGPoint(x: 200.0, y: 31.0), to: CGPoint(x: 260.0, y: 31.0), startTime: 1.0, duration: 0.4, progress: progress, initialVelocity: CGPoint(x: -500.0, y: 0.0))
+        let left = LiquidLensPositionSegment(from: CGPoint(x: 200.0, y: 31.0), to: CGPoint(x: 140.0, y: 31.0), startTime: 1.0, duration: 0.4, progress: progress, initialVelocity: CGPoint(x: 500.0, y: 0.0))
+        for frame in 0 ... 48 {
+            let time = 1.0 + Double(frame) / 120.0
+            XCTAssertEqual(right.position(at: time).x - 200.0, 200.0 - left.position(at: time).x, accuracy: 0.0001)
+        }
+    }
+
     func testRestingInactivePlanIsEmpty() {
         let plan = LiquidLensMotionPlan(start: LiquidLensMotionState(time: 5.0), segment: .resting(at: CGPoint(x: 1.0, y: 2.0), time: 5.0), isFlexActive: false, size: self.size)
         XCTAssertEqual(plan.states.count, 1)
