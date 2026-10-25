@@ -4,14 +4,20 @@ import Display
 import ComponentFlow
 import GlassBackgroundComponent
 
+/// The lens's resting selection, as UIKit's `_UITabSelectionView` draws it on iOS 27 (its `updateBackground` when the
+/// platform metrics give no selection color, as the glass tab bar's do): the backdrop captured at a quarter of the
+/// resolution, in a backdrop group of its own, blurred by 2 with normalized edges, then through a color matrix.
 private final class RestingBackgroundView: UIVisualEffectView {
     var isDark: Bool?
 
+    /// `_ColorMatrix.YCC(black:white:saturation:hue:).colorMatrix` (DesignLibrary), as `currentColorMatrixValue`
+    /// builds it: light YCC(-0.2, 0.93, 1.2, 0), dark YCC(-0.07, 0.8, 1.2, 0), computed by calling DesignLibrary in
+    /// the iOS 27 simulator.
     static func colorMatrix(isDark: Bool) -> [Float32] {
         if isDark {
-            return [1.082, -0.113, -0.011, 0.0, 0.135, -0.034, 1.003, -0.011, 0.0, 0.135, -0.034, -0.113, 1.105, 0.0, 0.135, 0.0, 0.0, 0.0, 1.0, 0.0]
+            return [1.1298, -0.2361, -0.0237, 0.0, -0.07, -0.0701, 0.964, -0.0238, 0.0, -0.07, -0.0702, -0.236, 1.1762, 0.0, -0.07, 0.0, 0.0, 0.0, 1.0, 0.0]
         } else {
-            return [1.185, -0.05, -0.005, 0.0, -0.2, -0.015, 1.15, -0.005, 0.0, -0.2, -0.015, -0.05, 1.195, 0.0, -0.2, 0.0, 0.0, 0.0, 1.0, 0.0]
+            return [1.1851, -0.0502, -0.005, 0.0, -0.2, -0.0149, 1.1499, -0.0051, 0.0, -0.2, -0.0149, -0.05, 1.1949, 0.0, -0.2, 0.0, 0.0, 0.0, 1.0, 0.0]
         }
     }
 
@@ -41,17 +47,15 @@ private final class RestingBackgroundView: UIVisualEffectView {
         if let sublayer = self.layer.sublayers?[0], let _ = sublayer.filters {
             sublayer.backgroundColor = nil
             sublayer.isOpaque = false
-            
-            if let classValue = NSClassFromString("CAFilter") as AnyObject as? NSObjectProtocol {
-                let makeSelector = NSSelectorFromString("filterWithName:")
-                let filter = classValue.perform(makeSelector, with: "colorMatrix").takeUnretainedValue() as? NSObject
-                
-                if let filter {
-                    var matrix: [Float32] = RestingBackgroundView.colorMatrix(isDark: isDark)
-                    filter.setValue(NSValue(bytes: &matrix, objCType: "{CAColorMatrix=ffffffffffffffffffff}"), forKey: "inputColorMatrix")
-                    sublayer.filters = [filter]
-                    sublayer.setValue(1.0, forKey: "scale")
-                }
+
+            if let blurFilter = CALayer.blur(), let colorMatrixFilter = CALayer.colorMatrix() {
+                blurFilter.setValue(2.0 as NSNumber, forKey: "inputRadius")
+                blurFilter.setValue(true as NSNumber, forKey: "inputNormalizeEdges")
+                var matrix: [Float32] = RestingBackgroundView.colorMatrix(isDark: isDark)
+                colorMatrixFilter.setValue(NSValue(bytes: &matrix, objCType: "{CAColorMatrix=ffffffffffffffffffff}"), forKey: "inputColorMatrix")
+                sublayer.filters = [blurFilter, colorMatrixFilter]
+                sublayer.setValue(0.25, forKey: "scale")
+                sublayer.setValue("RestingBackgroundView-\(UInt(bitPattern: ObjectIdentifier(self)))", forKey: "groupName")
             }
         }
     }
@@ -111,6 +115,7 @@ public final class LiquidLensView: UIView {
     }
 
     private let containerView: UIView
+    private let backgroundTintColor: GlassBackgroundView.TintColor
     private let backgroundContainer: GlassBackgroundContainerView?
     private let genericBackgroundContainer: UIView?
     private let backgroundView: GlassBackgroundView?
@@ -153,9 +158,11 @@ public final class LiquidLensView: UIView {
     public var onUpdatedIsAnimating: ((Bool) -> Void)?
     public var isLiftedAnimationCompleted: (() -> Void)?
 
-    public init(kind: Kind) {
+    /// `backgroundTintColor` tints the glass behind the items, when the kind has one.
+    public init(kind: Kind, backgroundTintColor: GlassBackgroundView.TintColor = GlassBackgroundView.TintColor(kind: .panel)) {
         self.containerView = UIView()
-        
+        self.backgroundTintColor = backgroundTintColor
+
         switch kind {
         case .builtinContainer:
             self.backgroundContainer = GlassBackgroundContainerView()
@@ -254,7 +261,6 @@ public final class LiquidLensView: UIView {
                 }
             }
             
-            lensView.setValue(UIColor(white: 0.0, alpha: 0.1), forKey: "restingBackgroundColor")
         } else {
             let legacySelectionView = GlassBackgroundView.ContentImageView()
             self.legacySelectionView = legacySelectionView
@@ -437,7 +443,7 @@ public final class LiquidLensView: UIView {
         
         if let backgroundView = self.backgroundView {
             transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: params.size))
-            backgroundView.update(size: params.size, cornerRadius: params.cornerRadius ?? (params.size.height * 0.5), isDark: params.isDark, tintColor: GlassBackgroundView.TintColor.init(kind: .panel), isInteractive: true, transition: transition)
+            backgroundView.update(size: params.size, cornerRadius: params.cornerRadius ?? (params.size.height * 0.5), isDark: params.isDark, tintColor: self.backgroundTintColor, isInteractive: true, transition: transition)
         }
         
         if self.contentView.bounds.size != params.size {

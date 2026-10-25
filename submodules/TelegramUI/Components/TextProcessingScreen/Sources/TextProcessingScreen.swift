@@ -793,7 +793,8 @@ final class TextProcessingContentComponent: Component {
                         selectedId: currentModeId,
                         outerInsets: UIEdgeInsets(),
                         axis: .horizontal,
-                        isCompact: false
+                        isCompact: false,
+                        usesSystemLayout: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 62.0)

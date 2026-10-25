@@ -459,7 +459,7 @@ private class SimpleGlassView: UIView {
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, transition: ComponentTransition) {
         let colorValue: UIColor
         switch tintColor.kind {
-        case .clear, .panel:
+        case .clear, .panel, .untinted:
             if isDark {
                 colorValue = UIColor(white: 1.0, alpha: 0.025)
             } else {
