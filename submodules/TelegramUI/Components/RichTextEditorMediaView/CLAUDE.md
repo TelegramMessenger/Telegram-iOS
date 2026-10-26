@@ -175,12 +175,18 @@ Spec/plan in-tree: `docs/superpowers/{specs/2026-07-17-richtext-media-layout-tog
 ## Button layout (`MediaChromeLayout`)
 
 All the glass buttons' geometry is the pure `MediaChromeLayout` (36pt buttons, 8pt inset, 6pt spacing),
-pinned by `//submodules/TelegramUI/Components/RichTextEditorMediaView:RichTextEditorMediaViewTests`. The
-container's "+" and toggle sit top-right of the container; each tile's "…" top-left of the tile. A narrow
-tile in the top-right corner (a square photo beside a portrait video, #28) would put its "…" on the
-container's buttons, so `moreButtonOrigin(cellFrame:avoiding:)` moves it down below them, at the same left
-inset (as low as the tile allows when it is too short for that). `applyCells` computes it per cell and
-hands it to the component as `moreButtonOrigin`; a slideshow page counts as at the container's origin.
+pinned by `//submodules/TelegramUI/Components/RichTextEditorMediaView:RichTextEditorMediaViewTests`, which also
+sweeps the real album layouts (`MosaicCellFrames`, the frame math of `updateMosaic`). The container's "+" and
+toggle sit top-right of the container; each tile's "…" top-left of the tile. A narrow tile in the top-right
+corner (a square photo beside a portrait video, #28) would put its "…" on the container's buttons, so
+`moreButtonOrigins(cellFrames:avoiding:)` moves it: below them at the same inset, else into their row just
+left of them, inside the tile. A tile too small for both (~70–85pt squares in some 4/6/7-item albums) gets the
+row position overflowing its left edge onto its neighbour, by at most `maxOverflow` (27pt); the cell is
+brought above its neighbours and `MediaItemNodeView.hitTest` no longer gates a cell's controls on its
+bounds. Beyond that cap, or where the overflow would land on another tile's "…", the tile keeps its old
+top-left spot and overlap: from 375pt up that never happens; at 320pt, ~0.2% of the swept albums (4/6/7/9
+items) keep it, where before #28 7.5% of them overlapped, at every width. Slideshow pages are full width and
+keep "…" top-left.
 
 ## History
 

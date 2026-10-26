@@ -240,16 +240,7 @@ public final class MediaItemNodeView: UIView, RichTextMediaItemView, UIScrollVie
         } else {
             // Same cap the box reserves (MediaBlockBox.mosaicSize): pack within width × min(1000,width),
             // then scale-to-fit + center when the width-driven pack still exceeds the cap.
-            let cap = min(1000.0, size.width)
-            let (rawFrames, naturalSize) = chatMessageBubbleMosaicLayout(
-                maxSize: CGSize(width: size.width, height: cap),
-                itemSizes: self.mosaicItems.map { $0.naturalSize })
-            let scale: CGFloat = naturalSize.height > cap ? cap / naturalSize.height : 1.0
-            let xOffset = floor((size.width - naturalSize.width * scale) / 2.0)
-            frames = rawFrames.map { frame, _ in
-                CGRect(x: xOffset + frame.minX * scale, y: frame.minY * scale,
-                       width: frame.width * scale, height: frame.height * scale)
-            }
+            frames = MosaicCellFrames.frames(itemSizes: self.mosaicItems.map { $0.naturalSize }, size: size)
         }
         self.applyCells(into: self, frames: frames, size: size,
                         usesAspectFit: self.mosaicItems.count == 1, reportNilIndex: self.mosaicItems.count == 1)
@@ -277,11 +268,20 @@ public final class MediaItemNodeView: UIView, RichTextMediaItemView, UIScrollVie
         // `reuseIndex` walks `plan.reuse` in lockstep with `incomingIds` — both were built by iterating
         // `mosaicItems` in order and skipping id-less items identically, so the two stay aligned.
         var reuseIndex = 0
+        let cellFrames = self.mosaicItems.indices.map { $0 < frames.count ? frames[$0] : CGRect(origin: .zero, size: size) }
+        // Each cell's "…", clear of the container's "+" / layout toggle (a narrow top-right tile, #28). A
+        // slideshow page is on screen at the container's origin, alone, whatever its offset in the scroll view.
         let controlFrames = self.containerControlFrames(width: size.width)
         let containerControls = [controlFrames.add, controlFrames.toggle].compactMap { $0 }
+        let moreButtonOrigins: [CGPoint]
+        if container === self {
+            moreButtonOrigins = MediaChromeLayout.moreButtonOrigins(cellFrames: cellFrames, avoiding: containerControls)
+        } else {
+            moreButtonOrigins = cellFrames.map { MediaChromeLayout.moreButtonOrigin(cellFrame: CGRect(origin: CGPoint(x: 0.0, y: $0.minY), size: $0.size), avoiding: containerControls) }
+        }
         for (index, item) in self.mosaicItems.enumerated() {
             guard let mediaId = item.media.id else { continue }
-            let frame = index < frames.count ? frames[index] : CGRect(origin: .zero, size: size)
+            let frame = cellFrames[index]
             let host: ComponentHostView<Empty>
             let cellKey: MosaicCellDiff.PooledKey
             if let reusedKey = plan.reuse[reuseIndex], let existingHost = self.mosaicCells[reusedKey]?.host {
@@ -306,10 +306,11 @@ public final class MediaItemNodeView: UIView, RichTextMediaItemView, UIScrollVie
             // component whose `isSpoiler` (part of `==`) reflects the current state is what makes the toggle
             // re-render. `usesAspectFit` rides a size change (1↔mosaic), so it needn't be in `==`.
             let component = RichTextMediaContentComponent(context: context, media: item.media, showsMoreButton: self.showsControls, usesAspectFit: usesAspectFit, isSpoiler: item.isSpoiler)
-            // Keep the cell's "…" clear of the container's "+" / layout toggle (a narrow top-right tile, #28).
-            // A slideshow page is on screen at the container's origin, whatever its offset in the scroll view.
-            let onScreenFrame = container === self ? frame : CGRect(origin: CGPoint(x: 0.0, y: frame.minY), size: frame.size)
-            component.moreButtonOrigin = MediaChromeLayout.moreButtonOrigin(cellFrame: onScreenFrame, avoiding: containerControls)
+            component.moreButtonOrigin = moreButtonOrigins[index]
+            if self.showsControls, MediaChromeLayout.overflowsTile(component.moreButtonOrigin) {
+                // Its "…" overflows onto a neighbour tile: draw it above that tile.
+                container.bringSubviewToFront(host)
+            }
             component.onControlTapped = { [weak self] kind, anchorView, rect in
                 self?.onControlTapped?(kind, reportedIndex, anchorView, rect)
             }
@@ -317,6 +318,12 @@ public final class MediaItemNodeView: UIView, RichTextMediaItemView, UIScrollVie
             host.frame = frame
             _ = host.update(transition: .immediate, component: AnyComponent(component),
                             environment: {}, containerSize: frame.size)
+        }
+        // The container's own buttons stay above every cell, including one just raised above its neighbours.
+        for button in [self.layoutToggleContainer, self.addButtonContainer] {
+            if let button, button.superview === self {
+                self.bringSubviewToFront(button)
+            }
         }
     }
 
@@ -492,10 +499,11 @@ public final class MediaItemNodeView: UIView, RichTextMediaItemView, UIScrollVie
                 let inScroll = scroll.convert(point, from: self)
                 if scroll.point(inside: inScroll, with: event) { return scroll }
             }
-            for (_, cell) in self.mosaicCells {
+            // Not gated on the cell's bounds: a narrow tile's "…" can overflow onto its neighbour
+            // (`MediaChromeLayout.moreButtonOrigin`), and the cell only ever returns its controls.
+            for (_, cell) in self.mosaicCells where !cell.host.isHidden {
                 let inHost = cell.host.convert(point, from: self)
-                if cell.host.point(inside: inHost, with: event),
-                   let hit = cell.host.hitTest(inHost, with: event), hit !== cell.host {
+                if let hit = cell.host.hitTest(inHost, with: event), hit !== cell.host {
                     return hit
                 }
             }
