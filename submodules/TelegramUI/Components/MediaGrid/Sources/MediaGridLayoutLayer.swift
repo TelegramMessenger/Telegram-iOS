@@ -12,6 +12,7 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
     private var visibleRange: Range<Int> = 0 ..< 0
+    private var needsRebind = false
 
     init(dataSource: MediaGridDataSource, pool: MediaGridCellPool) {
         self.dataSource = dataSource
@@ -40,16 +41,19 @@ final class MediaGridLayoutLayer: CALayer {
         self.pixelSize = pixelSize
         self.detail = detail
         if rebind {
-            self.removeAllCells()
-            return
+            self.needsRebind = true
+        }
+        let kept = self.visibleRange.clamped(to: 0 ..< layout.count)
+        if kept != self.visibleRange {
+            for index in self.visibleCells.keys where !kept.contains(index) {
+                if let cell = self.visibleCells.removeValue(forKey: index) {
+                    self.pool.enqueue(cell)
+                }
+            }
+            self.visibleRange = kept.isEmpty ? 0 ..< 0 : kept
         }
         for (index, cell) in self.visibleCells {
-            if index < layout.count {
-                cell.frame = layout.frame(at: index)
-            } else {
-                self.visibleCells.removeValue(forKey: index)
-                self.pool.enqueue(cell)
-            }
+            cell.frame = layout.frame(at: index)
         }
     }
 
@@ -72,21 +76,25 @@ final class MediaGridLayoutLayer: CALayer {
         }
         self.visibleCells.removeAll()
         self.visibleRange = 0 ..< 0
+        self.needsRebind = false
     }
 
-    func updateVisibleRange(_ range: Range<Int>) {
-        guard let layout = self.layout else {
+    private func remove(_ lower: Int, _ upper: Int) {
+        guard lower < upper else {
             return
         }
-        let range = range.clamped(to: 0 ..< layout.count)
-        if range == self.visibleRange && self.visibleCells.count == range.count {
+        for index in lower ..< upper {
+            if let cell = self.visibleCells.removeValue(forKey: index) {
+                self.pool.enqueue(cell)
+            }
+        }
+    }
+
+    private func add(_ lower: Int, _ upper: Int, layout: MediaGridLayout) {
+        guard lower < upper else {
             return
         }
-        for (index, cell) in self.visibleCells where !range.contains(index) {
-            self.visibleCells.removeValue(forKey: index)
-            self.pool.enqueue(cell)
-        }
-        for index in range where self.visibleCells[index] == nil {
+        for index in lower ..< upper {
             let cell = self.pool.dequeue()
             if cell.superlayer !== self {
                 self.addSublayer(cell)
@@ -94,8 +102,37 @@ final class MediaGridLayoutLayer: CALayer {
             self.bind(cell, index: index, layout: layout)
             self.visibleCells[index] = cell
         }
+    }
+
+    func updateVisibleRange(_ range: Range<Int>) {
+        guard let layout = self.layout else {
+            return
+        }
+        let range = range.clamped(to: 0 ..< layout.count)
+        let old = self.visibleRange
+        if range == old && !self.needsRebind {
+            return
+        }
+        if old.overlaps(range) {
+            self.remove(old.lowerBound, range.lowerBound)
+            self.remove(range.upperBound, old.upperBound)
+            if self.needsRebind {
+                for index in range.clamped(to: old) {
+                    if let cell = self.visibleCells[index] {
+                        cell.imageRequest?.cancel()
+                        cell.imageRequest = nil
+                        self.bind(cell, index: index, layout: layout)
+                    }
+                }
+            }
+            self.add(range.lowerBound, old.lowerBound, layout: layout)
+            self.add(old.upperBound, range.upperBound, layout: layout)
+        } else {
+            self.remove(old.lowerBound, old.upperBound)
+            self.add(range.lowerBound, range.upperBound, layout: layout)
+        }
+        self.needsRebind = false
         self.visibleRange = range
-        self.pool.noteVisibleCount(self.visibleCells.count)
     }
 
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {

@@ -5,9 +5,12 @@ import CoreList
 
 public final class MediaGridView: UIView {
     private let dataSource: MediaGridDataSource
-    private let engine: PhysicsScrollEngine
-    private let pool: MediaGridCellPool
-    let activeLayoutLayer: MediaGridLayoutLayer
+    let engine: PhysicsScrollEngine
+    let pool: MediaGridCellPool
+    private(set) var activeLayoutLayer: MediaGridLayoutLayer
+    private var spareLayoutLayer: MediaGridLayoutLayer?
+    private var transition: MediaGridZoomTransition?
+    private var pendingZoom: (anchor: MediaGridZoomAnchor, relativePosition: CGPoint)?
 
     public private(set) var level: MediaGridLevel = .three
     private var itemCount: Int
@@ -44,10 +47,19 @@ public final class MediaGridView: UIView {
     }
 
     public var onScroll: ((CGFloat) -> Void)?
+    public var onLevelChanged: ((MediaGridLevel) -> Void)?
+    public var isZoomEnabled: Bool = true {
+        didSet {
+            if self.transition == nil {
+                self.tapRecognizer.isEnabled = self.level.isInteractive || self.isZoomEnabled
+            }
+        }
+    }
     public var onTapItem: ((Int) -> Void)?
     public var isItemSelected: ((Int) -> Bool)? {
         didSet {
             self.activeLayoutLayer.isItemSelected = self.isItemSelected
+            self.transition?.incoming.isItemSelected = self.isItemSelected
             self.updateSelectionForVisibleItems()
         }
     }
@@ -56,6 +68,7 @@ public final class MediaGridView: UIView {
     public var cameraView: UIView? {
         didSet {
             if self.cameraView !== oldValue {
+                self.finishTransition()
                 oldValue?.removeFromSuperview()
                 if let cameraView = self.cameraView {
                     self.engine.contentHost.addSubview(cameraView)
@@ -71,8 +84,8 @@ public final class MediaGridView: UIView {
 
     private static let cameraSlots: Set<MediaGridSlot> = [MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]
 
-    private var reservedSlots: Set<MediaGridSlot> {
-        return self.level.showsCamera && self.cameraView != nil ? MediaGridView.cameraSlots : []
+    private func reservedSlots(for level: MediaGridLevel) -> Set<MediaGridSlot> {
+        return level.showsCamera && self.cameraView != nil ? MediaGridView.cameraSlots : []
     }
 
     public init(dataSource: MediaGridDataSource, cellFactory: @escaping () -> MediaGridCellLayer) {
@@ -129,6 +142,11 @@ public final class MediaGridView: UIView {
     deinit {
         self.engine.tearDown()
         self.resetPrefetch()
+        if let transition = self.transition {
+            transition.removeAnimations()
+            transition.outgoing.removeAllCells()
+            transition.incoming.removeAllCells()
+        }
         self.activeLayoutLayer.removeAllCells()
     }
 
@@ -176,6 +194,7 @@ public final class MediaGridView: UIView {
     }
 
     public func reloadData() {
+        self.finishTransition()
         self.itemCount = max(0, self.dataSource.count)
         self.needsLayoutRebuild = true
         self.dateCache = [:]
@@ -192,6 +211,7 @@ public final class MediaGridView: UIView {
             self.pendingContentOffset = y
             return
         }
+        self.finishTransition()
         let offset = min(max(0.0, y), self.maxOffset)
         self.engine.setOffset(offset)
         self.scrolled(to: offset)
@@ -213,6 +233,7 @@ public final class MediaGridView: UIView {
 
     public func updateSelectionForVisibleItems() {
         self.activeLayoutLayer.refreshSelection()
+        self.transition?.incoming.refreshSelection()
     }
 
     @objc private func tapped(_ recognizer: UITapGestureRecognizer) {
@@ -222,16 +243,219 @@ public final class MediaGridView: UIView {
     }
 
     private func handleTap(at point: CGPoint) {
-        guard self.level.isInteractive, let index = self.index(at: point) else {
+        guard self.transition == nil, let index = self.index(at: point) else {
             return
         }
-        self.onTapItem?(index)
-        self.updateSelectionForVisibleItems()
+        if self.level.isInteractive {
+            self.onTapItem?(index)
+            self.updateSelectionForVisibleItems()
+        } else if self.isZoomEnabled, let target = self.level.zoomedIn {
+            self.setLevel(target, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: point))
+        }
     }
 
-    func _testSetLevel(_ level: MediaGridLevel) {
+    public var canZoomIn: Bool {
+        return self.isZoomEnabled && self.level.zoomedIn != nil
+    }
+
+    public var canZoomOut: Bool {
+        return self.isZoomEnabled && self.level.zoomedOut != nil
+    }
+
+    public func zoomIn() {
+        guard self.isZoomEnabled, let target = self.level.zoomedIn else {
+            return
+        }
+        self.finishTransition()
+        self.setLevel(target, animated: true, anchor: self.centreAnchor())
+    }
+
+    public func zoomOut() {
+        guard self.isZoomEnabled, let target = self.level.zoomedOut else {
+            return
+        }
+        self.finishTransition()
+        self.setLevel(target, animated: true, anchor: self.centreAnchor())
+    }
+
+    private func centreAnchor() -> MediaGridZoomAnchor? {
+        guard let layout = self.currentLayout, layout.count > 0, self.bounds.height > 0.0 else {
+            return nil
+        }
+        let centre = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
+        if let index = self.index(at: centre) {
+            return MediaGridZoomAnchor(index: index, pointInView: centre)
+        }
+        let host = self.engine.contentHost.frame
+        let strip = CGRect(x: 0.0, y: centre.y - host.minY + self.engine.offset, width: layout.geometry.width, height: layout.itemSize.height + layout.geometry.spacing)
+        let range = layout.indexRange(intersecting: strip)
+        let index = range.isEmpty ? (self.topVisibleIndex ?? layout.count - 1) : range.lowerBound
+        guard let frame = self.frameForItem(at: index) else {
+            return nil
+        }
+        return MediaGridZoomAnchor(index: index, pointInView: CGPoint(x: frame.midX, y: centre.y))
+    }
+
+    private func relativePosition(of anchor: MediaGridZoomAnchor) -> CGPoint {
+        guard let frame = self.frameForItem(at: anchor.index) else {
+            return CGPoint(x: 0.5, y: 0.5)
+        }
+        return MediaGridZoomMath.relativePosition(of: anchor.pointInView, in: frame)
+    }
+
+    public func setLevel(_ level: MediaGridLevel, animated: Bool, anchor: MediaGridZoomAnchor? = nil) {
+        self.finishTransition()
+        guard level != self.level else {
+            return
+        }
+        let resolvedAnchor = anchor ?? self.centreAnchor()
+        guard let source = self.currentLayout, self.bounds.width > 0.0, self.bounds.height > 0.0, let resolvedAnchor, resolvedAnchor.index >= 0, resolvedAnchor.index < source.count else {
+            self.level = level
+            self.invalidateGridLayout()
+            self.updateGridLayout()
+            self.onLevelChanged?(level)
+            return
+        }
+        let relative = self.relativePosition(of: resolvedAnchor)
+        self.engine.haltMotionInPlace()
+        if !animated {
+            self.level = level
+            self.pendingZoom = (resolvedAnchor, relative)
+            self.needsLayoutRebuild = true
+            self.updateGridLayout()
+            self.onLevelChanged?(level)
+            return
+        }
+        self.beginTransition(to: level, source: source, anchor: resolvedAnchor, relativePosition: relative)
+        self.onLevelChanged?(level)
+    }
+
+    private func makeLayout(level: MediaGridLevel, geometry: MediaGridGeometry) -> MediaGridUniformLayout {
+        return MediaGridUniformLayout(geometry: geometry, columns: level.columns, cellAspect: self.cellAspect, reservedSlots: self.reservedSlots(for: level), count: self.itemCount)
+    }
+
+    private func pixelSize(for layout: MediaGridUniformLayout) -> CGSize {
+        return CGSize(width: ceil(layout.itemSize.width * layout.geometry.scale), height: ceil(layout.itemSize.height * layout.geometry.scale))
+    }
+
+    private func beginTransition(to level: MediaGridLevel, source: MediaGridUniformLayout, anchor: MediaGridZoomAnchor, relativePosition: CGPoint) {
+        let sourceLevel = self.level
         self.level = level
-        self.invalidateGridLayout()
+        self.engine.isScrollEnabled = false
+        self.tapRecognizer.isEnabled = false
+        self.selectionGesture.isEnabled = false
+
+        let width = self.bounds.width
+        let height = self.bounds.height
+        let host = self.engine.contentHost.frame
+        let sourceOffset = self.engine.offset
+        let target = self.makeLayout(level: level, geometry: source.geometry)
+        let targetOffset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: anchor.index, pointInView: CGPoint(x: anchor.pointInView.x - host.minX, y: anchor.pointInView.y - host.minY)), in: target, viewportHeight: height, relativePosition: relativePosition)
+        let scale = MediaGridZoomMath.scale(from: source, to: target, anchorIndex: anchor.index)
+        let anchorPoint = CGPoint(x: anchor.pointInView.x - host.minX, y: anchor.pointInView.y - host.minY + sourceOffset)
+        let shift = sourceOffset - targetOffset
+        let pixelSize = self.pixelSize(for: target)
+
+        let incoming = self.spareLayoutLayer ?? MediaGridLayoutLayer(dataSource: self.dataSource, pool: self.pool)
+        self.spareLayoutLayer = nil
+        incoming.isItemSelected = self.isItemSelected
+        incoming.transform = CATransform3DIdentity
+        incoming.opacity = 1.0
+        incoming.setLayout(target, pixelSize: pixelSize, detail: level.isInteractive ? .full : .compact)
+        incoming.frame = CGRect(x: 0.0, y: shift, width: width, height: target.contentHeight)
+        self.engine.contentHost.layer.insertSublayer(incoming, above: self.activeLayoutLayer)
+
+        let viewport = CGRect(x: 0.0, y: sourceOffset, width: width, height: height)
+        let incomingRect = viewport.union(MediaGridView.scaled(viewport, about: anchorPoint, by: scale)).offsetBy(dx: 0.0, dy: -shift)
+        incoming.updateVisibleRange(target.indexRange(intersecting: incomingRect.insetBy(dx: 0.0, dy: -self.windowMargin(level: level))))
+        let outgoingRect = viewport.union(MediaGridView.scaled(viewport, about: anchorPoint, by: 1.0 / scale))
+        self.activeLayoutLayer.updateVisibleRange(source.indexRange(intersecting: outgoingRect.insetBy(dx: 0.0, dy: -self.windowMargin(level: sourceLevel))))
+        self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count + incoming.visibleCells.count)
+
+        var cameraRole: MediaGridZoomTransition.CameraRole = .none
+        var cameraAlpha: (CGFloat, CGFloat) = (0.0, 0.0)
+        if let cameraView = self.cameraView {
+            let sourceShows = !self.reservedSlots(for: sourceLevel).isEmpty
+            let targetSlots = self.reservedSlots(for: level)
+            if !targetSlots.isEmpty, let frame = target.reservedFrame(targetSlots) {
+                cameraRole = .incoming
+                cameraAlpha = (sourceShows ? 1.0 : 0.0, 1.0)
+                cameraView.layer.transform = CATransform3DIdentity
+                cameraView.frame = frame.offsetBy(dx: 0.0, dy: shift)
+                cameraView.isHidden = false
+            } else if sourceShows {
+                cameraRole = .outgoing
+                cameraAlpha = (1.0, 0.0)
+            }
+        }
+
+        let transition = MediaGridZoomTransition(outgoing: self.activeLayoutLayer, incoming: incoming, anchorPoint: anchorPoint, scale: scale, targetLayout: target, targetOffset: targetOffset, targetPixelSize: pixelSize, camera: cameraRole == .none ? nil : self.cameraView, cameraRole: cameraRole, cameraAlphaRange: cameraAlpha)
+        self.transition = transition
+        transition.apply(progress: 0.0)
+        transition.animate(to: 1.0, completion: { [weak self, weak transition] in
+            guard let self, let transition, self.transition === transition else {
+                return
+            }
+            self.finishTransition()
+        })
+    }
+
+    private static func scaled(_ rect: CGRect, about point: CGPoint, by scale: CGFloat) -> CGRect {
+        guard scale.isFinite, scale > 0.0 else {
+            return rect
+        }
+        return CGRect(x: point.x + (rect.minX - point.x) * scale, y: point.y + (rect.minY - point.y) * scale, width: rect.width * scale, height: rect.height * scale)
+    }
+
+    private func finishTransition() {
+        guard let transition = self.transition else {
+            return
+        }
+        self.transition = nil
+        transition.removeAnimations()
+        let outgoing = transition.outgoing
+        let incoming = transition.incoming
+        outgoing.removeAllCells()
+        outgoing.transform = CATransform3DIdentity
+        outgoing.opacity = 1.0
+        outgoing.removeFromSuperlayer()
+        self.spareLayoutLayer = outgoing
+
+        incoming.transform = CATransform3DIdentity
+        incoming.opacity = 1.0
+        incoming.frame = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: transition.targetLayout.contentHeight)
+        self.activeLayoutLayer = incoming
+
+        self.resetPrefetch()
+        self.currentLayout = transition.targetLayout
+        self.prefetchPixelSize = transition.targetPixelSize
+        self.engine.setEdges(min: 0.0, max: self.maxOffset)
+        self.engine.setOffset(min(max(0.0, transition.targetOffset), self.maxOffset))
+        self.engine.isScrollEnabled = true
+        self.layoutCamera(layout: transition.targetLayout)
+        let interactive = self.level.isInteractive
+        self.tapRecognizer.isEnabled = interactive || self.isZoomEnabled
+        self.selectionGesture.isEnabled = interactive
+        self.scrolled(to: self.engine.offset)
+    }
+
+    private func layoutCamera(layout: MediaGridUniformLayout) {
+        guard let cameraView = self.cameraView else {
+            return
+        }
+        cameraView.layer.transform = CATransform3DIdentity
+        if !self.reservedSlots(for: self.level).isEmpty, let frame = layout.reservedFrame(MediaGridView.cameraSlots) {
+            cameraView.isHidden = false
+            cameraView.alpha = 1.0
+            cameraView.frame = frame
+        } else {
+            cameraView.alpha = 0.0
+            cameraView.isHidden = true
+        }
+    }
+
+    func _testFinishAnimations() {
+        self.finishTransition()
     }
 
     func _testTap(at point: CGPoint) {
@@ -281,34 +505,44 @@ public final class MediaGridView: UIView {
         }
         let insets = self.geometryInsets
         let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: insets.top, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
+        if let transition = self.transition {
+            if !self.needsLayoutRebuild && transition.targetLayout.geometry == geometry {
+                return
+            }
+            self.finishTransition()
+        }
         var compensatedOffset: CGFloat?
+        var zoomOffset: CGFloat?
         if self.needsLayoutRebuild || self.currentLayout?.geometry != geometry {
             self.needsLayoutRebuild = false
-            let reservedSlots = self.reservedSlots
-            let layout = MediaGridUniformLayout(geometry: geometry, columns: self.level.columns, cellAspect: self.cellAspect, reservedSlots: reservedSlots, count: self.itemCount)
+            let layout = self.makeLayout(level: self.level, geometry: geometry)
             if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
                 compensatedOffset = max(0.0, self.engine.offset + (insets.top - lastTopInset))
+            }
+            if let zoom = self.pendingZoom {
+                compensatedOffset = nil
+                let host = self.engine.contentHost.frame
+                let point = CGPoint(x: zoom.anchor.pointInView.x - host.minX, y: zoom.anchor.pointInView.y - host.minY)
+                zoomOffset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: zoom.anchor.index, pointInView: point), in: layout, viewportHeight: size.height, relativePosition: zoom.relativePosition)
             }
             self.lastTopInset = insets.top
             self.resetPrefetch()
             self.currentLayout = layout
-            let pixelSize = CGSize(width: ceil(layout.itemSize.width * geometry.scale), height: ceil(layout.itemSize.height * geometry.scale))
+            let pixelSize = self.pixelSize(for: layout)
             self.prefetchPixelSize = pixelSize
             self.activeLayoutLayer.setLayout(layout, pixelSize: pixelSize, detail: self.cellDetail)
             self.activeLayoutLayer.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: layout.contentHeight)
-            if let cameraView = self.cameraView {
-                if let frame = layout.reservedFrame(MediaGridView.cameraSlots), !reservedSlots.isEmpty {
-                    cameraView.isHidden = false
-                    cameraView.frame = frame
-                } else {
-                    cameraView.isHidden = true
-                }
-            }
+            self.layoutCamera(layout: layout)
         }
+        self.pendingZoom = nil
         let interactive = self.level.isInteractive
-        self.tapRecognizer.isEnabled = interactive
+        self.tapRecognizer.isEnabled = interactive || self.isZoomEnabled
         self.selectionGesture.isEnabled = interactive
         self.engine.setEdges(min: 0.0, max: self.maxOffset)
+        if let zoomOffset {
+            self.engine.setOffset(min(max(0.0, zoomOffset), self.maxOffset))
+            self.scrolled(to: self.engine.offset)
+        }
         if let compensated = compensatedOffset {
             self.engine.setOffset(min(compensated, self.maxOffset))
             self.scrolled(to: self.engine.offset)
@@ -326,6 +560,9 @@ public final class MediaGridView: UIView {
     }
 
     private func scrolled(to offset: CGFloat) {
+        if self.transition != nil {
+            return
+        }
         self.updateVisibleCells(offset: offset)
         self.updatePrefetch(offset: offset)
         if !self.isNotifyingScroll {
@@ -389,7 +626,12 @@ public final class MediaGridView: UIView {
             return
         }
         let viewport = CGRect(x: 0.0, y: offset, width: self.bounds.width, height: height)
-        let range = layout.indexRange(intersecting: viewport.insetBy(dx: 0.0, dy: -height))
+        let range = layout.indexRange(intersecting: viewport.insetBy(dx: 0.0, dy: -self.windowMargin(level: self.level)))
         self.activeLayoutLayer.updateVisibleRange(range)
+        self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count)
+    }
+
+    private func windowMargin(level: MediaGridLevel) -> CGFloat {
+        return level.isInteractive ? self.bounds.height : self.bounds.height * 0.25
     }
 }

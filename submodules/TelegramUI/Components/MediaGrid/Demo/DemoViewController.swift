@@ -17,6 +17,8 @@ final class DemoViewController: UIViewController {
     private let frameMonitor = FrameMonitor()
     private let hudLabel = UILabel()
     private let resetButton = UIButton(type: .system)
+    private let zoomInButton = UIButton(type: .system)
+    private let zoomOutButton = UIButton(type: .system)
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "LLLL yyyy"
@@ -52,6 +54,12 @@ final class DemoViewController: UIViewController {
         self.resetButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         self.resetButton.addTarget(self, action: #selector(self.resetPressed), for: .touchUpInside)
         self.view.addSubview(self.resetButton)
+        for (button, title, action) in [(self.zoomInButton, "Zoom In", #selector(self.zoomInPressed)), (self.zoomOutButton, "Zoom Out", #selector(self.zoomOutPressed))] {
+            button.setTitle(title, for: .normal)
+            button.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+            button.addTarget(self, action: action, for: .touchUpInside)
+            self.view.addSubview(button)
+        }
         self.frameMonitor.onUpdate = { [weak self] summary in
             self?.hudLabel.text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms", summary.frames, summary.dropped, summary.worst * 1000.0)
         }
@@ -69,6 +77,19 @@ final class DemoViewController: UIViewController {
 
     @objc private func resetPressed() {
         self.frameMonitor.reset()
+    }
+
+    @objc private func zoomInPressed() {
+        self.gridView?.zoomIn()
+    }
+
+    @objc private func zoomOutPressed() {
+        self.gridView?.zoomOut()
+    }
+
+    private func updateZoomButtons() {
+        self.zoomInButton.isEnabled = self.gridView?.canZoomIn ?? false
+        self.zoomOutButton.isEnabled = self.gridView?.canZoomOut ?? false
     }
 
     private func updateScrubberDate() {
@@ -138,8 +159,12 @@ final class DemoViewController: UIViewController {
             self.scrubber.setFraction(range > 0.0 ? offset / range : 0.0)
             self.updateScrubberDate()
         }
+        gridView.onLevelChanged = { [weak self] _ in
+            self?.updateZoomButtons()
+        }
         self.view.insertSubview(gridView, at: 0)
         self.gridView = gridView
+        self.updateZoomButtons()
         self.view.setNeedsLayout()
     }
 
@@ -192,5 +217,7 @@ final class DemoViewController: UIViewController {
         self.scrubber.frame = CGRect(x: self.view.bounds.width - 220.0, y: insets.top, width: 220.0, height: self.view.bounds.height - insets.top - insets.bottom)
         self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 32.0)
         self.resetButton.frame = CGRect(x: 8.0, y: self.hudLabel.frame.maxY + 4.0, width: 60.0, height: 28.0)
+        self.zoomInButton.frame = CGRect(x: 8.0, y: self.view.bounds.height - insets.bottom - 40.0, width: 84.0, height: 32.0)
+        self.zoomOutButton.frame = CGRect(x: self.zoomInButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 84.0, height: 32.0)
     }
 }

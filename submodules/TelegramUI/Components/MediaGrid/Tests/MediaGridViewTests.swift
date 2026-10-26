@@ -343,8 +343,25 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertNil(view.index(at: CGPoint(x: camera.frame.midX, y: camera.frame.midY)))
     }
 
-    func testNoCameraSlotsAtFifteen() throws {
-        throw XCTSkip("needs setLevel from Task 8")
+    func testNoCameraSlotsAtFifteen() {
+        let (view, _) = self.makeView(count: 100)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        let cameraCentre = CGPoint(x: camera.frame.midX, y: camera.frame.midY)
+        XCTAssertNil(view.index(at: cameraCentre))
+        view.setLevel(.fifteen, animated: false)
+        XCTAssertEqual(view.level, .fifteen)
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        XCTAssertEqual(layout.columns, 15)
+        XCTAssertEqual(layout.frame(at: 0).minX, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 0).minY, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 15).minY, layout.itemSize.height + 1.0, accuracy: 1e-6)
+        XCTAssertNotNil(view.index(at: CGPoint(x: 5.0, y: 5.0)))
+        XCTAssertEqual(camera.alpha, 0.0)
     }
 
     func testCompactDetailAtFifteen() {
@@ -360,8 +377,7 @@ final class MediaGridViewTests: XCTestCase {
             details.insert("\((cell as! DetailRecordingCell).detail!)")
         }
         XCTAssertEqual(details, ["full"])
-        view._testSetLevel(.fifteen)
-        view.layoutIfNeeded()
+        view.setLevel(.fifteen, animated: false)
         details = []
         view.forEachVisibleCell { _, cell in
             details.insert("\((cell as! DetailRecordingCell).detail!)")
@@ -404,6 +420,254 @@ final class MediaGridViewTests: XCTestCase {
         view.layoutIfNeeded()
         XCTAssertEqual(view.contentOffset, 1000.0, accuracy: 1e-6)
         XCTAssertEqual(view.frameForItem(at: 30)?.minY ?? -1.0, before, accuracy: 1e-6)
+    }
+
+    func testZoomInFromThirtyOneByTap() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setLevel(.thirtyOne, animated: false)
+        XCTAssertEqual(view.level, .thirtyOne)
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(layout.frame(at: 4000).minY - 300.0)
+        guard let frame = view.frameForItem(at: 4000) else {
+            XCTFail("no frame")
+            return
+        }
+        var levels: [MediaGridLevel] = []
+        view.onLevelChanged = { levels.append($0) }
+        var tapped: [Int] = []
+        view.onTapItem = { tapped.append($0) }
+        let point = CGPoint(x: frame.midX, y: frame.midY)
+        view._testTap(at: point)
+        XCTAssertTrue(tapped.isEmpty)
+        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertFalse(view.engine.isScrollEnabled)
+        view._testFinishAnimations()
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        XCTAssertEqual(levels, [.fifteen])
+        XCTAssertEqual(view.currentLayout?.columns, 15)
+        guard let zoomed = view.frameForItem(at: 4000) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertTrue(zoomed.minY <= point.y && point.y < zoomed.maxY, "\(zoomed) \(point)")
+        XCTAssertEqual(zoomed.midY, point.y, accuracy: 0.5)
+        XCTAssertEqual(view.index(at: CGPoint(x: zoomed.midX, y: zoomed.midY)), 4000)
+    }
+
+    func testAnimatedZoomBuildsTwoLayersAndSettles() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let host = view.subviews[0].layer
+        let layoutLayersBefore = host.sublayers?.filter { $0 is MediaGridLayoutLayer }.count
+        XCTAssertEqual(layoutLayersBefore, 1)
+        let outgoing = view.activeLayoutLayer
+        view.zoomOut()
+        XCTAssertEqual(view.level, .five)
+        let during = host.sublayers?.compactMap { $0 as? MediaGridLayoutLayer } ?? []
+        XCTAssertEqual(during.count, 2)
+        guard let incoming = during.first(where: { $0 !== outgoing }) else {
+            XCTFail("no incoming layer")
+            return
+        }
+        XCTAssertNotNil(outgoing.animation(forKey: "mediaGridZoom.transform"))
+        XCTAssertNotNil(incoming.animation(forKey: "mediaGridZoom.opacity"))
+        XCTAssertEqual(outgoing.opacity, 0.0)
+        XCTAssertEqual(incoming.opacity, 1.0)
+        XCTAssertTrue(CATransform3DIsIdentity(incoming.transform))
+        XCTAssertFalse(incoming.visibleCells.isEmpty)
+        view._testFinishAnimations()
+        let after = host.sublayers?.compactMap { $0 as? MediaGridLayoutLayer } ?? []
+        XCTAssertEqual(after.count, 1)
+        XCTAssertTrue(after.first === incoming)
+        XCTAssertTrue(view.activeLayoutLayer === incoming)
+        XCTAssertTrue(outgoing.visibleCells.isEmpty)
+        XCTAssertTrue(CATransform3DIsIdentity(incoming.transform))
+        XCTAssertEqual(incoming.opacity, 1.0)
+        XCTAssertEqual(incoming.frame.minY, 0.0)
+        XCTAssertNil(incoming.animation(forKey: "mediaGridZoom.transform"))
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        XCTAssertEqual(layout.columns, 5)
+        let window = layout.indexRange(intersecting: self.viewport(view).insetBy(dx: 0.0, dy: -view.bounds.height))
+        XCTAssertEqual(Set(self.visibleCells(view).keys), Set(window))
+        view.zoomIn()
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .three)
+        XCTAssertTrue(view.activeLayoutLayer === outgoing)
+    }
+
+    func testZoomButtonsDisabledAtEnds() {
+        let (view, _) = self.makeView(count: 1000)
+        XCTAssertTrue(view.canZoomIn)
+        XCTAssertTrue(view.canZoomOut)
+        view.setLevel(.one, animated: false)
+        XCTAssertFalse(view.canZoomIn)
+        XCTAssertTrue(view.canZoomOut)
+        view.zoomIn()
+        XCTAssertEqual(view.level, .one)
+        view.setLevel(.thirtyOne, animated: false)
+        XCTAssertTrue(view.canZoomIn)
+        XCTAssertFalse(view.canZoomOut)
+        view.zoomOut()
+        XCTAssertEqual(view.level, .thirtyOne)
+        view.isZoomEnabled = false
+        XCTAssertFalse(view.canZoomIn)
+        XCTAssertFalse(view.canZoomOut)
+        view.zoomIn()
+        XCTAssertEqual(view.level, .thirtyOne)
+        guard let frame = view.frameForItem(at: 10) else {
+            XCTFail("no frame")
+            return
+        }
+        view._testTap(at: CGPoint(x: frame.midX, y: frame.midY))
+        XCTAssertEqual(view.level, .thirtyOne)
+    }
+
+    func testCameraFadesAtFifteen() {
+        let (view, _) = self.makeView(count: 1000)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        view.setLevel(.five, animated: false)
+        XCTAssertEqual(camera.alpha, 1.0)
+        XCTAssertFalse(camera.isHidden)
+        view.zoomOut()
+        XCTAssertEqual(camera.alpha, 0.0)
+        XCTAssertNotNil(camera.layer.animation(forKey: "mediaGridZoom.opacity"))
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertEqual(camera.alpha, 0.0)
+        XCTAssertTrue(CATransform3DIsIdentity(camera.layer.transform))
+        view.zoomIn()
+        XCTAssertFalse(camera.isHidden)
+        XCTAssertEqual(camera.alpha, 1.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(camera.alpha, 1.0)
+        XCTAssertTrue(CATransform3DIsIdentity(camera.layer.transform))
+        XCTAssertEqual(camera.frame, view.currentLayout?.reservedFrame([MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]))
+    }
+
+    func testNoMarkersAtCompact() {
+        let dataSource = TestDataSource(count: 100_000)
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return MarkerTestCell()
+        })
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.layoutIfNeeded()
+        var markers = 0
+        view.forEachVisibleCell { _, cell in
+            markers += cell.sublayers?.count ?? 0
+        }
+        XCTAssertGreaterThan(markers, 0)
+        view.zoomOut()
+        view._testFinishAnimations()
+        view.zoomOut()
+        view._testFinishAnimations()
+        view.zoomOut()
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .thirtyOne)
+        var visible = 0
+        view.forEachVisibleCell { index, cell in
+            visible += 1
+            XCTAssertEqual(cell.sublayers?.count ?? 0, 0, "index \(index) has a marker")
+        }
+        XCTAssertGreaterThan(visible, 0)
+    }
+
+    func testWindowStaysExactAcrossSmallAndLargeScrolls() {
+        let (view, _) = self.makeView(count: 100_000)
+        for level in [MediaGridLevel.three, .thirtyOne] {
+            view.setLevel(level, animated: false)
+            let margin = level.isInteractive ? view.bounds.height : view.bounds.height * 0.25
+            var offsets: [CGFloat] = []
+            var y: CGFloat = 1000.0
+            for _ in 0 ..< 40 {
+                y += 7.0
+                offsets.append(y)
+            }
+            for _ in 0 ..< 20 {
+                y -= 13.0
+                offsets.append(y)
+            }
+            offsets.append(contentsOf: [y + 600.0, y + 3000.0, view.contentHeight / 2.0, view.contentHeight / 2.0 - 900.0, 0.0, view.contentHeight])
+            for offset in offsets {
+                view.setContentOffset(offset)
+                guard let layout = view.currentLayout else {
+                    XCTFail("no layout")
+                    return
+                }
+                let window = layout.indexRange(intersecting: self.viewport(view).insetBy(dx: 0.0, dy: -margin))
+                let cells = self.visibleCells(view)
+                XCTAssertEqual(Set(cells.keys), Set(window), "level \(level) offset \(offset)")
+                let mismatched = cells.filter { index, cell in
+                    let expected = layout.frame(at: index)
+                    return cell.index != index || cell.isHidden || abs(cell.frame.minX - expected.minX) > 1e-6 || abs(cell.frame.minY - expected.minY) > 1e-6 || abs(cell.frame.width - expected.width) > 1e-6
+                }
+                XCTAssertTrue(mismatched.isEmpty, "level \(level) offset \(offset): \(mismatched.keys.sorted().prefix(5))")
+            }
+        }
+    }
+
+    func testPoolShrinksAfterCompactLevel() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(30_000.0)
+        let interactiveVisible = self.visibleCells(view).count
+        view.setLevel(.thirtyOne, animated: false)
+        let compactVisible = self.visibleCells(view).count
+        XCTAssertGreaterThan(compactVisible, interactiveVisible)
+        view.setLevel(.three, animated: false)
+        let visible = self.visibleCells(view).count
+        XCTAssertLessThanOrEqual(view.pool.count, 2 * visible)
+        let attached = view.activeLayoutLayer.sublayers?.count ?? 0
+        XCTAssertLessThanOrEqual(attached, 3 * visible)
+    }
+
+    func testRebindAtNewPixelSizeKeepsContents() {
+        let dataSource = TestDataSource(count: 100)
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return MediaGridCellLayer()
+        })
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.layoutIfNeeded()
+        let before = self.visibleCells(view)
+        XCTAssertTrue(before.values.allSatisfy { $0.contents != nil })
+        dataSource.deliveries = []
+        let cancels = dataSource.cancelCount
+        view.setLevel(.five, animated: false)
+        var kept = 0
+        view.forEachVisibleCell { index, cell in
+            if before[index] === cell {
+                kept += 1
+                XCTAssertNotNil(cell.contents, "index \(index) lost its image")
+            }
+        }
+        XCTAssertGreaterThan(kept, 0)
+        XCTAssertGreaterThanOrEqual(dataSource.cancelCount - cancels, kept)
+    }
+}
+
+private final class MarkerTestCell: MediaGridCellLayer {
+    private var marker: CALayer?
+
+    override func bind(index: Int, detail: MediaGridCellDetail) {
+        super.bind(index: index, detail: detail)
+        if detail == .full {
+            if self.marker == nil {
+                let marker = CALayer()
+                self.addSublayer(marker)
+                self.marker = marker
+            }
+        } else {
+            self.marker?.removeFromSuperlayer()
+            self.marker = nil
+        }
     }
 }
 

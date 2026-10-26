@@ -4,7 +4,7 @@ import QuartzCore
 final class MediaGridCellPool {
     private let factory: () -> MediaGridCellLayer
     private var cells: [MediaGridCellLayer] = []
-    private var largestVisibleCount = 0
+    private var visibleCount = 0
 
     init(factory: @escaping () -> MediaGridCellLayer) {
         self.factory = factory
@@ -24,7 +24,7 @@ final class MediaGridCellPool {
 
     func enqueue(_ cell: MediaGridCellLayer) {
         cell.prepareForReuse()
-        if self.cells.count >= 2 * self.largestVisibleCount {
+        if self.cells.count >= 2 * self.visibleCount {
             cell.removeFromSuperlayer()
             return
         }
@@ -32,7 +32,11 @@ final class MediaGridCellPool {
         self.cells.append(cell)
     }
 
-    func noteVisibleCount(_ count: Int) {
-        self.largestVisibleCount = max(self.largestVisibleCount, count)
+    func setVisibleCount(_ count: Int) {
+        self.visibleCount = count
+        let limit = 2 * count
+        while self.cells.count > limit {
+            self.cells.removeLast().removeFromSuperlayer()
+        }
     }
 }
