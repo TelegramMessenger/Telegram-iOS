@@ -167,7 +167,7 @@ final class MediaGridViewTests: XCTestCase {
         view.setContentOffset(view.contentHeight - view.bounds.height)
         var cells = self.visibleCells(view)
         XCTAssertNotNil(cells[99_999])
-        XCTAssertLessThanOrEqual(layout.frame(at: 99_999).maxY, view.contentHeight)
+        XCTAssertLessThanOrEqual(layout.frame(at: 99_999).maxY, view.contentOffset + view.bounds.height)
         for index in layout.indexRange(intersecting: self.viewport(view)) {
             XCTAssertNotNil(cells[index]?.contents, "index \(index) has no image at the end")
         }
@@ -206,6 +206,30 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertEqual(dataSource.dateCalls[target], targetCalls + 1)
     }
 
+    func testTopVisibleIndexInBottomOverscroll() {
+        let (view, _) = self.makeView(count: 1000)
+        view.setContentOffset(view.contentHeight - view.bounds.height)
+        let expected = view.topVisibleIndex
+        XCTAssertNotNil(expected)
+        view._testSetRawOffset(view.contentHeight + 300.0)
+        XCTAssertNotNil(view.topVisibleIndex)
+        XCTAssertNotNil(view.topVisibleDate)
+    }
+
+    func testListenerSeesFinalOffsetOfNestedWrite() {
+        let (view, _) = self.makeView(count: 100_000)
+        var received: [CGFloat] = []
+        view.onScroll = { [unowned view] offset in
+            received.append(offset)
+            if offset == 500.0 {
+                view.setContentOffset(1234.0)
+            }
+        }
+        view.setContentOffset(500.0)
+        XCTAssertEqual(received.last ?? -1.0, view.contentOffset, accuracy: 0.001)
+        XCTAssertEqual(view.contentOffset, 1234.0, accuracy: 0.001)
+    }
+
     func testTopVisibleIndexEmpty() {
         let (view, _) = self.makeView(count: 0)
         XCTAssertNil(view.topVisibleIndex)
@@ -221,7 +245,7 @@ final class MediaGridViewTests: XCTestCase {
             view.setContentOffset(1234.0)
         }
         view.setContentOffset(500.0)
-        XCTAssertEqual(calls, 1)
+        XCTAssertEqual(calls, 2)
         XCTAssertEqual(view.contentOffset, 1234.0, accuracy: 0.001)
     }
 

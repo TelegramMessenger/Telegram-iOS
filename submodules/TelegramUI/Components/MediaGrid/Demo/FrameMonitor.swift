@@ -16,6 +16,8 @@ final class FrameMonitor {
     private var displayLink: CADisplayLink?
     private var lastTimestamp: CFTimeInterval?
     private var window: [Sample] = []
+    private var windowHead = 0
+    private var lastUpdate: CFTimeInterval = 0.0
     private var frames = 0
     private var dropped = 0
     private var total = 0.0
@@ -43,6 +45,7 @@ final class FrameMonitor {
 
     func reset() {
         self.window = []
+        self.windowHead = 0
         self.frames = 0
         self.dropped = 0
         self.total = 0.0
@@ -51,7 +54,10 @@ final class FrameMonitor {
     }
 
     var summary: Summary {
-        let worst = self.window.map { $0.interval }.max() ?? 0.0
+        var worst = 0.0
+        for index in self.windowHead ..< self.window.count {
+            worst = max(worst, self.window[index].interval)
+        }
         return Summary(frames: self.frames, dropped: self.dropped, worst: worst, average: self.frames > 0 ? self.total / Double(self.frames) : 0.0)
     }
 
@@ -76,9 +82,16 @@ final class FrameMonitor {
         }
         self.window.append(Sample(timestamp: link.timestamp, interval: interval))
         let cutoff = link.timestamp - 5.0
-        while let first = self.window.first, first.timestamp < cutoff {
-            self.window.removeFirst()
+        while self.windowHead < self.window.count && self.window[self.windowHead].timestamp < cutoff {
+            self.windowHead += 1
         }
-        self.onUpdate?(self.summary)
+        if self.windowHead > 512 {
+            self.window.removeFirst(self.windowHead)
+            self.windowHead = 0
+        }
+        if link.timestamp - self.lastUpdate >= 0.1 {
+            self.lastUpdate = link.timestamp
+            self.onUpdate?(self.summary)
+        }
     }
 }

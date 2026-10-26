@@ -99,7 +99,8 @@ public final class MediaGridView: UIView {
             return nil
         }
         let pitch = layout.itemSize.height + layout.geometry.spacing
-        let strip = CGRect(x: 0.0, y: self.engine.offset + layout.geometry.topInset, width: layout.geometry.width, height: max(1.0, pitch))
+        let minY = min(max(layout.geometry.topInset, self.engine.offset + layout.geometry.topInset), max(layout.geometry.topInset, layout.contentHeight - layout.geometry.bottomInset - 1.0))
+        let strip = CGRect(x: 0.0, y: minY, width: layout.geometry.width, height: max(1.0, pitch))
         for index in layout.indexRange(intersecting: strip) {
             if layout.frame(at: index).intersects(strip) {
                 return index
@@ -223,7 +224,17 @@ public final class MediaGridView: UIView {
         self.updatePrefetch(offset: offset)
         if !self.isNotifyingScroll {
             self.isNotifyingScroll = true
-            self.onScroll?(offset)
+            var reported = offset
+            var depth = 0
+            while true {
+                self.onScroll?(reported)
+                depth += 1
+                let current = self.engine.offset
+                if current == reported || depth >= 4 {
+                    break
+                }
+                reported = current
+            }
             self.isNotifyingScroll = false
         }
     }
@@ -231,6 +242,11 @@ public final class MediaGridView: UIView {
     private func flightChanged(settledOffset: CGFloat?) {
         self.settledFlightOffset = settledOffset
         self.updatePrefetch(offset: self.engine.offset)
+    }
+
+    func _testSetRawOffset(_ y: CGFloat) {
+        self.engine.setOffset(y)
+        self.scrolled(to: self.engine.offset)
     }
 
     func _testFlight(settledOffset: CGFloat?) {
