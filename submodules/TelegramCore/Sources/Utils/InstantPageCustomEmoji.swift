@@ -4,93 +4,91 @@ import Foundation
 //
 // A rich message (`RichTextMessageAttribute`) carries its custom emoji as `RichText.textCustomEmoji`
 // runs inside the page, not as `MessageTextEntity.CustomEmoji` entities, so every consumer that scans
-// `textEntitiesAttribute` for emoji (the context menu's "this message contains emoji from …" tip) sees
-// none. The switches below are EXHAUSTIVE (no `default`) on purpose: a new block or rich-text case
+// `textEntitiesAttribute` for emoji (the context menu's "this message contains emoji from …" tip, the
+// notification extension's emoji glyphs) sees none. The switches below are EXHAUSTIVE (no `default`) on purpose: a new block or rich-text case
 // must state where its text lives, rather than silently hiding the emoji inside it.
 
-private func collectCustomEmojiFileIds(_ text: RichText, into result: inout [Int64], seen: inout Set<Int64>) {
+private func collectCustomEmoji(_ text: RichText, _ visit: (Int64, String) -> Void) {
     switch text {
     case .empty, .plain, .image, .formula:
         break
-    case let .textCustomEmoji(fileId, _):
-        if seen.insert(fileId).inserted {
-            result.append(fileId)
-        }
+    case let .textCustomEmoji(fileId, alt):
+        visit(fileId, alt)
     case let .bold(text), let .italic(text), let .underline(text), let .strikethrough(text), let .fixed(text), let .subscript(text), let .superscript(text), let .marked(text):
-        collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+        collectCustomEmoji(text, visit)
     case let .url(text, _, _), let .email(text, _), let .phone(text, _), let .anchor(text, _):
-        collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+        collectCustomEmoji(text, visit)
     case let .textAutoEmail(text), let .textAutoPhone(text), let .textAutoUrl(text), let .textBankCard(text), let .textTonAddress(text), let .textBotCommand(text), let .textCashtag(text), let .textHashtag(text), let .textMention(text), let .textSpoiler(text):
-        collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+        collectCustomEmoji(text, visit)
     case let .textMentionName(text, _), let .textDate(text, _, _):
-        collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+        collectCustomEmoji(text, visit)
     case let .textButton(button):
-        collectCustomEmojiFileIds(button.text, into: &result, seen: &seen)
+        collectCustomEmoji(button.text, visit)
     case let .concat(texts):
         for text in texts {
-            collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+            collectCustomEmoji(text, visit)
         }
     }
 }
 
-private func collectCustomEmojiFileIds(_ caption: InstantPageCaption, into result: inout [Int64], seen: inout Set<Int64>) {
-    collectCustomEmojiFileIds(caption.text, into: &result, seen: &seen)
-    collectCustomEmojiFileIds(caption.credit, into: &result, seen: &seen)
+private func collectCustomEmoji(_ caption: InstantPageCaption, _ visit: (Int64, String) -> Void) {
+    collectCustomEmoji(caption.text, visit)
+    collectCustomEmoji(caption.credit, visit)
 }
 
-private func collectCustomEmojiFileIds(_ blocks: [InstantPageBlock], into result: inout [Int64], seen: inout Set<Int64>) {
+private func collectCustomEmoji(_ blocks: [InstantPageBlock], _ visit: (Int64, String) -> Void) {
     for block in blocks {
         switch block {
         case .unsupported, .formula, .divider, .anchor, .channelBanner:
             break
         case let .title(text), let .subtitle(text), let .header(text), let .subheader(text), let .paragraph(text), let .footer(text), let .kicker(text), let .thinking(text):
-            collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+            collectCustomEmoji(text, visit)
         case let .authorDate(author, _):
-            collectCustomEmojiFileIds(author, into: &result, seen: &seen)
+            collectCustomEmoji(author, visit)
         case let .heading(text, _), let .preformatted(text, _):
-            collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+            collectCustomEmoji(text, visit)
         case let .list(items, _):
             for item in items {
                 switch item {
                 case .unknown:
                     break
                 case let .text(text, _, _):
-                    collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+                    collectCustomEmoji(text, visit)
                 case let .blocks(blocks, _, _):
-                    collectCustomEmojiFileIds(blocks, into: &result, seen: &seen)
+                    collectCustomEmoji(blocks, visit)
                 }
             }
         case let .blockQuote(blocks, caption, _):
-            collectCustomEmojiFileIds(blocks, into: &result, seen: &seen)
-            collectCustomEmojiFileIds(caption, into: &result, seen: &seen)
+            collectCustomEmoji(blocks, visit)
+            collectCustomEmoji(caption, visit)
         case let .pullQuote(text, caption):
-            collectCustomEmojiFileIds(text, into: &result, seen: &seen)
-            collectCustomEmojiFileIds(caption, into: &result, seen: &seen)
+            collectCustomEmoji(text, visit)
+            collectCustomEmoji(caption, visit)
         case let .image(_, caption, _, _, _), let .video(_, caption, _, _, _), let .audio(_, caption), let .document(_, caption), let .webEmbed(_, _, _, caption, _, _, _), let .map(_, _, _, _, caption):
-            collectCustomEmojiFileIds(caption, into: &result, seen: &seen)
+            collectCustomEmoji(caption, visit)
         case let .buttonRow(_, buttons):
             for button in buttons {
-                collectCustomEmojiFileIds(button.text, into: &result, seen: &seen)
+                collectCustomEmoji(button.text, visit)
             }
         case let .cover(block):
-            collectCustomEmojiFileIds([block], into: &result, seen: &seen)
+            collectCustomEmoji([block], visit)
         case let .postEmbed(_, _, _, _, _, blocks, caption), let .collage(blocks, caption), let .slideshow(blocks, caption):
-            collectCustomEmojiFileIds(blocks, into: &result, seen: &seen)
-            collectCustomEmojiFileIds(caption, into: &result, seen: &seen)
+            collectCustomEmoji(blocks, visit)
+            collectCustomEmoji(caption, visit)
         case let .table(title, rows, _, _, _):
-            collectCustomEmojiFileIds(title, into: &result, seen: &seen)
+            collectCustomEmoji(title, visit)
             for row in rows {
                 for cell in row.cells {
                     if let text = cell.text {
-                        collectCustomEmojiFileIds(text, into: &result, seen: &seen)
+                        collectCustomEmoji(text, visit)
                     }
                 }
             }
         case let .details(title, blocks, _):
-            collectCustomEmojiFileIds(title, into: &result, seen: &seen)
-            collectCustomEmojiFileIds(blocks, into: &result, seen: &seen)
+            collectCustomEmoji(title, visit)
+            collectCustomEmoji(blocks, visit)
         case let .relatedArticles(title, _):
-            collectCustomEmojiFileIds(title, into: &result, seen: &seen)
+            collectCustomEmoji(title, visit)
         }
     }
 }
@@ -101,7 +99,20 @@ public extension InstantPage {
     var customEmojiFileIds: [Int64] {
         var result: [Int64] = []
         var seen = Set<Int64>()
-        collectCustomEmojiFileIds(self.blocks, into: &result, seen: &seen)
+        collectCustomEmoji(self.blocks, { fileId, _ in
+            if seen.insert(fileId).inserted {
+                result.append(fileId)
+            }
+        })
+        return result
+    }
+
+    /// Every custom emoji in the page with its alt text, in reading order, repeats included.
+    var customEmojiOccurrences: [(fileId: Int64, alt: String)] {
+        var result: [(fileId: Int64, alt: String)] = []
+        collectCustomEmoji(self.blocks, { fileId, alt in
+            result.append((fileId, alt))
+        })
         return result
     }
 }

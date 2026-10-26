@@ -1576,10 +1576,20 @@ Preview bodies are limited to 200 grapheme clusters, with an ellipsis on truncat
 Traversal also limits depth (64), nodes (4,096), and inspected UTF-16 units (16,384).
 Spoilers, custom emoji, dates, italic, underline, and strikethrough survive nesting.
 Dates use supplied presentation settings; nil-format dates retain their literal text.
-Unresolved custom emoji keeps its identity in preview metadata and displays alt
-text (or `�` if empty). Only a resolved file receives the native custom-emoji
-attribute: entity text nodes otherwise replace alt text by a blank attachment.
-The modern composer accessory uses the existing entity-aware text component.
+Every custom emoji receives the native custom-emoji attribute (its alt text, or
+U+FFFC if empty, is the backing string), with the file when the page or the
+message's associated media has it and without it otherwise. A received rich
+message's emoji files are rarely in either, so the file must not be required:
+entity text nodes resolve it by id, exactly as for an ordinary message's
+`CustomEmoji` entity whose file is not stored (issue #29: requiring it showed
+the alt emoji in the chat list). The textual projection keeps the alt text (`�` if
+empty). The modern composer accessory uses the existing entity-aware text component.
+
+A rich message's notification body is the server's plain text of the page. On iOS
+18+ the Notification Service extension turns its custom emoji into image glyphs as
+it does an ordinary message's entities: `InstantPage.customEmojiOccurrences` (reading
+order, repeats kept) is matched in the body by alt text, whole characters only
+(`notificationRichTextCustomEmoji`).
 
 `styleInstantPagePreview` applies a consumer's fonts/colors without deleting semantic
 attributes. Formula/table runs use U+FFFC plus icon and fallback metadata, never
