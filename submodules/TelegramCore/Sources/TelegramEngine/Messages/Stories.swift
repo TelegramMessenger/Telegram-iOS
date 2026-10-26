@@ -3716,7 +3716,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                     |> take(1)
                     |> mapToSignal { [weak stateManager] _ in stateManager?.pollStateUpdateCompletion() ?? .complete() }
                     |> take(1)
-                    |> mapToSignal { [weak account] _ -> Signal<Never, NoError> in
+                    |> mapToSignal { [weak account = account] _ -> Signal<Never, NoError> in
                         guard let account else {
                             _ = storyReactionContext.finish(request, success: true)
                             return .complete()
