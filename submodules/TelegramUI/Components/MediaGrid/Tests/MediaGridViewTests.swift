@@ -118,4 +118,41 @@ final class MediaGridViewTests: XCTestCase {
             XCTAssertNil(view.frameForItem(at: count))
         }
     }
+
+    func testFlightStartsCachingAtLanding() {
+        let (view, dataSource) = self.makeView(count: 100_000)
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        XCTAssertFalse(dataSource.cachedIndices.isEmpty)
+        let landing = view.contentHeight / 2.0
+        XCTAssertFalse(dataSource.cachedIndices.contains(layout.indexRange(intersecting: CGRect(x: 0.0, y: landing, width: 393.0, height: 1.0)).lowerBound))
+        view._testFlight(settledOffset: landing)
+        let expected = layout.indexRange(intersecting: CGRect(x: 0.0, y: landing - view.bounds.height, width: 393.0, height: view.bounds.height * 3.0))
+        XCTAssertFalse(expected.isEmpty)
+        XCTAssertTrue(Set(expected).isSubset(of: dataSource.cachedIndices))
+        let viewport = layout.indexRange(intersecting: CGRect(x: 0.0, y: 0.0, width: 393.0, height: view.bounds.height))
+        XCTAssertTrue(Set(viewport).isSubset(of: dataSource.cachedIndices))
+        view._testFlight(settledOffset: nil)
+        XCTAssertTrue(Set(expected).isDisjoint(with: dataSource.cachedIndices))
+        XCTAssertTrue(Set(viewport).isSubset(of: dataSource.cachedIndices))
+    }
+
+    func testFinalNilKeepsDegradedImage() {
+        let dataSource = TestDataSource(count: 10)
+        dataSource.deliveries = [(TestDataSource.sampleImage, true), (nil, false)]
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return MediaGridCellLayer()
+        })
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.layoutIfNeeded()
+        var count = 0
+        view.forEachVisibleCell { _, cell in
+            count += 1
+            XCTAssertNotNil(cell.contents)
+        }
+        XCTAssertEqual(count, 10)
+    }
 }

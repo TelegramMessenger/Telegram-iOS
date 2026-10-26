@@ -8,7 +8,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = DemoViewController()
+        window.rootViewController = UINavigationController(rootViewController: DemoViewController())
         window.makeKeyAndVisible()
         self.window = window
     }

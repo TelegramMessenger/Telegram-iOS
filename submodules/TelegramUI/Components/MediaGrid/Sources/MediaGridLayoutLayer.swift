@@ -101,6 +101,9 @@ final class MediaGridLayoutLayer: CALayer {
             if isDegraded && cell.hasFinalImage {
                 return
             }
+            if image == nil && !isDegraded {
+                return
+            }
             if !isDegraded {
                 cell.hasFinalImage = true
             }

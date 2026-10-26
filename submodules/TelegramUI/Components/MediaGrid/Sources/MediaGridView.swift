@@ -13,6 +13,9 @@ public final class MediaGridView: UIView {
     private var itemCount: Int
     private(set) var currentLayout: MediaGridUniformLayout?
     private var needsLayoutRebuild = true
+    private var prefetchPlanner = MediaGridPrefetchPlanner()
+    private var prefetchPixelSize: CGSize = .zero
+    private var settledFlightOffset: CGFloat?
 
     var scaleOverride: CGFloat? {
         didSet {
@@ -54,6 +57,9 @@ public final class MediaGridView: UIView {
         self.engine.onScroll = { [weak self] offset in
             self?.scrolled(to: offset)
         }
+        self.engine.onFlightChanged = { [weak self] flight in
+            self?.flightChanged(settledOffset: flight?.settledOffset)
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -62,6 +68,7 @@ public final class MediaGridView: UIView {
 
     deinit {
         self.engine.tearDown()
+        self.resetPrefetch()
         self.activeLayoutLayer.removeAllCells()
     }
 
@@ -80,6 +87,7 @@ public final class MediaGridView: UIView {
     public func reloadData() {
         self.itemCount = max(0, self.dataSource.count)
         self.needsLayoutRebuild = true
+        self.resetPrefetch()
         self.activeLayoutLayer.reloadCells()
         self.updateGridLayout()
     }
@@ -145,8 +153,10 @@ public final class MediaGridView: UIView {
         if self.needsLayoutRebuild || self.currentLayout?.geometry != geometry {
             self.needsLayoutRebuild = false
             let layout = MediaGridUniformLayout(geometry: geometry, columns: self.level.columns, cellAspect: self.cellAspect, reservedSlots: [], count: self.itemCount)
+            self.resetPrefetch()
             self.currentLayout = layout
             let pixelSize = CGSize(width: ceil(layout.itemSize.width * geometry.scale), height: ceil(layout.itemSize.height * geometry.scale))
+            self.prefetchPixelSize = pixelSize
             self.activeLayoutLayer.setLayout(layout, pixelSize: pixelSize, detail: self.cellDetail)
             self.activeLayoutLayer.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: layout.contentHeight)
         }
@@ -155,11 +165,43 @@ public final class MediaGridView: UIView {
             self.engine.setOffset(self.maxOffset)
         }
         self.updateVisibleCells(offset: self.engine.offset)
+        self.updatePrefetch(offset: self.engine.offset)
     }
 
     private func scrolled(to offset: CGFloat) {
         self.updateVisibleCells(offset: offset)
+        self.updatePrefetch(offset: offset)
         self.onScroll?(offset)
+    }
+
+    private func flightChanged(settledOffset: CGFloat?) {
+        self.settledFlightOffset = settledOffset
+        self.updatePrefetch(offset: self.engine.offset)
+    }
+
+    func _testFlight(settledOffset: CGFloat?) {
+        self.flightChanged(settledOffset: settledOffset)
+    }
+
+    private func resetPrefetch() {
+        let stale = self.prefetchPlanner.reset()
+        self.settledFlightOffset = nil
+        if !stale.isEmpty {
+            self.dataSource.stopCaching(indices: stale, pixelSize: self.prefetchPixelSize)
+        }
+    }
+
+    private func updatePrefetch(offset: CGFloat) {
+        guard let layout = self.currentLayout else {
+            return
+        }
+        let plan = self.prefetchPlanner.update(layout: layout, viewportHeight: self.bounds.height, offset: offset, settledOffset: self.settledFlightOffset)
+        if !plan.stop.isEmpty {
+            self.dataSource.stopCaching(indices: plan.stop, pixelSize: self.prefetchPixelSize)
+        }
+        if !plan.start.isEmpty {
+            self.dataSource.startCaching(indices: plan.start, pixelSize: self.prefetchPixelSize)
+        }
     }
 
     private func updateVisibleCells(offset: CGFloat) {
