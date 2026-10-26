@@ -310,6 +310,10 @@ extension UpdateInterpreter {
         updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), threadId: threadId, reactions: reactions, eventTimestamp: updatesDate)
     }
     
+    mutating func applyMessageWidgetData(_ data: Api.Update.Cons_updateMessageWidgetData) {
+        updatedState.updateMessageWidgetData(MessageId(peerId: data.peer.peerId, namespace: Namespaces.Message.Cloud, id: data.msgId), publicData: data.publicData?.makeData(), chatData: data.chatData?.makeData())
+    }
+
     mutating func applyMessageExtendedMedia(_ updateMessageExtendedMediaData: Api.Update.Cons_updateMessageExtendedMedia) {
         let (peer, msgId, extendedMedia) = (updateMessageExtendedMediaData.peer, updateMessageExtendedMediaData.msgId, updateMessageExtendedMediaData.extendedMedia)
         updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)

@@ -278,11 +278,14 @@ public final class AccountStateManager {
         }
         
         let messagesRemovedContext: MessagesRemovedContext
+        let storyReactionContext: StoryReactionContext
+        let storyRefreshContext: StoryRefreshContext
+        let storyViewRefreshContext: StoryViewRefreshContext
 
         /// What every replay of this account's final states needs (seam 5, `FinalStateReplayer.applyReplay`). Built
         /// from the constants above, so it is the same value whenever and wherever it is read.
         var replayer: FinalStateReplayer {
-            return FinalStateReplayer(accountManager: self.accountManager, postbox: self.postbox, accountPeerId: self.accountPeerId, encryptionProvider: self.network.encryptionProvider, auxiliaryMethods: self.auxiliaryMethods, messagesRemovedContext: self.messagesRemovedContext)
+            return FinalStateReplayer(accountManager: self.accountManager, postbox: self.postbox, accountPeerId: self.accountPeerId, encryptionProvider: self.network.encryptionProvider, auxiliaryMethods: self.auxiliaryMethods, messagesRemovedContext: self.messagesRemovedContext, storyReactionContext: self.storyReactionContext, storyRefreshContext: self.storyRefreshContext, storyViewRefreshContext: self.storyViewRefreshContext)
         }
         
         fileprivate var storyUpdatesPipe: ValuePipe<[InternalStoryUpdate]> {
@@ -301,6 +304,10 @@ public final class AccountStateManager {
 
         var walletStateUpdates: Signal<Api.WalletState, NoError> {
             return self.eventHub.walletStateUpdates
+        }
+
+        var agentSettingsUpdates: Signal<Api.agent.Settings, NoError> {
+            return self.eventHub.agentSettingsUpdates
         }
         
         fileprivate var botPreviewUpdatesPipe: ValuePipe<[InternalBotPreviewUpdate]> {
@@ -366,7 +373,10 @@ public final class AccountStateManager {
             ignoresShortSentMessages: Bool,
             updateConfigRequested: (() -> Void)?,
             isPremiumUpdated: (() -> Void)?,
-            messagesRemovedContext: MessagesRemovedContext
+            messagesRemovedContext: MessagesRemovedContext,
+            storyReactionContext: StoryReactionContext,
+            storyRefreshContext: StoryRefreshContext,
+            storyViewRefreshContext: StoryViewRefreshContext
         ) {
             self.queue = queue
             self.gapWaitTimeout = gapWaitTimeout
@@ -379,6 +389,9 @@ public final class AccountStateManager {
             self.auxiliaryMethods = auxiliaryMethods
             self.ignoresShortSentMessages = ignoresShortSentMessages
             self.messagesRemovedContext = messagesRemovedContext
+            self.storyReactionContext = storyReactionContext
+            self.storyRefreshContext = storyRefreshContext
+            self.storyViewRefreshContext = storyViewRefreshContext
             self.eventHub = AccountStateEventHub(
                 queue: queue,
                 postbox: postbox,
@@ -1124,6 +1137,9 @@ public final class AccountStateManager {
     var isPremiumUpdated: (() -> Void)?
     
     let messagesRemovedContext = MessagesRemovedContext()
+    let storyReactionContext = StoryReactionContext()
+    let storyRefreshContext = StoryRefreshContext()
+    let storyViewRefreshContext = StoryViewRefreshContext()
 
     /// This manager's registration with `StoredMessageConfirmationDeletionReporters` (owner decision D1),
     /// disposed in `deinit`.
@@ -1152,6 +1168,9 @@ public final class AccountStateManager {
         self.auxiliaryMethods = auxiliaryMethods
         
         let messagesRemovedContext = self.messagesRemovedContext
+        let storyReactionContext = self.storyReactionContext
+        let storyRefreshContext = self.storyRefreshContext
+        let storyViewRefreshContext = self.storyViewRefreshContext
         
         var updateConfigRequestedImpl: (() -> Void)?
         var isPremiumUpdatedImpl: (() -> Void)?
@@ -1175,7 +1194,10 @@ public final class AccountStateManager {
                 isPremiumUpdated: {
                     isPremiumUpdatedImpl?()
                 },
-                messagesRemovedContext: messagesRemovedContext
+                messagesRemovedContext: messagesRemovedContext,
+                storyReactionContext: storyReactionContext,
+                storyRefreshContext: storyRefreshContext,
+                storyViewRefreshContext: storyViewRefreshContext
             )
         })
         
@@ -1310,6 +1332,12 @@ public final class AccountStateManager {
     func walletStateUpdates() -> Signal<Api.WalletState, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.walletStateUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+
+    func agentSettingsUpdates() -> Signal<Api.agent.Settings, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.agentSettingsUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

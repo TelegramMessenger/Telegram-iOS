@@ -385,15 +385,15 @@ skipped, then `messages.receivedQueue(maxQts:)`, errors swallowed (`testAppliedQ
 
 ### Events
 
-`AccountFinalStateEvents` has 35 stored fields (`testStoredFieldCountMatchesEveryInitAndUnion`); `init(state:)` takes 28
+`AccountFinalStateEvents` has 36 stored fields (`testStoredFieldCountMatchesEveryInitAndUnion`); `init(state:)` takes 29
 from `AccountReplayedFinalState` and 7 from the mutable state. `union(with:)` treats `other` as the later replay: lists
-append, sets unite, flags OR, current-state values (balances, wallet and auction state, web pages, typing) take the
+append, sets unite, flags OR, current-state values (balances, wallet, agent settings and auction state, web pages, typing) take the
 later value, read maxima, `updatedMaxMessageId`, `updatedQts`, `delayNotificatonsUntil` the maximum
 (`AccountFinalStateEventsUnionTests`). `isEmpty` decides whether a `dispatchEvents` is queued; `delayNotificatonsUntil`
 and `updatedMaxMessageId` stay as its terms (`testOwnPresenceOnlyBatchStillQueuesProcessEvents`,
 `testAnotherUsersPresenceOnlyBatchQueuesNoProcessEvents`).
 
-`AccountStateEventHub` (built in `Impl.init`, no reference back) has 24 `ValuePipe`s (no replay), 3 replaying `Promise`s
+`AccountStateEventHub` (built in `Impl.init`, no reference back) has 25 `ValuePipe`s (no replay), 3 replaying `Promise`s
 (`termsOfServiceUpdate`, `appUpdateInfo`, `contactBirthdays`) and 6 subscriber contexts (`grep -c '= ValuePipe<'` and
 `grep -c '= Promise<'` on the file). `dispatch(_:completed:)` (1) starts the transaction that reads the notification
 messages; (2) before returning, in order: `reactionNotificationsPipe` (always; only reactions younger than 20 s),
@@ -401,8 +401,8 @@ messages; (2) before returning, in order: `reactionNotificationsPipe` (always; o
 `authorizationListUpdatesPipe`, `deletedMessagesPipe` (each only when non-empty), `updateConfigRequested`,
 `isPremiumUpdated`; (3) on the queue, one `notificationMessagesPipe` value per dispatch (empty included: each incoming
 id's `messagesForNotification`, then the was-scheduled messages as one entry), then `completed()`.
-`dispatchAfterNotificationMessages(_:)` then delivers typing, web pages (a nil page included), balances, wallet updates,
-revenue and auction states, emoji game info (a Postbox write), calls, call signaling, group calls, stories, thread read
+`dispatchAfterNotificationMessages(_:)` then delivers typing, web pages (a nil page included), balances, wallet updates, agent
+settings, revenue and auction states, emoji game info (a Postbox write), calls, call signaling, group calls, stories, thread read
 states, sent scheduled ids, delivery reports and conference invitations, in that order (`AccountStateEventHubTests` pins
 only that web-page updates, nil removals included, arrive before the sent scheduled ids). The hub's subscription
 generators and `modify...` methods hop with `queue.async`, which is always inline (their callers are already on the
@@ -854,7 +854,7 @@ Each: the rule; why; where enforced; what pins it.
 22. **A notification fires only for a message not stored before the replay**, or a replayed message notifies twice.
     Enforced: `filterStoredMessageIds` in the prepass. Pinned:
     `testPrepareListsOnlyIncomingTopMessagesThatAreNotStored`.
-23. **`AccountFinalStateEvents` keeps 35 fields, each set by `init()`, `init(state:)`, `union(with:)` and the test
+23. **`AccountFinalStateEvents` keeps 36 fields, each set by `init()`, `init(state:)`, `union(with:)` and the test
     helper; events union in replay order.** A defaulted field compiles and is dropped at every merge; reversed order
     delivers stale state. Pinned: `testStoredFieldCountMatchesEveryInitAndUnion`, `testUnionMergesEachFieldByItsPolicy`.
 24. **`followUp` precedence: discard, poll, gap wait, apply.** A discarded batch is never replayed; a forced poll

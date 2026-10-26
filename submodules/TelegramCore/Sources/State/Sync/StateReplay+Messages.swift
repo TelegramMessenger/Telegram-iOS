@@ -492,6 +492,17 @@ extension ReplayContext {
         })
     }
     
+    func applyUpdateMessageWidgetData(_ messageId: MessageId, _ publicData: Data?, _ chatData: Data?) {
+        transaction.updateMessage(messageId, update: { message in
+            let media = message.media.map { media -> Media in
+                guard let widget = media as? TelegramMediaWidget else { return media }
+                return widget.withUpdatedData(publicData: publicData, chatData: chatData)
+            }
+            let forwardInfo = message.forwardInfo.map { StoreMessageForwardInfo(authorId: $0.author?.id, sourceId: $0.source?.id, sourceMessageId: $0.sourceMessageId, date: $0.date, authorSignature: $0.authorSignature, psaType: $0.psaType, flags: $0.flags) }
+            return .update(StoreMessage(id: message.id, customStableId: nil, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: StoreMessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: media))
+        })
+    }
+
     func applyUpdateExtendedMedia(_ messageId: MessageId, _ apiExtendedMedia: [Api.MessageExtendedMedia]) {
         transaction.updateMessage(messageId, update: { currentMessage in
             var media = currentMessage.media

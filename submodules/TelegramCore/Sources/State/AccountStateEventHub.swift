@@ -151,6 +151,11 @@ final class AccountStateEventHub {
         return self.walletStateUpdatesPipe.signal()
     }
 
+    private let agentSettingsUpdatesPipe = ValuePipe<Api.agent.Settings>()
+    var agentSettingsUpdates: Signal<Api.agent.Settings, NoError> {
+        return self.agentSettingsUpdatesPipe.signal()
+    }
+
     let botPreviewUpdatesPipe = ValuePipe<[InternalBotPreviewUpdate]>()
     var botPreviewUpdates: Signal<[InternalBotPreviewUpdate], NoError> {
         return self.botPreviewUpdatesPipe.signal()
@@ -339,6 +344,9 @@ final class AccountStateEventHub {
         }
         if let updatedWalletState = events.updatedWalletState {
             self.walletStateUpdatesPipe.putNext(updatedWalletState)
+        }
+        if let updatedAgentSettings = events.updatedAgentSettings {
+            self.agentSettingsUpdatesPipe.putNext(updatedAgentSettings)
         }
         if !events.updatedStarsRevenueStatus.isEmpty {
             self.notifyUpdatedStarsRevenueStatus(events.updatedStarsRevenueStatus)

@@ -3,7 +3,7 @@
 A widget message carries `messageMediaWidget width:int height:int payload:bytes` (layer 233): a bot's size anchors and
 the widget's HTML, compressed by the server: a zlib stream (PHP's `gzcompress($html, 9)`; gzip before widget-sandbox
 v0.1.3). It is the only way widgets are delivered. TelegramCore stores it as `TelegramMediaWidget` (Postbox keys `w`,
-`h`, `p`; `html()` inflates zlib or gzip, checking the header first, with no size check of its own; a local message is
+`h`, `p`, plus `f`, `pd`, `cd` and `wi` for the flags, public data, chat data and widget id; `html()` inflates zlib or gzip, checking the header first, with no size check of its own; a local message is
 compressed as the server does, zlib at level 9, through the SDK's `zlib`, never Compression's `COMPRESSION_ZLIB`, which
 is raw deflate);
 `ChatMessageWidgetBubbleContentNode` draws it as a live widget in a bubble of its own, the message's text as its

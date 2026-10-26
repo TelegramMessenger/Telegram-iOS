@@ -919,8 +919,6 @@ public final class Network: NSObject {
     let requestService: NetworkEngineRequestService
     let basePath: String
     private let mainSessionDelegate: NetworkMainSessionDelegate
-    /// Records requests and failures of every session, whichever engine runs them. Nil unless
-    /// `network_telemetry_enabled` was set when the network started (always set in Debug builds).
     public let telemetry: NetworkTelemetry?
     private let useRequestTimeoutTimers: Bool
     private let baseTcpConnectionInterfaceFactory: ((MTTcpConnectionInterfaceDelegate, DispatchQueue) -> MTTcpConnectionInterface)?

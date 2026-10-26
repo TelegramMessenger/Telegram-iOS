@@ -2,24 +2,44 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 
+public enum PendingUpdateMessageResult {
+    case applied
+    case unconfirmed
+    case failed(RequestEditMessageError)
+    case cancelled
+    case superseded
+    case interrupted
+}
+
+struct PendingUpdateMessageRequest {
+    let messageId: MessageId
+    let value: ChatUpdatingMessageMedia
+    let inlineStickers: [MediaId: Media]
+    let webpagePreviewAttribute: WebpagePreviewMessageAttribute?
+}
+
 private final class PendingUpdateMessageContext {
     var value: ChatUpdatingMessageMedia
     let disposable: Disposable
+    private var completion: ((PendingUpdateMessageResult) -> Void)?
     
-    init(value: ChatUpdatingMessageMedia, disposable: Disposable) {
+    init(value: ChatUpdatingMessageMedia, disposable: Disposable, completion: ((PendingUpdateMessageResult) -> Void)?) {
         self.value = value
         self.disposable = disposable
+        self.completion = completion
+    }
+
+    func complete(_ result: PendingUpdateMessageResult) {
+        let completion = self.completion
+        self.completion = nil
+        completion?(result)
     }
 }
 
-private final class PendingUpdateMessageManagerImpl {
+final class PendingUpdateMessageManagerImpl {
     let queue: Queue
-    let postbox: Postbox
-    let network: Network
-    let stateManager: AccountStateManager
-    let messageMediaPreuploadManager: MessageMediaPreuploadManager
-    let mediaReferenceRevalidationContext: MediaReferenceRevalidationContext
-    
+    private let makeRequest: (PendingUpdateMessageRequest, TransformOutgoingMessageMedia?) -> Signal<RequestEditMessageResult, RequestEditMessageError>
+
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
     private var updatingMessageMediaValue: [MessageId: ChatUpdatingMessageMedia] = [:] {
@@ -41,20 +61,22 @@ private final class PendingUpdateMessageManagerImpl {
         return self.errorsPipe.signal()
     }
     
-    init(queue: Queue, postbox: Postbox, network: Network, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext) {
+    convenience init(queue: Queue, postbox: Postbox, network: Network, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext) {
+        self.init(queue: queue, makeRequest: { request, transformOutgoingMessageMedia in
+            return requestEditMessage(accountPeerId: stateManager.accountPeerId, postbox: postbox, network: network, stateManager: stateManager, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, messageId: request.messageId, text: request.value.text, media: request.value.media, entities: request.value.entities, richText: request.value.richText, inlineStickers: request.inlineStickers, webpagePreviewAttribute: request.webpagePreviewAttribute, disableUrlPreview: request.value.disableUrlPreview, scheduleInfoAttribute: nil, invertMediaAttribute: request.value.invertMediaAttribute)
+        })
+    }
+
+    init(queue: Queue, makeRequest: @escaping (PendingUpdateMessageRequest, TransformOutgoingMessageMedia?) -> Signal<RequestEditMessageResult, RequestEditMessageError>) {
         self.queue = queue
-        self.postbox = postbox
-        self.network = network
-        self.stateManager = stateManager
-        self.messageMediaPreuploadManager = messageMediaPreuploadManager
-        self.mediaReferenceRevalidationContext = mediaReferenceRevalidationContext
-        
+        self.makeRequest = makeRequest
         self.updatingMessageMediaPromise.set(.single(self.updatingMessageMediaValue))
     }
-    
+
     deinit {
         for (_, context) in self.contexts {
             context.disposable.dispose()
+            context.complete(.interrupted)
         }
     }
     
@@ -64,14 +86,12 @@ private final class PendingUpdateMessageManagerImpl {
         }
     }
     
-    func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, richText: RichTextMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, invertMediaAttribute: InvertMediaMessageAttribute?, disableUrlPreview: Bool) {
-        if let context = self.contexts[messageId] {
-            self.contexts.removeValue(forKey: messageId)
-            context.disposable.dispose()
-        }
+    func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, richText: RichTextMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute?, invertMediaAttribute: InvertMediaMessageAttribute?, disableUrlPreview: Bool, completion: ((PendingUpdateMessageResult) -> Void)? = nil) {
+        let previous = self.contexts.removeValue(forKey: messageId)
+        previous?.disposable.dispose()
         
         let disposable = MetaDisposable()
-        let context = PendingUpdateMessageContext(value: ChatUpdatingMessageMedia(text: text, entities: entities, disableUrlPreview: disableUrlPreview, media: media, invertMediaAttribute: invertMediaAttribute, richText: richText, progress: 0.0), disposable: disposable)
+        let context = PendingUpdateMessageContext(value: ChatUpdatingMessageMedia(text: text, entities: entities, disableUrlPreview: disableUrlPreview, media: media, invertMediaAttribute: invertMediaAttribute, richText: richText, progress: 0.0), disposable: disposable, completion: completion)
         self.contexts[messageId] = context
         // Publish the optimistic value immediately. Otherwise it only becomes visible on the first
         // `.progress`/`.done` event from `requestEditMessage` — which, for a media-bearing rich edit,
@@ -81,7 +101,8 @@ private final class PendingUpdateMessageManagerImpl {
         self.updateValues()
 
         let queue = self.queue
-        disposable.set((requestEditMessage(accountPeerId: self.stateManager.accountPeerId, postbox: self.postbox, network: self.network, stateManager: self.stateManager, transformOutgoingMessageMedia: self.transformOutgoingMessageMedia, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, richText: richText, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview, scheduleInfoAttribute: nil, invertMediaAttribute: invertMediaAttribute)
+        let request = PendingUpdateMessageRequest(messageId: messageId, value: context.value, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute)
+        disposable.set((self.makeRequest(request, self.transformOutgoingMessageMedia)
         |> deliverOn(self.queue)).start(next: { [weak self, weak context] value in
             queue.async {
                 guard let strongSelf = self, let initialContext = context else {
@@ -89,10 +110,11 @@ private final class PendingUpdateMessageManagerImpl {
                 }
                 if let context = strongSelf.contexts[messageId], context === initialContext {
                     switch value {
-                    case .done:
+                    case let .done(applied):
                         strongSelf.contexts.removeValue(forKey: messageId)
                         context.disposable.dispose()
                         strongSelf.updateValues()
+                        context.complete(applied ? .applied : .unconfirmed)
                     case let .progress(progress):
                         context.value = context.value.withProgress(progress)
                         strongSelf.updateValues()
@@ -104,23 +126,32 @@ private final class PendingUpdateMessageManagerImpl {
                 guard let strongSelf = self, let initialContext = context else {
                     return
                 }
-                if let context = strongSelf.contexts[messageId], context === initialContext {
-                    strongSelf.contexts.removeValue(forKey: messageId)
-                    context.disposable.dispose()
-                    strongSelf.updateValues()
-                }
-                
+                guard let context = strongSelf.contexts[messageId], context === initialContext else { return }
+                strongSelf.contexts.removeValue(forKey: messageId)
+                context.disposable.dispose()
+                strongSelf.updateValues()
                 strongSelf.errorsPipe.putNext((messageId, error))
+                context.complete(.failed(error))
+            }
+        }, completed: { [weak self, weak context] in
+            queue.async {
+                guard let self, let context, self.contexts[messageId] === context else { return }
+                self.contexts.removeValue(forKey: messageId)
+                context.disposable.dispose()
+                self.updateValues()
+                context.complete(.unconfirmed)
             }
         }))
+        previous?.complete(.superseded)
     }
-    
+
     func cancel(messageId: MessageId) {
         if let context = self.contexts[messageId] {
             self.contexts.removeValue(forKey: messageId)
             context.disposable.dispose()
             
             self.updateValues()
+            context.complete(.cancelled)
         }
     }
 }
@@ -175,6 +206,12 @@ public final class PendingUpdateMessageManager {
         }
     }
     
+    public func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, richText: RichTextMessageAttribute?, inlineStickers: [MediaId: Media], webpagePreviewAttribute: WebpagePreviewMessageAttribute? = nil, invertMediaAttribute: InvertMediaMessageAttribute? = nil, disableUrlPreview: Bool = false, completion: @escaping (PendingUpdateMessageResult) -> Void) {
+        self.impl.with { impl in
+            impl.add(messageId: messageId, text: text, media: media, entities: entities, richText: richText, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, invertMediaAttribute: invertMediaAttribute, disableUrlPreview: disableUrlPreview, completion: completion)
+        }
+    }
+
     public func cancel(messageId: MessageId) {
         self.impl.with { impl in
             impl.cancel(messageId: messageId)

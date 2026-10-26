@@ -1158,17 +1158,20 @@ final class NetworkTelemetryTests: XCTestCase {
     }
 
     func testRecordingDecision() {
+        let previous = networkTelemetryOverrides.recording
+        defer { networkTelemetryOverrides.recording = previous }
+        networkTelemetryOverrides.recording = nil
         let enabled = NetworkTelemetryConfiguration(isEnabled: true, variant: nil, reportInterval: 86400.0)
         XCTAssertFalse(networkTelemetryShouldRecord(supplementary: true, isAppExtension: false, configuration: enabled))
         XCTAssertFalse(networkTelemetryShouldRecord(supplementary: false, isAppExtension: true, configuration: enabled))
-        XCTAssertTrue(networkTelemetryShouldRecord(supplementary: false, isAppExtension: false, configuration: enabled))
-        XCTAssertEqual(networkTelemetryShouldRecord(supplementary: false, isAppExtension: false, configuration: .disabled), networkTelemetryAlwaysRecords)
+        XCTAssertEqual(networkTelemetryShouldRecord(supplementary: false, isAppExtension: false, configuration: enabled), AppLogEventCollection.allowsLegacyEvents)
+        XCTAssertEqual(networkTelemetryShouldRecord(supplementary: false, isAppExtension: false, configuration: .disabled), AppLogEventCollection.allowsLegacyEvents && networkTelemetryAlwaysRecords)
 
         networkTelemetryOverrides.recording = true
-        XCTAssertTrue(networkTelemetryShouldRecord(supplementary: true, isAppExtension: true, configuration: .disabled))
+        XCTAssertEqual(networkTelemetryShouldRecord(supplementary: true, isAppExtension: true, configuration: .disabled), AppLogEventCollection.allowsLegacyEvents)
+        XCTAssertEqual(networkTelemetryShouldRecord(supplementary: false, isAppExtension: false, configuration: enabled), AppLogEventCollection.allowsLegacyEvents)
         networkTelemetryOverrides.recording = false
         XCTAssertFalse(networkTelemetryShouldRecord(supplementary: false, isAppExtension: false, configuration: enabled))
-        networkTelemetryOverrides.recording = nil
     }
 
     func testReportIsDue() {

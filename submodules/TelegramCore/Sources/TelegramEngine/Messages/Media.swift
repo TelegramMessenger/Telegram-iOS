@@ -1,8 +1,8 @@
 import Postbox
 
-/// A media class defined outside TelegramCore (an app-side pseudo-media such as a link-preview
-/// placeholder). Conforming to this protocol is what lets `EngineMedia` wrap it, as `.custom`;
-/// any other unknown `Media` class still traps in `EngineMedia.init(_:)`.
+/// A media class without a case of its own in `EngineMedia`: an app-side pseudo-media such as a link-preview
+/// placeholder, or TelegramCore's `TelegramMediaWidget`. Conforming to this protocol is what lets `EngineMedia`
+/// wrap it, as `.custom`; any other unknown `Media` class still traps in `EngineMedia.init(_:)`.
 public protocol EngineCustomMedia: Media {
 }
 
