@@ -67,6 +67,38 @@ func textureRotatonForAVAsset(_ asset: AVAsset, mirror: Bool = false) -> Texture
     return .rotate0Degrees
 }
 
+/// The audio track to export. Videos recorded with Spatial Audio carry an AAC stereo track next to the APAC
+/// one, and after a trim in Photos the APAC one comes first. Exporting from the AAC track skips rendering the
+/// APAC one to stereo, so an AAC track is taken when there is one; other tracks are still exported (see
+/// `linearPCMAudioSettings(matching:)`).
+func preferredAudioTrack(in asset: AVAsset) -> AVAssetTrack? {
+    let tracks = asset.tracks(withMediaType: .audio)
+    let aacTrack = tracks.first(where: { track in
+        guard let description = track.formatDescriptions.first else {
+            return false
+        }
+        return CMFormatDescriptionGetMediaSubType(description as! CMFormatDescription) == kAudioFormatMPEG4AAC
+    })
+    return aacTrack ?? tracks.first
+}
+
+/// Reader settings that decode audio straight to the channel count of the AAC encoder (`encoderSettings`).
+/// The encoder only takes decoded audio with its own channel count, and it may be mono. Decoding straight
+/// to it lets Core Audio downmix or render the source first: PCM tracks (ProRes), 5.1 and other
+/// multichannel tracks, and Spatial Audio's ambisonic APAC track all fail otherwise.
+func linearPCMAudioSettings(matching encoderSettings: [String: Any]) -> [String: Any]? {
+    guard let channels = (encoderSettings[AVNumberOfChannelsKey] as? NSNumber)?.intValue, channels == 1 || channels == 2 else {
+        return nil
+    }
+    var layout = AudioChannelLayout()
+    layout.mChannelLayoutTag = channels == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo
+    return [
+        AVFormatIDKey: kAudioFormatLinearPCM,
+        AVNumberOfChannelsKey: channels,
+        AVChannelLayoutKey: Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
+    ]
+}
+
 func loadTexture(image: UIImage, device: MTLDevice) -> MTLTexture? {
     func dataForImage(_ image: UIImage) -> UnsafeMutablePointer<UInt8> {
         let imageRef = image.cgImage
