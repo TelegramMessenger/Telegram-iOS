@@ -600,6 +600,13 @@ extension ChatContextResultMessage {
                     ),
                     replyMarkup: parsedReplyMarkup
                 )
+            case let .botInlineMessageWidget(botInlineMessageWidgetData):
+                // Widget inline results are not supported yet: keep only the reply markup.
+                var parsedReplyMarkup: ReplyMarkupMessageAttribute?
+                if let replyMarkup = botInlineMessageWidgetData.replyMarkup {
+                    parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
+                }
+                self = .auto(caption: "", entities: nil, replyMarkup: parsedReplyMarkup)
         }
     }
 }

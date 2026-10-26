@@ -11,7 +11,7 @@ final class TelegramMediaWidgetTests: XCTestCase {
     /// The server's `messageMediaWidget` is stored as the widget media, anchors and gzip payload unchanged.
     func testTheApiWidgetBecomesATelegramMediaWidget() {
         let payload = MTGzip.compress("<p>Hi</p>".data(using: .utf8)!)!
-        let api = Api.MessageMedia.messageMediaWidget(.init(width: 300, height: 0, payload: Buffer(data: payload)))
+        let api = Api.MessageMedia.messageMediaWidget(.init(flags: 0, width: 300, height: 0, payload: Buffer(data: payload), publicData: nil, chatData: nil, widgetId: nil))
         let parsed = textMediaAndExpirationTimerFromApiMedia(api, PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)))
         guard let widget = parsed.media as? TelegramMediaWidget else {
             return XCTFail("parsed as \(String(describing: parsed.media))")
