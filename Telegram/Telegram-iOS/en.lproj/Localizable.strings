@@ -17246,3 +17246,22 @@ Error: %8$@";
 
 "Message.WidgetStopped" = "Widget stopped";
 "Message.Widget" = "Widget";
+
+"Agent.AddKey" = "Add Your AI API key";
+"Agent.AddKeyInfo" = "This chatbot works only if you have an active subscription for an AI service.";
+"Agent.AddAnotherProvider" = "Add Another Provider";
+"Agent.ProvidersInfo" = "Tap and hold to delete.";
+"Agent.Connect.Title" = "Connect API Key";
+"Agent.Connect.ProviderHeader" = "Provider";
+"Agent.Connect.ProviderInfo" = "Select the AI provider you have an account with.";
+"Agent.Key.Title" = "API Key";
+"Agent.Key.Header" = "API Key";
+"Agent.Key.Invalid" = "Invalid API Key";
+"Agent.Key.Placeholder" = "Paste your %@ API key";
+"Agent.Key.Info" = "Get your API key or API token in your [AI provider's settings]().";
+"Agent.Key.Connect" = "Connect %@";
+"Agent.Key.Connecting" = "Connecting...";
+"Agent.Key.ProviderUnavailable" = "%@ didn't respond. Please try again later.";
+"Agent.Connected.Title" = "%@ connected!";
+"Agent.Connected.Text" = "You can now use %@.";
+"Agent.Connected.Start" = "Start";
