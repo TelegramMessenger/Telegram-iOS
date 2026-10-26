@@ -160,6 +160,9 @@ private final class SheetContent: CombinedComponent {
                     let _ = disableUrlPreview
                     let _ = previewParameters
                     replyMarkup = replyMarkupValue
+                case let .widget(widget, replyMarkupValue):
+                    media = [widget]
+                    replyMarkup = replyMarkupValue
                 case let .contact(contact, replyMarkupValue):
                     media = [contact]
                     replyMarkup = replyMarkupValue
@@ -189,6 +192,9 @@ private final class SheetContent: CombinedComponent {
                     richText = richTextValue
                     let _ = disableUrlPreview
                     let _ = previewParameters
+                    replyMarkup = replyMarkupValue
+                case let .widget(widget, replyMarkupValue):
+                    media = [widget]
                     replyMarkup = replyMarkupValue
                 case let .contact(contact, replyMarkupValue):
                     media = [contact]
