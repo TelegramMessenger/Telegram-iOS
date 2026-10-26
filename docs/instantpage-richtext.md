@@ -926,11 +926,36 @@ be a cycle.
   only in the editor — the renderer decides the same question from the name and would keep reserving.
   The closure also lets the row packer ask the question per padding attempt without rasterising.
 - **The editor's icon must be resolved through `ButtonActionCodec`, not from `ButtonAction` directly.**
-  `RichTextEditorCore` can name only `url` / `copyText` / `disabled`; every other action travels as an
-  opaque `.unsupported(kind:payload:)`. `richTextEditorButtonIcon` decodes it back so a
-  `.openUserProfile` button draws the profile icon in the composer, and — the case that actually bites
+  `RichTextEditorCore` can name only `url` / `copyText` / `userProfile` / `disabled`; every other action
+  travels as an opaque `.unsupported(kind:payload:)`. `richTextEditorButtonIcon` decodes it back so a
+  `.openWebView` button draws the web-app icon in the composer, and — the case that actually bites
   — so an iconless `.callback` reserves nothing on either side. `richTextButtonHasBadge` remains as the
   coarse fallback for an editor with no provider registered, and is wrong for exactly that case.
+
+### Authoring (the button sheet)
+
+`ButtonEditorScreen` (`RichTextAttachmentScreen`) is the one property sheet for both pill kinds. Its ACTION
+section authors three actions, the ones `RichTextEditorCore` names: **URL**, **Copy Text** (`.copyText`,
+`inlineButtonTypeCopy`) and **User Profile** (`.userProfile(peerId:)` ⇄ `.openUserProfile`,
+`inlineButtonTypeUserProfile`). A sent message's tap goes through `performMessageButtonAction`: copy with
+the usual toast, open the user's profile.
+
+- **Users only.** The schema has no chat or channel profile type; a chat is linked with a URL button and
+  its t.me link. The picker is `makePeerSelectionController` filtered to private chats, with global search
+  for an @username.
+- **The sheet stays window-presented; the picker joins it at window level** in `UserPickerHostController`,
+  a host with its own navigation controller (the `ShareScreenHostController` shape), since anything pushed
+  onto the chat's navigation sits under a window-level sheet. Pushing the SHEET instead breaks the editor
+  under it: popping a modal that still holds the first responder sets `NavigationController`'s
+  `ignoreInputHeight`, which only clears once the keyboard is seen hidden, and the editor takes the keyboard
+  back before that, so its toolbar is laid out under the keyboard.
+- **A payload field must not be focused when an update removes it** (switching type, picking a user): a
+  `ListTextFieldItemComponent` removed while focused resigns inside the update and its end-editing callback
+  re-enters it (a `ComponentView` assertion). The sheet ends editing in the tap handlers first.
+- **A preserved `.unsupported` action gets no ACTION section**, since the sheet keeps it verbatim. A
+  `.disabled` one does, so an author can give it an action again.
+- **`.userProfile` survives a paste** (`convertingUnsupportedButtonActions` leaves it alone, as it does
+  `.copyText`): its payload is a user id, which works in any message.
 
 ### Non-obvious invariants
 
