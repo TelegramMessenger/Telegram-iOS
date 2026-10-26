@@ -381,6 +381,8 @@ struct UpdateInterpreter {
                 self.applyJoinChatWebViewDecision(updateJoinChatWebViewDecisionData)
             case .updateConfig:
                 self.applyConfig()
+            case let .updateMessageWidgetData(data):
+                self.applyMessageWidgetData(data)
             case let .updateMessageExtendedMedia(updateMessageExtendedMediaData):
                 self.applyMessageExtendedMedia(updateMessageExtendedMediaData)
             case let .updateStory(updateStoryData):
@@ -411,6 +413,8 @@ struct UpdateInterpreter {
                 self.applyWalletTonConnectPendingDisconnect(data)
             case let .updateWalletState(updateWalletStateData):
                 self.applyWalletState(updateWalletStateData)
+            case let .updateAgentSettings(updateAgentSettingsData):
+                self.applyAgentSettings(updateAgentSettingsData)
             case let .updateStarsRevenueStatus(updateStarsRevenueStatusData):
                 self.applyStarsRevenueStatus(updateStarsRevenueStatusData)
             case let .updatePaidReactionPrivacy(updatePaidReactionPrivacyData):

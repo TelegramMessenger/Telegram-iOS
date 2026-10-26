@@ -10,6 +10,7 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
         case data
     }
     
+    case widget(media: TelegramMediaWidget, replyMarkup: ReplyMarkupMessageAttribute?)
     case auto(caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     case text(text: String, entities: TextEntitiesMessageAttribute?, richText: RichTextMessageAttribute?, disableUrlPreview: Bool, previewParameters: WebpagePreviewMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     case mapLocation(media: TelegramMediaMap, replyMarkup: ReplyMarkupMessageAttribute?)
@@ -29,6 +30,8 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
             self = .contact(media: decoder.decodeObjectForKey("c") as! TelegramMediaContact, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
         case 4:
             self = .invoice(media: decoder.decodeObjectForKey("i") as! TelegramMediaInvoice, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 6:
+            self = .widget(media: decoder.decodeObjectForKey("w", decoder: { TelegramMediaWidget(decoder: $0) }) as! TelegramMediaWidget, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
         case 5:
             self = .webpage(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, url: decoder.decodeStringForKey("url", orElse: ""), previewParameters: decoder.decodeObjectForKey("prp") as? WebpagePreviewMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
         default:
@@ -38,6 +41,10 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
+        case let .widget(media, replyMarkup):
+            encoder.encodeInt32(6, forKey: "_v")
+            encoder.encodeObject(media, forKey: "w")
+            if let replyMarkup { encoder.encodeObject(replyMarkup, forKey: "m") } else { encoder.encodeNil(forKey: "m") }
         case let .auto(caption, entities, replyMarkup):
             encoder.encodeInt32(0, forKey: "_v")
             encoder.encodeString(caption, forKey: "c")
@@ -138,6 +145,9 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
     
     public static func ==(lhs: ChatContextResultMessage, rhs: ChatContextResultMessage) -> Bool {
         switch lhs {
+        case let .widget(media, markup):
+            if case let .widget(other, otherMarkup) = rhs { return media == other && markup == otherMarkup }
+            return false
         case let .auto(lhsCaption, lhsEntities, lhsReplyMarkup):
             if case let .auto(rhsCaption, rhsEntities, rhsReplyMarkup) = rhs {
                 if lhsCaption != rhsCaption {
@@ -494,6 +504,8 @@ public final class ChatContextResultCollection: Equatable, Codable {
 extension ChatContextResultMessage {
     init(apiMessage: Api.BotInlineMessage) {
         switch apiMessage {
+            case let .botInlineMessageWidget(value):
+                self = .widget(media: TelegramMediaWidget(width: value.width, height: value.height, payload: value.payload.makeData(), publicData: value.publicData?.makeData(), chatData: value.chatData?.makeData(), widgetId: value.widgetId), replyMarkup: value.replyMarkup.map { ReplyMarkupMessageAttribute(apiMarkup: $0) })
             case let .botInlineMessageMediaAuto(botInlineMessageMediaAutoData):
                 let (_, message, entities, replyMarkup) = (botInlineMessageMediaAutoData.flags, botInlineMessageMediaAutoData.message, botInlineMessageMediaAutoData.entities, botInlineMessageMediaAutoData.replyMarkup)
                 var parsedEntities: TextEntitiesMessageAttribute?
@@ -600,13 +612,6 @@ extension ChatContextResultMessage {
                     ),
                     replyMarkup: parsedReplyMarkup
                 )
-            case let .botInlineMessageWidget(botInlineMessageWidgetData):
-                // Widget inline results are not supported yet: keep only the reply markup.
-                var parsedReplyMarkup: ReplyMarkupMessageAttribute?
-                if let replyMarkup = botInlineMessageWidgetData.replyMarkup {
-                    parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
-                }
-                self = .auto(caption: "", entities: nil, replyMarkup: parsedReplyMarkup)
         }
     }
 }

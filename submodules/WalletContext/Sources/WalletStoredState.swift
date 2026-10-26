@@ -27,6 +27,7 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
         private enum CodingKeys: String, CodingKey {
             case kind
             case userId
+            case channelId
             case address
             case providerName
             case ownProfile
@@ -49,7 +50,7 @@ struct WalletStoredTransaction: Codable, Equatable, Sendable {
                 )
             case .channel:
                 self = .channel(
-                    id: EnginePeer.Id(try container.decode(Int64.self, forKey: .userId))
+                    id: EnginePeer.Id(try container.decodeIfPresent(Int64.self, forKey: .channelId) ?? container.decode(Int64.self, forKey: .userId))
                 )
             case .telegramGift:
                 self = .telegramGift(ownProfile: try container.decodeIfPresent(Bool.self, forKey: .ownProfile) ?? false)

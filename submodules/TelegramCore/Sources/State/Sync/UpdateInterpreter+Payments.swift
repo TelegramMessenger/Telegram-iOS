@@ -31,6 +31,10 @@ extension UpdateInterpreter {
     mutating func applyWalletState(_ updateWalletStateData: Api.Update.Cons_updateWalletState) {
         updatedState.updateWalletState(updateWalletStateData.state)
     }
+
+    mutating func applyAgentSettings(_ updateAgentSettingsData: Api.Update.Cons_updateAgentSettings) {
+        updatedState.updateAgentSettings(updateAgentSettingsData.settings)
+    }
     
     mutating func applyStarsRevenueStatus(_ updateStarsRevenueStatusData: Api.Update.Cons_updateStarsRevenueStatus) {
         updatedState.updateStarsRevenueStatus(peerId: updateStarsRevenueStatusData.peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: updateStarsRevenueStatusData.status))

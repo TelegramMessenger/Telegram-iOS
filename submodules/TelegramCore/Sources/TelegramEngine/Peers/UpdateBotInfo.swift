@@ -127,34 +127,38 @@ public enum ToggleBotEmojiStatusAccessError {
 }
 
 func _internal_toggleBotEmojiStatusAccess(account: Account, peerId: PeerId, enabled: Bool) -> Signal<Never, ToggleBotEmojiStatusAccessError> {
-    return account.postbox.transaction { transaction -> Signal<Void, ToggleBotEmojiStatusAccessError> in
-        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
-            return account.network.request(Api.functions.bots.toggleUserEmojiStatusPermission(bot: inputUser, enabled: enabled ? .boolTrue : .boolFalse))
-            |> mapError { _ -> ToggleBotEmojiStatusAccessError in
-                return .generic
-            }
-            |> mapToSignal { result -> Signal<Void, ToggleBotEmojiStatusAccessError> in
-                return account.postbox.transaction { transaction -> Void in
-                    if case .boolTrue = result {
-                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                            if let current = current as? CachedUserData {
-                                var updatedFlags: CachedUserFlags = current.flags
-                                if enabled {
-                                    updatedFlags.insert(.botCanManageEmojiStatus)
-                                } else {
-                                    updatedFlags.remove(.botCanManageEmojiStatus)
-                                }
-                                return current.withUpdatedFlags(updatedFlags)
-                            } else {
-                                return current
-                            }
-                        })
-                    }
-                }
-                |> mapError { _ -> ToggleBotEmojiStatusAccessError in }
-            }
-        } else {
+    let postbox = account.postbox
+    let network = account.network
+    return postbox.transaction { transaction -> Signal<Void, ToggleBotEmojiStatusAccessError> in
+        guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
             return .fail(.generic)
+        }
+        return network.request(Api.functions.bots.toggleUserEmojiStatusPermission(bot: inputUser, enabled: enabled ? .boolTrue : .boolFalse))
+        |> mapError { _ -> ToggleBotEmojiStatusAccessError in
+            return .generic
+        }
+        |> then(.fail(.generic))
+        |> take(1)
+        |> mapToSignal { result -> Signal<Void, ToggleBotEmojiStatusAccessError> in
+            guard case .boolTrue = result else {
+                return .fail(.generic)
+            }
+            return postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    guard current == nil || current is CachedUserData else {
+                        return current
+                    }
+                    let current = current as? CachedUserData ?? CachedUserData()
+                    var updatedFlags = current.flags
+                    if enabled {
+                        updatedFlags.insert(.botCanManageEmojiStatus)
+                    } else {
+                        updatedFlags.remove(.botCanManageEmojiStatus)
+                    }
+                    return current.withUpdatedFlags(updatedFlags)
+                })
+            }
+            |> mapError { _ -> ToggleBotEmojiStatusAccessError in }
         }
     }
     |> mapError { _ -> ToggleBotEmojiStatusAccessError in }

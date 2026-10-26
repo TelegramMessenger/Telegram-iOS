@@ -229,6 +229,7 @@ public final class AgentSettingsContext {
 public extension TelegramEngine {
     final class Agent {
         private let account: Account
+        private let cachedProviders = Atomic<(hash: Int64, providers: [EngineAgentProvider])?>(value: nil)
 
         init(account: Account) {
             self.account = account
@@ -236,6 +237,44 @@ public extension TelegramEngine {
 
         public func settingsContext() -> AgentSettingsContext {
             return AgentSettingsContext(account: self.account)
+        }
+
+        public func providers() -> Signal<[EngineAgentProvider], EngineAgentError> {
+            let cache = self.cachedProviders
+            let hash = cache.with { $0?.hash } ?? 0
+            return self.account.network.request(Api.functions.agent.getProviders(hash: hash))
+            |> mapError(agentError)
+            |> map { result -> [EngineAgentProvider] in
+                switch result {
+                case let .providers(data):
+                    let providers = data.providers.map(EngineAgentProvider.init(apiProvider:))
+                    let _ = cache.swap((data.hash, providers))
+                    return providers
+                case .providersNotModified:
+                    return cache.with { $0?.providers } ?? []
+                }
+            }
+        }
+
+        public func settings() -> Signal<EngineAgentSettings, EngineAgentError> {
+            return agentSettingsRequest(account: self.account, Api.functions.agent.getSettings())
+        }
+
+        public func connect(provider: String, key: String) -> Signal<EngineAgentSettings, EngineAgentError> {
+            return agentSettingsRequest(account: self.account, Api.functions.agent.connect(provider: provider, key: key))
+        }
+
+        public func disconnect(provider: String) -> Signal<EngineAgentSettings, EngineAgentError> {
+            return agentSettingsRequest(account: self.account, Api.functions.agent.disconnect(provider: provider))
+        }
+
+        public func setActiveProvider(_ provider: String) -> Signal<EngineAgentSettings, EngineAgentError> {
+            return agentSettingsRequest(account: self.account, Api.functions.agent.setActiveProvider(provider: provider))
+        }
+
+        public func settingsUpdates() -> Signal<EngineAgentSettings, NoError> {
+            return self.account.stateManager.agentSettingsUpdates()
+            |> map(EngineAgentSettings.init(apiSettings:))
         }
     }
 }

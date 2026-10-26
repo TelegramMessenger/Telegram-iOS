@@ -61,6 +61,8 @@ enum UpdateGroup {
 /// The pts span of a common-box update that carries one.
 func apiUpdatePtsRange(_ update: Api.Update) -> SequenceSpan? {
     switch update {
+        case let .updateMessageWidgetData(data):
+            return SequenceSpan(end: data.pts, count: data.ptsCount)
         case let .updateDeleteMessages(updateDeleteMessagesData):
             let (pts, ptsCount) = (updateDeleteMessagesData.pts, updateDeleteMessagesData.ptsCount)
             return SequenceSpan(end: pts, count: ptsCount)

@@ -83,12 +83,20 @@ public enum UpdateBirthdayError {
     case flood
 }
 
+private final class AccountBirthdayRequestDependencyTag: NetworkRequestDependencyTag {
+    func shouldDependOn(other: NetworkRequestDependencyTag) -> Bool {
+        return other is AccountBirthdayRequestDependencyTag
+    }
+}
+
 func _internal_updateBirthday(account: Account, birthday: TelegramBirthday?) -> Signal<Never, UpdateBirthdayError> {
     var flags: Int32 = 0
     if let _ = birthday {
         flags |= (1 << 0)
     }
-    return account.network.request(Api.functions.account.updateBirthday(flags: flags, birthday: birthday?.apiBirthday), automaticFloodWait: false)
+    let postbox = account.postbox
+    let accountPeerId = account.peerId
+    return account.network.request(Api.functions.account.updateBirthday(flags: flags, birthday: birthday?.apiBirthday), tag: AccountBirthdayRequestDependencyTag(), automaticFloodWait: false)
     |> mapError { error -> UpdateBirthdayError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .flood
@@ -96,16 +104,17 @@ func _internal_updateBirthday(account: Account, birthday: TelegramBirthday?) -> 
             return .generic
         }
     }
+    |> then(.fail(.generic))
+    |> take(1)
     |> mapToSignal { result -> Signal<Never, UpdateBirthdayError> in
-        return account.postbox.transaction { transaction -> Void in
-            if case .boolTrue = result {
-                transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
-                    let current = current as? CachedUserData ?? CachedUserData()
-                    return current.withUpdatedBirthday(birthday)
-                })
-            }
+        guard case .boolTrue = result else { return .fail(.generic) }
+        return postbox.transaction { transaction -> Void in
+            transaction.updatePeerCachedData(peerIds: Set([accountPeerId]), update: { _, current in
+                let current = current as? CachedUserData ?? CachedUserData()
+                return current.withUpdatedBirthday(birthday)
+            })
         }
-        |> mapError { _ -> UpdateBirthdayError in }
+        |> castError(UpdateBirthdayError.self)
         |> ignoreValues
     }
 }

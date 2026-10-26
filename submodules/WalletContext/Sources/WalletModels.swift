@@ -470,6 +470,15 @@ public extension WalletContext {
                 return value
             }
 
+            public var counterpartyPeer: EnginePeer? {
+                switch self {
+                case let .user(peer, _, _), let .channel(peer, _, _):
+                    return peer
+                case .telegramGift, .address, .onramp, .unsupported:
+                    return nil
+                }
+            }
+
             public var displayName: String? {
                 switch self {
                 case let .user(peer, _, _), let .channel(peer, _, _):

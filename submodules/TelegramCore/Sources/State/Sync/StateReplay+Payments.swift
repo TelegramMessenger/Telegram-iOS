@@ -24,6 +24,10 @@ extension ReplayContext {
     func applyUpdateWalletState(_ state: Api.WalletState) {
         updatedWalletState = state
     }
+
+    func applyUpdateAgentSettings(_ settings: Api.agent.Settings) {
+        updatedAgentSettings = settings
+    }
     
     func applyUpdateStarsRevenueStatus(_ peerId: PeerId, _ status: StarsRevenueStats.Balances) {
         updatedStarsRevenueStatus[peerId] = status
