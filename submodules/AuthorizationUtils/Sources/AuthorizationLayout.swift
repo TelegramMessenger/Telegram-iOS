@@ -46,6 +46,16 @@ public final class SolvedAuthorizationLayoutItem {
     }
 }
 
+public func authorizationLayoutItemsFit(height: CGFloat, items: [AuthorizationLayoutItem]) -> Bool {
+    var minimumHeight: CGFloat = 0.0
+    for item in items {
+        minimumHeight += item.size.height
+        minimumHeight += min(item.spacingBefore.weight, item.spacingBefore.maxValue) * 0.5
+        minimumHeight += min(item.spacingAfter.weight, item.spacingAfter.maxValue) * 0.5
+    }
+    return minimumHeight <= height
+}
+
 public func layoutAuthorizationItems(bounds: CGRect, items: [AuthorizationLayoutItem], transition: ContainedViewLayoutTransition, failIfDoesNotFit: Bool) -> Bool {
     var fixedHeight: CGFloat = 0.0
     var totalSpacerWeight: CGFloat = 0.0

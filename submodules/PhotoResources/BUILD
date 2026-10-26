@@ -28,6 +28,7 @@ swift_library(
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/ImageCompression",
         "//submodules/PassRenderer:PassRenderer",
+        "//submodules/HLSPlayback:HLSPlayback",
     ],
     visibility = [
         "//visibility:public",

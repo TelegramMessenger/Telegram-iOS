@@ -7,7 +7,9 @@ private var morphsIntoContextMenuKey: UInt8 = 0
 public extension UIView {
     /// Opts this view in to UIKit's liquid morph (iOS 26+) when it is the reference
     /// view of a context menu; every other source keeps the standard presentation.
-    /// For now only navigation-header glass capsules holding a single button set it.
+    /// Set by glass that a menu-opening button is drawn on: navigation-bar pills
+    /// (`navigationButtonContextContainer(sourceView:)`), and `GlassBackgroundView`s
+    /// handed out as a button's `menuSourceView`.
     var morphsIntoContextMenu: Bool {
         get {
             return (objc_getAssociatedObject(self, &morphsIntoContextMenuKey) as? Bool) ?? false

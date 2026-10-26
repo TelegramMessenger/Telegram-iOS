@@ -1,0 +1,116 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="bold" style="font-size: 16px">Where should the offsite be?</div>
+  <div class="tiny muted" id="sub">Anonymous · pick one</div>
+  <div id="opts">
+    <div class="opt" data-i="0" role="button"><div class="fill"></div><div class="lbl"><span class="radio"></span><span>Lisbon, late May</span><span class="pct" hidden=""></span></div></div>
+    <div class="opt" data-i="1" role="button"><div class="fill"></div><div class="lbl"><span class="radio"></span><span>Tbilisi, early June</span><span class="pct" hidden=""></span></div></div>
+    <div class="opt" data-i="2" role="button"><div class="fill"></div><div class="lbl"><span class="radio"></span><span>Cabin in the Harz, any week</span><span class="pct" hidden=""></span></div></div>
+    <div class="opt" data-i="3" role="button"><div class="fill"></div><div class="lbl"><span class="radio"></span><span>Stay remote, bigger party budget</span><span class="pct" hidden=""></span></div></div>
+  </div>
+  <div class="foot"><span class="tiny muted grow" id="total">27 votes so far</span><span class="link small" id="change" hidden="">Change vote</span></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 270.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 270.2
+    div 15 13 330 244.2
+      div 15 13 330 20.8
+      div 15 33.8 330 14.3
+      div 15 56.1 330 176.8
+        div 16 57.1 328 36.2
+          div 16 57.1 0 36.2
+          div 28 66.1 304 18.2
+            span 30 70.2 10 10
+            span 52 66.1 128 18.2
+            span 0 0 0 0
+        div 16 103.3 328 36.2
+          div 16 103.3 0 36.2
+          div 28 112.3 304 18.2
+            span 30 116.4 10 10
+            span 52 112.3 152 18.2
+            span 0 0 0 0
+        div 16 149.5 328 36.2
+          div 16 149.5 0 36.2
+          div 28 158.5 304 18.2
+            span 30 162.6 10 10
+            span 52 158.5 216 18.2
+            span 0 0 0 0
+        div 16 195.7 328 36.2
+          div 16 195.7 0 36.2
+          div 28 204.7 304 18.2
+            span 30 208.8 10 10
+            span 52 204.7 256 18.2
+            span 0 0 0 0
+      div 15 242.9 330 14.3
+        span 15 242.9 330 14.3
+        span 0 0 0 0
+
+== paint
+root 360x270.2 items=52
+  solid-fill bounds=(0,0,360,270) layer=(border=(0,0,360,270),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,270),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,270) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,270) root=0
+  text bounds=(7,7,56,32) pos=(15,15,40,16) color=#000000ff text="Where" font=f1 glyphs=5 advance=40
+  text bounds=(55,7,64,32) pos=(63,15,48,16) color=#000000ff text="should" font=f1 glyphs=6 advance=48
+  text bounds=(111,7,40,32) pos=(119,15,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(143,7,72,32) pos=(151,15,56,16) color=#000000ff text="offsite" font=f1 glyphs=7 advance=56
+  text bounds=(207,7,40,32) pos=(215,15,24,16) color=#000000ff text="be?" font=f1 glyphs=3 advance=24
+  text bounds=(7,26,88,32) pos=(15,34,72,16) color=#6e6e73ff text="Anonymous" font=f2 glyphs=9 advance=72
+  text bounds=(87,26,32,32) pos=(95,34,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(111,26,48,32) pos=(119,34,32,16) color=#6e6e73ff text="pick" font=f2 glyphs=4 advance=32
+  text bounds=(151,26,40,32) pos=(159,34,24,16) color=#6e6e73ff text="one" font=f2 glyphs=3 advance=24
+  text bounds=(7,235,32,32) pos=(15,243,16,16) color=#6e6e73ff text="27" font=f2 glyphs=2 advance=16
+  text bounds=(31,235,56,32) pos=(39,243,40,16) color=#6e6e73ff text="votes" font=f2 glyphs=5 advance=40
+  text bounds=(79,235,32,32) pos=(87,243,16,16) color=#6e6e73ff text="so" font=f2 glyphs=2 advance=16
+  text bounds=(103,235,40,32) pos=(111,243,24,16) color=#6e6e73ff text="far" font=f2 glyphs=3 advance=24
+  borders bounds=(15,56,330,38) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(10,10,10,10,10,10,10,10)) pos=(15,56,330,38) root=0
+  set-clip bounds=(16,57.1,328,36.2) pos=(16,57.1,328,36.2) radius=(9,9,9,9,9,9,9,9)
+  solid-fill bounds=(16,57,0,36) layer=(border=(16,57,0,36),radius=(0,0,0,0,0,0,0,0),clip=(16,57,0,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff24
+  borders bounds=(28,68,14,14) borders=(left=(2,4,#7f7f7f38),top=(2,4,#7f7f7f38),right=(2,4,#7f7f7f38),bottom=(2,4,#7f7f7f38),radius=(7,7,7,7,7,7,7,7)) pos=(28,68,14,14) root=0
+  text bounds=(44,59,72,32) pos=(52,67,56,16) color=#000000ff text="Lisbon," font=f3 glyphs=7 advance=56
+  text bounds=(108,59,48,32) pos=(116,67,32,16) color=#000000ff text="late" font=f3 glyphs=4 advance=32
+  text bounds=(148,59,40,32) pos=(156,67,24,16) color=#000000ff text="May" font=f3 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,102,330,39) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(10,10,10,10,10,10,10,10)) pos=(15,102,330,39) root=0
+  set-clip bounds=(16,103.3,328,36.2) pos=(16,103.3,328,36.2) radius=(9,9,9,9,9,9,9,9)
+  solid-fill bounds=(16,103,0,37) layer=(border=(16,103,0,37),radius=(0,0,0,0,0,0,0,0),clip=(16,103,0,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff24
+  borders bounds=(28,114,14,14) borders=(left=(2,4,#7f7f7f38),top=(2,4,#7f7f7f38),right=(2,4,#7f7f7f38),bottom=(2,4,#7f7f7f38),radius=(7,7,7,7,7,7,7,7)) pos=(28,114,14,14) root=0
+  text bounds=(44,105,80,32) pos=(52,113,64,16) color=#000000ff text="Tbilisi," font=f3 glyphs=8 advance=64
+  text bounds=(116,105,56,32) pos=(124,113,40,16) color=#000000ff text="early" font=f3 glyphs=5 advance=40
+  text bounds=(164,105,48,32) pos=(172,113,32,16) color=#000000ff text="June" font=f3 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,149,330,38) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(10,10,10,10,10,10,10,10)) pos=(15,149,330,38) root=0
+  set-clip bounds=(16,149.5,328,36.2) pos=(16,149.5,328,36.2) radius=(9,9,9,9,9,9,9,9)
+  solid-fill bounds=(16,150,0,36) layer=(border=(16,150,0,36),radius=(0,0,0,0,0,0,0,0),clip=(16,150,0,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff24
+  borders bounds=(28,161,14,14) borders=(left=(2,4,#7f7f7f38),top=(2,4,#7f7f7f38),right=(2,4,#7f7f7f38),bottom=(2,4,#7f7f7f38),radius=(7,7,7,7,7,7,7,7)) pos=(28,161,14,14) root=0
+  text bounds=(44,152,56,32) pos=(52,160,40,16) color=#000000ff text="Cabin" font=f3 glyphs=5 advance=40
+  text bounds=(92,152,32,32) pos=(100,160,16,16) color=#000000ff text="in" font=f3 glyphs=2 advance=16
+  text bounds=(116,152,40,32) pos=(124,160,24,16) color=#000000ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(148,152,56,32) pos=(156,160,40,16) color=#000000ff text="Harz," font=f3 glyphs=5 advance=40
+  text bounds=(196,152,40,32) pos=(204,160,24,16) color=#000000ff text="any" font=f3 glyphs=3 advance=24
+  text bounds=(228,152,48,32) pos=(236,160,32,16) color=#000000ff text="week" font=f3 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(15,195,330,38) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(10,10,10,10,10,10,10,10)) pos=(15,195,330,38) root=0
+  set-clip bounds=(16,195.7,328,36.2) pos=(16,195.7,328,36.2) radius=(9,9,9,9,9,9,9,9)
+  solid-fill bounds=(16,196,0,36) layer=(border=(16,196,0,36),radius=(0,0,0,0,0,0,0,0),clip=(16,196,0,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007aff24
+  borders bounds=(28,207,14,14) borders=(left=(2,4,#7f7f7f38),top=(2,4,#7f7f7f38),right=(2,4,#7f7f7f38),bottom=(2,4,#7f7f7f38),radius=(7,7,7,7,7,7,7,7)) pos=(28,207,14,14) root=0
+  text bounds=(44,198,48,32) pos=(52,206,32,16) color=#000000ff text="Stay" font=f3 glyphs=4 advance=32
+  text bounds=(84,198,72,32) pos=(92,206,56,16) color=#000000ff text="remote," font=f3 glyphs=7 advance=56
+  text bounds=(148,198,64,32) pos=(156,206,48,16) color=#000000ff text="bigger" font=f3 glyphs=6 advance=48
+  text bounds=(204,198,56,32) pos=(212,206,40,16) color=#000000ff text="party" font=f3 glyphs=5 advance=40
+  text bounds=(252,198,64,32) pos=(260,206,48,16) color=#000000ff text="budget" font=f3 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

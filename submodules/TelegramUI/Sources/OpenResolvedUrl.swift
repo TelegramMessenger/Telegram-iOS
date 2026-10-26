@@ -396,9 +396,11 @@ func openResolvedUrlImpl(
             } else if let navigationController = navigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
                 // A link tapped in a message carries its inline progress; the thread fetch then shimmers the link
                 // instead of covering the chat with a modal spinner.
+                // The resolver already fetched a comment thread, so it is only preloaded; a forum topic's resolved thread
+                // carries no read state and is opened as before.
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
                     present(c, a)
-                }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true, progress: progress).startStandalone()
+                }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true, progress: progress, resolvedThread: replyThreadMessage.isForumPost ? nil : replyThreadMessage).startStandalone()
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {

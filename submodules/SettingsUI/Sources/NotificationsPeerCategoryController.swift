@@ -1063,7 +1063,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
         if !state.mode.peerIds.isEmpty {
             if state.editing {
                 leftNavigationButton = ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {})
-                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                     updateState { value in
                         return value.withUpdatedEditing(false)
                     }

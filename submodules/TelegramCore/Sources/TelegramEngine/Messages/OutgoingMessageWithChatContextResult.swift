@@ -36,6 +36,9 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
         attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: postpone))
     }
     switch result.message {
+    case let .widget(media, replyMarkup):
+        if let replyMarkup { attributes.append(replyMarkup) }
+        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     case let .auto(caption, entities, replyMarkup):
         if let entities = entities {
             attributes.append(entities)

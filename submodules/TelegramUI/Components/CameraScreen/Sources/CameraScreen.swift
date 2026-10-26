@@ -2372,8 +2372,10 @@ private final class CameraScreenComponent: CombinedComponent {
                     availableSize: CGSize(width: availableSize.width - 32.0, height: availableSize.height),
                     transition: context.transition
                 )
+                // Below the viewfinder, not above the bottom inset, which can be the home indicator's (iPhone Duo): a viewfinder
+                // taller than the screen leaves no room for the hint, and it stays off screen as on home-button phones.
                 context.add(collageReorderHint
-                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + 16.0 + collageReorderHint.size.height / 2.0))
+                    .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight + 16.0 + collageReorderHint.size.height / 2.0))
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -2760,7 +2762,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         fileprivate var documentFrameBottomDimView: UIView?
         fileprivate let transitionDimView: UIView
         fileprivate let transitionCornersView: UIImageView
-        
+        private var transitionCornersRadii: CornerRadii?
+
         private var cameraStateDisposable: Disposable?
         private var changingPositionDisposable: Disposable?
         private var appliedDualCamera = false
@@ -4780,7 +4783,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
             // Clamped like the story editor's: a 9:16 viewfinder much taller than the screen (iPhone Duo's unfolded
             // screen in portrait, 238pt over) would otherwise put the bottom controls below the screen.
-            let bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
+            var bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
+            if !isTablet {
+                // The bottom controls stay above the home indicator. Below a 9:16 viewfinder that fits there is always more
+                // room than the indicator takes; one taller than the screen leaves none, which until iPhone Duo only
+                // happened on home-button phones (its folded screen, 150pt over, put the mode selector on the indicator).
+                bottomInset = max(bottomInset, layout.intrinsicInsets.bottom)
+            }
             
             let panelWidth: CGFloat
             var previewFrame: CGRect
@@ -5155,22 +5164,50 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.previewFrameRightDimView.isHidden = !isTablet
             transition.setFrame(view: self.previewFrameRightDimView, frame: CGRect(origin: CGPoint(x: viewfinderFrame.maxX, y: 0.0), size: CGSize(width: viewfinderFrame.minX + 1.0, height: viewfinderFrame.height)))
             
-            let screenCornerRadius = layout.deviceMetrics.screenCornerRadius
-            if screenCornerRadius > 0.0, self.transitionCornersView.image == nil {
-                self.transitionCornersView.image = generateImage(CGSize(width: screenCornerRadius, height: screenCornerRadius * 3.0), rotatedContext: { size, context in
-                    context.setFillColor(UIColor.black.cgColor)
-                    context.fill(CGRect(origin: .zero, size: size))
-                    context.setBlendMode(.clear)
-                    
-                    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: size.width)
-                    context.addPath(path.cgPath)
-                    context.fillPath()
-                })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(screenCornerRadius))
+            // The strip rounds the left corners of the screen the camera pushes aside (the chat list) as the screen's own
+            // left corners are rounded: on iPhone Duo's folded screen they differ from the right ones (8pt on the hinge
+            // side, 59pt outside).
+            let screenCornerRadii = layout.screenCornerRadii
+            let transitionCornersWidth = max(screenCornerRadii.topLeft, screenCornerRadii.bottomLeft)
+            if transitionCornersWidth > 0.0, self.transitionCornersRadii != screenCornerRadii {
+                self.transitionCornersRadii = screenCornerRadii
+                if screenCornerRadii.isUniform {
+                    let screenCornerRadius = transitionCornersWidth
+                    self.transitionCornersView.image = generateImage(CGSize(width: screenCornerRadius, height: screenCornerRadius * 3.0), rotatedContext: { size, context in
+                        context.setFillColor(UIColor.black.cgColor)
+                        context.fill(CGRect(origin: .zero, size: size))
+                        context.setBlendMode(.clear)
+
+                        let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: size.width)
+                        context.addPath(path.cgPath)
+                        context.fillPath()
+                    })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(screenCornerRadius))
+                } else {
+                    let topRadius = screenCornerRadii.topLeft
+                    let bottomRadius = screenCornerRadii.bottomLeft
+                    self.transitionCornersView.image = generateImage(CGSize(width: transitionCornersWidth, height: topRadius + bottomRadius + 1.0), rotatedContext: { size, context in
+                        context.setFillColor(UIColor.black.cgColor)
+                        context.fill(CGRect(origin: .zero, size: size))
+                        context.setBlendMode(.clear)
+
+                        let path = CGMutablePath()
+                        path.move(to: CGPoint(x: topRadius, y: 0.0))
+                        path.addLine(to: CGPoint(x: size.width, y: 0.0))
+                        path.addLine(to: CGPoint(x: size.width, y: size.height))
+                        path.addLine(to: CGPoint(x: bottomRadius, y: size.height))
+                        path.addArc(tangent1End: CGPoint(x: 0.0, y: size.height), tangent2End: CGPoint(x: 0.0, y: size.height - bottomRadius), radius: bottomRadius)
+                        path.addLine(to: CGPoint(x: 0.0, y: topRadius))
+                        path.addArc(tangent1End: CGPoint(x: 0.0, y: 0.0), tangent2End: CGPoint(x: topRadius, y: 0.0), radius: topRadius)
+                        path.closeSubpath()
+                        context.addPath(path)
+                        context.fillPath()
+                    })?.resizableImage(withCapInsets: UIEdgeInsets(top: topRadius, left: 0.0, bottom: bottomRadius, right: 0.0), resizingMode: .stretch)
+                }
             }
             self.transitionCornersView.isHidden = isTablet
-        
-            transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + screenCornerRadius / 2.0, y: layout.size.height / 2.0))
-            transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: screenCornerRadius, height: layout.size.height)))
+
+            transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + transitionCornersWidth / 2.0, y: layout.size.height / 2.0))
+            transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: transitionCornersWidth, height: layout.size.height)))
             
             if (cameraScreenUsesModalPresentation(mode: controller.mode.kind) || isTablet) && isFirstTime {
                 self.animateIn()

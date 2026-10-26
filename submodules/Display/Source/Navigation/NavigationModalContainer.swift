@@ -28,6 +28,22 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
     private var validLayout: ContainerViewLayout?
     private var horizontalDismissOffset: CGFloat?
     
+    /// The card's frame now, in this container's coordinates: where `update` placed it, moved by an interactive dismiss
+    /// (down with the scroll, aside with the edge pan). Nil before the first layout.
+    var presentedCardFrame: CGRect? {
+        guard let layout = self.validLayout else {
+            return nil
+        }
+        // The card sits one screen down in the scroll content, which rests scrolled one screen down.
+        var frame = self.container.frame.offsetBy(dx: 0.0, dy: -layout.size.height)
+        if let horizontalDismissOffset = self.horizontalDismissOffset {
+            frame.origin.x += horizontalDismissOffset
+        } else {
+            frame.origin.y += self.dismissProgress * layout.size.height
+        }
+        return frame
+    }
+    
     var keyboardViewManager: KeyboardViewManager? {
         didSet {
             if self.keyboardViewManager !== oldValue {

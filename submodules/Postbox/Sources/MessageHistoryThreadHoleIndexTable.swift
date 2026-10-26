@@ -168,6 +168,9 @@ final class MessageHistoryThreadHoleIndexTable: Table {
         return result
     }
     
+    /// The first hole of each space of the thread whose upper bound is strictly above `id`: the range query
+    /// starts after the key of `id`, so a hole ending exactly at `id` is NOT returned, and the lower bound is
+    /// NOT checked. `Transaction.getThreadIndexHole` returns it as it is, and its callers rely on that.
     func containing(threadId: Int64, id: MessageId) -> [MessageHistoryHoleSpace: ClosedRange<MessageId.Id>] {
         self.ensureInitialized(peerId: id.peerId, threadId: threadId)
         

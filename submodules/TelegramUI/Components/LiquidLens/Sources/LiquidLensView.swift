@@ -4,14 +4,20 @@ import Display
 import ComponentFlow
 import GlassBackgroundComponent
 
+/// The lens's resting selection, as UIKit's `_UITabSelectionView` draws it on iOS 27 (its `updateBackground` when the
+/// platform metrics give no selection color, as the glass tab bar's do): the backdrop captured at a quarter of the
+/// resolution, in a backdrop group of its own, blurred by 2 with normalized edges, then through a color matrix.
 private final class RestingBackgroundView: UIVisualEffectView {
     var isDark: Bool?
 
+    /// `_ColorMatrix.YCC(black:white:saturation:hue:).colorMatrix` (DesignLibrary), as `currentColorMatrixValue`
+    /// builds it: light YCC(-0.2, 0.93, 1.2, 0), dark YCC(-0.07, 0.8, 1.2, 0), computed by calling DesignLibrary in
+    /// the iOS 27 simulator.
     static func colorMatrix(isDark: Bool) -> [Float32] {
         if isDark {
-            return [1.082, -0.113, -0.011, 0.0, 0.135, -0.034, 1.003, -0.011, 0.0, 0.135, -0.034, -0.113, 1.105, 0.0, 0.135, 0.0, 0.0, 0.0, 1.0, 0.0]
+            return [1.1298, -0.2361, -0.0237, 0.0, -0.07, -0.0701, 0.964, -0.0238, 0.0, -0.07, -0.0702, -0.236, 1.1762, 0.0, -0.07, 0.0, 0.0, 0.0, 1.0, 0.0]
         } else {
-            return [1.185, -0.05, -0.005, 0.0, -0.2, -0.015, 1.15, -0.005, 0.0, -0.2, -0.015, -0.05, 1.195, 0.0, -0.2, 0.0, 0.0, 0.0, 1.0, 0.0]
+            return [1.1851, -0.0502, -0.005, 0.0, -0.2, -0.0149, 1.1499, -0.0051, 0.0, -0.2, -0.0149, -0.05, 1.1949, 0.0, -0.2, 0.0, 0.0, 0.0, 1.0, 0.0]
         }
     }
 
@@ -41,20 +47,83 @@ private final class RestingBackgroundView: UIVisualEffectView {
         if let sublayer = self.layer.sublayers?[0], let _ = sublayer.filters {
             sublayer.backgroundColor = nil
             sublayer.isOpaque = false
-            
-            if let classValue = NSClassFromString("CAFilter") as AnyObject as? NSObjectProtocol {
-                let makeSelector = NSSelectorFromString("filterWithName:")
-                let filter = classValue.perform(makeSelector, with: "colorMatrix").takeUnretainedValue() as? NSObject
-                
-                if let filter {
-                    var matrix: [Float32] = RestingBackgroundView.colorMatrix(isDark: isDark)
-                    filter.setValue(NSValue(bytes: &matrix, objCType: "{CAColorMatrix=ffffffffffffffffffff}"), forKey: "inputColorMatrix")
-                    sublayer.filters = [filter]
-                    sublayer.setValue(1.0, forKey: "scale")
-                }
+
+            if let blurFilter = CALayer.blur(), let colorMatrixFilter = CALayer.colorMatrix() {
+                blurFilter.setValue(2.0 as NSNumber, forKey: "inputRadius")
+                blurFilter.setValue(true as NSNumber, forKey: "inputNormalizeEdges")
+                var matrix: [Float32] = RestingBackgroundView.colorMatrix(isDark: isDark)
+                colorMatrixFilter.setValue(NSValue(bytes: &matrix, objCType: "{CAColorMatrix=ffffffffffffffffffff}"), forKey: "inputColorMatrix")
+                sublayer.filters = [blurFilter, colorMatrixFilter]
+                sublayer.setValue(0.25, forKey: "scale")
+                sublayer.setValue("RestingBackgroundView-\(UInt(bitPattern: ObjectIdentifier(self)))", forKey: "groupName")
             }
         }
     }
+}
+
+/// `-[_UILiquidLensView _lifted]`, nil when the lens has no such method.
+private func lensViewIsLifted(_ lensView: UIView) -> Bool? {
+    let selector = NSSelectorFromString("_lifted")
+    guard lensView.responds(to: selector), let method = lensView.method(for: selector) else {
+        return nil
+    }
+    typealias ObjCMethod = @convention(c) (AnyObject, Selector) -> Bool
+    let function = unsafeBitCast(method, to: ObjCMethod.self)
+    return function(lensView, selector)
+}
+
+/// The duration and curve of a move animated with `animation`, as `CALayer.animate(from:to:keyPath:duration:delay:
+/// curve:...)` draws it (`CALayer.makeAnimation` in Display): the part of the move done at a fraction of the duration.
+/// `.spring` is a real spring only at Display's two native durations and a bezier otherwise.
+private func lensMoveCurve(_ animation: ComponentTransition.Animation) -> (duration: Double, progress: (Double) -> CGFloat)? {
+    guard case let .curve(duration, curve) = animation, duration > 0.0 else {
+        return nil
+    }
+    switch curve {
+    case .spring:
+        var isSpringAnimation = duration == 0.5
+        if #available(iOS 26.0, *), abs(duration - 0.3832) <= 0.0001 {
+            isSpringAnimation = true
+        }
+        if isSpringAnimation {
+            let spring = makeSpringAnimation("position", duration: duration)
+            return (duration, { springAnimationValueAt(spring, CGFloat($0)) })
+        } else {
+            return (duration, { liquidLensBezierProgress(0.380, 0.700, 0.125, 1.000, $0) })
+        }
+    case .easeInOut:
+        return (duration, { liquidLensBezierProgress(0.42, 0.0, 0.58, 1.0, $0) })
+    case .easeIn:
+        return (duration, { liquidLensBezierProgress(0.42, 0.0, 1.0, 1.0, $0) })
+    case .linear:
+        return (duration, { CGFloat($0) })
+    case let .custom(c1x, c1y, c2x, c2y):
+        return (duration, { liquidLensBezierProgress(Double(c1x), Double(c1y), Double(c2x), Double(c2y), $0) })
+    case let .bounce(stiffness, damping):
+        let spring = makeSpringBounceAnimation("position", 0.0, damping)
+        spring.stiffness = stiffness
+        return (duration, { springAnimationValueAt(spring, CGFloat($0)) })
+    }
+}
+
+/// Keyframes a frame apart, played from `beginTime` at the speed Display plays its animations at.
+private func makeLensKeyframeAnimation(keyPath: String, values: [Any], times: [Double], duration: Double, beginTime: Double, timeScale: Double) -> CAKeyframeAnimation {
+    let animation = CAKeyframeAnimation(keyPath: keyPath)
+    animation.values = values
+    animation.keyTimes = times.map { NSNumber(value: min(1.0, max(0.0, $0 / duration))) }
+    animation.calculationMode = .linear
+    animation.duration = duration
+    animation.beginTime = beginTime
+    animation.speed = Float(1.0 / timeScale)
+    animation.fillMode = .both
+    animation.isRemovedOnCompletion = true
+    if #available(iOS 15.0, *) {
+        let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
+        if maxFps > 61.0 {
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: 30.0, maximum: maxFps, preferred: maxFps)
+        }
+    }
+    return animation
 }
 
 public final class LiquidLensView: UIView {
@@ -111,6 +180,7 @@ public final class LiquidLensView: UIView {
     }
 
     private let containerView: UIView
+    private let backgroundTintColor: GlassBackgroundView.TintColor
     private let backgroundContainer: GlassBackgroundContainerView?
     private let genericBackgroundContainer: UIView?
     private let backgroundView: GlassBackgroundView?
@@ -128,12 +198,35 @@ public final class LiquidLensView: UIView {
         return self.liftedContainerView
     }
 
+    /// `_UILiquidLensViewLargeVariantSpec` (the lens's style 1): how long a lens stays lifted at least, and the response
+    /// of its lift and unlift springs (damping ratio 1).
+    private static let lensHangTime: Double = 0.22
+    private static let liftSpringResponse: Double = 0.25
+    /// The finger's velocity is its displacement over the immediate updates of this long before the move starts; a
+    /// longer window than one touch event, because events arrive in bursts after the main thread stalls.
+    private static let immediateVelocityWindow: Double = 0.1
+    private static let minImmediateVelocityInterval: Double = 0.03
+    private static let maxCarriedSpeed: CGFloat = 3000.0
+
     private var params: Params?
     private var appliedLensParams: LensParams?
-    private var isApplyingLensParams: Bool = false
-    private var pendingLensParams: LensParams?
 
-    private var liftedDisplayLink: SharedDisplayLinkDriver.Link?
+    /// Whether the UIKit lens is lifted: after an unlift is requested it stays lifted for the rest of its hang time.
+    private var isLensLifted: Bool = false
+    private var liftTimestamp: Double = 0.0
+    private var unliftTimer: Foundation.Timer?
+    private var pendingUnliftTransition: ComponentTransition?
+    private var lensAnimationCount: Int = 0
+
+    /// The lens's position and flex are worked out ahead (`LiquidLensMotionPlan`) and played as keyframe animations;
+    /// a change replans from where the current plan is.
+    private var isFlexActive: Bool = false
+    private var lensSegment: LiquidLensPositionSegment?
+    private var lensPlan: LiquidLensMotionPlan?
+    private var isLensMoving: Bool = false
+    private var lensMoveID: Int = 0
+    /// The lens's recent immediate positions (the finger's), newest last.
+    private var immediateLensPositions: [(time: Double, position: CGPoint)] = []
 
     public var selectionOrigin: CGPoint? {
         return self.params?.selectionOrigin
@@ -153,9 +246,11 @@ public final class LiquidLensView: UIView {
     public var onUpdatedIsAnimating: ((Bool) -> Void)?
     public var isLiftedAnimationCompleted: (() -> Void)?
 
-    public init(kind: Kind) {
+    /// `backgroundTintColor` tints the glass behind the items, when the kind has one.
+    public init(kind: Kind, backgroundTintColor: GlassBackgroundView.TintColor = GlassBackgroundView.TintColor(kind: .panel)) {
         self.containerView = UIView()
-        
+        self.backgroundTintColor = backgroundTintColor
+
         switch kind {
         case .builtinContainer:
             self.backgroundContainer = GlassBackgroundContainerView()
@@ -253,8 +348,12 @@ public final class LiquidLensView: UIView {
                     function(lensView, selector, true)
                 }
             }
-            
-            lensView.setValue(UIColor(white: 0.0, alpha: 0.1), forKey: "restingBackgroundColor")
+
+            // The lens's flex is `LiquidLensFlex`, planned with its position. UIKit's, which guesses the lens's motion by
+            // sampling it, stays attached (the lens activates and deactivates it as it lifts) with nothing to flex from.
+            if lensView.responds(to: NSSelectorFromString("flexInteraction")), let flexInteraction = lensView.value(forKey: "flexInteraction") as? NSObject, flexInteraction.responds(to: NSSelectorFromString("setPreferredFlexSources:")) {
+                flexInteraction.setValue(0 as NSNumber, forKey: "preferredFlexSources")
+            }
         } else {
             let legacySelectionView = GlassBackgroundView.ContentImageView()
             self.legacySelectionView = legacySelectionView
@@ -290,7 +389,11 @@ public final class LiquidLensView: UIView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
+    deinit {
+        self.unliftTimer?.invalidate()
+    }
+
     public func setLiftedContainer(view: UIView) {
         guard let lensView = self.lensView else {
             return
@@ -313,111 +416,301 @@ public final class LiquidLensView: UIView {
         self.update(params: params, transition: transition)
     }
 
+    private func lensBounds(params: LensParams, isLifted: Bool) -> CGRect {
+        let inset: CGFloat = isLifted ? params.liftedInset : (-params.inset)
+        return CGRect(origin: CGPoint(), size: CGSize(width: params.baseFrame.width + inset * 2.0, height: params.baseFrame.height + inset * 2.0))
+    }
+
     private func updateLens(params: LensParams, transition: ComponentTransition) {
+        guard self.lensView != nil else {
+            return
+        }
+        self.appliedLensParams = params
+
+        if params.isLifted {
+            self.cancelPendingUnlift()
+            if !self.isLensLifted {
+                self.setLensLifted(true, params: params, transition: transition)
+                return
+            }
+        } else if self.isLensLifted {
+            // UIKit keeps a lens lifted for at least its hang time, so that a tap shows the lift. It is timed here
+            // instead of by UIKit's own unlift timer, which would also hold back the lens's frame until it fires.
+            let remainingHangTime = self.liftTimestamp + LiquidLensView.lensHangTime * UIView.animationDurationFactor() - CACurrentMediaTime()
+            if !transition.animation.isImmediate && remainingHangTime > 0.0 {
+                self.scheduleUnlift(after: remainingHangTime, transition: transition)
+            } else {
+                self.cancelPendingUnlift()
+                self.setLensLifted(false, params: params, transition: transition)
+                return
+            }
+        }
+        self.moveLens(params: params, transition: transition)
+    }
+
+    /// UIKit animates the lens's material into and out of the lifted state; its size and position are animated here,
+    /// with UIKit's lift spring for the size. UIKit's `alongsideAnimations` would run them inside its own spring, or,
+    /// for an unlift within the hang time, only once its timer fires.
+    private func setLensLifted(_ isLifted: Bool, params: LensParams, transition: ComponentTransition) {
         guard let lensView = self.lensView else {
             return
         }
-
-        if self.isApplyingLensParams {
-            self.pendingLensParams = params
-            return
+        let animated = !transition.animation.isImmediate
+        self.isLensLifted = isLifted
+        var resetsMotion = false
+        if isLifted {
+            self.liftTimestamp = CACurrentMediaTime()
+            if !self.isFlexActive {
+                self.isFlexActive = true
+                resetsMotion = true
+            }
         }
-        self.isApplyingLensParams = true
-        let previousParams = self.appliedLensParams
-        self.appliedLensParams = params
 
-        if previousParams?.isLifted != params.isLifted {
-            self.isAnimating = true
-            
-            let selector = NSSelectorFromString("setLifted:animated:alongsideAnimations:completion:")
-            var shouldScheduleUpdate = false
-            var didProcessUpdate = false
-            self.pendingLensParams = params
-            if let lensView = self.lensView, let method = lensView.method(for: selector) {
-                typealias ObjCMethod = @convention(c) (AnyObject, Selector, Bool, Bool, @escaping () -> Void, (() -> Void)?) -> Void
-                let function = unsafeBitCast(method, to: ObjCMethod.self)
-                function(lensView, selector, params.isLifted, !transition.animation.isImmediate, { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    let liftedInset: CGFloat = params.isLifted ? params.liftedInset : (-params.inset)
-                    lensView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: params.baseFrame.width + liftedInset * 2.0, height: params.baseFrame.height + liftedInset * 2.0))
-                    didProcessUpdate = true
-                    if shouldScheduleUpdate {
-                        DispatchQueue.main.async { [weak self] in
-                            guard let self, let pendingLensParams = self.pendingLensParams else {
-                                return
-                            }
-                            self.isApplyingLensParams = false
-                            self.pendingLensParams = nil
-                            self.updateLens(params: pendingLensParams, transition: transition)
-                        }
-                    }
-                }, { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    if !self.isApplyingLensParams {
-                        self.isAnimating = false
-                    }
-                    self.isLiftedAnimationCompleted?()
+        self.beginLensAnimation()
+        let completion: () -> Void = { [weak self] in
+            guard let self else {
+                return
+            }
+            // UIKit deactivates the lens's flex when the unlift completes.
+            if !self.isLensLifted {
+                self.setFlexActive(false)
+            }
+            self.endLensAnimation()
+            self.isLiftedAnimationCompleted?()
+        }
+        let selector = NSSelectorFromString("setLifted:animated:alongsideAnimations:completion:")
+        if lensViewIsLifted(lensView) != isLifted, let method = lensView.method(for: selector) {
+            typealias ObjCMethod = @convention(c) (AnyObject, Selector, Bool, Bool, (@convention(block) () -> Void)?, (@convention(block) () -> Void)?) -> Void
+            let function = unsafeBitCast(method, to: ObjCMethod.self)
+            function(lensView, selector, isLifted, animated, nil, completion)
+        } else {
+            // Already in that state (UIKit unlifts a lens that leaves its window); UIKit would not call the completion.
+            completion()
+        }
+
+        let lensBounds = self.lensBounds(params: params, isLifted: isLifted)
+        if animated {
+            // Inside a view animation the lens lays its glass out along with its bounds.
+            if #available(iOS 17.0, *) {
+                UIView.animate(springDuration: LiquidLensView.liftSpringResponse, bounce: 0.0, initialSpringVelocity: 0.0, delay: 0.0, options: [.allowUserInteraction, .beginFromCurrentState], animations: {
+                    lensView.bounds = lensBounds
+                })
+            } else {
+                UIView.animate(withDuration: LiquidLensView.liftSpringResponse, delay: 0.0, usingSpringWithDamping: 1.0, initialSpringVelocity: 0.0, options: [.allowUserInteraction, .beginFromCurrentState], animations: {
+                    lensView.bounds = lensBounds
                 })
             }
-            if didProcessUpdate {
-                transition.animateView {
-                    lensView.center = CGPoint(x: params.baseFrame.midX, y: params.baseFrame.midY)
-                }
-                self.pendingLensParams = nil
-                self.isApplyingLensParams = false
-            } else {
-                shouldScheduleUpdate = true
-            }
         } else {
-            let liftedInset: CGFloat = params.isLifted ? params.liftedInset : (-params.inset)
-            let lensBounds = CGRect(origin: CGPoint(), size: CGSize(width: params.baseFrame.width + liftedInset * 2.0, height: params.baseFrame.height + liftedInset * 2.0))
-            let lensCenter = CGPoint(x: params.baseFrame.midX, y: params.baseFrame.midY)
-            
-            let previousBounds: CGRect = lensView.bounds
+            lensView.bounds = lensBounds
+        }
+        let resetsFlex = !animated && !isLifted
+        if resetsFlex {
+            self.isFlexActive = false
+        }
+        // The flex depends on the lens's size, so it is planned again also when the lens stays where it is.
+        self.setLensPosition(CGPoint(x: params.baseFrame.midX, y: params.baseFrame.midY), transition: transition, replans: true, resetsMotion: resetsMotion, resetsFlex: resetsFlex)
+        self.updateRestingBackgroundAlpha(transition: transition)
+    }
+
+    private func scheduleUnlift(after delay: Double, transition: ComponentTransition) {
+        self.pendingUnliftTransition = transition
+        if self.unliftTimer != nil {
+            return
+        }
+        // A frame later than the hang time, so that UIKit, which measures it from its own lift timestamp, unlifts at once.
+        let timer = Foundation.Timer(timeInterval: delay + 1.0 / 120.0, repeats: false, block: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.unliftTimer = nil
+            let transition = self.pendingUnliftTransition ?? .spring(duration: 0.4)
+            self.pendingUnliftTransition = nil
+            guard let params = self.appliedLensParams, !params.isLifted, self.isLensLifted else {
+                return
+            }
+            self.setLensLifted(false, params: params, transition: transition)
+        })
+        RunLoop.main.add(timer, forMode: .common)
+        self.unliftTimer = timer
+    }
+
+    private func cancelPendingUnlift() {
+        self.unliftTimer?.invalidate()
+        self.unliftTimer = nil
+        self.pendingUnliftTransition = nil
+    }
+
+    private func moveLens(params: LensParams, transition: ComponentTransition) {
+        guard let lensView = self.lensView else {
+            return
+        }
+        let lensBounds = self.lensBounds(params: params, isLifted: self.isLensLifted)
+        let lensCenter = CGPoint(x: params.baseFrame.midX, y: params.baseFrame.midY)
+
+        let previousBounds: CGRect = lensView.bounds
+        if previousBounds != lensBounds {
             transition.animateView {
                 lensView.bounds = lensBounds
             }
-            
+
             if let info = transition.userData(TransitionInfo.self), info.disableAnimationWorkarounds {
             } else {
+                // The bounds snap, while the glass, which the lens lays out inside the animation above, still grows
+                // or shrinks from its old size, anchored at the lens's left edge. The additive offset below moves the
+                // layer by the same amount, so the glass keeps its centre on the lens's path, which is what the
+                // keyframes describe. This also removes the keyframes, which the position update below adds again.
                 lensView.layer.removeAllAnimations()
                 lensView.bounds = lensBounds
             }
-            
-            if !transition.animation.isImmediate {
-                self.isAnimating = true
+            if previousBounds.width != lensBounds.width {
+                transition.animatePosition(layer: lensView.layer, from: CGPoint(x: (lensBounds.width - previousBounds.width) * 0.5, y: 0.0), to: CGPoint(), additive: true)
             }
-            transition.setPosition(view: lensView, position: lensCenter, completion: { [weak self] flag in
-                guard let self, flag else {
-                    return
-                }
-                if !self.isApplyingLensParams {
-                    self.isAnimating = false
-                }
-            })
-            // No idea why
-            transition.animatePosition(layer: lensView.layer, from: CGPoint(x: (lensBounds.width - previousBounds.width) * 0.5, y: 0.0), to: CGPoint(), additive: true)
-            
-            self.isApplyingLensParams = false
+        }
+        self.setLensPosition(lensCenter, transition: transition, replans: previousBounds != lensBounds)
+    }
+
+    private func beginLensAnimation() {
+        self.lensAnimationCount += 1
+        self.isAnimating = true
+    }
+
+    private func endLensAnimation() {
+        self.lensAnimationCount = max(0, self.lensAnimationCount - 1)
+        if self.lensAnimationCount == 0 {
+            self.isAnimating = false
         }
     }
 
-    private func updateLiftedLensPosition() {
-        // Without this, the lens won't update its bouncing animations unless it's being moved
-        if self.isApplyingLensParams {
+    /// A move counts as one lens animation, from its start until its segment ends or another replaces it.
+    private func updateIsLensMoving(segment: LiquidLensPositionSegment, now: Double) {
+        self.lensMoveID += 1
+        if self.isLensMoving {
+            self.isLensMoving = false
+            self.endLensAnimation()
+        }
+        if segment.endTime > now {
+            self.isLensMoving = true
+            self.beginLensAnimation()
+            let moveID = self.lensMoveID
+            DispatchQueue.main.asyncAfter(deadline: .now() + (segment.endTime - now) * self.lensTimeScale(), execute: { [weak self] in
+                guard let self, self.lensMoveID == moveID, self.isLensMoving else {
+                    return
+                }
+                self.isLensMoving = false
+                self.endLensAnimation()
+            })
+        }
+    }
+
+    /// The lens flexes from lift until its unlift completes, and then settles back.
+    private func setFlexActive(_ isActive: Bool) {
+        if self.isFlexActive == isActive {
             return
         }
+        self.isFlexActive = isActive
+        self.replanLens(now: self.lensTime(), resetsMotion: isActive)
+    }
+
+    /// Animation time scaled the way Display scales its animations' durations (slow animations in the simulator), in
+    /// which the plans are made; Core Animation plays them at `1 / lensTimeScale()`.
+    private func lensTimeScale() -> Double {
+        return max(0.01, UIView.animationDurationFactor())
+    }
+
+    private func lensTime() -> Double {
+        return CACurrentMediaTime() / self.lensTimeScale()
+    }
+
+    /// Moves the lens's glass to `center` from where it is now, along `transition`'s curve as `CALayer.animate` draws
+    /// it, so that it stays in step with content animated with the same transition, and plans the flex of that move.
+    /// An interrupted move continues from its current position (as a Core Animation `from: presentation` animation
+    /// does) and the flex from its current state.
+    private func setLensPosition(_ center: CGPoint, transition: ComponentTransition, replans: Bool, resetsMotion: Bool = false, resetsFlex: Bool = false) {
         guard let lensView = self.lensView else {
             return
         }
-        guard let params = self.appliedLensParams else {
+        let now = self.lensTime()
+        var movesLens = false
+        if self.lensSegment?.to != center {
+            let current = self.lensSegment?.position(at: now) ?? lensView.center
+            let segment: LiquidLensPositionSegment
+            if let curve = lensMoveCurve(transition.animation), current != center {
+                segment = LiquidLensPositionSegment(from: current, to: center, startTime: now, duration: curve.duration, progress: curve.progress, initialVelocity: self.lensVelocity(at: now))
+                self.immediateLensPositions.removeAll()
+            } else {
+                segment = .resting(at: center, time: now)
+                self.immediateLensPositions.append((now, center))
+                self.immediateLensPositions.removeAll(where: { now - $0.time > LiquidLensView.immediateVelocityWindow })
+            }
+            self.lensSegment = segment
+            UIView.performWithoutAnimation {
+                lensView.center = center
+            }
+            movesLens = true
+            self.updateIsLensMoving(segment: segment, now: now)
+        }
+        if movesLens || replans {
+            self.replanLens(now: now, resetsMotion: resetsMotion, resetsFlex: resetsFlex)
+        }
+    }
+
+    /// How fast the lens moves at `time`: along its current move, or, right after it followed the finger (immediate
+    /// updates), as fast as the finger moved it. A new move starts with this velocity.
+    private func lensVelocity(at time: Double) -> CGPoint {
+        var velocity = CGPoint()
+        if let segment = self.lensSegment, time < segment.endTime {
+            velocity = segment.velocity(at: time)
+        } else {
+            let recent = self.immediateLensPositions.filter { time - $0.time <= LiquidLensView.immediateVelocityWindow }
+            if let first = recent.first, let last = recent.last, time - last.time <= LiquidLensView.immediateVelocityWindow * 0.5 {
+                // Over at least a few frames, so that a lone jump (a relayout) or a burst of events is not a speed.
+                let interval = max(last.time - first.time, LiquidLensView.minImmediateVelocityInterval)
+                if recent.count > 1 {
+                    velocity = CGPoint(x: (last.position.x - first.position.x) / CGFloat(interval), y: (last.position.y - first.position.y) / CGFloat(interval))
+                }
+            }
+        }
+        let speed = sqrt(velocity.x * velocity.x + velocity.y * velocity.y)
+        if speed > LiquidLensView.maxCarriedSpeed {
+            velocity = CGPoint(x: velocity.x * LiquidLensView.maxCarriedSpeed / speed, y: velocity.y * LiquidLensView.maxCarriedSpeed / speed)
+        }
+        return velocity
+    }
+
+    private func replanLens(now: Double, resetsMotion: Bool = false, resetsFlex: Bool = false) {
+        guard let lensView = self.lensView else {
             return
         }
-        lensView.center = CGPoint(x: params.baseFrame.midX, y: params.baseFrame.midY)
+        let segment = self.lensSegment ?? .resting(at: lensView.center, time: now)
+        var start = self.lensPlan?.state(at: now) ?? LiquidLensMotionState(time: now)
+        start.time = now
+        if resetsMotion {
+            start.motion = LiquidLensMotion()
+        }
+        if resetsFlex {
+            start.animator.reset()
+        }
+        let plan = LiquidLensMotionPlan(start: start, segment: segment, isFlexActive: self.isFlexActive, size: lensView.bounds.size)
+        self.lensPlan = plan
+
+        let layer = lensView.layer
+        let timeScale = self.lensTimeScale()
+        let beginTime = layer.convertTime(plan.startTime * timeScale, from: nil)
+
+        let positionKeyframes = plan.positionKeyframes
+        if positionKeyframes.count > 1, let duration = positionKeyframes.last?.time, duration > 0.0 {
+            let animation = makeLensKeyframeAnimation(keyPath: "position", values: positionKeyframes.map { NSValue(cgPoint: $0.position) }, times: positionKeyframes.map { $0.time }, duration: duration, beginTime: beginTime, timeScale: timeScale)
+            layer.add(animation, forKey: "liquidLensPosition")
+        } else {
+            layer.removeAnimation(forKey: "liquidLensPosition")
+        }
+
+        if plan.hasFlex, plan.endTime > plan.startTime {
+            let animation = makeLensKeyframeAnimation(keyPath: "transform", values: plan.states.map { NSValue(caTransform3D: $0.animator.flex.transform) }, times: plan.states.map { $0.time - plan.startTime }, duration: plan.endTime - plan.startTime, beginTime: beginTime, timeScale: timeScale)
+            layer.add(animation, forKey: "liquidLensFlex")
+        } else {
+            layer.removeAnimation(forKey: "liquidLensFlex")
+        }
     }
 
     private func update(params: Params, transition: ComponentTransition) {
@@ -437,7 +730,7 @@ public final class LiquidLensView: UIView {
         
         if let backgroundView = self.backgroundView {
             transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: params.size))
-            backgroundView.update(size: params.size, cornerRadius: params.cornerRadius ?? (params.size.height * 0.5), isDark: params.isDark, tintColor: GlassBackgroundView.TintColor.init(kind: .panel), isInteractive: true, transition: transition)
+            backgroundView.update(size: params.size, cornerRadius: params.cornerRadius ?? (params.size.height * 0.5), isDark: params.isDark, tintColor: self.backgroundTintColor, isInteractive: true, transition: transition)
         }
         
         if self.contentView.bounds.size != params.size {
@@ -485,20 +778,16 @@ public final class LiquidLensView: UIView {
 
         transition.setFrame(view: self.restingBackgroundView, frame: CGRect(origin: CGPoint(), size: params.size))
         self.restingBackgroundView.update(isDark: params.isDark)
-        transition.setAlpha(view: self.restingBackgroundView, alpha: (params.isLifted || params.isCollapsed) ? 0.0 : 1.0)
+        self.updateRestingBackgroundAlpha(transition: transition)
+    }
 
-        if params.isLifted {
-            if self.liftedDisplayLink == nil {
-                self.liftedDisplayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.updateLiftedLensPosition()
-                })
-            }
-        } else if let liftedDisplayLink = self.liftedDisplayLink {
-            self.liftedDisplayLink = nil
-            liftedDisplayLink.invalidate()
+    /// The resting selection shows while the lens rests: hidden while it is lifted, which on iOS 26 and later lasts
+    /// until the lens actually unlifts, after its hang time.
+    private func updateRestingBackgroundAlpha(transition: ComponentTransition) {
+        guard let params = self.params else {
+            return
         }
+        let isLifted = self.lensView != nil ? self.isLensLifted : params.isLifted
+        transition.setAlpha(view: self.restingBackgroundView, alpha: (isLifted || params.isCollapsed) ? 0.0 : 1.0)
     }
 }

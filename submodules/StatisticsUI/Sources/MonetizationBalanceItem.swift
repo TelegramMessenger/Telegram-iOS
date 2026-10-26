@@ -195,7 +195,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             let (valueLayout, valueApply) = makeValueTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: Font.regular(17.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 13.0
-            let buttonHeight: CGFloat = 50.0
+            let buttonHeight: CGFloat = 52.0
             let buttonSpacing: CGFloat = 12.0
             
             var height: CGFloat = verticalInset * 2.0 + balanceLayout.size.height
@@ -376,6 +376,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                 transition: .immediate,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: item.presentationData.theme.list.itemCheckColors.fillColor,
                         foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -392,7 +393,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                containerSize: CGSize(width: withdrawWidth, height: 52.0)
             )
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
@@ -407,6 +408,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     transition: .immediate,
                     component: AnyComponent(ButtonComponent(
                         background: ButtonComponent.Background(
+                            style: .glass,
                             color: item.presentationData.theme.list.itemCheckColors.fillColor,
                             foreground: item.presentationData.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: item.presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -423,7 +425,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: withdrawWidth, height: 50.0)
+                    containerSize: CGSize(width: withdrawWidth, height: 52.0)
                 )
                 if let buttonView = self.buyButton.view {
                     if buttonView.superview == nil {

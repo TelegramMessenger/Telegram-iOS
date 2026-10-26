@@ -499,7 +499,7 @@ public final class EmojiStatusSelectionController: ViewController {
                             }
                         })
                     },
-                    clearGroup: { groupId in
+                    clearGroup: { groupId, _, _ in
                     },
                     editAction: { _ in },
                     pushController: { c in

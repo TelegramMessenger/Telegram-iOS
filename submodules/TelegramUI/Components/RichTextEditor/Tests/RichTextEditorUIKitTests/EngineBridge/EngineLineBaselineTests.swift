@@ -10,7 +10,7 @@ import XCTest
 /// The engine draws the bridge's attributed string directly — it has no counterpart to the legacy
 /// canvas's `BlockLayoutEngine.baselineDelta`, which CORRECTS TextKit's placement back to V2's. So the
 /// placement the paragraph style produces is the placement the glyphs get. See
-/// the RichTextEditor `CLAUDE.md`, "A block's FRAME is a line box; the rhythm below it is the renderer's".
+/// the RichTextEngineEditor `CLAUDE.md`, "A block's FRAME is a line box; the rhythm below it is the renderer's".
 ///
 /// **SCOPE LIMIT — these measure in TextKit 1 and the engine is TextKit 2.** `NSLayoutManager` here
 /// is the LEGACY canvas's engine (`BlockLayoutTK1`); the engine sizes blocks from

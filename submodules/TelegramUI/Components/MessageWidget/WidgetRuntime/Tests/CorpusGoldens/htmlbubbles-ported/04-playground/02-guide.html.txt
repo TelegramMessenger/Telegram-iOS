@@ -1,0 +1,228 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="pg" id="pg">
+  <p style="margin-bottom: 4px" id="title">Try one of these 👇</p>
+  <div id="chips">
+    <span class="ask" data-action="tab" data-value="table" style="--i: 0">Show a table</span>
+    <span class="ask" data-action="tab" data-value="card" style="--i: 1">Show a card</span>
+    <span class="ask" data-action="tab" data-value="chart" style="--i: 2">Draw a chart</span>
+    <span class="ask x" data-action="close" id="close" hidden="">✕</span>
+  </div>
+  <div class="stage" id="stage" hidden="">
+    <div id="s-table" hidden="">
+      <div class="tbl"><div class="thd"><span class="grow srt" data-action="sort" data-value="name">Feature<span id="arrow-name"> ↕</span></span><span class="sup srt" data-action="sort" data-value="ok">Supported<span id="arrow-ok"> ↕</span></span></div>
+        <div class="rws" id="rows"><div class="tr" data-action="row" data-value="0" style="top: 0px; animation-delay: 0ms;"><span class="grow">Block &amp; inline layout</span><span class="sup">✅</span></div><div class="tr alt" data-action="row" data-value="1" style="top: 26px; animation-delay: 39ms;"><span class="grow">Tables, floats, positioning</span><span class="sup">✅</span></div><div class="tr" data-action="row" data-value="2" style="top: 52px; animation-delay: 79ms;"><span class="grow">Flexbox</span><span class="sup">✅</span></div><div class="tr alt" data-action="row" data-value="3" style="top: 78px; animation-delay: 118ms;"><span class="grow">Gradients (linear/radial/conic)</span><span class="sup">✅</span></div><div class="tr" data-action="row" data-value="4" style="top: 104px; animation-delay: 157ms;"><span class="grow">JavaScript</span><span class="sup">✅ sandboxed</span></div><div class="tr alt" data-action="row" data-value="5" style="top: 130px; animation-delay: 197ms;"><span class="grow">CSS grid</span><span class="sup">❌</span></div><div class="tr" data-action="row" data-value="6" style="top: 156px; animation-delay: 236ms;"><span class="grow">CSS transitions</span><span class="sup">❌</span></div></div></div>
+      <div class="tip" id="ftip"><span class="muted">Click a header to sort, a row for details</span></div>
+    </div>
+    <div id="s-card" hidden="">
+      <div style="height: 240px"><div class="flipper" id="flipper">
+        <div class="card fc" id="front">
+          <div style="position: relative; height: 120px"><span class="pic dunes"></span>
+            <span class="fav" data-action="fav"><span class="heart" id="heart">🤍</span></span></div>
+          <div style="padding: 9px 14px 0 14px">
+            <div class="caps t-orange" id="travel">Travel · 3 nights</div>
+            <div style="font-size: 17px; font-weight: 700">Desert Retreat, Merzouga</div>
+            <div class="small muted" style="margin: 2px 0 9px 0">★★★★☆ 4.6 · 1,204 reviews · <span class="lnk" data-action="flip">Details ↻</span></div>
+            <div class="row between" id="buy">
+              <span><b style="font-size: 18px" id="price">$420</b> <s class="small muted" id="was">$510</s></span>
+              <span><span class="stp" data-action="nights" data-value="-1">−</span><span class="small" style="display: inline-block; width: 28px; text-align: center" id="nn">3 n</span><span class="stp" data-action="nights" data-value="1">+</span></span>
+              <span class="book" data-action="book">Book</span>
+            </div>
+            <div class="row between" id="booked" hidden="">
+              <span class="t-green"><b>✓ Booked</b> · <span id="bookedText">3 nights · $420</span></span><span class="undo" data-action="unbook">Undo</span>
+            </div>
+          </div></div>
+        <div class="card fc" id="back" hidden=""><div style="padding: 12px 14px">
+          <div class="row between"><b>What's included</b><span class="lnk small" data-action="flip">↻ Photo</span></div>
+          <div class="small" style="margin-top: 4px; line-height: 1.6">🐪 Camel trek at sunset<br>⛺ Luxury tent with en-suite<br>🍲 Dinner &amp; breakfast<br>🌌 Stargazing with a guide</div>
+          <div class="caps" style="margin: 8px 0 2px 0">Reviews · 4.6 ★</div>
+          <div id="reviews"><div class="row tiny"><span style="width: 22px">5★</span><div class="rb"><div style="width: 72%"></div></div><span class="muted" style="width: 34px; text-align: right">72%</span></div><div class="row tiny"><span style="width: 22px">4★</span><div class="rb"><div style="width: 18%"></div></div><span class="muted" style="width: 34px; text-align: right">18%</span></div><div class="row tiny"><span style="width: 22px">3★</span><div class="rb"><div style="width: 6%"></div></div><span class="muted" style="width: 34px; text-align: right">6%</span></div><div class="row tiny"><span style="width: 22px">2★</span><div class="rb"><div style="width: 3%"></div></div><span class="muted" style="width: 34px; text-align: right">3%</span></div><div class="row tiny"><span style="width: 22px">1★</span><div class="rb"><div style="width: 1%"></div></div><span class="muted" style="width: 34px; text-align: right">1%</span></div></div>
+        </div></div>
+      </div></div>
+    </div>
+    <div id="s-chart" hidden="">
+      <div class="row between"><b>Weekly messages</b><span id="weeks"><span class="seg on" data-action="week" data-value="now">This week</span> <span class="seg" data-action="week" data-value="last">Last week</span></span></div>
+      <div class="bars" id="bars"><div class="col" data-action="bar" data-value="0"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b " style="height: 2px"></div></div><div class="col" data-action="bar" data-value="1"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b " style="height: 2px"></div></div><div class="col" data-action="bar" data-value="2"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b " style="height: 2px"></div></div><div class="col" data-action="bar" data-value="3"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b pk" style="height: 2px"></div></div><div class="col" data-action="bar" data-value="4"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b " style="height: 2px"></div></div><div class="col" data-action="bar" data-value="5"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b " style="height: 2px"></div></div><div class="col" data-action="bar" data-value="6"><div class="tiny" style="height: 16px; font-weight: 700">&nbsp;</div><div class="b " style="height: 2px"></div></div></div><div class="days" id="days"><span class="col tiny muted">M</span><span class="col tiny muted">T</span><span class="col tiny muted">W</span><span class="col tiny t-purple"><b>T</b></span><span class="col tiny muted">F</span><span class="col tiny muted">S</span><span class="col tiny muted">S</span></div>
+      <div class="small" style="margin-top: 6px" id="info"><span class="muted">Click a bar · busiest day is Thursday</span></div>
+      <div class="tiny muted">Total <b id="total">0</b> · pure HTML/CSS bars</div>
+    </div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 82.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 82.6
+    div 0 0 320 82.6
+      p 0 0 320 18.2
+      div 0 22.2 320 60.4
+        span 13 28.2 96 18.2
+        span 147 28.2 88 18.2
+        span 13 58.4 96 18.2
+        span 0 0 0 0
+      div 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+              span 0 0 0 0
+                span 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+              div 0 0 0 0
+                span 0 0 0 0
+                span 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+                div 0 0 0 0
+                  span 0 0 0 0
+                  span 0 0 0 0
+                    span 0 0 0 0
+                div 0 0 0 0
+                  div 0 0 0 0
+                  div 0 0 0 0
+                  div 0 0 0 0
+                    span 0 0 0 0
+                  div 0 0 0 0
+                    span 0 0 0 0
+                      b 0 0 0 0
+                      s 0 0 0 0
+                    span 0 0 0 0
+                      span 0 0 0 0
+                      span 0 0 0 0
+                      span 0 0 0 0
+                    span 0 0 0 0
+                  div 0 0 0 0
+                    span 0 0 0 0
+                      b 0 0 0 0
+                      span 0 0 0 0
+                    span 0 0 0 0
+              div 0 0 0 0
+                div 0 0 0 0
+                  div 0 0 0 0
+                    b 0 0 0 0
+                    span 0 0 0 0
+                  div 0 0 0 0
+                    br 0 0 0 0
+                    br 0 0 0 0
+                    br 0 0 0 0
+                  div 0 0 0 0
+                  div 0 0 0 0
+                    div 0 0 0 0
+                      span 0 0 0 0
+                      div 0 0 0 0
+                        div 0 0 0 0
+                      span 0 0 0 0
+                    div 0 0 0 0
+                      span 0 0 0 0
+                      div 0 0 0 0
+                        div 0 0 0 0
+                      span 0 0 0 0
+                    div 0 0 0 0
+                      span 0 0 0 0
+                      div 0 0 0 0
+                        div 0 0 0 0
+                      span 0 0 0 0
+                    div 0 0 0 0
+                      span 0 0 0 0
+                      div 0 0 0 0
+                        div 0 0 0 0
+                      span 0 0 0 0
+                    div 0 0 0 0
+                      span 0 0 0 0
+                      div 0 0 0 0
+                        div 0 0 0 0
+                      span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+            span 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+              b 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            span 0 0 0 0
+          div 0 0 0 0
+            b 0 0 0 0
+
+== paint
+root 360x82.6 items=17
+  text bounds=(-8,-7,40,32) pos=(0,1,24,16) color=#000000ff text="Try" font=f1 glyphs=3 advance=24
+  text bounds=(24,-7,40,32) pos=(32,1,24,16) color=#000000ff text="one" font=f1 glyphs=3 advance=24
+  text bounds=(56,-7,32,32) pos=(64,1,16,16) color=#000000ff text="of" font=f1 glyphs=2 advance=16
+  text bounds=(80,-7,56,32) pos=(88,1,40,16) color=#000000ff text="these" font=f1 glyphs=5 advance=40
+  text bounds=(128,-7,48,32) pos=(136,1,32,16) color=#000000ff text="👇" font=f1 glyphs=4 advance=32
+  borders bounds=(0,24,122,26) borders=(left=(1,4,#2cb67dff),top=(1,4,#2cb67dff),right=(1,4,#2cb67dff),bottom=(1,4,#2cb67dff),radius=(13,13,13,13,13,13,13,13)) pos=(0,24,122,26) root=0
+  text bounds=(5,21,48,32) pos=(13,29,32,16) color=#2cb67dff text="Show" font=f1 glyphs=4 advance=32
+  text bounds=(45,21,24,32) pos=(53,29,8,16) color=#2cb67dff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(61,21,56,32) pos=(69,29,40,16) color=#2cb67dff text="table" font=f1 glyphs=5 advance=40
+  borders bounds=(134,24,114,26) borders=(left=(1,4,#2cb67dff),top=(1,4,#2cb67dff),right=(1,4,#2cb67dff),bottom=(1,4,#2cb67dff),radius=(13,13,13,13,13,13,13,13)) pos=(134,24,114,26) root=0
+  text bounds=(139,21,48,32) pos=(147,29,32,16) color=#2cb67dff text="Show" font=f1 glyphs=4 advance=32
+  text bounds=(179,21,24,32) pos=(187,29,8,16) color=#2cb67dff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(195,21,48,32) pos=(203,29,32,16) color=#2cb67dff text="card" font=f1 glyphs=4 advance=32
+  borders bounds=(0,54,122,27) borders=(left=(1,4,#2cb67dff),top=(1,4,#2cb67dff),right=(1,4,#2cb67dff),bottom=(1,4,#2cb67dff),radius=(13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5)) pos=(0,54,122,27) root=0
+  text bounds=(5,51,48,32) pos=(13,59,32,16) color=#2cb67dff text="Draw" font=f1 glyphs=4 advance=32
+  text bounds=(45,51,24,32) pos=(53,59,8,16) color=#2cb67dff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(61,51,56,32) pos=(69,59,40,16) color=#2cb67dff text="chart" font=f1 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

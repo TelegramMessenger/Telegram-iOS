@@ -18,6 +18,7 @@ import ChatMessageItemCommon
 import MessageInlineBlockBackgroundView
 import CheckNode
 import EmojiTextAttachmentView
+import ShimmerEffect
 
 public enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
@@ -85,6 +86,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let innerSubject: EngineMessageReplyInnerSubject?
         public let story: EngineStoryId?
         public let isSummarized: Bool
+        /// The reply target (or the replied story) is missing and being fetched: the header draws as a skeleton.
+        public let isLoading: Bool
         public let parentMessage: EngineRawMessage
         public let constrainedSize: CGSize
         public let animationCache: AnimationCache?
@@ -102,6 +105,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             innerSubject: EngineMessageReplyInnerSubject?,
             story: EngineStoryId?,
             isSummarized: Bool,
+            isLoading: Bool,
             parentMessage: EngineRawMessage,
             constrainedSize: CGSize,
             animationCache: AnimationCache?,
@@ -118,6 +122,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             self.innerSubject = innerSubject
             self.story = story
             self.isSummarized = isSummarized
+            self.isLoading = isLoading
             self.parentMessage = parentMessage
             self.constrainedSize = constrainedSize
             self.animationCache = animationCache
@@ -146,6 +151,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     private var expiredStoryIconView: UIImageView?
     private var checkLayer: CheckLayer?
     private var giftEmojiLayer: InlineStickerItemLayer?
+    private var skeletonNodes: [ShimmerEffectNode] = []
+    private var isSkeleton: Bool = false
     
     private var currentProgressDisposable: Disposable?
     
@@ -195,6 +202,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let fontSize = floor(arguments.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let titleFont = Font.semibold(fontSize)
             let textFont = Font.regular(fontSize)
+            
+            // A target or story being fetched draws in the header's own geometry: shimmering bars where the
+            // author and the text go (a quote shows its text, which the reply already holds), a shimmering
+            // square where a story's thumbnail goes. It has the real header's height, so the bubble keeps it.
+            let isMessageSkeleton = arguments.isLoading && arguments.message == nil && arguments.replyForward == nil && arguments.story == nil
+            let isStorySkeleton = arguments.isLoading && arguments.story.flatMap({ arguments.parentMessage.associatedStories[$0] }) == nil && arguments.story != nil
             
             var titleString: NSAttributedString
             var textString: NSAttributedString
@@ -458,6 +471,24 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 textLeftInset += 16.0
                 
                 todoItemCompleted = todo.completions.contains(where: { $0.id == todoItemId })
+            } else if isMessageSkeleton, let quote = arguments.quote?.quote, !quote.text.isEmpty {
+                // The same entities the landed quote applies: a spoiler stays hidden under dust meanwhile.
+                let entities = quote.entities.filter { entity in
+                    if case .Strikethrough = entity.type {
+                        return true
+                    } else if case .Spoiler = entity.type {
+                        return true
+                    } else if case .CustomEmoji = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                if entities.count > 0 {
+                    messageText = stringWithAppliedEntities(quote.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
+                } else {
+                    messageText = NSAttributedString(string: quote.text, font: textFont, textColor: textColor)
+                }
             } else if let message = arguments.message, isText || arguments.quote.flatMap({ $0.quote.richText != nil && !$0.quote.text.isEmpty }) == true {
                 // A rich target reports `isText == false` (`descriptionStringForMessage` previews its
                 // page), but a rich quote has a flat form to show like any other quote.
@@ -628,6 +659,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
+            if isStorySkeleton && imageDimensions == nil {
+                // A story's thumbnail is square-cropped; any dimensions reserve the same square.
+                imageDimensions = CGSize(width: 9.0, height: 16.0)
+            }
+            
             var imageTextInset: CGFloat = 0.0
             if let _ = imageDimensions {
                 imageTextInset += floor(arguments.presentationData.fontSize.baseDisplaySize * 32.0 / 17.0)
@@ -742,6 +778,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             size.height += 2.0
             if isExpiredStory || isStory || isPoll {
                 size.width += 16.0
+            }
+            if isMessageSkeleton {
+                size.width = max(size.width, min(arguments.constrainedSize.width, floor(arguments.presentationData.fontSize.baseDisplaySize * 150.0 / 17.0)))
             }
             
             return (size, { realSize, attemptSynchronous, animation in
@@ -1012,6 +1051,61 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 } else if let starsView = node.starsView {
                     node.starsView = nil
                     starsView.removeFromSuperview()
+                }
+                
+                var skeletonFrames: [CGRect] = []
+                if isMessageSkeleton || isStorySkeleton {
+                    let barHeight = floor(fontSize * 0.6)
+                    let titleLineHeight = titleLayout.linesRects().first?.height ?? fontSize
+                    let barsX = leftInset - 2.0
+                    let barsWidth = max(20.0, size.width - barsX - 10.0)
+                    if isMessageSkeleton {
+                        skeletonFrames.append(CGRect(x: barsX, y: floor(titleNode.frame.minY + textInsets.top + (titleLineHeight - barHeight) / 2.0), width: floor(barsWidth * 0.45), height: barHeight))
+                        if arguments.quote == nil {
+                            let textLineHeight = textLayout.linesRects().first?.height ?? titleLineHeight
+                            skeletonFrames.append(CGRect(x: barsX, y: floor(effectiveTextFrame.minY + textInsets.top + (textLineHeight - barHeight) / 2.0), width: floor(barsWidth * 0.75), height: barHeight))
+                        }
+                    }
+                    if isStorySkeleton, let imageNode = node.imageNode {
+                        skeletonFrames.append(imageNode.frame)
+                    }
+                }
+                let wasSkeleton = node.isSkeleton
+                node.isSkeleton = !skeletonFrames.isEmpty
+                while node.skeletonNodes.count > skeletonFrames.count {
+                    let skeletonNode = node.skeletonNodes.removeLast()
+                    if animation.isAnimated {
+                        skeletonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak skeletonNode] _ in
+                            skeletonNode?.removeFromSupernode()
+                        })
+                    } else {
+                        skeletonNode.removeFromSupernode()
+                    }
+                }
+                let barColor = mainColor.withMultipliedAlpha(0.2)
+                // Reduce Motion: the sweep is the bar's own colour, so nothing moves.
+                let sweepColor = UIAccessibility.isReduceMotionEnabled ? barColor : mainColor.withMultipliedAlpha(0.4)
+                for (index, frame) in skeletonFrames.enumerated() {
+                    let skeletonNode: ShimmerEffectNode
+                    if index < node.skeletonNodes.count {
+                        skeletonNode = node.skeletonNodes[index]
+                    } else {
+                        skeletonNode = ShimmerEffectNode()
+                        skeletonNode.isUserInteractionEnabled = false
+                        node.skeletonNodes.append(skeletonNode)
+                        node.addSubnode(skeletonNode)
+                    }
+                    let isImage = isStorySkeleton && index == skeletonFrames.count - 1 && node.imageNode != nil
+                    let shape: ShimmerEffectNode.Shape = .roundedRect(rect: CGRect(origin: CGPoint(), size: frame.size), cornerRadius: isImage ? 4.0 : frame.height / 2.0)
+                    skeletonNode.frame = frame
+                    skeletonNode.update(backgroundColor: .clear, foregroundColor: barColor, shimmeringColor: sweepColor, shapes: [shape], horizontal: true, size: frame.size, mask: true)
+                    skeletonNode.updateAbsoluteRect(frame, within: size)
+                }
+                if wasSkeleton && !node.isSkeleton && animation.isAnimated {
+                    // The real header lands in place: its text fades in as the bars fade out.
+                    titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    node.imageNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)

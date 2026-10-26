@@ -1,0 +1,51 @@
+<!doctype html>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8)}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+h3{margin:0;font-size:16px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+svg{display:block;width:100%;height:auto;color:var(--mut)}
+#cap{font-size:14px;margin-top:6px;min-height:19px}
+#cap b{font-variant-numeric:tabular-nums}
+</style>
+<h3>Spending, 2026</h3>
+<div class="sub">Tap a month</div>
+<svg id="chart" viewBox="0 0 320 180"></svg>
+<div id="cap"></div>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const data = [['Apr', 820], ['May', 640], ['Jun', 910], ['Jul', 1240], ['Aug', 1080], ['Sep', 760]];
+const svg = document.getElementById('chart');
+const cap = document.getElementById('cap');
+const W = 320, H = 180, left = 34, bottom = 22, top = 8;
+const max = 1250, plotH = H - bottom - top;
+const slot = (W - left) / data.length, bw = slot * 0.56;
+function el(name, attrs, text) {
+  const e = document.createElementNS(NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  svg.appendChild(e);
+  return e;
+}
+for (let v = 0; v <= 1200; v += 400) {
+  const y = top + plotH - v / max * plotH;
+  el('line', { x1: left, x2: W, y1: y, y2: y, stroke: 'currentColor', 'stroke-opacity': 0.25, 'stroke-width': 1 });
+  el('text', { x: left - 6, y: y + 4, 'text-anchor': 'end', 'font-size': 10, fill: 'currentColor' }, v ? '€' + v : '0');
+}
+const bars = data.map(([month, value], i) => {
+  const h = value / max * plotH;
+  const x = left + i * slot + (slot - bw) / 2;
+  const bar = el('rect', { x, y: top + plotH - h, width: bw, height: h, rx: 4, fill: '#3390ec' });
+  el('text', { x: x + bw / 2, y: H - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'currentColor' }, month);
+  bar.addEventListener('click', () => select(i));
+  return bar;
+});
+function select(i) {
+  bars.forEach((b, j) => b.setAttribute('fill', j === i ? '#ff8a3d' : '#3390ec'));
+  const [month, value] = data[i];
+  const avg = data.reduce((s, d) => s + d[1], 0) / data.length;
+  const diff = Math.round((value - avg) / avg * 100);
+  cap.innerHTML = month + ': <b>€' + value + '</b> · ' + (diff >= 0 ? diff + '% above' : -diff + '% below') + ' average';
+}
+select(3);
+</script>

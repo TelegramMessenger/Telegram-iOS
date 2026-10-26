@@ -27,6 +27,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/ContextUI",
+        "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/UndoUI",
         "//submodules/AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode",

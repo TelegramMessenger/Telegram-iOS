@@ -57,7 +57,7 @@ cp "$BAZEL" "tools/bazel"
 
 BUILD_CONFIGURATION="$1"
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
 	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ] || [ "$BUILD_CONFIGURATION" == "appstore-development" ]; then
 	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
@@ -88,7 +88,7 @@ fi
 
 BASE_DIR=$(pwd)
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ] || [ "$BUILD_CONFIGURATION" == "appstore-development" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ] || [ "$BUILD_CONFIGURATION" == "appstore-development" ]; then
 	if [ ! `which generate-configuration.sh` ]; then
 		echo "generate-configuration.sh not found in PATH $PATH"
 		exit 1
@@ -98,7 +98,7 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 	mkdir -p "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 
 	case "$BUILD_CONFIGURATION" in
-		"hockeyapp"|"appcenter-experimental"|"appcenter-experimental-2")
+		"hockeyapp")
 			generate-configuration.sh internal release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 			;;
 

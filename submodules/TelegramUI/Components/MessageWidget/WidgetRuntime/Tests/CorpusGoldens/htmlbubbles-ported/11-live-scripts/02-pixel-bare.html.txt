@@ -1,0 +1,101 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad ctr" id="root">
+  <div class="row between"><b>Counter</b>
+    <div class="seg" id="seg"><div class="pill" id="pill"></div>
+      <div class="opt fg" style="left: 0px" data-step="1">×1</div>
+      <div class="opt muted" style="left: 50px" data-step="5">×5</div>
+      <div class="opt muted" style="left: 100px" data-step="10">×10</div></div></div>
+  <div class="num fg intro" id="num">0</div>
+  <div class="btns">
+    <button id="minus">−1</button>
+    <button id="reset">↺</button>
+    <button class="primary" id="plus">+1</button>
+  </div>
+  <div class="panel spark">
+    <svg id="svg" width="276" height="44" viewBox="0 0 276 44" xmlns="http://www.w3.org/2000/svg">
+      <line id="zero" x1="0" y1="22.0" x2="276" y2="22.0" stroke="#8e8e93" stroke-opacity="0.55" stroke-dasharray="3 3"></line>
+      <path id="area" d="" fill="#af52de" fill-opacity="0.14"></path>
+      <path id="line" d="" fill="none" stroke="#af52de" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+      <circle id="dot" cx="272.0" cy="22.0" r="3.5" fill="#af52de"></circle>
+    </svg>
+    <div class="stats muted"><span id="stats">min 0 · max 0 · 0 changes</span>
+      <span id="undoSlot"><span>history</span></span></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 234.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 234.5
+    div 15 13 320 208.5
+      div 15 13 320 26
+        b 15 16.9 56 18.2
+        div 185 13 150 26
+          div 187 15 46 22
+          div 185 13 50 26
+          div 235 13 50 26
+          div 285 13 50 26
+      div 15 39 320 68
+      div 15 107 320 29.2
+        button 73 112 40 19.2
+        button 155 112 40 19.2
+        button 237 112 40 19.2
+      div 23 154.2 304 61.3
+        svg 23 154.2 276 44
+          line 0 0 0 0
+          path 0 0 0 0
+          path 0 0 0 0
+          circle 0 0 0 0
+        div 23 201.2 304 14.3
+          span 23 201.2 216 14.3
+          span 271 201.2 56 14.3
+            span 271 201.2 0 0
+
+== paint
+root 360x234.5 items=29
+  solid-fill bounds=(0,0,350,235) layer=(border=(0,0,350,235),radius=(14,14,14,14,14,14,14,14),clip=(0,0,350,235),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,350,235) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,350,235) root=0
+  solid-fill bounds=(15,148,320,74) layer=(border=(15,148,320,74),radius=(10,10,10,10,10,10,10,10),clip=(15,148,320,74),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  set-clip bounds=(23,154.2,276,44) pos=(23,154.2,276,44) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(23,154.2,276,44)
+    group opacity=1 matrix=(1,0,0,1,23,154.2) backface=0 bounds=(0,0,276,44) exact=0
+      path bounds=(-3,19,282,6) ops=(0,1) points=(0,22,276,22) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e938c stroke-width=1 cap=0 join=0 miter=4 dashes=(3,3) dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(267.5,17.5,9,9) ops=(0,3,3,3,3,4) points=(275.5,22,275.5,23.933,273.933,25.5,272,25.5,270.067,25.5,268.5,23.933,268.5,22,268.5,20.067,270.067,18.5,272,18.5,273.933,18.5,275.5,20.067,275.5,22) fill=1 fill-color=#af52deff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(7,10,72,32) pos=(15,18,56,16) color=#000000ff text="Counter" font=f1 glyphs=7 advance=56
+  text bounds=(163,57,24,32) pos=(171,65,8,16) color=#000000ff text="0" font=f2 glyphs=1 advance=8
+  solid-fill bounds=(60,107,66,29) layer=(border=(60,107,66,29),radius=(8,8,8,8,8,8,8,8),clip=(60,107,66,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(69,105,48,32) pos=(77,113,32,16) color=#000000ff text="−1" font=f3 glyphs=4 advance=32
+  solid-fill bounds=(142,107,66,29) layer=(border=(142,107,66,29),radius=(8,8,8,8,8,8,8,8),clip=(142,107,66,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(155,105,40,32) pos=(163,113,24,16) color=#000000ff text="↺" font=f3 glyphs=3 advance=24
+  solid-fill bounds=(224,107,66,29) layer=(border=(224,107,66,29),radius=(8,8,8,8,8,8,8,8),clip=(224,107,66,29),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(241,105,32,32) pos=(249,113,16,16) color=#ffffffff text="+1" font=f3 glyphs=2 advance=16
+  text bounds=(15,193,40,32) pos=(23,201,24,16) color=#6e6e73ff text="min" font=f4 glyphs=3 advance=24
+  text bounds=(47,193,24,32) pos=(55,201,8,16) color=#6e6e73ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(63,193,32,32) pos=(71,201,16,16) color=#6e6e73ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(87,193,40,32) pos=(95,201,24,16) color=#6e6e73ff text="max" font=f4 glyphs=3 advance=24
+  text bounds=(119,193,24,32) pos=(127,201,8,16) color=#6e6e73ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(135,193,32,32) pos=(143,201,16,16) color=#6e6e73ff text="·" font=f4 glyphs=2 advance=16
+  text bounds=(159,193,24,32) pos=(167,201,8,16) color=#6e6e73ff text="0" font=f4 glyphs=1 advance=8
+  text bounds=(175,193,72,32) pos=(183,201,56,16) color=#6e6e73ff text="changes" font=f4 glyphs=7 advance=56
+  text bounds=(263,193,72,32) pos=(271,201,56,16) color=#6e6e73ff text="history" font=f4 glyphs=7 advance=56
+  solid-fill bounds=(185,13,150,26) layer=(border=(185,13,150,26),radius=(8,8,8,8,8,8,8,8),clip=(185,13,150,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(187,15,46,22) layer=(border=(187,15,46,22),radius=(6,6,6,6,6,6,6,6),clip=(187,15,46,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  text bounds=(190,10,40,32) pos=(198,18,24,16) color=#000000ff text="×1" font=f5 glyphs=3 advance=24
+  text bounds=(240,10,40,32) pos=(248,18,24,16) color=#6e6e73ff text="×5" font=f5 glyphs=3 advance=24
+  text bounds=(286,10,48,32) pos=(294,18,32,16) color=#6e6e73ff text="×10" font=f5 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=46,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

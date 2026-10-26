@@ -134,9 +134,35 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         self.state = .cancelled
     }
     
+    /// Failed (from outside: a message widget took the touches, or the chat's lock holds this finger), it shows and
+    /// fires nothing more: its highlight ends and its timer stops at once, not when UIKit resets it after every touch
+    /// has ended. Keyed on the value set, so a long tap it cancelled itself is untouched.
+    override public var state: UIGestureRecognizer.State {
+        willSet {
+            if newValue == .failed {
+                self.timer?.invalidate()
+                self.timer = nil
+                if self.highlightPoint != nil {
+                    self.highlightPoint = nil
+                    self.highlight?(nil)
+                }
+            }
+        }
+    }
+    
+    /// Whether a long tap whose timer fires while the recognizer is in `state` is reported: not once it has failed
+    /// (failing it also stops the timer). A long tap it cancelled itself (a finger drifting past 2 pt) is reported as it
+    /// always was.
+    public static func reportsLongTap(in state: UIGestureRecognizer.State) -> Bool {
+        return state != .failed
+    }
+
     fileprivate func longTapEvent() {
         self.timer?.invalidate()
         self.timer = nil
+        if !TapLongTapOrDoubleTapGestureRecognizer.reportsLongTap(in: self.state) {
+            return
+        }
         if let (location, _) = self.touchLocationAndTimestamp {
             self.lastRecognizedGestureAndLocation = (.longTap, location)
             if let longTap = self.longTap {

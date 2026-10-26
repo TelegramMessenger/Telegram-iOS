@@ -2544,16 +2544,11 @@ private final class ChatSendStarsScreenComponent: Component {
             }
             
             let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 54.0, sideInset: 32.0)
-            // iPhone Duo: beside a side strip the button and the footnote below it keep to the sheet, which is centered
-            // clear of the strip in landscape; across the full width they ran under the strip and the corner block at
-            // its end. Where the sheet spans the strip (folded portrait) or the side insets are equal they keep the
-            // full width.
-            let bottomPanelBand: (minX: CGFloat, width: CGFloat)
-            if environment.safeInsets.left != environment.safeInsets.right && fillingSize <= availableSize.width - environment.safeInsets.left - environment.safeInsets.right {
-                bottomPanelBand = (floor((availableSize.width - fillingSize) * 0.5), fillingSize)
-            } else {
-                bottomPanelBand = (0.0, availableSize.width)
-            }
+            // The button and the footnote below it keep to the sheet. Across the full width they spread over the whole
+            // screen wherever the sheet is narrower than it (iPad, landscape) and, on iPhone Duo, ran under the side
+            // strip and the corner block at its end. Where the sheet fills the screen (portrait, Duo folded portrait)
+            // this is the full width.
+            let bottomPanelBand: (minX: CGFloat, width: CGFloat) = (floor((availableSize.width - fillingSize) * 0.5), fillingSize)
             
             let actionButtonSize = actionButton.update(
                 transition: transition,

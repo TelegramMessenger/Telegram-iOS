@@ -4,7 +4,7 @@
 //   python3 Tests/ComposerHarness/Tools/generate_harness_stubs.py \
 //     --source submodules/AccountContext/Sources/AccountContext.swift \
 //     --protocol SharedAccountContext --conformer HarnessSharedAccountContext \
-//     --exclude currentPresentationData,immediateExperimentalUISettings,currentChatSettings,energyUsageSettings,mainWindow,accountManager \
+//     --exclude currentPresentationData,immediateExperimentalUISettings,currentChatSettings,energyUsageSettings,mainWindow,accountManager,applicationBindings \
 //     > Tests/ComposerHarness/AppContext/HarnessSharedAccountContext+Generated.swift
 //
 // Every member here TRAPS and names itself. A stub returning a plausible constant is
@@ -66,9 +66,6 @@ extension HarnessSharedAccountContext {
     }
     public var currentMediaDisplaySettings : Atomic<MediaDisplaySettings> {
         fatalError("harness: SharedAccountContext.currentMediaDisplaySettings is not provided")
-    }
-    public var applicationBindings : TelegramApplicationBindings {
-        fatalError("harness: SharedAccountContext.applicationBindings is not provided")
     }
     public var authorizationPushConfiguration : Signal<AuthorizationCodePushNotificationConfiguration?, NoError> {
         fatalError("harness: SharedAccountContext.authorizationPushConfiguration is not provided")

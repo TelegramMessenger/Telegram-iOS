@@ -453,6 +453,7 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
 }
 
 public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, scrollToEndIfExists: Bool, keepStack: NavigateToChatKeepStack, animated: Bool) -> Signal<Never, NoError> {
+    Logger.shared.log("ReplyThreadOpen", "forum open start peer=\(peerId.id._internalGetInt64Value()) thread=\(threadId) message=\(String(describing: messageId))")
     return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: messageId, preload: false)
     |> deliverOnMainQueue
     |> beforeNext { [weak context, weak navigationController] result in
@@ -465,6 +466,7 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
             actualActivateInput = activateInput
         }
         
+        Logger.shared.log("ReplyThreadOpen", "forum push thread=\(threadId)")
         context.sharedContext.navigateToChatController(
             NavigateToChatControllerParams(
                 navigationController: navigationController,

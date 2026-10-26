@@ -1,0 +1,9 @@
+# WPT URL cases the parser fails (V5b plan, Task 5; Tests/URLDataTests.cpp). One case id per line, a reason after " ## ".
+# The list only shrinks: a case that passes must be removed.
+urltestdata: "blob:http://example.org:88/" origin ## a blob: URL's origin is its path URL's (http/https); URL::origin answers "null"
+urltestdata: "blob:https://example.com:443/" origin ## the same
+urltestdata: "non-special:opaque  #hi" href ## an opaque path's trailing spaces before a query or fragment are kept as "%20" since the 2024 standard
+urltestdata: "non-special:opaque  ?hi" href ## the same
+urltestdata: "non-special:opaque \t\t  #hi" href ## the same, with tabs removed first
+urltestdata: "non-special:opaque \t\t  \t#hi" href ## the same
+urltestdata: "non-special:opaque\t\t  \r #hi" href ## the same

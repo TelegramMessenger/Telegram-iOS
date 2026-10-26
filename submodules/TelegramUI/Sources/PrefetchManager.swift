@@ -9,6 +9,7 @@ import Emoji
 import UniversalMediaPlayer
 import ChatMessageInteractiveMediaNode
 import ChatMessageAnimatedStickerItemNode
+import TelegramUniversalVideoContent
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()
@@ -147,7 +148,11 @@ private final class PrefetchManagerInnerImpl {
                         }
                     } else if let telegramFile = mediaItem.media.media as? TelegramMediaFile {
                         mediaResource = EngineMediaResource(telegramFile.resource)
-                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: .file(telegramFile)) {
+                        // An adaptive (HLS) video plays from its quality files, never from the original: prefetching the original
+                        // (its first seconds, or all of it) only costs data. The bubble preloads the HLS preload quality when it is
+                        // shown.
+                        if NativeVideoContent.isHLSVideo(file: telegramFile) {
+                        } else if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: .file(telegramFile)) {
                             automaticDownload = .full
                         } else if shouldPredownloadMedia(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, media: .file(telegramFile)) {
                             automaticDownload = .prefetch

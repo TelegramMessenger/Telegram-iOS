@@ -124,126 +124,97 @@ func managedSavedMusicIdsUpdates(postbox: Postbox, network: Network, accountPeer
     return (poll |> then(.complete() |> suspendAwareDelay(0.5 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
+private func updatedSavedMusicFiles(_ files: [TelegramMediaFile], file: TelegramMediaFile, afterFileId: MediaId?) -> [TelegramMediaFile] {
+    var result = files
+    if let index = result.firstIndex(where: { $0.fileId == file.fileId }), afterFileId == file.fileId {
+        result[index] = file
+        return result
+    }
+    result.removeAll(where: { $0.fileId == file.fileId })
+    let index = afterFileId.flatMap { id in result.firstIndex(where: { $0.fileId == id }) }.map { $0 + 1 }
+        ?? (afterFileId == nil ? 0 : result.count)
+    result.insert(file, at: index)
+    return result
+}
+
 func _internal_addSavedMusic(account: Account, file: FileMediaReference, afterFile: FileMediaReference?) -> Signal<Never, AddSavedMusicError> {
-    return account.postbox.transaction { transaction in
-        if let cachedSavedMusic = transaction.retrieveItemCacheEntry(id: entryId(peerId: account.peerId))?.get(CachedProfileSavedMusic.self) {
-            var updatedFiles = cachedSavedMusic.files
-            var updatedCount = cachedSavedMusic.count
-            
-            if let fromIndex = updatedFiles.firstIndex(where: { $0.fileId == file.media.fileId }) {
-                let anchorIdxOpt: Int? = afterFile.flatMap { af in
-                    updatedFiles.firstIndex(where: { $0.fileId == af.media.fileId })
+    if afterFile?.media.fileId == file.media.fileId {
+        return .complete()
+    }
+    var flags: Int32 = 0
+    var afterId: Api.InputDocument?
+    if let afterFile {
+        guard let resource = afterFile.media.resource as? CloudDocumentMediaResource else {
+            return .fail(.generic)
+        }
+        flags = 1 << 1
+        afterId = .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)))
+    }
+    return revalidatedMusic(account: account, file: file, signal: { resource in
+        return account.network.request(Api.functions.account.saveMusic(flags: flags, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), afterId: afterId))
+    })
+    |> mapError { _ -> AddSavedMusicError in .generic }
+    |> mapToSignal { result -> Signal<Never, AddSavedMusicError> in
+        guard case .boolTrue = result else { return .fail(.generic) }
+        return account.postbox.transaction { transaction in
+            let savedIds = transaction.getPreferencesEntry(key: PreferencesKeys.savedMusicIds())?.get(SavedMusicIdsList.self)
+            var firstFile: TelegramMediaFile?
+            if let cached = transaction.retrieveItemCacheEntry(id: entryId(peerId: account.peerId))?.get(CachedProfileSavedMusic.self) {
+                let wasSaved = cached.files.contains(where: { $0.fileId == file.media.fileId }) || savedIds?.items.contains(file.media.fileId.id) == true
+                let files = updatedSavedMusicFiles(cached.files, file: file.media, afterFileId: afterFile?.media.fileId)
+                firstFile = files.first
+                let count = max(Int32(clamping: files.count), Int32(clamping: Int64(cached.count) + (wasSaved ? 0 : 1)))
+                if let entry = CodableEntry(CachedProfileSavedMusic(files: files, count: count)) {
+                    transaction.putItemCacheEntry(id: entryId(peerId: account.peerId), entry: entry)
                 }
-                updatedFiles.remove(at: fromIndex)
-                let insertIndex: Int
-                if let anchorIndex = anchorIdxOpt {
-                    if anchorIndex == fromIndex {
-                        insertIndex = min(fromIndex + 1, updatedFiles.count)
-                    } else {
-                        let adjustedAnchor = anchorIndex > fromIndex ? (anchorIndex - 1) : anchorIndex
-                        insertIndex = updatedFiles.index(after: adjustedAnchor)
-                    }
-                } else if afterFile != nil {
-                    insertIndex = 0
-                } else {
-                    insertIndex = 0
-                }
-                
-                updatedFiles.insert(file.media, at: insertIndex)
-            } else {
-                if let afterFile, let anchor = updatedFiles.firstIndex(where: { $0.fileId == afterFile.media.fileId }) {
-                    updatedFiles.insert(file.media, at: updatedFiles.index(after: anchor))
-                } else if afterFile != nil {
-                    updatedFiles.append(file.media)
-                } else {
-                    updatedFiles.insert(file.media, at: 0)
-                }
-                updatedCount = updatedCount + 1
             }
-            
-            if let entry = CodableEntry(CachedProfileSavedMusic(files: updatedFiles, count: updatedCount)) {
-                transaction.putItemCacheEntry(id: entryId(peerId: account.peerId), entry: entry)
-            }
-            
-            if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.savedMusicIds())?.get(SavedMusicIdsList.self) {
-                var ids = Set(entry.items)
+            if let savedIds {
+                var ids = Set(savedIds.items)
                 ids.insert(file.media.fileId.id)
-                let savedMusicIdsList = SavedMusicIdsList(items: Array(ids))
-                transaction.setPreferencesEntry(key: PreferencesKeys.savedMusicIds(), value: PreferencesEntry(savedMusicIdsList))
+                transaction.setPreferencesEntry(key: PreferencesKeys.savedMusicIds(), value: PreferencesEntry(SavedMusicIdsList(items: Array(ids))))
             }
-            
-            if afterFile == nil {
+            if let firstFile = afterFile == nil ? file.media : firstFile {
                 transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
-                    if let cachedData = cachedData as? CachedUserData {
-                        var updatedData = cachedData
-                        updatedData = updatedData.withUpdatedSavedMusic(file.media)
-                        return updatedData
-                    } else {
-                        return cachedData
-                    }
+                    return (cachedData as? CachedUserData)?.withUpdatedSavedMusic(firstFile) ?? cachedData
                 })
             }
         }
-        return revalidatedMusic(account: account, file: file, signal: { resource in
-            var flags: Int32 = 0
-            var afterId: Api.InputDocument?
-            if let afterFile, let resource = afterFile.media.resource as? CloudDocumentMediaResource {
-                flags = 1 << 1
-                afterId = .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)))
-            }
-            return account.network.request(Api.functions.account.saveMusic(flags: flags, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), afterId: afterId))
-        })
-        |> mapError { _ -> AddSavedMusicError in
-            return .generic
-        }
-        |> mapToSignal { _ in
-            return .complete()
-        }
+        |> castError(AddSavedMusicError.self)
+        |> ignoreValues
     }
-    |> castError(AddSavedMusicError.self)
-    |> switchToLatest
 }
 
 func _internal_removeSavedMusic(account: Account, file: FileMediaReference) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction in
-        if let cachedSavedMusic = transaction.retrieveItemCacheEntry(id: entryId(peerId: account.peerId))?.get(CachedProfileSavedMusic.self) {
-            let updatedFiles = cachedSavedMusic.files.filter { $0.fileId != file.media.id }
-            let updatedCount = max(0, cachedSavedMusic.count - 1)
-            if let entry = CodableEntry(CachedProfileSavedMusic(files: updatedFiles, count: updatedCount)) {
-                transaction.putItemCacheEntry(id: entryId(peerId: account.peerId), entry: entry)
+    return revalidatedMusic(account: account, file: file, signal: { resource in
+        return account.network.request(Api.functions.account.saveMusic(flags: 1 << 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), afterId: nil))
+    })
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in .complete() }
+    |> mapToSignal { result -> Signal<Never, NoError> in
+        guard case .boolTrue = result else { return .complete() }
+        return account.postbox.transaction { transaction in
+            let savedIds = transaction.getPreferencesEntry(key: PreferencesKeys.savedMusicIds())?.get(SavedMusicIdsList.self)
+            var nextFile: TelegramMediaFile?
+            if let cached = transaction.retrieveItemCacheEntry(id: entryId(peerId: account.peerId))?.get(CachedProfileSavedMusic.self) {
+                let wasSaved = cached.files.contains(where: { $0.fileId == file.media.fileId }) || savedIds?.items.contains(file.media.fileId.id) == true
+                let files = cached.files.filter { $0.fileId != file.media.fileId }
+                let count = max(Int32(clamping: files.count), Int32(clamping: Int64(cached.count) - (wasSaved ? 1 : 0)))
+                nextFile = files.first
+                if let entry = CodableEntry(CachedProfileSavedMusic(files: files, count: count)) {
+                    transaction.putItemCacheEntry(id: entryId(peerId: account.peerId), entry: entry)
+                }
             }
-            
-            if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.savedMusicIds())?.get(SavedMusicIdsList.self) {
-                var ids = Set(entry.items)
+            if let savedIds {
+                var ids = Set(savedIds.items)
                 ids.remove(file.media.fileId.id)
-                let savedMusicIdsList = SavedMusicIdsList(items: Array(ids))
-                transaction.setPreferencesEntry(key: PreferencesKeys.savedMusicIds(), value: PreferencesEntry(savedMusicIdsList))
+                transaction.setPreferencesEntry(key: PreferencesKeys.savedMusicIds(), value: PreferencesEntry(SavedMusicIdsList(items: Array(ids))))
             }
-            
-            if updatedCount == 0 {
-                transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
-                    if let cachedData = cachedData as? CachedUserData {
-                        var updatedData = cachedData
-                        updatedData = updatedData.withUpdatedSavedMusic(nil)
-                        return updatedData
-                    } else {
-                        return cachedData
-                    }
-                })
-            }
+            transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
+                guard let cached = cachedData as? CachedUserData, cached.savedMusic?.fileId == file.media.fileId else { return cachedData }
+                return cached.withUpdatedSavedMusic(nextFile)
+            })
         }
-        let flags: Int32 = 1 << 0
-        return revalidatedMusic(account: account, file: file, signal: { resource in
-            return account.network.request(Api.functions.account.saveMusic(flags: flags, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))), afterId: nil))
-        })
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .complete()
-        }
-        |> mapToSignal { _ in
-            return .complete()
-        }
+        |> ignoreValues
     }
-    |> switchToLatest
 }
 
 private final class CachedProfileSavedMusic: Codable {
@@ -299,9 +270,17 @@ public final class ProfileSavedMusicContext {
     
     private let disposable = MetaDisposable()
     private let cacheDisposable = MetaDisposable()
+    private let cacheReadDisposable = MetaDisposable()
     
     private var files: [TelegramMediaFile] = []
     private var count: Int32?
+    private var needsFirstPageRetry = false
+    private var nextOffset: Int32 = 0
+    private var requestGeneration: UInt64 = 0
+    private var pendingMutations: Set<UUID> = []
+    private var mutationStarts: [() -> Void] = []
+    private var mutationUpdateDepth = 0
+    private var isStartingMutations = false
     private var dataState: ProfileSavedMusicContext.State.DataState = .ready(canLoadMore: true)
     
     private let stateValue = Promise<State>()
@@ -319,10 +298,10 @@ public final class ProfileSavedMusicContext {
     deinit {
         self.disposable.dispose()
         self.cacheDisposable.dispose()
+        self.cacheReadDisposable.dispose()
     }
     
     public func reload() {
-        self.files = []
         self.dataState = .ready(canLoadMore: true)
         self.loadMore(reload: true)
     }
@@ -332,128 +311,200 @@ public final class ProfileSavedMusicContext {
         let network = self.account.network
         let postbox = self.account.postbox
         let dataState = self.dataState
-        let offset = Int32(self.files.count)
+        let offset = reload || self.needsFirstPageRetry ? 0 : self.nextOffset
         
-        guard case .ready(true) = dataState else {
+        guard case .ready(true) = dataState, self.pendingMutations.isEmpty else {
             return
         }
-        if self.files.isEmpty, !reload {
-            self.cacheDisposable.set((postbox.transaction { transaction -> CachedProfileSavedMusic? in
+        self.requestGeneration &+= 1
+        let generation = self.requestGeneration
+        let requestDisposable = MetaDisposable()
+        self.disposable.set(requestDisposable)
+        self.cacheReadDisposable.set(nil)
+        guard self.requestGeneration == generation else { return }
+        if self.files.isEmpty, offset == 0, !reload {
+            let cacheDisposable = MetaDisposable()
+            self.cacheReadDisposable.set(cacheDisposable)
+            cacheDisposable.set((postbox.transaction { transaction -> CachedProfileSavedMusic? in
                 return transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedProfileSavedMusic.self)
             } |> deliverOn(self.queue)).start(next: { [weak self] cachedSavedMusic in
-                guard let self, let cachedSavedMusic else {
+                guard let self, self.requestGeneration == generation, let cachedSavedMusic else {
                     return
                 }
                 self.files = cachedSavedMusic.files
                 self.count = cachedSavedMusic.count
-                if case .loading = self.dataState {
+                if self.dataState == .loading || self.needsFirstPageRetry {
                     self.pushState()
                 }
             }))
         }
         
+        guard self.requestGeneration == generation else { return }
         self.dataState = .loading
-        if !reload {
-            self.pushState()
-        }
+        self.pushState()
+        guard self.requestGeneration == generation else { return }
         
         let signal = postbox.loadedPeerWithId(peerId)
         |> castError(MTRpcError.self)
-        |> mapToSignal { peer -> Signal<([TelegramMediaFile], Int32), MTRpcError> in
+        |> mapToSignal { peer -> Signal<([TelegramMediaFile], Int32, Int32), MTRpcError> in
             guard let inputUser = apiInputUser(peer) else {
                 return .complete()
             }
             return network.request(Api.functions.users.getSavedMusic(id: inputUser, offset: offset, limit: 32, hash: 0))
-            |> map { result -> ([TelegramMediaFile], Int32) in
+            |> mapToSignal { result -> Signal<([TelegramMediaFile], Int32, Int32), MTRpcError> in
                 switch result {
                 case let .savedMusic(savedMusicData):
-                    return (savedMusicData.documents.compactMap { telegramMediaFileFromApiDocument($0, altDocuments: nil) }, savedMusicData.count)
-                case let .savedMusicNotModified(savedMusicNotModifiedData):
-                    return ([], savedMusicNotModifiedData.count)
+                    return .single((savedMusicData.documents.compactMap { telegramMediaFileFromApiDocument($0, altDocuments: nil) }, savedMusicData.count, Int32(clamping: savedMusicData.documents.count)))
+                case .savedMusicNotModified:
+                    return .complete()
                 }
             }
         }
         
-        self.disposable.set((signal
-        |> deliverOn(self.queue)).start(next: { [weak self] files, count in
-            guard let self else {
+        var receivedResult = false
+        let finishWithoutResult: () -> Void = { [weak self] in
+            guard let self, self.requestGeneration == generation, !receivedResult else {
                 return
             }
+            self.needsFirstPageRetry = offset == 0
+            self.dataState = .ready(canLoadMore: true)
+            self.pushState()
+        }
+        requestDisposable.set((signal
+        |> deliverOn(self.queue)).start(next: { [weak self] files, count, receivedCount in
+            guard let self, self.requestGeneration == generation else {
+                return
+            }
+            receivedResult = true
+            self.cacheReadDisposable.set(nil)
+            self.needsFirstPageRetry = false
+            self.nextOffset = Int32(clamping: Int64(offset) + Int64(receivedCount))
+            var mergedFiles: [TelegramMediaFile] = []
+            var indices: [MediaId: Int] = [:]
+            let previousFiles = offset == 0 ? [] : self.files
+            for file in previousFiles + files {
+                if let index = indices[file.fileId] {
+                    mergedFiles[index] = file
+                } else {
+                    indices[file.fileId] = mergedFiles.count
+                    mergedFiles.append(file)
+                }
+            }
+            self.files = mergedFiles
             if offset == 0 || reload {
-                self.files = files
                 self.cacheDisposable.set(self.account.postbox.transaction { transaction in
-                    if let entry = CodableEntry(CachedProfileSavedMusic(files: files, count: count)) {
+                    if let entry = CodableEntry(CachedProfileSavedMusic(files: mergedFiles, count: count)) {
                         transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
                     }
                 }.start())
-            } else {
-                self.files.append(contentsOf: files)
             }
             
             let updatedCount = max(Int32(self.files.count), count)
             self.count = updatedCount
-            self.dataState = .ready(canLoadMore: count != 0 && updatedCount > self.files.count)
+            self.dataState = .ready(canLoadMore: receivedCount > 0 && self.nextOffset < count)
             self.pushState()
-        }))
+        }, error: { _ in
+            finishWithoutResult()
+        }, completed: finishWithoutResult))
     }
         
     public func addMusic(file: FileMediaReference, afterFile: FileMediaReference? = nil, apply: Bool = true) -> Signal<Never, AddSavedMusicError> {
-        var updatedFiles = self.files
-    
-        let fromIdx = updatedFiles.firstIndex { $0.fileId == file.media.fileId }
-        let anchorIdxOpt = afterFile.flatMap { af in
-            updatedFiles.firstIndex { $0.fileId == af.media.fileId }
+        if afterFile?.media.fileId == file.media.fileId { return .complete() }
+        guard self.peerId == self.account.peerId else {
+            return apply ? _internal_addSavedMusic(account: self.account, file: file, afterFile: afterFile) : .complete()
         }
-        
-        if let fromIdx = fromIdx {
-            updatedFiles.remove(at: fromIdx)
-            
-            let insertIdx: Int
-            if let anchorIdx = anchorIdxOpt {
-                if anchorIdx == fromIdx {
-                    insertIdx = min(fromIdx + 1, updatedFiles.count)
-                } else {
-                    let adjustedAnchor = anchorIdx > fromIdx ? (anchorIdx - 1) : anchorIdx
-                    insertIdx = updatedFiles.index(after: adjustedAnchor)
-                }
-            } else if afterFile != nil {
-                insertIdx = updatedFiles.count
-            } else {
-                insertIdx = 0
-            }
-            updatedFiles.insert(file.media, at: insertIdx)
-        } else {
-            if let anchorIdx = anchorIdxOpt {
-                updatedFiles.insert(file.media, at: updatedFiles.index(after: anchorIdx))
-            } else if afterFile != nil {
-                updatedFiles.append(file.media)
-            } else {
-                updatedFiles.insert(file.media, at: 0)
-            }
-            if let count = self.count {
-                self.count = count + 1
+        let update: (ProfileSavedMusicContext) -> Void = { context in
+            let wasPresent = context.files.contains(where: { $0.fileId == file.media.fileId })
+            context.files = updatedSavedMusicFiles(context.files, file: file.media, afterFileId: afterFile?.media.fileId)
+            if !wasPresent, let count = context.count {
+                context.count = max(Int32(clamping: context.files.count), Int32(clamping: Int64(count) + 1))
             }
         }
-        self.files = updatedFiles        
-        self.pushState()
-        
-        if apply {
-            return _internal_addSavedMusic(account: self.account, file: file, afterFile: afterFile)
-        } else {
+        if !apply {
+            self.invalidatePage()
+            update(self)
+            self.pushState()
             return .complete()
         }
+        return self.performMutation(signal: _internal_addSavedMusic(account: self.account, file: file, afterFile: afterFile), update: update)
     }
-    
+
     public func removeMusic(file: FileMediaReference) -> Signal<Never, NoError> {
-        self.files.removeAll(where: { $0.fileId == file.media.id })
-        if let count = self.count {
-            self.count = max(0, count - 1)
-        }
-        self.pushState()
-        
-        return _internal_removeSavedMusic(account: self.account, file: file)
+        let signal = _internal_removeSavedMusic(account: self.account, file: file)
+        guard self.peerId == self.account.peerId else { return signal }
+        return self.performMutation(signal: signal, update: { context in
+            let wasPresent = context.files.contains(where: { $0.fileId == file.media.fileId })
+            context.files.removeAll(where: { $0.fileId == file.media.fileId })
+            if wasPresent, let count = context.count {
+                context.count = max(Int32(clamping: context.files.count), Int32(clamping: Int64(count) - 1))
+            }
+        })
     }
-    
+
+    private func invalidatePage() {
+        self.requestGeneration &+= 1
+        self.disposable.set(nil)
+        self.cacheReadDisposable.set(nil)
+        self.cacheDisposable.set(nil)
+        self.needsFirstPageRetry = true
+        self.nextOffset = 0
+        self.dataState = .ready(canLoadMore: true)
+    }
+
+    private func finishMutation(_ id: UUID) {
+        guard self.pendingMutations.remove(id) != nil else { return }
+        if self.pendingMutations.isEmpty {
+            self.reload()
+        }
+    }
+
+    private func performMutation<E>(signal: Signal<Never, E>, update: @escaping (ProfileSavedMusicContext) -> Void) -> Signal<Never, E> {
+        let queue = self.queue
+        return Signal { [weak self] subscriber in
+            let id = UUID()
+            let disposable = MetaDisposable()
+            let cancelled = Atomic<Bool>(value: false)
+            let start: () -> Void = { [weak self] in
+                guard !cancelled.with({ $0 }) else { return }
+                disposable.set((signal |> deliverOn(queue)).start(error: { [weak self] error in
+                    self?.finishMutation(id)
+                    subscriber.putError(error)
+                }, completed: { [weak self] in
+                    self?.finishMutation(id)
+                    subscriber.putCompletion()
+                }))
+            }
+            if let self {
+                self.pendingMutations.insert(id)
+                self.mutationStarts.append(start)
+                self.mutationUpdateDepth += 1
+                self.invalidatePage()
+                update(self)
+                self.pushState()
+                self.mutationUpdateDepth -= 1
+                self.startPendingMutations()
+            } else {
+                start()
+            }
+            return ActionDisposable { [weak self] in
+                _ = cancelled.swap(true)
+                disposable.dispose()
+                queue.async { [weak self] in self?.finishMutation(id) }
+            }
+        }
+        |> runOn(queue)
+    }
+
+    private func startPendingMutations() {
+        guard self.mutationUpdateDepth == 0, !self.isStartingMutations else { return }
+        self.isStartingMutations = true
+        while !self.mutationStarts.isEmpty {
+            let start = self.mutationStarts.removeFirst()
+            start()
+        }
+        self.isStartingMutations = false
+    }
+
     private func pushState() {
         let state = State(
             files: self.files,

@@ -1,0 +1,47 @@
+<!doctype html>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{color-scheme:light dark;--fg:light-dark(#000,#fff);--mut:light-dark(#707579,#9ea3a8)}
+body{margin:0;padding:12px;font:15px/1.35 system-ui,-apple-system,sans-serif;color:var(--fg)}
+h3{margin:0;font-size:16px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+.box{position:relative;height:220px}
+#fallback li{display:flex;justify-content:space-between;padding:4px 0}
+#fallback{margin:0;padding:0;list-style:none}
+</style>
+<h3>October budget</h3>
+<div class="sub">€2,480 spent of €3,000 · tap a slice</div>
+<div class="box"><canvas id="c"></canvas></div>
+<ul id="fallback" hidden></ul>
+<script>
+const labels = ['Rent', 'Food', 'Transport', 'Fun', 'Savings'];
+const values = [1200, 520, 180, 260, 320];
+const colors = ['#3390ec', '#31b545', '#ff9f0a', '#ff5e8a', '#8e6cf0'];
+if (typeof Chart === 'undefined') {
+  const ul = document.getElementById('fallback');
+  labels.forEach((l, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span></span><b></b>';
+    li.firstChild.textContent = l;
+    li.lastChild.textContent = '€' + values[i];
+    ul.appendChild(li);
+  });
+  ul.hidden = false;
+  document.querySelector('.box').hidden = true;
+} else {
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  new Chart(document.getElementById('c'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 8 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'right', labels: { color: dark ? '#fff' : '#000', boxWidth: 10, boxHeight: 10, usePointStyle: true } },
+        tooltip: { callbacks: { label: (c) => ' €' + c.parsed } }
+      }
+    }
+  });
+}
+</script>

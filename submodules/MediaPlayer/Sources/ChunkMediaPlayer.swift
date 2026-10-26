@@ -119,10 +119,15 @@ public final class ChunkMediaPlayerPartsState {
     
     public let duration: Double?
     public let content: Content
+    // `.parts` only: until the clock first moves after a seek (an open included), it does not start before this moment
+    // (`CACurrentMediaTime()`), so that a short run ahead does not drain before the next part lands. Nil: the clock
+    // starts as soon as 1 s is ahead.
+    public let startNotBefore: Double?
     
-    public init(duration: Double?, content: Content) {
+    public init(duration: Double?, content: Content, startNotBefore: Double? = nil) {
         self.duration = duration
         self.content = content
+        self.startNotBefore = startNotBefore
     }
 }
 

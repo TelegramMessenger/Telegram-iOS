@@ -452,7 +452,7 @@ public func proxySettingsController(accountManager: AccountManager<TelegramAccou
         if proxySettings.servers.isEmpty {
             rightNavigationButton = nil
         } else if state.editing {
-            rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+            rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                 updateState { state in
                     var state = state
                     state.editing = false

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import CoreText
 import Display
 import ComponentFlow
 import SwiftSignalKit
@@ -103,7 +104,7 @@ public final class NewsFeedPostComponent: Component {
     public let fading: Bool
     /// When Undo brought the post back: a row created right after fades in and rises.
     public let appearTime: Double?
-    /// The row's swipe actions; nil for rows that do not swipe (search results).
+    /// The row's swipe actions; nil for rows that do not swipe (Added, search results).
     public let swipe: NewsPostSwipe?
     public let action: () -> Void
 
@@ -183,7 +184,7 @@ public final class NewsFeedPostComponent: Component {
         private let separatorLayer = SimpleLayer()
         /// The swipe (spec §1). It holds the content, which slides, and the full-width press highlight, which it turns
         /// into the swipe surface; the fresh block and the separator stay outside it.
-        private let revealNode = NewsPostRevealNode()
+        private let revealView = NewsPostRevealView()
         /// Its own swipe fades the separator, and so does the swipe of the row below (`setRowBelowSeparatorAlpha`).
         private var rowBelowSeparatorAlpha: CGFloat = 1.0
         /// The content has faded out for the "Post hidden" panel (spec §3).
@@ -211,23 +212,23 @@ public final class NewsFeedPostComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
-            self.addSubview(self.revealNode.view)
-            self.revealNode.contentNode.view.addSubview(self.contentView)
+            self.addSubview(self.revealView)
+            self.revealView.contentView.addSubview(self.contentView)
             self.contentView.addSubview(self.lensView)
-            self.revealNode.opened = { [weak self] in
+            self.revealView.opened = { [weak self] in
                 guard let self else {
                     return
                 }
                 self.component?.swipe?.opened(self)
             }
-            self.revealNode.separatorAlphaChanged = { [weak self] in
+            self.revealView.separatorAlphaChanged = { [weak self] in
                 guard let self else {
                     return
                 }
                 self.updateSeparatorAlpha()
                 self.component?.swipe?.separatorAlphaChanged(self)
             }
-            self.revealNode.selected = { [weak self] action in
+            self.revealView.selected = { [weak self] action in
                 self?.component?.swipe?.action(action)
             }
             // One element, so VoiceOver offers the swipe's actions on it (spec §6).
@@ -280,13 +281,23 @@ public final class NewsFeedPostComponent: Component {
             guard let textView = self.text.view as? MultilineTextWithEntitiesComponent.View, let layout = textView.textNode.cachedLayout else {
                 return []
             }
-            return layout.linesRects().map { textView.textNode.view.convert($0, to: self) }
+            // Each line's ascent and descent around the baseline it is drawn at. `linesRects()` starts each line at
+            // its baseline, most of a line lower.
+            let textNodeView = textView.textNode.view
+            var frames: [CGRect] = []
+            layout.enumerateRenderedLines(in: textNodeView.bounds) { line, baseline in
+                var ascent: CGFloat = 0.0
+                var descent: CGFloat = 0.0
+                let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, nil))
+                frames.append(textNodeView.convert(CGRect(x: baseline.x, y: baseline.y - ascent, width: width, height: ascent + descent), to: self))
+            }
+            return frames
         }
 
         @objc private func tapped() {
             // A tap on an open row only closes it. The control's own tap does that too; whichever of the two taps
             // wins, the row closes and nothing opens.
-            guard !self.revealNode.isRevealOptionsActive else {
+            guard !self.revealView.isRevealOptionsActive else {
                 self.closeSwipe(animated: true)
                 return
             }
@@ -301,7 +312,7 @@ public final class NewsFeedPostComponent: Component {
 
         /// 1 closed, 0 open: the row's own separator, and the separator of the row above, fade with it.
         public var swipeSeparatorAlpha: CGFloat {
-            return self.revealNode.revealOptionsSeparatorAlpha
+            return self.revealView.revealOptionsSeparatorAlpha
         }
 
         /// The swipe separator alpha of the post row directly below (1 when there is none).
@@ -314,7 +325,7 @@ public final class NewsFeedPostComponent: Component {
         }
 
         public func closeSwipe(animated: Bool) {
-            self.revealNode.setRevealOptionsOpened(false, animated: animated)
+            self.revealView.setRevealOptionsOpened(false, animated: animated)
         }
 
         private func updateSeparatorAlpha() {
@@ -329,9 +340,9 @@ public final class NewsFeedPostComponent: Component {
                 return
             }
             self.isFadedOut = fading
-            let layer = self.revealNode.layer
+            let layer = self.revealView.layer
             if fading {
-                self.revealNode.alpha = 0.0
+                self.revealView.alpha = 0.0
                 self.freshBlockView?.alpha = 0.0
                 if animated {
                     let duration = NewsFeedbackTiming.fadeOut
@@ -346,7 +357,7 @@ public final class NewsFeedPostComponent: Component {
                     }
                 }
             } else {
-                self.revealNode.alpha = 1.0
+                self.revealView.alpha = 1.0
                 self.freshBlockView?.alpha = 1.0
                 layer.filters = nil
             }
@@ -375,13 +386,13 @@ public final class NewsFeedPostComponent: Component {
             self.isHighlighted = highlighted
             // The control owns the highlight's alpha (pressed, and the swipe surface), as in the chat list.
             let transition: ContainedViewLayoutTransition = highlighted || !animated ? .immediate : .animated(duration: 0.4, curve: .easeInOut)
-            self.revealNode.updateRevealOptionsHighlightedBackgroundNode(self.revealNode.highlightNode, isHighlighted: highlighted, transition: transition, aboveNodes: [])
+            self.revealView.updateRevealOptionsHighlightedBackgroundNode(self.revealView.highlightView, isHighlighted: highlighted, transition: transition, aboveNodes: [])
         }
 
         override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             super.touchesBegan(touches, with: event)
             // An open row shows its swipe surface; a tap only closes it.
-            if self.revealNode.isRevealOptionsActive {
+            if self.revealView.isRevealOptionsActive {
                 return
             }
             self.highlightTimer?.invalidate()
@@ -394,7 +405,7 @@ public final class NewsFeedPostComponent: Component {
 
         override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             super.touchesEnded(touches, with: event)
-            if self.revealNode.isRevealOptionsActive {
+            if self.revealView.isRevealOptionsActive {
                 return
             }
             self.highlightTimer?.invalidate()
@@ -607,9 +618,9 @@ public final class NewsFeedPostComponent: Component {
             transition.setFrame(layer: self.separatorLayer, frame: layout.separator)
             self.updateSeparatorAlpha()
             let rowSize = CGSize(width: availableSize.width, height: layout.height)
-            // The row places the node; the node lays out inside it (a size change closes an open swipe).
-            self.revealNode.frame = CGRect(origin: CGPoint(), size: rowSize)
-            self.revealNode.update(size: rowSize, options: component.swipe != nil ? newsPostRevealOptions(theme: theme, strings: component.strings) : [], highlightColor: theme.list.itemHighlightedBackgroundColor)
+            // The row places the view; the view lays out inside it (a size change closes an open swipe).
+            self.revealView.frame = CGRect(origin: CGPoint(), size: rowSize)
+            self.revealView.update(size: rowSize, options: component.swipe != nil ? newsPostRevealOptions(theme: theme, strings: component.strings) : [], highlightColor: theme.list.itemHighlightedBackgroundColor)
             self.contentView.frame = CGRect(origin: CGPoint(), size: rowSize)
             self.lensView.frame = self.contentView.bounds
 

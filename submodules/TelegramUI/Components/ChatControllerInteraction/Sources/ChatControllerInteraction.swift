@@ -150,18 +150,27 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public struct OpenUrl {
         public var url: String
         public var concealed: Bool
+        /// Ask "Open link?" whatever the URL: `parseUrl` clears `concealed` for Telegram's own hosts and `tel:`.
+        public var forceConcealed: Bool
         public var external: Bool?
         public var message: EngineRawMessage?
         public var allowInlineWebpageResolution: Bool
         public var progress: Promise<Bool>?
-        
-        public init(url: String, concealed: Bool, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil) {
+        /// The confirmation shows the whole URL (SDK v1 §5.2, a message widget's link).
+        public var fullUrl: Bool
+        /// Told the confirmation when it appears and nil when it goes (a message widget's one-dialog guard).
+        public var alertDisplayUpdated: ((ViewController?) -> Void)?
+
+        public init(url: String, concealed: Bool, forceConcealed: Bool = false, external: Bool? = nil, message: EngineRawMessage? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, fullUrl: Bool = false, alertDisplayUpdated: ((ViewController?) -> Void)? = nil) {
             self.url = url
             self.concealed = concealed
+            self.forceConcealed = forceConcealed
             self.external = external
             self.message = message
             self.allowInlineWebpageResolution = allowInlineWebpageResolution
             self.progress = progress
+            self.fullUrl = fullUrl
+            self.alertDisplayUpdated = alertDisplayUpdated
         }
     }
     

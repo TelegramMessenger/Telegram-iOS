@@ -215,6 +215,19 @@ private final class MultiplexedRequestManagerContext {
         }
     }
     
+    private func completeExecutingRequest(_ request: RequestData, requestId: Int32, context: RequestTargetContext?, result: Any, info: NetworkResponseInfo) {
+        if let context {
+            for i in 0 ..< context.requests.count {
+                if context.requests[i].requestId == requestId {
+                    context.requests.remove(at: i)
+                    break
+                }
+            }
+        }
+        request.completed(result, info)
+        self.updateState()
+    }
+
     private func isTargetSaturated(_ targetKey: MultiplexedRequestTargetKey) -> Bool {
         let (maxRequestsPerWorker, maxWorkersPerTarget) = self.limits(targetKey.target)
         guard let contexts = self.targetContexts[targetKey], contexts.count >= maxWorkersPerTarget else {
@@ -300,21 +313,52 @@ private final class MultiplexedRequestManagerContext {
                 let requestId = request.id
                 selectedContext.requests.append(ExecutingRequestData(requestId: requestId, disposable: disposable))
                 let queue = self.queue
-                disposable.set(selectedContext.worker.rawRequest((request.functionDescription, request.payload, request.deserializeResponse), automaticFloodWait: request.automaticFloodWait, onFloodWaitError: request.onFloodWaitError, expectedResponseSize: request.expectedResponseSize).start(next: { [weak self, weak selectedContext] result, info in
+                #if DEBUG
+                // Only with a profile: without one, the request does no more than in a release build.
+                let shaping: (shaper: DebugNetworkShaper, sentAt: Double, responseBytes: Atomic<Int>)? = DebugNetworkShaper.shared.map { shaper in
+                    return (shaper, CFAbsoluteTimeGetCurrent(), Atomic<Int>(value: 0))
+                }
+                let deserializeResponse: (Buffer) -> Any?
+                if let shaping {
+                    let deserialize = request.deserializeResponse
+                    deserializeResponse = { buffer in
+                        let _ = shaping.responseBytes.swap(Int(buffer.size))
+                        return deserialize(buffer)
+                    }
+                } else {
+                    deserializeResponse = request.deserializeResponse
+                }
+                #else
+                let deserializeResponse = request.deserializeResponse
+                #endif
+                disposable.set(selectedContext.worker.rawRequest((request.functionDescription, request.payload, deserializeResponse), automaticFloodWait: request.automaticFloodWait, onFloodWaitError: request.onFloodWaitError, expectedResponseSize: request.expectedResponseSize).start(next: { [weak self, weak selectedContext] result, info in
                     queue.async {
                         guard let strongSelf = self else {
                             return
                         }
-                        if let selectedContext = selectedContext {
-                            for i in 0 ..< selectedContext.requests.count {
-                                if selectedContext.requests[i].requestId == requestId {
-                                    selectedContext.requests.remove(at: i)
-                                    break
-                                }
+                        #if DEBUG
+                        if let shaping {
+                            let now = CFAbsoluteTimeGetCurrent()
+                            let hold = shaping.shaper.holdDuration(bytes: shaping.responseBytes.with { $0 }, sentAt: shaping.sentAt, now: now)
+                            // The request's network time is the shaped link's, as the download meter
+                            // (`DownloadThroughputMeter`) must see it.
+                            var shapedInfo = info
+                            shapedInfo.networkDuration = max(info.networkDuration, now + max(0.0, hold) - shaping.sentAt)
+                            if hold > 0.0 {
+                                // The request keeps its worker slot while held; one disposed meanwhile delivers nothing.
+                                queue.after(hold, { [weak strongSelf, weak selectedContext] in
+                                    guard let strongSelf, let selectedContext, selectedContext.requests.contains(where: { $0.requestId == requestId }) else {
+                                        return
+                                    }
+                                    strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: shapedInfo)
+                                })
+                                return
                             }
+                            strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: shapedInfo)
+                            return
                         }
-                        request.completed(result, info)
-                        strongSelf.updateState()
+                        #endif
+                        strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: info)
                     }
                 }, error: { [weak self, weak selectedContext] error, timestamp in
                     queue.async {

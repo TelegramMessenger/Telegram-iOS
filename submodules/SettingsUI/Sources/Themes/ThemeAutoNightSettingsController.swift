@@ -239,7 +239,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                     arguments.openTimeBasedManual(.to)
                 })
             case let .brightnessValue(theme, value):
-                return ThemeSettingsBrightnessItem(theme: theme, value: Int32(value * 100.0), sectionId: self.section, updated: { value in
+                return ThemeSettingsBrightnessItem(systemStyle: .glass, theme: theme, value: Int32(value * 100.0), sectionId: self.section, updated: { value in
                     arguments.updateAutomaticBrightness(Double(value) / 100.0)
                 })
             case let .settingInfo(_, text):

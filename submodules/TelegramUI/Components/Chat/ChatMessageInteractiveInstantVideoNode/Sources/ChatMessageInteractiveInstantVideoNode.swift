@@ -354,6 +354,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
                 var replyInnerSubject: EngineMessageReplyInnerSubject?
                 var replyStory: EngineStoryId?
+                var replyIsLoading = false
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? InlineBotMessageAttribute {
                         if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
@@ -381,6 +382,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyAttribute.messageId.id {
                         } else {
                             replyMessage = item.message.associatedMessages[replyAttribute.messageId].flatMap(EngineMessage.init)
+                            if replyMessage == nil {
+                                replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                            }
                         }
                         replyQuote = replyAttribute.quote.flatMap { ($0, replyAttribute.isQuote) }
                         replyInnerSubject = replyAttribute.innerSubject
@@ -388,10 +392,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         replyForward = attribute
                     } else if let attribute = attribute as? ReplyStoryAttribute {
                         replyStory = attribute.storyId
+                        if item.message.associatedStories[attribute.storyId] == nil {
+                            replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                        }
                     }
                 }
                 
-                if replyMessage != nil || replyForward != nil || replyStory != nil {
+                if replyMessage != nil || replyForward != nil || replyStory != nil || replyIsLoading {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyMessage?.id.id {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
@@ -405,6 +412,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             innerSubject: replyInnerSubject,
                             story: replyStory,
                             isSummarized: false,
+                            isLoading: replyIsLoading,
                             parentMessage: item.message,
                             constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                             animationCache: item.controllerInteraction.presentationContext.animationCache,

@@ -35,6 +35,7 @@ import RangeSet
 import GiftItemComponent
 import MediaResources
 import UIKitRuntimeUtils
+import ShimmerEffect
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -433,6 +434,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private let pinchContainerNode: PinchSourceContainerNode
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
+    /// Over a forwarded story's media area while the story is being fetched (the area already has its final size).
+    private var storySkeletonNode: ShimmerEffectNode?
     private var currentHighQualityImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
     private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize, Int32)?
     private var highQualityImageNode: TransformImageNode?
@@ -535,6 +538,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var hlsInlinePlaybackRange: Range<Int64>?
     private var appliedHlsInlinePlaybackRange: Range<Int64>?
     private var hlsInlinePlaybackRangeDisposable: Disposable?
+    // The video the inline gate's range belongs to; the range counts for no other.
+    private var hlsInlinePlaybackRangeFileId: Int64?
+    private var hlsInlinePlaybackRangeDelivered = false
     
     #if DEBUG && false
     private var testDeferHLSMedia: Bool = true
@@ -873,6 +879,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         let currentAutomaticPlayback = self.automaticPlayback
         
         let hlsInlinePlaybackRange = self.hlsInlinePlaybackRange
+        let hlsInlinePlaybackRangeFileId = self.hlsInlinePlaybackRangeFileId
         let appliedHlsInlinePlaybackRange = self.appliedHlsInlinePlaybackRange
         
         #if DEBUG && false
@@ -1419,7 +1426,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                             if !useInlineHLS {
                                                 file = minimizedQualityFile.file.media
                                             }
-                                            if hlsInlinePlaybackRange == nil {
+                                            if hlsInlinePlaybackRange == nil || hlsInlinePlaybackRangeFileId != loadHLSRangeVideoFile?.fileId.id {
                                                 passFile = false
                                             }
                                         }
@@ -1603,7 +1610,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     if !useInlineHLS {
                                         file = minimizedQualityFile.file.media
                                     }
-                                    if hlsInlinePlaybackRange == nil {
+                                    if hlsInlinePlaybackRange == nil || hlsInlinePlaybackRangeFileId != loadHLSRangeVideoFile?.fileId.id {
                                         passFile = false
                                     }
                                 }
@@ -1680,6 +1687,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 } else {
                                     onlyFullSizeVideoThumbnail = isSendingUpdated
                                     let codecConfiguration = HLSCodecConfiguration(context: context)
+                                    // When the chat preload below runs, the first frame comes from the quality it fetches.
+                                    let preferredHLSQualityFileId = automaticDownload != .none ? HLSVideoContent.minimizedHLSQuality(file: .message(message: MessageReference(message), media: file), codecConfiguration: codecConfiguration)?.file.media.fileId.id : nil
                                     updateImageSignal = { synchronousLoad, _ in
                                         let videoReference: FileMediaReference = .message(message: MessageReference(message), media: file)
                                         var hlsFiles: [(playlist: TelegramMediaFile, video: TelegramMediaFile)] = []
@@ -1690,7 +1699,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                                 }
                                             }
                                         }
-                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: videoReference, hlsFiles: hlsFiles, onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
+                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: videoReference, hlsFiles: hlsFiles, onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true, preferredHLSQualityFileId: preferredHLSQualityFileId)
                                     }
                                     updateBlurredImageSignal = { synchronousLoad, _ in
                                         return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: true)
@@ -1704,7 +1713,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     if file.isAnimated {
                                         disposableSet.add(context.engine.resources.fetch(reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).startStrict())
                                     } else if NativeVideoContent.isHLSVideo(file: file) {
-                                        strongSelf.fetchDisposable.set(nil)
+                                        // fetchDisposable holds the chat preload of the preload quality: keep it.
+                                        return
                                     } else {
                                         disposableSet.add(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).startStrict())
                                     }
@@ -1929,6 +1939,35 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             }
                             strongSelf.currentImageArguments = arguments
                             imageApply(transition)
+                            
+                            var storyIsLoading = false
+                            if let story = media as? TelegramMediaStory, message.associatedStories[story.storyId] == nil {
+                                storyIsLoading = context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: message.id)
+                            }
+                            if storyIsLoading {
+                                let skeletonNode: ShimmerEffectNode
+                                if let current = strongSelf.storySkeletonNode {
+                                    skeletonNode = current
+                                } else {
+                                    skeletonNode = ShimmerEffectNode()
+                                    skeletonNode.isUserInteractionEnabled = false
+                                    strongSelf.storySkeletonNode = skeletonNode
+                                    strongSelf.pinchContainerNode.contentNode.addSubnode(skeletonNode)
+                                }
+                                let skeletonFrame = CGRect(origin: CGPoint(), size: imageFrame.size)
+                                let baseColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
+                                // Reduce Motion: the sweep is the block's own colour, so nothing moves.
+                                let sweepColor = UIAccessibility.isReduceMotionEnabled ? baseColor : baseColor.mixedWith(.white, alpha: 0.25)
+                                skeletonNode.frame = skeletonFrame
+                                skeletonNode.update(backgroundColor: .clear, foregroundColor: baseColor, shimmeringColor: sweepColor, shapes: [.roundedRect(rect: skeletonFrame, cornerRadius: arguments.corners.topLeft.radius)], horizontal: true, size: skeletonFrame.size, mask: true)
+                                skeletonNode.updateAbsoluteRect(skeletonFrame, within: skeletonFrame.size)
+                            } else if let skeletonNode = strongSelf.storySkeletonNode {
+                                // The story landed (or will not): the skeleton fades off what is now drawn.
+                                strongSelf.storySkeletonNode = nil
+                                skeletonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak skeletonNode] _ in
+                                    skeletonNode?.removeFromSupernode()
+                                })
+                            }
 
                             if let statusApply = statusApply {
                                 let dateAndStatusFrame = CGRect(origin: CGPoint(x: cleanImageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: cleanImageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
@@ -2008,14 +2047,27 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                             fetchAutomatically: false,
                                             onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false),
                                             autoFetchFullSizeThumbnail: true,
-                                            codecConfiguration: HLSCodecConfiguration(context: context)
+                                            // The node made here is the one the gallery takes over: protect it as the
+                                            // gallery would.
+                                            captureProtected: associatedData.isCopyProtectionEnabled || message.isCopyProtected() || isExtendedMedia || message.paidContent != nil || message.containsSecretMedia || message.minAutoremoveOrClearTimeout == viewOnceTimeout,
+                                            codecConfiguration: HLSCodecConfiguration(context: context),
+                                            // These three reach only the base-file player used when no quality is
+                                            // playable.
+                                            continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo,
+                                            placeholderColor: emptyColor,
+                                            storeAfterDownload: { [weak context] in
+                                                guard let context, let peerId else {
+                                                    return
+                                                }
+                                                let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).startStandalone()
+                                            }
                                         )
                                     } else {
                                         videoContent = NativeVideoContent(
                                             id: .message(message.stableId, updatedVideoFile.fileId),
                                             userLocation: .peer(message.id.peerId),
                                             fileReference: .message(message: MessageReference(message), media: updatedVideoFile),
-                                            limitedFileRange: hlsInlinePlaybackRange,
+                                            limitedFileRange: hlsInlinePlaybackRangeFileId == loadHLSRangeVideoFile?.fileId.id ? hlsInlinePlaybackRange : nil,
                                             streamVideo: streamVideo ? .conservative : .none,
                                             loopVideo: loopVideo,
                                             enableSound: false,
@@ -2442,11 +2494,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         guard let fileAndRange else {
                                             return .complete()
                                         }
-                                        return freeMediaFileResourceInteractiveFetched(postbox: postbox, userLocation: .peer(message.id.peerId), fileReference: fileAndRange.0, resource: fileAndRange.0.media.resource, range: (fileAndRange.1, .default))
-                                        |> ignoreValues
-                                        |> `catch` { _ -> Signal<Never, NoError> in
-                                            return .complete()
-                                        }
+                                        // Fetched until the range is on disk: a failure is never terminal.
+                                        return fetchedResourceRangeUntilOnDisk(mediaBox: postbox.mediaBox, resource: fileAndRange.0.media.resource, range: fileAndRange.1, fetch: freeMediaFileResourceInteractiveFetched(postbox: postbox, userLocation: .peer(message.id.peerId), fileReference: fileAndRange.0, resource: fileAndRange.0.media.resource, range: (fileAndRange.1, .default)))
                                     }
                                     
                                     let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
@@ -2511,7 +2560,22 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.appliedHlsInlinePlaybackRange = hlsInlinePlaybackRange
                             
                             if let loadHLSRangeVideoFile, NativeVideoContent.isHLSVideo(file: loadHLSRangeVideoFile) {
+                                let hlsFileId = loadHLSRangeVideoFile.fileId.id
+                                if strongSelf.hlsInlinePlaybackRangeFileId != hlsFileId {
+                                    // Another video (the message was edited): its own playlist gates it.
+                                    strongSelf.hlsInlinePlaybackRangeDisposable?.dispose()
+                                    strongSelf.hlsInlinePlaybackRangeDisposable = nil
+                                    strongSelf.hlsInlinePlaybackRange = nil
+                                    strongSelf.hlsInlinePlaybackRangeFileId = hlsFileId
+                                    strongSelf.hlsInlinePlaybackRangeDelivered = false
+                                }
                                 if strongSelf.hlsInlinePlaybackRangeDisposable == nil {
+                                    Queue.mainQueue().after(10.0, { [weak strongSelf] in
+                                        guard let strongSelf, strongSelf.hlsInlinePlaybackRangeFileId == hlsFileId, !strongSelf.hlsInlinePlaybackRangeDelivered else {
+                                            return
+                                        }
+                                        Logger.shared.log("HLSNative", "inline gate waiting for playlist file=\(hlsFileId)")
+                                    })
                                     strongSelf.hlsInlinePlaybackRangeDisposable = (HLSVideoContent.minimizedHLSQualityPreloadData(
                                         postbox: context.account.postbox,
                                         file: .message(message: MessageReference(message), media: loadHLSRangeVideoFile),
@@ -2529,7 +2593,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                             hlsInlinePlaybackRange = preloadData.1
                                         } else {
                                             hlsInlinePlaybackRange = nil
+                                            Logger.shared.log("HLSNative", "inline gate: no playable range file=\(hlsFileId)")
                                         }
+                                        strongSelf.hlsInlinePlaybackRangeDelivered = true
                                         if strongSelf.hlsInlinePlaybackRange != hlsInlinePlaybackRange {
                                             strongSelf.hlsInlinePlaybackRange = hlsInlinePlaybackRange
                                             strongSelf.requestInlineUpdate?()

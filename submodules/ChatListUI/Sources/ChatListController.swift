@@ -2940,6 +2940,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return nil
     }
     
+    /// The source for a menu a header button opens: the glass pill the button is in, which morphs into the menu.
+    func headerMenuSourceView(_ sourceView: UIView) -> UIView {
+        return self.chatListHeaderView()?.navigationButtonContextContainer(sourceView: sourceView) ?? sourceView
+    }
+    
     private func makeCommunityViewController(communityId: EnginePeer.Id, mode: CommunityViewScreenMode = .fullscreen) -> ViewController {
         let controller = self.context.sharedContext.makeCommunityViewScreen(
             context: self.context,
@@ -4006,7 +4011,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 })))
             }
 
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: self.headerMenuSourceView(sourceView))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             self.presentInGlobalOverlay(contextController)
         })
     }
@@ -5466,13 +5471,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if case let .user(user) = chatPeer, user.botInfo == nil, canRemoveGlobally {
                 strongSelf.maybeAskForPeerChatRemoval(peer: peer, joined: joined, completion: { _ in }, removed: {})
             } else {
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                var items: [ActionSheetItem] = []
+                var actions: [AlertScreen.Action] = []
                 var canClear = true
                 var canStop = false
                 var canRemoveGlobally = false
                 
                 var deleteTitle = strongSelf.presentationData.strings.Common_Delete
+                var alertTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 if case let .channel(channel) = chatPeer {
                     if channel.isMonoForum {
                         canClear = false
@@ -5481,8 +5486,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if case .broadcast = channel.info {
                             canClear = false
                             deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
+                            alertTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
                         } else {
                             deleteTitle = strongSelf.presentationData.strings.Group_DeleteGroup
+                            alertTitle = strongSelf.presentationData.strings.Group_DeleteGroup
                         }
                         if strongSelf.canDeletePeerGloballyAsCreator(mainPeer) {
                             canRemoveGlobally = true
@@ -5492,6 +5499,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                     }
                 } else if case .legacyGroup = chatPeer {
+                    alertTitle = strongSelf.presentationData.strings.Group_DeleteGroup
                     if strongSelf.canDeletePeerGloballyAsCreator(mainPeer) {
                         canRemoveGlobally = true
                     }
@@ -5520,12 +5528,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     break
                 }
                 
+                let alertAction: DeleteChatPeerAction
                 if canRemoveGlobally && isGroupOrChannel {
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                    alertAction = .deleteAndLeave
                     
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak self, weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        
+                    actions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, type: .destructive, action: {
                         let proceed = {
                             self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: false, completion: {
                             })
@@ -5568,8 +5575,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembers
                     }
                     
-                    items.append(ActionSheetButtonItem(title: deleteForAllText, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                    actions.append(AlertScreen.Action(title: deleteForAllText, type: .destructive, action: {
                         guard let strongSelf = self else {
                             return
                         }
@@ -5591,12 +5597,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         ], parseMarkdown: true), in: .window(.root))
                     }))
                 } else {
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                    alertAction = .delete
                     
                     if canStop {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            
+                        actions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, type: .destructive, action: {
                             if let strongSelf = self {
                                 strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in
                                 }, removed: {
@@ -5654,9 +5658,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }), in: .current)
                         }
                         
-                        items.append(ActionSheetButtonItem(title: canStop ? strongSelf.presentationData.strings.DialogList_DeleteBotClearHistory : strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            
+                        actions.append(AlertScreen.Action(title: canStop ? strongSelf.presentationData.strings.DialogList_DeleteBotClearHistory : strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, action: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -5665,36 +5667,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 beginClear(.forEveryone)
                             } else {
                                 if canRemoveGlobally {
-                                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                                    var items: [ActionSheetItem] = []
-                                                                
-                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory(canClearCache: false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
-                                    
+                                    var clearActions: [AlertScreen.Action] = []
                                     if joined || mainPeer.isDeleted {
-                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                                        clearActions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.Common_Delete, type: .destructive, action: {
                                             beginClear(.forEveryone)
-                                            actionSheet?.dismissAnimated()
                                         }))
                                     } else {
-                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                                        clearActions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, type: .destructive, action: {
                                             beginClear(.forLocalPeer)
-                                            actionSheet?.dismissAnimated()
                                         }))
-                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, color: .destructive, action: { [weak actionSheet] in
+                                        clearActions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, type: .destructive, action: {
                                             beginClear(.forEveryone)
-                                            actionSheet?.dismissAnimated()
                                         }))
                                     }
+                                    clearActions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.Common_Cancel))
                                     
-                                    actionSheet.setItemGroups([
-                                        ActionSheetItemGroup(items: items),
-                                        ActionSheetItemGroup(items: [
-                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                                actionSheet?.dismissAnimated()
-                                            })
-                                        ])
-                                    ])
-                                    strongSelf.present(actionSheet, in: .window(.root))
+                                    strongSelf.present(deleteChatPeerAlertScreen(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory(canClearCache: false), actions: clearActions), in: .window(.root))
                                 } else {
                                     strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
                                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
@@ -5709,8 +5697,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     
                     if case .secretChat = chatPeer {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        actions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, type: .destructive, action: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -5718,8 +5705,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         }))
                     } else if !canStop {
-                        items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        actions.append(AlertScreen.Action(title: deleteTitle, type: .destructive, action: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -5733,13 +5719,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                             
                             if canRemoveGlobally && isGroupOrChannel {
-                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                                var items: [ActionSheetItem] = []
+                                var leaveActions: [AlertScreen.Action] = []
                                 
-                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
-                                
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
+                                leaveActions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, type: .destructive, action: {
                                     self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: false, completion: {
                                     })
                                 }))
@@ -5751,8 +5733,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembers
                                 }
                                 
-                                items.append(ActionSheetButtonItem(title: deleteForAllText, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
+                                leaveActions.append(AlertScreen.Action(title: deleteForAllText, type: .destructive, action: {
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -5773,53 +5754,36 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         })
                                     ], parseMarkdown: true), in: .window(.root))
                                 }))
-                                    
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: items),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
-                                strongSelf.present(actionSheet, in: .window(.root))
+                                
+                                leaveActions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.Common_Cancel))
+                                
+                                strongSelf.present(deleteChatPeerAlertScreen(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, title: alertTitle, actions: leaveActions), in: .window(.root))
                             } else {
                                 strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
                             }
                         }))
                     }
                 }
-            
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                        ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                strongSelf.present(actionSheet, in: .window(.root))
+                
+                actions.append(AlertScreen.Action(title: strongSelf.presentationData.strings.Common_Cancel))
+                
+                strongSelf.present(deleteChatPeerAlertScreen(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: alertAction, title: alertTitle, actions: actions), in: .window(.root))
             }
         })
     }
     
     func deletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
-        let actionSheet = ActionSheetController(presentationData: self.presentationData)
-        var items: [ActionSheetItem] = []
-        
-        items.append(ActionSheetTextItem(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
-            actionSheet?.dismissAnimated()
-            self?.commitDeletePeerThread(peerId: peerId, threadId: threadId, completion: {})
-        }))
-        
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+        let alertScreen = AlertScreen(
+            context: self.context,
+            text: self.presentationData.strings.ChatList_DeleteTopicConfirmationText,
+            actions: [
+                AlertScreen.Action(title: self.presentationData.strings.Common_Cancel),
+                AlertScreen.Action(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationAction, type: .defaultDestructive, action: { [weak self] in
+                    self?.commitDeletePeerThread(peerId: peerId, threadId: threadId, completion: {})
                 })
-            ])
-        ])
-        self.present(actionSheet, in: .window(.root))
+            ]
+        )
+        self.present(alertScreen, in: .window(.root))
     }
     
     func selectPeerThread(peerId: EnginePeer.Id, threadId: Int64) {
@@ -6330,9 +6294,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let _ = strongSelf.context.engine.peers.markChatListFeaturedFiltersAsSeen().startStandalone()
             let (_, filterItems) = filterItemsAndTotalCount
             
+            // The list keeps an .allChats entry (the server's dialogFilterDefault) without any folders
+            let hasFolders = presetList.contains(where: { filter in
+                if case .filter = filter {
+                    return true
+                }
+                return false
+            })
+            
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? strongSelf.presentationData.strings.ChatList_AddFolder : strongSelf.presentationData.strings.ChatList_EditFolders, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: presetList.isEmpty ? "Chat/Context Menu/Add" : "Chat/Context Menu/EditFolder"), color: theme.contextMenu.primaryColor)
+            items.append(.action(ContextMenuActionItem(text: hasFolders ? strongSelf.presentationData.strings.ChatList_EditFolders : strongSelf.presentationData.strings.ChatList_AddFolder, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: hasFolders ? "Chat/Context Menu/EditFolder" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
             }, action: { c, f in
                 c?.dismiss(completion: {
                     guard let strongSelf = self else {
@@ -6356,14 +6328,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 })))
             }
             
-            let hasFilters = presetList.contains(where: { filter in
-                if case .filter = filter {
-                    return true
-                } else {
-                    return false
-                }
-            })
-            if hasFilters {
+            if hasFolders {
                 if strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter == nil {
                     items.append(.separator)
                 }
@@ -7524,7 +7489,7 @@ private final class ChatListLocationContext {
                     guard let self, let parentController = self.parentController else {
                         return
                     }
-                    ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: gesture)
+                    ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: parentController.headerMenuSourceView(sourceView), gesture: gesture)
                 }
             )
         }
@@ -7559,7 +7524,7 @@ private final class ChatListLocationContext {
                 parentController.openArchiveMoreMenu(sourceView: sourceView, gesture: nil)
             }
         case let .forum(peerId):
-            ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: nil)
+            ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: parentController.headerMenuSourceView(sourceView), gesture: nil)
         case .savedMessagesChats:
             break
         }

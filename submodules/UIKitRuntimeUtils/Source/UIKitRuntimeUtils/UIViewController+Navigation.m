@@ -508,13 +508,19 @@ static void registerEffectViewOverrides(void) {
         }
     }
     NSString *selectorString = [@"backdropLayer" stringByAppendingString:@":didChangeLuma:"];
-    
-    for (NSString *name in nameList) {
+
+    // UIKit's SDF glass backdrop view is file-private on iOS 26 and module-level from iOS 27, where its old name
+    // resolves to nil (which left the luma limits uninstalled there).
+    NSArray<NSString *> *lumaClassNames = @[
+        TGEncodeText(@"_TtC5UIKit17UISDFBackdropView", 0),
+        nameList.firstObject
+    ];
+    for (NSString *name in lumaClassNames) {
         Class classValue = NSClassFromString(name);
         if (classValue == nil) {
             continue;
         }
-        
+
         Method method = (Method)[RuntimeUtils getMethodOfClass:classValue selector:NSSelectorFromString(selectorString)];
         if (method) {
             const char *typeEncoding = method_getTypeEncoding(method);
@@ -1057,8 +1063,9 @@ void snapshotViewByDrawingInContext(UIView * _Nonnull view) {
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self != nil) {
+        // No limit until the owner sets one: a luma that arrives first passes through instead of clamping to 0.
         _lumaMin = 0.0;
-        _lumaMax = 0.0;
+        _lumaMax = 1.0;
     }
     return self;
 }

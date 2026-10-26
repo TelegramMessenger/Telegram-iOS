@@ -1,0 +1,121 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div style="display: flex; align-items: center; margin-bottom: 8px">
+  <div style="position: relative; margin-right: 22px"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2a6 6 0 0 0-6 6v4l-2 3v1h16v-1l-2-3V8a6 6 0 0 0-6-6zm-2 16a2 2 0 0 0 4 0z" fill="#8e8e93"></path></svg><span style="position: absolute; top: -6px; right: -10px; background-color: #ff3b30; color: #ffffff; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 8px; line-height: 16px">12</span></div>
+  <div style="position: relative; margin-right: 22px"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 5h20l-10 7zM2 7.5V19h20V7.5l-10 7z" fill="#8e8e93"></path></svg><span style="position: absolute; top: -6px; right: -8px; background-color: #007aff; color: #ffffff; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 8px; line-height: 16px">3</span></div>
+  <div style="font-size: 12px; color: #8e8e93">← position: absolute badges</div>
+</div>
+<div style="position: relative; height: 64px; background-color: rgba(127,127,127,0.14); border-radius: 8px; font-size: 12px">
+  <span style="position: absolute; left: 8px; top: 6px">top-left</span>
+  <span style="position: absolute; right: 8px; top: 6px">top-right</span>
+  <span style="position: absolute; left: 40%; top: 24px; color: #ff2d55">left: 40%</span>
+  <span style="position: absolute; left: 8px; bottom: 6px">bottom-left</span>
+  <span style="position: absolute; right: 8px; bottom: 6px">bottom-right</span>
+</div>
+<div style="margin-top: 8px"><svg width="56" height="56" viewBox="0 0 56 56" style="float: right; margin-left: 8px; border-radius: 28px"><defs><linearGradient id="ocean" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd3ff"></stop><stop offset=".45" stop-color="#2a9df4"></stop><stop offset="1" stop-color="#0b5ea8"></stop></linearGradient></defs><rect width="56" height="56" fill="url(#ocean)"></rect><path d="M0 34c7-5 14-5 21 0s14 5 21 0 10-3 14 0v22H0z" fill="rgba(255,255,255,0.22)"></path></svg>float: right — the ocean image sits on the right while this text wraps on its left side for a couple of lines, then continues underneath.</div>
+</body></html>
+
+== layout
+html 0 0 360 176.8
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 176.8
+    div 0 0 360 24
+      div 0 0 24 24
+        svg 0 0 24 24
+          path 0 0 0 0
+        span 15 -6 14 32
+      div 46 0 24 24
+        svg 46 0 24 24
+          path 0 0 0 0
+        span 65 -6 8 16
+      div 92 4.2 232 15.6
+    div 0 32 360 64
+      span 8 38 64 15.6
+      span 280 38 72 15.6
+      span 144 56 72 15.6
+      span 8 74.4 88 15.6
+      span 256 74.4 96 15.6
+    div 0 104 360 72.8
+      svg 304 104 56 56
+        defs 0 0 0 0
+          lineargradient 0 0 0 0
+            stop 0 0 0 0
+            stop 0 0 0 0
+            stop 0 0 0 0
+        rect 0 0 0 0
+        path 0 0 0 0
+
+== paint
+root 360x176.8 items=56
+  set-clip bounds=(304,104,56,56) pos=(304,104,56,56) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(304,104,56,56)
+    group opacity=1 matrix=(1,0,0,1,304,104) backface=0 bounds=(0,0,56,56) exact=0
+      path bounds=(-1,-1,58,58) ops=(0,1,1,1,4) points=(0,0,56,0,56,56,0,56) fill=1 fill-color=#0b5ea8ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(1,0,0,0,56,0.5,0.5,0.5,((0,#8fd3ffff),(0.45,#2a9df4ff),(1,#0b5ea8ff)))
+      path bounds=(-1,29.25,58,27.75) ops=(0,3,3,3,1,1,4) points=(0,34,7,29,14,29,21,34,28,39,35,39,42,34,49,29,52,31,56,34,56,56,0,56) fill=1 fill-color=#ffffff38 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(84,-4,40,32) pos=(92,4,24,16) color=#8e8e93ff text="←" font=f1 glyphs=3 advance=24
+  text bounds=(116,-4,88,32) pos=(124,4,72,16) color=#8e8e93ff text="position:" font=f1 glyphs=9 advance=72
+  text bounds=(196,-4,80,32) pos=(204,4,64,16) color=#8e8e93ff text="absolute" font=f1 glyphs=8 advance=64
+  text bounds=(268,-4,64,32) pos=(276,4,48,16) color=#8e8e93ff text="badges" font=f1 glyphs=6 advance=48
+  text bounds=(-8,97,64,32) pos=(0,105,48,16) color=#000000ff text="float:" font=f2 glyphs=6 advance=48
+  text bounds=(48,97,56,32) pos=(56,105,40,16) color=#000000ff text="right" font=f2 glyphs=5 advance=40
+  text bounds=(96,97,40,32) pos=(104,105,24,16) color=#000000ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(128,97,40,32) pos=(136,105,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(160,97,56,32) pos=(168,105,40,16) color=#000000ff text="ocean" font=f2 glyphs=5 advance=40
+  text bounds=(208,97,56,32) pos=(216,105,40,16) color=#000000ff text="image" font=f2 glyphs=5 advance=40
+  text bounds=(256,97,48,32) pos=(264,105,32,16) color=#000000ff text="sits" font=f2 glyphs=4 advance=32
+  text bounds=(-8,115,32,32) pos=(0,123,16,16) color=#000000ff text="on" font=f2 glyphs=2 advance=16
+  text bounds=(16,115,40,32) pos=(24,123,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(48,115,56,32) pos=(56,123,40,16) color=#000000ff text="right" font=f2 glyphs=5 advance=40
+  text bounds=(96,115,56,32) pos=(104,123,40,16) color=#000000ff text="while" font=f2 glyphs=5 advance=40
+  text bounds=(144,115,48,32) pos=(152,123,32,16) color=#000000ff text="this" font=f2 glyphs=4 advance=32
+  text bounds=(184,115,48,32) pos=(192,123,32,16) color=#000000ff text="text" font=f2 glyphs=4 advance=32
+  text bounds=(224,115,56,32) pos=(232,123,40,16) color=#000000ff text="wraps" font=f2 glyphs=5 advance=40
+  text bounds=(272,115,32,32) pos=(280,123,16,16) color=#000000ff text="on" font=f2 glyphs=2 advance=16
+  text bounds=(-8,133,40,32) pos=(0,141,24,16) color=#000000ff text="its" font=f2 glyphs=3 advance=24
+  text bounds=(24,133,48,32) pos=(32,141,32,16) color=#000000ff text="left" font=f2 glyphs=4 advance=32
+  text bounds=(64,133,48,32) pos=(72,141,32,16) color=#000000ff text="side" font=f2 glyphs=4 advance=32
+  text bounds=(104,133,40,32) pos=(112,141,24,16) color=#000000ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(136,133,24,32) pos=(144,141,8,16) color=#000000ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(152,133,64,32) pos=(160,141,48,16) color=#000000ff text="couple" font=f2 glyphs=6 advance=48
+  text bounds=(208,133,32,32) pos=(216,141,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(232,133,64,32) pos=(240,141,48,16) color=#000000ff text="lines," font=f2 glyphs=6 advance=48
+  text bounds=(-8,152,48,32) pos=(0,160,32,16) color=#000000ff text="then" font=f2 glyphs=4 advance=32
+  text bounds=(32,152,88,32) pos=(40,160,72,16) color=#000000ff text="continues" font=f2 glyphs=9 advance=72
+  text bounds=(112,152,104,32) pos=(120,160,88,16) color=#000000ff text="underneath." font=f2 glyphs=11 advance=88
+  set-clip bounds=(0,0,24,24) pos=(0,0,24,24) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(0,0,24,24)
+    group opacity=1 matrix=(1,0,0,1,0,0) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(3,1,18,20) ops=(0,3,1,1,1,1,1,1,1,3,4,0,3,3,4) points=(12,2,8.68629,2,6,4.68629,6,8,6,12,4,15,4,16,20,16,20,15,18,12,18,8,18,4.68629,15.3137,2,12,2,10,18,10,19.1046,10.8954,20,12,20,13.1046,20,14,19.1046,14,18) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(10,-6,24,32) layer=(border=(10,-6,24,32),radius=(8,8,8,8,8,8,8,8),clip=(10,-6,24,32),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b30ff
+  text bounds=(7,-14,24,32) pos=(15,-6,8,16) color=#ffffffff text="1" font=f3 glyphs=1 advance=8
+  text bounds=(7,2,24,32) pos=(15,10,8,16) color=#ffffffff text="2" font=f3 glyphs=1 advance=8
+  set-clip bounds=(46,0,24,24) pos=(46,0,24,24) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(46,0,24,24)
+    group opacity=1 matrix=(1,0,0,1,46,0) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1,4,22,16) ops=(0,1,1,4,0,1,1,1,1,4) points=(2,5,22,5,12,12,2,7.5,2,19,22,19,22,7.5,12,14.5) fill=1 fill-color=#8e8e93ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(60,-6,18,16) layer=(border=(60,-6,18,16),radius=(8,8,8,8,8,8,8,8),clip=(60,-6,18,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(57,-14,24,32) pos=(65,-6,8,16) color=#ffffffff text="3" font=f3 glyphs=1 advance=8
+  solid-fill bounds=(0,32,360,64) layer=(border=(0,32,360,64),radius=(8,8,8,8,8,8,8,8),clip=(0,32,360,64),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  text bounds=(0,30,48,32) pos=(8,38,32,16) color=#000000ff text="top-" font=f1 glyphs=4 advance=32
+  text bounds=(32,30,48,32) pos=(40,38,32,16) color=#000000ff text="left" font=f1 glyphs=4 advance=32
+  text bounds=(272,30,48,32) pos=(280,38,32,16) color=#000000ff text="top-" font=f1 glyphs=4 advance=32
+  text bounds=(304,30,56,32) pos=(312,38,40,16) color=#000000ff text="right" font=f1 glyphs=5 advance=40
+  text bounds=(136,48,56,32) pos=(144,56,40,16) color=#ff2d55ff text="left:" font=f1 glyphs=5 advance=40
+  text bounds=(184,48,40,32) pos=(192,56,24,16) color=#ff2d55ff text="40%" font=f1 glyphs=3 advance=24
+  text bounds=(0,66,72,32) pos=(8,74,56,16) color=#000000ff text="bottom-" font=f1 glyphs=7 advance=56
+  text bounds=(56,66,48,32) pos=(64,74,32,16) color=#000000ff text="left" font=f1 glyphs=4 advance=32
+  text bounds=(248,66,72,32) pos=(256,74,56,16) color=#000000ff text="bottom-" font=f1 glyphs=7 advance=56
+  text bounds=(304,66,56,32) pos=(312,74,40,16) color=#000000ff text="right" font=f1 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,89 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>25:00 – Pomodoro</title>
+<style></style>
+</head>
+<body>
+<div class="modes">
+  <button class="active" data-min="25">Focus</button>
+  <button data-min="5">Short break</button>
+  <button data-min="15">Long break</button>
+</div>
+<div class="ring">
+  <svg width="220" height="220" viewBox="0 0 220 220">
+    <circle class="bg" cx="110" cy="110" r="100"></circle>
+    <circle class="fg" id="fg" cx="110" cy="110" r="100" stroke-dasharray="628.3" stroke-dashoffset="0" style="stroke-dashoffset: 0;"></circle>
+  </svg>
+  <div class="time"><span id="clock">25:00</span><small id="label">FOCUS</small></div>
+</div>
+<div class="controls">
+  <button id="start">Start</button>
+  <button class="secondary" id="reset">Reset</button>
+</div>
+<div class="done" id="done"></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 397.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 20 20 320 357.6
+    div 31 20 298 29.6
+      button 44 27 40 15.6
+      button 116 27 88 15.6
+      button 236 27 80 15.6
+    div 70 65.6 220 220
+      svg 70 65.6 220 220
+        circle 0 0 0 0
+        circle 0 0 0 0
+      div 70 65.6 220 220
+        span 160 137.125 40 59.4
+        small 160 196.525 40 17.55
+    div 98 305.6 164 40
+      button 116 315.6 40 20
+      button 203 316.6 40 18
+    div 180 357.6 0 20
+
+== paint
+root 360x397.6 items=23
+  solid-fill bounds=(0,0,360,398) layer=(border=(0,0,360,398),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,398),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#fef2f2ff
+  solid-fill bounds=(31,20,66,30) layer=(border=(31,20,66,30),radius=(8,8,8,8,8,8,8,8),clip=(31,20,66,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f1d1dff
+  borders bounds=(31,20,66,30) borders=(left=(1,4,#fecacaff),top=(1,4,#fecacaff),right=(1,4,#fecacaff),bottom=(1,4,#fecacaff),radius=(8,8,8,8,8,8,8,8)) pos=(31,20,66,30) root=0
+  solid-fill bounds=(103,20,114,30) layer=(border=(103,20,114,30),radius=(8,8,8,8,8,8,8,8),clip=(103,20,114,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(103,20,114,30) borders=(left=(1,4,#fecacaff),top=(1,4,#fecacaff),right=(1,4,#fecacaff),bottom=(1,4,#fecacaff),radius=(8,8,8,8,8,8,8,8)) pos=(103,20,114,30) root=0
+  solid-fill bounds=(223,20,106,30) layer=(border=(223,20,106,30),radius=(8,8,8,8,8,8,8,8),clip=(223,20,106,30),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(223,20,106,30) borders=(left=(1,4,#fecacaff),top=(1,4,#fecacaff),right=(1,4,#fecacaff),bottom=(1,4,#fecacaff),radius=(8,8,8,8,8,8,8,8)) pos=(223,20,106,30) root=0
+  solid-fill bounds=(98,306,76,40) layer=(border=(98,306,76,40),radius=(8,8,8,8,8,8,8,8),clip=(98,306,76,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ef4444ff
+  solid-fill bounds=(184,306,78,40) layer=(border=(184,306,78,40),radius=(8,8,8,8,8,8,8,8),clip=(184,306,78,40),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(184,306,78,40) borders=(left=(1,4,#fca5a5ff),top=(1,4,#fca5a5ff),right=(1,4,#fca5a5ff),bottom=(1,4,#fca5a5ff),radius=(8,8,8,8,8,8,8,8)) pos=(184,306,78,40) root=0
+  text bounds=(36,19,56,32) pos=(44,27,40,16) color=#ffffffff text="Focus" font=f1 glyphs=5 advance=40
+  text bounds=(108,19,56,32) pos=(116,27,40,16) color=#7f1d1dff text="Short" font=f1 glyphs=5 advance=40
+  text bounds=(156,19,56,32) pos=(164,27,40,16) color=#7f1d1dff text="break" font=f1 glyphs=5 advance=40
+  text bounds=(228,19,48,32) pos=(236,27,32,16) color=#7f1d1dff text="Long" font=f1 glyphs=4 advance=32
+  text bounds=(268,19,56,32) pos=(276,27,40,16) color=#7f1d1dff text="break" font=f1 glyphs=5 advance=40
+  text bounds=(108,310,56,32) pos=(116,318,40,16) color=#ffffffff text="Start" font=f2 glyphs=5 advance=40
+  text bounds=(195,310,56,32) pos=(203,318,40,16) color=#991b1bff text="Reset" font=f2 glyphs=5 advance=40
+  group opacity=1 matrix=(-4.37114e-08,-1,1,-4.37114e-08,4.40001,355.6) backface=0 bounds=(70,65.6,220,220) exact=0
+    set-clip bounds=(70,65.6,220,220) pos=(70,65.6,220,220) radius=(0,0,0,0,0,0,0,0)
+    isolated box=(70,65.6,220,220)
+      group opacity=1 matrix=(1,0,0,1,70,65.6) backface=0 bounds=(0,0,220,220) exact=0
+        path bounds=(-15,-15,250,250) ops=(0,3,3,3,3,4) points=(210,110,210,165.228,165.228,210,110,210,54.7715,210,10,165.228,10,110,10,54.7715,54.7715,10,110,10,165.228,10,210,54.7715,210,110) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#fecacaff stroke-width=12 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+        path bounds=(-15,-15,250,250) ops=(0,3,3,3,3,4) points=(210,110,210,165.228,165.228,210,110,210,54.7715,210,10,165.228,10,110,10,54.7715,54.7715,10,110,10,165.228,10,210,54.7715,210,110) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ef4444ff stroke-width=12 cap=1 join=0 miter=4 dashes=(628.3,628.3) dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+    del-clip bounds=(0,0,0,0)
+  text bounds=(152,150,56,32) pos=(160,158,40,16) color=#991b1bff text="25:00" font=f3 glyphs=5 advance=40
+  text bounds=(152,189,56,32) pos=(160,197,40,16) color=#b91c1cff text="FOCUS" font=f4 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=44,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f4 (family="system-ui,sans-serif",size=13,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=1,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)

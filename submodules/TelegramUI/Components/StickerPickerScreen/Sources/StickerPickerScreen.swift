@@ -987,7 +987,7 @@ public class StickerPickerScreen: ViewController {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
+                clearGroup: { [weak self] groupId, sourceView, sourceRect in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
@@ -997,18 +997,10 @@ public class StickerPickerScreen: ViewController {
                     }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
-                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                        let contextController = makeEmojiClearGroupContextController(presentationData: presentationData, title: presentationData.strings.Emoji_ClearRecent, sourceView: sourceView, sourceRect: sourceRect, action: {
                             let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                        })
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(contextController)
                     } else if groupId == AnyHashable("popular") {
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
@@ -1404,7 +1396,7 @@ public class StickerPickerScreen: ViewController {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
+                clearGroup: { [weak self] groupId, sourceView, sourceRect in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
@@ -1414,18 +1406,9 @@ public class StickerPickerScreen: ViewController {
                         if controller.forceDark {
                             presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
                         }
-                        guard let stickersView = strongSelf.hostView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("stickers"))) as? EmojiPagerContentComponent.View, let reference = stickersView.clearGroupButtonReference(groupId: groupId) else {
-                            return
-                        }
-                        let items: [ContextMenuItem] = [
-                            .action(ContextMenuActionItem(text: presentationData.strings.Stickers_ClearRecent, textColor: .destructive, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-                            }, action: { _, f in
-                                f(.default)
-                                let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
-                            }))
-                        ]
-                        let contextController = makeContextController(presentationData: presentationData, source: .reference(StickerPickerClearGroupReferenceContentSource(sourceView: reference.view, insets: reference.insets)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+                        let contextController = makeEmojiClearGroupContextController(presentationData: presentationData, title: presentationData.strings.Stickers_ClearRecent, sourceView: sourceView, sourceRect: sourceRect, action: {
+                            let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
+                        })
                         controller.presentInGlobalOverlay(contextController)
                     } else if groupId == AnyHashable("featuredTop") {
                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Collections.FeaturedStickerPacks())

@@ -1,0 +1,21 @@
+<!-- Taps and holds (widget-sandbox v0.1.2): every tap over the widget is the widget's, on #button (which asks to open a
+     link: the readout's openLink) and on #empty (which handles nothing) alike, and a double tap is two clicks then a
+     dblclick, never the bubble's quick reaction. Both are touch-action: auto, so a hold on either is the bubble's menu,
+     which ends the widget's touch with a pointercancel. Each click, dblclick, pointercancel and contextmenu is logged
+     into <html data-log> (the readout's `log` line) as <type>:<element>. -->
+<style>
+  body { margin: 0; }
+  #button { display: block; width: 100%; height: 100px; margin: 0; border: 0; background: #8cf; }
+  #empty { height: 100px; background: #eee; }
+</style>
+<button id="button" onclick="TelegramWidget.openLink('https://example.org/tap')">button</button>
+<div id="empty">empty</div>
+<script>
+  const log = [];
+  for (const type of ['click', 'dblclick', 'pointercancel', 'contextmenu']) {
+    document.addEventListener(type, e => {
+      log.push(type + ':' + e.target.id);
+      document.documentElement.setAttribute('data-log', log.join(' '));
+    });
+  }
+</script>

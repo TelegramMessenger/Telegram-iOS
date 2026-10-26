@@ -69,6 +69,7 @@ public typealias EngineRawMessageHistoryThreadIndexView = MessageHistoryThreadIn
 public typealias EngineRawCombinedReadStateView = CombinedReadStateView
 public typealias EngineRawMessageHistoryThreadInfoView = MessageHistoryThreadInfoView
 public typealias EngineRawBasicPeerView = BasicPeerView
+public typealias EngineRawAssociatedPeerIdsView = AssociatedPeerIdsView
 public typealias EngineRawCachedPeerDataView = CachedPeerDataView
 public typealias EngineRawUnreadMessageCountsItem = UnreadMessageCountsItem
 public typealias EngineRawMessageHistorySavedMessagesIndexView = MessageHistorySavedMessagesIndexView

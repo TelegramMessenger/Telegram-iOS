@@ -612,8 +612,32 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             totalAmount: nil,
             hasCheck: false,
             navigationController: component.controller()?.navigationController as? NavigationController,
-            completion: { _ in
-                completion()
+            completion: { [weak view] _ in
+                guard let view, let component = view.component, let starsContext = component.context.starsContext else {
+                    return
+                }
+                let peerId = component.slice.effectivePeer.id
+                let totalAmount = sendPaidMessageStars.value
+                if let currentState = starsContext.currentState, currentState.balance.value < totalAmount {
+                    let _ = (component.context.engine.payments.starsTopUpOptions()
+                    |> take(1)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak view] options in
+                        guard let view, let component = view.component, let navigationController = component.controller()?.navigationController as? NavigationController else {
+                            return
+                        }
+                        let controller = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options, purpose: .sendMessage(peerId: peerId, requiredStars: totalAmount), targetPeerId: nil, customTheme: component.theme, completion: { stars in
+                            starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                            let _ = (starsContext.onUpdate
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: {
+                                completion()
+                            })
+                        })
+                        navigationController.pushViewController(controller)
+                    })
+                } else {
+                    completion()
+                }
             }
         )
         component.controller()?.present(controller, in: .window(.root))
@@ -3492,7 +3516,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             if peer.smallProfileImage == nil {
                 expandAvatar = false
             }
-            if component.metrics.widthClass == .regular {
+            if component.isCardLayout {
                 expandAvatar = false
             }
             if let infoController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: false, requestsContext: nil) {

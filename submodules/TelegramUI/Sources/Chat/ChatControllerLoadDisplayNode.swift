@@ -128,6 +128,7 @@ import GlobalControlPanelsContext
 import ComponentFlow
 import ComponentDisplayAdapters
 import UIKitRuntimeUtils
+import ChatHistoryListViewBackend
 
 extension ChatControllerImpl {
     func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((ContainedViewLayoutTransition?) -> Void) -> Void) {

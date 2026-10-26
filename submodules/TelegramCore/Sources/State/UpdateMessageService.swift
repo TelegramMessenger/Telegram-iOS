@@ -37,30 +37,23 @@ class UpdateMessageService: NSObject, NetworkEngineUpdateSink {
         switch updates {
             case let .updates(updatesData):
                 let (updates, users, chats, date, seq) = (updatesData.updates, updatesData.users, updatesData.chats, updatesData.date, updatesData.seq)
-                let groups = groupUpdates(updates, users: users, chats: chats, date: date, seqRange: seq == 0 ? nil : (seq, 1))
-                if groups.count != 0 {
-                    self.putNext(groups)
-                }
+                let groups = groupUpdates(updates, users: users, chats: chats, date: date, seqRange: seq == 0 ? nil : SequenceSpan(end: seq, count: 1))
+                self.putNext(groups)
             case let .updatesCombined(updatesCombinedData):
                 let (updates, users, chats, date, seqStart, seq) = (updatesCombinedData.updates, updatesCombinedData.users, updatesCombinedData.chats, updatesCombinedData.date, updatesCombinedData.seqStart, updatesCombinedData.seq)
-                let groups = groupUpdates(updates, users: users, chats: chats, date: date, seqRange: seq == 0 ? nil : (seq, seq - seqStart))
-                if groups.count != 0 {
-                    self.putNext(groups)
-                }
+                // The container covers seq_start...seq: count = seq - seq_start + 1 (G2).
+                let groups = groupUpdates(updates, users: users, chats: chats, date: date, seqRange: seq == 0 ? nil : SequenceSpan(seqStart: seqStart, seq: seq))
+                self.putNext(groups)
             case let .updateShort(updateShortData):
                 let (update, date) = (updateShortData.update, updateShortData.date)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
-                if groups.count != 0 {
-                    self.putNext(groups)
-                }
+                self.putNext(groups)
             case let .updateShortChatMessage(updateShortChatMessageData):
                 let (flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities, ttlPeriod) = (updateShortChatMessageData.flags, updateShortChatMessageData.id, updateShortChatMessageData.fromId, updateShortChatMessageData.chatId, updateShortChatMessageData.message, updateShortChatMessageData.pts, updateShortChatMessageData.ptsCount, updateShortChatMessageData.date, updateShortChatMessageData.fwdFrom, updateShortChatMessageData.viaBotId, updateShortChatMessageData.replyTo, updateShortChatMessageData.entities, updateShortChatMessageData.ttlPeriod)
                     let generatedMessage = Api.Message.message(.init(flags: flags, flags2: 0, id: id, fromId: .peerUser(.init(userId: fromId)), fromBoostsApplied: nil, fromRank: nil, peerId: Api.Peer.peerChat(.init(chatId: chatId)), savedPeerId: nil, fwdFrom: fwdFrom, viaBotId: viaBotId, viaBusinessBotId: nil, guestchatViaFrom: nil, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, reactions: nil, restrictionReason: nil, ttlPeriod: ttlPeriod, quickReplyShortcutId: nil, effect: nil, factcheck: nil, reportDeliveryUntilDate: nil, paidMessageStars: nil, suggestedPost: nil, scheduleRepeatPeriod: nil, summaryFromLanguage: nil, richMessage: nil))
                 let update = Api.Update.updateNewMessage(.init(message: generatedMessage, pts: pts, ptsCount: ptsCount))
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
-                if groups.count != 0 {
-                    self.putNext(groups)
-                }
+                self.putNext(groups)
             case let .updateShortMessage(updateShortMessageData):
                 let (flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities, ttlPeriod) = (updateShortMessageData.flags, updateShortMessageData.id, updateShortMessageData.userId, updateShortMessageData.message, updateShortMessageData.pts, updateShortMessageData.ptsCount, updateShortMessageData.date, updateShortMessageData.fwdFrom, updateShortMessageData.viaBotId, updateShortMessageData.replyTo, updateShortMessageData.entities, updateShortMessageData.ttlPeriod)
                 let generatedFromId: Api.Peer
@@ -75,9 +68,7 @@ class UpdateMessageService: NSObject, NetworkEngineUpdateSink {
                 let generatedMessage = Api.Message.message(.init(flags: flags, flags2: 0, id: id, fromId: generatedFromId, fromBoostsApplied: nil, fromRank: nil, peerId: generatedPeerId, savedPeerId: nil, fwdFrom: fwdFrom, viaBotId: viaBotId, viaBusinessBotId: nil, guestchatViaFrom: nil, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, reactions: nil, restrictionReason: nil, ttlPeriod: ttlPeriod, quickReplyShortcutId: nil, effect: nil, factcheck: nil, reportDeliveryUntilDate: nil, paidMessageStars: nil, suggestedPost: nil, scheduleRepeatPeriod: nil, summaryFromLanguage: nil, richMessage: nil))
                 let update = Api.Update.updateNewMessage(.init(message: generatedMessage, pts: pts, ptsCount: ptsCount))
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
-                if groups.count != 0 {
-                    self.putNext(groups)
-                }
+                self.putNext(groups)
             case .updatesTooLong:
                 self.pipe.putNext([.reset])
             case let .updateShortSentMessage(updateShortSentMessageData):

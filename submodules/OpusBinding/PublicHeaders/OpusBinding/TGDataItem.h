@@ -4,6 +4,7 @@
 
 - (instancetype)initWithData:(NSData *)data;
 - (void)appendData:(NSData *)data;
+- (bool)replaceData:(NSData *)data;
 - (NSData *)data;
 
 @end

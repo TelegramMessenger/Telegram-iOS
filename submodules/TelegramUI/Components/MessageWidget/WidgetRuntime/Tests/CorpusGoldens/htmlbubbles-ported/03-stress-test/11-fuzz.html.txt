@@ -1,0 +1,130 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>Emoji ZWJ: 👨‍👩‍👧‍👦 👩🏽‍💻 🏳️‍🌈 🧑‍🚀 · Flags: 🇺🇦 🇯🇵 🇧🇷 🇰🇪 🇨🇦 · Skin tones: 👍🏻 👍🏽 👍🏿</p>
+<p>Combining marks: é ñ å · Math: ∑ ∫ √ ≠ ≤ ∞ π · Arrows: ← ↑ → ↓ ⇄ · Box: ┌─┐└─┘</p>
+<p>Кириллица · Ελληνικά · ქართული · हिन्दी · ภาษาไทย</p>
+<p lang="ja">日本語のテキストにはスペースがありませんが、ちゃんと折り返されるでしょうか。これは行の折り返しをテストするための長い文章です。</p>
+<p dir="rtl" style="text-align: right">مرحبا بالعالم — שלום עולם</p>
+<p style="font-size: 12px; color: #8e8e93">Each word is shaped by CoreText (Arabic joins correctly), but litehtml lays words out left-to-right — no bidi reordering.</p>
+</body></html>
+
+== layout
+html 0 0 360 432.6
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 432.6
+    p 0 0 360 91
+    p 0 99 360 54.6
+    p 0 161.6 360 54.6
+    p 0 224.2 360 109.2
+    p 0 341.4 360 36.4
+    p 0 385.8 360 46.8
+
+== paint
+root 360x433 items=98
+  text bounds=(-8,-7,56,32) pos=(0,1,40,16) color=#000000ff text="Emoji" font=f1 glyphs=5 advance=40
+  text bounds=(40,-7,48,32) pos=(48,1,32,16) color=#000000ff text="ZWJ:" font=f1 glyphs=4 advance=32
+  text bounds=(80,-7,216,32) pos=(88,1,200,16) color=#000000ff text="👨‍👩‍👧‍👦" font=f1 glyphs=25 advance=200
+  text bounds=(-8,11,136,32) pos=(0,19,120,16) color=#000000ff text="👩🏽‍💻" font=f1 glyphs=15 advance=120
+  text bounds=(120,11,128,32) pos=(128,19,112,16) color=#000000ff text="🏳️‍🌈" font=f1 glyphs=14 advance=112
+  text bounds=(240,11,104,32) pos=(248,19,88,16) color=#000000ff text="🧑‍🚀" font=f1 glyphs=11 advance=88
+  text bounds=(336,11,32,32) pos=(344,19,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(-8,29,64,32) pos=(0,37,48,16) color=#000000ff text="Flags:" font=f1 glyphs=6 advance=48
+  text bounds=(48,29,80,32) pos=(56,37,64,16) color=#000000ff text="🇺🇦" font=f1 glyphs=8 advance=64
+  text bounds=(120,29,80,32) pos=(128,37,64,16) color=#000000ff text="🇯🇵" font=f1 glyphs=8 advance=64
+  text bounds=(192,29,80,32) pos=(200,37,64,16) color=#000000ff text="🇧🇷" font=f1 glyphs=8 advance=64
+  text bounds=(264,29,80,32) pos=(272,37,64,16) color=#000000ff text="🇰🇪" font=f1 glyphs=8 advance=64
+  text bounds=(-8,48,80,32) pos=(0,56,64,16) color=#000000ff text="🇨🇦" font=f1 glyphs=8 advance=64
+  text bounds=(64,48,32,32) pos=(72,56,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(88,48,48,32) pos=(96,56,32,16) color=#000000ff text="Skin" font=f1 glyphs=4 advance=32
+  text bounds=(128,48,64,32) pos=(136,56,48,16) color=#000000ff text="tones:" font=f1 glyphs=6 advance=48
+  text bounds=(184,48,80,32) pos=(192,56,64,16) color=#000000ff text="👍🏻" font=f1 glyphs=8 advance=64
+  text bounds=(256,48,80,32) pos=(264,56,64,16) color=#000000ff text="👍🏽" font=f1 glyphs=8 advance=64
+  text bounds=(-8,66,80,32) pos=(0,74,64,16) color=#000000ff text="👍🏿" font=f1 glyphs=8 advance=64
+  text bounds=(-8,92,88,32) pos=(0,100,72,16) color=#000000ff text="Combining" font=f1 glyphs=9 advance=72
+  text bounds=(72,92,64,32) pos=(80,100,48,16) color=#000000ff text="marks:" font=f1 glyphs=6 advance=48
+  text bounds=(128,92,40,32) pos=(136,100,24,16) color=#000000ff text="é" font=f1 glyphs=3 advance=24
+  text bounds=(160,92,40,32) pos=(168,100,24,16) color=#000000ff text="ñ" font=f1 glyphs=3 advance=24
+  text bounds=(192,92,40,32) pos=(200,100,24,16) color=#000000ff text="å" font=f1 glyphs=3 advance=24
+  text bounds=(224,92,32,32) pos=(232,100,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(248,92,56,32) pos=(256,100,40,16) color=#000000ff text="Math:" font=f1 glyphs=5 advance=40
+  text bounds=(296,92,40,32) pos=(304,100,24,16) color=#000000ff text="∑" font=f1 glyphs=3 advance=24
+  text bounds=(328,92,40,32) pos=(336,100,24,16) color=#000000ff text="∫" font=f1 glyphs=3 advance=24
+  text bounds=(-8,110,40,32) pos=(0,118,24,16) color=#000000ff text="√" font=f1 glyphs=3 advance=24
+  text bounds=(24,110,40,32) pos=(32,118,24,16) color=#000000ff text="≠" font=f1 glyphs=3 advance=24
+  text bounds=(56,110,40,32) pos=(64,118,24,16) color=#000000ff text="≤" font=f1 glyphs=3 advance=24
+  text bounds=(88,110,40,32) pos=(96,118,24,16) color=#000000ff text="∞" font=f1 glyphs=3 advance=24
+  text bounds=(120,110,32,32) pos=(128,118,16,16) color=#000000ff text="π" font=f1 glyphs=2 advance=16
+  text bounds=(144,110,32,32) pos=(152,118,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(168,110,72,32) pos=(176,118,56,16) color=#000000ff text="Arrows:" font=f1 glyphs=7 advance=56
+  text bounds=(232,110,40,32) pos=(240,118,24,16) color=#000000ff text="←" font=f1 glyphs=3 advance=24
+  text bounds=(264,110,40,32) pos=(272,118,24,16) color=#000000ff text="↑" font=f1 glyphs=3 advance=24
+  text bounds=(296,110,40,32) pos=(304,118,24,16) color=#000000ff text="→" font=f1 glyphs=3 advance=24
+  text bounds=(328,110,40,32) pos=(336,118,24,16) color=#000000ff text="↓" font=f1 glyphs=3 advance=24
+  text bounds=(-8,128,40,32) pos=(0,136,24,16) color=#000000ff text="⇄" font=f1 glyphs=3 advance=24
+  text bounds=(24,128,32,32) pos=(32,136,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(48,128,48,32) pos=(56,136,32,16) color=#000000ff text="Box:" font=f1 glyphs=4 advance=32
+  text bounds=(88,128,160,32) pos=(96,136,144,16) color=#000000ff text="┌─┐└─┘" font=f1 glyphs=18 advance=144
+  text bounds=(-8,155,160,32) pos=(0,163,144,16) color=#000000ff text="Кириллица" font=f1 glyphs=18 advance=144
+  text bounds=(144,155,32,32) pos=(152,163,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(168,155,144,32) pos=(176,163,128,16) color=#000000ff text="Ελληνικά" font=f1 glyphs=16 advance=128
+  text bounds=(304,155,32,32) pos=(312,163,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(-8,173,184,32) pos=(0,181,168,16) color=#000000ff text="ქართული" font=f1 glyphs=21 advance=168
+  text bounds=(168,173,32,32) pos=(176,181,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(192,173,160,32) pos=(200,181,144,16) color=#000000ff text="हिन्दी" font=f1 glyphs=18 advance=144
+  text bounds=(-8,191,32,32) pos=(0,199,16,16) color=#000000ff text="·" font=f1 glyphs=2 advance=16
+  text bounds=(16,191,184,32) pos=(24,199,168,16) color=#000000ff text="ภาษาไทย" font=f1 glyphs=21 advance=168
+  text bounds=(-8,217,40,32) pos=(0,225,24,16) color=#000000ff text="日" font=f1 glyphs=3 advance=24
+  text bounds=(16,217,40,32) pos=(24,225,24,16) color=#000000ff text="本" font=f1 glyphs=3 advance=24
+  text bounds=(40,217,40,32) pos=(48,225,24,16) color=#000000ff text="語" font=f1 glyphs=3 advance=24
+  text bounds=(-8,235,376,32) pos=(0,243,360,16) color=#000000ff text="のテキストにはスペースがありま" font=f1 glyphs=45 advance=360
+  text bounds=(-8,254,208,32) pos=(0,262,192,16) color=#000000ff text="せんが、ちゃんと" font=f1 glyphs=24 advance=192
+  text bounds=(184,254,40,32) pos=(192,262,24,16) color=#000000ff text="折" font=f1 glyphs=3 advance=24
+  text bounds=(208,254,40,32) pos=(216,262,24,16) color=#000000ff text="り" font=f1 glyphs=3 advance=24
+  text bounds=(232,254,40,32) pos=(240,262,24,16) color=#000000ff text="返" font=f1 glyphs=3 advance=24
+  text bounds=(-8,272,304,32) pos=(0,280,288,16) color=#000000ff text="されるでしょうか。これは" font=f1 glyphs=36 advance=288
+  text bounds=(280,272,40,32) pos=(288,280,24,16) color=#000000ff text="行" font=f1 glyphs=3 advance=24
+  text bounds=(304,272,40,32) pos=(312,280,24,16) color=#000000ff text="の" font=f1 glyphs=3 advance=24
+  text bounds=(328,272,40,32) pos=(336,280,24,16) color=#000000ff text="折" font=f1 glyphs=3 advance=24
+  text bounds=(-8,290,40,32) pos=(0,298,24,16) color=#000000ff text="り" font=f1 glyphs=3 advance=24
+  text bounds=(16,290,40,32) pos=(24,298,24,16) color=#000000ff text="返" font=f1 glyphs=3 advance=24
+  text bounds=(40,290,256,32) pos=(48,298,240,16) color=#000000ff text="しをテストするための" font=f1 glyphs=30 advance=240
+  text bounds=(280,290,40,32) pos=(288,298,24,16) color=#000000ff text="長" font=f1 glyphs=3 advance=24
+  text bounds=(304,290,40,32) pos=(312,298,24,16) color=#000000ff text="い" font=f1 glyphs=3 advance=24
+  text bounds=(328,290,40,32) pos=(336,298,24,16) color=#000000ff text="文" font=f1 glyphs=3 advance=24
+  text bounds=(-8,308,40,32) pos=(0,316,24,16) color=#000000ff text="章" font=f1 glyphs=3 advance=24
+  text bounds=(16,308,88,32) pos=(24,316,72,16) color=#000000ff text="です。" font=f1 glyphs=9 advance=72
+  text bounds=(272,334,96,32) pos=(280,342,80,16) color=#000000ff text="مرحبا" font=f1 glyphs=10 advance=80
+  text bounds=(152,334,128,32) pos=(160,342,112,16) color=#000000ff text="بالعالم" font=f1 glyphs=14 advance=112
+  text bounds=(120,334,40,32) pos=(128,342,24,16) color=#000000ff text="—" font=f1 glyphs=3 advance=24
+  text bounds=(48,334,80,32) pos=(56,342,64,16) color=#000000ff text="שלום" font=f1 glyphs=8 advance=64
+  text bounds=(288,353,80,32) pos=(296,361,64,16) color=#000000ff text="עולם" font=f1 glyphs=8 advance=64
+  text bounds=(-8,378,48,32) pos=(0,386,32,16) color=#8e8e93ff text="Each" font=f2 glyphs=4 advance=32
+  text bounds=(32,378,48,32) pos=(40,386,32,16) color=#8e8e93ff text="word" font=f2 glyphs=4 advance=32
+  text bounds=(72,378,32,32) pos=(80,386,16,16) color=#8e8e93ff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(96,378,64,32) pos=(104,386,48,16) color=#8e8e93ff text="shaped" font=f2 glyphs=6 advance=48
+  text bounds=(152,378,32,32) pos=(160,386,16,16) color=#8e8e93ff text="by" font=f2 glyphs=2 advance=16
+  text bounds=(176,378,80,32) pos=(184,386,64,16) color=#8e8e93ff text="CoreText" font=f2 glyphs=8 advance=64
+  text bounds=(248,378,72,32) pos=(256,386,56,16) color=#8e8e93ff text="(Arabic" font=f2 glyphs=7 advance=56
+  text bounds=(312,378,56,32) pos=(320,386,40,16) color=#8e8e93ff text="joins" font=f2 glyphs=5 advance=40
+  text bounds=(-8,393,104,32) pos=(0,401,88,16) color=#8e8e93ff text="correctly)," font=f2 glyphs=11 advance=88
+  text bounds=(88,393,40,32) pos=(96,401,24,16) color=#8e8e93ff text="but" font=f2 glyphs=3 advance=24
+  text bounds=(120,393,80,32) pos=(128,401,64,16) color=#8e8e93ff text="litehtml" font=f2 glyphs=8 advance=64
+  text bounds=(192,393,48,32) pos=(200,401,32,16) color=#8e8e93ff text="lays" font=f2 glyphs=4 advance=32
+  text bounds=(232,393,56,32) pos=(240,401,40,16) color=#8e8e93ff text="words" font=f2 glyphs=5 advance=40
+  text bounds=(280,393,40,32) pos=(288,401,24,16) color=#8e8e93ff text="out" font=f2 glyphs=3 advance=24
+  text bounds=(312,393,56,32) pos=(320,401,40,16) color=#8e8e93ff text="left-" font=f2 glyphs=5 advance=40
+  text bounds=(-8,409,40,32) pos=(0,417,24,16) color=#8e8e93ff text="to-" font=f2 glyphs=3 advance=24
+  text bounds=(16,409,56,32) pos=(24,417,40,16) color=#8e8e93ff text="right" font=f2 glyphs=5 advance=40
+  text bounds=(64,409,40,32) pos=(72,417,24,16) color=#8e8e93ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(96,409,32,32) pos=(104,417,16,16) color=#8e8e93ff text="no" font=f2 glyphs=2 advance=16
+  text bounds=(120,409,48,32) pos=(128,417,32,16) color=#8e8e93ff text="bidi" font=f2 glyphs=4 advance=32
+  text bounds=(160,409,104,32) pos=(168,417,88,16) color=#8e8e93ff text="reordering." font=f2 glyphs=11 advance=88
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

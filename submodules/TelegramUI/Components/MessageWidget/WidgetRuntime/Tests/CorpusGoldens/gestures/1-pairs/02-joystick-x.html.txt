@@ -1,0 +1,87 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Star catcher</title>
+<style></style>
+</head><body><p class="ta"><code>touch-action: pan-y</code> · the x stick: start sideways, then steer anywhere; a first move up or down, or a still thumb, goes to the chat</p>
+<div id="ar"><div id="sh" style="left: 50%; top: 50%;"></div><div class="s" style="left: 8.037014710716903%; top: 18.761682640761137%;">★</div><div class="s" style="left: 83.92729818727821%; top: 67.18300947919488%;">★</div><div class="s" style="left: 63.83436201047152%; top: 49.08118523657322%;">★</div></div>
+<div id="pad"><div id="base"></div><div id="knob"></div></div>
+<p class="st">★ <b id="sc">0</b> · presses taken by the chat: <b id="tk">0</b></p>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 451.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 435.75
+    p 12 8 336 70.2
+      code 12 8 0 0
+    div 20 86.2 320 190
+      div 169 170.2 22 22
+      div 36.7184 112.847 18 18
+      div 279.567 204.848 18 18
+      div 215.27 170.454 18 18
+    div 21 287.2 318 130
+      div 134 306.2 92 92
+      div 158 330.2 44 44
+    p 12 426.2 336 17.55
+      b 12 426.2 0 0
+      b 12 426.2 0 0
+
+== paint
+root 360x451.75 items=46
+  text bounds=(4,0,64,32) pos=(12,8,48,16) color=#707579ff text="touch-" font=f1 glyphs=6 advance=48
+  text bounds=(52,0,72,32) pos=(60,8,56,16) color=#707579ff text="action:" font=f1 glyphs=7 advance=56
+  text bounds=(116,0,48,32) pos=(124,8,32,16) color=#707579ff text="pan-" font=f1 glyphs=4 advance=32
+  text bounds=(148,0,24,32) pos=(156,8,8,16) color=#707579ff text="y" font=f1 glyphs=1 advance=8
+  text bounds=(164,0,32,32) pos=(172,8,16,16) color=#707579ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(188,0,40,32) pos=(196,8,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(220,0,24,32) pos=(228,8,8,16) color=#707579ff text="x" font=f2 glyphs=1 advance=8
+  text bounds=(236,0,64,32) pos=(244,8,48,16) color=#707579ff text="stick:" font=f2 glyphs=6 advance=48
+  text bounds=(292,0,56,32) pos=(300,8,40,16) color=#707579ff text="start" font=f2 glyphs=5 advance=40
+  text bounds=(4,18,88,32) pos=(12,26,72,16) color=#707579ff text="sideways," font=f2 glyphs=9 advance=72
+  text bounds=(84,18,48,32) pos=(92,26,32,16) color=#707579ff text="then" font=f2 glyphs=4 advance=32
+  text bounds=(124,18,56,32) pos=(132,26,40,16) color=#707579ff text="steer" font=f2 glyphs=5 advance=40
+  text bounds=(172,18,88,32) pos=(180,26,72,16) color=#707579ff text="anywhere;" font=f2 glyphs=9 advance=72
+  text bounds=(252,18,24,32) pos=(260,26,8,16) color=#707579ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(268,18,56,32) pos=(276,26,40,16) color=#707579ff text="first" font=f2 glyphs=5 advance=40
+  text bounds=(4,35,48,32) pos=(12,43,32,16) color=#707579ff text="move" font=f2 glyphs=4 advance=32
+  text bounds=(44,35,32,32) pos=(52,43,16,16) color=#707579ff text="up" font=f2 glyphs=2 advance=16
+  text bounds=(68,35,32,32) pos=(76,43,16,16) color=#707579ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(92,35,56,32) pos=(100,43,40,16) color=#707579ff text="down," font=f2 glyphs=5 advance=40
+  text bounds=(140,35,32,32) pos=(148,43,16,16) color=#707579ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(164,35,24,32) pos=(172,43,8,16) color=#707579ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(180,35,56,32) pos=(188,43,40,16) color=#707579ff text="still" font=f2 glyphs=5 advance=40
+  text bounds=(228,35,64,32) pos=(236,43,48,16) color=#707579ff text="thumb," font=f2 glyphs=6 advance=48
+  text bounds=(284,35,48,32) pos=(292,43,32,16) color=#707579ff text="goes" font=f2 glyphs=4 advance=32
+  text bounds=(324,35,32,32) pos=(332,43,16,16) color=#707579ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(4,53,40,32) pos=(12,61,24,16) color=#707579ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(36,53,48,32) pos=(44,61,32,16) color=#707579ff text="chat" font=f2 glyphs=4 advance=32
+  text bounds=(4,418,40,32) pos=(12,426,24,16) color=#000000ff text="★" font=f2 glyphs=3 advance=24
+  text bounds=(36,418,24,32) pos=(44,426,8,16) color=#000000ff text="0" font=f3 glyphs=1 advance=8
+  text bounds=(52,418,32,32) pos=(60,426,16,16) color=#000000ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(76,418,72,32) pos=(84,426,56,16) color=#000000ff text="presses" font=f2 glyphs=7 advance=56
+  text bounds=(140,418,56,32) pos=(148,426,40,16) color=#000000ff text="taken" font=f2 glyphs=5 advance=40
+  text bounds=(188,418,32,32) pos=(196,426,16,16) color=#000000ff text="by" font=f2 glyphs=2 advance=16
+  text bounds=(212,418,40,32) pos=(220,426,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(244,418,56,32) pos=(252,426,40,16) color=#000000ff text="chat:" font=f2 glyphs=5 advance=40
+  text bounds=(292,418,24,32) pos=(300,426,8,16) color=#000000ff text="0" font=f3 glyphs=1 advance=8
+  solid-fill bounds=(20,86,320,190) layer=(border=(20,86,320,190),radius=(12,12,12,12,12,12,12,12),clip=(20,86,320,190),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f4f4f5ff
+  set-clip bounds=(20,86.2,320,190) pos=(20,86.2,320,190) radius=(12,12,12,12,12,12,12,12)
+  solid-fill bounds=(169,170,22,22) layer=(border=(169,170,22,22),radius=(11,11,11,11,11,11,11,11),clip=(169,170,22,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+  text bounds=(28.7184,106,40,32) pos=(36.7184,114,24,16) color=#f5a700ff text="★" font=f4 glyphs=3 advance=24
+  text bounds=(271.567,198,40,32) pos=(279.567,206,24,16) color=#f5a700ff text="★" font=f4 glyphs=3 advance=24
+  text bounds=(207.27,163,40,32) pos=(215.27,171,24,16) color=#f5a700ff text="★" font=f4 glyphs=3 advance=24
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(20,286,320,132) borders=(left=(1,3,#707579ff),top=(1,3,#707579ff),right=(1,3,#707579ff),bottom=(1,3,#707579ff),radius=(12,12,12,12,12,12,12,12)) pos=(20,286,320,132) root=0
+  solid-fill bounds=(134,306,92,92) layer=(border=(134,306,92,92),radius=(46,46,46,46,46,46,46,46),clip=(134,306,92,92),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#80808026
+  solid-fill bounds=(158,330,44,44) layer=(border=(158,330,44,44),radius=(22,22,22,22,22,22,22,22),clip=(158,330,44,44),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#3390ecff
+
+== fonts
+f1 (family="ui-monospace,monospace",size=11.7,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=18,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

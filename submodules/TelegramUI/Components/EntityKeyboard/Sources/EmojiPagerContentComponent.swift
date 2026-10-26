@@ -257,7 +257,7 @@ public final class EmojiPagerContentComponent: Component {
         public let openFeatured: (() -> Void)?
         public let openSearch: () -> Void
         public let addGroupAction: (AnyHashable, Bool, Bool) -> Void
-        public let clearGroup: (AnyHashable) -> Void
+        public let clearGroup: (AnyHashable, UIView, CGRect) -> Void
         public let editAction: (AnyHashable) -> Void
         public let pushController: (ViewController) -> Void
         public let presentController: (ViewController) -> Void
@@ -288,7 +288,7 @@ public final class EmojiPagerContentComponent: Component {
             openFeatured: (() -> Void)?,
             openSearch: @escaping () -> Void,
             addGroupAction: @escaping (AnyHashable, Bool, Bool) -> Void,
-            clearGroup: @escaping (AnyHashable) -> Void,
+            clearGroup: @escaping (AnyHashable, UIView, CGRect) -> Void,
             editAction: @escaping (AnyHashable) -> Void,
             pushController: @escaping (ViewController) -> Void,
             presentController: @escaping (ViewController) -> Void,
@@ -1753,7 +1753,7 @@ public final class EmojiPagerContentComponent: Component {
                     if groupHeader.frame.insetBy(dx: -10.0, dy: -6.0).contains(locationInScrollView) {
                         let groupHeaderPoint = self.scrollView.convert(locationInScrollView, to: groupHeader)
                         if let clearIconLayer = groupHeader.clearIconLayer, clearIconLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(groupHeaderPoint) {
-                            component.inputInteractionHolder.inputInteraction?.clearGroup(id)
+                            component.inputInteractionHolder.inputInteraction?.clearGroup(id, groupHeader, clearIconLayer.frame)
                             return
                         } else {
                             if groupHeader.tapGesture(point: self.convert(point, to: groupHeader)) {
@@ -2924,7 +2924,7 @@ public final class EmojiPagerContentComponent: Component {
                         if groupHeader.frame.insetBy(dx: -10.0, dy: -6.0).contains(locationInScrollView) {
                             let groupHeaderPoint = self.scrollView.convert(locationInScrollView, to: groupHeader)
                             if let clearIconLayer = groupHeader.clearIconLayer, clearIconLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(groupHeaderPoint) {
-                                component.inputInteractionHolder.inputInteraction?.clearGroup(id)
+                                component.inputInteractionHolder.inputInteraction?.clearGroup(id, groupHeader, clearIconLayer.frame)
                                 return
                             } else {
                                 if groupHeader.tapGesture(point: recognizer.location(in: groupHeader)) {

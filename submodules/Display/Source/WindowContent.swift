@@ -137,19 +137,16 @@ private func deviceSafeInsets(deviceMetrics: DeviceMetrics, windowSize: CGSize) 
 /// the side the camera is on and whether the window reaches the screen edge at all, and each side is
 /// taken on its own, because the two sides need not be equal. Every other device keeps the per-model
 /// table, whose values the layout has been tuned against.
-/// Also carries the corner blocks (see `iPhoneDuoReservedCorners`) and the fold.
+/// Also carries the corner blocks (see `iPhoneDuoReservedArea`) and the fold.
 private func windowReservedArea(hostView: WindowHostView, deviceMetrics: DeviceMetrics, windowSize: CGSize, orientation: UIInterfaceOrientation) -> WindowReservedArea {
     if DeviceMetrics.hasMultipleDisplays {
-        // The table's settled insets agree with the table's corners at every posture; the live system
-        // insets lag behind rotations and folds. Postures the table does not list keep the live ones.
-        let safeInsets: UIEdgeInsets
-        if let tableInsets = iPhoneDuoSafeInsets(windowSize: windowSize, orientation: orientation) {
-            safeInsets = tableInsets
-        } else {
-            let systemInsets = hostView.systemSafeAreaInsets
-            safeInsets = UIEdgeInsets(top: systemInsets.top, left: systemInsets.left, bottom: 0.0, right: systemInsets.right)
-        }
-        return WindowReservedArea(safeInsets: safeInsets, reservedCorners: iPhoneDuoReservedCorners(windowSize: windowSize, orientation: orientation), division: iPhoneDuoDivision(windowSize: windowSize, reported: hostView.activeDivision))
+        // The system's insets and status block, while they describe the window's posture; the live values lag behind
+        // rotations and folds, and the table's settled ones stand in meanwhile. Postures the table does not list keep
+        // the live insets.
+        let systemInsets = hostView.systemSafeAreaInsets
+        let duoArea = iPhoneDuoReservedArea(windowSize: windowSize, orientation: orientation, systemSafeInsets: systemInsets, systemOcclusions: iPhoneDuoSystemReportIsSettled ? hostView.activeOcclusions : [])
+        let safeInsets = duoArea.safeInsets ?? UIEdgeInsets(top: systemInsets.top, left: systemInsets.left, bottom: 0.0, right: systemInsets.right)
+        return WindowReservedArea(safeInsets: safeInsets, reservedCorners: duoArea.corners, division: iPhoneDuoDivision(windowSize: windowSize, reported: hostView.activeDivision))
     }
     return WindowReservedArea(safeInsets: deviceSafeInsets(deviceMetrics: deviceMetrics, windowSize: windowSize), reservedCorners: .none, division: nil)
 }
@@ -285,6 +282,12 @@ public final class WindowHostView {
             return self.eventView.reservedRegions(kind: .division).first(where: \.isActive)?.frame
         }
         return nil
+    }
+    
+    /// Multi-display devices only: the occlusion regions the system reports as active (the status corner block and
+    /// the camera), in `eventView` coordinates. Empty before iOS 27.1.
+    fileprivate var activeOcclusions: [CGRect] {
+        return activeOcclusionFrames(in: self.eventView)
     }
     
     /// The bounds of the display the window is currently on (they follow the interface orientation).
@@ -1038,6 +1041,14 @@ public class Window1 {
             transition = .animated(duration: duration, curve: .easeInOut)
         } else {
             transition = .immediate
+        }
+        if DeviceMetrics.hasMultipleDisplays {
+            // A rotation or a fold: the system's report is transitional for a while, and once it has settled its sizes
+            // replace the table's, even if no layout pass follows.
+            iPhoneDuoPostureWillChange()
+            DispatchQueue.main.asyncAfter(deadline: .now() + iPhoneDuoSystemReportSettleDelay + 0.05, execute: { [weak self] in
+                self?.updateSystemInsets()
+            })
         }
         self.updateLayout { $0.update(size: value, metrics: layoutMetricsForWindowSize(size: value, orientation: orientation), reservedArea: windowReservedArea(hostView: self.hostView, deviceMetrics: self.deviceMetrics, windowSize: value, orientation: self.hostView.currentInterfaceOrientation()), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
         if let statusBarHost = self.statusBarHost, !statusBarHost.isApplicationInForeground {

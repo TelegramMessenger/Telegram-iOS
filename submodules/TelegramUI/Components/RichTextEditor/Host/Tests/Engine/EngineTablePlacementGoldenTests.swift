@@ -50,7 +50,7 @@ import RichTextEditorUIKit
 /// paragraphs stop instead of running out to the column edge. Its `indent` and every `dy` are
 /// untouched, which is what says the change is a width and not a placement.
 /// **All six were re-read on 2026-09-15 after the trailing line-box overhang was taken out of the
-/// rhythm** (package CLAUDE.md, "A block's FRAME is a line box"). Every stacked block had been
+/// rhythm** (RichTextEngineEditor `CLAUDE.md`, "A block's FRAME is a line box"). Every stacked block had been
 /// standing `pitch - ceil(ascender + |descender|)` too tall, so everything below a paragraph moved
 /// UP by that much: two points under a 17pt body line, and — golden 4 — ONE point under a quote's
 /// 15pt child, which is the per-role read proving itself. Widths, cell heights and insets that sit

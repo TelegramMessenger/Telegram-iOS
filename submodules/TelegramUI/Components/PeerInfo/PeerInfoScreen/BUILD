@@ -46,6 +46,7 @@ swift_library(
         "//submodules/DeviceAccess",
         "//submodules/Display",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/AgentConnectScreen",
         "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent",
         "//submodules/EncryptionKeyVisualization",
         "//submodules/TelegramUI/Components/EntityKeyboard",

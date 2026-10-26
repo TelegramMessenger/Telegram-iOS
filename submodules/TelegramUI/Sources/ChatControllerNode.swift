@@ -76,6 +76,8 @@ import RichTextEditorUIKit
 import RichTextEditorMediaView
 import InstantPageUI
 import ChatRichTextEditorComposer
+import ChatHistoryListViewBackend
+import MessageWidget
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -1110,6 +1112,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         self.panRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
+        // While a message widget's control is held, a finger anywhere else in the chat does nothing until it lifts.
+        self.view.addGestureRecognizer(MessageWidgetChatLockRecognizer())
         
         self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             guard let strongSelf = self else {

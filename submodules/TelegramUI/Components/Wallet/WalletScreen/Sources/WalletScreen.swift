@@ -741,7 +741,11 @@ private final class WalletScreenComponent: Component {
         private let scrollView: ScrollView
         private let topContentContainerView = UIView()
         private let topEdgeEffectView: EdgeEffectView
-        private let header = ComponentView<Empty>()
+        private let header = WalletNavigationHeaderView()
+        /// The header bar, for navigation transitions.
+        var navigationTransitionHeader: WalletNavigationHeaderView {
+            return self.header
+        }
         private let navigationTitle = ComponentView<Empty>()
         private let navigationBalance = ComponentView<Empty>()
         private let navigationBalanceButton = UIButton(type: .custom)
@@ -2933,7 +2937,7 @@ private final class WalletScreenComponent: Component {
             }
             let contextController = makeContextController(
                 presentationData: presentationData,
-                source: .reference(WalletContextReferenceContentSource(sourceView: sourceView)),
+                source: .reference(WalletContextReferenceContentSource(sourceView: self.header.barView?.navigationButtonContextContainer(sourceView: sourceView) ?? sourceView)),
                 items: menuItems,
                 gesture: nil
             )
@@ -2982,8 +2986,7 @@ private final class WalletScreenComponent: Component {
             )
 
             let headerSize = self.header.update(
-                transition: transition,
-                component: AnyComponent(NavigationBarComponent(
+                component: NavigationBarComponent(
                     theme: NavigationBarTheme(rootControllerTheme: environment.theme),
                     strings: NavigationBarStrings(presentationStrings: environment.strings),
                     leftInset: 16.0 + environment.safeInsets.left,
@@ -2992,9 +2995,9 @@ private final class WalletScreenComponent: Component {
                     primaryContent: primaryContent,
                     secondaryContent: nil,
                     secondaryTransition: 0.0
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 44.0)
+                ),
+                width: availableSize.width,
+                transition: transition
             )
             let headerOriginY: CGFloat
             if environment.metrics.widthClass == .regular {
@@ -3004,18 +3007,16 @@ private final class WalletScreenComponent: Component {
             } else {
                 headerOriginY = environment.statusBarHeight + 10.0
             }
-            if let headerView = self.header.view {
-                if headerView.superview == nil {
-                    self.insertSubview(headerView, aboveSubview: self.cardBalanceClippingView)
-                }
-                transition.setFrame(
-                    view: headerView,
-                    frame: CGRect(
-                        origin: CGPoint(x: 0.0, y: headerOriginY),
-                        size: headerSize
-                    )
-                )
+            if self.header.superview == nil {
+                self.insertSubview(self.header, aboveSubview: self.cardBalanceClippingView)
             }
+            transition.setFrame(
+                view: self.header,
+                frame: CGRect(
+                    origin: CGPoint(x: 0.0, y: headerOriginY),
+                    size: headerSize
+                )
+            )
 
             self.navigationTitle.parentState = state
             let navigationTitleSize = self.navigationTitle.update(
@@ -4021,9 +4022,13 @@ public final class WalletScreen: ViewControllerComponentContainer {
     private var walletScreenUpdatesDisposable: Disposable?
     private var didAppear = false
 
-    /// Has its own header: the bar takes no part in a navigation transition.
+    /// Draws its own header (its Display bar only holds the iPhone Duo side column's back); it takes part in navigation
+    /// transitions itself.
     override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
-        return nil
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return (self.node.hostView.componentView as? WalletScreenComponent.View)?.navigationTransitionHeader
     }
 
     public init(

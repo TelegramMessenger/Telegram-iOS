@@ -457,6 +457,9 @@ final class PeerInfoScreenData {
     /// The chat the shared media lists when it is not the profile's own chat: the channel whose
     /// direct messages the profile was opened from.
     let sharedMediaPeer: EnginePeer?
+    /// Set for a bot listed in `agent_bot_ids`: the provider keys its profile shows.
+    let agentSettingsContext: AgentSettingsContext?
+    let agentState: AgentSettingsContext.State?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -517,7 +520,9 @@ final class PeerInfoScreenData {
         managedByBot: EnginePeer?,
         businessConnectedBot: EnginePeer?,
         sharedMediaPeer: EnginePeer? = nil,
-        walletBalance: Int64? = nil
+        walletBalance: Int64? = nil,
+        agentSettingsContext: AgentSettingsContext? = nil,
+        agentState: AgentSettingsContext.State? = nil
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -567,6 +572,8 @@ final class PeerInfoScreenData {
         self.managedByBot = managedByBot
         self.businessConnectedBot = businessConnectedBot
         self.sharedMediaPeer = sharedMediaPeer
+        self.agentSettingsContext = agentSettingsContext
+        self.agentState = agentState
     }
 }
 
@@ -1445,6 +1452,16 @@ func peerInfoScreenData(
             let starsRevenueContextAndState: Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError>
             let revenueContextAndState: Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError>
             let webAppPermissions: Signal<WebAppPermissionsState?, NoError>
+            var agentSettingsContext: AgentSettingsContext?
+            let agentState: Signal<AgentSettingsContext.State?, NoError>
+            if case .bot = kind, peerInfoIsAgentBot(context: context, peerId: userPeerId) {
+                let agentSettingsContextValue = context.engine.agent.settingsContext()
+                agentSettingsContext = agentSettingsContextValue
+                agentState = agentSettingsContextValue.state
+                |> map(Optional.init)
+            } else {
+                agentState = .single(nil)
+            }
             if case .bot = kind {
                 recommendedBots = context.engine.peers.recommendedBots(peerId: userPeerId)
                 
@@ -1588,10 +1605,10 @@ func peerInfoScreenData(
                 premiumGiftOptions,
                 webAppPermissions,
                 savedMusicContext.state,
-                combineLatest(businessConnectedBot, walletBalance)
+                combineLatest(businessConnectedBot, walletBalance, agentState)
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessConnectedBotAndWalletBalance -> Signal<PeerInfoScreenData, NoError> in
-                let (businessConnectedBot, walletBalance) = businessConnectedBotAndWalletBalance
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessConnectedBotAndWalletBalanceAndAgentState -> Signal<PeerInfoScreenData, NoError> in
+                let (businessConnectedBot, walletBalance, agentState) = businessConnectedBotAndWalletBalanceAndAgentState
                 var availablePanes = availablePanes
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
@@ -1776,7 +1793,9 @@ func peerInfoScreenData(
                         managedByBot: managedByBot,
                         businessConnectedBot: businessConnectedBot,
                         sharedMediaPeer: sharedMediaPeer,
-                        walletBalance: walletBalance
+                        walletBalance: walletBalance,
+                        agentSettingsContext: agentSettingsContext,
+                        agentState: agentState
                     )
                 }
             }
@@ -2471,6 +2490,23 @@ func peerInfoScreenData(
 /// of the profile. A profile opened from a channel's direct messages lists that channel's thread,
 /// not the private chat, so it follows the direct-messages channel's own protection (which cannot
 /// be enabled today) and never the private chat's.
+/// A bot whose profile manages the user's AI provider keys: one of `appConfig.agent_bot_ids`.
+func peerInfoIsAgentBot(context: AccountContext, peerId: EnginePeer.Id) -> Bool {
+    guard peerId.namespace == Namespaces.Peer.CloudUser, let data = context.currentAppConfiguration.with({ $0 }).data, let botIds = data["agent_bot_ids"] as? [Any] else {
+        return false
+    }
+    let id = peerId.id._internalGetInt64Value()
+    return botIds.contains(where: { value in
+        if let value = value as? NSNumber {
+            return value.int64Value == id
+        } else if let value = value as? String {
+            return Int64(value) == id
+        } else {
+            return false
+        }
+    })
+}
+
 func peerInfoIsCopyProtected(data: PeerInfoScreenData, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?) -> Bool {
     if sharedMediaFromForumTopic != nil {
         return data.sharedMediaPeer?.isCopyProtectionEnabled ?? false
@@ -2668,6 +2704,18 @@ func peerInfoHeaderActionButtons(peer: EnginePeer?, isSecretChat: Bool, isContac
     return result
 }
 
+/// Whether a user's profile (or a secret chat's, which reports its user) offers Report. It is in the More menu, and
+/// where the header has no More (`peerInfoUserHeaderHasMore`) a list row offers it instead.
+func peerInfoCanReportUser(_ user: TelegramUser, accountPeerId: EnginePeer.Id) -> Bool {
+    return user.id != accountPeerId && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) && !EnginePeer.user(user).isService
+}
+
+/// Whether a user's (or a secret chat's) profile header has the More button. The profile's list offers what the menu
+/// would otherwise hold (Report) when it has none.
+func peerInfoUserHeaderHasMore(_ user: TelegramUser, isSecretChat: Bool, isContact: Bool) -> Bool {
+    return !(isSecretChat && !isContact) && !user.flags.contains(.isSupport)
+}
+
 func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if case let .user(user) = peer {
@@ -2700,8 +2748,7 @@ func peerInfoHeaderButtons(peer: EnginePeer?, cachedData: EngineCachedPeerData?,
             result.append(.stop)
         }
         
-        if (isSecretChat && !isContact) || user.flags.contains(.isSupport) {
-        } else {
+        if peerInfoUserHeaderHasMore(user, isSecretChat: isSecretChat, isContact: isContact) {
             result.append(.more)
         }
     } else if case let .channel(channel) = peer {

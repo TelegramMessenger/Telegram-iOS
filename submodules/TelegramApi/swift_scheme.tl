@@ -48,7 +48,8 @@ inputMediaWebPage#c21b8849 flags:# force_large_media:flags.0?true force_small_me
 inputMediaPaidMedia#c4103386 flags:# stars_amount:long extended_media:Vector<InputMedia> payload:flags.0?string = InputMedia;
 inputMediaTodo#9fc55fde todo:TodoList = InputMedia;
 inputMediaStakeDice#f3a9244a game_hash:string ton_amount:long client_seed:bytes = InputMedia;
-inputMediaWidget#297da8f8 width:int height:int html:string = InputMedia;
+inputMediaWidget#52d8dd85 flags:# allow_queries:flags.0?true fwd_allow_queries:flags.1?true shared_widget:flags.2?true width:int height:int html:string public_data:flags.3?bytes chat_data:flags.4?bytes = InputMedia;
+inputMediaWidgetId#7c855cb5 flags:# widget_id:long chat_data:flags.0?bytes = InputMedia;
 
 inputChatPhotoEmpty#1ca48f57 = InputChatPhoto;
 inputChatUploadedPhoto#bdcdaec0 flags:# file:flags.0?InputFile video:flags.1?InputFile video_start_ts:flags.2?double video_emoji_markup:flags.3?VideoSize = InputChatPhoto;
@@ -144,7 +145,7 @@ messageMediaGiveawayResults#ceaa3ea1 flags:# only_new_subscribers:flags.0?true r
 messageMediaPaidMedia#a8852491 stars_amount:long extended_media:Vector<MessageExtendedMedia> = MessageMedia;
 messageMediaToDo#8a53b014 flags:# todo:TodoList completions:flags.0?Vector<TodoCompletion> = MessageMedia;
 messageMediaVideoStream#ca5cab89 flags:# rtmp_stream:flags.0?true call:InputGroupCall = MessageMedia;
-messageMediaWidget#b7ed7b0d width:int height:int payload:bytes = MessageMedia;
+messageMediaWidget#a831bf37 flags:# is_copy:flags.0?true can_query:flags.1?true background_query:flags.2?true width:int height:int payload:bytes public_data:flags.3?bytes chat_data:flags.4?bytes widget_id:flags.5?long = MessageMedia;
 
 messageActionEmpty#b6aef7b0 = MessageAction;
 messageActionChatCreate#bd47cbad title:string users:Vector<long> = MessageAction;
@@ -494,6 +495,10 @@ updateWalletGaslessInfo#a8ae1cac flags:# available:flags.0?true left:int reset_a
 updateWalletTonConnectSession#50a38e0e session:TonConnectSession = Update;
 updateWalletTonConnectPendingDisconnect#d1ee8199 session_ids:Vector<long> = Update;
 updateReadFeed#74585fb1 flags:# filter_id:int max_position:FeedPosition unread_count:flags.0?int unread_muted_count:flags.0?int = Update;
+updateBotWidgetQuery#26816906 flags:# query_id:long user_id:long peer:Peer msg_id:int chat_instance:long chat_type:string data:bytes widget_id:flags.0?long = Update;
+updateInlineBotWidgetQuery#ab6fb64b flags:# query_id:long user_id:long inline_message_id:InputBotInlineMessageID chat_instance:long chat_type:string data:bytes widget_id:flags.0?long = Update;
+updateBotWidgetCopyQuery#b3323f58 flags:# query_id:long user_id:long data:bytes widget_id:long = Update;
+updateMessageWidgetData#3800a794 flags:# peer:Peer msg_id:int public_data:flags.0?bytes chat_data:flags.1?bytes pts:int pts_count:int = Update;
 updateAgentSettings#9434e98d settings:agent.settings = Update;
 
 updates.state#a56c2a3e pts:int qts:int date:int seq:int unread_count:int = updates.State;
@@ -808,6 +813,8 @@ inputBotInlineMessageGame#4b425864 flags:# reply_markup:flags.2?ReplyMarkup = In
 inputBotInlineMessageMediaInvoice#d7e78225 flags:# title:string description:string photo:flags.0?InputWebDocument invoice:Invoice payload:bytes provider:string provider_data:DataJSON reply_markup:flags.2?ReplyMarkup = InputBotInlineMessage;
 inputBotInlineMessageMediaWebPage#bddcc510 flags:# invert_media:flags.3?true force_large_media:flags.4?true force_small_media:flags.5?true optional:flags.6?true message:string entities:flags.1?Vector<MessageEntity> url:string reply_markup:flags.2?ReplyMarkup = InputBotInlineMessage;
 inputBotInlineMessageRichMessage#b43df56c flags:# reply_markup:flags.2?ReplyMarkup rich_message:InputRichMessage = InputBotInlineMessage;
+inputBotInlineMessageWidget#c32aafcc flags:# allow_queries:flags.0?true fwd_allow_queries:flags.1?true shared_widget:flags.2?true width:int height:int html:string public_data:flags.3?bytes chat_data:flags.4?bytes reply_markup:flags.5?ReplyMarkup = InputBotInlineMessage;
+inputBotInlineMessageWidgetId#2faae1fd flags:# widget_id:long chat_data:flags.0?bytes reply_markup:flags.1?ReplyMarkup = InputBotInlineMessage;
 
 inputBotInlineResult#88bf9319 flags:# id:string type:string title:flags.1?string description:flags.2?string url:flags.3?string thumb:flags.4?InputWebDocument content:flags.5?InputWebDocument send_message:InputBotInlineMessage = InputBotInlineResult;
 inputBotInlineResultPhoto#a8d864a7 id:string type:string photo:InputPhoto send_message:InputBotInlineMessage = InputBotInlineResult;
@@ -822,6 +829,7 @@ botInlineMessageMediaContact#18d1cdc2 flags:# phone_number:string first_name:str
 botInlineMessageMediaInvoice#354a9b09 flags:# shipping_address_requested:flags.1?true test:flags.3?true title:string description:string photo:flags.0?WebDocument currency:string total_amount:long reply_markup:flags.2?ReplyMarkup = BotInlineMessage;
 botInlineMessageMediaWebPage#809ad9a6 flags:# invert_media:flags.3?true force_large_media:flags.4?true force_small_media:flags.5?true manual:flags.7?true safe:flags.8?true message:string entities:flags.1?Vector<MessageEntity> url:string reply_markup:flags.2?ReplyMarkup = BotInlineMessage;
 botInlineMessageRichMessage#a617e7b flags:# reply_markup:flags.2?ReplyMarkup rich_message:RichMessage = BotInlineMessage;
+botInlineMessageWidget#f1851c7e flags:# width:int height:int payload:bytes public_data:flags.0?bytes chat_data:flags.1?bytes reply_markup:flags.2?ReplyMarkup widget_id:flags.3?long = BotInlineMessage;
 
 botInlineResult#11965f3a flags:# id:string type:string title:flags.1?string description:flags.2?string url:flags.3?string thumb:flags.4?WebDocument content:flags.5?WebDocument send_message:BotInlineMessage = BotInlineResult;
 botInlineMediaResult#17db940b flags:# id:string type:string photo:flags.0?Photo document:flags.1?Document title:flags.2?string description:flags.3?string send_message:BotInlineMessage = BotInlineResult;
@@ -2362,6 +2370,7 @@ auth.firebasePnvIntent#df5ac00c nonce:string digital_credential_payload:string =
 inputTonConnectOauthSession#629f66ce session_id:long challenge_answer:bytes body:bytes proof:WalletOwnershipProof = InputTonConnectOauthSession;
 
 exportedNoPaidMessagesToken#695dd042 flags:# token:string url:string expires:flags.0?int = ExportedNoPaidMessagesToken;
+exportedNoPaidMessagesTokenLegacy#cf5105be flags:# token:string url:flags.0?string expires:flags.1?int = ExportedNoPaidMessagesToken;
 
 shareThemeDefault#95ace84f = ShareTheme;
 shareThemeEmojiBackdrop#64b334e1 flags:# backdrop_id:flags.0?int emojis:flags.1?Vector<Reaction> = ShareTheme;
@@ -2396,6 +2405,11 @@ feed.interestCategory#6c4666e3 flags:# id:int title:string emoji:flags.0?string 
 
 feed.interestCategoriesNotModified#79cf2195 = feed.InterestCategories;
 feed.interestCategories#ecb62fa0 categories:Vector<feed.InterestCategory> selected:Vector<int> = feed.InterestCategories;
+
+messages.botWidgetQueryAnswer#95b73023 flags:# result:flags.0?bytes = messages.BotWidgetQueryAnswer;
+
+messages.widgetPublicDataNotModified#b9196e57 period:int = messages.WidgetPublicData;
+messages.widgetPublicData#4493bff hash:long data:bytes period:int = messages.WidgetPublicData;
 
 agentProvider#47327c87 flags:# models_searchable:flags.0?true id:string title:string vendor:string key_url:string icon_emoji_id:flags.1?long = agent.Provider;
 
@@ -2880,6 +2894,12 @@ messages.composeRichMessageWithAI#8d7ae6af flags:# proofread:flags.0?true emojif
 messages.requestChatJoinWebView#ba9ee679 flags:# query_id:long theme_params:flags.0?DataJSON platform:string = WebViewResult;
 messages.setShareTheme#698a9b1a peer:InputPeer theme:ShareTheme = Bool;
 messages.getShareThemeBackdrops#f4599ef2 hash:int = ShareThemeBackdrops;
+messages.getBotWidgetQueryAnswer#d78dba1a peer:InputPeer msg_id:int data:bytes = messages.BotWidgetQueryAnswer;
+messages.setBotWidgetQueryAnswer#f8cdec6a flags:# query_id:long result:flags.0?bytes = Bool;
+messages.editMessageWidgetData#f624bc1e flags:# peer:InputPeer id:int public_data:flags.0?bytes chat_data:flags.1?bytes = Updates;
+messages.editInlineBotMessageWidgetData#6396ce2b flags:# id:InputBotInlineMessageID public_data:flags.0?bytes chat_data:flags.1?bytes = Bool;
+messages.editWidgetData#eac343c0 flags:# widget_id:long public_data:bytes cache_time:flags.0?int = Bool;
+messages.getWidgetPublicData#6fc53181 peer:InputPeer msg_id:int hash:long = messages.WidgetPublicData;
 
 updates.getState#edd4882a = updates.State;
 updates.getDifference#19c2f763 flags:# pts:int pts_limit:flags.1?int pts_total_limit:flags.0?int date:int qts:int qts_limit:flags.2?int = updates.Difference;

@@ -413,6 +413,12 @@ public final class CoreVirtualListView: UIView {
     }
 
     static func firstDuplicatePair(in items: [CoreListItem]) -> (first: Int, second: Int)? {
+        // Every pass with new items runs this on the main thread: answer the common case (no duplicate) in linear
+        // time, and search for the pair the precondition reports only when there is one.
+        var identities = Set<AnyHashable>(minimumCapacity: items.count)
+        guard items.contains(where: { !identities.insert($0.identity).inserted }) else {
+            return nil
+        }
         for first in items.indices {
             for second in items.indices where second > first {
                 if items[first].identity == items[second].identity {

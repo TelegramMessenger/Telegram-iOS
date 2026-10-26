@@ -19,7 +19,7 @@ import ChatInputTextNode
 /// 8..<9), then every range of the reduced shapes scanned: exactly the lone separators come back empty.
 ///
 /// **Suspected cause.** The selection-geometry rule that stands a selected PARAGRAPH break up as a mark
-/// (RichTextEditor `CLAUDE.md`, "Block selection rectangles": a zero-width segment is reported as "failed to
+/// (RichTextEngineEditor `CLAUDE.md`, "Block selection rectangles": a zero-width segment is reported as "failed to
 /// measure" and the coordinator's all-or-nothing validity check discards the whole answer) covers breaks
 /// BETWEEN blocks; a line separator inside one block produces the same zero-width segment inside
 /// `IDBlockTextGeometry` and is not stood up.

@@ -31,6 +31,7 @@ import WalletContext
 import WalletConnectScreen
 import AlertUI
 import MetalEngine
+import MessageWidget
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -426,6 +427,7 @@ public final class AccountContextImpl: AccountContext {
             experimentalSettings: sharedContext.immediateExperimentalUISettings
         ))
         self._appConfiguration.set(.single(appConfiguration) |> then(updatedAppConfiguration))
+        MessageWidgetKillSwitch.isEngaged = appConfiguration.data?[MessageWidgetKillSwitch.appConfigurationKey] != nil
                 
         let currentAppConfiguration = self.currentAppConfiguration
         let cachedLottieRenderingSettings = self.cachedLottieRenderingSettings
@@ -441,6 +443,9 @@ public final class AccountContextImpl: AccountContext {
             // Switches off the on-disk archive of compiled Metal pipelines (now, and on later launches until the key
             // is removed); pipelines are then compiled on first use as before.
             MetalEngine.shared.pipelineCache.setArchiveDisabled(value.data?["ios_killswitch_disable_metal_pipeline_cache"] != nil)
+            
+            // Read here once per configuration: bubble layout reads the flag on every pass, on any thread.
+            MessageWidgetKillSwitch.isEngaged = value.data?[MessageWidgetKillSwitch.appConfigurationKey] != nil
             
             guard let data = appConfiguration.data else {
                 return

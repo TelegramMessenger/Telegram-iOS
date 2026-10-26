@@ -1,0 +1,813 @@
+{
+  "_": "Shared fixture for src/shared/sdk-policy.ts, ios SdkPolicy.swift, android SdkPolicy.kt and desktop sdk_policy.cpp (copies made by scripts/build-native-bundles.ts). links: checkLink(method, url) → the URL opened or null. haptics: checkHaptic(args). bridge: checkBridgeCall(method, args) → the action (or, for setResizeAnchor, the anchor the host keeps: {kind: \"setResizeAnchor\", edge}) or null. hapticGate: steps on one HapticGate, decide(at, visible) → play | drop | report. themeParams: checkThemeParams(input). locales: checkLocale(input). storage: checkStorageCommit(input) → the commit or null; strings in `repeat` are expanded (s repeated n times) before the check. utf8: utf8Length(s). No lone surrogates here: they cannot cross every platform's string type unchanged.",
+  "links": [
+    { "method": "openLink", "url": "https://example.com/", "expect": "https://example.com/" },
+    { "method": "openLink", "url": "https://example.com", "expect": "https://example.com" },
+    { "method": "openLink", "url": "HTTPS://Example.COM/Path?Q=1#Frag", "expect": "https://example.com/Path?Q=1#Frag" },
+    { "method": "openLink", "url": "https://example.com:8443/a", "expect": "https://example.com:8443/a" },
+    { "method": "openLink", "url": "https://example.com:65535/", "expect": "https://example.com:65535/" },
+    { "method": "openLink", "url": "https://example.com:65536/", "expect": null },
+    { "method": "openLink", "url": "https://example.com:/", "expect": null },
+    { "method": "openLink", "url": "https://example.com:12a/", "expect": null },
+    { "method": "openLink", "url": "https://example.com:123456/", "expect": null },
+    { "method": "openLink", "url": "https://example.com?x=1", "expect": "https://example.com?x=1" },
+    { "method": "openLink", "url": "https://example.com#top", "expect": "https://example.com#top" },
+    { "method": "openLink", "url": "https://xn--80ak6aa92e.com/", "expect": "https://xn--80ak6aa92e.com/" },
+    { "method": "openLink", "url": "https://192.168.0.1/", "expect": "https://192.168.0.1/" },
+    { "method": "openLink", "url": "https://a-b.example/x", "expect": "https://a-b.example/x" },
+    { "method": "openLink", "url": "http://example.com/", "expect": null },
+    { "method": "openLink", "url": "javascript:alert(1)", "expect": null },
+    { "method": "openLink", "url": "tg://resolve?domain=x", "expect": null },
+    { "method": "openLink", "url": "//example.com/", "expect": null },
+    { "method": "openLink", "url": " https://example.com/", "expect": null },
+    { "method": "openLink", "url": "https:example.com", "expect": null },
+    { "method": "openLink", "url": "https:/example.com", "expect": null },
+    { "method": "openLink", "url": "https://", "expect": null },
+    { "method": "openLink", "url": "https:///path", "expect": null },
+    { "method": "openLink", "url": "https://user:pass@example.com/", "expect": null },
+    { "method": "openLink", "url": "https://user@example.com/", "expect": null },
+    { "method": "openLink", "url": "https://example.com/@x", "expect": "https://example.com/@x" },
+    {
+      "method": "openLink",
+      "url": "https://[::1]/",
+      "expect": null
+    },
+    { "method": "openLink", "url": "https://exa_mple.com/", "expect": null },
+    { "method": "openLink", "url": "https://-example.com/", "expect": null },
+    { "method": "openLink", "url": "https://example-.com/", "expect": null },
+    { "method": "openLink", "url": "https://example..com/", "expect": null },
+    { "method": "openLink", "url": "https://example.com./", "expect": null },
+    { "method": "openLink", "url": "https://.example.com/", "expect": null },
+    { "method": "openLink", "url": "https://exa\\mple.com/", "expect": null },
+    { "method": "openLink", "url": "https://example.com\\@t.me/", "expect": null },
+    { "method": "openLink", "url": "https://пример.рф/", "expect": null },
+    { "method": "openLink", "url": "https://Kelvin.com/", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a b", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a\tb", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a\"b", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a<b>", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a\\b", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a^b", "expect": null },
+    { "method": "openLink", "url": "https://example.com/a`b", "expect": null },
+    {
+      "method": "openLink",
+      "url": "https://example.com/a{b}",
+      "expect": null
+    },
+    { "method": "openLink", "url": "https://example.com/a|b", "expect": null },
+    { "method": "openLink", "url": "https://example.com/", "expect": null },
+    { "method": "openLink", "url": "https://example.com/%41%2f", "expect": "https://example.com/%41%2f" },
+    { "method": "openLink", "url": "https://example.com/%4", "expect": null },
+    { "method": "openLink", "url": "https://example.com/%zz", "expect": null },
+    { "method": "openLink", "url": "https://example.com/100%", "expect": null },
+    {
+      "method": "openLink",
+      "url": "https://example.com/a-._~:/?#[]@!$&'()*+,;=",
+      "expect": "https://example.com/a-._~:/?#[]@!$&'()*+,;="
+    },
+    { "method": "openLink", "url": "https://example.com/поиск?q=ё", "expect": "https://example.com/%D0%BF%D0%BE%D0%B8%D1%81%D0%BA?q=%D1%91" },
+    { "method": "openLink", "url": "https://example.com/é", "expect": "https://example.com/%C3%A9" },
+    { "method": "openLink", "url": "https://example.com/€", "expect": "https://example.com/%E2%82%AC" },
+    { "method": "openLink", "url": "https://example.com/😀", "expect": "https://example.com/%F0%9F%98%80" },
+    { "method": "openLink", "url": "https://example.com/ ", "expect": "https://example.com/%C2%A0" },
+    { "method": "openLink", "url": "https://t.me/durov", "expect": null },
+    { "method": "openLink", "url": "https://T.ME/durov", "expect": null },
+    { "method": "openLink", "url": "https://telegram.me/x", "expect": null },
+    { "method": "openLink", "url": "https://telegram.dog/x", "expect": null },
+    { "method": "openLink", "url": "https://durov.t.me/", "expect": null },
+    { "method": "openLink", "url": "https://t.me:443/x", "expect": null },
+    { "method": "openLink", "url": "https://t.me.example.com/", "expect": "https://t.me.example.com/" },
+    { "method": "openLink", "url": "https://at.me/", "expect": "https://at.me/" },
+    { "method": "openLink", "url": "https://nottelegram.me/", "expect": "https://nottelegram.me/" },
+    { "method": "openTelegramLink", "url": "https://t.me/durov", "expect": "https://t.me/durov" },
+    { "method": "openTelegramLink", "url": "https://T.Me/Durov", "expect": "https://t.me/Durov" },
+    { "method": "openTelegramLink", "url": "https://t.me", "expect": "https://t.me" },
+    { "method": "openTelegramLink", "url": "https://t.me/proxy?server=1.2.3.4&port=443&secret=00", "expect": "https://t.me/proxy?server=1.2.3.4&port=443&secret=00" },
+    { "method": "openTelegramLink", "url": "https://t.me/+AbCdEf", "expect": "https://t.me/+AbCdEf" },
+    { "method": "openTelegramLink", "url": "https://telegram.me/x", "expect": "https://telegram.me/x" },
+    { "method": "openTelegramLink", "url": "https://telegram.dog/x", "expect": "https://telegram.dog/x" },
+    { "method": "openTelegramLink", "url": "https://durov.t.me/", "expect": "https://durov.t.me/" },
+    { "method": "openTelegramLink", "url": "https://t.me/канал", "expect": "https://t.me/%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB" },
+    { "method": "openTelegramLink", "url": "http://t.me/durov", "expect": null },
+    { "method": "openTelegramLink", "url": "tg://resolve?domain=durov", "expect": null },
+    { "method": "openTelegramLink", "url": "https://example.com/", "expect": null },
+    { "method": "openTelegramLink", "url": "https://t.me.example.com/", "expect": null },
+    { "method": "openTelegramLink", "url": "https://at.me/", "expect": null },
+    { "method": "openTelegramLink", "url": "https://user@t.me/x", "expect": null },
+    { "method": "openTelegramLink", "url": "https://t.me./x", "expect": null },
+    { "method": "openLink", "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "expect": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "note": "exactly 256 characters" },
+    { "method": "openLink", "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "expect": null, "note": "257 characters" },
+    { "method": "openLink", "url": "https://example.com/éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé", "expect": null, "note": "122 characters, 224 UTF-8 bytes, 632 once encoded" },
+    { "method": "openLink", "url": "https://example.com/ééééééééééééééééééééééééééééééééééééééé", "expect": "https://example.com/%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9%C3%A9", "note": "254 characters once encoded" },
+    { "method": "openLink", "url": "https://example.com/éééééééééééééééééééééééééééééééééééééééé", "expect": null, "note": "260 characters once encoded" },
+    { "method": "openLink", "url": 42, "expect": null },
+    { "method": "openLink", "url": null, "expect": null }
+  ],
+  "haptics": [
+    {
+      "args": [
+        "impact",
+        "light"
+      ],
+      "expect": {
+        "haptic": "impact",
+        "value": "light"
+      }
+    },
+    {
+      "args": [
+        "impact",
+        "medium"
+      ],
+      "expect": {
+        "haptic": "impact",
+        "value": "medium"
+      }
+    },
+    {
+      "args": [
+        "impact",
+        "heavy"
+      ],
+      "expect": {
+        "haptic": "impact",
+        "value": "heavy"
+      }
+    },
+    {
+      "args": [
+        "impact",
+        "rigid"
+      ],
+      "expect": {
+        "haptic": "impact",
+        "value": "rigid"
+      }
+    },
+    {
+      "args": [
+        "impact",
+        "soft"
+      ],
+      "expect": {
+        "haptic": "impact",
+        "value": "soft"
+      }
+    },
+    {
+      "args": [
+        "notification",
+        "error"
+      ],
+      "expect": {
+        "haptic": "notification",
+        "value": "error"
+      }
+    },
+    {
+      "args": [
+        "notification",
+        "success"
+      ],
+      "expect": {
+        "haptic": "notification",
+        "value": "success"
+      }
+    },
+    {
+      "args": [
+        "notification",
+        "warning"
+      ],
+      "expect": {
+        "haptic": "notification",
+        "value": "warning"
+      }
+    },
+    {
+      "args": [
+        "selection"
+      ],
+      "expect": {
+        "haptic": "selection"
+      }
+    },
+    {
+      "args": [
+        "impact"
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        "impact",
+        "Light"
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        "impact",
+        "light",
+        "x"
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        "notification",
+        "light"
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        "selection",
+        "light"
+      ],
+      "expect": null
+    },
+    {
+      "args": [
+        "vibrate",
+        200
+      ],
+      "expect": null
+    },
+    {
+      "args": [],
+      "expect": null
+    },
+    { "args": "impact", "expect": null }
+  ],
+  "bridge": [
+    {
+      "method": "ready",
+      "args": [],
+      "expect": {
+        "kind": "ready"
+      }
+    },
+    {
+      "method": "ready",
+      "args": [
+        "x"
+      ],
+      "expect": null
+    },
+    {
+      "method": "openLink",
+      "args": [
+        "https://example.com/"
+      ],
+      "expect": {
+        "kind": "openLink",
+        "url": "https://example.com/"
+      }
+    },
+    {
+      "method": "openLink",
+      "args": [
+        "https://t.me/x"
+      ],
+      "expect": null
+    },
+    {
+      "method": "openLink",
+      "args": [],
+      "expect": null
+    },
+    {
+      "method": "openLink",
+      "args": [
+        "https://example.com/",
+        "x"
+      ],
+      "expect": null
+    },
+    {
+      "method": "openTelegramLink",
+      "args": [
+        "https://t.me/x"
+      ],
+      "expect": {
+        "kind": "openTelegramLink",
+        "url": "https://t.me/x"
+      }
+    },
+    {
+      "method": "openTelegramLink",
+      "args": [
+        "https://example.com/"
+      ],
+      "expect": null
+    },
+    {
+      "method": "haptic",
+      "args": [
+        "impact",
+        "heavy"
+      ],
+      "expect": {
+        "kind": "haptic",
+        "haptic": "impact",
+        "value": "heavy"
+      }
+    },
+    {
+      "method": "haptic",
+      "args": [
+        "selection"
+      ],
+      "expect": {
+        "kind": "haptic",
+        "haptic": "selection"
+      }
+    },
+    {
+      "method": "haptic",
+      "args": [
+        "impact",
+        "loud"
+      ],
+      "expect": null
+    },
+    {
+      "method": "sendMessage",
+      "args": [
+        "hi"
+      ],
+      "expect": null
+    },
+    {
+      "method": "alert",
+      "args": [
+        "hi"
+      ],
+      "expect": null
+    },
+    {
+      "method": "clipboard",
+      "args": [
+        "hi"
+      ],
+      "expect": null
+    },
+    {
+      "method": "openInvoice",
+      "args": [
+        "x"
+      ],
+      "expect": null
+    },
+    { "method": "ready", "args": "x", "expect": null },
+    {
+      "method": 7,
+      "args": [],
+      "expect": null
+    },
+    { "method": "setResizeAnchor", "args": ["top"], "expect": { "kind": "setResizeAnchor", "edge": "top" } },
+    { "method": "setResizeAnchor", "args": ["bottom"], "expect": { "kind": "setResizeAnchor", "edge": "bottom" } },
+    { "method": "setResizeAnchor", "args": [], "expect": null },
+    { "method": "setResizeAnchor", "args": ["bottom", "top"], "expect": null },
+    { "method": "setResizeAnchor", "args": ["Bottom"], "expect": null },
+    { "method": "setResizeAnchor", "args": [" top"], "expect": null },
+    { "method": "setResizeAnchor", "args": ["left"], "expect": null },
+    { "method": "setResizeAnchor", "args": ["center"], "expect": null },
+    { "method": "setResizeAnchor", "args": [""], "expect": null },
+    { "method": "setResizeAnchor", "args": [1], "expect": null },
+    { "method": "setResizeAnchor", "args": [null], "expect": null },
+    { "method": "setResizeAnchor", "args": [true], "expect": null },
+    { "method": "setResizeAnchor", "args": [["top"]], "expect": null },
+    { "method": "setResizeAnchor", "args": [{ "edge": "top" }], "expect": null },
+    { "method": "setResizeAnchor", "args": "bottom", "expect": null },
+    { "method": "setresizeanchor", "args": ["top"], "expect": null }
+  ],
+  "hapticGate": [
+    {
+      "name": "a burst of 5, then one every 100 ms",
+      "steps": [
+        { "at": 0, "visible": true, "expect": "play" },
+        { "at": 0, "visible": true, "expect": "play" },
+        { "at": 0, "visible": true, "expect": "play" },
+        { "at": 0, "visible": true, "expect": "play" },
+        { "at": 0, "visible": true, "expect": "play" },
+        { "at": 0, "visible": true, "expect": "report" },
+        { "at": 50, "visible": true, "expect": "drop" },
+        { "at": 100, "visible": true, "expect": "play" },
+        { "at": 150, "visible": true, "expect": "drop" },
+        { "at": 199, "visible": true, "expect": "drop" },
+        { "at": 300, "visible": true, "expect": "play" },
+        { "at": 999, "visible": true, "expect": "play" },
+        { "at": 999, "visible": true, "expect": "play" },
+        { "at": 999, "visible": true, "expect": "play" },
+        { "at": 999, "visible": true, "expect": "play" },
+        { "at": 999, "visible": true, "expect": "play" },
+        { "at": 999, "visible": true, "expect": "drop" },
+        { "at": 1000, "visible": true, "expect": "report" }
+      ]
+    },
+    {
+      "name": "the bucket refills to 5, not beyond",
+      "steps": [
+        { "at": 0, "visible": true, "expect": "play" },
+        { "at": 10000, "visible": true, "expect": "play" },
+        { "at": 10000, "visible": true, "expect": "play" },
+        { "at": 10000, "visible": true, "expect": "play" },
+        { "at": 10000, "visible": true, "expect": "play" },
+        { "at": 10000, "visible": true, "expect": "play" },
+        { "at": 10000, "visible": true, "expect": "report" }
+      ]
+    },
+    {
+      "name": "hidden: dropped without using the bucket, reported once per second",
+      "steps": [
+        { "at": 0, "visible": false, "expect": "report" },
+        { "at": 10, "visible": false, "expect": "drop" },
+        { "at": 20, "visible": true, "expect": "play" },
+        { "at": 20, "visible": true, "expect": "play" },
+        { "at": 20, "visible": true, "expect": "play" },
+        { "at": 20, "visible": true, "expect": "play" },
+        { "at": 20, "visible": true, "expect": "play" },
+        { "at": 20, "visible": true, "expect": "drop" },
+        { "at": 1500, "visible": false, "expect": "report" }
+      ]
+    },
+    {
+      "name": "a clock that goes back refills nothing",
+      "steps": [
+        { "at": 1000, "visible": true, "expect": "play" },
+        { "at": 1000, "visible": true, "expect": "play" },
+        { "at": 1000, "visible": true, "expect": "play" },
+        { "at": 1000, "visible": true, "expect": "play" },
+        { "at": 1000, "visible": true, "expect": "play" },
+        { "at": 500, "visible": true, "expect": "report" },
+        { "at": 600, "visible": true, "expect": "play" }
+      ]
+    }
+  ],
+  "themeParams": [
+    {
+      "input": {
+        "bg_color": "#FFFFFF",
+        "text_color": "#000000"
+      },
+      "expect": {
+        "bg_color": "#ffffff",
+        "text_color": "#000000"
+      }
+    },
+    {
+      "input": {
+        "bg_color": "#fff",
+        "text_color": "red",
+        "link_color": "#12345g",
+        "hint_color": " #123456",
+        "button_color": "#abcdef"
+      },
+      "expect": {
+        "button_color": "#abcdef"
+      }
+    },
+    {
+      "input": {
+        "unknown_color": "#123456",
+        "__proto__x": "#123456",
+        "bg_color": 16777215
+      },
+      "expect": {}
+    },
+    {
+      "input": {
+        "bg_color": "#010203",
+        "text_color": "#040506",
+        "hint_color": "#070809",
+        "link_color": "#0a0b0c",
+        "button_color": "#0d0e0f",
+        "button_text_color": "#101112",
+        "secondary_bg_color": "#131415",
+        "accent_text_color": "#161718",
+        "subtitle_text_color": "#191a1b",
+        "destructive_text_color": "#1c1d1e",
+        "section_bg_color": "#1f2021",
+        "section_header_text_color": "#222324",
+        "section_separator_color": "#252627",
+        "header_bg_color": "#28292a",
+        "bottom_bar_bg_color": "#2b2c2d"
+      },
+      "expect": {
+        "bg_color": "#010203",
+        "text_color": "#040506",
+        "hint_color": "#070809",
+        "link_color": "#0a0b0c",
+        "button_color": "#0d0e0f",
+        "button_text_color": "#101112",
+        "secondary_bg_color": "#131415",
+        "accent_text_color": "#161718",
+        "subtitle_text_color": "#191a1b",
+        "destructive_text_color": "#1c1d1e",
+        "section_bg_color": "#1f2021",
+        "section_header_text_color": "#222324",
+        "section_separator_color": "#252627",
+        "header_bg_color": "#28292a",
+        "bottom_bar_bg_color": "#2b2c2d"
+      }
+    },
+    {
+      "input": [
+        "#ffffff"
+      ],
+      "expect": {}
+    },
+    {
+      "input": "bg_color",
+      "expect": {}
+    },
+    {
+      "input": null,
+      "expect": {}
+    }
+  ],
+  "locales": [
+    { "input": "ru", "expect": "ru" },
+    { "input": "en-US", "expect": "en-US" },
+    { "input": "pt-BR", "expect": "pt-BR" },
+    { "input": "zh-Hant-TW", "expect": "zh-Hant-TW" },
+    { "input": "es-419", "expect": "es-419" },
+    { "input": "en_US", "expect": null },
+    { "input": "e", "expect": null },
+    { "input": "", "expect": null },
+    { "input": "en-", "expect": null },
+    { "input": "-en", "expect": null },
+    { "input": "en--US", "expect": null },
+    { "input": "en-US ", "expect": null },
+    { "input": "ру", "expect": null },
+    { "input": "en-abcdefghi", "expect": null },
+    { "input": "en-aaaaaaaa-bbbbbbbb-cccccccc-ddddd", "expect": "en-aaaaaaaa-bbbbbbbb-cccccccc-ddddd", "note": "35 characters" },
+    { "input": "en-aaaaaaaa-bbbbbbbb-cccccccc-dddddd", "expect": null, "note": "36 characters" },
+    { "input": 7, "expect": null }
+  ],
+  "storage": [
+    {
+      "input": {},
+      "expect": {}
+    },
+    {
+      "input": {
+        "local": {}
+      },
+      "expect": {
+        "local": {}
+      }
+    },
+    {
+      "input": {
+        "local": {
+          "a": "1",
+          "b": ""
+        },
+        "session": {
+          "c": "x"
+        }
+      },
+      "expect": {
+        "local": {
+          "a": "1",
+          "b": ""
+        },
+        "session": {
+          "c": "x"
+        }
+      }
+    },
+    {
+      "input": {
+        "local": {
+          "__proto__": "x",
+          "constructor": "y",
+          "toString": "z"
+        }
+      },
+      "expect": {
+        "local": {
+          "__proto__": "x",
+          "constructor": "y",
+          "toString": "z"
+        }
+      },
+      "note": "keys that name Object.prototype members are plain keys"
+    },
+    {
+      "input": {
+        "local": {
+          "a": 1
+        }
+      },
+      "expect": null
+    },
+    {
+      "input": {
+        "local": {
+          "a": null
+        }
+      },
+      "expect": null
+    },
+    {
+      "input": {
+        "local": [
+          "a"
+        ]
+      },
+      "expect": null
+    },
+    {
+      "input": {
+        "local": "a"
+      },
+      "expect": null
+    },
+    {
+      "input": {
+        "cookies": {}
+      },
+      "expect": null
+    },
+    {
+      "input": {
+        "local": {
+          "a": "1"
+        },
+        "session": {
+          "b": 2
+        }
+      },
+      "expect": null,
+      "note": "a commit is checked whole"
+    },
+    {
+      "input": [],
+      "expect": null
+    },
+    { "input": null, "expect": null },
+    {
+      "input": {
+        "local": {
+          "k": {
+            "repeat": [
+              "x",
+              16383
+            ]
+          }
+        }
+      },
+      "expect": {
+        "local": {
+          "k": {
+            "repeat": [
+              "x",
+              16383
+            ]
+          }
+        }
+      },
+      "note": "1 + 16383 = 16384 bytes"
+    },
+    {
+      "input": {
+        "local": {
+          "k": {
+            "repeat": [
+              "x",
+              16384
+            ]
+          }
+        }
+      },
+      "expect": null,
+      "note": "16385 bytes"
+    },
+    {
+      "input": {
+        "local": {
+          "k": {
+            "repeat": [
+              "ж",
+              8191
+            ]
+          }
+        }
+      },
+      "expect": {
+        "local": {
+          "k": {
+            "repeat": [
+              "ж",
+              8191
+            ]
+          }
+        }
+      },
+      "note": "1 + 2 × 8191 = 16383 bytes"
+    },
+    {
+      "input": {
+        "local": {
+          "kk": {
+            "repeat": [
+              "ж",
+              8192
+            ]
+          }
+        }
+      },
+      "expect": null,
+      "note": "2 + 2 × 8192 = 16386 bytes"
+    },
+    {
+      "input": {
+        "local": {
+          "k": {
+            "repeat": [
+              "😀",
+              4095
+            ]
+          }
+        }
+      },
+      "expect": {
+        "local": {
+          "k": {
+            "repeat": [
+              "😀",
+              4095
+            ]
+          }
+        }
+      },
+      "note": "1 + 4 × 4095 = 16381 bytes"
+    },
+    {
+      "input": {
+        "local": {
+          "k": {
+            "repeat": [
+              "😀",
+              4096
+            ]
+          }
+        }
+      },
+      "expect": null,
+      "note": "1 + 4 × 4096 = 16385 bytes"
+    },
+    {
+      "input": {
+        "local": {
+          "k": {
+            "repeat": [
+              "x",
+              16000
+            ]
+          }
+        },
+        "session": {
+          "k": {
+            "repeat": [
+              "x",
+              16000
+            ]
+          }
+        }
+      },
+      "expect": {
+        "local": {
+          "k": {
+            "repeat": [
+              "x",
+              16000
+            ]
+          }
+        },
+        "session": {
+          "k": {
+            "repeat": [
+              "x",
+              16000
+            ]
+          }
+        }
+      },
+      "note": "the quota is per area"
+    }
+  ],
+  "utf8": [
+    { "s": "", "bytes": 0 },
+    { "s": "abc", "bytes": 3 },
+    { "s": "é", "bytes": 2 },
+    { "s": "ж", "bytes": 2 },
+    { "s": "€", "bytes": 3 },
+    { "s": "😀", "bytes": 4 },
+    { "s": "a😀ж€", "bytes": 10 }
+  ]
+}

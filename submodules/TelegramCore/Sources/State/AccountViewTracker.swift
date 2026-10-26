@@ -347,6 +347,11 @@ public final class AccountViewTracker {
     
     let chatHistoryPreloadManager: ChatHistoryPreloadManager
     
+    let recentDiscussionMessageFetches = RecentDiscussionMessageFetches()
+    
+    /// Reply targets and stories a history fill is fetching; layout draws them as skeletons.
+    public let pendingMessageReferences = PendingMessageReferences()
+    
     private let historyViewStateValidationContexts: HistoryViewStateValidationContexts
     
     public var orderedPreloadMedia: Signal<[ChatHistoryPreloadMediaItem], NoError> {

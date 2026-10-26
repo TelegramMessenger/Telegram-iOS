@@ -51,8 +51,8 @@ extension PeerInfoScreenNode {
         }, contentContext: nil, progress: nil, completion: nil)
     }
     
-    func openUrl(url: String, concealed: Bool, external: Bool, forceExternal: Bool = false, commit: @escaping () -> Void = {}) {
-        let _ = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: false, skipUrlAuth: false, skipConcealedAlert: false, forceDark: false, present: { [weak self] c in
+    func openUrl(url: String, concealed: Bool, forceConcealed: Bool = false, external: Bool, forceExternal: Bool = false, commit: @escaping () -> Void = {}) {
+        let _ = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: forceConcealed, skipUrlAuth: false, skipConcealedAlert: false, forceDark: false, present: { [weak self] c in
             self?.controller?.present(c, in: .window(.root))
         }, openResolved: { [weak self] tempResolved in
             guard let strongSelf = self else {

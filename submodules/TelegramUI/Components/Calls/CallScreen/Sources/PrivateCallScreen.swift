@@ -247,6 +247,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     private var audioLevelUpdateSubscription: SharedDisplayLinkDriver.Link?
     
     public var speakerAction: (() -> Void)?
+    
+    public var speakerButtonView: UIView? {
+        return self.buttonGroupView.buttonView(key: .speaker)
+    }
+    
     public var flipCameraAction: (() -> Void)?
     public var videoAction: (() -> Void)?
     public var microhoneMuteAction: (() -> Void)?

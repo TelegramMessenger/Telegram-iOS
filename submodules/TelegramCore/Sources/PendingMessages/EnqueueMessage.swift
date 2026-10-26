@@ -63,9 +63,15 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
     public var richText: [RichText]?
     
     public init(text: String, offset: Int?, entities: [MessageTextEntity], media: Media?, richText: [RichText]? = nil) {
-        self.text = text
+        if text.isEmpty, let richText {
+            let flat = richReplyQuoteTextAndEntities(richText)
+            self.text = flat.text
+            self.entities = entities.isEmpty ? flat.entities : entities
+        } else {
+            self.text = text
+            self.entities = entities
+        }
         self.offset = offset
-        self.entities = entities
         self.media = media
         self.richText = richText
     }
@@ -90,6 +96,13 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
             self.richText = richText.isEmpty ? nil : richText
         } else {
             self.richText = nil
+        }
+        if self.text.isEmpty, let richText = self.richText {
+            let flat = richReplyQuoteTextAndEntities(richText)
+            self.text = flat.text
+            if self.entities.isEmpty {
+                self.entities = flat.entities
+            }
         }
     }
     
@@ -882,6 +895,19 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
     }
     
+    // Sending to a user whose chat still shows the report/block panel ends its suspicious state
+    // (`CachedUserData.isSuspiciousPeer`): only the report and block flags go, so an Add Contact
+    // offer stays. A scheduled message reaches no one yet and changes nothing.
+    if peerId.namespace == Namespaces.Peer.CloudUser, messages.contains(where: { !$0.1.attributes.contains(where: { $0 is OutgoingScheduleInfoMessageAttribute }) }) {
+        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+            guard let current = current as? CachedUserData, current.isSuspiciousPeer, var peerStatusSettings = current.peerStatusSettings else {
+                return current
+            }
+            peerStatusSettings.flags.subtract(.suspiciousPeer)
+            return current.withUpdatedPeerStatusSettings(peerStatusSettings)
+        })
+    }
+    
     var forwardedMessageIds = Set<MessageId>()
     for (_, message) in messages {
         if case let .forward(sourceId, _, _, _, _) = message {
@@ -1302,6 +1328,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                         }
                         
+                        if sourceMessage.media.contains(where: { $0 is TelegramMediaWidget }) {
+                            hideSendersNames = false
+                        }
                         var hidesCaption = false
                         if hideCaptions {
                             for media in sourceMessage.media {

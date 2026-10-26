@@ -41,7 +41,7 @@ final class InstantPageInlineAttachmentWrappingTests: XCTestCase {
     }
 
     /// `EngineMedia.Id`, not the raw Postbox `MediaId` — TelegramCore does not re-export Postbox (see
-    /// the engine typealias cheat sheet in the root CLAUDE.md); the two are the same type.
+    /// the engine typealias cheat sheet in docs/superpowers/postbox-refactor-log.md); the two are the same type.
     private func inlineImage(_ id: Int64 = 1, side: Int32 = 40) -> RichText {
         return .image(id: EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: id),
                       dimensions: PixelDimensions(width: side, height: side))

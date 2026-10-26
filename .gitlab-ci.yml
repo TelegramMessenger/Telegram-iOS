@@ -21,7 +21,7 @@ internal:
   script:
     - export PATH=/opt/homebrew/opt/ruby/bin:$PATH                                  
     - export PATH=`gem environment gemdir`/bin:$PATH
-    - python3 -u build-system/Make/Make.py vm-build --waitForLock --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appcenter-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=adhoc --configuration=release_arm64 --embedWatchApp --watchApiId="$TELEGRAM_WATCHOS_APP_ID" --watchApiHash="$TELEGRAM_WATCHOS_APP_HASH"
+    - python3 -u build-system/Make/Make.py vm-build --waitForLock --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appstore-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=adhoc --configuration=release_arm64 --embedWatchApp --watchApiId="$TELEGRAM_WATCHOS_APP_ID" --watchApiHash="$TELEGRAM_WATCHOS_APP_HASH"
     - python3 -u build-system/Make/DeployBuild.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/deploy-configurations/internal-configuration.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
     - rm -rf build-input/configuration-repository-workdir
     - rm -rf build-input/configuration-repository
@@ -77,7 +77,7 @@ experimental_i:
   script:
     - export PATH=/opt/homebrew/opt/ruby/bin:$PATH                                  
     - export PATH=`gem environment gemdir`/bin:$PATH
-    - python3 -u build-system/Make/Make.py vm-build --waitForLock --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appcenter-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=adhoc --configuration=release_arm64
+    - python3 -u build-system/Make/Make.py vm-build --waitForLock --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appstore-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=adhoc --configuration=release_arm64
     - python3 -u build-system/Make/Make.py vm-deploy-testflight --waitForLock --ipa="build/artifacts/Telegram.ipa"
   environment:
     name: experimental

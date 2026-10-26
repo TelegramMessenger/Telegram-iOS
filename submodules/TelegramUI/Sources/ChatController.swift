@@ -149,6 +149,7 @@ import ChatSearchNavigationContentNode
 import ChatAgeRestrictionAlertController
 import TextProcessingScreen
 import ChatMediaEditorScreen
+import OpenUserGeneratedUrl
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -3457,9 +3458,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let performOpenURL = strongSelf.performOpenURL {
-                performOpenURL(message, url, progress)
+                if !urlData.forceConcealed { performOpenURL(message, url, progress) } // a link that must be confirmed (a widget's) gets no preview fetched here
             } else {
-                strongSelf.openUrl(url, concealed: concealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
+                strongSelf.openUrl(url, concealed: concealed, forceConcealed: urlData.forceConcealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress, fullUrl: urlData.fullUrl, alertDisplayUpdated: urlData.alertDisplayUpdated)
             }
         }, openExternalInstantPage: { [weak self] instantPage in
             guard let self else {
@@ -6531,7 +6532,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else if peerId.namespace == Namespaces.Peer.CloudUser {
                 self.openBotForumMoreMenu(sourceView: self.navigationBar?.navigationButtonContextContainer(sourceView: sourceNode.view) ?? sourceNode.view, gesture: gesture)
             } else {
-                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: false, sourceView: sourceNode.view, gesture: gesture)
+                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: false, sourceView: self.navigationBar?.navigationButtonContextContainer(sourceView: sourceNode.view) ?? sourceNode.view, gesture: gesture)
             }
         }
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
@@ -10195,6 +10196,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func openUrl(
         _ url: String,
         concealed: Bool,
+        forceConcealed: Bool = false,
         forceExternal: Bool = false,
         forceUpdate: Bool = false,
         skipUrlAuth: Bool = false,
@@ -10202,6 +10204,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         message: Message? = nil,
         allowInlineWebpageResolution: Bool = false,
         progress: Promise<Bool>? = nil,
+        fullUrl: Bool = false,
+        alertDisplayUpdated: ((ViewController?) -> Void)? = nil,
         commit: @escaping () -> Void = {}
     ) {
         self.commitPurposefulAction()
@@ -10234,11 +10238,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            let disposable = self.context.sharedContext.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: false, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
+            let disposable = OpenUserGeneratedUrl.openUserGeneratedUrl(context: self.context, peerId: self.contentData?.state.peerView?.peerId, url: url, webpage: nil, concealed: concealed, forceConcealed: forceConcealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, forceDark: false, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(result: resolved, sourceMessageId: message?.id, progress: progress, forceExternal: forceExternal, concealed: concealed, commit: commit)
-            }, progress: progress, alertDisplayUpdated: nil, concealedAlertOption: nil)
+            }, progress: progress, alertDisplayUpdated: alertDisplayUpdated, concealedAlertOption: nil, fullUrl: fullUrl)
             self.navigationActionDisposable.set(disposable)
         }, performAction: true)
     }
@@ -10803,20 +10807,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if remainingTime == 0 {
                 self.updateSlowmodeStatusTimerValue = nil
                 self.updateSlowmodeStatusDisposable.set(nil)
-                self.updateChatPresentationInterfaceState(interactive: false, {
-                    $0.updatedSlowmodeState(nil)
-                })
+                // Not from inside the update that called this, which would then lay out the finished countdown after
+                // the nested update cleared it. The next update drops it (updateChatPresentationInterfaceStateImpl).
+                Queue.mainQueue().justDispatch { [weak self] in
+                    self?.updateChatPresentationInterfaceState(interactive: false, { $0 })
+                }
             } else {
                 if self.updateSlowmodeStatusTimerValue != slowmodeActiveUntilTimestamp {
                     self.updateSlowmodeStatusTimerValue = slowmodeActiveUntilTimestamp
+                    // Fires when the countdown reaches zero, not a whole number of seconds after a truncated now,
+                    // which left "0:00" on screen for up to a second.
+                    let delay = max(0.0, Double(slowmodeActiveUntilTimestamp) - Date().timeIntervalSince1970)
                     self.updateSlowmodeStatusDisposable.set((Signal<Never, NoError>.complete()
-                    |> suspendAwareDelay(Double(remainingTime), granularity: 1.0, queue: .mainQueue())
+                    |> suspendAwareDelay(delay, granularity: 1.0, queue: .mainQueue())
                     |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.updateSlowmodeStatusTimerValue = nil
-                        strongSelf.updateSlowmodeStatus()
+                        // Drops the finished countdown in this run loop turn, and re-arms the timer if it fired early.
+                        strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0 })
                     }))
                 }
             }
@@ -11457,6 +11467,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 completion?()
                 return
             }
+            Logger.shared.log("ReplyThreadOpen", "inline switch start peer=\(peerId.id._internalGetInt64Value()) thread=\(String(describing: threadId))")
             guard let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer else {
                 completion?()
                 return

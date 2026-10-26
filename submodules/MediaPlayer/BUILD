@@ -24,6 +24,7 @@ swift_library(
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/TextFormat:TextFormat",
         "//submodules/ManagedFile",
+        "//submodules/HLSPlayback:HLSPlayback",
     ],
     visibility = [
         "//visibility:public",
@@ -38,6 +39,7 @@ swift_library(
     ]),
     deps = [
         ":UniversalMediaPlayer",
+        "//submodules/HLSPlayback:HLSPlayback",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramAudio:TelegramAudio",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -54,6 +56,12 @@ ios_unit_test(
     name = "UniversalMediaPlayerTests",
     minimum_os_version = "15.0",
     runner = ":UniversalMediaPlayerTestRunner",
+    resources = [
+        "Tests/Fixtures/fragment.mp4",
+        "Tests/Fixtures/fragment720.mp4",
+        "Tests/Fixtures/fragment-edit.mp4",
+        "Tests/Fixtures/fragment-videoedit.mp4",
+    ],
     deps = [
         ":UniversalMediaPlayerTestsLib",
     ],

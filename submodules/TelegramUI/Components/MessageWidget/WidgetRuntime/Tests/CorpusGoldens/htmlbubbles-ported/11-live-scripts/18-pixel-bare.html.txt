@@ -1,0 +1,238 @@
+stop -
+drive idle
+console log probe fetch=1 XMLHttpRequest=1 WebSocket=1 require=0 process=0 WebAssembly=0 document=1 window=1 localStorage=1 navigator=1 setTimeout=1 setInterval=1 requestAnimationFrame=1 performance=1 console=1 animate=0 tween=0 transition=0 ease=0 sleep=0 lerp=0 clamp=0 mix=0 alpha=0 esc=0 update=0
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad seen">
+  <b>🔍 What can a script see?</b>
+  <div class="caps" style="margin: 8px 0 3px 0">I/O: present as a name, but every call is refused</div>
+  <div class="g" id="io"><span class="t-green">● fetch <i>rejects with NetworkDisabledError</i></span><span class="t-green">● XMLHttpRequest <i>throws NetworkDisabledError</i></span><span class="t-green">● WebSocket <i>throws NetworkDisabledError</i></span></div>
+  <div class="caps" style="margin: 8px 0 3px 0">Not there</div>
+  <div class="g" id="absent"><span class="t-green" data-name="require">○ require <i></i></span><span class="t-green" data-name="process">○ process <i></i></span><span class="t-green" data-name="WebAssembly">○ WebAssembly <i></i></span></div>
+  <div class="caps" style="margin: 8px 0 3px 0">Provided by the sandbox</div>
+  <div class="g" id="present"><span class="t-green" data-name="document">● document <i></i></span><span class="t-green" data-name="window">● window <i></i></span><span class="t-green" data-name="localStorage">● localStorage <i>per message</i></span><span class="t-green" data-name="navigator">● navigator <i>no network</i></span><span class="t-green" data-name="setTimeout">● setTimeout <i></i></span><span class="t-green" data-name="setInterval">● setInterval <i></i></span><span class="t-green" data-name="requestAnimationFrame">● requestAnimationFrame <i></i></span><span class="t-green" data-name="performance">● performance <i></i></span><span class="t-green" data-name="console">● console <i></i></span></div>
+  <div class="caps" style="margin: 8px 0 3px 0">LiteChat-only helpers (not in twidget)</div>
+  <div class="g" id="helpers"><span class="t-green" data-name="animate">○ animate <i>not needed</i></span><span class="t-green" data-name="tween">○ tween <i>not needed</i></span><span class="t-green" data-name="transition">○ transition <i>not needed</i></span><span class="t-green" data-name="ease">○ ease <i>not needed</i></span><span class="t-green" data-name="sleep">○ sleep <i>not needed</i></span><span class="t-green" data-name="lerp">○ lerp <i>not needed</i></span><span class="t-green" data-name="clamp">○ clamp <i>not needed</i></span><span class="t-green" data-name="mix">○ mix <i>not needed</i></span><span class="t-green" data-name="alpha">○ alpha <i>not needed</i></span><span class="t-green" data-name="esc">○ esc <i>not needed</i></span><span class="t-green" data-name="update">○ update <i>not needed</i></span></div>
+  <div class="tiny muted" style="margin-top: 6px">Plus the standard built-ins: Math, Date, JSON, Map, Promise, Intl… ● = defined, ○ = undefined; green = the sandbox's intended answer.</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 504.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 504.5
+    div 15 13 360 478.5
+      b 15 13 0 0
+      div 15 39.2 360 28.6
+      div 15 70.8 360 52.8
+        span 15 71.8 360 15.6
+          i 15 71.8 0 0
+        span 15 89.4 360 15.6
+          i 15 89.4 0 0
+        span 15 107 360 15.6
+          i 15 107 0 0
+      div 15 131.6 360 14.3
+      div 15 148.9 360 35.2
+        span 15 149.9 180 15.6
+          i 15 149.9 0 0
+        span 195 149.9 180 15.6
+          i 195 149.9 0 0
+        span 15 167.5 180 15.6
+          i 15 167.5 0 0
+      div 15 192.1 360 14.3
+      div 15 209.4 360 88
+        span 15 210.4 180 15.6
+          i 15 210.4 0 0
+        span 195 210.4 180 15.6
+          i 195 210.4 0 0
+        span 15 228 180 15.6
+          i 15 228 0 0
+        span 195 228 180 15.6
+          i 195 228 0 0
+        span 15 245.6 180 15.6
+          i 15 245.6 0 0
+        span 195 245.6 180 15.6
+          i 195 245.6 0 0
+        span 15 263.2 180 15.6
+          i 15 263.2 0 0
+        span 195 263.2 180 15.6
+          i 195 263.2 0 0
+        span 15 280.8 180 15.6
+          i 15 280.8 0 0
+      div 15 305.4 360 14.3
+      div 15 322.7 360 105.6
+        span 15 323.7 180 15.6
+          i 15 323.7 0 0
+        span 195 323.7 180 15.6
+          i 195 323.7 0 0
+        span 15 341.3 180 15.6
+          i 15 341.3 0 0
+        span 195 341.3 180 15.6
+          i 195 341.3 0 0
+        span 15 358.9 180 15.6
+          i 15 358.9 0 0
+        span 195 358.9 180 15.6
+          i 195 358.9 0 0
+        span 15 376.5 180 15.6
+          i 15 376.5 0 0
+        span 195 376.5 180 15.6
+          i 195 376.5 0 0
+        span 15 394.1 180 15.6
+          i 15 394.1 0 0
+        span 195 394.1 180 15.6
+          i 195 394.1 0 0
+        span 15 411.7 180 15.6
+          i 15 411.7 0 0
+      div 15 434.3 360 57.2
+
+== paint
+root 390x504.5 items=138
+  solid-fill bounds=(0,0,390,504) layer=(border=(0,0,390,504),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,504),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,504) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,504) root=0
+  text bounds=(7,6,48,32) pos=(15,14,32,16) color=#000000ff text="🔍" font=f1 glyphs=4 advance=32
+  text bounds=(47,6,48,32) pos=(55,14,32,16) color=#000000ff text="What" font=f1 glyphs=4 advance=32
+  text bounds=(87,6,40,32) pos=(95,14,24,16) color=#000000ff text="can" font=f1 glyphs=3 advance=24
+  text bounds=(119,6,24,32) pos=(127,14,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(135,6,64,32) pos=(143,14,48,16) color=#000000ff text="script" font=f1 glyphs=6 advance=48
+  text bounds=(191,6,48,32) pos=(199,14,32,16) color=#000000ff text="see?" font=f1 glyphs=4 advance=32
+  text bounds=(7,31,48,32) pos=(15,39,32,16) color=#6e6e73ff text="I/O:" font=f2 glyphs=4 advance=32
+  text bounds=(47,31,72,32) pos=(55,39,56,16) color=#6e6e73ff text="PRESENT" font=f2 glyphs=7 advance=56
+  text bounds=(111,31,32,32) pos=(119,39,16,16) color=#6e6e73ff text="AS" font=f2 glyphs=2 advance=16
+  text bounds=(135,31,24,32) pos=(143,39,8,16) color=#6e6e73ff text="A" font=f2 glyphs=1 advance=8
+  text bounds=(151,31,56,32) pos=(159,39,40,16) color=#6e6e73ff text="NAME," font=f2 glyphs=5 advance=40
+  text bounds=(199,31,40,32) pos=(207,39,24,16) color=#6e6e73ff text="BUT" font=f2 glyphs=3 advance=24
+  text bounds=(231,31,56,32) pos=(239,39,40,16) color=#6e6e73ff text="EVERY" font=f2 glyphs=5 advance=40
+  text bounds=(279,31,48,32) pos=(287,39,32,16) color=#6e6e73ff text="CALL" font=f2 glyphs=4 advance=32
+  text bounds=(319,31,32,32) pos=(327,39,16,16) color=#6e6e73ff text="IS" font=f2 glyphs=2 advance=16
+  text bounds=(7,45,72,32) pos=(15,53,56,16) color=#6e6e73ff text="REFUSED" font=f2 glyphs=7 advance=56
+  text bounds=(7,64,40,32) pos=(15,72,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,64,56,32) pos=(47,72,40,16) color=#34c759ff text="fetch" font=f3 glyphs=5 advance=40
+  text bounds=(87,64,72,32) pos=(95,72,56,16) color=#6e6e73ff text="rejects" font=f4 glyphs=7 advance=56
+  text bounds=(151,64,48,32) pos=(159,72,32,16) color=#6e6e73ff text="with" font=f4 glyphs=4 advance=32
+  text bounds=(191,64,176,32) pos=(199,72,160,16) color=#6e6e73ff text="NetworkDisabledError" font=f4 glyphs=20 advance=160
+  text bounds=(7,81,40,32) pos=(15,89,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,81,128,32) pos=(47,89,112,16) color=#34c759ff text="XMLHttpRequest" font=f3 glyphs=14 advance=112
+  text bounds=(159,81,64,32) pos=(167,89,48,16) color=#6e6e73ff text="throws" font=f4 glyphs=6 advance=48
+  text bounds=(215,81,176,32) pos=(223,89,160,16) color=#6e6e73ff text="NetworkDisabledError" font=f4 glyphs=20 advance=160
+  text bounds=(7,99,40,32) pos=(15,107,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,99,88,32) pos=(47,107,72,16) color=#34c759ff text="WebSocket" font=f3 glyphs=9 advance=72
+  text bounds=(119,99,64,32) pos=(127,107,48,16) color=#6e6e73ff text="throws" font=f4 glyphs=6 advance=48
+  text bounds=(175,99,176,32) pos=(183,107,160,16) color=#6e6e73ff text="NetworkDisabledError" font=f4 glyphs=20 advance=160
+  text bounds=(7,124,40,32) pos=(15,132,24,16) color=#6e6e73ff text="NOT" font=f2 glyphs=3 advance=24
+  text bounds=(39,124,56,32) pos=(47,132,40,16) color=#6e6e73ff text="THERE" font=f2 glyphs=5 advance=40
+  text bounds=(7,142,40,32) pos=(15,150,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,142,72,32) pos=(47,150,56,16) color=#34c759ff text="require" font=f3 glyphs=7 advance=56
+  text bounds=(187,142,40,32) pos=(195,150,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(219,142,72,32) pos=(227,150,56,16) color=#34c759ff text="process" font=f3 glyphs=7 advance=56
+  text bounds=(7,160,40,32) pos=(15,168,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,160,104,32) pos=(47,168,88,16) color=#34c759ff text="WebAssembly" font=f3 glyphs=11 advance=88
+  text bounds=(7,184,80,32) pos=(15,192,64,16) color=#6e6e73ff text="PROVIDED" font=f2 glyphs=8 advance=64
+  text bounds=(79,184,32,32) pos=(87,192,16,16) color=#6e6e73ff text="BY" font=f2 glyphs=2 advance=16
+  text bounds=(103,184,40,32) pos=(111,192,24,16) color=#6e6e73ff text="THE" font=f2 glyphs=3 advance=24
+  text bounds=(135,184,72,32) pos=(143,192,56,16) color=#6e6e73ff text="SANDBOX" font=f2 glyphs=7 advance=56
+  text bounds=(7,202,40,32) pos=(15,210,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,202,80,32) pos=(47,210,64,16) color=#34c759ff text="document" font=f3 glyphs=8 advance=64
+  text bounds=(187,202,40,32) pos=(195,210,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(219,202,64,32) pos=(227,210,48,16) color=#34c759ff text="window" font=f3 glyphs=6 advance=48
+  text bounds=(7,220,40,32) pos=(15,228,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,220,112,32) pos=(47,228,96,16) color=#34c759ff text="localStorage" font=f3 glyphs=12 advance=96
+  text bounds=(143,220,40,32) pos=(151,228,24,16) color=#6e6e73ff text="per" font=f4 glyphs=3 advance=24
+  text bounds=(175,220,72,32) pos=(183,228,56,16) color=#6e6e73ff text="message" font=f4 glyphs=7 advance=56
+  text bounds=(187,220,40,32) pos=(195,228,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(219,220,88,32) pos=(227,228,72,16) color=#34c759ff text="navigator" font=f3 glyphs=9 advance=72
+  text bounds=(299,220,32,32) pos=(307,228,16,16) color=#6e6e73ff text="no" font=f4 glyphs=2 advance=16
+  text bounds=(323,220,72,32) pos=(331,228,56,16) color=#6e6e73ff text="network" font=f4 glyphs=7 advance=56
+  text bounds=(7,238,40,32) pos=(15,246,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,238,96,32) pos=(47,246,80,16) color=#34c759ff text="setTimeout" font=f3 glyphs=10 advance=80
+  text bounds=(187,238,40,32) pos=(195,246,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(219,238,104,32) pos=(227,246,88,16) color=#34c759ff text="setInterval" font=f3 glyphs=11 advance=88
+  text bounds=(7,255,40,32) pos=(15,263,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,255,184,32) pos=(47,263,168,16) color=#34c759ff text="requestAnimationFrame" font=f3 glyphs=21 advance=168
+  text bounds=(187,255,40,32) pos=(195,263,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(219,255,104,32) pos=(227,263,88,16) color=#34c759ff text="performance" font=f3 glyphs=11 advance=88
+  text bounds=(7,273,40,32) pos=(15,281,24,16) color=#34c759ff text="●" font=f3 glyphs=3 advance=24
+  text bounds=(39,273,72,32) pos=(47,281,56,16) color=#34c759ff text="console" font=f3 glyphs=7 advance=56
+  text bounds=(7,297,88,32) pos=(15,305,72,16) color=#6e6e73ff text="LITECHAT-" font=f2 glyphs=9 advance=72
+  text bounds=(79,297,48,32) pos=(87,305,32,16) color=#6e6e73ff text="ONLY" font=f2 glyphs=4 advance=32
+  text bounds=(119,297,72,32) pos=(127,305,56,16) color=#6e6e73ff text="HELPERS" font=f2 glyphs=7 advance=56
+  text bounds=(183,297,48,32) pos=(191,305,32,16) color=#6e6e73ff text="(NOT" font=f2 glyphs=4 advance=32
+  text bounds=(223,297,32,32) pos=(231,305,16,16) color=#6e6e73ff text="IN" font=f2 glyphs=2 advance=16
+  text bounds=(247,297,80,32) pos=(255,305,64,16) color=#6e6e73ff text="TWIDGET)" font=f2 glyphs=8 advance=64
+  text bounds=(7,316,40,32) pos=(15,324,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,316,72,32) pos=(47,324,56,16) color=#34c759ff text="animate" font=f3 glyphs=7 advance=56
+  text bounds=(103,316,40,32) pos=(111,324,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(135,316,64,32) pos=(143,324,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(187,316,40,32) pos=(195,324,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(219,316,56,32) pos=(227,324,40,16) color=#34c759ff text="tween" font=f3 glyphs=5 advance=40
+  text bounds=(267,316,40,32) pos=(275,324,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(299,316,64,32) pos=(307,324,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(7,333,40,32) pos=(15,341,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,333,96,32) pos=(47,341,80,16) color=#34c759ff text="transition" font=f3 glyphs=10 advance=80
+  text bounds=(127,333,40,32) pos=(135,341,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(159,333,64,32) pos=(167,341,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(187,333,40,32) pos=(195,341,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(219,333,48,32) pos=(227,341,32,16) color=#34c759ff text="ease" font=f3 glyphs=4 advance=32
+  text bounds=(259,333,40,32) pos=(267,341,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(291,333,64,32) pos=(299,341,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(7,351,40,32) pos=(15,359,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,351,56,32) pos=(47,359,40,16) color=#34c759ff text="sleep" font=f3 glyphs=5 advance=40
+  text bounds=(87,351,40,32) pos=(95,359,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(119,351,64,32) pos=(127,359,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(187,351,40,32) pos=(195,359,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(219,351,48,32) pos=(227,359,32,16) color=#34c759ff text="lerp" font=f3 glyphs=4 advance=32
+  text bounds=(259,351,40,32) pos=(267,359,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(291,351,64,32) pos=(299,359,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(7,368,40,32) pos=(15,376,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,368,56,32) pos=(47,376,40,16) color=#34c759ff text="clamp" font=f3 glyphs=5 advance=40
+  text bounds=(87,368,40,32) pos=(95,376,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(119,368,64,32) pos=(127,376,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(187,368,40,32) pos=(195,376,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(219,368,40,32) pos=(227,376,24,16) color=#34c759ff text="mix" font=f3 glyphs=3 advance=24
+  text bounds=(251,368,40,32) pos=(259,376,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(283,368,64,32) pos=(291,376,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(7,386,40,32) pos=(15,394,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,386,56,32) pos=(47,394,40,16) color=#34c759ff text="alpha" font=f3 glyphs=5 advance=40
+  text bounds=(87,386,40,32) pos=(95,394,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(119,386,64,32) pos=(127,394,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(187,386,40,32) pos=(195,394,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(219,386,40,32) pos=(227,394,24,16) color=#34c759ff text="esc" font=f3 glyphs=3 advance=24
+  text bounds=(251,386,40,32) pos=(259,394,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(283,386,64,32) pos=(291,394,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(7,404,40,32) pos=(15,412,24,16) color=#34c759ff text="○" font=f3 glyphs=3 advance=24
+  text bounds=(39,404,64,32) pos=(47,412,48,16) color=#34c759ff text="update" font=f3 glyphs=6 advance=48
+  text bounds=(95,404,40,32) pos=(103,412,24,16) color=#6e6e73ff text="not" font=f4 glyphs=3 advance=24
+  text bounds=(127,404,64,32) pos=(135,412,48,16) color=#6e6e73ff text="needed" font=f4 glyphs=6 advance=48
+  text bounds=(7,426,48,32) pos=(15,434,32,16) color=#6e6e73ff text="Plus" font=f5 glyphs=4 advance=32
+  text bounds=(47,426,40,32) pos=(55,434,24,16) color=#6e6e73ff text="the" font=f5 glyphs=3 advance=24
+  text bounds=(79,426,80,32) pos=(87,434,64,16) color=#6e6e73ff text="standard" font=f5 glyphs=8 advance=64
+  text bounds=(151,426,64,32) pos=(159,434,48,16) color=#6e6e73ff text="built-" font=f5 glyphs=6 advance=48
+  text bounds=(199,426,48,32) pos=(207,434,32,16) color=#6e6e73ff text="ins:" font=f5 glyphs=4 advance=32
+  text bounds=(239,426,56,32) pos=(247,434,40,16) color=#6e6e73ff text="Math," font=f5 glyphs=5 advance=40
+  text bounds=(287,426,56,32) pos=(295,434,40,16) color=#6e6e73ff text="Date," font=f5 glyphs=5 advance=40
+  text bounds=(7,441,56,32) pos=(15,449,40,16) color=#6e6e73ff text="JSON," font=f5 glyphs=5 advance=40
+  text bounds=(55,441,48,32) pos=(63,449,32,16) color=#6e6e73ff text="Map," font=f5 glyphs=4 advance=32
+  text bounds=(95,441,80,32) pos=(103,449,64,16) color=#6e6e73ff text="Promise," font=f5 glyphs=8 advance=64
+  text bounds=(167,441,72,32) pos=(175,449,56,16) color=#6e6e73ff text="Intl…" font=f5 glyphs=7 advance=56
+  text bounds=(231,441,40,32) pos=(239,449,24,16) color=#6e6e73ff text="●" font=f5 glyphs=3 advance=24
+  text bounds=(263,441,24,32) pos=(271,449,8,16) color=#6e6e73ff text="=" font=f5 glyphs=1 advance=8
+  text bounds=(279,441,80,32) pos=(287,449,64,16) color=#6e6e73ff text="defined," font=f5 glyphs=8 advance=64
+  text bounds=(7,455,40,32) pos=(15,463,24,16) color=#6e6e73ff text="○" font=f5 glyphs=3 advance=24
+  text bounds=(39,455,24,32) pos=(47,463,8,16) color=#6e6e73ff text="=" font=f5 glyphs=1 advance=8
+  text bounds=(55,455,96,32) pos=(63,463,80,16) color=#6e6e73ff text="undefined;" font=f5 glyphs=10 advance=80
+  text bounds=(143,455,56,32) pos=(151,463,40,16) color=#6e6e73ff text="green" font=f5 glyphs=5 advance=40
+  text bounds=(191,455,24,32) pos=(199,463,8,16) color=#6e6e73ff text="=" font=f5 glyphs=1 advance=8
+  text bounds=(207,455,40,32) pos=(215,463,24,16) color=#6e6e73ff text="the" font=f5 glyphs=3 advance=24
+  text bounds=(239,455,88,32) pos=(247,463,72,16) color=#6e6e73ff text="sandbox's" font=f5 glyphs=9 advance=72
+  text bounds=(7,469,80,32) pos=(15,477,64,16) color=#6e6e73ff text="intended" font=f5 glyphs=8 advance=64
+  text bounds=(79,469,72,32) pos=(87,477,56,16) color=#6e6e73ff text="answer." font=f5 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="ui-monospace,monospace",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

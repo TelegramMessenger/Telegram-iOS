@@ -1,0 +1,22 @@
+<!doctype html>
+<html data-test="fixture/tap">
+<head><style>body { margin: 0 } #b { display: block; width: 120px; height: 40px }</style></head>
+<body>
+<button id="b">Tap</button>
+<script>
+// A conformance fixture with scripted input: publishes `awaiting` with its target, and `done` once a tap clicks it.
+const b = document.getElementById('b');
+function publish(status, checks) {
+  const r = b.getBoundingClientRect();
+  document.documentElement.setAttribute('data-conformance', JSON.stringify({
+    v: 1, id: 'fixture/tap', status, n: {}, checks, targets: { button: [r.left, r.top, r.width, r.height] }
+  }));
+}
+b.addEventListener('click', () => {
+  TelegramWidget.openLink('https://example.org/conformance/tap');
+  publish('done', [['tw.open-link', 'a tap clicks the button', 'pass', '']]);
+});
+requestAnimationFrame(() => publish('awaiting', [['tw.open-link', 'a tap clicks the button', 'pending', '']]));
+</script>
+</body>
+</html>

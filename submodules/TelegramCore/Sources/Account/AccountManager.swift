@@ -186,6 +186,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizeAppLogEventsOperation.self, f: { SynchronizeAppLogEventsOperation(decoder: $0) })
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
+    declareEncodable(TelegramMediaWidget.self, f: { TelegramMediaWidget(decoder: $0) })
     declareEncodable(EmojiKeywordCollectionInfo.self, f: { EmojiKeywordCollectionInfo(decoder: $0) })
     declareEncodable(EmojiKeywordItem.self, f: { EmojiKeywordItem(decoder: $0) })
     declareEncodable(SynchronizeEmojiKeywordsOperation.self, f: { SynchronizeEmojiKeywordsOperation(decoder: $0) })

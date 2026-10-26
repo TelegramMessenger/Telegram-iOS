@@ -553,6 +553,9 @@ public final class ChatMessageAccessibilityData {
                 replyValue = replyMessageValue
                 
                 label = "\(replyLabel) . \(label)"
+            } else if let attribute = attribute as? ReplyMessageAttribute, item.message.associatedMessages[attribute.messageId] == nil, item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id) {
+                // The reply's target is being fetched; the header draws as a skeleton.
+                label = "\(item.presentationData.strings.VoiceOver_Chat_Reply), \(item.presentationData.strings.Channel_NotificationLoading) . \(label)"
             }
         }
         
@@ -660,6 +663,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open var scrollTiltProvider: ((CFTimeInterval) -> Float)?
     
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
+    /// The edge of the message that stays put on screen when its next height change lands (a message widget's resize
+    /// anchor); nil leaves the list's own placement. Read when the message asks to be updated.
+    open var resizeAnchor: ListViewItemResizeAnchor? {
+        return nil
+    }
     
     private var fetchEffectDisposable: Disposable?
     

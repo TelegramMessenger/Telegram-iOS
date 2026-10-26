@@ -1,0 +1,74 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div><svg class="logo" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#37aee2"></stop><stop offset="1" stop-color="#1e96c8"></stop></linearGradient></defs><rect width="44" height="44" rx="11" fill="url(#lg)"></rect><path d="M9.5 21.6l22.2-8.6c1-.4 1.9.2 1.6 1.7l-3.8 17.8c-.3 1.3-1.1 1.6-2.2 1l-6-4.4-2.9 2.8c-.3.3-.6.6-1.2.6l.4-6.1 11.2-10.1c.5-.4-.1-.7-.8-.3L14.2 24.7l-5.9-1.8c-1.3-.4-1.3-1.3.3-1.9z" fill="#fff"></path></svg><b>Floats work too.</b> This paragraph wraps around the logo on the left exactly like a browser would, and once the text runs past the bottom of the image it flows back to the full width of the bubble.</div>
+</body></html>
+
+== layout
+html 0 0 360 91
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 91
+    div 0 0 360 91
+      svg 0 3 44 44
+        defs 0 0 0 0
+          lineargradient 0 0 0 0
+            stop 0 0 0 0
+            stop 0 0 0 0
+        rect 0 0 0 0
+        path 0 0 0 0
+      b 0 0 0 0
+
+== paint
+root 360x91 items=42
+  set-clip bounds=(0,3,44,44) pos=(0,3,44,44) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(0,3,44,44)
+    group opacity=1 matrix=(1,0,0,1,0,3) backface=0 bounds=(0,0,44,44) exact=0
+      path bounds=(-1,-1,46,46) ops=(0,1,3,1,3,1,3,1,3,4) points=(11,0,33,0,39.0751,0,44,4.92487,44,11,44,33,44,39.0751,39.0751,44,33,44,11,44,4.92487,44,0,39.0751,0,33,0,11,0,4.92487,4.92487,0,11,0) fill=1 fill-color=#1e96c8ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(1,0,0,0,44,0.5,0.5,0.5,((0,#37aee2ff),(1,#1e96c8ff)))
+      path bounds=(6.35958,11.8792,27.999,22.9172) ops=(0,1,3,1,3,1,1,3,1,1,3,1,1,3,4) points=(9.5,21.6,31.7,13,32.7,12.6,33.6,13.2,33.3,14.7,29.5,32.5,29.2,33.8,28.4,34.1,27.3,33.5,21.3,29.1,18.4,31.9,18.1,32.2,17.8,32.5,17.2,32.5,17.6,26.4,28.8,16.3,29.3,15.9,28.7,15.6,28,16,14.2,24.7,8.3,22.9,7,22.5,7,21.6,8.6,21) fill=1 fill-color=#ffffffff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(46,-7,64,32) pos=(54,1,48,16) color=#000000ff text="Floats" font=f1 glyphs=6 advance=48
+  text bounds=(102,-7,48,32) pos=(110,1,32,16) color=#000000ff text="work" font=f1 glyphs=4 advance=32
+  text bounds=(142,-7,48,32) pos=(150,1,32,16) color=#000000ff text="too." font=f1 glyphs=4 advance=32
+  text bounds=(182,-7,48,32) pos=(190,1,32,16) color=#000000ff text="This" font=f2 glyphs=4 advance=32
+  text bounds=(222,-7,88,32) pos=(230,1,72,16) color=#000000ff text="paragraph" font=f2 glyphs=9 advance=72
+  text bounds=(302,-7,56,32) pos=(310,1,40,16) color=#000000ff text="wraps" font=f2 glyphs=5 advance=40
+  text bounds=(46,11,64,32) pos=(54,19,48,16) color=#000000ff text="around" font=f2 glyphs=6 advance=48
+  text bounds=(102,11,40,32) pos=(110,19,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(134,11,48,32) pos=(142,19,32,16) color=#000000ff text="logo" font=f2 glyphs=4 advance=32
+  text bounds=(174,11,32,32) pos=(182,19,16,16) color=#000000ff text="on" font=f2 glyphs=2 advance=16
+  text bounds=(198,11,40,32) pos=(206,19,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(230,11,48,32) pos=(238,19,32,16) color=#000000ff text="left" font=f2 glyphs=4 advance=32
+  text bounds=(270,11,72,32) pos=(278,19,56,16) color=#000000ff text="exactly" font=f2 glyphs=7 advance=56
+  text bounds=(46,29,48,32) pos=(54,37,32,16) color=#000000ff text="like" font=f2 glyphs=4 advance=32
+  text bounds=(86,29,24,32) pos=(94,37,8,16) color=#000000ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(102,29,72,32) pos=(110,37,56,16) color=#000000ff text="browser" font=f2 glyphs=7 advance=56
+  text bounds=(166,29,64,32) pos=(174,37,48,16) color=#000000ff text="would," font=f2 glyphs=6 advance=48
+  text bounds=(222,29,40,32) pos=(230,37,24,16) color=#000000ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(254,29,48,32) pos=(262,37,32,16) color=#000000ff text="once" font=f2 glyphs=4 advance=32
+  text bounds=(294,29,40,32) pos=(302,37,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(-8,48,48,32) pos=(0,56,32,16) color=#000000ff text="text" font=f2 glyphs=4 advance=32
+  text bounds=(32,48,48,32) pos=(40,56,32,16) color=#000000ff text="runs" font=f2 glyphs=4 advance=32
+  text bounds=(72,48,48,32) pos=(80,56,32,16) color=#000000ff text="past" font=f2 glyphs=4 advance=32
+  text bounds=(112,48,40,32) pos=(120,56,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(144,48,64,32) pos=(152,56,48,16) color=#000000ff text="bottom" font=f2 glyphs=6 advance=48
+  text bounds=(200,48,32,32) pos=(208,56,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(224,48,40,32) pos=(232,56,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(256,48,56,32) pos=(264,56,40,16) color=#000000ff text="image" font=f2 glyphs=5 advance=40
+  text bounds=(304,48,32,32) pos=(312,56,16,16) color=#000000ff text="it" font=f2 glyphs=2 advance=16
+  text bounds=(-8,66,56,32) pos=(0,74,40,16) color=#000000ff text="flows" font=f2 glyphs=5 advance=40
+  text bounds=(40,66,48,32) pos=(48,74,32,16) color=#000000ff text="back" font=f2 glyphs=4 advance=32
+  text bounds=(80,66,32,32) pos=(88,74,16,16) color=#000000ff text="to" font=f2 glyphs=2 advance=16
+  text bounds=(104,66,40,32) pos=(112,74,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(136,66,48,32) pos=(144,74,32,16) color=#000000ff text="full" font=f2 glyphs=4 advance=32
+  text bounds=(176,66,56,32) pos=(184,74,40,16) color=#000000ff text="width" font=f2 glyphs=5 advance=40
+  text bounds=(224,66,32,32) pos=(232,74,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(248,66,40,32) pos=(256,74,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(280,66,72,32) pos=(288,74,56,16) color=#000000ff text="bubble." font=f2 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -4816,10 +4816,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         screen.canSendInHighQuality = params.canSendInHighQuality
         screen.actionCompleted = params.actionCompleted
-        screen.enqueued = { ids, correlationIds in
+        screen.sent = { ids in
             shared = true
-            params.enqueued?(ids, correlationIds)
             params.completed?(ids)
+        }
+        screen.enqueued = { ids, correlationIds in
+            params.enqueued?(ids, correlationIds)
         }
         screen.dismissed = { params.dismissed?(shared) }
         let theme = params.forceTheme ?? params.updatedPresentationData?.initial.theme ?? self.currentPresentationData.with { $0 }.theme

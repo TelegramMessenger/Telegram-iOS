@@ -1,0 +1,85 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Text card</title>
+</head><body><h2>The library closes early on Friday</h2>
+<p>The reading room and the café close at <strong>15:00</strong> this Friday for the building's yearly inspection. Books can go into the return box by the main door until midnight.</p>
+<p>Saturday is as usual: <em>10:00 to 18:00</em>.</p>
+<p><small>Posted by the front desk · 2 hours ago</small></p>
+</body></html>
+
+== layout
+html 0 0 360 210.062
+  head 0 0 0 0
+  body 12 8 336 194.062
+    h2 12 8 336 25.3125
+    p 12 42.3125 336 101.25
+      strong 12 42.3125 0 0
+    p 12 152.562 336 20.25
+      em 12 152.562 0 0
+    p 12 181.812 336 20.25
+      small 12 181.812 0 0
+
+== paint
+root 360x210.062 items=52
+  text bounds=(4,4,40,32) pos=(12,12,24,16) color=#000000ff text="The" font=f1 glyphs=3 advance=24
+  text bounds=(36,4,72,32) pos=(44,12,56,16) color=#000000ff text="library" font=f1 glyphs=7 advance=56
+  text bounds=(100,4,64,32) pos=(108,12,48,16) color=#000000ff text="closes" font=f1 glyphs=6 advance=48
+  text bounds=(156,4,56,32) pos=(164,12,40,16) color=#000000ff text="early" font=f1 glyphs=5 advance=40
+  text bounds=(204,4,32,32) pos=(212,12,16,16) color=#000000ff text="on" font=f1 glyphs=2 advance=16
+  text bounds=(228,4,64,32) pos=(236,12,48,16) color=#000000ff text="Friday" font=f1 glyphs=6 advance=48
+  text bounds=(4,36,40,32) pos=(12,44,24,16) color=#000000ff text="The" font=f2 glyphs=3 advance=24
+  text bounds=(36,36,72,32) pos=(44,44,56,16) color=#000000ff text="reading" font=f2 glyphs=7 advance=56
+  text bounds=(100,36,48,32) pos=(108,44,32,16) color=#000000ff text="room" font=f2 glyphs=4 advance=32
+  text bounds=(140,36,40,32) pos=(148,44,24,16) color=#000000ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(172,36,40,32) pos=(180,44,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(204,36,56,32) pos=(212,44,40,16) color=#000000ff text="café" font=f2 glyphs=5 advance=40
+  text bounds=(252,36,56,32) pos=(260,44,40,16) color=#000000ff text="close" font=f2 glyphs=5 advance=40
+  text bounds=(300,36,32,32) pos=(308,44,16,16) color=#000000ff text="at" font=f2 glyphs=2 advance=16
+  text bounds=(4,57,56,32) pos=(12,65,40,16) color=#000000ff text="15:00" font=f3 glyphs=5 advance=40
+  text bounds=(52,57,48,32) pos=(60,65,32,16) color=#000000ff text="this" font=f2 glyphs=4 advance=32
+  text bounds=(92,57,64,32) pos=(100,65,48,16) color=#000000ff text="Friday" font=f2 glyphs=6 advance=48
+  text bounds=(148,57,40,32) pos=(156,65,24,16) color=#000000ff text="for" font=f2 glyphs=3 advance=24
+  text bounds=(180,57,40,32) pos=(188,65,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(212,57,96,32) pos=(220,65,80,16) color=#000000ff text="building's" font=f2 glyphs=10 advance=80
+  text bounds=(4,77,64,32) pos=(12,85,48,16) color=#000000ff text="yearly" font=f2 glyphs=6 advance=48
+  text bounds=(60,77,104,32) pos=(68,85,88,16) color=#000000ff text="inspection." font=f2 glyphs=11 advance=88
+  text bounds=(156,77,56,32) pos=(164,85,40,16) color=#000000ff text="Books" font=f2 glyphs=5 advance=40
+  text bounds=(204,77,40,32) pos=(212,85,24,16) color=#000000ff text="can" font=f2 glyphs=3 advance=24
+  text bounds=(236,77,32,32) pos=(244,85,16,16) color=#000000ff text="go" font=f2 glyphs=2 advance=16
+  text bounds=(260,77,48,32) pos=(268,85,32,16) color=#000000ff text="into" font=f2 glyphs=4 advance=32
+  text bounds=(300,77,40,32) pos=(308,85,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(4,97,64,32) pos=(12,105,48,16) color=#000000ff text="return" font=f2 glyphs=6 advance=48
+  text bounds=(60,97,40,32) pos=(68,105,24,16) color=#000000ff text="box" font=f2 glyphs=3 advance=24
+  text bounds=(92,97,32,32) pos=(100,105,16,16) color=#000000ff text="by" font=f2 glyphs=2 advance=16
+  text bounds=(116,97,40,32) pos=(124,105,24,16) color=#000000ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(148,97,48,32) pos=(156,105,32,16) color=#000000ff text="main" font=f2 glyphs=4 advance=32
+  text bounds=(188,97,48,32) pos=(196,105,32,16) color=#000000ff text="door" font=f2 glyphs=4 advance=32
+  text bounds=(228,97,56,32) pos=(236,105,40,16) color=#000000ff text="until" font=f2 glyphs=5 advance=40
+  text bounds=(4,117,88,32) pos=(12,125,72,16) color=#000000ff text="midnight." font=f2 glyphs=9 advance=72
+  text bounds=(4,147,80,32) pos=(12,155,64,16) color=#000000ff text="Saturday" font=f2 glyphs=8 advance=64
+  text bounds=(76,147,32,32) pos=(84,155,16,16) color=#000000ff text="is" font=f2 glyphs=2 advance=16
+  text bounds=(100,147,32,32) pos=(108,155,16,16) color=#000000ff text="as" font=f2 glyphs=2 advance=16
+  text bounds=(124,147,64,32) pos=(132,155,48,16) color=#000000ff text="usual:" font=f2 glyphs=6 advance=48
+  text bounds=(180,147,56,32) pos=(188,155,40,16) color=#000000ff text="10:00" font=f4 glyphs=5 advance=40
+  text bounds=(228,147,32,32) pos=(236,155,16,16) color=#000000ff text="to" font=f4 glyphs=2 advance=16
+  text bounds=(252,147,56,32) pos=(260,155,40,16) color=#000000ff text="18:00" font=f4 glyphs=5 advance=40
+  text bounds=(292,147,24,32) pos=(300,155,8,16) color=#000000ff text="." font=f2 glyphs=1 advance=8
+  text bounds=(4,176,64,32) pos=(12,184,48,16) color=#000000ff text="Posted" font=f5 glyphs=6 advance=48
+  text bounds=(60,176,32,32) pos=(68,184,16,16) color=#000000ff text="by" font=f5 glyphs=2 advance=16
+  text bounds=(84,176,40,32) pos=(92,184,24,16) color=#000000ff text="the" font=f5 glyphs=3 advance=24
+  text bounds=(116,176,56,32) pos=(124,184,40,16) color=#000000ff text="front" font=f5 glyphs=5 advance=40
+  text bounds=(164,176,48,32) pos=(172,184,32,16) color=#000000ff text="desk" font=f5 glyphs=4 advance=32
+  text bounds=(204,176,32,32) pos=(212,184,16,16) color=#000000ff text="·" font=f5 glyphs=2 advance=16
+  text bounds=(228,176,24,32) pos=(236,184,8,16) color=#000000ff text="2" font=f5 glyphs=1 advance=8
+  text bounds=(244,176,56,32) pos=(252,184,40,16) color=#000000ff text="hours" font=f5 glyphs=5 advance=40
+  text bounds=(292,176,40,32) pos=(300,184,24,16) color=#000000ff text="ago" font=f5 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=20.25,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=15,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=15,style=1,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12.75,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

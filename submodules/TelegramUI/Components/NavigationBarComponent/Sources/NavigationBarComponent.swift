@@ -1068,9 +1068,11 @@ public final class NavigationBarComponent: Component {
                     self.sideColumnView.addSubview(backBackgroundContainer)
                     backBackgroundContainer.contentView.addSubview(self.columnBackContainer)
                     backBackgroundContainer.alpha = 0.0
+                    // Alpha does not hide native glass: a new circle materializes through `isVisible`, as the row's pills do.
+                    backBackgroundContainer.update(size: backFrame.size, cornerRadius: backFrame.height * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 backTransition.setFrame(view: backBackgroundContainer, frame: backFrame)
-                backBackgroundContainer.update(size: backFrame.size, cornerRadius: backFrame.height * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, transition: backTransition)
+                backBackgroundContainer.update(size: backFrame.size, cornerRadius: backFrame.height * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, transition: transition)
                 backTransition.setFrame(view: self.columnBackContainer, frame: backFrame)
                 for (contentView, _) in contents {
                     backTransition.setFrame(view: contentView.columnBackContainer, frame: backFrame)
@@ -1078,6 +1080,7 @@ public final class NavigationBarComponent: Component {
                 transition.setAlpha(view: backBackgroundContainer, alpha: backAlpha)
             } else if let backBackgroundContainer = self.columnBackBackgroundContainer {
                 self.columnBackBackgroundContainer = nil
+                backBackgroundContainer.update(size: backBackgroundContainer.bounds.size, cornerRadius: backBackgroundContainer.bounds.height * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: false, transition: transition)
                 transition.setAlpha(view: backBackgroundContainer, alpha: 0.0, completion: { [weak backBackgroundContainer] _ in
                     backBackgroundContainer?.removeFromSuperview()
                 })
@@ -1120,9 +1123,10 @@ public final class NavigationBarComponent: Component {
                     self.sideColumnView.addSubview(capsuleBackgroundContainer)
                     capsuleBackgroundContainer.contentView.addSubview(self.columnButtonsContainer)
                     capsuleBackgroundContainer.alpha = 0.0
+                    capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 capsuleTransition.setFrame(view: capsuleBackgroundContainer, frame: capsuleFrame)
-                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, transition: capsuleTransition)
+                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: !component.hidesSideColumnButtons, transition: transition)
                 capsuleBackgroundContainer.morphsIntoContextMenu = self.effectiveContentView?.columnLayout?.cellFrames.count == 1
                 capsuleTransition.setFrame(view: self.columnButtonsContainer, frame: CGRect(origin: CGPoint(), size: capsuleFrame.size))
                 for (contentView, _) in contents {
@@ -1133,6 +1137,7 @@ public final class NavigationBarComponent: Component {
                 capsuleBackgroundContainer.isUserInteractionEnabled = !component.hidesSideColumnButtons
             } else if let capsuleBackgroundContainer = self.columnButtonsBackgroundContainer {
                 self.columnButtonsBackgroundContainer = nil
+                capsuleBackgroundContainer.update(size: capsuleBackgroundContainer.bounds.size, cornerRadius: capsuleBackgroundContainer.bounds.width * 0.5, isDark: isDark, tintColor: genericTintColor, isInteractive: true, isVisible: false, transition: transition)
                 transition.setAlpha(view: capsuleBackgroundContainer, alpha: 0.0, completion: { [weak capsuleBackgroundContainer] _ in
                     capsuleBackgroundContainer?.removeFromSuperview()
                 })
@@ -1163,9 +1168,10 @@ public final class NavigationBarComponent: Component {
                     self.sideColumnView.addSubview(trailingBackgroundContainer)
                     trailingBackgroundContainer.contentView.addSubview(self.columnTrailingContainer)
                     trailingBackgroundContainer.alpha = 0.0
+                    trailingBackgroundContainer.update(size: trailingFrame.size, cornerRadius: trailingFrame.height * 0.5, isDark: isDark, tintColor: navigationBarGlassTintColor(trailingTint, theme: component.theme), isInteractive: true, isVisible: false, transition: .immediate)
                 }
                 trailingTransition.setFrame(view: trailingBackgroundContainer, frame: trailingFrame)
-                trailingBackgroundContainer.update(size: trailingFrame.size, cornerRadius: trailingFrame.height * 0.5, isDark: isDark, tintColor: navigationBarGlassTintColor(trailingTint, theme: component.theme), isInteractive: true, transition: trailingTransition)
+                trailingBackgroundContainer.update(size: trailingFrame.size, cornerRadius: trailingFrame.height * 0.5, isDark: isDark, tintColor: navigationBarGlassTintColor(trailingTint, theme: component.theme), isInteractive: true, isVisible: !component.hidesSideColumnButtons, transition: transition)
                 trailingBackgroundContainer.morphsIntoContextMenu = true
                 trailingTransition.setFrame(view: self.columnTrailingContainer, frame: CGRect(origin: CGPoint(), size: trailingFrame.size))
                 for (contentView, _) in contents {
@@ -1175,6 +1181,7 @@ public final class NavigationBarComponent: Component {
                 trailingBackgroundContainer.isUserInteractionEnabled = !component.hidesSideColumnButtons
             } else if let trailingBackgroundContainer = self.columnTrailingBackgroundContainer {
                 self.columnTrailingBackgroundContainer = nil
+                trailingBackgroundContainer.update(size: trailingBackgroundContainer.bounds.size, cornerRadius: trailingBackgroundContainer.bounds.height * 0.5, isDark: isDark, tintColor: trailingBackgroundContainer.glassTintColor ?? genericTintColor, isInteractive: true, isVisible: false, transition: transition)
                 transition.setAlpha(view: trailingBackgroundContainer, alpha: 0.0, completion: { [weak trailingBackgroundContainer] _ in
                     trailingBackgroundContainer?.removeFromSuperview()
                 })

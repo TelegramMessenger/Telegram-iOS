@@ -10,4 +10,13 @@ final class DeviceMetricsDuoTests: XCTestCase {
     func test_iPhoneDuo_screenCornerRadius_55() {
         XCTAssertEqual(DeviceMetrics.iPhoneDuo.screenCornerRadius, 55.0)
     }
+
+    /// The unfolded inner screen in either orientation; not the cover screen, and no other device of that size.
+    func test_isIPhoneDuoInnerScreen() {
+        XCTAssertTrue(DeviceMetrics.iPhoneDuo.isIPhoneDuoInnerScreen(size: CGSize(width: 669.0, height: 951.0)))
+        XCTAssertTrue(DeviceMetrics.iPhoneDuo.isIPhoneDuoInnerScreen(size: CGSize(width: 951.0, height: 669.0)))
+        XCTAssertFalse(DeviceMetrics.iPhoneDuo.isIPhoneDuoInnerScreen(size: CGSize(width: 466.0, height: 678.0)))
+        XCTAssertFalse(DeviceMetrics.iPhoneDuo.isIPhoneDuoInnerScreen(size: CGSize(width: 678.0, height: 466.0)))
+        XCTAssertFalse(DeviceMetrics.iPhone18Pro.isIPhoneDuoInnerScreen(size: CGSize(width: 669.0, height: 951.0)))
+    }
 }

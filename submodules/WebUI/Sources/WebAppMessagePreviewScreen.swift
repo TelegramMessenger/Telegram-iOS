@@ -169,6 +169,9 @@ private final class SheetContent: CombinedComponent {
                 case let .invoice(invoice, replyMarkupValue):
                     media = [invoice]
                     replyMarkup = replyMarkupValue
+                case let .widget(widget, replyMarkupValue):
+                    media = [widget]
+                    replyMarkup = replyMarkupValue
                 case let .webpage(textValue, entitiesValue, _, _, replyMarkupValue):
                     text = textValue
                     entities = entitiesValue
@@ -198,6 +201,9 @@ private final class SheetContent: CombinedComponent {
                     replyMarkup = replyMarkupValue
                 case let .invoice(invoice, replyMarkupValue):
                     media = [invoice]
+                    replyMarkup = replyMarkupValue
+                case let .widget(widget, replyMarkupValue):
+                    media = [widget]
                     replyMarkup = replyMarkupValue
                 case let .webpage(textValue, entitiesValue, _, _, replyMarkupValue):
                     text = textValue

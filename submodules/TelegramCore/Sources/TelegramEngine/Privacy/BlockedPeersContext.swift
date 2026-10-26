@@ -40,6 +40,15 @@ public final class BlockedPeersContext {
     }
     
     private let disposable = MetaDisposable()
+    private var nextOffset: Int32 = 0
+    private var requestGeneration: UInt64 = 0
+
+    private struct Page {
+        let peers: [RenderedPeer]
+        let count: Int
+        let rawCount: Int32
+        let canLoadMore: Bool
+    }
     
     public init(account: Account, subject: Subject) {
         assert(Queue.mainQueue().isCurrent())
@@ -59,175 +68,152 @@ public final class BlockedPeersContext {
     
     public func loadMore() {
         assert(Queue.mainQueue().isCurrent())
-        
-        if self._state.isLoadingMore || !self._state.canLoadMore {
-            return
-        }
+        guard !self._state.isLoadingMore, self._state.canLoadMore else { return }
+        self.requestGeneration &+= 1
+        let generation = self.requestGeneration
+        let offset = self.nextOffset
+        let requestDisposable = MetaDisposable()
+        self.disposable.set(requestDisposable)
+        guard self.requestGeneration == generation else { return }
         self._state = BlockedPeersContextState(isLoadingMore: true, canLoadMore: self._state.canLoadMore, totalCount: self._state.totalCount, peers: self._state.peers)
+        guard self.requestGeneration == generation else { return }
         let postbox = self.account.postbox
         let accountPeerId = self.account.peerId
-        
         var flags: Int32 = 0
-        if case .stories = self.subject {
-            flags |= 1 << 0
-        }
-        
-        var limit: Int32 = 200
-        if self._state.peers.count > 0 {
-            limit = 100
-        }
-        
-        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: flags, offset: Int32(self._state.peers.count), limit: limit))
+        if case .stories = self.subject { flags |= 1 << 0 }
+        let limit: Int32 = offset == 0 ? 200 : 100
+        var receivedResult = false
+        requestDisposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: flags, offset: offset, limit: limit))
         |> retryRequestIfNotFrozen
-        |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
-            guard let result else {
-                return .single((peers: [], canLoadMore: false, totalCount: 0))
-            }
-            return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
+        |> mapToSignal { result -> Signal<Page?, NoError> in
+            guard let result else { return .single(nil) }
+            return postbox.transaction { transaction -> Page? in
+                let blocked: [Api.PeerBlocked]
+                let chats: [Api.Chat]
+                let users: [Api.User]
+                let count: Int
+                let isSlice: Bool
                 switch result {
-                    case let .blocked(blockedData):
-                        let (blocked, chats, users) = (blockedData.blocked, blockedData.chats, blockedData.users)
-                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                            
-                        var renderedPeers: [RenderedPeer] = []
-                        for blockedPeer in blocked {
-                            switch blockedPeer {
-                            case let .peerBlocked(peerBlockedData):
-                                let peerId = peerBlockedData.peerId
-                                if let peer = transaction.getPeer(peerId.peerId) {
-                                    renderedPeers.append(RenderedPeer(peer: peer))
-                                }
-                            }
-                        }
-
-                        return (renderedPeers, false, nil)
-                    case let .blockedSlice(blockedSliceData):
-                        let (count, blocked, chats, users) = (blockedSliceData.count, blockedSliceData.blocked, blockedSliceData.chats, blockedSliceData.users)
-                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                        
-                        var renderedPeers: [RenderedPeer] = []
-                        for blockedPeer in blocked {
-                            switch blockedPeer {
-                            case let .peerBlocked(peerBlockedData):
-                                let peerId = peerBlockedData.peerId
-                                if let peer = transaction.getPeer(peerId.peerId) {
-                                    renderedPeers.append(RenderedPeer(peer: peer))
-                                }
-                            }
-                        }
-
-                        return (renderedPeers, true, Int(count))
+                case let .blocked(data):
+                    blocked = data.blocked
+                    chats = data.chats
+                    users = data.users
+                    count = Int(offset) + blocked.count
+                    isSlice = false
+                case let .blockedSlice(data):
+                    blocked = data.blocked
+                    chats = data.chats
+                    users = data.users
+                    count = max(0, Int(data.count))
+                    isSlice = true
                 }
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                var renderedPeers: [RenderedPeer] = []
+                for blockedPeer in blocked {
+                    switch blockedPeer {
+                    case let .peerBlocked(data):
+                        if let peer = transaction.getPeer(data.peerId.peerId) {
+                            renderedPeers.append(RenderedPeer(peer: peer))
+                        }
+                    }
+                }
+                return Page(peers: renderedPeers, count: count, rawCount: Int32(clamping: blocked.count), canLoadMore: isSlice && !blocked.isEmpty && Int(offset) + blocked.count < count)
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] (peers, canLoadMore, totalCount) in
-            guard let strongSelf = self else {
+        |> deliverOnMainQueue).start(next: { [weak self] page in
+            guard let self, self.requestGeneration == generation else { return }
+            receivedResult = true
+            guard let page else {
+                self._state = BlockedPeersContextState(isLoadingMore: false, canLoadMore: false, totalCount: self._state.totalCount, peers: self._state.peers)
                 return
             }
-            
-            var mergedPeers = strongSelf._state.peers
-            var existingPeerIds = Set(mergedPeers.map { $0.peerId })
-            for peer in peers {
-                if !existingPeerIds.contains(peer.peerId) {
-                    existingPeerIds.insert(peer.peerId)
+            self.nextOffset = Int32(clamping: Int64(offset) + Int64(page.rawCount))
+            var mergedPeers: [RenderedPeer] = []
+            var indices: [PeerId: Int] = [:]
+            for peer in (offset == 0 ? [] : self._state.peers) + page.peers {
+                if let index = indices[peer.peerId] {
+                    mergedPeers[index] = peer
+                } else {
+                    indices[peer.peerId] = mergedPeers.count
                     mergedPeers.append(peer)
                 }
             }
-            
-            let updatedTotalCount: Int?
-            if !canLoadMore {
-                updatedTotalCount = mergedPeers.count
-            } else if let totalCount = totalCount {
-                updatedTotalCount = totalCount
-            } else {
-                updatedTotalCount = strongSelf._state.totalCount
-            }
-            
-            strongSelf._state = BlockedPeersContextState(isLoadingMore: false, canLoadMore: canLoadMore, totalCount: updatedTotalCount, peers: mergedPeers)
+            self._state = BlockedPeersContextState(isLoadingMore: false, canLoadMore: page.canLoadMore, totalCount: max(mergedPeers.count, page.count), peers: mergedPeers)
+        }, completed: { [weak self] in
+            guard let self, self.requestGeneration == generation, !receivedResult else { return }
+            self._state = BlockedPeersContextState(isLoadingMore: false, canLoadMore: true, totalCount: self._state.totalCount, peers: self._state.peers)
         }))
     }
-    
+
+    private func applyUpdatedPeers(_ peers: [RenderedPeer], totalCount: Int?) {
+        self.requestGeneration &+= 1
+        let generation = self.requestGeneration
+        self.nextOffset = 0
+        self.disposable.set(nil)
+        guard self.requestGeneration == generation else { return }
+        self._state = BlockedPeersContextState(isLoadingMore: false, canLoadMore: true, totalCount: totalCount.map { max(peers.count, $0) }, peers: peers)
+        guard self.requestGeneration == generation else { return }
+        self.loadMore()
+    }
+
     public func updatePeerIds(_ peerIds: [EnginePeer.Id]) -> Signal<Never, BlockedPeersContextAddError> {
         assert(Queue.mainQueue().isCurrent())
-        
+        let postbox = self.account.postbox
         let network = self.account.network
         let subject = self.subject
-        let currentPeers = self._state.peers
-        
+        let currentPeerIds = Set(self._state.peers.map { $0.peerId })
         var flags: Int32 = 0
-        if case .stories = self.subject {
-            flags |= 1 << 0
-        }
-        
-        return self.account.postbox.transaction { transaction -> [Peer] in
+        if case .stories = subject { flags |= 1 << 0 }
+        return postbox.transaction { transaction -> ([Peer], [Api.InputPeer])? in
             var peers: [Peer] = []
-            
-            var removedPeerIds = Set<EnginePeer.Id>()
-            var validPeerIds = Set<EnginePeer.Id>()
-            var allPeerIds = Set<EnginePeer.Id>()
-            
-            for peerId in peerIds {
-                if let peer = transaction.getPeer(peerId) {
-                    peers.append(peer)
-                }
-                validPeerIds.insert(peerId)
-                allPeerIds.insert(peerId)
+            var inputs: [Api.InputPeer] = []
+            var seen = Set<PeerId>()
+            for peerId in peerIds where seen.insert(peerId).inserted {
+                guard let peer = transaction.getPeer(peerId), let input = apiInputPeer(peer) else { return nil }
+                peers.append(peer)
+                inputs.append(input)
             }
-            for peer in currentPeers {
-                if !validPeerIds.contains(peer.peerId) {
-                    removedPeerIds.insert(peer.peerId)
-                    allPeerIds.insert(peer.peerId)
-                }
-            }
-            
-            transaction.updatePeerCachedData(peerIds: allPeerIds, update: { peerId, current in
-                let previous: CachedUserData
-                if let current = current as? CachedUserData {
-                    previous = current
-                } else {
-                    previous = CachedUserData()
-                }
-                if case .stories = subject {
-                    var userFlags = previous.flags
-                    if validPeerIds.contains(peerId) {
-                        userFlags.insert(.isBlockedFromStories)
-                    } else if removedPeerIds.contains(peerId) {
-                        userFlags.remove(.isBlockedFromStories)
-                    }
-                    return previous.withUpdatedFlags(userFlags)
-                } else {
-                    if validPeerIds.contains(peerId) {
-                        return previous.withUpdatedIsBlocked(true)
-                    } else if removedPeerIds.contains(peerId) {
-                        return previous.withUpdatedIsBlocked(false)
-                    } else {
-                        return previous
-                    }
-                }
-            })
-            
-            return peers
+            return (peers, inputs)
         }
         |> castError(BlockedPeersContextAddError.self)
-        |> mapToSignal { [weak self] peers -> Signal<Never, BlockedPeersContextAddError> in
-            Queue.mainQueue().async {
-                if let strongSelf = self {
-                    strongSelf._state = BlockedPeersContextState(isLoadingMore: strongSelf._state.isLoadingMore, canLoadMore: strongSelf._state.canLoadMore, totalCount: peers.count, peers: peers.map(RenderedPeer.init))
+        |> mapToSignal { [weak self] result -> Signal<Never, BlockedPeersContextAddError> in
+            guard let (peers, inputs) = result else { return .fail(.generic) }
+            return network.request(Api.functions.contacts.setBlocked(flags: flags, id: inputs, limit: Int32(clamping: inputs.count)))
+            |> mapError { _ -> BlockedPeersContextAddError in .generic }
+            |> deliverOnMainQueue
+            |> mapToSignal { [weak self] result -> Signal<[Peer], BlockedPeersContextAddError> in
+                guard case .boolTrue = result else { return .fail(.generic) }
+                let previousPeerIds = currentPeerIds.union(self?._state.peers.map { $0.peerId } ?? [])
+                return postbox.transaction { transaction -> [Peer] in
+                    let validPeerIds = Set(peers.map { $0.id })
+                    let allPeerIds = previousPeerIds.union(validPeerIds).filter { $0.namespace == Namespaces.Peer.CloudUser }
+                    transaction.updatePeerCachedData(peerIds: Set(allPeerIds), update: { peerId, current in
+                        let previous = current as? CachedUserData ?? CachedUserData()
+                        if case .stories = subject {
+                            var userFlags = previous.flags
+                            if validPeerIds.contains(peerId) {
+                                userFlags.insert(.isBlockedFromStories)
+                            } else {
+                                userFlags.remove(.isBlockedFromStories)
+                            }
+                            return previous.withUpdatedFlags(userFlags)
+                        } else {
+                            return previous.withUpdatedIsBlocked(validPeerIds.contains(peerId))
+                        }
+                    })
+                    return peers
                 }
+                |> castError(BlockedPeersContextAddError.self)
             }
-            let inputPeers = peers.compactMap { apiInputPeer($0) }
-            return network.request(Api.functions.contacts.setBlocked(flags: flags, id: inputPeers, limit: Int32(max(currentPeers.count, peers.count))))
-            |> mapError { _ -> BlockedPeersContextAddError in
-                return .generic
-            }
-            |> mapToSignal { _ -> Signal<Never, BlockedPeersContextAddError> in
+            |> deliverOnMainQueue
+            |> mapToSignal { [weak self] peers -> Signal<Never, BlockedPeersContextAddError> in
+                self?.applyUpdatedPeers(peers.map(RenderedPeer.init), totalCount: peers.count)
                 return .complete()
             }
         }
     }
-    
+
     public func add(peerId: PeerId) -> Signal<Never, BlockedPeersContextAddError> {
         assert(Queue.mainQueue().isCurrent())
         
@@ -252,7 +238,8 @@ public final class BlockedPeersContext {
             |> mapError { _ -> BlockedPeersContextAddError in
                 return .generic
             }
-            |> mapToSignal { _ -> Signal<Peer?, BlockedPeersContextAddError> in
+            |> mapToSignal { result -> Signal<Peer?, BlockedPeersContextAddError> in
+                guard case .boolTrue = result else { return .fail(.generic) }
                 return postbox.transaction { transaction -> Peer? in
                     if peerId.namespace == Namespaces.Peer.CloudUser {
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
@@ -290,12 +277,12 @@ public final class BlockedPeersContext {
                 
                 let updatedTotalCount: Int?
                 if let totalCount = strongSelf._state.totalCount {
-                    updatedTotalCount = totalCount + 1
+                    updatedTotalCount = max(mergedPeers.count, totalCount + (existingPeerIds.contains(peer.id) ? 0 : 1))
                 } else {
                     updatedTotalCount = nil
                 }
                 
-                strongSelf._state = BlockedPeersContextState(isLoadingMore: strongSelf._state.isLoadingMore, canLoadMore: strongSelf._state.canLoadMore, totalCount: updatedTotalCount, peers: mergedPeers)
+                strongSelf.applyUpdatedPeers(mergedPeers, totalCount: updatedTotalCount)
                 return .complete()
             }
         }
@@ -324,7 +311,8 @@ public final class BlockedPeersContext {
             |> mapError { _ -> BlockedPeersContextRemoveError in
                 return .generic
             }
-            |> mapToSignal { value in
+            |> mapToSignal { result -> Signal<Peer?, BlockedPeersContextRemoveError> in
+                guard case .boolTrue = result else { return .fail(.generic) }
                 return postbox.transaction { transaction -> Peer? in
                     if peerId.namespace == Namespaces.Peer.CloudUser {
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
@@ -366,7 +354,7 @@ public final class BlockedPeersContext {
                 let updatedTotalCount: Int?
                 if let totalCount = strongSelf._state.totalCount {
                     if found {
-                        updatedTotalCount = totalCount - 1
+                        updatedTotalCount = max(mergedPeers.count, totalCount - 1)
                     } else {
                         updatedTotalCount = totalCount
                     }
@@ -374,7 +362,7 @@ public final class BlockedPeersContext {
                     updatedTotalCount = nil
                 }
                 
-                strongSelf._state = BlockedPeersContextState(isLoadingMore: strongSelf._state.isLoadingMore, canLoadMore: strongSelf._state.canLoadMore, totalCount: updatedTotalCount, peers: mergedPeers)
+                strongSelf.applyUpdatedPeers(mergedPeers, totalCount: updatedTotalCount)
                 return .complete()
             }
         }

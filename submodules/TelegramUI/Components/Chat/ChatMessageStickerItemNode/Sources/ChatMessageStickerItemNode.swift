@@ -683,6 +683,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
             var replyInnerSubject: EngineMessageReplyInnerSubject?
             var replyStory: EngineStoryId?
+            var replyIsLoading = false
             var inlineBotNameString: String?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
@@ -708,6 +709,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyAttribute.messageId.id {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
+                        if replyMessage == nil {
+                            replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                        }
                     }
                     replyQuote = replyAttribute.quote.flatMap { ($0, replyAttribute.isQuote) }
                     replyInnerSubject = replyAttribute.innerSubject
@@ -715,12 +719,20 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     replyForward = attribute
                 } else if let attribute = attribute as? ReplyStoryAttribute {
                     replyStory = attribute.storyId
+                    if item.message.associatedStories[attribute.storyId] == nil {
+                        replyIsLoading = item.context.account.viewTracker.pendingMessageReferences.hasLoadingReferences(messageId: item.message.id)
+                    }
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
             }
             
-            var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
+            // A suspicious sender's buttons are not shown, as their links are not.
+            if item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId) {
+                replyMarkup = nil
+            }
+            
+            var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil || replyIsLoading
             if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let peer = item.message.peers[item.message.id.peerId], peer.isForumOrMonoForum, item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -741,7 +753,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 ))*/
             }
             
-            if hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
+            if hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil || replyIsLoading) {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
@@ -753,6 +765,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     innerSubject: replyInnerSubject,
                     story: replyStory,
                     isSummarized: false,
+                    isLoading: replyIsLoading,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,

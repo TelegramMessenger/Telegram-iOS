@@ -22,6 +22,7 @@ public protocol SplitTest {
 
 extension SplitTest {
     public func addEvent(_ event: Self.Event, data: JSON = []) {
+        guard AppLogEventCollection.allowsLegacyEvents else { return }
         if let bucket = self.bucket {
             //TODO: merge additional data
             _internal_addAppLogEvent(postbox: self.postbox, type: event.rawValue, data: ["bucket": bucket])

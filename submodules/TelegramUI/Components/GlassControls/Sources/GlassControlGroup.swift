@@ -142,8 +142,15 @@ public final class GlassControlGroupComponent: Component {
             self.backgroundView.update(size: params.size, cornerRadius: params.size.height * 0.5, isDark: params.isDark, tintColor: params.tintColor, isInteractive: true, isVisible: !isHidden, transition: transition)
         }
 
+        /// The source for a context menu one of the group's items opens: the group's glass, which morphs into the menu
+        /// whole, as a navigation-bar pill of several buttons does.
+        public var menuSourceView: UIView {
+            return self.backgroundView
+        }
+
         override public init(frame: CGRect) {
             self.backgroundView = GlassBackgroundView()
+            self.backgroundView.morphsIntoContextMenu = true
             
             super.init(frame: frame)
             

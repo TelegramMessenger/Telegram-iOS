@@ -1313,6 +1313,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                     let mirroredControlsBottomInset = -(environment.statusBarHeight + 31.0 + 30.0)
                     bottomPanelLift = max(0.0, controlsBottomInset - mirroredControlsBottomInset)
                     controlsBottomInset -= bottomPanelLift
+                } else {
+                    // Elsewhere (folded) the editor's bar is 62pt above the home indicator; so is this one, and the rows
+                    // above it move up with it.
+                    bottomPanelLift = environment.safeInsets.bottom
+                    controlsBottomInset -= bottomPanelLift
                 }
             }
             let previewBottomInset = max(0.0, unclampedPreviewBottomInset)
@@ -2446,8 +2451,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                     if let self {
                         if case .clear = action {
                             let sourceView: UIView
-                            if let topButtonsView = self.componentHost.findTaggedView(tag: topButtonsTag) as? GlassControlPanelComponent.View, let rightItemView = topButtonsView.rightItemView, let clearAllView = rightItemView.itemView(id: AnyHashable("clearAll")) {
-                                sourceView = clearAllView
+                            if let topButtonsView = self.componentHost.findTaggedView(tag: topButtonsTag) as? GlassControlPanelComponent.View, let rightItemView = topButtonsView.rightItemView, rightItemView.itemView(id: AnyHashable("clearAll")) != nil {
+                                sourceView = rightItemView.menuSourceView
                             } else {
                                 sourceView = self.view
                             }
@@ -2627,7 +2632,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.dismiss.connect { [weak self] _ in
                 if let strongSelf = self {
                     if strongSelf.drawingView.canUndo || strongSelf.entitiesView.hasChanges {
-                        let sourceView = strongSelf.externalCancelSourceView ?? strongSelf.componentHost.findTaggedView(tag: cancelButtonTag) ?? strongSelf.view
+                        let sourceView = strongSelf.externalCancelSourceView ?? (strongSelf.componentHost.findTaggedView(tag: cancelButtonTag) as? GlassBarButtonComponent.View)?.menuSourceView ?? strongSelf.view
                         let items: [ContextMenuItem] = [
                             .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PhotoEditor_DiscardChanges, textColor: .destructive, icon: { _ in
                                 return nil

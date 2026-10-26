@@ -38,6 +38,7 @@ public final class LivePhotoButton: UIView, TGLivePhotoButton {
         self.context = context
         
         self.backgroundView = GlassContextExtractableContainer()
+        self.backgroundView.morphsIntoContextMenu = true
         
         super.init(frame: .zero)
         

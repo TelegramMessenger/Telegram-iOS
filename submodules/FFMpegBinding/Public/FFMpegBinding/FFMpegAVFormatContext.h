@@ -48,6 +48,9 @@ extern int FFMpegCodecIdAV1;
 - (bool)openInputWithDirectFilePath:(NSString * _Nullable)directFilePath;
 - (bool)openInputWithDirectFilePath:(NSString * _Nullable)directFilePath ignoreEditList:(bool)ignoreEditList;
 - (bool)findStreamInfo;
+// Marks every stream not of `type` discarded (`AVDISCARD_ALL`): `findStreamInfo` then analyses only streams of `type`,
+// and reading returns no packets of the others.
+- (void)discardStreamsNotOfType:(FFMpegAVFormatStreamType)type NS_SWIFT_NAME(discardStreams(notOf:));
 - (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts positionOnKeyframe:(bool)positionOnKeyframe;
 - (void)seekFrameForStreamIndex:(int32_t)streamIndex byteOffset:(int64_t)byteOffset;
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet;

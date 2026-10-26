@@ -214,7 +214,7 @@ public final class CallListController: TelegramBaseController {
                 if let isEmpty = self.isEmpty, isEmpty {
                 } else {
                     if self.editingMode {
-                        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed))
+                        self.navigationItem.leftBarButtonItem = self.editingDoneBarButtonItem()
                     } else {
                         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
                     }
@@ -223,7 +223,7 @@ public final class CallListController: TelegramBaseController {
                 self.navigationItem.rightBarButtonItem = self.tabCallBarButtonItem()
             case .navigation:
                 if self.editingMode {
-                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed))
+                    self.navigationItem.rightBarButtonItem = self.editingDoneBarButtonItem()
                 } else {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
                 }
@@ -406,7 +406,7 @@ public final class CallListController: TelegramBaseController {
                         switch strongSelf.mode {
                             case .tab:
                                 if strongSelf.editingMode {
-                                    strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setLeftBarButton(strongSelf.editingDoneBarButtonItem(), animated: strongSelf.controllerNode.didSetReady)
                                     strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: strongSelf.controllerNode.didSetReady)
                                     strongSelf.navigationItem.rightBarButtonItem?.setCustomAction({
                                         pressedImpl?()
@@ -421,7 +421,7 @@ public final class CallListController: TelegramBaseController {
                                     strongSelf.navigationItem.leftBarButtonItem?.setCustomAction({
                                         pressedImpl?()
                                     })
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed)), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setRightBarButton(strongSelf.editingDoneBarButtonItem(), animated: strongSelf.controllerNode.didSetReady)
                                 } else {
                                     strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: strongSelf.controllerNode.didSetReady)
                                 }
@@ -552,31 +552,20 @@ public final class CallListController: TelegramBaseController {
             beginClear(true)
         })))
         
-        final class ExtractedContentSourceImpl: ContextExtractedContentSource {
-            var keepInPlace: Bool
-            let ignoreContentTouches: Bool = true
-            let blurBackground: Bool
+        final class ReferenceContentSourceImpl: ContextReferenceContentSource {
+            private let sourceView: UIView
             
-            private let controller: ViewController
-            private let sourceNode: ContextExtractedContentContainingNode
-            
-            init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
-                self.controller = controller
-                self.sourceNode = sourceNode
-                self.keepInPlace = keepInPlace
-                self.blurBackground = blurBackground
+            init(sourceView: UIView) {
+                self.sourceView = sourceView
             }
             
-            func takeView() -> ContextControllerTakeViewInfo? {
-                return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
-            }
-            
-            func putBack() -> ContextControllerPutBackViewInfo? {
-                return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
+            func transitionInfo() -> ContextControllerReferenceViewInfo? {
+                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
             }
         }
     
-        let contextController = makeContextController(presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        let sourceView = self.navigationBar?.navigationButtonContextContainer(sourceView: buttonNode.view) ?? buttonNode.view
+        let contextController = makeContextController(presentationData: self.presentationData, source: .reference(ReferenceContentSourceImpl(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.presentInGlobalOverlay(contextController)
     }
     
@@ -687,6 +676,14 @@ public final class CallListController: TelegramBaseController {
         return false
     }
     
+    /// The Done of the Edit/Done toggle: the accent checkmark, kept in the bar's row where Edit is (on iPhone Duo it would
+    /// otherwise move into the side column).
+    private func editingDoneBarButtonItem() -> UIBarButtonItem {
+        let item = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed))
+        item.staysInRow = true
+        return item
+    }
+
     @objc func editPressed() {
         self.editingMode = true
         
@@ -703,7 +700,7 @@ public final class CallListController: TelegramBaseController {
         
         switch self.mode {
             case .tab:
-                self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed)), animated: true)
+                self.navigationItem.setLeftBarButton(self.editingDoneBarButtonItem(), animated: true)
                
                 self.navigationItem.setRightBarButton(UIBarButtonItem(customDisplayNode: buttonNode), animated: true)
                 self.navigationItem.rightBarButtonItem?.setCustomAction({
@@ -715,7 +712,7 @@ public final class CallListController: TelegramBaseController {
                     pressedImpl?()
                 })
             
-                self.navigationItem.setRightBarButton(UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed)), animated: true)
+                self.navigationItem.setRightBarButton(self.editingDoneBarButtonItem(), animated: true)
         }
         
         self.controllerNode.updateState { state in

@@ -53,6 +53,7 @@ func navigationBarButton(for item: UIBarButtonItem) -> NavigationBarComponent.Bu
         tint: tint,
         overflow: overflow,
         requiresOwnSection: item.requiresOwnSection,
+        staysInRow: item.staysInRow,
         action: { _ in
             item.performActionOnTarget()
         }

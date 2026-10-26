@@ -43,15 +43,13 @@ private func matchesSize(_ lhs: CGSize, _ rhs: CGSize) -> Bool {
     return abs(lhs.width - rhs.width) <= 1.0 && abs(lhs.height - rhs.height) <= 1.0
 }
 
-/// iPhone Duo (iPhone19,4): the block the system status corner reserves, per posture.
+/// iPhone Duo (iPhone19,4): the block the system status corner reserves, per posture, as the simulator settled on it.
 ///
-/// The system reports these blocks through `UIView.reservedRegions(kind: .occlusion)`, but the
-/// values are transitional for up to 0.6s after every rotation and fold (measured on the simulator:
-/// the previous posture's shape, a stray block, or none), so the settled values are tabulated here
-/// instead. The screen is identified by the window's own size: only a window that fills a screen
-/// gets corners, and during an unfold the scene still reports the cover screen when `updateSize`
-/// runs. Anything else gets `.none`, which is safe because `safeInsets` already keeps content clear
-/// of the status corner along a full edge.
+/// The table names the posture: which corner holds the block. Its sizes are what a layout gets only while the system's
+/// own report does not fit that posture (`iPhoneDuoReservedArea`), which happens for up to 0.6s after every rotation
+/// and fold. The screen is identified by the window's own size: only a window that fills a screen gets corners, and
+/// during an unfold the scene still reports the cover screen when `updateSize` runs. Anything else gets `.none`, which
+/// is safe because `safeInsets` already keeps content clear of the status corner along a full edge.
 func iPhoneDuoReservedCorners(windowSize: CGSize, orientation: UIInterfaceOrientation) -> ContainerViewLayoutCorners {
     // The size decides portrait vs landscape; the orientation only tells the two landscapes apart.
     // It can be stale (the window layout keeps the orientation of its last size change, and a
@@ -69,7 +67,8 @@ func iPhoneDuoReservedCorners(windowSize: CGSize, orientation: UIInterfaceOrient
         case .landscapeLeft:
             return ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: CGSize(width: 84.0, height: 82.0))
         case .landscapeRight:
-            // Settles at 82x84 but shows 84x82 during a rotation and as the hinge starts to open.
+            // The union of the 82x84 the system once settled at and the 84x82 it settles at now (and showed during a
+            // rotation and as the hinge starts to open then).
             return ContainerViewLayoutCorners(topLeft: CGSize(width: 84.0, height: 84.0), topRight: nil, bottomLeft: nil, bottomRight: nil)
         default:
             // Which landscape is unknown; the next layout pass reads the orientation again.
@@ -87,22 +86,161 @@ func iPhoneDuoReservedCorners(windowSize: CGSize, orientation: UIInterfaceOrient
     return .none
 }
 
+public extension DeviceMetrics {
+    /// iPhone Duo: whether a layout of `size` fills the unfolded inner screen (669x951, either orientation), a phone
+    /// screen as large as a small tablet's, rather than the cover screen. False on every other device.
+    func isIPhoneDuoInnerScreen(size: CGSize) -> Bool {
+        guard case .iPhoneDuo = self else {
+            return false
+        }
+        return matchesSize(portraitSize(size), CGSize(width: 669.0, height: 951.0))
+    }
+}
+
 /// The reserved corners for a full-screen layout built outside the window's own layout pass (a legacy host that hands
-/// a size and insets to a Display screen), from the same per-posture table the window uses: iPhone Duo's status
-/// corners for a window of `size` in `orientation`, `.none` on every other device.
+/// a size and insets to a Display screen), as the window's own layout gets them (`iPhoneDuoReservedArea`): iPhone
+/// Duo's status corners for a window of `size` in `orientation`, `.none` on every other device.
 public func reservedCornersForHostedLayout(size: CGSize, orientation: UIInterfaceOrientation) -> ContainerViewLayoutCorners {
     guard DeviceMetrics.hasMultipleDisplays else {
         return .none
     }
-    return iPhoneDuoReservedCorners(windowSize: size, orientation: orientation)
+    // The system's report comes from the app's window when the hosted layout fills it and the report has settled, as
+    // for the window's own layout.
+    var systemSafeInsets = UIEdgeInsets()
+    var systemOcclusions: [CGRect] = []
+    if iPhoneDuoSystemReportIsSettled, let window = registeredMainWindow, matchesSize(window.bounds.size, size) {
+        systemSafeInsets = window.safeAreaInsets
+        systemOcclusions = activeOcclusionFrames(in: window)
+    }
+    return iPhoneDuoReservedArea(windowSize: size, orientation: orientation, systemSafeInsets: systemSafeInsets, systemOcclusions: systemOcclusions).corners
 }
 
-/// iPhone Duo (iPhone19,4): the safe insets per posture, the settled system values (bottom 0: the home
-/// indicator is carried by the on-screen navigation height). The system's own lag behind rotations and
-/// folds like its reserved regions do (measured `t82` on the landscape inner screen after an unfold, and
-/// portrait's `t82 r0` kept after rotating the inner screen back to landscape), and a stale inset paired
-/// with the table's corners loses the side strip. Nil for a window of another size or a posture the table
-/// does not list, which keeps the live system insets.
+/// iPhone Duo: how long the system's reserved regions and safe insets stay transitional after a rotation or a fold. The
+/// longest measured on the simulator was 0.65s (an unfold: the cover's block, then the island rotated into the top-left
+/// corner); folded landscape-left to portrait reported landscape's block in portrait's corner for 47ms, which fits
+/// portrait's posture.
+let iPhoneDuoSystemReportSettleDelay: Double = 0.7
+
+private var iPhoneDuoSystemReportUnsettledUntil: Double = 0.0
+
+/// Notes that the window's posture changes (it rotates, or moves to the other screen): the system's report is not taken
+/// for `iPhoneDuoSystemReportSettleDelay`, and the table's settled sizes stand in.
+func iPhoneDuoPostureWillChange() {
+    iPhoneDuoSystemReportUnsettledUntil = CACurrentMediaTime() + iPhoneDuoSystemReportSettleDelay
+}
+
+/// Whether the system's report has settled since the window's posture last changed.
+var iPhoneDuoSystemReportIsSettled: Bool {
+    return CACurrentMediaTime() >= iPhoneDuoSystemReportUnsettledUntil
+}
+
+/// The frames of the occlusion regions the system reports as active in `view` (iPhone Duo's status corner and its
+/// camera), in the view's coordinates. Empty before iOS 27.1.
+func activeOcclusionFrames(in view: UIView) -> [CGRect] {
+    if #available(iOS 27.1, *) {
+        return view.reservedRegions(kind: .occlusion).filter(\.isActive).map(\.frame)
+    }
+    return []
+}
+
+/// iPhone Duo (iPhone19,4): a window's status corner block and safe insets, at the size the system gives them.
+///
+/// The posture comes from the table (`iPhoneDuoReservedCorners`, `iPhoneDuoSafeInsets`): which corner holds the block
+/// and which edge's inset the system widens it into. The sizes come from the system when its report fits that
+/// posture: an active occlusion region that fills the table's corner, as thick as the system's own safe inset on that
+/// edge, with no inset on the other edges. The block is the system's to size, not the device's: what the clock and
+/// the camera take can change without a new device (measured on the simulator: the folded landscape-right block,
+/// tabulated as 84x84 after it settled at 82x84, now settles at 84x82).
+///
+/// For up to 0.65s after every rotation and fold the system reports something else (measured on the simulator: the
+/// previous posture's block or insets, a stray block, none), and the table's sizes stand in. Most such reports do not
+/// fit the posture; one that does (folded landscape's 84x82 block in folded portrait's corner, beside portrait's inset)
+/// is kept out by not passing the system's report until it has settled (`iPhoneDuoSystemReportIsSettled`). The safe
+/// insets are nil where the table does not know the posture (the live insets apply, with the table's corners).
+func iPhoneDuoReservedArea(windowSize: CGSize, orientation: UIInterfaceOrientation, systemSafeInsets: UIEdgeInsets, systemOcclusions: [CGRect]) -> (safeInsets: UIEdgeInsets?, corners: ContainerViewLayoutCorners) {
+    let tableCorners = iPhoneDuoReservedCorners(windowSize: windowSize, orientation: orientation)
+    guard let tableInsets = iPhoneDuoSafeInsets(windowSize: windowSize, orientation: orientation) else {
+        return (nil, tableCorners)
+    }
+    let tolerance = reservedAreaEdgeTolerance
+
+    enum Corner {
+        case topLeft
+        case topRight
+        case bottomLeft
+        case bottomRight
+    }
+    let corner: Corner
+    if tableCorners.topLeft != nil {
+        corner = .topLeft
+    } else if tableCorners.topRight != nil {
+        corner = .topRight
+    } else if tableCorners.bottomLeft != nil {
+        corner = .bottomLeft
+    } else if tableCorners.bottomRight != nil {
+        corner = .bottomRight
+    } else {
+        return (tableInsets, tableCorners)
+    }
+
+    // The system's insets must be on the posture's edge alone; the bottom is the home indicator's.
+    let insetsFitPosture = (tableInsets.top > 0.0) == (systemSafeInsets.top > tolerance) && (tableInsets.left > 0.0) == (systemSafeInsets.left > tolerance) && (tableInsets.right > 0.0) == (systemSafeInsets.right > tolerance)
+    if !insetsFitPosture {
+        return (tableInsets, tableCorners)
+    }
+
+    let block = systemOcclusions.first(where: { frame in
+        if frame.width <= 0.0 || frame.height <= 0.0 {
+            return false
+        }
+        let fillsCorner: Bool
+        switch corner {
+        case .topLeft:
+            fillsCorner = abs(frame.minX) <= tolerance && abs(frame.minY) <= tolerance
+        case .topRight:
+            fillsCorner = abs(frame.maxX - windowSize.width) <= tolerance && abs(frame.minY) <= tolerance
+        case .bottomLeft:
+            fillsCorner = abs(frame.minX) <= tolerance && abs(frame.maxY - windowSize.height) <= tolerance
+        case .bottomRight:
+            fillsCorner = abs(frame.maxX - windowSize.width) <= tolerance && abs(frame.maxY - windowSize.height) <= tolerance
+        }
+        if !fillsCorner {
+            return false
+        }
+        // As thick as the inset the system widens it into: a block of another posture is not.
+        if tableInsets.top > 0.0 {
+            return abs(frame.height - systemSafeInsets.top) <= tolerance
+        } else if tableInsets.left > 0.0 {
+            return abs(frame.width - systemSafeInsets.left) <= tolerance
+        } else {
+            return abs(frame.width - systemSafeInsets.right) <= tolerance
+        }
+    })
+    guard let block else {
+        return (tableInsets, tableCorners)
+    }
+
+    let size = block.size
+    let corners: ContainerViewLayoutCorners
+    switch corner {
+    case .topLeft:
+        corners = ContainerViewLayoutCorners(topLeft: size, topRight: nil, bottomLeft: nil, bottomRight: nil)
+    case .topRight:
+        corners = ContainerViewLayoutCorners(topLeft: nil, topRight: size, bottomLeft: nil, bottomRight: nil)
+    case .bottomLeft:
+        corners = ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: size, bottomRight: nil)
+    case .bottomRight:
+        corners = ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: size)
+    }
+    return (UIEdgeInsets(top: systemSafeInsets.top, left: systemSafeInsets.left, bottom: 0.0, right: systemSafeInsets.right), corners)
+}
+
+/// iPhone Duo (iPhone19,4): the safe insets per posture, as the simulator settled on them (bottom 0: the home
+/// indicator is carried by the on-screen navigation height). Like the corner table, they apply while the system's
+/// report does not fit the posture (`iPhoneDuoReservedArea`): the system's insets lag behind rotations and folds
+/// (measured `t82` on the landscape inner screen after an unfold, and portrait's `t82 r0` kept after rotating the
+/// inner screen back to landscape), and a stale inset paired with the posture's corners loses the side strip. Nil
+/// for a window of another size or a posture the table does not list, which keeps the live system insets.
 func iPhoneDuoSafeInsets(windowSize: CGSize, orientation: UIInterfaceOrientation) -> UIEdgeInsets? {
     // As `iPhoneDuoReservedCorners`: the size decides portrait vs landscape, the orientation only tells
     // the two landscapes apart.
@@ -354,6 +492,23 @@ public extension ContainerViewLayout {
     /// that stands in for the status bar, such as the window's scroll-to-top views, belongs across the top.
     var statusBarIsInCorner: Bool {
         return self.reservedCorners != .none
+    }
+
+    /// Whether a surface at `frame` (in this layout's coordinates) still covers part of a corner block, so that the
+    /// status bar in it (iPhone Duo) shows over that surface rather than over what lies beneath. A modal card dragged
+    /// down, or aside, stops covering the block only once it has left it entirely. False without corner blocks.
+    func coversStatusCorner(frame: CGRect) -> Bool {
+        let size = self.size
+        let blocks: [CGRect] = [
+            self.reservedCorners.topLeft.map { CGRect(origin: CGPoint(), size: $0) },
+            self.reservedCorners.topRight.map { CGRect(origin: CGPoint(x: size.width - $0.width, y: 0.0), size: $0) },
+            self.reservedCorners.bottomLeft.map { CGRect(origin: CGPoint(x: 0.0, y: size.height - $0.height), size: $0) },
+            self.reservedCorners.bottomRight.map { CGRect(origin: CGPoint(x: size.width - $0.width, y: size.height - $0.height), size: $0) }
+        ].compactMap { $0 }
+        return blocks.contains(where: { block in
+            let intersection = block.intersection(frame)
+            return !intersection.isNull && intersection.width > 0.0 && intersection.height > 0.0
+        })
     }
 }
 

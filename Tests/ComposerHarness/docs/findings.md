@@ -295,7 +295,7 @@ run, and never count a timing-sensitive defect through `axe` alone.
   - `-[_UIConcretePasteboard string]` → `_coerceItemToClass`: the paste prompt, meaning foreign clipboard content arrived mid-run.
 
   Replays of the same seeds ran in seconds. **Driving note:** reboot that simulator BETWEEN Bazel runs when they start (`xcrun simctl shutdown <udid> && xcrun simctl boot <udid>`; the runner reuses it and its pre-action reinstalls the harness), never during one. The fuzz now re-writes its own pasteboard content before any paste when `UIPasteboard.general.changeCount` moved since its last write (reading `changeCount` reads no content), so the prompt cannot recur from the fuzz.
-- **A failed test run stalls in `simctl diagnose`.** After any failing test, xcodebuild runs `simctl diagnose … --timeout=600` on the test simulator (despite `-collect-test-diagnostics=never`), and the run sits there for up to 10 min after the tests end. Killing that process (it only collects logs) returns the run at once. The scratch runner that drove this wave did so automatically.
+- **A failed test run stalls in `simctl diagnose`.** After any failing test, xcodebuild runs `simctl diagnose … --timeout=600` on the test simulator (despite `-collect-test-diagnostics=never`), and the run sits there for up to 10 min after the tests end. Killing that process (it only collects logs) returns the run at once. The scratch runner that drove this wave did so automatically. **Cause found and fixed 2026-10-20:** xcodebuild ignores the `=` spelling xctestrunner passed; `MODULE.bazel` now patches it to two arguments (root `CLAUDE.md`, "Running tests").
 - **`FUZZ SLOW`.** Every op or undo/redo step over 1 s is printed. That is how seed 51's nested-quote keystroke cost was found (`HarnessNestedQuoteKeystrokeScalingTests`).
 - **Harness gaps.**
   - A table arranged WITHOUT column specs (`ChatInputTable(rows:)`, as a draft persisted before `columns` existed would decode: `decodeIfPresent … ?? []`) trips `assertionFailure("table … has a role but no grid — it will not be drawn")` in `syncTableChrome` and draws nothing. Drafts are out of scope, so this is not filed; real producers (paste, InstantPage conversion) always supply columns.
@@ -332,7 +332,7 @@ run, and never count a timing-sensitive defect through `axe` alone.
 - **Harness gaps.**
   - No `ChatController`, so the chat's key shortcuts (⌘B & co., ⌘K, ⇧⌘N) are absent; `HarnessChatFormatShortcutTests` repeats the shortcut's closure. A `KeyShortcutResponder` stand-in on the root would let Tier 2 press them.
   - XCUITest `typeKey(.return)` changed nothing observable on either backend in the harness (no newline, no send), and ⌘↑ / ⌘↓ did nothing on either; ←/→ with ⌘/⌥/⇧, ⌘A, ⌘Z, ⇧⌘Z and Tab arrive fine.
-  - A failing hosted run still sits in `simctl diagnose` for the rest of the 10 minutes; the p11 wrapper killed `diagnose.*<BAZEL_TEST udid>` in a loop during each foreground run.
+  - A failing hosted run still sits in `simctl diagnose` for the rest of the 10 minutes; the p11 wrapper killed `diagnose.*<BAZEL_TEST udid>` in a loop during each foreground run. (Fixed 2026-10-20 at the cause: xctestrunner's `=` spelling, patched in `MODULE.bazel`.)
 
 
 2026-09-24, p11 fixes (the six engine defects):

@@ -466,7 +466,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
                 self?.share()
             })))
 
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: controller, sourceView: view)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: controller, sourceView: (view as? GlassBarButtonComponent.View)?.menuSourceView ?? view)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             controller.presentInGlobalOverlay(contextController)
         }
         

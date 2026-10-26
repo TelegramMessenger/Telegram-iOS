@@ -1,11 +1,5 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-load(
-    "@build_configuration//:variables.bzl",
-    "telegram_bundle_id",
-)
-
-
 filegroup(
     name = "TelegramUIResources",
     srcs = glob([
@@ -43,17 +37,6 @@ filegroup(
 #    ], exclude = ["Telegram-iOS/Icons.xcassets/**/.*"]),
 #)
 
-internal_bundle_ids = [
-    "org.telegram.Telegram-iOS",
-]
-
-available_appcenter_targets = [
-    "@appcenter_sdk//:AppCenter",
-    "@appcenter_sdk//:AppCenterCrashes",
-]
-
-appcenter_targets = available_appcenter_targets if telegram_bundle_id in internal_bundle_ids else []
-
 swift_library(
     name = "TelegramUI",
     module_name = "TelegramUI",
@@ -63,6 +46,15 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
+    # DEBUG builds only: widget-sandbox's conformance set and the client's game examples, for Debug Settings' widget insertion
+    # (DebugSettingsUI/Sources/WidgetDebugPosts.swift reads them from this framework's bundle).
+    data = select({
+        "//third-party/widget-sandbox:debug_build": [
+            "//third-party/widget-sandbox:WidgetConformanceBundle",
+            "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         "//submodules/CrashReporting:CrashReporting",
         "//third-party/recaptcha:RecaptchaEnterprise",
@@ -332,6 +324,7 @@ swift_library(
         "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
         "//submodules/TelegramUI/Components/CoreListComponentHost",
+        "//submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend",
         "//submodules/TelegramUI/Components/News/NewsScreen",
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
@@ -561,6 +554,7 @@ swift_library(
         "//submodules/TelegramUI/Components/TranslateHeaderPanelComponent",
         "//submodules/TelegramUI/Components/AdPanelHeaderPanelComponent",
         "//submodules/TelegramUI/Components/MessageFeeHeaderPanelComponent",
+        "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         "//submodules/TelegramUI/Components/LegacyChatHeaderPanelComponent",
         "//submodules/TelegramUI/Components/GroupCallHeaderPanelComponent",
         "//submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode",
@@ -569,6 +563,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiGameStakeScreen",
         "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertHeaderComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertCheckComponent",
         "//submodules/TelegramUI/Components/Chat/ChatAgeRestrictionAlertController",
         "//submodules/TelegramUI/Components/CocoonInfoScreen",
         "//submodules/TelegramUI/Components/ProxyServerPreviewScreen",
@@ -590,10 +585,7 @@ swift_library(
         "//submodules/WalletContext",
         "//submodules/PasscodeCore",
         "//submodules/MTProtoRustEngine:MTProtoRustEngine",
-    ] + select({
-        "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
-        "//build-system:ios_sim_arm64": [],
-    }),
+    ],
     visibility = [
         "//visibility:public",
     ],

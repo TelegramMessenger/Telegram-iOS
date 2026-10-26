@@ -80,6 +80,12 @@ func updateChatPresentationInterfaceStateImpl(
     
     var completion = externalCompletion
     var temporaryChatPresentationInterfaceState = f(selfController.presentationInterfaceState)
+    // The chat's data keeps a finished countdown until it next recomputes slow mode, and re-applies it with any
+    // unrelated update. Drop it here, before anything reads it: once this update is under way, nothing can take it
+    // out of what it hands the panel, which then shows the finished countdown, "0:00".
+    if let slowmodeState = temporaryChatPresentationInterfaceState.slowmodeState, !slowmodeState.isActive(at: Int32(Date().timeIntervalSince1970)) {
+        temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedSlowmodeState(nil)
+    }
     
     if selfController.presentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup || selfController.presentationInterfaceState.keyboardButtonsMessage?.id != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.id {
         if let keyboardButtonsMessage = temporaryChatPresentationInterfaceState.keyboardButtonsMessage, let keyboardMarkup = keyboardButtonsMessage.visibleButtonKeyboardMarkup {

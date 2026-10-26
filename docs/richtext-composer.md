@@ -172,7 +172,8 @@ The editor auto-detects each paragraph's direction (RTL for Arabic/Hebrew/…) a
 typing "just works" in the composer; an empty message's caret follows the keyboard's input language and re-flips
 live on a globe-key switch. The whole-document override (`RichTextEditorView.layoutDirectionOverride`) exists on the
 façade (and has a UI control in `RichTextAttachmentScreen`) but is **not surfaced in the chat composer** this round —
-auto-detect covers it. Editor-side architecture lives in the editor's own `CLAUDE.md` ("RTL / writing direction").
+auto-detect covers it. Editor-side architecture lives in the canvas editor's guide,
+`submodules/TelegramUI/Components/RichTextEditor/Sources/RichTextEditorUIKit/CLAUDE.md` ("RTL / writing direction").
 
 **Empty-input right inset.** `ChatTextInputPanelNode.calculateTextFieldRealInsets` reserves the action-control slot
 on the field's right (`actionControlsWidth - 10`). The effective per-layout call (applied to the rich node) passes
@@ -465,7 +466,7 @@ Two layers (see `SyncCore_SynchronizeableChatInputState.swift`, `ChatInterfaceSt
 
 > **Invariant — `saveDraft` sends `message: ""` / no entities (clears the `1<<3` flag) when `richMessage` is
 > set.** The InstantPage already carries the text; the receiver builds the draft **purely** from `richMessage`
-> when present (`AccountStateManagementUtils` ignores `message`/`entities`), so sending the flat text duplicates
+> when present (`UpdateInterpreter` ignores `message`/`entities`), so sending the flat text duplicates
 > it on the wire.
 
 ### Cross-device media sync

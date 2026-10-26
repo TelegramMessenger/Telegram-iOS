@@ -17,6 +17,7 @@ public final class BottomButtonPanelComponent: Component {
     let icon: AnyComponentWithIdentity<Empty>?
     let isEnabled: Bool
     let insets: UIEdgeInsets
+    let backgroundColor: UIColor?
     let action: () -> Void
     
     public init(
@@ -26,6 +27,7 @@ public final class BottomButtonPanelComponent: Component {
         icon: AnyComponentWithIdentity<Empty>? = nil,
         isEnabled: Bool,
         insets: UIEdgeInsets,
+        backgroundColor: UIColor? = nil,
         action: @escaping () -> Void
     ) {
         self.theme = theme
@@ -34,6 +36,7 @@ public final class BottomButtonPanelComponent: Component {
         self.icon = icon
         self.isEnabled = isEnabled
         self.insets = insets
+        self.backgroundColor = backgroundColor
         self.action = action
     }
     
@@ -54,6 +57,9 @@ public final class BottomButtonPanelComponent: Component {
             return false
         }
         if lhs.insets != rhs.insets {
+            return false
+        }
+        if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
         return true
@@ -95,7 +101,7 @@ public final class BottomButtonPanelComponent: Component {
 
             let edgeEffectFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height))
             transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
-            self.edgeEffectView.update(content: component.theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: edgeEffectFrame, edge: .bottom, edgeSize: edgeEffectFrame.height, transition: transition)
+            self.edgeEffectView.update(content: component.backgroundColor ?? component.theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: edgeEffectFrame, edge: .bottom, edgeSize: edgeEffectFrame.height, transition: transition)
 
             var buttonTitleVStack: [AnyComponentWithIdentity<Empty>] = []
             buttonTitleVStack.append(AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(AnimatedTextComponent(

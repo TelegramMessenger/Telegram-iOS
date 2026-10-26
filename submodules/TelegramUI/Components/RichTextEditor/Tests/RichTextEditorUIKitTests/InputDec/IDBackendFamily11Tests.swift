@@ -16,7 +16,7 @@ import RichTextEditorCore
 /// `TGRichTextInputDecCanvasCallbacks.m`) with NO Swift-visible entry point that could trigger a
 /// genuine private-controller call deterministically in a unit test — the real native-checking
 /// machinery that would drive `annotatedSubstringForRange:` etc. is async and OS-scheduled (the
-/// package CLAUDE.md's own admission: grammar checking "did NOT fire in the unit-test host").
+/// `Sources/RichTextEditorUIKit/CLAUDE.md`'s own admission: grammar checking "did NOT fire in the unit-test host").
 /// `IDBackendFamily4Tests` (Task C7) already set the precedent for a multi-arg undeclared thunk:
 /// it drives `storageFacadeForTesting` directly rather than the private selector that sets its
 /// latch. This suite follows the identical shape via the new `IDTextEditorBackend

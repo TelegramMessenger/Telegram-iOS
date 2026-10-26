@@ -5,7 +5,16 @@ import TelegramCore
 /// in (bugs.telegram.org/c/18387). Every record not marked logged out counts. The app also leaves
 /// out a record whose session turns out to be unauthorized when it opens it, which the extension
 /// cannot know without opening every account; such a record counts here until it is marked.
-func notificationsNameRecipientAccount(records: [AccountRecord<TelegramAccountManagerTypes.Attribute>]) -> Bool {
+///
+/// With "Show Notifications From All Accounts" off
+/// (`InAppNotificationSettings.displayNotificationsFromAllAccounts`) only the current account
+/// notifies, so its notifications are not named. One for another account can still arrive then,
+/// sent before the app unregistered that account (after a switch of the current account), and it
+/// is named: it is not from the account the user is looking at.
+func notificationsNameRecipientAccount(records: [AccountRecord<TelegramAccountManagerTypes.Attribute>], notificationsFromAllAccounts: Bool, isCurrentAccount: Bool) -> Bool {
+    if !notificationsFromAllAccounts && isCurrentAccount {
+        return false
+    }
     let accountCount = records.filter { record in
         return !record.attributes.contains(where: { attribute in
             if case .loggedOut = attribute {

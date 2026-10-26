@@ -1,6 +1,6 @@
 # CoreList chat-history backend
 
-`CoreListChatHistoryBackend` (`submodules/TelegramUI/Sources/CoreListChatHistoryBackend.swift`) is an
+`CoreListChatHistoryBackend` (`submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend/Sources/CoreListChatHistoryBackend.swift`) is an
 alternative chat-history list backend built on the vendored `CoreList` module's `CoreVirtualListView`
 (a from-scratch UIKit virtualized list — see `submodules/TelegramUI/Components/CoreList/CLAUDE.md`).
 
@@ -24,7 +24,7 @@ The chosen backend is published as `ChatHistoryListNodeImpl.usesCoreListBackend`
 that is deliberately CoreList-only must read that**, not re-derive the policy — one site already
 drifted when the default moved and the Debug Settings switch stopped being the whole answer.
 
-See the "ChatHistoryListNode composition" section of the root `CLAUDE.md` for the backend seam
+See the "ChatHistoryListNode composition" section of `submodules/TelegramUI/Sources/CLAUDE.md` for the backend seam
 (`ChatHistoryListViewBackend`) this conforms to.
 
 ## Scope
@@ -709,6 +709,17 @@ chat reads `abs(offset) <= 0.9` as "pinned to the newest message"
   Settled is self-correcting in the one case where the two disagree for a reason — a transaction landing
   mid-fling, where settled is the flight's destination — because the next scroll frame re-reports
   presented, and the consumer's own alpha change is animated anyway.
+- **A third emission point: when the last animated pass in flight lands, `.presented`.** The chat
+  reads the messages it finds on screen inside `visibleContentOffsetChanged` (the max visible message
+  index, through `forEachVisibleItemNode` and `itemNodeFrame`, both presented geometry), so the
+  transaction emission carries the right offset but its read sees the rows where the pass *started*.
+  Tapping the go-down button in a quiet chat therefore scrolled to the newest messages and left them
+  unread until a drag or an unrelated later transaction (a new message, a read-state update). The
+  backend counts its animated passes (`animatedPassesInFlight`) and, when the last one's duration has
+  elapsed, reports the offset again. Only the last: until then the presented geometry is part-way
+  through a later pass whose transaction already reported its settled offset, and a mid-flight sample
+  would move the chrome (the go-down button, the overscroll control). With nothing in flight the two
+  geometries agree, or a drag is under way and the scroll path reports presented every frame anyway.
 
 **Why `ListViewImpl` needs no such distinction:** its model *is* its presented geometry.
 `replayOperations` writes final item-node frames immediately and animates the layers additively, so the

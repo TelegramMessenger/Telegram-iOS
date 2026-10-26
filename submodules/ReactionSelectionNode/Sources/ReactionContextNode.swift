@@ -1765,7 +1765,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 })
             },
-            clearGroup: { [weak self] groupId in
+            clearGroup: { [weak self] groupId, _, _ in
                 guard let strongSelf = self else {
                     return
                 }

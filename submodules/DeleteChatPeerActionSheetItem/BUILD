@@ -19,6 +19,9 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BalancedTextComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertHeaderComponent",
+        "//submodules/TelegramUI/Components/AvatarComponent",
     ],
     visibility = [
         "//visibility:public",

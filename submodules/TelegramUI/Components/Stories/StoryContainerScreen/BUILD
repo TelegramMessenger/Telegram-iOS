@@ -92,6 +92,7 @@ swift_library(
         "//submodules/TelegramUI/Components/NavigationSearchComponent",
         "//submodules/TelegramUI/Components/TabSelectorComponent",
         "//submodules/TelegramUI/Components/OptionButtonComponent",
+        "//submodules/TelegramUI/Components/GlassBarButtonComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Components/BalancedTextComponent",
         "//submodules/AnimatedCountLabelNode",

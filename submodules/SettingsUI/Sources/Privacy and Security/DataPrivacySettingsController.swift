@@ -12,6 +12,9 @@ import AlertUI
 import PresentationDataUtils
 import TelegramNotices
 import UndoUI
+import ComponentFlow
+import AlertComponent
+import AlertCheckComponent
 
 private final class DataPrivacyControllerArguments {
     let account: Account
@@ -353,42 +356,33 @@ public func dataPrivacyController(context: AccountContext, focusOnItemTag: DataP
     
     let arguments = DataPrivacyControllerArguments(account: context.account, clearPaymentInfo: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
+        let paymentInfoState = AlertCheckComponent.ExternalState()
+        let shippingInfoState = AlertCheckComponent.ExternalState()
+        
+        var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+        content.append(AnyComponentWithIdentity(
+            id: "paymentInfo",
+            component: AnyComponent(
+                AlertCheckComponent(title: presentationData.strings.Privacy_PaymentsClear_PaymentInfo, alignment: .default, initialValue: true, externalState: paymentInfoState)
+            )
+        ))
+        content.append(AnyComponentWithIdentity(
+            id: "shippingInfo",
+            component: AnyComponent(
+                AlertCheckComponent(title: presentationData.strings.Privacy_PaymentsClear_ShippingInfo, alignment: .default, initialValue: true, externalState: shippingInfoState)
+            )
+        ))
+        
+        let clearIsEnabled: Signal<Bool, NoError> = combineLatest(paymentInfoState.valueSignal, shippingInfoState.valueSignal)
+        |> map { paymentInfo, shippingInfo -> Bool in
+            return paymentInfo || shippingInfo
         }
         
-        var values = [true, true]
-        
-        let toggleCheck: (Int) -> Void = { [weak controller] itemIndex in
-            controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
-                if let item = item as? ActionSheetCheckboxItem {
-                    values[itemIndex] = !item.value
-                    return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
-                }
-                return item
-            })
-            
-            controller?.updateItem(groupIndex: 0, itemIndex: 2, { item in
-                if let item = item as? ActionSheetButtonItem {
-                    let disabled = !values[0] && !values[1]
-                    return ActionSheetButtonItem(title: item.title, color: disabled ? .disabled : .accent, enabled: !disabled, action: item.action)
-                }
-                return item
-            })
-        }
-        
-        var items: [ActionSheetItem] = []
-        
-        items.append(ActionSheetCheckboxItem(title: presentationData.strings.Privacy_PaymentsClear_PaymentInfo, label: "", value: true, action: { value in
-            toggleCheck(0)
-        }))
-
-        items.append(ActionSheetCheckboxItem(title: presentationData.strings.Privacy_PaymentsClear_ShippingInfo, label: "", value: true, action: { value in
-            toggleCheck(1)
-        }))
-        
-        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_ClearNone, action: {
+        let performClear: () -> Void = {
+            let values = [paymentInfoState.value, shippingInfoState.value]
+            if !values[0] && !values[1] {
+                return
+            }
             var clear = false
             updateState { state in
                 var state = state
@@ -430,13 +424,19 @@ public func dataPrivacyController(context: AccountContext, focusOnItemTag: DataP
                         }
                     }))
             }
-            dismissAction()
-        }))
+        }
         
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: items),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
+        let controller = AlertScreen(
+            configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+            content: content,
+            actions: [
+                .init(title: presentationData.strings.Cache_ClearNone, type: .defaultDestructive, action: {
+                    performClear()
+                }, isEnabled: clearIsEnabled),
+                .init(title: presentationData.strings.Common_Cancel)
+            ],
+            updatedPresentationData: (presentationData, context.sharedContext.presentationData)
+        )
         presentControllerImpl?(controller)
     }, updateSecretChatLinkPreviews: { value in
         let _ = ApplicationSpecificNotice.setSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager, value: value).start()
@@ -500,13 +500,12 @@ public func dataPrivacyController(context: AccountContext, focusOnItemTag: DataP
         }
     }, deleteCloudDrafts: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationData: presentationData)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Privacy_DeleteDrafts, color: .destructive, action: {
+        let controller = textAlertController(
+            context: context,
+            title: presentationData.strings.Privacy_DeleteDrafts,
+            text: "",
+            actions: [
+                TextAlertAction(type: .defaultDestructiveAction, title: presentationData.strings.Privacy_DeleteDrafts, action: {
                     var clear = false
                     updateState { state in
                         var state = state
@@ -528,11 +527,11 @@ public func dataPrivacyController(context: AccountContext, focusOnItemTag: DataP
                                 presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_DeleteDrafts_DraftsDeleted, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }))
                             }))
                     }
-                    dismissAction()
-                })
-                ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
+                }),
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
+            ],
+            actionLayout: .vertical
+        )
         presentControllerImpl?(controller)
     }, openBotListSettings: {
         pushControllerImpl?(context.sharedContext.makeBotSettingsScreen(context: context, peerId: nil))

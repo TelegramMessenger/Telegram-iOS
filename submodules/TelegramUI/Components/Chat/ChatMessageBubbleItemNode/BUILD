@@ -80,6 +80,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageRestrictedBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageStoryMentionContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageUnsupportedBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWallpaperBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiftBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiftOfferBubbleContentNode",

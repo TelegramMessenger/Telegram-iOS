@@ -1,7 +1,8 @@
 import Foundation
 import CoreGraphics
 
-/// A post row's swipe actions (Feed3 `feedSwipeActions`). There is no server API for them yet.
+/// A post row's swipe actions (Feed3 `feedSwipeActions`): Interesting sends `feed.likePost`, Not Interested
+/// `feed.dislikePost`.
 public enum NewsPostSwipeAction: Int32 {
     case interesting = 0
     case notInterested = 1

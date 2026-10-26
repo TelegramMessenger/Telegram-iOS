@@ -127,7 +127,7 @@ final class RichTextV2MetricsParityTests: XCTestCase {
         let bareCaption = InstantPageCaption(text: .empty, credit: .empty)
         let creditedCaption = InstantPageCaption(text: .empty, credit: .plain("c"))
         // `EngineMedia.Id`, not `MediaId`: TelegramCore does not re-export Postbox, so the raw Postbox
-        // spelling is out of scope here (see the engine typealias cheat sheet in the root CLAUDE.md).
+        // spelling is out of scope here (see the engine typealias cheat sheet in docs/superpowers/postbox-refactor-log.md).
         let mediaId = EngineMedia.Id(namespace: 0, id: 1)
         return [
             (.paragraph, .paragraph(.plain("x"))),

@@ -2999,7 +2999,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         if case let .assets(collection, mode) = self.subject, mode != .default {
             if case .wallpaper = mode {
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
+                if case .glass = style {
+                    self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+                } else {
+                    self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
+                }
             } else if collection == nil {
                 if case .glass = style {
                     self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
@@ -3423,8 +3427,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         guard let self else {
                             return
                         }
-                        if let controlsView = self.buttons?.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, let sourceView = rightItemView.itemView(id: AnyHashable("more")) {
-                            self.searchOrMorePressed(view: sourceView, gesture: nil)
+                        if let controlsView = self.buttons?.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, rightItemView.itemView(id: AnyHashable("more")) != nil {
+                            self.searchOrMorePressed(view: rightItemView.menuSourceView, gesture: nil)
                         }
                     }
                 ))
@@ -4281,6 +4285,7 @@ public func wallpaperMediaPickerController(
     let controller = AttachmentController(
         context: context,
         updatedPresentationData: updatedPresentationData,
+        style: .glass,
         chatLocation: nil,
         buttons: [.standalone],
         initialButton: .standalone,
@@ -4292,7 +4297,7 @@ public func wallpaperMediaPickerController(
     controller.animateAppearance = animateAppearance
     controller.requestController = { [weak controller] _, present in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let mediaPickerController = MediaPickerScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper), mainButtonState: AttachmentMainButtonState(text: presentationData.strings.Conversation_Theme_SetColorWallpaper, font: .regular, background: .color(.clear), textColor: presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false), mainButtonAction: {
+        let mediaPickerController = MediaPickerScreenImpl(context: context, updatedPresentationData: updatedPresentationData, style: .glass, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper), mainButtonState: AttachmentMainButtonState(text: presentationData.strings.Conversation_Theme_SetColorWallpaper, font: .regular, background: .color(.clear), textColor: presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true, hasShimmer: false), mainButtonAction: {
             controller?.dismiss(animated: true)
             openColors()
         })

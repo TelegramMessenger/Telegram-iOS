@@ -12,6 +12,7 @@ import WallpaperResources
 import LegacyComponents
 import ItemListUI
 import WallpaperBackgroundNode
+import WallpaperGalleryScreen
 import AnimationCache
 import MultiAnimationRenderer
 
@@ -61,6 +62,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
+    private let maskFillNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let chatBackgroundNode: WallpaperBackgroundNode
     private let messagesContainerNode: ASDisplayNode
@@ -113,6 +115,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         self.maskNode.displayWithoutProcessing = true
         self.maskNode.contentMode = .scaleToFill
         
+        self.maskFillNode = ASDisplayNode()
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = self.presentationData.theme.rootController.tabBar.separatorColor
         
@@ -126,12 +130,14 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         
         self.chatListBackgroundNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.presentationData.theme.chatList.backgroundColor)
+        self.maskFillNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.pageControlNode.isUserInteractionEnabled = false
         self.pageControlNode.pagesCount = 2
         
         self.addSubnode(self.scrollNode)
         self.chatListBackgroundNode.addSubnode(self.maskNode)
+        self.chatListBackgroundNode.addSubnode(self.maskFillNode)
         self.addSubnode(self.pageControlBackgroundNode)
         self.addSubnode(self.pageControlNode)
         self.addSubnode(self.toolbarNode)
@@ -614,6 +620,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         
         transition.updateFrame(node: self.maskNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight - 80.0, width: bounds.width, height: 80.0))
+        transition.updateFrame(node: self.maskFillNode, frame: CGRect(x: 0.0, y: layout.size.height - toolbarHeight, width: bounds.width, height: toolbarHeight))
     }
 }
 
@@ -730,10 +737,8 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
     
-    private let cancelButton = HighlightableButtonNode()
-    private let doneButton = HighlightableButtonNode()
-    private let separatorNode = ASDisplayNode()
-    private let topSeparatorNode = ASDisplayNode()
+    private let sectionNode = ASDisplayNode()
+    private let buttonsNode: WallpaperGalleryOldToolbarNode
     
     private var switchItemNode: ItemListSwitchItemNode
     private var fontSizeItemNode: ThemeSettingsFontSizeItemNode
@@ -753,55 +758,45 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         self.switchItemNode = ItemListSwitchItemNode(type: .regular)
         self.fontSizeItemNode = ThemeSettingsFontSizeItemNode()
         
+        self.buttonsNode = WallpaperGalleryOldToolbarNode(theme: presentationData.theme, strings: presentationData.strings, cancelButtonType: .cancel, doneButtonType: .set)
+        
         super.init()
         
-        self.cancelButton.accessibilityTraits = [.button]
-        self.doneButton.accessibilityTraits = [.button]
+        self.sectionNode.clipsToBounds = true
+        self.sectionNode.cornerRadius = 26.0
+        if #available(iOS 13.0, *) {
+            self.sectionNode.layer.cornerCurve = .continuous
+        }
         
-        self.addSubnode(self.switchItemNode)
-        self.addSubnode(self.fontSizeItemNode)
-        self.addSubnode(self.cancelButton)
-        self.addSubnode(self.doneButton)
-        self.addSubnode(self.separatorNode)
-        self.addSubnode(self.topSeparatorNode)
+        self.addSubnode(self.sectionNode)
+        self.sectionNode.addSubnode(self.switchItemNode)
+        self.sectionNode.addSubnode(self.fontSizeItemNode)
+        self.addSubnode(self.buttonsNode)
         
         self.updatePresentationData(presentationData: self.presentationData)
         
-        self.cancelButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.cancelButton.backgroundColor = strongSelf.presentationData.theme.list.itemHighlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.cancelButton.backgroundColor = .clear
-                    })
-                }
-            }
+        self.buttonsNode.cancel = { [weak self] in
+            self?.cancelPressed()
         }
-        
-        self.doneButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.doneButton.backgroundColor = strongSelf.presentationData.theme.list.itemHighlightedBackgroundColor
-                } else {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        strongSelf.doneButton.backgroundColor = .clear
-                    })
-                }
-            }
+        self.buttonsNode.done = { [weak self] _ in
+            self?.donePressed()
         }
-        
-        self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
-        self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
         
         if focusOnItemTag == .useSystem {
             self.switchItemNode.displayHighlight()
         }
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result === self.view || result === self.buttonsNode.view {
+            return nil
+        }
+        return result
+    }
+    
     func setDoneEnabled(_ enabled: Bool) {
-        self.doneButton.alpha = enabled ? 1.0 : 0.4
-        self.doneButton.isUserInteractionEnabled = enabled
+        self.buttonsNode.setDoneEnabled(enabled)
     }
     
     func setCustomMode(_ customMode: TextSelectionCustomMode) {
@@ -809,15 +804,8 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     }
     
     func updatePresentationData(presentationData: PresentationData) {
-        self.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
-        self.separatorNode.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
-        self.topSeparatorNode.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
-        
-        self.cancelButton.setTitle(presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
-        self.doneButton.setTitle(presentationData.strings.Wallpaper_Set, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
-        
-        self.cancelButton.accessibilityLabel = presentationData.strings.Common_Cancel
-        self.doneButton.accessibilityLabel = presentationData.strings.Wallpaper_Set
+        self.sectionNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        self.buttonsNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
     }
     
     func updatePresentationThemeSettings(presentationThemeSettings: PresentationThemeSettings) {
@@ -825,17 +813,16 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     }
     
     func updateLayout(width: CGFloat, bottomInset: CGFloat, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
-        var contentHeight: CGFloat = 0.0
-        // The rows keep the side safe insets too (iPhone Duo's side strip is a safe inset, not an intrinsic one).
-        let itemLeftInset = max(layout.intrinsicInsets.left, layout.safeInsets.left)
-        let itemRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right)
-        // Beside a strip the bottom buttons split the band instead of the full width: they span iPhone Duo's side strip
-        // and keep clear only of a corner block at the bottom.
-        let bottomInsets = layout.bottomEdgeSideInsets()
-        let buttonsMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? bottomInsets.left : 0.0
-        let buttonsWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? width - bottomInsets.left - bottomInsets.right : width
+        let sideInset: CGFloat = 16.0
+        let buttonsSpacing: CGFloat = 12.0
+        let buttonsHeight: CGFloat = 52.0
+        let sectionLeftInset = max(layout.intrinsicInsets.left, layout.safeInsets.left) + sideInset
+        let sectionRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right) + sideInset
+        let sectionWidth = max(1.0, width - sectionLeftInset - sectionRightInset)
         
-        let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
+        var sectionHeight: CGFloat = 0.0
+        
+        let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), systemStyle: .glass, title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, noCorners: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateUseSystemFont?(value)
         })
         let fontSizeItem = ThemeSettingsFontSizeItem(theme: self.presentationData.theme, fontSize: self.customMode == .chat ? self.presentationThemeSettings.fontSize : self.presentationThemeSettings.listsFontSize, enabled: !self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, disableDecorations: true, force: true, sectionId: 0, updated: { [weak self] value in
@@ -846,11 +833,11 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.switchItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: nil, next: fontSizeItem.neighborDescriptor), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: sectionWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: fontSizeItem.neighborDescriptor, next: fontSizeItem.neighborDescriptor), animation: .None, completion: { layout, apply in
             self.switchItemNode.contentSize = layout.contentSize
             self.switchItemNode.insets = layout.insets
-            transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
-            contentHeight += layout.contentSize.height
+            transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: sectionHeight), size: layout.contentSize))
+            sectionHeight += layout.contentSize.height
             apply(ListViewItemApply())
         })
         
@@ -858,34 +845,28 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.fontSizeItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: sectionWidth, leftInset: 0.0, rightInset: 0.0, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
             self.fontSizeItemNode.contentSize = layout.contentSize
             self.fontSizeItemNode.insets = layout.insets
-            transition.updateFrame(node: self.fontSizeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
-            contentHeight += layout.contentSize.height
+            transition.updateFrame(node: self.fontSizeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: sectionHeight), size: layout.contentSize))
+            sectionHeight += layout.contentSize.height
             apply(ListViewItemApply())
         })
         
-        self.cancelButton.frame = CGRect(origin: CGPoint(x: buttonsMinX, y: contentHeight), size: CGSize(width: floor(buttonsWidth / 2.0), height: 49.0))
-        self.doneButton.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: contentHeight), size: CGSize(width: buttonsWidth - floor(buttonsWidth / 2.0), height: 49.0))
+        transition.updateFrame(node: self.sectionNode, frame: CGRect(origin: CGPoint(x: sectionLeftInset, y: 0.0), size: CGSize(width: sectionWidth, height: sectionHeight)))
         
-        contentHeight += 49.0
+        let buttonsFrame = CGRect(origin: CGPoint(x: 0.0, y: sectionHeight + buttonsSpacing), size: CGSize(width: width, height: buttonsHeight))
+        transition.updateFrame(node: self.buttonsNode, frame: buttonsFrame)
+        self.buttonsNode.updateLayout(size: buttonsFrame.size, layout: layout, transition: transition)
         
-        self.topSeparatorNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel))
-        
-        let resultHeight = contentHeight + bottomInset
-        
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: self.cancelButton.frame.minY), size: CGSize(width: UIScreenPixel, height: resultHeight - self.cancelButton.frame.minY))
-        
-        return resultHeight
+        return buttonsFrame.maxY + (bottomInset.isZero ? sideInset : bottomInset)
     }
     
-    @objc func cancelPressed() {
+    private func cancelPressed() {
         self.cancel?()
     }
     
-    @objc func donePressed() {
-        self.doneButton.isUserInteractionEnabled = false
+    private func donePressed() {
         self.done?()
     }
 }

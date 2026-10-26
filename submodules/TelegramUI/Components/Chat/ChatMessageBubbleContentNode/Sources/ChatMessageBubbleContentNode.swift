@@ -237,6 +237,10 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     public var performRichTextButtonAction: ((ReplyMarkupButton, Promise<Bool>) -> Void)?
     /// Fires when a downloaded `.document` row in a rich message is tapped, with that exact file.
     public var openRichTextDocument: ((TelegramMediaFile) -> Void)?
+    /// A secondary click the content took itself (a message widget's, whose touches are its own), at its point in the
+    /// content node: the bubble opens the message's menu as for a secondary click of its own. Wired by
+    /// `ChatMessageBubbleItemNode`.
+    public var secondaryTap: ((CGPoint) -> Void)?
     
     open var disablesClipping: Bool {
         return false
@@ -314,6 +318,18 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     open func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         return ChatMessageBubbleContentTapAction(content: .none)
     }
+
+    /// Whether a horizontal drag starting at `point` (in the content node) is the content's own, so the bubble's swipe to
+    /// reply leaves it alone. Asked when the swipe's touch begins.
+    open func claimsHorizontalDrag(at point: CGPoint) -> Bool {
+        return false
+    }
+
+    /// The edge of the bubble that stays put on screen when the content's next height change lands (a message widget's
+    /// resize anchor), or nil for the list's own placement.
+    open var resizeAnchor: ListViewItemResizeAnchor? {
+        return nil
+    }
     
     open func updateTouchesAtPoint(_ point: CGPoint?) {
     }
@@ -326,6 +342,11 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     open func updateIsExtractedToContextPreview(_ value: Bool) {
+    }
+
+    /// Clears this node's text selection, if it has one: another content node of the bubble began one (a bubble shows one
+    /// selection at a time).
+    open func resignTextSelection() {
     }
 
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
