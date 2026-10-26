@@ -93,13 +93,14 @@ final class MediaChromeLayoutTests: XCTestCase {
 
     // Tiny top-right tiles the sweep finds, through the real album engine.
 
-    // 375pt, a tall portrait beside three stacked ones: the 75pt top-right tile's "…" overflows into the
-    // controls' row, on top of its neighbour.
-    func testTinyTileOfAFourItemAlbumOverflowsIntoTheControlsRow() {
+    // 375pt, a tall portrait beside three stacked ones: the 75pt top-right tile has no room below the
+    // controls, so its "…" goes into their row, just inside its left edge.
+    func testTinyTileOfAFourItemAlbumFitsItsMoreButtonInTheControlsRow() {
         let tiles = self.albumTiles([0.5, 1.0, 0.5, 0.5], width: 375.0)
         let origins = MediaChromeLayout.moreButtonOrigins(cellFrames: tiles, avoiding: self.controls(width: 375.0, count: 4))
         XCTAssertEqual(tiles[1], CGRect(x: 244.0, y: 0.0, width: 75.0, height: 75.0))
         XCTAssertEqual(origins[1], CGPoint(x: 3.0, y: 8.0))
+        XCTAssertFalse(MediaChromeLayout.isOutsideTile(origin: origins[1], tileSize: tiles[1].size))
         XCTAssertEqual(origins[0], CGPoint(x: 8.0, y: 8.0))
     }
 

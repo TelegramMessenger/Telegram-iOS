@@ -45,7 +45,7 @@ enum MediaChromeLayout {
         for candidate in [below, beside] where !self.isOutsideTile(origin: candidate, tileSize: cellFrame.size) && blockers(candidate).isEmpty {
             return candidate
         }
-        return -beside.x <= self.maxOverflow ? beside : topLeft
+        return -beside.x <= self.maxOverflow && blockers(beside).isEmpty ? beside : topLeft
     }
 
     /// The "…" origins of all the tiles of a mosaic (`moreButtonOrigin` each), except that a "…" overflowing

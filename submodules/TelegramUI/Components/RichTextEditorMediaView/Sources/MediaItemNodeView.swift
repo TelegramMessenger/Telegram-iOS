@@ -500,10 +500,12 @@ public final class MediaItemNodeView: UIView, RichTextMediaItemView, UIScrollVie
                 if scroll.point(inside: inScroll, with: event) { return scroll }
             }
             // Not gated on the cell's bounds: a narrow tile's "…" can overflow onto its neighbour
-            // (`MediaChromeLayout.moreButtonOrigin`), and the cell only ever returns its controls.
-            for (_, cell) in self.mosaicCells where !cell.host.isHidden {
-                let inHost = cell.host.convert(point, from: self)
-                if let hit = cell.host.hitTest(inHost, with: event), hit !== cell.host {
+            // (`MediaChromeLayout.moreButtonOrigin`), and the cell only ever returns its controls. Topmost
+            // cell first, so where two "…" overlap the one drawn on top takes the tap.
+            let cellHosts = Set(self.mosaicCells.values.map { ObjectIdentifier($0.host) })
+            for host in self.subviews.reversed() where cellHosts.contains(ObjectIdentifier(host)) && !host.isHidden {
+                let inHost = host.convert(point, from: self)
+                if let hit = host.hitTest(inHost, with: event), hit !== host {
                     return hit
                 }
             }
