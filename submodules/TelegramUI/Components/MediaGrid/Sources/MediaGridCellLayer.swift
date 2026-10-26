@@ -39,6 +39,9 @@ open class MediaGridCellLayer: CALayer {
         self.index = index
     }
 
+    open func setSelected(_ selected: Bool) {
+    }
+
     open func setImage(_ image: UIImage?) {
         self.contentsGravity = .resizeAspectFill
         if let image {

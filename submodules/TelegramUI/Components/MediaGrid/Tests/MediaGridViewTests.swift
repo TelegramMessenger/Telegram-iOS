@@ -276,4 +276,141 @@ final class MediaGridViewTests: XCTestCase {
         view.setContentOffset(300.0)
         XCTAssertFalse(view.isUserScrolling)
     }
+
+    func testTapAtInteractiveLevelReportsIndex() {
+        let (view, _) = self.makeView(count: 1000)
+        guard let frame = view.frameForItem(at: 7) else {
+            XCTFail("no frame")
+            return
+        }
+        var tapped: [Int] = []
+        view.onTapItem = { tapped.append($0) }
+        view._testTap(at: CGPoint(x: frame.midX, y: frame.midY))
+        XCTAssertEqual(tapped, [7])
+        view.setContentOffset(2000.0)
+        guard let moved = view.frameForItem(at: 400) else {
+            XCTFail("no frame")
+            return
+        }
+        view._testTap(at: CGPoint(x: moved.midX, y: moved.midY))
+        XCTAssertEqual(tapped, [7, 400])
+        XCTAssertEqual(view.index(at: CGPoint(x: moved.midX, y: moved.midY)), 400)
+    }
+
+    func testTapRefreshesSelection() {
+        let selected = Box()
+        let dataSource = TestDataSource(count: 100)
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return SelectableTestCell()
+        })
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.isItemSelected = { selected.values.contains($0) }
+        view.onTapItem = { selected.values.insert($0) }
+        view.layoutIfNeeded()
+        guard let frame = view.frameForItem(at: 3) else {
+            XCTFail("no frame")
+            return
+        }
+        view._testTap(at: CGPoint(x: frame.midX, y: frame.midY))
+        var result: [Int: Bool] = [:]
+        view.forEachVisibleCell { index, cell in
+            result[index] = (cell as? SelectableTestCell)?.selected
+        }
+        XCTAssertEqual(result[3], true)
+        XCTAssertEqual(result[2], false)
+    }
+
+    func testCameraTakesTwoSlots() {
+        let (view, _) = self.makeView(count: 100)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        let expected = layout.reservedFrame([MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)])
+        XCTAssertEqual(camera.frame, expected)
+        XCTAssertEqual(camera.frame.height, 2.0 * layout.itemSize.height + 1.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 0).minX, layout.itemSize.width + 1.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 0).minY, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 2).minX, layout.itemSize.width + 1.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 2).minY, layout.itemSize.height + 1.0, accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 4).minY, 2.0 * (layout.itemSize.height + 1.0), accuracy: 1e-6)
+        XCTAssertEqual(layout.frame(at: 4).minX, 0.0, accuracy: 1e-6)
+        XCTAssertTrue(camera.superview === view.subviews.first)
+        XCTAssertNil(view.index(at: CGPoint(x: camera.frame.midX, y: camera.frame.midY)))
+    }
+
+    func testNoCameraSlotsAtFifteen() throws {
+        throw XCTSkip("needs setLevel from Task 8")
+    }
+
+    func testCompactDetailAtFifteen() {
+        let dataSource = TestDataSource(count: 100)
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return DetailRecordingCell()
+        })
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.layoutIfNeeded()
+        var details: Set<String> = []
+        view.forEachVisibleCell { _, cell in
+            details.insert("\((cell as! DetailRecordingCell).detail!)")
+        }
+        XCTAssertEqual(details, ["full"])
+        view._testSetLevel(.fifteen)
+        view.layoutIfNeeded()
+        details = []
+        view.forEachVisibleCell { _, cell in
+            details.insert("\((cell as! DetailRecordingCell).detail!)")
+        }
+        XCTAssertEqual(details, ["compact"])
+    }
+
+    func testTopInsetShiftsContent() {
+        let (view, _) = self.makeView(count: 1000)
+        view.geometryInsets = UIEdgeInsets(top: 60.0, left: 0.0, bottom: 0.0, right: 0.0)
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.frameForItem(at: 0)?.minY ?? -1.0, 60.0, accuracy: 1e-6)
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+    }
+
+    func testTopInsetChangeKeepsVisibleContentInPlace() {
+        let (view, _) = self.makeView(count: 1000)
+        view.geometryInsets = UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
+        view.layoutIfNeeded()
+        view.setContentOffset(1000.0)
+        let before = view.frameForItem(at: 30)?.minY ?? 0.0
+        view.geometryInsets = UIEdgeInsets(top: 100.0, left: 0.0, bottom: 0.0, right: 0.0)
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.contentOffset, 1056.0, accuracy: 1e-6)
+        XCTAssertEqual(view.frameForItem(at: 30)?.minY ?? -1.0, before, accuracy: 1e-6)
+        view.geometryInsets = UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.contentOffset, 1000.0, accuracy: 1e-6)
+        XCTAssertEqual(view.frameForItem(at: 30)?.minY ?? -1.0, before, accuracy: 1e-6)
+    }
+}
+
+private final class Box {
+    var values: Set<Int> = []
+}
+
+private final class SelectableTestCell: MediaGridCellLayer {
+    var selected = false
+
+    override func setSelected(_ selected: Bool) {
+        self.selected = selected
+    }
+}
+
+private final class DetailRecordingCell: MediaGridCellLayer {
+    var detail: MediaGridCellDetail?
+
+    override func bind(index: Int, detail: MediaGridCellDetail) {
+        super.bind(index: index, detail: detail)
+        self.detail = detail
+    }
 }

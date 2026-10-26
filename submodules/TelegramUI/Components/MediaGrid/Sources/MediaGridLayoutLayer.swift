@@ -10,6 +10,7 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var pixelSize: CGSize = .zero
     private(set) var detail: MediaGridCellDetail = .full
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
+    var isItemSelected: ((Int) -> Bool)?
     private var visibleRange: Range<Int> = 0 ..< 0
 
     init(dataSource: MediaGridDataSource, pool: MediaGridCellPool) {
@@ -52,6 +53,15 @@ final class MediaGridLayoutLayer: CALayer {
         }
     }
 
+    func refreshSelection() {
+        guard self.detail == .full else {
+            return
+        }
+        for (index, cell) in self.visibleCells {
+            cell.setSelected(self.isItemSelected?(index) ?? false)
+        }
+    }
+
     func reloadCells() {
         self.removeAllCells()
     }
@@ -90,6 +100,9 @@ final class MediaGridLayoutLayer: CALayer {
 
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
         cell.bind(index: index, detail: self.detail)
+        if self.detail == .full {
+            cell.setSelected(self.isItemSelected?(index) ?? false)
+        }
         cell.frame = layout.frame(at: index)
         cell.bindingToken += 1
         cell.hasFinalImage = false

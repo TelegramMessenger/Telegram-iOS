@@ -44,6 +44,35 @@ public final class MediaGridView: UIView {
     }
 
     public var onScroll: ((CGFloat) -> Void)?
+    public var onTapItem: ((Int) -> Void)?
+    public var isItemSelected: ((Int) -> Bool)? {
+        didSet {
+            self.activeLayoutLayer.isItemSelected = self.isItemSelected
+        }
+    }
+    public var onSelectionPan: ((Int, Bool) -> Void)?
+
+    public var cameraView: UIView? {
+        didSet {
+            if self.cameraView !== oldValue {
+                oldValue?.removeFromSuperview()
+                if let cameraView = self.cameraView {
+                    self.engine.contentHost.addSubview(cameraView)
+                }
+                self.invalidateGridLayout()
+            }
+        }
+    }
+
+    private let tapRecognizer = UITapGestureRecognizer()
+    private let selectionGesture = MediaGridSelectionGesture()
+    private var lastTopInset: CGFloat?
+
+    private static let cameraSlots: Set<MediaGridSlot> = [MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]
+
+    private var reservedSlots: Set<MediaGridSlot> {
+        return self.level.showsCamera && self.cameraView != nil ? MediaGridView.cameraSlots : []
+    }
 
     public init(dataSource: MediaGridDataSource, cellFactory: @escaping () -> MediaGridCellLayer) {
         self.dataSource = dataSource
@@ -58,6 +87,26 @@ public final class MediaGridView: UIView {
         self.clipsToBounds = true
         self.addSubview(self.engine.contentHost)
         self.engine.contentHost.layer.addSublayer(self.activeLayoutLayer)
+        self.tapRecognizer.addTarget(self, action: #selector(self.tapped(_:)))
+        self.addGestureRecognizer(self.tapRecognizer)
+        self.selectionGesture.sideInset = 44.0
+        self.selectionGesture.itemAt = { [weak self] point in
+            guard let self, let index = self.index(at: point) else {
+                return nil
+            }
+            return (index, self.isItemSelected?(index) ?? false)
+        }
+        self.selectionGesture.updateSelection = { [weak self] index, selected in
+            guard let self else {
+                return
+            }
+            self.onSelectionPan?(index, selected)
+            self.updateSelectionForVisibleItems()
+        }
+        self.selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
+            self?.engine.isScrollEnabled = isEnabled
+        }
+        self.addGestureRecognizer(self.selectionGesture)
         self.engine.onScroll = { [weak self] offset in
             self?.scrolled(to: offset)
         }
@@ -153,6 +202,41 @@ public final class MediaGridView: UIView {
         }
     }
 
+    public func index(at point: CGPoint) -> Int? {
+        guard let layout = self.currentLayout else {
+            return nil
+        }
+        let host = self.engine.contentHost
+        return layout.index(at: CGPoint(x: point.x - host.frame.minX, y: point.y - host.frame.minY + self.engine.offset))
+    }
+
+    public func updateSelectionForVisibleItems() {
+        self.activeLayoutLayer.refreshSelection()
+    }
+
+    @objc private func tapped(_ recognizer: UITapGestureRecognizer) {
+        if recognizer.state == .ended {
+            self.handleTap(at: recognizer.location(in: self))
+        }
+    }
+
+    private func handleTap(at point: CGPoint) {
+        guard self.level.isInteractive, let index = self.index(at: point) else {
+            return
+        }
+        self.onTapItem?(index)
+        self.updateSelectionForVisibleItems()
+    }
+
+    func _testSetLevel(_ level: MediaGridLevel) {
+        self.level = level
+        self.invalidateGridLayout()
+    }
+
+    func _testTap(at point: CGPoint) {
+        self.handleTap(at: point)
+    }
+
     public func frameForItem(at index: Int) -> CGRect? {
         guard let layout = self.currentLayout, index >= 0, index < layout.count else {
             return nil
@@ -198,14 +282,30 @@ public final class MediaGridView: UIView {
         let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: insets.top, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
         if self.needsLayoutRebuild || self.currentLayout?.geometry != geometry {
             self.needsLayoutRebuild = false
-            let layout = MediaGridUniformLayout(geometry: geometry, columns: self.level.columns, cellAspect: self.cellAspect, reservedSlots: [], count: self.itemCount)
+            let reservedSlots = self.reservedSlots
+            let layout = MediaGridUniformLayout(geometry: geometry, columns: self.level.columns, cellAspect: self.cellAspect, reservedSlots: reservedSlots, count: self.itemCount)
+            if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
+                self.engine.setOffset(self.engine.offset + (insets.top - lastTopInset))
+            }
+            self.lastTopInset = insets.top
             self.resetPrefetch()
             self.currentLayout = layout
             let pixelSize = CGSize(width: ceil(layout.itemSize.width * geometry.scale), height: ceil(layout.itemSize.height * geometry.scale))
             self.prefetchPixelSize = pixelSize
             self.activeLayoutLayer.setLayout(layout, pixelSize: pixelSize, detail: self.cellDetail)
             self.activeLayoutLayer.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: layout.contentHeight)
+            if let cameraView = self.cameraView {
+                if let frame = layout.reservedFrame(MediaGridView.cameraSlots), !reservedSlots.isEmpty {
+                    cameraView.isHidden = false
+                    cameraView.frame = frame
+                } else {
+                    cameraView.isHidden = true
+                }
+            }
         }
+        let interactive = self.level.isInteractive
+        self.tapRecognizer.isEnabled = interactive
+        self.selectionGesture.isEnabled = interactive
         self.engine.setEdges(min: 0.0, max: self.maxOffset)
         if let pending = self.pendingContentOffset {
             self.pendingContentOffset = nil

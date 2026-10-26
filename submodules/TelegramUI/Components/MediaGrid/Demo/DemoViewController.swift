@@ -11,6 +11,8 @@ final class DemoViewController: UIViewController {
     private let syntheticDataSource = SyntheticDataSource()
     private var photoDataSource: PhotoLibraryDataSource?
     private var gridView: MediaGridView?
+    private var selectedIndices: Set<Int> = []
+    private let bannerView = UILabel()
     private let scrubber = DemoScrubberView()
     private let frameMonitor = FrameMonitor()
     private let hudLabel = UILabel()
@@ -109,8 +111,25 @@ final class DemoViewController: UIViewController {
     private func installGrid(dataSource: MediaGridDataSource) {
         self.gridView?.removeFromSuperview()
         let gridView = MediaGridView(dataSource: dataSource, cellFactory: {
-            return MediaGridCellLayer()
+            return DemoCellLayer()
         })
+        self.selectedIndices = []
+        let camera = UIView()
+        camera.backgroundColor = UIColor(white: 0.35, alpha: 1.0)
+        gridView.cameraView = camera
+        gridView.isItemSelected = { [weak self] index in
+            return self?.selectedIndices.contains(index) ?? false
+        }
+        gridView.onTapItem = { [weak self] index in
+            self?.toggle(index)
+        }
+        gridView.onSelectionPan = { [weak self] index, select in
+            if select {
+                self?.selectedIndices.insert(index)
+            } else {
+                self?.selectedIndices.remove(index)
+            }
+        }
         gridView.onScroll = { [weak self] offset in
             guard let self, let gridView = self.gridView else {
                 return
@@ -122,6 +141,14 @@ final class DemoViewController: UIViewController {
         self.view.insertSubview(gridView, at: 0)
         self.gridView = gridView
         self.view.setNeedsLayout()
+    }
+
+    private func toggle(_ index: Int) {
+        if self.selectedIndices.contains(index) {
+            self.selectedIndices.remove(index)
+        } else {
+            self.selectedIndices.insert(index)
+        }
     }
 
     @objc private func sourceChanged() {
@@ -153,7 +180,14 @@ final class DemoViewController: UIViewController {
             return
         }
         gridView.frame = self.view.bounds
-        gridView.geometryInsets = UIEdgeInsets(top: self.view.safeAreaInsets.top, left: 0.0, bottom: self.view.safeAreaInsets.bottom, right: 0.0)
+        self.bannerView.text = "Banner placeholder"
+        self.bannerView.textAlignment = .center
+        self.bannerView.backgroundColor = UIColor.systemYellow.withAlphaComponent(0.8)
+        if self.bannerView.superview == nil {
+            self.view.insertSubview(self.bannerView, aboveSubview: gridView)
+        }
+        self.bannerView.frame = CGRect(x: 0.0, y: self.view.safeAreaInsets.top, width: self.view.bounds.width, height: 44.0)
+        gridView.geometryInsets = UIEdgeInsets(top: self.view.safeAreaInsets.top + 44.0, left: 0.0, bottom: self.view.safeAreaInsets.bottom, right: 0.0)
         let insets = self.view.safeAreaInsets
         self.scrubber.frame = CGRect(x: self.view.bounds.width - 220.0, y: insets.top, width: 220.0, height: self.view.bounds.height - insets.top - insets.bottom)
         self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 32.0)
