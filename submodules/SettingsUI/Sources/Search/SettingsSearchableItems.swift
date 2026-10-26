@@ -30,6 +30,7 @@ import QuickReactionSetupController
 import AvatarEditorScreen
 import PeerSelectionScreen
 import DeviceModel
+import DebugSettingsUI
 
 enum SettingsSearchableItemIcon {
     case profile
@@ -97,6 +98,28 @@ public struct SettingsSearchableItem {
     func withUpdatedTitle(_ title: String) -> SettingsSearchableItem {
         return SettingsSearchableItem(id: self.id, title: title, alternate: self.alternate, icon: self.icon, breadcrumbs: self.breadcrumbs, isVisible: self.isVisible,  present: self.present)
     }
+}
+
+private func presentPasscodeSettingsFromSearch(context: AccountContext, focusOnItemTag: PasscodeOptionsEntryTag? = nil, present: @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) {
+    weak var accessController: ViewController?
+    let _ = passcodeOptionsAccessController(context: context, replaceController: { controller in
+        guard let navigation = accessController?.navigationController as? NavigationController else { return }
+        accessController = controller
+        navigation.replaceTopController(controller, animated: true)
+    }, authorizationCompleted: { result in
+        guard case let .success(session) = result else { return }
+        let controller = passcodeOptionsController(context: context, focusOnItemTag: focusOnItemTag, settingsSession: session)
+        if let navigation = accessController?.navigationController as? NavigationController {
+            navigation.replaceTopController(controller, animated: true)
+        } else {
+            present(.push, controller)
+        }
+    }).start(next: { controller in
+        if let controller {
+            accessController = controller
+            present(.push, controller)
+        }
+    })
 }
 
 private func synonyms(_ string: String?) -> [String] {
@@ -574,20 +597,7 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
             completion: nil
         )
     }
-    
-    items.append(
-        SettingsSearchableItem(
-            id: "premium/doubled-limits",
-            title: strings.Premium_DoubledLimits,
-            alternate: synonyms(strings.SettingsSearch_Synonyms_Premium_DoubledLimits),
-            icon: icon,
-            breadcrumbs: [strings.Settings_Premium],
-            present: { _, _, present in
-                presentDemo(.doubleLimits, present)
-            }
-        )
-    )
-    
+        
     items.append(
         SettingsSearchableItem(
             id: "premium/unlimited-cloud-storage",
@@ -845,7 +855,7 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
                                     let resultController = UndoOverlayController(
                                         presentationData: presentationData,
                                         content: .universal(
-                                            animation: "StarsSend",
+                                            animation: "star_reaction_appear",
                                             scale: 0.066,
                                             colors: [:],
                                             title: nil,
@@ -2816,16 +2826,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             icon: icon,
             breadcrumbs: [strings.Settings_PrivacySettings],
             present: { context, _, present in
-                let _ = passcodeOptionsAccessController(context: context, pushController: { c in
-                    present(.push, c)
-                }, completion: { animated in
-                    let controller = passcodeOptionsController(context: context)
-                    present(.push, controller)
-                }).start(next: { controller in
-                    if let controller {
-                        present(.push, controller)
-                    }
-                })
+                presentPasscodeSettingsFromSearch(context: context, present: present)
             }
         )
     )
@@ -2836,16 +2837,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, passcodeTitle],
             isVisible: false,
             present: { context, _, present in
-                let _ = passcodeOptionsAccessController(context: context, pushController: { c in
-                    present(.push, c)
-                }, completion: { animated in
-                    let controller = passcodeOptionsController(context: context, focusOnItemTag: .togglePasscode)
-                    present(.push, controller)
-                }).start(next: { controller in
-                    if let controller {
-                        present(.push, controller)
-                    }
-                })
+                presentPasscodeSettingsFromSearch(context: context, focusOnItemTag: .togglePasscode, present: present)
             }
         )
     )
@@ -2856,16 +2848,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, passcodeTitle],
             isVisible: false,
             present: { context, _, present in
-                let _ = passcodeOptionsAccessController(context: context, pushController: { c in
-                    present(.push, c)
-                }, completion: { animated in
-                    let controller = passcodeOptionsController(context: context, focusOnItemTag: .changePasscode)
-                    present(.push, controller)
-                }).start(next: { controller in
-                    if let controller {
-                        present(.push, controller)
-                    }
-                })
+                presentPasscodeSettingsFromSearch(context: context, focusOnItemTag: .changePasscode, present: present)
             }
         )
     )
@@ -2876,16 +2859,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, passcodeTitle],
             isVisible: false,
             present: { context, _, present in
-                let _ = passcodeOptionsAccessController(context: context, pushController: { c in
-                    present(.push, c)
-                }, completion: { animated in
-                    let controller = passcodeOptionsController(context: context, focusOnItemTag: .autolock)
-                    present(.push, controller)
-                }).start(next: { controller in
-                    if let controller {
-                        present(.push, controller)
-                    }
-                })
+                presentPasscodeSettingsFromSearch(context: context, focusOnItemTag: .autolock, present: present)
             }
         )
     )
@@ -2896,16 +2870,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, passcodeTitle],
             isVisible: false,
             present: { context, _, present in
-                let _ = passcodeOptionsAccessController(context: context, pushController: { c in
-                    present(.push, c)
-                }, completion: { animated in
-                    let controller = passcodeOptionsController(context: context, focusOnItemTag: .touchId)
-                    present(.push, controller)
-                }).start(next: { controller in
-                    if let controller {
-                        present(.push, controller)
-                    }
-                })
+                presentPasscodeSettingsFromSearch(context: context, focusOnItemTag: .touchId, present: present)
             }
         )
     )
@@ -3022,19 +2987,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             icon: icon,
             breadcrumbs: [strings.Settings_PrivacySettings],
             present: { context, navigationController, present in
-                let settingsPromise: Promise<TwoStepAuthData?>
-                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getTwoStepAuthData() {
-                    settingsPromise = current
-                } else {
-                    settingsPromise = Promise()
-                    settingsPromise.set(
-                        context.engine.auth.twoStepAuthData()
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
-                            return .single(nil)
-                        }
-                    )
-                }
+                let settingsPromise = context.twoStepAuthData
                 
                 let _ = (settingsPromise.get()
                 |> take(1)
@@ -4424,6 +4377,16 @@ func settingsSearchableItems(
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
+
+        allItems.append(SettingsSearchableItem(
+            id: "debug/crash_reports",
+            title: "Crash Logs",
+            icon: .support,
+            breadcrumbs: ["Debug Settings"],
+            present: { context, _, present in
+                present(.push, crashReportsController(sharedContext: context.sharedContext, context: context))
+            }
+        ))
         
         let profileItems = profileSearchableItems(context: context, canAddAccount: canAddAccount)
         allItems.append(contentsOf: profileItems)

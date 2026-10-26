@@ -271,6 +271,15 @@
     return parentView;
 }
 
+- (CGRect)_inputPanelContainerFrameForFrame:(CGRect)frame edgeInsets:(UIEdgeInsets)edgeInsets
+{
+    CGFloat originY = 0.0f;
+    if (UIInterfaceOrientationIsLandscape(_interfaceOrientation) && !TGIsPad())
+        originY = edgeInsets.top + frame.size.height;
+
+    return CGRectMake(edgeInsets.left, originY, frame.size.width, frame.size.height);
+}
+
 #pragma mark - Keyboard
 
 - (void)keyboardWillChangeFrame:(NSNotification *)notification
@@ -289,14 +298,18 @@
         keyboardHeight = 0.0f;
     }
     
-    _keyboardHeight = keyboardHeight;
-    if (!UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]) && !TGIsPad())
-        return;
-
     CGRect frame = _currentFrame;
     UIEdgeInsets edgeInsets = _currentEdgeInsets;
     bool usesContainerLayout = [self usesContainerLayout];
-    CGRect containerFrame = CGRectMake(edgeInsets.left, 0.0, frame.size.width, frame.size.height);
+    CGRect containerFrame = [self _inputPanelContainerFrameForFrame:frame edgeInsets:edgeInsets];
+
+    _keyboardHeight = keyboardHeight;
+    if (!UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]) && !TGIsPad()) {
+        if (usesContainerLayout)
+            _inputPanelView.frame = containerFrame;
+        return;
+    }
+
     _inputPanelView.frame = containerFrame;
     CGFloat panelHeight = [self updateInputPanelLayoutForFrame:frame edgeInsets:edgeInsets keyboardHeight:keyboardHeight animated:usesContainerLayout];
     CGFloat effectiveKeyboardHeight = [self currentEffectiveKeyboardHeight];
@@ -345,7 +358,7 @@
     _currentEdgeInsets = edgeInsets;
 
     bool usesContainerLayout = [self usesContainerLayout];
-    CGRect containerFrame = CGRectMake(edgeInsets.left, 0.0, frame.size.width, frame.size.height);
+    CGRect containerFrame = [self _inputPanelContainerFrameForFrame:frame edgeInsets:edgeInsets];
     CGFloat panelHeight = [self updateInputPanelLayoutForFrame:frame edgeInsets:edgeInsets keyboardHeight:_keyboardHeight animated:animated];
     CGFloat effectiveKeyboardHeight = [self currentEffectiveKeyboardHeight];
     CGFloat fadeAlpha = effectiveKeyboardHeight < FLT_EPSILON ? 0.0 : 1.0;

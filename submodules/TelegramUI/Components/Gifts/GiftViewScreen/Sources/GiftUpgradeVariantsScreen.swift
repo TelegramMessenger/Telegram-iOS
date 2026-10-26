@@ -148,6 +148,9 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
         private var isUpdating: Bool = false
         private var environment: ViewControllerComponentContainer.Environment?
         private var itemLayout: ItemLayout?
+        /// The container's bottom corners where the screen's differ (iPhone Duo's cover screen); nil elsewhere.
+        private var containerBottomCornerRadii: CornerRadii?
+        private var playbackButtonIslandLayout: (frame: CGRect, inset: CGFloat, islandHeight: CGFloat)?
                 
         override init(frame: CGRect) {
             self.dimView = UIView()
@@ -256,6 +259,11 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             transition.setTransform(layer: self.backgroundLayer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
             
             transition.setPosition(view: self.navigationBarContainer, position: CGPoint(x: 0.0, y: topOffset + itemLayout.containerInset))
+            if let playbackButtonView = self.playbackButton.view, let islandLayout = self.playbackButtonIslandLayout {
+                // Slides clear of the status island as the sheet's top rises beside it.
+                let shift = statusIslandTrailingShift(rowMinY: topOffset + itemLayout.containerInset + islandLayout.frame.minY, rowHeight: islandLayout.frame.height, islandHeight: islandLayout.islandHeight, inset: islandLayout.inset)
+                transition.setPosition(view: playbackButtonView, position: CGPoint(x: islandLayout.frame.midX - shift, y: islandLayout.frame.midY))
+            }
             
             var topOffsetFraction = self.scrollView.bounds.minY / 100.0
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
@@ -274,7 +282,9 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             containerTransform = CATransform3DTranslate(containerTransform, 0.0, scaledTranslation, 0.0)
             containerTransform = CATransform3DScale(containerTransform, scale, scale, scale)
             transition.setTransform(view: self.containerView, transform: containerTransform)
-            transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            if !self.containerView.layer.applyCornerRadiiIfNeeded(self.containerBottomCornerRadii) {
+                transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            }
             
             self.updateItems(transition: transition)
         }
@@ -299,8 +309,34 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
         }
         
+        private var previewModels: [StarGift.UniqueGift.Attribute] {
+            return self.displayCraftableModels ? self.previewCraftableModels : self.previewPrimaryModels
+        }
+        
+        private var previewModel: StarGift.UniqueGift.Attribute? {
+            let previewModels = self.previewModels
+            guard !previewModels.isEmpty else {
+                return nil
+            }
+            return previewModels[self.previewModelIndex % previewModels.count]
+        }
+        
+        private var previewBackdrop: StarGift.UniqueGift.Attribute? {
+            guard !self.previewBackdrops.isEmpty else {
+                return nil
+            }
+            return self.previewBackdrops[self.previewBackdropIndex % self.previewBackdrops.count]
+        }
+        
+        private var previewSymbol: StarGift.UniqueGift.Attribute? {
+            guard !self.previewSymbols.isEmpty else {
+                return nil
+            }
+            return self.previewSymbols[self.previewSymbolIndex % self.previewSymbols.count]
+        }
+        
         private func previewTimerTick() {
-            let previewModels = self.displayCraftableModels ? self.previewCraftableModels : self.previewPrimaryModels
+            let previewModels = self.previewModels
             guard !previewModels.isEmpty else { return }
             self.previewModelIndex = (self.previewModelIndex + 1) % previewModels.count
             
@@ -357,9 +393,8 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     effectiveGifts.append([model])
                 }
             case .backdrops:
-                let previewModels = self.displayCraftableModels ? self.previewCraftableModels : previewPrimaryModels
-                let selectedModel = self.selectedModel ?? previewModels[self.previewModelIndex]
-                let selectedSymbol = self.selectedSymbol ?? self.previewSymbols[self.previewSymbolIndex]
+                let selectedModel = self.selectedModel ?? self.previewModel
+                let selectedSymbol = self.selectedSymbol ?? self.previewSymbol
                 let backdrops = Array(attributes.filter({ attribute in
                     if case .backdrop = attribute {
                         return true
@@ -368,14 +403,10 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     }
                 }))
                 for backdrop in backdrops {
-                    effectiveGifts.append([
-                        selectedModel,
-                        backdrop,
-                        selectedSymbol
-                    ])
+                    effectiveGifts.append([selectedModel, backdrop, selectedSymbol].compactMap { $0 })
                 }
             case .symbols:
-                let selectedBackdrop = self.selectedBackdrop ?? self.previewBackdrops[self.previewBackdropIndex]
+                let selectedBackdrop = self.selectedBackdrop ?? self.previewBackdrop
                 let symbols = Array(attributes.filter({ attribute in
                     if case .pattern = attribute {
                         return true
@@ -384,10 +415,7 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     }
                 }))
                 for symbol in symbols {
-                    effectiveGifts.append([
-                        selectedBackdrop,
-                        symbol
-                    ])
+                    effectiveGifts.append([selectedBackdrop, symbol].compactMap { $0 })
                 }
             }
             self.effectiveGifts = effectiveGifts
@@ -400,11 +428,16 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
         
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
             
+            // Narrowed by the side safe insets only where there is one on each side. Beside iPhone Duo's side strip
+            // (one side only) the screen-centered sheet keeps its width: in landscape it already sits clear of the
+            // strip, and in folded portrait it spans the strip as a bottom panel. Subtracting the left inset twice
+            // made it 168pt narrower in landscape-right than in landscape-left.
+            let fillingSideInset: CGFloat = environment.safeInsets.left == environment.safeInsets.right ? environment.safeInsets.left : 0.0
             let fillingSize: CGFloat
             if case .regular = environment.metrics.widthClass {
-                fillingSize = min(itemLayout.containerSize.width, 414.0) - environment.safeInsets.left * 2.0
+                fillingSize = min(itemLayout.containerSize.width, 414.0) - fillingSideInset * 2.0
             } else {
-                fillingSize = min(itemLayout.containerSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                fillingSize = min(itemLayout.containerSize.width, itemLayout.containerSize.height) - fillingSideInset * 2.0
             }
             
             let rawSideInset: CGFloat = floor((itemLayout.containerSize.width - fillingSize) * 0.5)
@@ -609,11 +642,16 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
+            // Narrowed by the side safe insets only where there is one on each side. Beside iPhone Duo's side strip
+            // (one side only) the screen-centered sheet keeps its width: in landscape it already sits clear of the
+            // strip, and in folded portrait it spans the strip as a bottom panel. Subtracting the left inset twice
+            // made it 168pt narrower in landscape-right than in landscape-left.
+            let fillingSideInset: CGFloat = environment.safeInsets.left == environment.safeInsets.right ? environment.safeInsets.left : 0.0
             let fillingSize: CGFloat
             if case .regular = environment.metrics.widthClass {
-                fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, 414.0) - fillingSideInset * 2.0
             } else {
-                fillingSize = min(availableSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, availableSize.height) - fillingSideInset * 2.0
             }
             let rawSideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5)
             let sideInset: CGFloat = rawSideInset + 16.0
@@ -740,21 +778,24 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             var badgeColor: UIColor = .white.withAlphaComponent(0.4)
             
             var attributes: [StarGift.UniqueGift.Attribute] = []
-            let previewModels = self.displayCraftableModels ? self.previewCraftableModels : self.previewPrimaryModels
-            if !previewModels.isEmpty {
+            if let previewModel = self.previewModel {
                 if self.isPlaying {
-                    attributes.append(previewModels[self.previewModelIndex])
-                    attributes.append(self.previewBackdrops[self.previewBackdropIndex])
-                    attributes.append(self.previewSymbols[self.previewSymbolIndex])
+                    attributes.append(previewModel)
+                    if let previewBackdrop = self.previewBackdrop {
+                        attributes.append(previewBackdrop)
+                    }
+                    if let previewSymbol = self.previewSymbol {
+                        attributes.append(previewSymbol)
+                    }
                 } else {
                     if self.selectedModel == nil {
-                        self.selectedModel = previewModels[self.previewModelIndex]
+                        self.selectedModel = previewModel
                     }
                     if self.selectedBackdrop == nil {
-                        self.selectedBackdrop = self.previewBackdrops[self.previewBackdropIndex]
+                        self.selectedBackdrop = self.previewBackdrop
                     }
                     if self.selectedSymbol == nil {
-                        self.selectedSymbol = self.previewSymbols[self.previewSymbolIndex]
+                        self.selectedSymbol = self.previewSymbol
                     }
                     if let model = self.selectedModel {
                         attributes.append(model)
@@ -1031,6 +1072,7 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     tapAction: { [weak self] attributes, _ in
                         if let self, let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                             self.displayCraftableModels = !self.displayCraftableModels
+                            self.previewModelIndex = 0
                             self.isPlaying = false
                             
                             self.updateEffectiveGifts(attributes: component.attributes)
@@ -1149,7 +1191,16 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 160.0, height: 40.0)
             )
-            let playbackButtonFrame = CGRect(origin: CGPoint(x: fillingSize - 16.0 - playbackButtonSize.width, y: 16.0), size: playbackButtonSize)
+            // Clear of the side strip's status corner when the sheet spans it (iPhone Duo, folded portrait); on the
+            // unfolded screen in portrait `updateScrolling` moves it clear of the status island while the sheet's
+            // top is beside it, rather than by the island's full width wherever the sheet is.
+            let playbackButtonFrame = CGRect(origin: CGPoint(x: fillingSize - 16.0 - max(0.0, environment.safeInsets.right - rawSideInset) - playbackButtonSize.width, y: 16.0), size: playbackButtonSize)
+            if environment.navigationBarTrailingButtonsInset > 0.0, let island = environment.reservedCorners.topRight {
+                let islandInset = max(0.0, environment.safeInsets.right + environment.navigationBarTrailingButtonsInset - rawSideInset) - max(0.0, environment.safeInsets.right - rawSideInset)
+                self.playbackButtonIslandLayout = (playbackButtonFrame, islandInset, island.height)
+            } else {
+                self.playbackButtonIslandLayout = nil
+            }
             if let playbackButtonView = self.playbackButton.view {
                 if playbackButtonView.superview == nil {
                     self.playbackGlassContainerView.contentView.addSubview(playbackButtonView)
@@ -1173,6 +1224,11 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
             
             self.scrollContentClippingView.layer.cornerRadius = 38.0
             
+            // iPhone Duo's cover screen: the container's bottom corners, which reach the screen's, follow each screen
+            // corner (8pt on the hinge side, 59pt outside) instead of one radius. Nil where the corners are uniform.
+            self.containerBottomCornerRadii = environment.screenCornerRadii.sheetBottomCornerRadii(inset: 0.0).map { CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: $0.left, bottomRight: $0.right) }
+            // The scroll content's clip keeps its bottom corners within the container's.
+            let _ = self.scrollContentClippingView.layer.applyCornerRadiiIfNeeded(self.containerBottomCornerRadii.map { CornerRadii(topLeft: 38.0, topRight: 38.0, bottomLeft: min(38.0, $0.bottomLeft), bottomRight: min(38.0, $0.bottomRight)) })
             self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, containerCornerRadius: environment.deviceMetrics.screenCornerRadius, bottomInset: environment.safeInsets.bottom, topInset: topInset)
             
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: contentHeight)))
@@ -1208,11 +1264,14 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }

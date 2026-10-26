@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -15,7 +16,6 @@ import ComponentDisplayAdapters
 import WallpaperBackgroundNode
 import ReactionSelectionNode
 import EntityKeyboard
-import LottieMetal
 import TelegramAnimatedStickerNode
 import AnimatedStickerNode
 import ChatInputTextNode
@@ -1074,17 +1074,11 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 let standaloneReactionAnimation: AnimatedStickerNode
                                 var effectiveScale: CGFloat = 1.0
                                 #if targetEnvironment(simulator)
-                                standaloneReactionAnimation = DirectAnimatedStickerNode()
+                                standaloneReactionAnimation = DirectAnimatedStickerNode(lottieSettings: component.context.lottieRenderingSettings)
                                 effectiveScale = 1.4
                                 #else
-                                standaloneReactionAnimation = DirectAnimatedStickerNode()
+                                standaloneReactionAnimation = DirectAnimatedStickerNode(lottieSettings: component.context.lottieRenderingSettings)
                                 effectiveScale = 1.4
-                                /*if "".isEmpty {
-                                    standaloneReactionAnimation = DirectAnimatedStickerNode()
-                                    effectiveScale = 1.4
-                                } else {
-                                    standaloneReactionAnimation = LottieMetalAnimatedStickerNode()
-                                }*/
                                 #endif
                                 
                                 standaloneReactionAnimation.isUserInteractionEnabled = false
@@ -1189,7 +1183,10 @@ final class ChatSendMessageContextScreenComponent: Component {
                 case .message, .media:
                     break
                 case .videoMessage:
-                    readyMessageItemFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - messageItemSize.width) * 0.5), y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
+                    // Centred in the band beside iPhone Duo's side strip, where the video message camera puts the
+                    // circle this one animates from; equal insets keep it centred on the full width.
+                    let videoBandInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+                    readyMessageItemFrame = CGRect(origin: CGPoint(x: videoBandInsets.left + floor((availableSize.width - videoBandInsets.left - videoBandInsets.right - messageItemSize.width) * 0.5), y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
                 }
             }
             
@@ -1332,10 +1329,12 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             if let reactionContextNode = self.reactionContextNode {
-                let reactionContextY = environment.statusBarHeight
+                let reactionContextY = environment.fullStatusBarHeight
                 let size = availableSize
                 var reactionsAnchorRect = messageItemFrame
-                if let mediaPreview {
+                if !isMessageVisible {
+                    reactionsAnchorRect.origin.y = actionsStackFrame.minY
+                } else if let mediaPreview {
                     switch mediaPreview.layoutType {
                     case .message, .media:
                         reactionsAnchorRect.size.width += 100.0
@@ -1357,7 +1356,10 @@ final class ChatSendMessageContextScreenComponent: Component {
                     }
                 }
                 transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: reactionContextY), size: CGSize(width: availableSize.width, height: availableSize.height - reactionContextY)))
-                reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: false, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
+                // Beside iPhone Duo's side strip (the side insets differ) the effects panel keeps clear of the strip and
+                // its status corner, as the context menu's reactions do; equal insets keep the old full-width clamp.
+                let reactionsSideInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+                reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(top: 0.0, left: reactionsSideInsets.left, bottom: 0.0, right: reactionsSideInsets.right), anchorRect: reactionsAnchorRect, centerAligned: false, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 reactionContextNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: transition.containedViewLayoutTransition)
                 if self.presentationAnimationState.key == .animatedIn && previousAnimationState.key == .initial {
                     reactionContextNode.animateIn(from: reactionsAnchorRect)

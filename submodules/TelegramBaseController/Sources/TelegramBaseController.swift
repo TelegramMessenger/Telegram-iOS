@@ -96,14 +96,13 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     private var suspendNavigationBarLayout: Bool = false
     private var suspendedNavigationBarLayout: ContainerViewLayout?
     private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
-    private var additionalNavigationBarCutout: CGSize?
 
     override open func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {
             self.suspendedNavigationBarLayout = layout
             return
         }
-        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: self.additionalNavigationBarCutout, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -174,7 +173,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         self.suspendNavigationBarLayout = false
         if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
-            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: self.additionalNavigationBarCutout, transition: transition)
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
         }
         
         self.accessoryPanelContainerHeight = additionalHeight
@@ -194,7 +193,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         
         self.view.endEditing(true)
         
-        self.context.joinGroupCall(peerId: peerId, invite: invite, requestJoinAsPeerId: { completion in
+        self.context.joinGroupCall(peerId: peerId, invite: invite, requestJoinAsPeerId: { [weak self] completion in
             let currentAccountPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
             |> mapToSignal { peer -> Signal<EnginePeer, NoError> in
                 if let peer {

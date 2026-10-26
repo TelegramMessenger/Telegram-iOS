@@ -11,7 +11,10 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         self.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         self.modernHighlight = false;
         self.exclusiveTouch = true;
         self.backgroundColor = [TGCameraInterfaceAssets buttonColor];
@@ -119,7 +122,10 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         self.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         self.modernHighlight = false;
         self.exclusiveTouch = true;
         self.backgroundColor = [TGCameraInterfaceAssets buttonColor];

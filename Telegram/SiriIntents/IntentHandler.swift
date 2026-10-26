@@ -1,4 +1,5 @@
 import Foundation
+import PasscodeCore
 import Intents
 import TelegramCore
 import Postbox
@@ -11,7 +12,38 @@ import UIKit
 import GeneratedSources
 import WidgetItems
 
+/// The account the extension opened for an earlier request. The process outlives a single
+/// request, and opening an account costs time Siri does not give us, so it is kept - but only
+/// while it is still the account the app has current (see `usableAccountRecordId`). Read and
+/// written on the main queue only.
 private var accountCache: Account?
+
+/// The account record the extension may answer from: the app's current record, unless that
+/// record has been logged out. Logging out marks the record before the app moves its
+/// selection, so a request in that window, or a cached account opened for that record, must
+/// not read or send with the revoked session; `currentAccount` yields nothing for such a
+/// record, and the cache must agree.
+func usableAccountRecordId(_ record: AccountRecord<TelegramAccountManagerTypes.Attribute>?) -> AccountRecordId? {
+    guard let record else {
+        return nil
+    }
+    for attribute in record.attributes {
+        if case .loggedOut = attribute {
+            return nil
+        }
+    }
+    return record.id
+}
+
+/// The first value of `signal`, or nil if it completes without one. The account signal does
+/// exactly that for a logged-out or upgrading record, and every handler waits for its first
+/// value; without this that wait never ended and the intent's completion never ran.
+func firstValueOrNil<T>(_ signal: Signal<T?, NoError>) -> Signal<T?, NoError> {
+    return (signal |> take(1) |> map { Optional<T?>.some($0) })
+    |> then(.single(nil))
+    |> take(1)
+    |> map { $0 ?? nil }
+}
 
 private var installedSharedLogger = false
 
@@ -52,6 +84,21 @@ enum IntentHandlingError {
     case generic
 }
 
+/// Runs a signal that produces no values and reports `value` once it completes.
+/// A `Signal<Never, _>` cannot be chained into a differently typed one: `then` needs a
+/// matching value type, and `map`/`mapToSignal` bodies would be unreachable, which this
+/// project builds as an error.
+private func completing<T, E>(_ signal: Signal<Never, E>, with value: T) -> Signal<T, E> {
+    return Signal { subscriber in
+        return signal.start(error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putNext(value)
+            subscriber.putCompletion()
+        })
+    }
+}
+
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 @objc(IntentHandler)
 class IntentHandler: INExtension {
@@ -71,7 +118,7 @@ class IntentHandler: INExtension {
 }
 
 @objc(IntentHandler)
-class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartCallIntentHandling, INSearchCallHistoryIntentHandling {
+class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartCallIntentHandling {
     private let accountPromise = Promise<Account?>()
     private let allAccounts = Promise<[(AccountRecordId, PeerId, Bool)]>()
     
@@ -99,6 +146,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let languagesCategory = "ios"
         
         let appGroupName = "group.\(baseAppBundleId)"
+        try! PasscodeEnvironment.shared.configure(PasscodeConfiguration(appGroupIdentifier: appGroupName, processRole: .appExtension))
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
@@ -122,15 +170,19 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
+        let accountManager: AccountManager<TelegramAccountManagerTypes> = setupAccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         self.encryptionParameters = encryptionParameters
         
-        self.allAccounts.set(accountManager.accountRecords()
+        // One read of the account records serves both the account list and the choice of the
+        // account to answer from.
+        let accountRecords = accountManager.accountRecords()
         |> take(1)
+        
+        self.allAccounts.set(accountRecords
         |> map { view -> [(AccountRecordId, PeerId, Bool)] in
             var result: [(AccountRecordId, Int, PeerId, Bool)] = []
             for record in view.records {
@@ -169,11 +221,26 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
         })
         
-        let account: Signal<Account?, NoError>
-        if let accountCache = accountCache {
-            account = .single(accountCache)
-        } else {
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, tokenType: nil, tokenEnvironment: nil, signatureDict: nil)), externalRequestVerificationStream: .never(), externalRecaptchaRequestVerification: { _, _ in return .never() }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
+        let account: Signal<Account?, NoError> = accountRecords
+        |> map { view in
+            return usableAccountRecordId(view.currentRecord)
+        }
+        |> deliverOnMainQueue
+        |> mapToSignal { currentRecordId -> Signal<Account?, NoError> in
+            if let accountCache, accountCache.id == currentRecordId {
+                return .single(accountCache)
+            }
+            if let previous = accountCache {
+                // The app switched accounts (or logged this one out): the account opened for
+                // the previous record must not stay connected from the extension while the
+                // new one is opened beside it.
+                previous.shouldBeServiceTaskMaster.set(.single(.never))
+                accountCache = nil
+            }
+            guard currentRecordId != nil else {
+                return .single(nil)
+            }
+            return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, tokenType: nil, tokenEnvironment: nil, signatureDict: nil)), externalRequestVerificationStream: .never(), externalRecaptchaRequestVerification: { _, _ in return .never() }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
@@ -199,7 +266,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
             |> take(1)
         }
-        self.accountPromise.set(account)
+        self.accountPromise.set(firstValueOrNil(account))
     }
     
     deinit {
@@ -213,6 +280,10 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         case disambiguation([INPerson])
         case needsValue
         case noResult
+        /// A peer that exists but may not be messaged (see `peerAcceptsSiriMessages`).
+        case refused
+        /// No account is logged in.
+        case noAccount
         case skip
         
         @available(iOSApplicationExtension 11.0, iOS 11.0, *)
@@ -226,6 +297,10 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                     return .needsValue()
                 case .noResult:
                     return .unsupported()
+                case .refused:
+                    return .unsupported(forReason: .messagingServiceNotEnabledForRecipient)
+                case .noAccount:
+                    return .unsupported(forReason: .noAccount)
                 case .skip:
                     return .notRequired()
             }
@@ -239,7 +314,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 return .disambiguation(with: persons)
             case .needsValue:
                 return .needsValue()
-            case .noResult:
+            case .noResult, .refused, .noAccount:
                 return .unsupported()
             case .skip:
                 return .notRequired()
@@ -254,7 +329,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 return .disambiguation(with: persons)
             case .needsValue:
                 return .needsValue()
-            case .noResult:
+            case .noResult, .refused, .noAccount:
                 return .unsupported()
             case .skip:
                 return .notRequired()
@@ -308,7 +383,35 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         }
         
         if allPersonsAlreadyMatched && filteredPersons.count == 1 {
-            completion([.success(filteredPersons[0])])
+            // A person this extension handed Siri earlier - typically the sender of a message
+            // it just read. That sender may be a channel, which is not a recipient: decide by
+            // the peer, never by the identifier alone.
+            guard let peerId = siriSendMessageTarget(conversationIdentifier: nil, recipientCustomIdentifier: filteredPersons[0].customIdentifier) else {
+                completion([.noResult])
+                return
+            }
+            self.resolvePersonsDisposable.set((account
+            |> take(1)
+            |> mapToSignal { account -> Signal<SiriRecipientDecision?, NoError> in
+                guard let account else {
+                    return .single(nil)
+                }
+                return account.postbox.transaction { transaction -> SiriRecipientDecision? in
+                    return siriRecipientDecision(transaction: transaction, accountPeerId: account.peerId, peerId: peerId)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { decision in
+                switch decision {
+                case .none:
+                    completion([.noAccount])
+                case .unknown:
+                    completion([.noResult])
+                case .refused:
+                    completion([.refused])
+                case let .person(person):
+                    completion([.success(person)])
+                }
+            }))
             return
         }
         
@@ -383,15 +486,23 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             
             let signal = account
             |> castError(IntentHandlingError.self)
-            |> mapToSignal { account -> Signal<INPerson?, IntentHandlingError> in
+            |> mapToSignal { account -> Signal<INSendMessageRecipientResolutionResult, IntentHandlingError> in
                 if let account = account {
-                    return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
+                    // The conversation is the chat whose message Siri read: a user, or a group
+                    // when the message was a group message. A group is "recipient" enough for
+                    // Siri; the send handler routes by the conversation anyway.
+                    return account.postbox.transaction { transaction -> SiriRecipientDecision in
+                        return siriRecipientDecision(transaction: transaction, accountPeerId: account.peerId, peerId: PeerId(peerId))
+                    }
                     |> castError(IntentHandlingError.self)
-                    |> map { user -> INPerson? in
-                        if let user = user {
-                            return personWithUser(stableId: "tg\(peerId)", user: user)
-                        } else {
-                            return nil
+                    |> map { decision -> INSendMessageRecipientResolutionResult in
+                        switch decision {
+                        case .unknown:
+                            return .needsValue()
+                        case .refused:
+                            return .unsupported(forReason: .messagingServiceNotEnabledForRecipient)
+                        case let .person(person):
+                            return .success(with: person)
                         }
                     }
                 } else {
@@ -400,12 +511,8 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
             
             self.resolvePersonsDisposable.set((signal
-            |> deliverOnMainQueue).start(next: { person in
-                if let person = person {
-                    completion([INSendMessageRecipientResolutionResult.success(with: person)])
-                } else {
-                    completion([INSendMessageRecipientResolutionResult.needsValue()])
-                }
+            |> deliverOnMainQueue).start(next: { result in
+                completion([result])
             }, error: { error in
                 completion([INSendMessageRecipientResolutionResult.unsupported(forReason: .noAccount)])
             }))
@@ -477,26 +584,28 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             guard let account = account else {
                 return .fail(.generic)
             }
-            guard let recipient = intent.recipients?.first, let customIdentifier = recipient.customIdentifier, customIdentifier.hasPrefix("tg") else {
-                return .fail(.generic)
-            }
-            
-            guard let peerIdValue = Int64(String(customIdentifier[customIdentifier.index(customIdentifier.startIndex, offsetBy: 2)...])) else {
-                return .fail(.generic)
-            }
-            
-            let peerId = PeerId(peerIdValue)
-            if peerId.namespace != Namespaces.Peer.CloudUser {
+            guard let peerId = siriSendMessageTarget(conversationIdentifier: intent.conversationIdentifier, recipientCustomIdentifier: intent.recipients?.first?.customIdentifier) else {
                 return .fail(.generic)
             }
             
             account.shouldBeServiceTaskMaster.set(.single(.now))
-            return standaloneSendMessage(account: account, peerId: peerId, text: intent.content ?? "", attributes: [], media: nil, replyToMessageId: nil)
-            |> mapError { _ -> IntentHandlingError in
-                return .generic
+            return account.postbox.transaction { transaction -> Bool in
+                return siriRecipientAccepted(transaction: transaction, accountPeerId: account.peerId, peerId: peerId)
             }
-            |> mapToSignal { _ -> Signal<Void, IntentHandlingError> in
-                return .complete()
+            |> castError(IntentHandlingError.self)
+            |> mapToSignal { accepted -> Signal<Void, IntentHandlingError> in
+                guard accepted else {
+                    return .fail(.generic)
+                }
+                // A refused send fails here (StandaloneSendMessage no longer swallows the
+                // server's answer), and Siri reports the failure instead of "sent".
+                return standaloneSendMessage(account: account, peerId: peerId, text: intent.content ?? "", attributes: [], media: nil, replyToMessageId: nil)
+                |> mapError { _ -> IntentHandlingError in
+                    return .generic
+                }
+                |> mapToSignal { _ -> Signal<Void, IntentHandlingError> in
+                    return .complete()
+                }
             }
             |> afterDisposed {
                 account.shouldBeServiceTaskMaster.set(.single(.never))
@@ -550,11 +659,44 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             |> castError(IntentHandlingError.self)
             |> take(1)
             |> mapToSignal { _ -> Signal<[INMessage], IntentHandlingError> in
+                let scope = messageSearchScope(for: intent)
+                Logger.shared.log("SiriIntents", "INSearchForMessagesIntent notificationIdentifiers: \(intent.notificationIdentifiers ?? []), operator: \(intent.notificationIdentifiersOperator.rawValue), identifiers: \(intent.identifiers ?? []), scope: \(scope)")
+
                 let messages: Signal<[INMessage], NoError>
-                if let identifiers = intent.identifiers, !identifiers.isEmpty {
-                    messages = getMessages(account: account, ids: identifiers.compactMap(MessageId.init(string:)))
-                } else {
-                    messages = unreadMessages(account: account)
+                switch scope {
+                case let .notifications(requestIdentifiers):
+                    // An announce: only what these notifications stand for. A notification
+                    // this build never recorded yields nothing rather than the unread backlog.
+                    // The link is looked up in the current account only, which is also the
+                    // account a Siri reply would be sent from; a notification of another
+                    // logged-in account therefore resolves to nothing here.
+                    messages = account.postbox.transaction { transaction -> [MessageId] in
+                        return requestIdentifiers.compactMap { requestIdentifier in
+                            return _internal_getNotificationRequestMessageId(transaction: transaction, requestIdentifier: requestIdentifier)
+                        }
+                    }
+                    |> mapToSignal { ids -> Signal<[INMessage], NoError> in
+                        Logger.shared.log("SiriIntents", "INSearchForMessagesIntent resolved \(ids.count) of \(requestIdentifiers.count) notification identifiers: \(ids)")
+                        return getMessages(account: account, ids: ids)
+                    }
+                case let .messages(ids):
+                    messages = getMessages(account: account, ids: ids)
+                case let .unread(excludingNotifications):
+                    if excludingNotifications.isEmpty {
+                        messages = unreadMessages(account: account)
+                    } else {
+                        messages = account.postbox.transaction { transaction -> Set<String> in
+                            return Set(excludingNotifications.compactMap { requestIdentifier in
+                                return _internal_getNotificationRequestMessageId(transaction: transaction, requestIdentifier: requestIdentifier)
+                            }.map(intentMessageIdentifier))
+                        }
+                        |> mapToSignal { excludedIdentifiers -> Signal<[INMessage], NoError> in
+                            return unreadMessages(account: account)
+                            |> map { messages -> [INMessage] in
+                                return messages.filter { !excludedIdentifiers.contains($0.identifier) }
+                            }
+                        }
+                    }
                 }
                 return messages
                 |> castError(IntentHandlingError.self)
@@ -604,55 +746,75 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         self.actionDisposable.set((self.accountPromise.get()
         |> castError(IntentHandlingError.self)
         |> take(1)
-        |> mapToSignal { account -> Signal<Void, IntentHandlingError> in
+        |> mapToSignal { account -> Signal<INSetMessageAttributeIntentResponseCode, IntentHandlingError> in
             guard let account = account else {
                 return .fail(.generic)
             }
             
-            var signals: [Signal<Void, IntentHandlingError>] = []
+            // Message identifiers are "<peerId>_<namespace>_<id>" (IntentMessages.swift).
+            // Anything else - an identifier donated by an older build, a truncated payload -
+            // has to be skipped rather than indexed into.
             var maxMessageIdsToApply: [PeerId: MessageId] = [:]
-            if let identifiers = intent.identifiers {
-                for identifier in identifiers {
-                    let components = identifier.components(separatedBy: "_")
-                    if let first = components.first, let peerId = Int64(first), let namespace = Int32(components[1]), let id = Int32(components[2]) {
-                        let peerId = PeerId(peerId)
-                        let messageId = MessageId(peerId: peerId, namespace: namespace, id: id)
-                        if let currentMessageId = maxMessageIdsToApply[peerId] {
-                            if currentMessageId < messageId {
-                                maxMessageIdsToApply[peerId] = messageId
-                            }
-                        } else {
-                            maxMessageIdsToApply[peerId] = messageId
-                        }
-                    }
+            for identifier in intent.identifiers ?? [] {
+                let components = identifier.components(separatedBy: "_")
+                guard components.count == 3, let peerIdValue = Int64(components[0]), let namespace = Int32(components[1]), let id = Int32(components[2]) else {
+                    continue
                 }
+                let peerId = PeerId(peerIdValue)
+                let messageId = MessageId(peerId: peerId, namespace: namespace, id: id)
+                if let currentMessageId = maxMessageIdsToApply[peerId], messageId < currentMessageId {
+                    continue
+                }
+                maxMessageIdsToApply[peerId] = messageId
             }
             
-            for (_, messageId) in maxMessageIdsToApply {
-                signals.append(TelegramEngine(account: account).messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0))
-                |> castError(IntentHandlingError.self))
+            if maxMessageIdsToApply.isEmpty {
+                return .single(.failureMessageNotFound)
             }
             
-            if signals.isEmpty {
-                return .complete()
-            } else {
-                account.shouldBeServiceTaskMaster.set(.single(.now))
-                return combineLatest(signals)
-                |> mapToSignal { _ -> Signal<Void, IntentHandlingError> in
-                    return .complete()
+            // resolveAttribute accepts .read and .unread and folds .flagged into .unread;
+            // acting on the attribute is what tells "mark as read" from "mark as unread".
+            var attribute = intent.attribute
+            if attribute == .flagged {
+                attribute = .unread
+            }
+            
+            let engine = TelegramEngine(account: account)
+            let applied: Signal<Bool, NoError>
+            switch attribute {
+            case .read:
+                applied = combineLatest(maxMessageIdsToApply.values.map { messageId in
+                    return engine.messages.applyMaxReadMessageIdInteractively(messageId: messageId)
+                })
+                |> map { results -> Bool in
+                    return results.contains(true)
                 }
-                |> afterDisposed {
-                    account.shouldBeServiceTaskMaster.set(.single(.never))
-                }
+            case .unread:
+                // Marking unread is idempotent and never refused, so it always applies.
+                applied = completing(engine.messages.togglePeersUnreadMarkInteractively(peerIds: Array(maxMessageIdsToApply.keys), setToValue: true), with: true)
+            default:
+                return .single(.failureMessageAttributeNotSet)
+            }
+            
+            account.shouldBeServiceTaskMaster.set(.single(.now))
+            return applied
+            |> castError(IntentHandlingError.self)
+            |> map { applied -> INSetMessageAttributeIntentResponseCode in
+                // Nothing was applied - every peer refused, which is what a secret chat does
+                // for a read. Saying "success" would tell the user it was marked when it was not.
+                return applied ? .success : .failureMessageAttributeNotSet
+            }
+            |> afterDisposed {
+                account.shouldBeServiceTaskMaster.set(.single(.never))
             }
         }
-        |> deliverOnMainQueue).start(error: { _ in
+        |> deliverOnMainQueue).start(next: { code in
+            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSetMessageAttributeIntent.self))
+            let response = INSetMessageAttributeIntentResponse(code: code, userActivity: userActivity)
+            completion(response)
+        }, error: { _ in
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INSetMessageAttributeIntent.self))
             let response = INSetMessageAttributeIntentResponse(code: .failure, userActivity: userActivity)
-            completion(response)
-        }, completed: {
-            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSetMessageAttributeIntent.self))
-            let response = INSetMessageAttributeIntentResponse(code: .success, userActivity: userActivity)
             completion(response)
         }))
     }
@@ -718,60 +880,6 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         }, error: { _ in
             let userActivity = NSUserActivity(activityType: NSStringFromClass(INStartCallIntent.self))
             let response = INStartCallIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
-            completion(response)
-        }))
-    }
-    
-    // MARK: - INSearchCallHistoryIntentHandling
-    
-    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
-    public func resolveCallTypes(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeOptionsResolutionResult) -> Void) {
-        completion(.success(with: .missed))
-    }
-    
-    /*public func resolveCallType(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeResolutionResult) -> Void) {
-        completion(.success(with: .missed))
-    }*/
-    
-    public func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
-        if let appGroupUrl = self.appGroupUrl {
-            let rootPath = rootPathForBasePath(appGroupUrl.path)
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
-                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
-                let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
-                completion(response)
-                return
-            }
-        }
-        
-        self.actionDisposable.set((self.accountPromise.get()
-        |> take(1)
-        |> castError(IntentHandlingError.self)
-        |> mapToSignal { account -> Signal<[CallRecord], IntentHandlingError> in
-            guard let account = account else {
-                return .fail(.generic)
-            }
-            
-            account.shouldBeServiceTaskMaster.set(.single(.now))
-            return missedCalls(account: account)
-            |> castError(IntentHandlingError.self)
-            |> afterDisposed {
-                account.shouldBeServiceTaskMaster.set(.single(.never))
-            }
-        }
-        |> deliverOnMainQueue).start(next: { calls in
-            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
-            let response: INSearchCallHistoryIntentResponse
-            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                response = INSearchCallHistoryIntentResponse(code: .success, userActivity: userActivity)
-                response.callRecords = calls.map { $0.intentCall }
-            } else {
-                response = INSearchCallHistoryIntentResponse(code: .continueInApp, userActivity: userActivity)
-            }
-            completion(response)
-        }, error: { _ in
-            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
-            let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
             completion(response)
         }))
     }
@@ -1394,4 +1502,63 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
         }
     }
     return items
+}
+
+/// `INSearchCallHistoryIntent` and friends were deprecated in iOS 15 with no replacement, but the
+/// system still dispatches them, so the handler is retained. Keeping the conformance in a deprecated
+/// extension is what lets the deprecated types appear in these signatures without tripping
+/// `-warnings-as-errors`.
+@available(iOS, deprecated: 15.0, message: "INSearchCallHistoryIntent has no replacement; retained while the system still dispatches it.")
+extension DefaultIntentHandler: INSearchCallHistoryIntentHandling {
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func resolveCallTypes(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeOptionsResolutionResult) -> Void) {
+        completion(.success(with: .missed))
+    }
+    
+    /*public func resolveCallType(for intent: INSearchCallHistoryIntent, with completion: @escaping (INCallRecordTypeResolutionResult) -> Void) {
+        completion(.success(with: .missed))
+    }*/
+    
+    public func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
+        if let appGroupUrl = self.appGroupUrl {
+            let rootPath = rootPathForBasePath(appGroupUrl.path)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
+                let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+                completion(response)
+                return
+            }
+        }
+        
+        self.actionDisposable.set((self.accountPromise.get()
+        |> take(1)
+        |> castError(IntentHandlingError.self)
+        |> mapToSignal { account -> Signal<[CallRecord], IntentHandlingError> in
+            guard let account = account else {
+                return .fail(.generic)
+            }
+            
+            account.shouldBeServiceTaskMaster.set(.single(.now))
+            return missedCalls(account: account)
+            |> castError(IntentHandlingError.self)
+            |> afterDisposed {
+                account.shouldBeServiceTaskMaster.set(.single(.never))
+            }
+        }
+        |> deliverOnMainQueue).start(next: { calls in
+            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
+            let response: INSearchCallHistoryIntentResponse
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+                response = INSearchCallHistoryIntentResponse(code: .success, userActivity: userActivity)
+                response.callRecords = calls.map { $0.intentCall }
+            } else {
+                response = INSearchCallHistoryIntentResponse(code: .continueInApp, userActivity: userActivity)
+            }
+            completion(response)
+        }, error: { _ in
+            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
+            let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+            completion(response)
+        }))
+    }
 }

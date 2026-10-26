@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/AsyncDisplayKit",
         "//submodules/Display",
+        "//submodules/TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",

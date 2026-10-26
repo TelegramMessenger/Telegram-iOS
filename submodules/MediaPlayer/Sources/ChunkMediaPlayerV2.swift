@@ -78,13 +78,14 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             let mediaType: AVMediaType
             let codecName: String?
             let offset: Double
+            let ignoreEditList: Bool
             
             private(set) var reader: MediaDataReader?
             
             var didBeginReading: Bool = false
             var isFinished: Bool = false
             
-            init(queue: Queue, content: Content, mediaType: AVMediaType, codecName: String?, offset: Double) {
+            init(queue: Queue, content: Content, mediaType: AVMediaType, codecName: String?, offset: Double, ignoreEditList: Bool = false) {
                 assert(queue.isCurrent())
                 
                 self.queue = queue
@@ -92,6 +93,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 self.mediaType = mediaType
                 self.codecName = codecName
                 self.offset = offset
+                self.ignoreEditList = ignoreEditList
             }
             
             deinit {
@@ -106,9 +108,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                         reader = AVAssetVideoDataReader(filePath: tempFile.file.path, isVideo: self.mediaType == .video)
                     } else {
                         if params.useV2Reader {
-                            reader = FFMpegMediaDataReaderV2(content: .tempFile(tempFile), isVideo: self.mediaType == .video, codecName: self.codecName)
+                            reader = FFMpegMediaDataReaderV2(content: .tempFile(tempFile), isVideo: self.mediaType == .video, codecName: self.codecName, ignoreEditList: self.ignoreEditList)
                         } else {
-                            reader = FFMpegMediaDataReaderV1(filePath: tempFile.file.path, isVideo: self.mediaType == .video, codecName: self.codecName)
+                            reader = FFMpegMediaDataReaderV1(filePath: tempFile.file.path, isVideo: self.mediaType == .video, codecName: self.codecName, ignoreEditList: self.ignoreEditList)
                         }
                     }
                 case let .directStream(directStream):
@@ -152,6 +154,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             self.part = part
         }
     }
+
+    private struct AudioBufferTimingState {
+        var sampleRate: CMTimeScale
+        var anchorPts: CMTime
+        var nextSampleOffset: Int64
+    }
     
     private final class LoadedPartsMediaData {
         var ids: [ChunkMediaPlayerPart.Id] = []
@@ -160,6 +168,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         var directReaderId: Double?
         var notifiedHasSound: Bool = false
         var seekFromMinTimestamp: Double?
+        var audioBufferTimingState: AudioBufferTimingState?
     }
     
     private static let sharedDataQueue = Queue(name: "ChunkMediaPlayerV2-DataQueue")
@@ -181,13 +190,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var loadedPartsMediaData: QueueLocalObject<LoadedPartsMediaData>
     private var hasSound: Bool = false
     
-    private var statusValue: MediaPlayerStatus? {
-        didSet {
-            if let statusValue = self.statusValue, statusValue != oldValue {
-                self.statusPromise.set(statusValue)
-            }
-        }
-    }
+    private var lastEmittedStatus: MediaPlayerStatus?
+    private var lastStatusEmitTimestamp: Double = 0.0
     private let statusPromise = ValuePromise<MediaPlayerStatus>()
     public var status: Signal<MediaPlayerStatus, NoError> {
         return self.statusPromise.get()
@@ -198,6 +202,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     }
 
     public var actionAtEnd: MediaPlayerActionAtEnd = .stop
+
+    // A position this close to the duration counts as the end. HLS needs the slack: its chunks do not
+    // always line up with the declared duration.
+    private static let endTolerance: Double = 0.1
     
     private var didSeekOnce: Bool = false
     private var isPlaying: Bool = false
@@ -205,7 +213,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var isSoundEnabled: Bool
     private var isMuted: Bool
     private var isAmbientMode: Bool
-     
+    private var continuePlayingWithoutSoundOnLostAudioSession: Bool
+
     private var seekId: Int = 0
     private var seekTimestamp: Double = 0.0
     private var pendingSeekTimestamp: Double?
@@ -215,13 +224,19 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var bufferingStartTime: Double?
     
     private var renderSynchronizerRate: Double = 0.0
+    private var renderSynchronizerRateReapplyNotBefore: Double = 0.0
     private var videoIsRequestingMediaData: Bool = false
     private var audioIsRequestingMediaData: Bool = false
-    
+    private var videoRearmNotBefore: Double = 0.0
+    private var audioRearmNotBefore: Double = 0.0
+    private var videoStarvationBackoff: Double = 0.0
+    private var audioStarvationBackoff: Double = 0.0
+
     private let source: ChunkMediaPlayerSourceImpl
     private var didSetSourceSeek: Bool = false
     private var partsStateDisposable: Disposable?
     private var updateTimer: Foundation.Timer?
+    private var updateTimerIsFast: Bool = false
     
     private var audioSessionDisposable: Disposable?
     private var hasAudioSession: Bool = false
@@ -258,8 +273,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         self.isSoundEnabled = enableSound
         self.isMuted = soundMuted
         self.isAmbientMode = ambient
+        self.continuePlayingWithoutSoundOnLostAudioSession = continuePlayingWithoutSoundOnLostAudioSession
         self.baseRate = baseRate
-        
+
         self.renderSynchronizer = AVSampleBufferRenderSynchronizer()
         self.renderSynchronizer.setRate(0.0, time: CMTime(seconds: 0.0, preferredTimescale: 44000))
         
@@ -275,19 +291,15 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             self.source = ChunkMediaPlayerDirectFetchSourceImpl(resource: resource)
         }
         
-        self.updateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true, block: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            self.updateInternalState()
-        })
-        
+        self.updateTimerState()
+
         self.partsStateDisposable = (self.source.partsState
         |> deliverOnMainQueue).startStrict(next: { [weak self] partsState in
             guard let self else {
                 return
             }
             self.partsState = partsState
+            self.resetMediaDataStarvation()
             self.updateInternalState()
         })
         
@@ -320,7 +332,26 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         }
     }
     
+    private func updateTimerState() {
+        let isFast = self.isPlaying || self.pendingSeekTimestamp != nil || !self.didSeekOnce
+        if isFast == self.updateTimerIsFast, self.updateTimer != nil {
+            return
+        }
+        self.updateTimerIsFast = isFast
+        self.updateTimer?.invalidate()
+        self.updateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: isFast ? 1.0 / 60.0 : 1.0 / 5.0, repeats: true, block: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.updateInternalState()
+        })
+    }
+
     private func updateInternalState() {
+        defer {
+            self.updateTimerState()
+        }
+
         if self.isSoundEnabled && self.hasSound {
             if self.audioSessionDisposable == nil {
                 self.audioSessionDisposable = self.audioSessionManager.push(params: ManagedAudioSessionClientParams(
@@ -343,11 +374,26 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                                 subscriber.putCompletion()
                                 return EmptyDisposable
                             }
-                            
+
                             self.hasAudioSession = false
-                            self.updateInternalState()
+                            // Losing the session is the only signal this player gets that the system has
+                            // stopped it (it has no equivalent of the legacy player's audioPaused hook).
+                            // Leaving isPlaying set here is what strands it in "playing" against a rate the
+                            // system has zeroed, with a clock that no longer advances.
+                            // isPlaying is part of the condition because the session is held whenever
+                            // sound is enabled, paused or not, and continuePlayingWithoutSound sets
+                            // isPlaying — without this a lost session would start a paused video.
+                            if self.isSoundEnabled, self.isPlaying {
+                                if self.continuePlayingWithoutSoundOnLostAudioSession {
+                                    self.continuePlayingWithoutSound(seek: .none)
+                                } else {
+                                    self.pause()
+                                }
+                            } else {
+                                self.updateInternalState()
+                            }
                             subscriber.putCompletion()
-                            
+
                             return EmptyDisposable
                         }
                         |> runOn(.mainQueue())
@@ -371,6 +417,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 audioRenderer.isMuted = self.isMuted
                 self.audioRenderer = audioRenderer
                 self.renderSynchronizer.addRenderer(audioRenderer)
+                self.loadedPartsMediaData.with { loadedPartsMediaData in
+                    loadedPartsMediaData.audioBufferTimingState = nil
+                }
+                self.resetMediaDataStarvation()
             }
         } else {
             if let audioRenderer = self.audioRenderer {
@@ -378,6 +428,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 audioRenderer.stopRequestingMediaData()
                 self.audioIsRequestingMediaData = false
                 self.renderSynchronizer.removeRenderer(audioRenderer, at: .invalid)
+                self.loadedPartsMediaData.with { loadedPartsMediaData in
+                    loadedPartsMediaData.audioBufferTimingState = nil
+                }
+                self.resetMediaDataStarvation()
             }
         }
         
@@ -393,8 +447,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         } else {
             timestamp = self.renderSynchronizer.currentTime()
         }
-        let timestampSeconds = timestamp.seconds
-        
+        let rawTimestampSeconds = timestamp.seconds
+        let timestampSeconds = rawTimestampSeconds.isFinite ? rawTimestampSeconds : 0.0
+
         self.source.updatePlaybackState(
             seekTimestamp: self.seekTimestamp,
             position: timestampSeconds,
@@ -405,7 +460,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         if let partsStateDuration = self.partsState.duration {
             duration = partsStateDuration
         }
-        
+        if !duration.isFinite {
+            duration = 0.0
+        }
+
         let isBuffering: Bool
         
         let mediaDataReaderParams = self.mediaDataReaderParams
@@ -524,6 +582,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 loadedPartsMediaData.ids = loadedParts.map(\.part.id)
                 
                 for part in loadedParts {
+                    let ignoreAudioEditList = part.part.content.ignoreAudioEditList
                     if let loadedPart = loadedPartsMediaData.parts[part.part.id] {
                         if let audio = loadedPart.audio, audio.didBeginReading, !isSoundEnabled {
                             let cleanAudio = LoadedPart.Media(
@@ -531,7 +590,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                                 content: .tempFile(part.part.content),
                                 mediaType: .audio,
                                 codecName: part.part.codecName,
-                                offset: part.part.offsetTime
+                                offset: part.part.offsetTime,
+                                ignoreEditList: ignoreAudioEditList
                             )
                             cleanAudio.load(params: mediaDataReaderParams)
                             
@@ -555,7 +615,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             content: .tempFile(part.part.content),
                             mediaType: .audio,
                             codecName: part.part.codecName,
-                            offset: part.part.offsetTime
+                            offset: part.part.offsetTime,
+                            ignoreEditList: ignoreAudioEditList
                         )
                         audio.load(params: mediaDataReaderParams)
                         
@@ -585,12 +646,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                         }
                         if self.hasSound != hasSound {
                             self.hasSound = hasSound
+                            self.resetMediaDataStarvation()
                             self.updateInternalState()
                         }
                     }
                 }
             }
-            
+
             if let previousValidPartEndTime, previousValidPartEndTime >= duration - 0.5 {
                 isBuffering = false
             } else {
@@ -669,6 +731,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             }
                             if self.hasSound != hasSound {
                                 self.hasSound = hasSound
+                                self.resetMediaDataStarvation()
                                 self.updateInternalState()
                             }
                         }
@@ -684,9 +747,14 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             }
         }
         
+        // A video no longer than the end tolerance is at its end from position 0, so it is not played:
+        // its clock never moves. Its media is still requested while playback is asked for, so it shows
+        // its first frame, and its end action runs once, below.
+        let isTooShortToPlay = duration > 0.0 && duration <= ChunkMediaPlayerV2.endTolerance
+
         var effectiveRate: Double = 0.0
         if self.isPlaying {
-            if !isBuffering {
+            if !isBuffering && !isTooShortToPlay {
                 effectiveRate = self.baseRate
             }
         }
@@ -696,13 +764,22 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         
         //print("timestampSeconds: \(timestampSeconds) rate: \(effectiveRate)")
         
+        let now = CACurrentMediaTime()
         if self.renderSynchronizerRate != effectiveRate {
             self.renderSynchronizerRate = effectiveRate
-            self.renderSynchronizer.setRate(Float(effectiveRate), time: timestamp)
+            self.renderSynchronizerRateReapplyNotBefore = 0.0
+            self.renderSynchronizer.setRate(Float(effectiveRate), time: .invalid)
+        } else if effectiveRate == 0.0, self.renderSynchronizer.rate != 0.0, now >= self.renderSynchronizerRateReapplyNotBefore {
+            // The system can change the rate with no action by us, and the cached rate above cannot see
+            // that, so reconcile against the real one — but only ever downwards. Re-imposing a non-zero
+            // rate would fight the zeroing the system does on an audio interruption and run a silent
+            // stream through the interruption, losing the listener's position.
+            self.renderSynchronizerRateReapplyNotBefore = now + 1.0
+            self.renderSynchronizer.setRate(0.0, time: .invalid)
         }
-        
-        if effectiveRate != 0.0 {
-            self.triggerRequestMediaData()
+
+        if effectiveRate != 0.0 || (isTooShortToPlay && self.isPlaying) {
+            self.triggerRequestMediaData(now: now)
         }
         
         if isBuffering {
@@ -725,8 +802,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         } else {
             playbackStatus = .paused
         }
-        self.statusValue = MediaPlayerStatus(
-            generationTimestamp: CACurrentMediaTime(),
+        let isPlayingLike = self.isPlaying
+        let status = MediaPlayerStatus(
+            generationTimestamp: isPlayingLike ? CACurrentMediaTime() : 0.0,
             duration: duration,
             dimensions: CGSize(),
             timestamp: timestampSeconds,
@@ -735,18 +813,26 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             status: playbackStatus,
             soundEnabled: self.isSoundEnabled
         )
+        self.emitStatus(status, isPlayingLike: isPlayingLike, now: now)
         
         if self.shouldNotifySeeked {
             self.shouldNotifySeeked = false
             self.onSeeked?()
         }
 
-        if duration > 0.0 && timestampSeconds >= duration - 0.1 {
+        if duration > 0.0 && timestampSeconds >= duration - ChunkMediaPlayerV2.endTolerance {
             if !self.stoppedAtEnd {
                 switch self.actionAtEnd {
                 case let .loop(f):
-                    self.stoppedAtEnd = false
-                    self.seek(timestamp: 0.0, play: true, notify: true)
+                    // Looping a video that is too short to play would seek to where its clock already is,
+                    // and that no-op seek re-enters this check synchronously, without bound.
+                    if isTooShortToPlay {
+                        self.stoppedAtEnd = true
+                        self.pause()
+                    } else {
+                        self.stoppedAtEnd = false
+                        self.seek(timestamp: 0.0, play: true, notify: true)
+                    }
                     f?()
                 case .stop:
                     self.stoppedAtEnd = true
@@ -756,7 +842,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                     self.pause()
                     f()
                 case let .loopDisablingSound(f):
-                    if duration - 0.1 <= 0.0 {
+                    if isTooShortToPlay {
                         self.stoppedAtEnd = true
                         self.pause()
                     } else {
@@ -772,12 +858,14 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     
     public func play() {
         self.isPlaying = true
+        self.resetMediaDataStarvation()
         self.updateInternalState()
     }
 
     public func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek) {
         self.isPlaying = true
         self.isSoundEnabled = true
+        self.resetMediaDataStarvation()
 
         switch seek {
         case .automatic, .none:
@@ -820,6 +908,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     public func continuePlayingWithoutSound(seek: MediaPlayerSeek) {
         self.isSoundEnabled = false
         self.isPlaying = true
+        self.resetMediaDataStarvation()
         self.updateInternalState()
         
         switch seek {
@@ -833,6 +922,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     }
 
     public func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
+        self.continuePlayingWithoutSoundOnLostAudioSession = value
     }
 
     public func setForceAudioToSpeaker(_ value: Bool) {
@@ -852,6 +942,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         } else {
             self.isPlaying = true
         }
+        self.resetMediaDataStarvation()
         self.updateInternalState()
     }
     
@@ -878,6 +969,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 self.didSetSourceSeek = true
                 self.source.seek(id: self.seekId, position: timestamp)
             }
+            self.resetMediaDataStarvation()
             self.updateInternalState()
             return
         }
@@ -910,7 +1002,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             self.audioIsRequestingMediaData = false
             audioRenderer.stopRequestingMediaData()
         }
-        
+        self.resetMediaDataStarvation()
+
         self.didSetSourceSeek = true
         self.source.seek(id: self.seekId, position: timestamp)
         
@@ -919,6 +1012,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             loadedPartsMediaData.seekFromMinTimestamp = timestamp
             loadedPartsMediaData.directMediaData = nil
             loadedPartsMediaData.directReaderId = nil
+            loadedPartsMediaData.audioBufferTimingState = nil
             
             Queue.mainQueue().async {
                 guard let self else {
@@ -945,13 +1039,59 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
 
     public func setBaseRate(_ baseRate: Double) {
         self.baseRate = baseRate
+        self.resetMediaDataStarvation()
         self.updateInternalState()
     }
-    
-    private func triggerRequestMediaData() {
+
+    private func noteVideoStarvation(didEnqueue: Bool) {
+        self.videoStarvationBackoff = didEnqueue ? 0.0 : (self.videoStarvationBackoff <= 0.0 ? 1.0 / 60.0 : min(self.videoStarvationBackoff * 2.0, 1.0))
+        self.videoRearmNotBefore = CACurrentMediaTime() + self.videoStarvationBackoff
+    }
+
+    private func noteAudioStarvation(didEnqueue: Bool) {
+        self.audioStarvationBackoff = didEnqueue ? 0.0 : (self.audioStarvationBackoff <= 0.0 ? 1.0 / 60.0 : min(self.audioStarvationBackoff * 2.0, 1.0))
+        self.audioRearmNotBefore = CACurrentMediaTime() + self.audioStarvationBackoff
+    }
+
+    private func resetMediaDataStarvation() {
+        self.videoStarvationBackoff = 0.0
+        self.audioStarvationBackoff = 0.0
+        self.videoRearmNotBefore = 0.0
+        self.audioRearmNotBefore = 0.0
+    }
+
+    private static func differsBeyondTiming(_ lhs: MediaPlayerStatus, _ rhs: MediaPlayerStatus) -> Bool {
+        // Exhaustive over MediaPlayerStatus except generationTimestamp and timestamp. A field added to
+        // MediaPlayerStatus and not added here is silently throttled to the heartbeat rate.
+        return lhs.duration != rhs.duration || lhs.dimensions != rhs.dimensions || lhs.baseRate != rhs.baseRate || lhs.seekId != rhs.seekId || lhs.status != rhs.status || lhs.soundEnabled != rhs.soundEnabled
+    }
+
+    private func emitStatus(_ status: MediaPlayerStatus, isPlayingLike: Bool, now: Double) {
+        let shouldEmit: Bool
+        if let lastEmittedStatus = self.lastEmittedStatus {
+            if ChunkMediaPlayerV2.differsBeyondTiming(status, lastEmittedStatus) {
+                shouldEmit = true
+            } else if isPlayingLike {
+                shouldEmit = now - self.lastStatusEmitTimestamp >= 1.0 / 10.0
+            } else {
+                shouldEmit = status.timestamp != lastEmittedStatus.timestamp
+            }
+        } else {
+            shouldEmit = true
+        }
+        if !shouldEmit {
+            return
+        }
+
+        self.lastEmittedStatus = status
+        self.lastStatusEmitTimestamp = now
+        self.statusPromise.set(status)
+    }
+
+    private func triggerRequestMediaData(now: Double) {
         let loadedPartsMediaData = self.loadedPartsMediaData
-        
-        if !self.videoIsRequestingMediaData {
+
+        if !self.videoIsRequestingMediaData, now >= self.videoRearmNotBefore {
             self.videoIsRequestingMediaData = true
             
             let videoTarget: AVQueuedSampleBufferRendering
@@ -962,17 +1102,21 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             }
         
             let didNotifySentVideoFrames = self.didNotifySentVideoFrames
+            videoTarget.stopRequestingMediaData()
             videoTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
                     let bufferFillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
                     if bufferFillResult.bufferIsReadyForMoreData {
+                        // The renderer still wants data we do not have. Record the starvation instead of
+                        // re-arming from here: re-arming would immediately invoke this block again.
                         videoTarget.stopRequestingMediaData()
+                        let didEnqueue = bufferFillResult.didEnqueue
                         Queue.mainQueue().async {
                             guard let self else {
                                 return
                             }
                             self.videoIsRequestingMediaData = false
-                            self.updateInternalState()
+                            self.noteVideoStarvation(didEnqueue: didEnqueue)
                         }
                     }
                     if !didNotifySentVideoFrames {
@@ -994,21 +1138,23 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             })
         }
         
-        if !self.audioIsRequestingMediaData, let audioRenderer = self.audioRenderer {
+        if !self.audioIsRequestingMediaData, now >= self.audioRearmNotBefore, let audioRenderer = self.audioRenderer {
             self.audioIsRequestingMediaData = true
             let loadedPartsMediaData = self.loadedPartsMediaData
             let audioTarget = audioRenderer
+            audioTarget.stopRequestingMediaData()
             audioTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
                     let bufferFillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: audioTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: false)
                     if bufferFillResult.bufferIsReadyForMoreData {
                         audioTarget.stopRequestingMediaData()
+                        let didEnqueue = bufferFillResult.didEnqueue
                         Queue.mainQueue().async {
                             guard let self else {
                                 return
                             }
                             self.audioIsRequestingMediaData = false
-                            self.updateInternalState()
+                            self.noteAudioStarvation(didEnqueue: didEnqueue)
                         }
                     }
                 }
@@ -1065,10 +1211,17 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             continue outer
                         }
                     }
+                    if !isVideo {
+                        sampleBuffer = ChunkMediaPlayerV2.normalizeAudioSampleBuffer(
+                            sampleBuffer,
+                            state: &loadedPartsMediaData.audioBufferTimingState
+                        )
+                    }
                     /*if !isVideo {
                         print("Enqueue audio \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value) next: \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value + 1024)")
                     }*/
                     bufferTarget.enqueue(sampleBuffer)
+                    didEnqueue = true
                     hasData = true
                     continue outer
                 case .waitingForMoreData, .endOfStream, .error:
@@ -1132,6 +1285,57 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         }
         
         return (bufferIsReadyForMoreData: bufferIsReadyForMoreData, didEnqueue: didEnqueue)
+    }
+
+    private static func normalizeAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer, state: inout AudioBufferTimingState?) -> CMSampleBuffer {
+        let pts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        let sampleCount = CMSampleBufferGetNumSamples(sampleBuffer)
+        guard pts.seconds.isFinite, sampleCount > 0, let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer), let streamDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
+            state = nil
+            return sampleBuffer
+        }
+
+        let sampleRateValue = streamDescription.pointee.mSampleRate
+        let roundedSampleRate = sampleRateValue.rounded()
+        guard sampleRateValue.isFinite, roundedSampleRate > 0.0, roundedSampleRate <= Double(Int32.max), abs(sampleRateValue - roundedSampleRate) < 0.001 else {
+            state = nil
+            return sampleBuffer
+        }
+        let sampleRate = CMTimeScale(roundedSampleRate)
+        let sampleCountValue = Int64(sampleCount)
+
+        guard var currentState = state, currentState.sampleRate == sampleRate else {
+            state = AudioBufferTimingState(sampleRate: sampleRate, anchorPts: pts, nextSampleOffset: sampleCountValue)
+            return sampleBuffer
+        }
+
+        let expectedPts = CMTimeAdd(currentState.anchorPts, CMTime(value: currentState.nextSampleOffset, timescale: currentState.sampleRate))
+        let inputDelta = CMTimeSubtract(pts, expectedPts).seconds
+        guard inputDelta.isFinite, abs(inputDelta) <= 2.0 / 1000.0 else {
+            state = AudioBufferTimingState(sampleRate: sampleRate, anchorPts: pts, nextSampleOffset: sampleCountValue)
+            return sampleBuffer
+        }
+
+        let normalizedSampleBuffer: CMSampleBuffer
+        if CMTimeCompare(pts, expectedPts) == 0 {
+            normalizedSampleBuffer = sampleBuffer
+        } else {
+            let timeOffset = CMTimeSubtract(expectedPts, pts)
+            guard let updatedSampleBuffer = createSampleBuffer(fromSampleBuffer: sampleBuffer, withTimeOffset: timeOffset, duration: nil) else {
+                state = AudioBufferTimingState(sampleRate: sampleRate, anchorPts: pts, nextSampleOffset: sampleCountValue)
+                return sampleBuffer
+            }
+            normalizedSampleBuffer = updatedSampleBuffer
+        }
+
+        let (nextSampleOffset, overflow) = currentState.nextSampleOffset.addingReportingOverflow(sampleCountValue)
+        if overflow {
+            state = AudioBufferTimingState(sampleRate: sampleRate, anchorPts: pts, nextSampleOffset: sampleCountValue)
+        } else {
+            currentState.nextSampleOffset = nextSampleOffset
+            state = currentState
+        }
+        return normalizedSampleBuffer
     }
 }
 

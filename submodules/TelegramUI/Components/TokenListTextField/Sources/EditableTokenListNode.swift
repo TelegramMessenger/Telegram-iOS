@@ -6,12 +6,13 @@ import TelegramCore
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
+import CountrySelectionUI
 
 struct EditableTokenListToken {
     enum Subject {
         case peer(EnginePeer)
         case category(UIImage?)
-        case emoji(String)
+        case countryFlag(String)
     }
     
     let id: AnyHashable
@@ -88,6 +89,7 @@ private final class TokenNode: ASDisplayNode {
     let avatarNode: AvatarNode
     let categoryAvatarNode: ASImageNode
     let emojiTextNode: ImmediateTextNode
+    private let emojiFlagAnimations = CountryFlagTextAnimations()
     let removeIconNode: ASImageNode
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
@@ -135,7 +137,7 @@ private final class TokenNode: ASDisplayNode {
             cornerRadius = 24.0
         case .category:
             cornerRadius = 14.0
-        case .emoji:
+        case .countryFlag:
             cornerRadius = 24.0
         }
         
@@ -165,9 +167,9 @@ private final class TokenNode: ASDisplayNode {
         case let .category(image):
             self.addSubnode(self.categoryAvatarNode)
             self.categoryAvatarNode.image = image
-        case let .emoji(emoji):
+        case let .countryFlag(countryId):
             self.addSubnode(self.emojiTextNode)
-            self.emojiTextNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(17.0), textColor: .white)
+            self.emojiTextNode.attributedText = countryFlagAttributedString(countryId: countryId, font: Font.regular(17.0), textColor: .white)
         }
         
         self.updateIsSelected(isSelected, animated: false)
@@ -197,6 +199,7 @@ private final class TokenNode: ASDisplayNode {
         var textLeftOffset: CGFloat = 29.0
         if let emojiTextSize = self.emojiTextNode.cachedLayout?.size {
             self.emojiTextNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 4.0), size: emojiTextSize)
+            self.emojiFlagAnimations.update(layout: self.emojiTextNode.cachedLayout, in: self.emojiTextNode.view)
             textLeftOffset += 3.0
         }
         

@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import MobileCoreServices
+import UniformTypeIdentifiers
 import TextFormat
 
 private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> String {
@@ -292,7 +292,10 @@ public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.D
                 }
             }
         })
-        return chatInputStateString(attributedString: updatedString)
+        // Paste direction: a link whose label IS its own URL (an anchor whose text is the URL, the common
+        // shape of a copied web link) carries nothing a plain URL would not, so it pastes as plain text and
+        // the server detects it. A genuine text link — a label that differs from its target — is kept.
+        return chatInputStateString(attributedString: updatedString).flatMap(chatInputTextStrippingSelfReferentialLinks)
     }
     return nil
 }
@@ -306,10 +309,10 @@ public func chatInputStateStringFromAppSpecificString(data: Data) -> NSAttribute
 
 public func storeMessageTextInPasteboard(_ text: String, entities: [MessageTextEntity]?) {
     var items: [String: Any] = [:]
-    items[kUTTypeUTF8PlainText as String] = text
+    items[UTType.utf8PlainText.identifier] = text
     
     if let entities = entities {
-        items[kUTTypeRTF as String] = rtfStringWithAppliedEntities(text, entities: entities)
+        items[UTType.rtf.identifier] = rtfStringWithAppliedEntities(text, entities: entities)
         items["private.telegramtext"] = appSpecificStringWithAppliedEntities(text, entities: entities)
     }
     UIPasteboard.general.items = [items]

@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 
@@ -505,7 +505,7 @@ private func sendUploadedMessageContent(
                         if let _ = replyPollOption {
                             replyFlags |= 1 << 7
                         }
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
                     } else if let replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -542,7 +542,7 @@ private func sendUploadedMessageContent(
                         if let _ = replyPollOption {
                             replyFlags |= 1 << 7
                         }
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: nil))
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -559,6 +559,9 @@ private func sendUploadedMessageContent(
                 case let .forward(sourceInfo):
                     if topMsgId != nil {
                         flags |= Int32(1 << 9)
+                    }
+                    if Namespaces.Message.allEphemeral.contains(sourceInfo.messageId.namespace) {
+                        flags |= 1 << 25
                     }
                 
                     if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
@@ -583,7 +586,7 @@ private func sendUploadedMessageContent(
                         if monoforumPeerId != nil {
                             replyFlags |= 1 << 5
                         }
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -598,18 +601,18 @@ private func sendUploadedMessageContent(
 
                     if let replyMessageId = replyMessageId {
                         let replyFlags: Int32 = 0
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
                             replyTo = .inputReplyToStory(.init(peer: inputPeer, storyId: replyToStoryId.id))
                         } else {
                             let replyFlags: Int32 = 0
-                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                         }
                     } else {
                         let replyFlags: Int32 = 0
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     }
                 
                     sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))
@@ -684,17 +687,20 @@ public func standaloneSendMessage(account: Account, peerId: PeerId, text: String
                 case let .progress(progress):
                     return .single(progress)
                 case let .result(result):
-                let sendContent = sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: result, threadId: threadId) |> map({ _ -> Float in return 1.0 })
-                    return .single(1.0) |> then(sendContent |> mapError { _ -> StandaloneSendMessageError in })
+                    // The server's refusal (a blocked user, a restriction, a fee, flood) fails
+                    // the send, so the caller never reports as sent what was not.
+                    let sendContent = sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: result, threadId: threadId) |> map({ _ -> Float in return 1.0 })
+                    return .single(1.0) |> then(sendContent)
                 
             }
         }
 }
 
-private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent, threadId: Int32?) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+private func sendMessageContent(account: Account, peerId: PeerId, attributes: [MessageAttribute], content: StandaloneMessageContent, threadId: Int32?) -> Signal<Void, StandaloneSendMessageError> {
+    return account.postbox.transaction { transaction -> Signal<Void, StandaloneSendMessageError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
-            return .complete()
+            // Secret chats cannot be written to from here.
+            return .fail(.generic)
         } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var uniqueId: Int64 = Int64.random(in: Int64.min ... Int64.max)
             //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
@@ -759,7 +765,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 flags |= 1 << 21
             }
             
-            let sendMessageRequest: Signal<Api.Updates, NoError>
+            let sendMessageRequest: Signal<Api.Updates, StandaloneSendMessageError>
             switch content {
                 case let .text(text):
                     var replyTo: Api.InputReplyTo?
@@ -767,7 +773,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         flags |= 1 << 0
 
                         let replyFlags: Int32 = 0
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -775,12 +781,12 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         }
                     } else if let threadId {
                         flags |= 1 << 0
-                        replyTo = .inputReplyToMessage(.init(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     }
 
                     sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: nil, richMessage: apiRichMessage))
-                    |> `catch` { _ -> Signal<Api.Updates, NoError> in
-                        return .complete()
+                    |> mapError { _ -> StandaloneSendMessageError in
+                        return .generic
                     }
                 case let .media(inputMedia, text):
                     var replyTo: Api.InputReplyTo?
@@ -788,7 +794,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         flags |= 1 << 0
 
                         let replyFlags: Int32 = 0
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -796,7 +802,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         }
                     } else if let threadId {
                         flags |= 1 << 0
-                        replyTo = .inputReplyToMessage(.init(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+                        replyTo = .inputReplyToMessage(.init(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
                     }
                 
                     if suggestedPost != nil {
@@ -804,21 +810,21 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                     }
                 
                     sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, scheduleRepeatPeriod: scheduleRepeatPeriod, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars, suggestedPost: suggestedPost))
-                    |> `catch` { _ -> Signal<Api.Updates, NoError> in
-                        return .complete()
+                    |> mapError { _ -> StandaloneSendMessageError in
+                        return .generic
                     }
             }
             
             return sendMessageRequest
-            |> mapToSignal { result -> Signal<Void, NoError> in
+            |> mapToSignal { result -> Signal<Void, StandaloneSendMessageError> in
                 return .complete()
             }
-            |> `catch` { _ -> Signal<Void, NoError> in
-            }
         } else {
-            return .complete()
+            // No such peer in the store, or one that cannot be addressed.
+            return .fail(.generic)
         }
     }
+    |> castError(StandaloneSendMessageError.self)
     |> switchToLatest
 }
 

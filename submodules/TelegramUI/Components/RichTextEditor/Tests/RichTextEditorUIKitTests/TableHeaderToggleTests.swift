@@ -22,7 +22,7 @@ final class TableHeaderToggleTests: XCTestCase {
     func test_toggleHeader_onSelectedColumn_setsThenClearsThoseCells() {
         let v = makeView()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 1, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 1)!, head: t.cellTextStart(row: 1, column: 1)!)
         v.selectTableColumn(1)
         // Column 1 is mixed (r0 header, r1 body) → first toggle turns ALL on.
         v.toggleSelectionHeader()
@@ -41,7 +41,7 @@ final class TableHeaderToggleTests: XCTestCase {
     func test_toggleHeader_caretCellOnly_whenNoStructuralSelection() {
         let v = makeView()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head   // body cell, no structural selection
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)   // body cell, no structural selection
         v.toggleSelectionHeader()
         guard case .table(let out) = v.boxes[0].currentBlock() else { return XCTFail() }
         XCTAssertTrue(out.rows[1].cells[0].isHeader)

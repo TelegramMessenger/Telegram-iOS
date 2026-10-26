@@ -25,17 +25,17 @@ final class CanvasSelectionMenuTests: XCTestCase {
 
     func test_tapOutcome_onCaret_togglesMenu() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 3; v.head = r.globalStart + 3
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 3, head: r.globalStart + 3)
         XCTAssertEqual(v.tapOutcome(forResolvedPosition: r.globalStart + 3, point: .zero), .toggleMenu)
     }
     func test_tapOutcome_elsewhere_movesCaret() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 3; v.head = r.globalStart + 3
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 3, head: r.globalStart + 3)
         XCTAssertEqual(v.tapOutcome(forResolvedPosition: r.globalStart + 6, point: .zero), .setCaret(r.globalStart + 6))
     }
     func test_tapOutcome_insideSelection_togglesMenu() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5   // "Hello" selected
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // "Hello" selected
         let rects = v.selectionRects(globalFrom: v.selFrom, globalTo: v.selTo)
         let onSelection = CGPoint(x: rects[0].midX, y: rects[0].midY)   // a tap ON the rendered selection
         // A tap on the selection toggles the menu and KEEPS the selection (does not collapse).
@@ -43,7 +43,7 @@ final class CanvasSelectionMenuTests: XCTestCase {
     }
     func test_tapOutcome_outsideSelection_setsCaret() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 3   // "Hel" selected
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 3)   // "Hel" selected
         let caret = v.caretRect(for: DocumentTextPosition(r.globalStart + 6))           // past "Hel", off the selection
         // A tap OUTSIDE the selection collapses to a caret there.
         XCTAssertEqual(v.tapOutcome(forResolvedPosition: r.globalStart + 6, point: CGPoint(x: caret.midX, y: caret.midY)),
@@ -55,7 +55,7 @@ final class CanvasSelectionMenuTests: XCTestCase {
     /// this the common "tap to deselect" gesture; the old offset-only check treated it as "inside".
     func test_tapOutcome_emptyAreaResolvingInsideRange_setsCaret() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + r.length   // whole line selected
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + r.length)   // whole line selected
         let farOutside = CGPoint(x: 10_000, y: -10_000)   // nowhere near any selection rect
         XCTAssertEqual(v.tapOutcome(forResolvedPosition: r.globalStart + r.length, point: farOutside),
                        .setCaret(r.globalStart + r.length), "an empty-area tap must collapse the selection, not keep it")
@@ -66,7 +66,7 @@ final class CanvasSelectionMenuTests: XCTestCase {
     /// framework calling our selectedTextRange setter (not our handler).
     func test_performSingleTap_insideSelection_keepsSelection() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5   // "Hello" selected
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // "Hello" selected
         let rects = v.selectionRects(globalFrom: v.selFrom, globalTo: v.selTo)
         XCTAssertFalse(rects.isEmpty, "selection should have a highlight rect")
         let mid = CGPoint(x: rects[0].midX, y: rects[0].midY)
@@ -78,7 +78,7 @@ final class CanvasSelectionMenuTests: XCTestCase {
     /// selection, not jump the caret elsewhere). Ground-truth for the reported "tap outside doesn't deselect".
     func test_performSingleTap_outsideSelection_clearsAndMovesCaret() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5   // "Hello" selected
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // "Hello" selected
         let caret = v.caretRect(for: DocumentTextPosition(r.globalStart + 8))           // inside "world", outside the selection
         v.performSingleTap(at: CGPoint(x: caret.midX, y: caret.midY))
         XCTAssertEqual(v.selFrom, v.selTo, "tap outside the selection must collapse it")
@@ -256,7 +256,7 @@ final class CanvasSelectionMenuTests: XCTestCase {
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
         let gap = v.boxes.first { $0 is MediaBlockBox }!.nodeStart
-        v.anchor = gap; v.head = gap
+        v.setSelectionForTesting(anchor: gap, head: gap)
         v.selectWord(at: gap)
         XCTAssertEqual(v.selFrom, gap); XCTAssertEqual(v.selTo, gap)   // no word at a structural gap → unchanged
         v.selectParagraph(at: gap)
@@ -265,9 +265,9 @@ final class CanvasSelectionMenuTests: XCTestCase {
 
     func test_canPerformAction_select_onlyWhenCollapsedWithText() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 2; v.head = r.globalStart + 2   // collapsed
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 2)   // collapsed
         XCTAssertTrue(v.canPerformAction(#selector(UIResponderStandardEditActions.select(_:)), withSender: nil))
-        v.anchor = r.globalStart; v.head = r.globalStart + 5                                 // selection
+        v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // selection
         XCTAssertFalse(v.canPerformAction(#selector(UIResponderStandardEditActions.select(_:)), withSender: nil))
     }
     func test_canPerformAction_select_disabledOnImageGap() {
@@ -278,20 +278,20 @@ final class CanvasSelectionMenuTests: XCTestCase {
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
         let gap = v.boxes.first { $0 is MediaBlockBox }!.nodeStart
-        v.anchor = gap; v.head = gap
+        v.setSelectionForTesting(anchor: gap, head: gap)
         XCTAssertFalse(v.canPerformAction(#selector(UIResponderStandardEditActions.select(_:)), withSender: nil),
                        "Select is meaningless at an image gap (no word)")
     }
     func test_canPerformAction_selectAll_whenNotAllSelected() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 2
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 2)
         XCTAssertTrue(v.canPerformAction(#selector(UIResponderStandardEditActions.selectAll(_:)), withSender: nil))
         v.selectAllText()
         XCTAssertFalse(v.canPerformAction(#selector(UIResponderStandardEditActions.selectAll(_:)), withSender: nil))
     }
     func test_selectAction_selectsWordAtCaret() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 8; v.head = r.globalStart + 8   // inside "world"
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 8, head: r.globalStart + 8)   // inside "world"
         v.select(nil)
         XCTAssertEqual(v.selFrom, r.globalStart + 6)   // "world" starts after "Hello "
         XCTAssertEqual(v.selTo, r.globalStart + 11)
@@ -306,13 +306,13 @@ final class CanvasSelectionMenuTests: XCTestCase {
 
     func test_nearerSelectionEndpoint_picksByDistance() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 2; v.head = r.globalStart + 8
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 8)
         XCTAssertEqual(v.nearerSelectionEndpoint(toGlobal: r.globalStart + 7), .head)
         XCTAssertEqual(v.nearerSelectionEndpoint(toGlobal: r.globalStart + 3), .anchor)
     }
     func test_nearerSelectionEndpoint_nilWhenCollapsed() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 4; v.head = r.globalStart + 4
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 4, head: r.globalStart + 4)
         XCTAssertNil(v.nearerSelectionEndpoint(toGlobal: r.globalStart + 4))
     }
 }

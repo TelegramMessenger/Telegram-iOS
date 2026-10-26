@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 public enum ReportContentResult {
@@ -49,10 +49,10 @@ private let ephemeralReportOptions: [(title: String, value: String)] = [
 
 func _internal_reportContent(account: Account, subject: ReportContentSubject, option: Data?, message: String?) -> Signal<ReportContentResult, ReportContentError> {
     return account.postbox.transaction { transaction -> Signal<ReportContentResult, ReportContentError> in
-        if case let .messages(messageIds) = subject, !messageIds.isEmpty, messageIds.allSatisfy({ $0.namespace == Namespaces.Message.EphemeralLocal }) {
+        if case let .messages(messageIds) = subject, !messageIds.isEmpty, messageIds.allSatisfy({ Namespaces.Message.allEphemeral.contains($0.namespace) }) {
             guard let option else {
                 return .single(.options(title: "Report", options: ephemeralReportOptions.map { option in
-                    ReportContentResult.Option(text: option.title, option: Data())
+                    ReportContentResult.Option(text: option.title, option: Data(option.value.utf8))
                 }))
             }
 

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -117,7 +118,11 @@ final class PasskeysScreenListComponent: Component {
             
             self.backgroundColor = component.theme.list.blocksBackgroundColor
 
+            // Each side keeps its own inset (beside iPhone Duo's side strip only one side has one); centred content is
+            // centred between them.
             let sideInset: CGFloat = 16.0 + component.insets.left
+            let rightSideInset: CGFloat = 16.0 + component.insets.right
+            let bandCenterX: CGFloat = component.insets.left + (availableSize.width - component.insets.left - component.insets.right) * 0.5
 
             var contentHeight: CGFloat = 0.0
             contentHeight += component.insets.top
@@ -127,12 +132,13 @@ final class PasskeysScreenListComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "passkey_logo"),
-                    loop: false
+                    loop: false,
+                    lottieSettings: component.context.lottieRenderingSettings
                 )),
                 environment: {},
                 containerSize: CGSize(width: 124.0, height: 124.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - iconSize.width * 0.5), y: contentHeight), size: iconSize)
             if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.contentContainer.addSubview(iconView)
@@ -152,9 +158,9 @@ final class PasskeysScreenListComponent: Component {
                     maximumNumberOfLines: 0
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - titleSize.width * 0.5), y: contentHeight), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.contentContainer.addSubview(titleView)
@@ -174,9 +180,9 @@ final class PasskeysScreenListComponent: Component {
                     lineSpacing: 0.2
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: contentHeight), size: subtitleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - subtitleSize.width * 0.5), y: contentHeight), size: subtitleSize)
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     self.contentContainer.addSubview(subtitleView)
@@ -322,7 +328,7 @@ final class PasskeysScreenListComponent: Component {
                     items: listSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let listSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: listSectionSize)
             if let listSectionView = self.listSection.view as? ListSectionComponent.View {

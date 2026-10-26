@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 func _internal_findChannelById(accountPeerId: PeerId, postbox: Postbox, network: Network, channelId: Int64) -> Signal<Peer?, NoError> {
     return network.request(Api.functions.channels.getChannels(id: [.inputChannel(.init(channelId: channelId, accessHash: 0))]))

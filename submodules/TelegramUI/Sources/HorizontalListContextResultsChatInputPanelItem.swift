@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -18,6 +19,10 @@ import BatchVideoRendering
 import GifVideoLayer
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let context: AccountContext
     let theme: PresentationTheme
     let result: ChatContextResult
@@ -34,12 +39,12 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
         self.resultSelected = resultSelected
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = HorizontalListContextResultsChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom) = (previousItem != nil, nextItem != nil)
+            let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
             let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
@@ -60,13 +65,13 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? HorizontalListContextResultsChatInputPanelItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (top, bottom) = (previousItem != nil, nextItem != nil)
+                    let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
@@ -178,10 +183,10 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         }
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = item as? HorizontalListContextResultsChatInputPanelItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: previousItem != nil, bottom: nextItem != nil)
+            let merged = (top: neighbors.previous != nil, bottom: neighbors.next != nil)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
@@ -374,7 +379,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             if let currentAnimationNode = strongSelf.animationNode {
                                 animationNode = currentAnimationNode
                             } else {
-                                animationNode = DefaultAnimatedStickerNodeImpl()
+                                animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
                                 animationNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                                 animationNode.visibility = true
                                 if let placeholderNode = strongSelf.placeholderNode {

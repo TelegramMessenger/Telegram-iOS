@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -27,7 +28,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
             callbacks.append((success.frame, successCallback))
         }
         
-        if let _ = account.postbox.mediaBox.completedResourcePath(file.resource) {
+        if let _ = TelegramEngine(account: account).resources.completedResourcePath(id: EngineMediaResource.Id(file.resource.id)) {
             if immediate {
                 return .single(ManagedAnimationItem(source: .resource(account, EngineMediaResource(file.resource)), frames: .still(.end), duration: 0))
             } else {
@@ -136,7 +137,7 @@ public final class ManagedDiceAnimationNode: ManagedAnimationNode {
     
     public var success: (() -> Void)?
     
-    public init(context: AccountContext, emoji: String) {
+    public init(context: AccountContext, emoji: String, lottieSettings: LottieRenderingSettings) {
         self.context = context
         self.emoji = emoji
         
@@ -159,7 +160,7 @@ public final class ManagedDiceAnimationNode: ManagedAnimationNode {
             }
         })
         
-        super.init(size: CGSize(width: 184.0, height: 184.0))
+        super.init(size: CGSize(width: 184.0, height: 184.0), lottieSettings: lottieSettings)
     }
     
     deinit {

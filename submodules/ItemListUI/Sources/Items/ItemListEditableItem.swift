@@ -66,11 +66,19 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     private var revealOptions: (left: [ItemListRevealOption], right: [ItemListRevealOption]) = ([], [])
     private var enableAnimations: Bool = true
     
-    private var initialRevealOffset: CGFloat = 0.0
-    private var hasActiveRevealGestureOffset: Bool = false
+    private var motion = ItemListRevealMotion()
+    private var revealDirection: CGFloat = -1.0
+    private var animationLink: SharedDisplayLinkDriver.Link?
+    private var previousAnimationTime: CFTimeInterval = 0
+    private var animationCompletion: (() -> Void)?
+    private var suppressGestureEvents = false
+    private var deliveringAction = false
+    private var lastSurfaceProgress: CGFloat = 0
     public private(set) var revealOffset: CGFloat = 0.0
     public private(set) var isRevealOptionsActive: Bool = false
     public private(set) var isNextRevealOptionsActive: Bool = false
+    public private(set) var revealOptionsSeparatorAlpha: CGFloat = 1.0
+    public private(set) var nextRevealOptionsSeparatorAlpha: CGFloat = 1.0
     private weak var revealOptionsActivePreviousItemNode: ItemListRevealOptionsItemNode?
 
     private weak var revealOptionsTopSeparatorNode: ASDisplayNode?
@@ -85,14 +93,20 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     private var revealOptionsHighlightedBackgroundTracksRevealOffset: Bool = false
     private var revealOptionsHighlightedBackgroundActiveCornerRadius: CGFloat = 0.0
 
-    private var recognizer: ItemListRevealOptionsGestureRecognizer?
+    private var revealOptionsAllowsHighlight = true
+    private var revealOptionsBaseHighlightAlpha: CGFloat = 0
+    private var selectionHighlightEndTime: CFTimeInterval = 0
+    private var highlightFadeGeneration = 0
+    private weak var revealOptionsHighlightAnchor: ASDisplayNode?
+    private var recognizer: ItemListRevealTouchGestureRecognizer?
+    private var scrollRecognizer: UIPanGestureRecognizer?
     private var tapRecognizer: UITapGestureRecognizer?
     private var hapticFeedback: HapticFeedback?
     
     private var allowAnyDirection = false
 
     public var isDisplayingRevealedOptions: Bool {
-        return !self.revealOffset.isZero
+        return self.isRevealOptionsActive
     }
 
     private func updateRevealOptionsActive(_ isActive: Bool, transition: ContainedViewLayoutTransition) {
@@ -103,10 +117,14 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         }
     }
 
-    private func updateNextRevealOptionsActive(_ isActive: Bool, transition: ContainedViewLayoutTransition) {
+    private func updateNextRevealOptionsActive(_ isActive: Bool, separatorAlpha: CGFloat = 1.0, transition: ContainedViewLayoutTransition) {
+        let alphaChanged = self.nextRevealOptionsSeparatorAlpha != separatorAlpha
+        self.nextRevealOptionsSeparatorAlpha = separatorAlpha
         if self.isNextRevealOptionsActive != isActive {
             self.isNextRevealOptionsActive = isActive
             self.nextRevealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
+        } else if alphaChanged {
+            self.revealOptionsSeparatorAlphaUpdated()
         }
     }
 
@@ -158,15 +176,17 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
             self.revealOptionsActivePreviousItemNode?.updateNextRevealOptionsActive(false, transition: transition)
             self.revealOptionsActivePreviousItemNode = previousItemNode
         }
-        previousItemNode?.updateNextRevealOptionsActive(isActive, transition: transition)
+        previousItemNode?.updateNextRevealOptionsActive(isActive, separatorAlpha: self.revealOptionsSeparatorAlpha, transition: transition)
         if !isActive {
             self.revealOptionsActivePreviousItemNode = nil
         }
     }
 
     private func updateRevealOptionsSeparatorVisibility() {
-        self.revealOptionsTopSeparatorNode?.isHidden = self.revealOptionsTopSeparatorBaseIsHidden || self.revealOptionsTopSeparatorHiddenByPreviousRevealOptions || self.isRevealOptionsActive
-        self.revealOptionsBottomSeparatorNode?.isHidden = self.revealOptionsBottomSeparatorBaseIsHidden || self.revealOptionsBottomSeparatorHiddenByNextRevealOptions || self.isRevealOptionsActive || self.isNextRevealOptionsActive
+        self.revealOptionsTopSeparatorNode?.isHidden = self.revealOptionsTopSeparatorBaseIsHidden || self.revealOptionsTopSeparatorHiddenByPreviousRevealOptions
+        self.revealOptionsBottomSeparatorNode?.isHidden = self.revealOptionsBottomSeparatorBaseIsHidden || (!self.isNextRevealOptionsActive && self.revealOptionsBottomSeparatorHiddenByNextRevealOptions)
+        self.revealOptionsTopSeparatorNode?.alpha = self.revealOptionsSeparatorAlpha
+        self.revealOptionsBottomSeparatorNode?.alpha = min(self.revealOptionsSeparatorAlpha, self.nextRevealOptionsSeparatorAlpha)
     }
 
     private func updateRevealOptionsHighlightedBackgroundGeometry(transition: ContainedViewLayoutTransition) {
@@ -181,7 +201,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
             frame = baseFrame
         }
         transition.updateFrame(node: highlightedBackgroundNode, frame: frame)
-        transition.updateCornerRadius(node: highlightedBackgroundNode, cornerRadius: self.isRevealOptionsActive ? self.revealOptionsHighlightedBackgroundActiveCornerRadius : 0.0)
+        highlightedBackgroundNode.layer.cornerCurve = .continuous
+        highlightedBackgroundNode.cornerRadius = min(self.revealOptionsHighlightedBackgroundActiveCornerRadius, baseFrame.height / 2) * (self.revealOptionsAllowsHighlight ? self.revealOptionsHighlightProgress : 0)
     }
 
     public func updateRevealOptionsSeparatorNodes(top: ASDisplayNode?, bottom: ASDisplayNode?, topIsHidden: Bool, bottomIsHidden: Bool, topHiddenByPreviousRevealOptions: Bool = false, bottomHiddenByNextRevealOptions: Bool = false) {
@@ -194,47 +215,95 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         self.updateRevealOptionsSeparatorVisibility()
     }
 
-    public func updateRevealOptionsHighlightedBackgroundFrame(_ highlightedBackgroundNode: ASDisplayNode, frame: CGRect, tracksRevealOffset: Bool = true, activeCornerRadius: CGFloat = 26.0, transition: ContainedViewLayoutTransition = .immediate) {
+    public func updateRevealOptionsHighlightedBackgroundFrame(_ highlightedBackgroundNode: ASDisplayNode, frame: CGRect, tracksRevealOffset: Bool = true, activeCornerRadius: CGFloat = 26.0, transition: ContainedViewLayoutTransition = .immediate, aboveNodes: [ASDisplayNode?] = []) {
         self.revealOptionsHighlightedBackgroundNode = highlightedBackgroundNode
+        if !aboveNodes.isEmpty {
+            self.revealOptionsHighlightAnchor = aboveNodes.compactMap { $0 }.first(where: { $0.supernode != nil })
+        }
         self.revealOptionsHighlightedBackgroundBaseFrame = frame
         self.revealOptionsHighlightedBackgroundTracksRevealOffset = tracksRevealOffset
         self.revealOptionsHighlightedBackgroundActiveCornerRadius = activeCornerRadius
         self.updateRevealOptionsHighlightedBackgroundGeometry(transition: transition)
     }
 
-    public func updateRevealOptionsHighlightedBackgroundNode(_ highlightedBackgroundNode: ASDisplayNode, isHighlighted: Bool, transition: ContainedViewLayoutTransition, aboveNodes: [ASDisplayNode?]) {
+    public var revealOptionsHighlightProgress: CGFloat {
+        return CGFloat(min(1, max(0, self.motion.surface.value)))
+    }
+
+    public func updateRevealOptionsHighlightedBackgroundNode(_ highlightedBackgroundNode: ASDisplayNode, isHighlighted: Bool, transition: ContainedViewLayoutTransition, aboveNodes: [ASDisplayNode?], highlightAlpha: CGFloat = 1.0, allowsRevealHighlight: Bool = true) {
         self.revealOptionsHighlightedBackgroundNode = highlightedBackgroundNode
-        if isHighlighted {
-            highlightedBackgroundNode.alpha = 1.0
-            if highlightedBackgroundNode.supernode == nil {
-                var anchorNode: ASDisplayNode?
-                for node in aboveNodes {
-                    if let node = node, node.supernode != nil {
-                        anchorNode = node
-                        break
-                    }
-                }
-                if let anchorNode = anchorNode {
-                    self.insertSubnode(highlightedBackgroundNode, aboveSubnode: anchorNode)
+        self.revealOptionsAllowsHighlight = allowsRevealHighlight
+        self.revealOptionsBaseHighlightAlpha = isHighlighted ? highlightAlpha : 0.0
+        self.revealOptionsHighlightAnchor = aboveNodes.compactMap { $0 }.first(where: { $0.supernode != nil })
+        self.applyRevealOptionsHighlight(transition: transition)
+    }
+
+    private func applyRevealOptionsHighlight(transition: ContainedViewLayoutTransition) {
+        guard let node = self.revealOptionsHighlightedBackgroundNode else { return }
+        let alpha = self.revealOptionsBaseHighlightAlpha + (1.0 - self.revealOptionsBaseHighlightAlpha) * (self.revealOptionsAllowsHighlight ? CGFloat(min(1, max(0, self.motion.surfaceOpacity.value))) : 0)
+        if alpha > 0 || self.isRevealOptionsActive {
+            if self.isRevealOptionsActive || node.alpha == 0 {
+                self.highlightFadeGeneration += 1
+                node.layer.removeAnimation(forKey: "opacity")
+            }
+            if node.supernode == nil {
+                if let anchor = self.revealOptionsHighlightAnchor, anchor.supernode === self {
+                    self.insertSubnode(node, aboveSubnode: anchor)
                 } else {
-                    self.addSubnode(highlightedBackgroundNode)
+                    self.insertSubnode(node, at: 0)
                 }
             }
-        } else if highlightedBackgroundNode.supernode != nil {
-            if transition.isAnimated {
-                highlightedBackgroundNode.layer.animateAlpha(from: highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak highlightedBackgroundNode] completed in
-                    if completed {
-                        highlightedBackgroundNode?.removeFromSupernode()
+            if self.isRevealOptionsActive {
+                self.selectionHighlightEndTime = 0
+                node.alpha = alpha
+            } else {
+                transition.updateAlpha(node: node, alpha: alpha)
+            }
+        } else if node.supernode != nil {
+            // A second highlight/layout update must not remove the node while its
+            // presentation is still fading (the model alpha is already zero).
+            if node.alpha != 0 || node.layer.animation(forKey: "opacity") == nil {
+                self.highlightFadeGeneration += 1
+                let generation = self.highlightFadeGeneration
+                let delay = max(0, self.selectionHighlightEndTime - CACurrentMediaTime())
+                let transition = UIAccessibility.isReduceMotionEnabled ? ContainedViewLayoutTransition.immediate : transition
+                transition.updateAlpha(node: node, alpha: 0, delay: delay, completion: { [weak self, weak node] completed in
+                    if completed, let self, self.highlightFadeGeneration == generation, !self.isRevealOptionsActive, self.revealOptionsBaseHighlightAlpha == 0 {
+                        node?.removeFromSupernode()
                     }
                 })
-                highlightedBackgroundNode.alpha = 0.0
-            } else {
-                highlightedBackgroundNode.removeFromSupernode()
             }
         }
         self.updateRevealOptionsHighlightedBackgroundGeometry(transition: transition)
     }
-    
+
+    // For decorations whose colors depend on the animated surface (e.g. badges).
+    open func revealOptionsSurfaceUpdated(progress: CGFloat) {
+    }
+
+    open func revealOptionsSeparatorAlphaUpdated() {
+        self.updateRevealOptionsSeparatorVisibility()
+    }
+
+    override open func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
+        if highlighted || !animated {
+            self.selectionHighlightEndTime = 0
+            self.highlightFadeGeneration += 1
+            self.revealOptionsHighlightedBackgroundNode?.layer.removeAnimation(forKey: "opacity")
+        }
+        self.revealOptionsBaseHighlightAlpha = highlighted ? 1 : 0
+        self.applyRevealOptionsHighlight(transition: animated && !highlighted ? .animated(duration: 0.4, curve: .easeInOut) : .immediate)
+    }
+
+    override open func selected() {
+        super.selected()
+        // Hold only accepted taps, never touches cancelled by scrolling or a swipe.
+        if !self.isRevealOptionsActive && !UIAccessibility.isReduceMotionEnabled {
+            self.selectionHighlightEndTime = CACurrentMediaTime() + 0.5
+        }
+    }
+
     override open var canBeSelected: Bool {
         return !self.isDisplayingRevealedOptions
     }
@@ -244,6 +313,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     }
 
     deinit {
+        self.animationLink?.invalidate()
+        NotificationCenter.default.removeObserver(self)
         self.revealOptionsActivePreviousItemNode?.updateNextRevealOptionsActive(false, transition: .immediate)
     }
     
@@ -253,391 +324,379 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     
     override open func didLoad() {
         super.didLoad()
-        
-        let recognizer = ItemListRevealOptionsGestureRecognizer(target: self, action: #selector(self.revealGesture(_:)))
+        let recognizer = ItemListRevealTouchGestureRecognizer(target: self, action: #selector(self.revealGesture(_:)))
         self.recognizer = recognizer
         recognizer.delegate = self.wrappedGestureRecognizerDelegate
-        recognizer.allowAnyDirection = self.allowAnyDirection
+        recognizer.canBegin = { [weak self] point, direction in
+            guard let self else { return false }
+            return self.canBeginReveal(at: point, direction: direction)
+        }
+        recognizer.horizontalIntent = { [weak self] in
+            guard let self else { return }
+            self.cancelRevealContextGestures(in: self.view)
+        }
         self.view.addGestureRecognizer(recognizer)
-        
+
+        // Touch input has its own measured hysteresis. Keep indirect scrolling
+        // on UIPan so trackpads retain UIKit's continuous scroll event support.
+        let scrollRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.revealScrollGesture(_:)))
+        scrollRecognizer.allowedTouchTypes = []
+        if #available(iOS 13.4, *) {
+            scrollRecognizer.allowedScrollTypesMask = .continuous
+        }
+        scrollRecognizer.delegate = self.wrappedGestureRecognizerDelegate
+        self.scrollRecognizer = scrollRecognizer
+        self.view.addGestureRecognizer(scrollRecognizer)
+
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.revealTapGesture(_:)))
         self.tapRecognizer = tapRecognizer
         tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(tapRecognizer)
-        
-        self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
-        
+        self.updateRecognizerAvailability()
         self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
-            guard let strongSelf = self else {
-                return false
-            }
-            if !strongSelf.revealOffset.isZero {
-                return true
-            }
-            return false
+            return self?.isRevealOptionsActive ?? false
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(self.reduceMotionChanged), name: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil)
+    }
+
+    override open func reuse() {
+        self.selectionHighlightEndTime = 0
+        self.highlightFadeGeneration += 1
+        self.revealOptionsHighlightedBackgroundNode?.layer.removeAnimation(forKey: "opacity")
+        self.resetRevealInteraction(notify: true)
+        self.revealOptionsBaseHighlightAlpha = 0
+        self.applyRevealOptionsHighlight(transition: .immediate)
+        super.reuse()
+    }
+
+    override open func didExitHierarchy() {
+        super.didExitHierarchy()
+        self.resetRevealInteraction(notify: true)
+    }
+
+    private var activeRevealNode: ItemListRevealOptionsNode? {
+        return self.revealDirection > 0 ? self.leftRevealNode : self.rightRevealNode
+    }
+
+    private var activeOptions: [ItemListRevealOption] {
+        return self.revealDirection > 0 ? self.revealOptions.left : self.revealOptions.right
+    }
+
+    private func updateRecognizerAvailability() {
+        let enabled = !self.revealOptions.left.isEmpty || !self.revealOptions.right.isEmpty
+        self.recognizer?.isEnabled = enabled
+        self.scrollRecognizer?.isEnabled = enabled
+        self.allowAnyDirection = !self.revealOptions.left.isEmpty || self.isRevealOptionsActive
+        if self.isNodeLoaded {
+            self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
         }
     }
-    
+
     open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption]), enableAnimations: Bool = true) {
-        if self.revealOptions == options {
-            return
+        guard self.revealOptions != options || self.enableAnimations != enableAnimations else { return }
+        let previous = self.activeOptions
+        let updated = self.revealDirection > 0 ? options.left : options.right
+        let structuralChange = previous.map { self.revealOptionAnimationKey($0.key) } != updated.map { self.revealOptionAnimationKey($0.key) } || previous.map(\.isDestructive) != updated.map(\.isDestructive)
+        if structuralChange && self.isRevealOptionsActive {
+            self.resetRevealInteraction(notify: true)
         }
-        let previousOptions = self.revealOptions
-        let wasEmpty = self.revealOptions.left.isEmpty && self.revealOptions.right.isEmpty
         self.revealOptions = options
         self.enableAnimations = enableAnimations
-        let isEmpty = options.left.isEmpty && options.right.isEmpty
-        if options.left.isEmpty {
-            if let _ = self.leftRevealNode {
-                self.recognizer?.becomeCancelled()
-                self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
+        if let node = self.activeRevealNode {
+            node.setOptions(self.activeOptions, isLeft: self.revealDirection > 0, enableAnimations: enableAnimations)
+            self.updateActiveRevealMetrics()
+            // Appearance changes (mute/read toggles, themes, localization) keep
+            // every channel's presentation and velocity.
+            if self.motion.state == .open || self.motion.state == .settling(open: true) {
+                self.motion.settle(to: self.motion.parameters.openDistance, velocity: self.motion.body.velocity, animated: true)
             }
-        } else if previousOptions.left != options.left {
-            /*if let _ = self.leftRevealNode {
-                self.revealOptionsInteractivelyClosed()
-                self.recognizer?.becomeCancelled()
-                self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
-            }*/
+            self.renderRevealMotion()
+            self.startRevealAnimation()
         }
-        if options.right.isEmpty {
-            if let _ = self.rightRevealNode {
-                self.recognizer?.becomeCancelled()
-                self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
-            }
-        } else if previousOptions.right != options.right {
-            if let _ = self.rightRevealNode {
-                /*self.revealOptionsInteractivelyClosed()
-                self.recognizer?.becomeCancelled()
-                self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))*/
-            }
-        }
-        if wasEmpty != isEmpty {
-            self.recognizer?.isEnabled = !isEmpty
-        }
-        let allowAnyDirection = !options.left.isEmpty || !self.revealOffset.isZero
-        if allowAnyDirection != self.allowAnyDirection {
-            self.allowAnyDirection = allowAnyDirection
-            self.recognizer?.allowAnyDirection = allowAnyDirection
-            if self.isNodeLoaded {
-                self.view.disablesInteractiveTransitionGestureRecognizer = allowAnyDirection
-            }
-        }
+        self.updateRecognizerAvailability()
     }
-    
+
+    // Hosts can identify alternate presentations of the same control (e.g.
+    // mute/unmute). Selection still delivers the option's original action key.
+    open func revealOptionAnimationKey(_ key: Int32) -> Int32 {
+        return key
+    }
+
+    private func containsAction(at point: CGPoint) -> Bool {
+        guard let node = self.activeRevealNode else { return false }
+        return node.containsActionPoint(node.view.convert(point, from: self.view))
+    }
+
+    private func canBeginReveal(at point: CGPoint, direction: CGFloat) -> Bool {
+        guard self.validLayout != nil, self.motion.state != .filling, !self.deliveringAction, !self.containsAction(at: point) else { return false }
+        if self.isRevealOptionsActive && (abs(self.motion.body.value) >= 0.1 || abs(self.motion.body.velocity) >= 5) { return true }
+        return direction > 0 ? !self.revealOptions.left.isEmpty : !self.revealOptions.right.isEmpty
+    }
+
     override open func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let recognizer = self.recognizer, gestureRecognizer == self.tapRecognizer {
-            return abs(self.revealOffset) > 0.0 && !recognizer.validatedGesture
-        } else if let recognizer = self.recognizer, gestureRecognizer == self.recognizer, recognizer.numberOfTouches == 0 {
-            let translation = recognizer.velocity(in: recognizer.view)
-            if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
-                return false
-            }
+        if gestureRecognizer === self.tapRecognizer {
+            return self.isRevealOptionsActive && self.motion.state != .dragging && !self.containsAction(at: gestureRecognizer.location(in: self.view))
+        } else if gestureRecognizer === self.scrollRecognizer, let recognizer = self.scrollRecognizer {
+            let velocity = recognizer.velocity(in: self.view)
+            return abs(velocity.x) > abs(velocity.y) && self.canBeginReveal(at: recognizer.location(in: self.view), direction: velocity.x)
         }
         return true
     }
-    
+
     open func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let recognizer = self.recognizer, otherGestureRecognizer == recognizer {
-            return true
-        } else {
-            return false
-        }
+        return otherGestureRecognizer === self.recognizer || otherGestureRecognizer === self.scrollRecognizer
     }
-    
+
+    open func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // Navigation containers already take priority over UIPan recognizers.
+        // Keep that relationship for our touch recognizer too: folder paging
+        // accepts center swipes and rejects edge swipes, leaving those to us.
+        return gestureRecognizer === self.recognizer && otherGestureRecognizer is InteractiveTransitionGestureRecognizer
+    }
+
     open func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return false
+        // A scrolling pan must wait for the horizontal recognizer's vertical
+        // rejection; otherwise it wins before the 25-point horizontal deadzone.
+        return gestureRecognizer === self.recognizer && otherGestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer.view is UIScrollView
     }
-    
+
     @objc private func revealTapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.updateRevealOffsetInternal(offset: 0.0, transition: .animated(duration: 0.6, curve: self.revealSpringCurve(initialVelocity: 0.0)))
+        if recognizer.state == .ended {
+            self.setRevealOptionsOpened(false, animated: true)
             self.revealOptionsInteractivelyClosed()
         }
     }
 
-    private func revealSpringCurve(initialVelocity: CGFloat = 0.0) -> ContainedViewLayoutTransitionCurve {
-        return .customSpring(mass: 2.0, stiffness: 200.0, damping: 100.0, initialVelocity: initialVelocity)
+    @objc private func revealGesture(_ recognizer: ItemListRevealTouchGestureRecognizer) {
+        self.handleRevealGesture(state: recognizer.state, direction: recognizer.initialDirection, translation: recognizer.translation, velocity: recognizer.horizontalVelocity, location: recognizer.location)
     }
 
-    @objc private func revealGesture(_ recognizer: ItemListRevealOptionsGestureRecognizer) {
-        guard let (size, _, _) = self.validLayout else {
-            return
-        }
-        switch recognizer.state {
-            case .began:
-                self.hasActiveRevealGestureOffset = !self.revealOffset.isZero
-                if let leftRevealNode = self.leftRevealNode {
-                    let revealSize = leftRevealNode.bounds.size
-                    let location = recognizer.location(in: self.view)
-                    if location.x < revealSize.width {
-                        recognizer.becomeCancelled()
-                    } else {
-                        self.initialRevealOffset = self.revealOffset
-                    }
-                } else if let rightRevealNode = self.rightRevealNode {
-                    let revealSize = rightRevealNode.bounds.size
-                    let location = recognizer.location(in: self.view)
-                    if location.x > size.width - revealSize.width {
-                        recognizer.becomeCancelled()
-                    } else {
-                        self.initialRevealOffset = self.revealOffset
-                    }
-                } else {
-                    if self.revealOptions.left.isEmpty && self.revealOptions.right.isEmpty {
-                        recognizer.becomeCancelled()
-                    }
-                    self.initialRevealOffset = self.revealOffset
-                }
-            case .changed:
-                var translation = recognizer.translation(in: self.view)
-                translation.x += self.initialRevealOffset
-                if self.revealOptions.left.isEmpty {
-                    translation.x = min(0.0, translation.x)
-                }
-                if self.leftRevealNode == nil && CGFloat(0.0).isLess(than: translation.x) {
-                    self.setupAndAddLeftRevealNode()
-                    self.revealOptionsInteractivelyOpened()
-                    self.hasActiveRevealGestureOffset = true
-                } else if self.rightRevealNode == nil && translation.x.isLess(than: 0.0) {
-                    self.setupAndAddRightRevealNode()
-                    self.revealOptionsInteractivelyOpened()
-                    self.hasActiveRevealGestureOffset = true
-                }
-                if !translation.x.isZero {
-                    self.hasActiveRevealGestureOffset = true
-                }
-                self.updateRevealOffsetInternal(offset: translation.x, transition: .immediate)
-                if self.leftRevealNode == nil && self.rightRevealNode == nil && !self.hasActiveRevealGestureOffset {
-                    self.revealOptionsInteractivelyClosed()
-                }
-            case .ended, .cancelled:
-                let hasActiveRevealGestureOffset = self.hasActiveRevealGestureOffset
-                self.hasActiveRevealGestureOffset = false
-                guard let recognizer = self.recognizer else {
-                    if hasActiveRevealGestureOffset {
-                        self.revealOptionsInteractivelyClosed()
-                    }
-                    break
-                }
-                
-                if let leftRevealNode = self.leftRevealNode {
-                    let velocity = recognizer.velocity(in: self.view)
-                    let revealSize = leftRevealNode.bounds.size
-                    var reveal = false
-                    if abs(velocity.x) < 100.0 {
-                        if self.initialRevealOffset.isZero && self.revealOffset > 0.0 {
-                            reveal = true
-                        } else if self.revealOffset > revealSize.width {
-                            reveal = true
-                        } else {
-                            reveal = false
-                        }
-                    } else {
-                        if velocity.x > 0.0 {
-                            reveal = true
-                        } else {
-                            reveal = false
-                        }
-                    }
-                    
-                    var selectedOption: ItemListRevealOption?
-                    if reveal && leftRevealNode.isDisplayingExtendedAction() {
-                        reveal = false
-                        selectedOption = self.revealOptions.left.first
-                    } else {
-                        self.updateRevealOffsetInternal(offset: reveal ?revealSize.width : 0.0, transition: .animated(duration: 0.6, curve: self.revealSpringCurve(initialVelocity: 0.0)))
-                    }
-            
-                    if let selectedOption = selectedOption {
-                        self.revealOptionSelected(selectedOption, animated: true)
-                    } else {
-                        if !reveal {
-                            self.revealOptionsInteractivelyClosed()
-                        }
-                    }
-                } else if let rightRevealNode = self.rightRevealNode {
-                    let velocity = recognizer.velocity(in: self.view)
-                    let revealSize = rightRevealNode.bounds.size
-                    var reveal = false
-                    if abs(velocity.x) < 100.0 {
-                        if self.initialRevealOffset.isZero && self.revealOffset < 0.0 {
-                            reveal = true
-                        } else if self.revealOffset < -revealSize.width {
-                            reveal = true
-                        } else {
-                            reveal = false
-                        }
-                    } else {
-                        if velocity.x < 0.0 {
-                            reveal = true
-                        } else {
-                            reveal = false
-                        }
-                    }
-                    
-                    var selectedOption: ItemListRevealOption?
-                    if reveal && rightRevealNode.isDisplayingExtendedAction() {
-                        reveal = false
-                        selectedOption = self.revealOptions.right.last
-                    } else {
-                        self.updateRevealOffsetInternal(offset: reveal ? -revealSize.width : 0.0, transition: .animated(duration: 0.6, curve: self.revealSpringCurve(initialVelocity: 0.0)))
-                    }
-                    
-                    if let selectedOption = selectedOption {
-                        self.revealOptionSelected(selectedOption, animated: true)
-                    } else {
-                        if !reveal {
-                            self.revealOptionsInteractivelyClosed()
-                        }
-                    }
-                } else if hasActiveRevealGestureOffset {
-                    self.revealOptionsInteractivelyClosed()
-                }
-            default:
-                break
-        }
+    @objc private func revealScrollGesture(_ recognizer: UIPanGestureRecognizer) {
+        let velocity = recognizer.velocity(in: self.view)
+        self.handleRevealGesture(state: recognizer.state, direction: velocity.x, translation: recognizer.translation(in: self.view).x, velocity: velocity.x, location: recognizer.location(in: self.view))
     }
-    
-    private func setupAndAddLeftRevealNode() {
-        if !self.revealOptions.left.isEmpty {
-            let revealNode = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
-                self?.revealOptionSelected(option, animated: false)
-            }, tapticAction: { [weak self] in
-                self?.hapticImpact()
-            })
-            revealNode.setOptions(self.revealOptions.left, isLeft: true, enableAnimations: self.enableAnimations)
-            self.leftRevealNode = revealNode
-            
-            if let (size, leftInset, _) = self.validLayout {
-                var revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
-                revealSize.width += leftInset
-                
-                revealNode.frame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
-                revealNode.updateRevealOffset(offset: 0.0, sideInset: leftInset, transition: .immediate)
+
+    func handleRevealGesture(state: UIGestureRecognizer.State, direction: CGFloat, translation: CGFloat, velocity: CGFloat, location: CGPoint) {
+        guard !self.suppressGestureEvents, let (size, _, _) = self.validLayout else { return }
+        switch state {
+        case .began:
+            self.cancelRevealContextGestures(in: self.view)
+            self.advanceRevealAnimation()
+            let atClosedPosition = abs(self.motion.body.value) < 0.1 && abs(self.motion.body.velocity) < 5
+            if !self.isRevealOptionsActive || atClosedPosition {
+                let newDirection: CGFloat = direction > 0 ? 1 : -1
+                if self.revealDirection != newDirection {
+                    self.leftRevealNode?.removeFromSupernode()
+                    self.rightRevealNode?.removeFromSupernode()
+                    self.leftRevealNode = nil
+                    self.rightRevealNode = nil
+                    self.motion.reset()
+                }
+                guard self.setupRevealNode(direction: newDirection) else { return }
             }
-            
-            self.controlsContainer.addSubnode(revealNode)
-        }
-    }
-    
-    private func setupAndAddRightRevealNode() {
-        if !self.revealOptions.right.isEmpty {
-            let revealNode = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
-                self?.revealOptionSelected(option, animated: false)
-            }, tapticAction: { [weak self] in
-                self?.hapticImpact()
-            })
-            revealNode.setOptions(self.revealOptions.right, isLeft: false, enableAnimations: self.enableAnimations)
-            self.rightRevealNode = revealNode
-            
-            if let (size, _, rightInset) = self.validLayout {
-                var revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
-                revealSize.width += rightInset
-                
-                revealNode.frame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
-                revealNode.updateRevealOffset(offset: 0.0, sideInset: -rightInset, transition: .immediate)
+            self.animationCompletion = nil
+            let highlightAlpha = self.revealOptionsHighlightedBackgroundNode.flatMap { node -> CGFloat? in
+                guard node.supernode != nil, !node.isHidden else { return nil }
+                return CGFloat(node.layer.presentation()?.opacity ?? node.layer.opacity)
+            } ?? 0
+            self.motion.begin(highlightAlpha: Double(highlightAlpha))
+            self.hapticFeedback = self.hapticFeedback ?? HapticFeedback()
+            self.hapticFeedback?.prepareTap()
+            self.renderRevealMotion()
+            self.revealOptionsInteractivelyOpened()
+            fallthrough
+        case .changed:
+            let wasArmed = self.motion.isArmed
+            let distance = self.revealDirection < 0 ? location.x : size.width - location.x
+            self.motion.change(translation: Double(translation * self.revealDirection), velocity: Double(velocity * self.revealDirection), distanceFromCommitEdge: Double(distance), reduceMotion: UIAccessibility.isReduceMotionEnabled)
+            if wasArmed != self.motion.isArmed { self.hapticFeedback?.tap() }
+            self.renderRevealMotion()
+            self.startRevealAnimation()
+        case .ended, .cancelled:
+            guard self.motion.state == .dragging else { return }
+            let commit = self.motion.end(translation: Double(translation * self.revealDirection), velocity: Double(velocity * self.revealDirection), cancelled: state == .cancelled, animated: !UIAccessibility.isReduceMotionEnabled)
+            self.renderRevealMotion()
+            self.startRevealAnimation()
+            if commit, let option = self.revealDirection > 0 ? self.activeOptions.first : self.activeOptions.last {
+                self.deliverRevealOption(option, animated: true)
+            } else if !self.motion.wantsOpen {
+                self.revealOptionsInteractivelyClosed()
             }
-            
-            self.controlsContainer.addSubnode(revealNode)
+        default:
+            break
         }
     }
-    
+
+    private func cancelRevealContextGestures(in view: UIView) {
+        for recognizer in view.gestureRecognizers ?? [] {
+            if let contextGesture = recognizer as? ContextGesture {
+                contextGesture.cancel()
+            }
+        }
+        for subview in view.subviews {
+            self.cancelRevealContextGestures(in: subview)
+        }
+    }
+
+    private func deliverRevealOption(_ option: ItemListRevealOption, animated: Bool) {
+        guard !self.deliveringAction, self.motion.state != .filling else { return }
+        self.deliveringAction = true
+        self.revealOptionSelected(option, animated: animated)
+        self.deliveringAction = false
+    }
+
+    @discardableResult private func setupRevealNode(direction: CGFloat) -> Bool {
+        guard self.validLayout != nil else { return false }
+        let options = direction > 0 ? self.revealOptions.left : self.revealOptions.right
+        guard !options.isEmpty else { return false }
+        self.revealDirection = direction
+        if self.activeRevealNode == nil {
+            let node = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
+                self?.deliverRevealOption(option, animated: false)
+            }, tapticAction: {})
+            node.setOptions(options, isLeft: direction > 0, enableAnimations: self.enableAnimations)
+            if direction > 0 { self.leftRevealNode = node } else { self.rightRevealNode = node }
+            self.controlsContainer.addSubnode(node)
+        }
+        self.updateActiveRevealMetrics()
+        return true
+    }
+
+    private func updateActiveRevealMetrics() {
+        guard let (size, leftInset, rightInset) = self.validLayout, let node = self.activeRevealNode else { return }
+        let sideInset = self.revealDirection > 0 ? leftInset : rightInset
+        var revealSize = node.measure(CGSize(width: .greatestFiniteMagnitude, height: size.height))
+        revealSize.width += sideInset
+        node.bounds = CGRect(origin: .zero, size: revealSize)
+        self.motion.configure(node.motionParameters(width: size.width, sideInset: sideInset, displayScale: self.isNodeLoaded ? self.view.traitCollection.displayScale : UIScreen.main.scale))
+    }
+
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        if let previous = self.validLayout, previous.0 != size || previous.1 != leftInset || previous.2 != rightInset {
+            self.resetRevealInteraction(notify: true)
+        }
         self.validLayout = (size, leftInset, rightInset)
         if self.isRevealOptionsActive {
             self.updatePreviousRevealOptionsItemNode(isActive: true, transition: .immediate)
-        }
-        
-        if let leftRevealNode = self.leftRevealNode {
-            var revealSize = leftRevealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
-            revealSize.width += leftInset
-            leftRevealNode.frame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
-        }
-        
-        if let rightRevealNode = self.rightRevealNode {
-            var revealSize = rightRevealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
-            revealSize.width += rightInset
-            rightRevealNode.frame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
+            self.updateActiveRevealMetrics()
+            self.renderRevealMotion()
         }
     }
-    
+
     open func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
-        self.revealOffset = offset
-        self.updateRevealOptionsActive(!offset.isZero, transition: transition)
-        guard let (size, leftInset, rightInset) = self.validLayout else {
+        if offset != 0 && self.activeRevealNode == nil {
+            guard self.setupRevealNode(direction: offset > 0 ? 1 : -1) else { completion?(); return }
+        }
+        self.animationCompletion = completion
+        self.motion.settle(to: Double(offset * self.revealDirection), velocity: self.motion.body.velocity, animated: transition.isAnimated && !UIAccessibility.isReduceMotionEnabled)
+        self.renderRevealMotion()
+        self.startRevealAnimation()
+    }
+
+    private func renderRevealMotion() {
+        guard let (size, _, _) = self.validLayout else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        self.revealOffset = self.revealDirection * CGFloat(self.motion.body.value)
+        // Separators return as the surface fades, while controls and interaction
+        // state remain alive until all their animation channels have settled.
+        let separatorAlpha = 1.0 - CGFloat(min(1, max(0, self.motion.surfaceOpacity.value)))
+        let separatorAlphaChanged = self.revealOptionsSeparatorAlpha != separatorAlpha
+        self.revealOptionsSeparatorAlpha = separatorAlpha
+        self.updateRevealOptionsActive(self.motion.state != .closed, transition: .immediate)
+        if separatorAlphaChanged {
+            self.revealOptionsSeparatorAlphaUpdated()
+            self.revealOptionsActivePreviousItemNode?.updateNextRevealOptionsActive(self.isRevealOptionsActive, separatorAlpha: separatorAlpha, transition: .immediate)
+        }
+        if let node = self.activeRevealNode {
+            let distance = max(0, CGFloat(self.motion.body.value))
+            let x = self.revealDirection > 0 ? min(distance - node.bounds.width, 0) : size.width - distance
+            node.position = CGPoint(x: x + node.bounds.width / 2, y: node.bounds.height / 2)
+            node.render(motion: self.motion)
+        }
+        self.updateRevealOffset(offset: self.revealOffset, transition: .immediate)
+        self.applyRevealOptionsHighlight(transition: .immediate)
+        let progress = self.revealOptionsHighlightProgress
+        if progress != self.lastSurfaceProgress || self.motion.surfaceOpacity.value != self.motion.surfaceOpacity.target {
+            self.lastSurfaceProgress = progress
+            self.revealOptionsSurfaceUpdated(progress: progress)
+        }
+        if self.motion.state == .closed {
+            self.leftRevealNode?.removeFromSupernode()
+            self.rightRevealNode?.removeFromSupernode()
+            self.leftRevealNode = nil
+            self.rightRevealNode = nil
+        }
+        self.updateRecognizerAvailability()
+    }
+
+    private func startRevealAnimation() {
+        if self.motion.isAtRest {
+            self.animationLink?.invalidate()
+            self.animationLink = nil
+            self.previousAnimationTime = 0
+            let completion = self.animationCompletion
+            self.animationCompletion = nil
+            completion?()
             return
         }
-        
-        var leftRevealCompleted = true
-        var rightRevealCompleted = true
-        let intermediateCompletion = {
-            if leftRevealCompleted && rightRevealCompleted {
-                completion?()
-            }
-        }
-        
-        if let leftRevealNode = self.leftRevealNode {
-            leftRevealCompleted = false
-            
-            let revealSize = leftRevealNode.bounds.size
-            
-            let revealFrame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
-            //let revealNodeOffset = max(-self.revealOffset, revealSize.width)
-            let revealNodeOffset = -self.revealOffset
-            leftRevealNode.updateRevealOffset(offset: revealNodeOffset, sideInset: leftInset, transition: transition)
-            
-            if CGFloat(offset).isLessThanOrEqualTo(0.0) {
-                self.leftRevealNode = nil
-                transition.updateFrame(node: leftRevealNode, frame: revealFrame, completion: { [weak leftRevealNode] _ in
-                    leftRevealNode?.removeFromSupernode()
-                    
-                    leftRevealCompleted = true
-                    intermediateCompletion()
-                })
-            } else {
-                transition.updateFrame(node: leftRevealNode, frame: revealFrame, completion: { _ in
-                    leftRevealCompleted = true
-                    intermediateCompletion()
-                })
-            }
-        }
-        if let rightRevealNode = self.rightRevealNode {
-            rightRevealCompleted = false
-            
-            let revealSize = rightRevealNode.bounds.size
-            
-            let revealFrame = CGRect(origin: CGPoint(x: min(size.width, size.width + self.revealOffset), y: 0.0), size: revealSize)
-            let revealNodeOffset = -self.revealOffset
-            rightRevealNode.updateRevealOffset(offset: revealNodeOffset, sideInset: -rightInset, transition: transition)
-            
-            if CGFloat(0.0).isLessThanOrEqualTo(offset) {
-                self.rightRevealNode = nil
-                transition.updateFrame(node: rightRevealNode, frame: revealFrame, completion: { [weak rightRevealNode] _ in
-                    rightRevealNode?.removeFromSupernode()
-                    
-                    rightRevealCompleted = true
-                    intermediateCompletion()
-                })
-            } else {
-                transition.updateFrame(node: rightRevealNode, frame: revealFrame, completion: { _ in
-                    rightRevealCompleted = true
-                    intermediateCompletion()
-                })
-            }
-        }
-        let allowAnyDirection = !self.revealOptions.left.isEmpty || !offset.isZero
-        if allowAnyDirection != self.allowAnyDirection {
-            self.allowAnyDirection = allowAnyDirection
-            self.recognizer?.allowAnyDirection = allowAnyDirection
-            self.view.disablesInteractiveTransitionGestureRecognizer = allowAnyDirection
-        }
-        
-        self.updateRevealOffset(offset: offset, transition: transition)
-        self.updateRevealOptionsHighlightedBackgroundGeometry(transition: transition)
+        guard self.animationLink == nil else { return }
+        self.previousAnimationTime = CACurrentMediaTime()
+        self.animationLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
+            self?.advanceRevealAnimation()
+        })
     }
-    
+
+    private func advanceRevealAnimation() {
+        guard self.previousAnimationTime > 0 else { return }
+        let now = CACurrentMediaTime()
+        let dt = max(0, now - self.previousAnimationTime)
+        self.previousAnimationTime = now
+        self.advanceRevealAnimations(by: dt)
+    }
+
+    // Same deterministic step for display updates and interaction regressions.
+    func advanceRevealAnimations(by dt: Double) {
+        self.motion.advance(by: dt)
+        self.renderRevealMotion()
+        self.startRevealAnimation()
+    }
+
+    private func cancelRevealRecognizers() {
+        self.suppressGestureEvents = true
+        self.recognizer?.isEnabled = false
+        self.scrollRecognizer?.isEnabled = false
+        self.updateRecognizerAvailability()
+        self.suppressGestureEvents = false
+    }
+
+    private func resetRevealInteraction(notify: Bool) {
+        let wasActive = self.isRevealOptionsActive
+        self.cancelRevealRecognizers()
+        self.animationLink?.invalidate()
+        self.animationLink = nil
+        self.previousAnimationTime = 0
+        self.animationCompletion = nil
+        self.layer.allowsGroupOpacity = false
+        self.motion.reset()
+        self.renderRevealMotion()
+        if notify && wasActive { self.revealOptionsInteractivelyClosed() }
+    }
+
+    @objc private func reduceMotionChanged() {
+        if UIAccessibility.isReduceMotionEnabled {
+            self.selectionHighlightEndTime = 0
+            self.highlightFadeGeneration += 1
+            self.revealOptionsHighlightedBackgroundNode?.layer.removeAnimation(forKey: "opacity")
+            self.motion.snapToTargets()
+            self.motion.advance(by: 0)
+            self.renderRevealMotion()
+            self.startRevealAnimation()
+        }
+    }
+
     open func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        
     }
 
     open func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
@@ -648,72 +707,49 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     open func nextRevealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
         self.updateRevealOptionsSeparatorVisibility()
     }
-    
+
     open func revealOptionsInteractivelyOpened() {
-        
     }
-    
+
     open func revealOptionsInteractivelyClosed() {
-        
     }
-    
+
     open func setRevealOptionsOpened(_ value: Bool, animated: Bool) {
-        if value != !self.revealOffset.isZero {
-            if !self.revealOffset.isZero {
-                self.recognizer?.becomeCancelled()
-            }
-            let transition: ContainedViewLayoutTransition
-            if animated {
-                transition = .animated(duration: 0.6, curve: self.revealSpringCurve(initialVelocity: 0.0))
-            } else {
-                transition = .immediate
-            }
-            if value {
-                if self.rightRevealNode == nil {
-                    self.setupAndAddRightRevealNode()
-                    if let rightRevealNode = self.rightRevealNode, rightRevealNode.isNodeLoaded, let _ = self.validLayout {
-                        rightRevealNode.layout()
-                        let revealSize = rightRevealNode.bounds.size
-                        self.updateRevealOffsetInternal(offset: -revealSize.width, transition: transition)
-                    }
-                }
-            } else if !self.revealOffset.isZero {
-                self.updateRevealOffsetInternal(offset: 0.0, transition: transition)
-            }
+        guard self.motion.state != .filling, value != self.motion.wantsOpen else { return }
+        if value {
+            guard self.setupRevealNode(direction: -1) else { return }
+        } else {
+            self.cancelRevealRecognizers()
         }
+        self.animationCompletion = nil
+        self.motion.settle(to: value ? self.motion.parameters.openDistance : 0, velocity: self.motion.body.velocity, animated: animated && !UIAccessibility.isReduceMotionEnabled)
+        self.renderRevealMotion()
+        self.startRevealAnimation()
     }
-    
+
     open func animateRevealOptionsFill(completion: (() -> Void)? = nil) {
-        if let validLayout = self.validLayout {
-            self.layer.allowsGroupOpacity = true
-            self.updateRevealOffsetInternal(offset: -validLayout.0.width - 74.0, transition: .animated(duration: 0.6, curve: self.revealSpringCurve(initialVelocity: 0.0)), completion: {
-                self.layer.allowsGroupOpacity = false
-                completion?()
-            })
+        guard let (size, _, _) = self.validLayout, self.activeRevealNode != nil else { completion?(); return }
+        self.cancelRevealRecognizers()
+        self.layer.allowsGroupOpacity = true
+        self.animationCompletion = { [weak self] in
+            self?.layer.allowsGroupOpacity = false
+            completion?()
         }
+        self.motion.settle(to: Double(size.width + 74), velocity: self.motion.body.velocity, animated: !UIAccessibility.isReduceMotionEnabled, filling: true)
+        self.renderRevealMotion()
+        self.startRevealAnimation()
     }
-    
+
     open func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
     }
-    
+
     override open var preventsTouchesToOtherItems: Bool {
         return self.isDisplayingRevealedOptions
     }
-    
+
     override open func touchesToOtherItemsPrevented() {
         if self.isDisplayingRevealedOptions {
             self.setRevealOptionsOpened(false, animated: true)
         }
-    }
-    
-    private func hapticImpact() {
-        if self.hapticFeedback == nil {
-            self.hapticFeedback = HapticFeedback()
-        }
-        self.hapticFeedback?.impact(.medium)
-    }
-    
-    override open func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
-        super.animateFrameTransition(progress, currentValue)   
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -421,7 +422,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
         
-        self.playPauseIconNode = PlayPauseIconNode()
+        self.playPauseIconNode = PlayPauseIconNode(lottieSettings: context.lottieRenderingSettings)
         
         self.statusButtonNode = HighlightTrackingButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -500,7 +501,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 let theme = defaultDarkPresentationTheme
                 let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), self.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                 
-                let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: updatedPresentationData))
+                let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: updatedPresentationData))
 
                 self.controllerInteraction?.presentController(shareController, nil)
             case .lookup:
@@ -511,7 +512,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     window.rootViewController?.present(controller, animated: true)
                 }
             case .speak:
-                if let speechHolder = speakText(context: self.context, text: text.string) {
+                if let speechHolder = speakText(text: text.string) {
                     speechHolder.completion = { [weak self, weak speechHolder] in
                         guard let self else {
                             return
@@ -1198,17 +1199,27 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             buttonPanelInsets.left += 18.0
             buttonPanelInsets.right += 18.0
         }
+        // Beside a side strip (iPhone Duo) the buttons keep to the band between the side insets: in folded
+        // landscape-left the strip's status block sits at the bottom, level with them. Equal side insets keep the
+        // screen-wide panel.
+        let stripInsets: (left: CGFloat, right: CGFloat) = leftInset != rightInset ? (leftInset, rightInset) : (0.0, 0.0)
+        buttonPanelInsets.left += stripInsets.left
+        buttonPanelInsets.right += stripInsets.right
+        let buttonsCenterX = stripInsets.left + (width - stripInsets.left - stripInsets.right) / 2.0
         
         var needsShadow = false
         if !self.textNode.isHidden {
             var textFrame = CGRect()
             var visibleTextHeight: CGFloat = 0.0
             
-            let sideInset: CGFloat = 16.0 + leftInset
+            // An expanded caption can rise to the top of the screen, so it keeps clear of iPhone Duo's side strip,
+            // which the buttons at the bottom span.
+            let captionInsets = self.screenSideInsets ?? (leftInset, rightInset)
+            let sideInset: CGFloat = 16.0 + captionInsets.left
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0 + 14.0
             
-            let constrainSize = CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude)
+            let constrainSize = CGSize(width: width - 16.0 * 2.0 - captionInsets.left - captionInsets.right, height: CGFloat.greatestFiniteMagnitude)
             let textSize = self.textNode.updateLayout(constrainSize)
             
             var textOffset: CGFloat = 0.0
@@ -1476,19 +1487,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         }
 
         if let image = self.backwardButton.backgroundIconNode.image {
-            self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) - 66.0, y: panelHeight - buttonPanelInsets.bottom - 44.0 + floorToScreenPixels((44.0 - image.size.height) * 0.5)), size: image.size)
+            self.backwardButton.frame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - image.size.width / 2.0) - 66.0, y: panelHeight - buttonPanelInsets.bottom - 44.0 + floorToScreenPixels((44.0 - image.size.height) * 0.5)), size: image.size)
         }
         if let image = self.forwardButton.backgroundIconNode.image {
-            self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) + 66.0, y: panelHeight - buttonPanelInsets.bottom - 44.0 + floorToScreenPixels((44.0 - image.size.height) * 0.5)), size: image.size)
+            self.forwardButton.frame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - image.size.width / 2.0) + 66.0, y: panelHeight - buttonPanelInsets.bottom - 44.0 + floorToScreenPixels((44.0 - image.size.height) * 0.5)), size: image.size)
         }
         
-        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - buttonPanelInsets.bottom - 44.0 + floorToScreenPixels((44.0 - 44.0) * 0.5)), size: CGSize(width: 44.0, height: 44.0))
+        self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - 22.0), y: panelHeight - buttonPanelInsets.bottom - 44.0 + floorToScreenPixels((44.0 - 44.0) * 0.5)), size: CGSize(width: 44.0, height: 44.0))
         self.playPauseIconNode.frame = self.playbackControlButton.bounds.offsetBy(dx: 2.0, dy: -2.0)
         
+        // In the playback button's place: centred in the band beside a side strip (iPhone Duo), like the buttons.
         let statusSize = CGSize(width: 28.0, height: 28.0)
-        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor((width - statusSize.width) / 2.0), y: panelHeight - bottomInset - statusSize.height - 8.0), size: statusSize))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor(buttonsCenterX - statusSize.width / 2.0), y: panelHeight - bottomInset - statusSize.height - 8.0), size: statusSize))
         
-        self.statusButtonNode.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        self.statusButtonNode.frame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - 22.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
         if let (videoFramePreviewNode, videoFrameTextNode) = self.videoFramePreviewNode {
             let intrinsicImageSize = videoFramePreviewNode.image?.size ?? CGSize(width: 320.0, height: 240.0)
@@ -1914,7 +1926,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             }
                         }
                         
-                        let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction, externalShare: hasExternalShare, forceTheme: forceTheme, actionCompleted: { [weak self] in
+                        let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction, externalShare: hasExternalShare, forceTheme: forceTheme, actionCompleted: { [weak self] in
                             if let strongSelf = self, let actionCompletionText = actionCompletionText {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
@@ -1984,7 +1996,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             }
                             self.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: text), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
                         }))
-                        strongSelf.controllerInteraction?.presentController(shareController, nil)
+                        strongSelf.context.sharedContext.mainWindow?.present(shareController, on: .root, blockInteraction: true)
                     } else {
                         var singleText = presentationData.strings.Media_ShareItem(1)
                         var multipleText = presentationData.strings.Media_ShareItem(Int32(messages.count))
@@ -2004,7 +2016,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         
                         let shareAction: ([EngineRawMessage]) -> Void = { messages in
                             if let strongSelf = self {
-                                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages), preferredAction: preferredAction, forceTheme: forceTheme, actionCompleted: { [weak self] in
+                                let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages), preferredAction: preferredAction, forceTheme: forceTheme, actionCompleted: { [weak self] in
                                     if let strongSelf = self {
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                         strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: presentationData.strings.Gallery_ImageSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
@@ -2053,7 +2065,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                                         })
                                     }
                                 }))
-                                strongSelf.controllerInteraction?.presentController(shareController, nil)
+                                strongSelf.context.sharedContext.mainWindow?.present(shareController, on: .root, blockInteraction: true)
                             }
                         }
                         
@@ -2159,7 +2171,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     }
                 }
             }
-            let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction, forceTheme: forceTheme, dismissed: { [weak self] _ in
+            let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction, forceTheme: forceTheme, dismissed: { [weak self] _ in
                 self?.interacting?(false)
             }, completed: { [weak self] peerIds in
                 if let strongSelf = self {
@@ -2203,7 +2215,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     })
                 }
             }))
-            self.controllerInteraction?.presentController(shareController, nil)
+            self.context.sharedContext.mainWindow?.present(shareController, on: .root, blockInteraction: true)
         }
     }
     
@@ -2331,8 +2343,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    init() {
-        super.init(size: CGSize(width: 40.0, height: 40.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 40.0, height: 40.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

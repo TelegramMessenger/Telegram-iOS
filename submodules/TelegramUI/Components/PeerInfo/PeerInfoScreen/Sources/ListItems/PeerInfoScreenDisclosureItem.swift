@@ -154,8 +154,9 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.selectionNode.pressed = item.action
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 16.0 + safeInsets.right
         let leftInset = (item.icon == nil && item.iconSignal == nil ? sideInset : sideInset + 29.0 + 16.0)
-        let rightInset = sideInset + (item.hasArrow ? 18.0 : 0.0)
+        let rightInset = sideInsetRight + (item.hasArrow ? 18.0 : 0.0)
         let separatorInset = item.icon == nil && item.iconSignal == nil ? sideInset : leftInset - 1.0
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         
@@ -209,6 +210,8 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         var labelConstrainWidth = width - textSize.width - (leftInset + rightInset)
         if case .semitransparentBadge = item.label {
             labelConstrainWidth -= 16.0
+        } else {
+            labelConstrainWidth -= 8.0
         }
         let labelSize = self.labelNode.updateLayout(CGSize(width: labelConstrainWidth, height: .greatestFiniteMagnitude))
         

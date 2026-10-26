@@ -54,6 +54,7 @@ swift_library(
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/Display",
         "//submodules/Postbox",
         "//submodules/TelegramCore",
@@ -74,6 +75,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache/ImageDCT",
         "//submodules/FileMediaResourceStatus",
         "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
+        "//submodules/TelegramUI/Components/MediaAssetsContext",
     ],
     visibility = [
         "//visibility:public",

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -297,6 +296,9 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 |> map { $0._asPeer() }
                 |> take(1)
                 let foundLocalPeers = context.stateManager.postbox.searchPeers(query: query.lowercased())
+                |> map { peers -> [EngineRenderedPeer] in
+                    return peers.map(EngineRenderedPeer.init)
+                }
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError> = .single(([], [], true))
                 |> then(
                     _internal_searchPeers(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, network: context.stateManager.network, query: query, scope: .everywhere)
@@ -307,7 +309,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 )
                 
                 struct FoundPeers {
-                    var foundLocalPeers: [RenderedPeer]
+                    var foundLocalPeers: [EngineRenderedPeer]
                     var foundRemotePeers: ([FoundPeer], [FoundPeer], Bool)
                 }
                 
@@ -329,7 +331,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     var result = Set<EnginePeer.Id>()
                     
                     for peer in foundPeers.foundLocalPeers {
-                        if let user = peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                        if case let .user(user) = peer.peer, user.flags.contains(.requirePremium) {
                             result.insert(user.id)
                         }
                     }
@@ -381,9 +383,9 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     
                     for renderedPeer in foundLocalPeers {
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
-                            if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(EnginePeer(peer)) {
+                            if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(renderedPeer.peerId)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, requiresStars: nil, theme: theme, strings: strings, isGlobal: false))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: renderedPeer, presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, requiresStars: nil, theme: theme, strings: strings, isGlobal: false))
                                 index += 1
                             }
                         }

@@ -249,11 +249,11 @@ public final class LoadingOverlayNode: ASDisplayNode {
             
             var itemNodes: [ChatListItemNode] = []
             for i in 0 ..< items.count {
-                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: (i == items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: (i == items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     if let itemNode = node as? ChatListItemNode {
                         itemNodes.append(itemNode)
                     }
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
             }
             
@@ -392,7 +392,13 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
+        recognizer.tapActionAtPoint = { [weak self] point in
+            guard let self else {
+                return .waitForSingleTap
+            }
+            if self.hasAvatarAction(at: point) {
+                return .fail
+            }
             return .waitForSingleTap
         }
         recognizer.highlight = { [weak self] point in
@@ -420,6 +426,24 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
         default:
             break
         }
+    }
+
+    private func communityId() -> EnginePeer.Id? {
+        guard let itemNode = self.itemNode as? ChatListItemNode, let chatListItem = itemNode.item else {
+            return nil
+        }
+        guard case let .peer(peerData) = chatListItem.content else {
+            return nil
+        }
+        return peerData.peer.peer?.containerPeerId
+    }
+
+    private func hasAvatarAction(at point: CGPoint) -> Bool {
+        guard let item = self.item, let itemNode = self.itemNode as? ChatListItemNode else {
+            return false
+        }
+        let avatarFrame = itemNode.avatarNode.view.convert(itemNode.avatarNode.view.bounds, to: self.view)
+        return avatarFrame.contains(point) && (self.communityId() != nil || item.data.storyStats != nil)
     }
     
     override func update(context: AccountContext, width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -541,6 +565,17 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
                 
                 StoryContainerScreen.openPeerStories(context: item.context, peerId: item.data.peer.peerId, parentController: controller, avatarNode: itemNode.avatarNode)
             },
+            openCommunity: { [weak self] communityId in
+                guard let self, let item = self.item, let controller = item.controller() else {
+                    return
+                }
+                let communityController = item.context.sharedContext.makeCommunityViewScreen(
+                    context: item.context,
+                    communityId: communityId,
+                    mode: .sheet
+                )
+                controller.push(communityController)
+            },
             openStarsTopup: { _ in
             },
             editPeer: { _ in
@@ -631,8 +666,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
                     return current
                 },
                 params: params,
-                previousItem: nil,
-                nextItem: nil, animation: .None,
+                neighbors: .none, animation: .None,
                 completion: { layout, apply in
                     let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
@@ -640,7 +674,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
                     current.insets = layout.insets
                     current.frame = nodeFrame
                     
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 })
         } else {
             var outItemNode: ListViewItemNode?
@@ -648,11 +682,10 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
                 async: { f in f() },
                 params: params,
                 synchronousLoads: true,
-                previousItem: nil,
-                nextItem: nil,
+                neighbors: .none,
                 completion: { node, apply in
                     outItemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 }
             )
             itemNode = outItemNode
@@ -665,7 +698,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             
             self.itemNode = itemNode
             if let itemNode {
-                itemNode.isUserInteractionEnabled = false
+                itemNode.isUserInteractionEnabled = true
                 self.contextSourceNode.contentNode.addSubnode(itemNode)
             }
         }
@@ -742,7 +775,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
         if let point, let itemNode = self.itemNode as? ChatListItemNode {
             if !itemNode.avatarNode.view.convert(itemNode.avatarNode.view.bounds, to: self.view).contains(point) {
                 isHighlighted = true
-            } else if let item = self.item, item.data.storyStats == nil {
+            } else if let item = self.item, item.data.storyStats == nil && self.communityId() == nil {
                 isHighlighted = true
             }
         }

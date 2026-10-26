@@ -77,6 +77,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
     
     public private(set) var titleNode: TextNode?
     public private(set) var nameNode: TextNode?
+    private var viaBotNode: TextNode?
     private var credibilityIconNode: ASImageNode?
     private var infoNode: InfoButtonNode?
     private var expiredStoryIconView: UIImageView?
@@ -89,8 +90,6 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
     private var hasLinkProgress: Bool = false
     private var linkProgressView: TextLoadingEffectView?
     private var linkProgressDisposable: Disposable?
-    
-    private var previousPeer: EnginePeer?
     
     public var openPsa: ((String, ASDisplayNode) -> Void)?
     
@@ -144,7 +143,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
             
             if let nameNode = self.nameNode {
-                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+                let viaBotWidth = self.viaBotNode.map { $0.frame.maxX - nameNode.frame.maxX } ?? 0.0
+                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX + viaBotWidth)
             }
         }
         
@@ -175,7 +175,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
             
             if let nameNode = self.nameNode {
-                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+                let viaBotWidth = self.viaBotNode.map { $0.frame.maxX - nameNode.frame.maxX } ?? 0.0
+                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX + viaBotWidth)
             }
         }
         
@@ -251,7 +252,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
                 
                 if let nameNode = self.nameNode {
-                    addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+                    let viaBotWidth = self.viaBotNode.map { $0.frame.maxX - nameNode.frame.maxX } ?? 0.0
+                    addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX + viaBotWidth)
                 }
             }
             
@@ -267,7 +269,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             
             let progressColor: UIColor = highlightColor
             
-            linkProgressView.update(color: progressColor, size: CGRectUnion(titleNode.frame, nameNode.frame).size, rects: initialRects)
+            let nameFrame = self.viaBotNode.map { CGRectUnion(nameNode.frame, $0.frame) } ?? nameNode.frame
+            linkProgressView.update(color: progressColor, size: CGRectUnion(titleNode.frame, nameFrame).size, rects: initialRects)
         } else {
             if let linkProgressView = self.linkProgressView {
                 self.linkProgressView = nil
@@ -278,23 +281,19 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
-    public static func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: EnginePeer?, _ authorName: String?, _ psaType: String?, _ storyData: StoryData?, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
+    public static func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: EnginePeer?, _ authorName: String?, _ inlineBotName: String?, _ psaType: String?, _ storyData: StoryData?, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let nameNodeLayout = TextNode.asyncLayout(maybeNode?.nameNode)
+        let viaBotNodeLayout = TextNode.asyncLayout(maybeNode?.viaBotNode)
         
-        let previousPeer = maybeNode?.previousPeer
-        
-        return { context, presentationData, strings, type, peer, authorName, psaType, storyData, constrainedSize in
-            let originalPeer = peer
-            let peer = peer ?? previousPeer
-            
+        return { context, presentationData, strings, type, peer, authorName, inlineBotName, psaType, storyData, constrainedSize in
             let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let prefixFont = Font.regular(fontSize)
             let peerFont = Font.medium(fontSize)
             
             let peerString: String
             if let peer = peer {
-                if let authorName = authorName, originalPeer == peer {
+                if let authorName = authorName {
                     peerString = "\(peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
                 } else {
                     peerString = peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
@@ -468,23 +467,41 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
             
             var authorAvatarInset: CGFloat = 0.0
-            authorAvatarInset = 20.0
+            if let authorString, !authorString.isEmpty {
+                authorAvatarInset = 20.0
+            }
+            
+            let availableNameWidth = max(0.0, constrainedSize.width - credibilityIconWidth - infoWidth - authorAvatarInset)
+            var viaBotLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if authorString != nil, let inlineBotName {
+                let formattedViaString = strings.Conversation_MessageViaUser("@\(inlineBotName)")
+                let viaString = NSMutableAttributedString(string: " \(formattedViaString.string)", attributes: [
+                    NSAttributedString.Key.font: prefixFont,
+                    NSAttributedString.Key.foregroundColor: titleColor
+                ])
+                for range in formattedViaString.ranges where range.index == 0 {
+                    viaString.addAttribute(.font, value: peerFont, range: NSRange(location: range.range.location + 1, length: range.range.length))
+                }
+                viaBotLayoutAndApply = viaBotNodeLayout(TextNodeLayoutArguments(attributedString: viaString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: availableNameWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            }
             
             var nameLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if let authorString {
-                nameLayoutAndApply = nameNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: authorString, font: peer != nil ? peerFont : prefixFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth - authorAvatarInset, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let viaBotWidth = viaBotLayoutAndApply?.0.size.width ?? 0.0
+                nameLayoutAndApply = nameNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: authorString, font: peer != nil ? peerFont : prefixFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, availableNameWidth - viaBotWidth), height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             let titleAuthorSpacing: CGFloat = 0.0
             
             let resultSize: CGSize
             if let nameLayoutAndApply {
+                let viaBotSize = viaBotLayoutAndApply?.0.size ?? CGSize()
                 resultSize = CGSize(
                     width: max(
                         titleLayout.size.width + credibilityIconWidth + infoWidth,
-                        authorAvatarInset + nameLayoutAndApply.0.size.width
+                        authorAvatarInset + nameLayoutAndApply.0.size.width + viaBotSize.width
                     ),
-                    height: titleLayout.size.height + titleAuthorSpacing + nameLayoutAndApply.0.size.height
+                    height: titleLayout.size.height + titleAuthorSpacing + max(nameLayoutAndApply.0.size.height, viaBotSize.height)
                 )
             } else {
                 resultSize = CGSize(width: titleLayout.size.width + credibilityIconWidth + infoWidth, height: titleLayout.size.height)
@@ -500,8 +517,6 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 
                 node.theme = presentationData.theme.theme
                 node.highlightColor = titleColor.withMultipliedAlpha(0.1)
-                
-                node.previousPeer = peer
                 
                 let titleNode = titleApply()
                 titleNode.displaysAsynchronously = !presentationData.isPreview
@@ -564,6 +579,22 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                     }
                 }
                 
+                var viaBotFrame = CGRect()
+                if let (viaBotLayout, viaBotApply) = viaBotLayoutAndApply {
+                    let viaBotNode = viaBotApply()
+                    viaBotNode.displaysAsynchronously = !presentationData.isPreview
+                    if node.viaBotNode == nil {
+                        viaBotNode.isUserInteractionEnabled = false
+                        node.viaBotNode = viaBotNode
+                        node.addSubnode(viaBotNode)
+                    }
+                    viaBotFrame = CGRect(origin: CGPoint(x: nameFrame.maxX, y: titleLayout.size.height + titleAuthorSpacing), size: viaBotLayout.size)
+                    viaBotNode.frame = viaBotFrame
+                } else if let viaBotNode = node.viaBotNode {
+                    node.viaBotNode = nil
+                    viaBotNode.removeFromSupernode()
+                }
+                
                 if let storyData, case .expired = storyData.storyType {
                     let expiredStoryIconView: UIImageView
                     if let current = node.expiredStoryIconView {
@@ -600,7 +631,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         node.credibilityIconNode = credibilityIconNode
                         node.addSubnode(credibilityIconNode)
                     }
-                    credibilityIconNode.frame = CGRect(origin: CGPoint(x: nameFrame.maxX + 4.0, y: 17.0), size: credibilityIconImage.size)
+                    credibilityIconNode.frame = CGRect(origin: CGPoint(x: max(nameFrame.maxX, viaBotFrame.maxX) + 4.0, y: 17.0), size: credibilityIconImage.size)
                     credibilityIconNode.image = credibilityIconImage
                 } else {
                     node.credibilityIconNode?.removeFromSupernode()

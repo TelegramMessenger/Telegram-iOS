@@ -43,7 +43,7 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             guard let functionVideoBiPlanarToRGBA = library.makeFunction(name: "videoBiPlanarToRGBA") else {
                 return nil
             }
-            guard let computePipelineStateYUVBiPlanarToRGBA = try? device.makeComputePipelineState(function: functionVideoBiPlanarToRGBA) else {
+            guard let computePipelineStateYUVBiPlanarToRGBA = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: functionVideoBiPlanarToRGBA) else {
                 return nil
             }
             self.computePipelineStateYUVBiPlanarToRGBA = computePipelineStateYUVBiPlanarToRGBA
@@ -51,7 +51,7 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             guard let functionVideoTriPlanarToRGBA = library.makeFunction(name: "videoTriPlanarToRGBA") else {
                 return nil
             }
-            guard let computePipelineStateYUVTriPlanarToRGBA = try? device.makeComputePipelineState(function: functionVideoTriPlanarToRGBA) else {
+            guard let computePipelineStateYUVTriPlanarToRGBA = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: functionVideoTriPlanarToRGBA) else {
                 return nil
             }
             self.computePipelineStateYUVTriPlanarToRGBA = computePipelineStateYUVTriPlanarToRGBA
@@ -59,12 +59,12 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             guard let gaussianBlurHorizontal = library.makeFunction(name: "gaussianBlurHorizontal"), let gaussianBlurVertical = library.makeFunction(name: "gaussianBlurVertical") else {
                 return nil
             }
-            guard let computePipelineStateHorizontal = try? device.makeComputePipelineState(function: gaussianBlurHorizontal) else {
+            guard let computePipelineStateHorizontal = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: gaussianBlurHorizontal) else {
                 return nil
             }
             self.computePipelineStateHorizontal = computePipelineStateHorizontal
             
-            guard let computePipelineStateVertical = try? device.makeComputePipelineState(function: gaussianBlurVertical) else {
+            guard let computePipelineStateVertical = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: gaussianBlurVertical) else {
                 return nil
             }
             self.computePipelineStateVertical = computePipelineStateVertical
@@ -96,7 +96,7 @@ public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSu
             pipelineDescriptor.vertexFunction = vertexFunction
             pipelineDescriptor.fragmentFunction = fragmentFunction
             pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
                 return nil
             }
             self.pipelineState = pipelineState

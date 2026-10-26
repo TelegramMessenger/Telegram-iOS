@@ -137,7 +137,7 @@ final class StarsBalanceComponent: Component {
             if self.component == nil {
                 switch component.currency {
                 case .ton:
-                    self.icon.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: UIColor(rgb: 0x30A1F5))
+                    self.icon.image = UIImage(bundleImageName: "Ads/GramBig")
                 case .stars:
                     self.icon.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
                 }
@@ -368,6 +368,9 @@ final class StarsBalanceComponent: Component {
                 }
                 
                 contentHeight += buttonSize.height
+            } else {
+                self.button.view?.removeFromSuperview()
+                self.secondaryButton.view?.removeFromSuperview()
             }
             
             if let additionalAction = component.additionalAction {

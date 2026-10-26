@@ -38,6 +38,7 @@ final class RTFDocumentParser {
     // List state (per-paragraph, not group-scoped).
     private var curListLevel: Int? = nil     // set by \ilvlN or \lsN
     private var curListMarkerText = ""       // text captured inside \listtext / \pntext
+    private var curSawListText = false       // a \listtext/\pntext marker group was seen this paragraph
 
     // Field handling state (parser-level, not group-scoped).
     private var fldInstText = ""             // accumulates \fldinst text
@@ -116,6 +117,7 @@ final class RTFDocumentParser {
             runs = []
             curListLevel = nil
             curListMarkerText = ""
+            curSawListText = false
             return
         }
         // Code: every run mono → merge into a trailing code block.
@@ -132,7 +134,8 @@ final class RTFDocumentParser {
         let pt = state.fontSizeHalfPoints / 2
         let style: ParagraphStyleName = pt >= 23 ? .heading1 : pt >= 20 ? .heading2 : pt >= 18 ? .heading3 : .body
         var list: ListMembership? = nil
-        if let lvl = curListLevel {
+        if curListLevel != nil || curSawListText {
+            let lvl = curListLevel ?? 0
             let m = curListMarkerText.trimmingCharacters(in: .whitespaces)
             let marker: ListMarker = m.first.map { "0123456789".contains($0) } == true ? .ordered : .bullet
             list = ListMembership(marker: marker, level: lvl)
@@ -153,6 +156,7 @@ final class RTFDocumentParser {
         runs = []
         curListLevel = nil
         curListMarkerText = ""
+        curSawListText = false
     }
 
     private func handle(_ tok: RTFToken) {
@@ -211,6 +215,7 @@ final class RTFDocumentParser {
             state.inListText = true
             state.skipDestination = false
             curListMarkerText = ""
+            curSawListText = true
         case "ilvl":
             curListLevel = param ?? 0
         case "ls":

@@ -81,14 +81,14 @@ final class InChatPrefetchManager {
             
             if let telegramImage = media as? TelegramMediaImage {
                 mediaResource = largestRepresentationForPhoto(telegramImage)?.resource
-                if shouldDownloadMediaAutomatically(settings: self.settings, peerType: options.peerType, networkType: options.networkType, authorPeerId: nil, contactsPeerIds: [], media: telegramImage) {
+                if shouldDownloadMediaAutomatically(settings: self.settings, peerType: options.peerType, networkType: options.networkType, authorPeerId: nil, contactsPeerIds: [], media: .image(telegramImage)) {
                     automaticDownload = .full
                 }
             } else if let telegramFile = media as? TelegramMediaFile {
                 mediaResource = telegramFile.resource
-                if shouldDownloadMediaAutomatically(settings: self.settings, peerType: options.peerType, networkType: options.networkType, authorPeerId: nil, contactsPeerIds: [], media: telegramFile) {
+                if shouldDownloadMediaAutomatically(settings: self.settings, peerType: options.peerType, networkType: options.networkType, authorPeerId: nil, contactsPeerIds: [], media: .file(telegramFile)) {
                     automaticDownload = .full
-                } else if shouldPredownloadMedia(settings: self.settings, peerType: options.peerType, networkType: options.networkType, media: telegramFile) {
+                } else if shouldPredownloadMedia(settings: self.settings, peerType: options.peerType, networkType: options.networkType, media: .file(telegramFile)) {
                     automaticDownload = .prefetch
                 }
             }

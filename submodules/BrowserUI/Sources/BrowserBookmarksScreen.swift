@@ -157,7 +157,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, commitEmojiInteraction: { _, _, _, _ in
             }, openLargeEmojiInfo: { _, _, _ in
             }, openJoinLink: { _ in
-            }, openWebView: { _, _, _, _ in
+            }, openWebView: { _, _, _, _, _ in
             }, activateAdAction: { _, _, _, _ in
             }, adContextAction: { _, _, _ in
             }, removeAd: { _ in
@@ -346,7 +346,9 @@ public final class BrowserBookmarksScreen: ViewController {
             var headerInsets = layout.insets(options: [.input])
             headerInsets.top += actualNavigationBarHeight
             
-            let panelHeight = self.bottomPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: insets.bottom, transition: transition)
+            // The bottom panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+            let bottomInsets = layout.bottomEdgeSideInsets()
+            let panelHeight = self.bottomPanelNode.updateLayout(width: layout.size.width, leftInset: bottomInsets.left, rightInset: bottomInsets.right, bottomInset: insets.bottom, transition: transition)
             var panelOrigin: CGFloat = layout.size.height
             if !self.addedBookmark {
                 panelOrigin -= panelHeight
@@ -391,7 +393,7 @@ public final class BrowserBookmarksScreen: ViewController {
         self.openUrl = openUrl
         self.addBookmark = addBookmark
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self._hasGlassStyle = true
                 
@@ -456,7 +458,7 @@ public final class BrowserBookmarksScreen: ViewController {
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
     }
     
@@ -502,7 +504,7 @@ private class BottomPanelNode: ASDisplayNode {
     private let edgeEffectView = EdgeEffectView()
     private let button = ComponentView<Empty>()
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat)?
     
     init(theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
         self.theme = theme
@@ -522,8 +524,8 @@ private class BottomPanelNode: ASDisplayNode {
         self.action()
     }
     
-    func updateLayout(width: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.validLayout = (width, sideInset, bottomInset)
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset)
         let topInset: CGFloat = 8.0
         var bottomInset = bottomInset
         bottomInset += topInset - (bottomInset.isZero ? 0.0 : 4.0)
@@ -587,9 +589,9 @@ private class BottomPanelNode: ASDisplayNode {
                 )
             ),
             environment: {},
-            containerSize: CGSize(width: width - sideInset * 2.0 - buttonInsets.left - buttonInsets.right, height: 52.0)
+            containerSize: CGSize(width: width - leftInset - rightInset - buttonInsets.left - buttonInsets.right, height: 52.0)
         )
-        let buttonFrame = CGRect(origin: CGPoint(x: sideInset + buttonInsets.left, y: height - buttonInsets.bottom - buttonSize.height), size: buttonSize)
+        let buttonFrame = CGRect(origin: CGPoint(x: leftInset + buttonInsets.left, y: height - buttonInsets.bottom - buttonSize.height), size: buttonSize)
         if let buttonView = self.button.view {
             if buttonView.superview == nil {
                 self.view.addSubview(buttonView)
@@ -614,10 +616,10 @@ final class BrowserBookmarksContextExtractedContentSource: ContextExtractedConte
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.contentNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.contentNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

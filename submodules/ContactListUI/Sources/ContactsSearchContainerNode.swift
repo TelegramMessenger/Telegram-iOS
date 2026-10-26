@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -321,7 +322,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.emptyResultsTextNode.alpha = 0.0
         self.emptyResultsTextNode.isUserInteractionEnabled = false
         
-        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         self.emptyResultsAnimationNode.alpha = 0.0
         self.emptyResultsAnimationNode.isUserInteractionEnabled = false
         
@@ -710,12 +711,14 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         
         let size = layout.size
         let sideInset = layout.safeInsets.left
+        // Each side keeps its own safe inset (beside iPhone Duo's side strip only one side has one).
+        let bandWidth = size.width - layout.safeInsets.left - layout.safeInsets.right
         let visibleHeight = layout.size.height
         let bottomInset = layout.insets(options: .input).bottom
             
         let padding: CGFloat = 16.0
-        let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: bandWidth - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: bandWidth - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
         let emptyAnimationHeight = self.emptyResultsAnimationSize.height
         let emptyAnimationSpacing: CGFloat = 8.0
@@ -724,9 +727,9 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
         
         let textTransition = ContainedViewLayoutTransition.immediate
-        textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
-        textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
-        textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+        textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (bandWidth - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
+        textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (bandWidth - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
+        textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (bandWidth - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
         self.emptyResultsAnimationNode.updateLayout(size: self.emptyResultsAnimationSize)
         
         if self.glass && !self.externalSearchBar {

@@ -6,7 +6,7 @@
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
 #import <AVFoundation/AVFoundation.h>
-#import <MobileCoreServices/MobileCoreServices.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 const int32_t TGGifConverterFPS = 600;
 const CGFloat TGGifConverterMaximumSide = 720.0f;
@@ -144,7 +144,7 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
             {
                 if (videoWriterInput.isReadyForMoreMediaData)
                 {
-                    NSDictionary *options = @{ (NSString *)kCGImageSourceTypeIdentifierHint : (id)kUTTypeGIF };
+                    NSDictionary *options = @{ (NSString *)kCGImageSourceTypeIdentifierHint : UTTypeGIF.identifier };
                     CGImageRef imgRef = CGImageSourceCreateImageAtIndex(source, currentFrameNumber, (__bridge CFDictionaryRef)options);
                     if (imgRef != NULL)
                     {

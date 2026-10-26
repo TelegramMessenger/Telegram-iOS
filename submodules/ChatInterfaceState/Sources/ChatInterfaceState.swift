@@ -667,6 +667,9 @@ public final class ChatInterfaceState: Codable, Equatable {
         
         if let composeDisableUrlPreviews = try? container.decodeIfPresent([String].self, forKey: "dupl") {
             self.composeDisableUrlPreviews = composeDisableUrlPreviews
+        } else if let composeDisableUrlPreviews = try? container.decodeIfPresent([String].self, forKey: "dup;") {
+            // Versions from 2023-10 to 2026-09 wrote the list under this mistyped key.
+            self.composeDisableUrlPreviews = composeDisableUrlPreviews
         } else if let composeDisableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup") {
             self.composeDisableUrlPreviews = [composeDisableUrlPreview]
         } else {
@@ -733,7 +736,7 @@ public final class ChatInterfaceState: Codable, Equatable {
 
         try container.encode(self.timestamp, forKey: "ts")
         try container.encode(self.composeInputState, forKey: "is")
-        try container.encode(self.composeDisableUrlPreviews, forKey: "dup;")
+        try container.encode(self.composeDisableUrlPreviews, forKey: "dupl")
         
         if let replyMessageSubject = self.replyMessageSubject {
             try container.encode(replyMessageSubject, forKey: "replyMessageSubject")

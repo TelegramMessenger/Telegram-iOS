@@ -2,11 +2,12 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-import TelegramApi
+internal import TelegramApi
 
 final class AccountTaskManager {
     private final class Impl {
         private let queue: Queue
+        private let accountId: AccountRecordId
         private let accountPeerId: PeerId
         private let stateManager: AccountStateManager
         private let accountManager: AccountManager<TelegramAccountManagerTypes>
@@ -25,9 +26,10 @@ final class AccountTaskManager {
         
         private var isUpdating: Bool = false
         
-        init(queue: Queue, accountPeerId: PeerId, stateManager: AccountStateManager, accountManager: AccountManager<TelegramAccountManagerTypes>,
+        init(queue: Queue, accountId: AccountRecordId, accountPeerId: PeerId, stateManager: AccountStateManager, accountManager: AccountManager<TelegramAccountManagerTypes>,
              networkArguments: NetworkInitializationArguments, viewTracker: AccountViewTracker, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, isMainApp: Bool, testingEnvironment: Bool) {
             self.queue = queue
+            self.accountId = accountId
             self.accountPeerId = accountPeerId
             self.stateManager = stateManager
             self.accountManager = accountManager
@@ -69,6 +71,10 @@ final class AccountTaskManager {
                 if self.isMainApp {
                     tasks.add(managedSynchronizePeerReadStates(network: self.stateManager.network, postbox: self.stateManager.postbox, stateManager: self.stateManager).start())
                     tasks.add(managedSynchronizeGroupMessageStats(network: self.stateManager.network, postbox: self.stateManager.postbox, stateManager: self.stateManager).start())
+                    
+                    tasks.add((self.stateManager.postbox.transaction { transaction -> Void in
+                        reindexUnreadCountersIfNeeded(transaction: transaction)
+                    }).start())
                     
                     tasks.add(managedGlobalNotificationSettings(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedSynchronizePinnedChatsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId, stateManager: self.stateManager, tag: OperationLogTags.SynchronizePinnedChats).start())
@@ -165,7 +171,21 @@ final class AccountTaskManager {
         }
         
         func reloadAppConfiguration() {
-            self.configurationDisposable.set(managedAppConfigurationUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
+            var confirmed: ((AppConfiguration) -> Signal<Void, NoError>)?
+            if self.isMainApp && !self.testingEnvironment {
+                // What the server said goes into the state every account shares, true and false: a login
+                // and an account without a configuration yet decide their engine from it.
+                let accountManager = self.accountManager
+                let accountId = self.accountId
+                let appVersion = self.networkArguments.appVersion
+                confirmed = { configuration in
+                    guard let rustDisabled = networkEngineServerFlag(appConfiguration: configuration) else {
+                        return .complete()
+                    }
+                    return updateNetworkEngineServerFlag(accountManager: accountManager, accountId: accountId, rustDisabled: rustDisabled, appVersion: appVersion)
+                }
+            }
+            self.configurationDisposable.set(managedAppConfigurationUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network, confirmed: confirmed).start())
             self.promoDisposable.set(managedPromoInfoUpdates(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network, viewTracker: self.viewTracker).start())
         }
     }
@@ -173,12 +193,12 @@ final class AccountTaskManager {
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    init(stateManager: AccountStateManager, accountManager: AccountManager<TelegramAccountManagerTypes>,
+    init(accountId: AccountRecordId, stateManager: AccountStateManager, accountManager: AccountManager<TelegramAccountManagerTypes>,
          networkArguments: NetworkInitializationArguments, viewTracker: AccountViewTracker, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, isMainApp: Bool, testingEnvironment: Bool) {
         let queue = Account.sharedQueue
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, accountPeerId: stateManager.accountPeerId, stateManager: stateManager, accountManager: accountManager, networkArguments: networkArguments, viewTracker: viewTracker, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, isMainApp: isMainApp, testingEnvironment: testingEnvironment)
+            return Impl(queue: queue, accountId: accountId, accountPeerId: stateManager.accountPeerId, stateManager: stateManager, accountManager: accountManager, networkArguments: networkArguments, viewTracker: viewTracker, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, isMainApp: isMainApp, testingEnvironment: testingEnvironment)
         })
     }
     

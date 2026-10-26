@@ -516,7 +516,7 @@ private final class InstalledStickerPacksSuggestOptionsContextReferenceContentSo
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
     }
 }
 
@@ -982,7 +982,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 if case .modal = mode {
                     rightNavigationButton = nil
                 } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                    rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                         updateState {
                             $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }
@@ -1084,7 +1084,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                         }
                     }
                     let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
-                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .text(text), externalShare: true))
+                    let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .text(text), externalShare: true))
                     presentControllerImpl?(shareController, nil)
                 })])
             } else {

@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public class RichTextMessageAttribute: MessageAttribute, Equatable {
     public let instantPage: InstantPage
@@ -55,7 +55,7 @@ extension RichTextMessageAttribute {
             }
             let isRtl = (richMessage.flags & (1 << 0)) != 0
             let isPartial = (richMessage.flags & (1 << 1)) != 0
-            let instantPage = InstantPage(blocks: richMessage.blocks.map({ InstantPageBlock(apiBlock: $0) }), media: media, isComplete: !isPartial, rtl: isRtl, url: "", views: nil)
+            let instantPage = InstantPage(blocks: richMessage.blocks.map({ InstantPageBlock(apiBlock: $0) }), rawMedia: media, isComplete: !isPartial, rtl: isRtl, url: "", views: nil)
             self.init(instantPage: instantPage, fullInstantPage: nil)
         }
     }

@@ -240,7 +240,7 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     public func seek(timestamp: Double) -> Signal<QueueLocalObject<MediaFrameSourceSeekResult>, MediaFrameSourceSeekError> {
         assert(self.queue.isCurrent())
         
-        return Signal { subscriber in
+        return Signal { [self] subscriber in
             let disposable = MetaDisposable()
             
             let queue = self.queue

@@ -45,10 +45,10 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = UserInfoEditingPhoneItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -61,13 +61,13 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? UserInfoEditingPhoneItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -82,6 +82,7 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
 }
 
 class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemNode, ItemListItemFocusableNode {
+    private let highlightedBackgroundNode = ASDisplayNode()
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -194,7 +195,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
             var updatedTheme: PresentationTheme?
@@ -232,6 +233,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         strongSelf.labelSeparatorNode.backgroundColor = itemSeparatorColor
                         
                         strongSelf.phoneNode.numberField?.textField.textColor = updatedTheme.list.itemPrimaryTextColor
@@ -282,9 +284,11 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         strongSelf.clearButton.frame = CGRect(origin: CGPoint(x: phoneFrame.maxX - image.size.width - 23.0, y: phoneFrame.minY + floor((phoneFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)
                     }
                     
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: .zero, size: contentSize), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
+                    strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: false, bottomIsHidden: false)
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                 }
             })
         }

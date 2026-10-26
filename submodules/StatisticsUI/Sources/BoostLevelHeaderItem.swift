@@ -27,10 +27,10 @@ final class BoostLevelHeaderItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = IncreaseLimitHeaderItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -43,7 +43,7 @@ final class BoostLevelHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? IncreaseLimitHeaderItemNode else {
                 assertionFailure()
@@ -53,7 +53,7 @@ final class BoostLevelHeaderItem: ListViewItem, ItemListItem {
             let makeLayout = nodeValue.asyncLayout()
             
             async {
-                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                 Queue.mainQueue().async {
                     completion(layout, { _ in
                         apply()
@@ -71,7 +71,7 @@ private let boldTextFont = Font.semibold(15.0)
 class IncreaseLimitHeaderItemNode: ListViewItemNode {
     private var hostView: ComponentHostView<Empty>?
     
-    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout)?
+    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGFloat)?
         
     private var item: BoostLevelHeaderItem?
     
@@ -86,19 +86,19 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         self.hostView = hostView
         self.view.addSubview(hostView)
         
-        if let (component, containerSize, layout) = self.params {
+        if let (component, containerSize, _, leftInset) = self.params {
             let size = hostView.update(
                 transition: .immediate,
                 component: component,
                 environment: {},
                 containerSize: containerSize
             )
-            hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -5.0), size: size)
+            hostView.frame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((containerSize.width - size.width) / 2.0), y: -5.0), size: size)
         }
     }
     
     func asyncLayout() -> (_ item: BoostLevelHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let topInset: CGFloat = 2.0
             
             let badgeHeight: CGFloat = 200.0
@@ -146,10 +146,10 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                             environment: {},
                             containerSize: containerSize
                         )
-                        hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -5.0), size: size)
+                        hostView.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((containerSize.width - size.width) / 2.0), y: -5.0), size: size)
                     }
                     
-                    strongSelf.params = (component, containerSize, layout)
+                    strongSelf.params = (component, containerSize, layout, params.leftInset)
                 }
             })
         }

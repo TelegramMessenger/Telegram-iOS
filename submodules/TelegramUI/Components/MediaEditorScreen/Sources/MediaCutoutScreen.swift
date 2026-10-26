@@ -24,17 +24,23 @@ private final class MediaCutoutScreenComponent: Component {
     
     let context: AccountContext
     let mediaEditor: MediaEditor
+    let homeIndicatorInset: CGFloat
     
     init(
         context: AccountContext,
-        mediaEditor: MediaEditor
+        mediaEditor: MediaEditor,
+        homeIndicatorInset: CGFloat
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
+        self.homeIndicatorInset = homeIndicatorInset
     }
     
     static func ==(lhs: MediaCutoutScreenComponent, rhs: MediaCutoutScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.homeIndicatorInset != rhs.homeIndicatorInset {
             return false
         }
         return true
@@ -74,6 +80,8 @@ private final class MediaCutoutScreenComponent: Component {
     
         private let fadeView = UIView()
         private var outlineViews: [StickerCutoutOutlineView] = []
+        /// Where the outline views go: the editor's preview (see `update`).
+        private var outlineFrame: CGRect?
                         
         private var component: MediaCutoutScreenComponent?
         private weak var state: State?
@@ -300,10 +308,15 @@ private final class MediaCutoutScreenComponent: Component {
                 buttonSideInset = 30.0
             } else {
                 previewSize = CGSize(width: availableSize.width, height: floorToScreenPixels(availableSize.width * 1.77778))
-                buttonSideInset = 10.0
+                buttonSideInset = environment.navigationBarTrailingButtonsInset > 0.0 ? 16.0 : 10.0
                 if availableSize.height < previewSize.height + 30.0 {
                     topInset = 0.0
                     controlsBottomInset = -75.0
+                    if environment.navigationBarTrailingButtonsInset > 0.0 {
+                        // Beside iPhone Duo's status island the bottom bar mirrors the editor's: its 33pt buttons centred
+                        // compact status height + 31 above the bottom edge, 16pt from the sides.
+                        controlsBottomInset = -(environment.statusBarHeight + 31.0 + buttonBottomInset + 16.5)
+                    }
                 } else {
                     self.buttonsBackgroundView.backgroundColor = .clear
                 }
@@ -361,7 +374,9 @@ private final class MediaCutoutScreenComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let doneButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width, y: buttonBottomInset),
+                    // The wide (tablet) layout keeps the button clear of the right inset. A bottom button spans iPhone
+                    // Duo's side strip; it keeps clear only of a corner block at the bottom.
+                    origin: CGPoint(x: availableSize.width - (isTablet ? environment.bottomEdgeSideInsets().right : 0.0) - buttonSideInset - doneButtonSize.width, y: buttonBottomInset),
                     size: doneButtonSize
                 )
                 if let doneButtonView = self.doneButton.view {
@@ -417,12 +432,23 @@ private final class MediaCutoutScreenComponent: Component {
             transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
 
             if case .cutout = controller.mode {
+                // The outline and the fade follow the sticker editor's preview. Where the 9:16 preview is taller than the
+                // whole screen (iPhone Duo) that is not the visible area: it starts at the top, 44pt higher on a screen
+                // under 680pt, as in the editor's sticker mode.
+                var overlayFrame = previewContainerFrame
+                if !isTablet, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: availableSize, safeInsets: environment.safeInsets, reservedCorners: environment.reservedCorners, statusBarHeight: environment.statusBarHeight, hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0, homeIndicatorInset: component.homeIndicatorInset) {
+                    // iPhone Duo: the editor's narrowed sticker preview.
+                    overlayFrame = stickerPreviewFrame
+                } else if previewSize.height > availableSize.height + 30.0 {
+                    overlayFrame = CGRect(origin: CGPoint(x: previewContainerFrame.minX, y: previewContainerFrame.minY - (availableSize.height < 680.0 ? 44.0 : 0.0)), size: previewSize)
+                }
+                self.outlineFrame = overlayFrame
                 for view in self.outlineViews {
-                    transition.setFrame(view: view, frame: previewContainerFrame)
+                    transition.setFrame(view: view, frame: overlayFrame)
                 }
                 
-                let frameWidth = floorToScreenPixels(previewContainerFrame.width * 0.97)
-                self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
+                let frameWidth = floorToScreenPixels(overlayFrame.width * 0.97)
+                self.fadeView.frame = CGRect(x: floorToScreenPixels((overlayFrame.width - frameWidth) / 2.0), y: overlayFrame.minY + floorToScreenPixels((overlayFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
                 self.fadeView.layer.cornerRadius = frameWidth / 8.0
                 
                 if isFirstTime {
@@ -434,8 +460,9 @@ private final class MediaCutoutScreenComponent: Component {
                                     for result in results {
                                         if let extractedImage = result.extractedImage, let maskImage = result.edgesMaskImage {
                                             if case let .image(image, _) = extractedImage, case let .image(_, mask) = maskImage {
-                                                let outlineView = StickerCutoutOutlineView(frame: self.previewContainerView.frame)
-                                                outlineView.update(image: image, maskImage: mask, size: self.previewContainerView.bounds.size, values: values)
+                                                let outlineFrame = self.outlineFrame ?? self.previewContainerView.frame
+                                                let outlineView = StickerCutoutOutlineView(frame: outlineFrame)
+                                                outlineView.update(image: image, maskImage: mask, size: outlineFrame.size, values: values)
                                                 self.insertSubview(outlineView, belowSubview: self.previewContainerView)
                                                 self.outlineViews.append(outlineView)
                                             }
@@ -540,17 +567,25 @@ final class MediaCutoutScreen: ViewController {
             let isTablet = layout.metrics.isTablet
 
             let previewSize: CGSize
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
+            var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
             }
-            let bottomInset = layout.size.height - previewSize.height - topInset
+            var bottomInset = layout.size.height - previewSize.height - topInset
+            if previewSize.height > layout.size.height + 30.0 {
+                // A 9:16 preview much taller than the whole screen (iPhone Duo: 1189pt on the 951pt unfolded screen) leaves no
+                // space below it; as in the editor, the preview starts at the top and the bottom controls stay on screen.
+                topInset = 0.0
+                bottomInset = 0.0
+            }
             
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                // Beside iPhone Duo's status island the bottom bar mirrors the editor's (see MediaEditorScreen).
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: topInset,
@@ -558,6 +593,8 @@ final class MediaCutoutScreen: ViewController {
                     bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
@@ -577,7 +614,8 @@ final class MediaCutoutScreen: ViewController {
                 component: AnyComponent(
                     MediaCutoutScreenComponent(
                         context: self.context,
-                        mediaEditor: controller.mediaEditor
+                        mediaEditor: controller.mediaEditor,
+                        homeIndicatorInset: layout.intrinsicInsets.bottom
                     )
                 ),
                 environment: {

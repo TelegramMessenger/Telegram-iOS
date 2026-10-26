@@ -24,7 +24,7 @@ final class EmojiViewHostingTests: XCTestCase {
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 400)
         c.layoutIfNeeded()
         c.simulateParentLayout()
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertEmoji(id: "star", altText: nil)
         c.layoutIfNeeded()
         return (c, p)
@@ -59,7 +59,7 @@ final class EmojiViewHostingTests: XCTestCase {
         c.emojiViewProvider = { _, _ in nil }
         c.setBlocks([.paragraph(ParagraphBlock(id: BlockID("p1"), runs: [TextRun(text: "ab")]))], width: 320)
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 400)
-        c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
         c.insertEmoji(id: "star", altText: nil)
         c.layoutIfNeeded()
         XCTAssertEqual(c.hostedEmojiCountForTesting, 0)

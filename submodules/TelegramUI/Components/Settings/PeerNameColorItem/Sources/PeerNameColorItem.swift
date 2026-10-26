@@ -283,10 +283,10 @@ public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemCompon
         self.sectionId = sectionId
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = PeerNameColorItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -299,13 +299,13 @@ public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemCompon
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? PeerNameColorItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -378,7 +378,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
     public func asyncLayout() -> (_ item: PeerNameColorItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var themeUpdated = false
             if currentItem?.theme !== item.theme {
                 themeUpdated = true
@@ -487,7 +487,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     
                     let action: (PeerNameColor?) -> Void = { color in
@@ -521,7 +521,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     let sideInset: CGFloat = params.leftInset + 10.0
                     let iconSize = CGSize(width: 32.0, height: 32.0)
                     
-                    let spacing = floorToScreenPixels((params.width - sideInset * 2.0 - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1))
+                    let spacing = floorToScreenPixels((params.width - sideInset - (params.rightInset + 10.0) - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1))
                     
                     var origin = CGPoint(x: sideInset, y: 10.0 + verticalInset)
                     

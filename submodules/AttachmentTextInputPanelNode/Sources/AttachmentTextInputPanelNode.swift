@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import MobileCoreServices
+import UniformTypeIdentifiers
 import TelegramPresentationData
 import TextFormat
 import AccountContext
@@ -252,6 +252,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     private let context: AccountContext
 
     private let glass: Bool
+    public var inputPanelBottomSpacing: CGFloat
     private let isCaption: Bool
     private let isAttachment: Bool
     private let customEmojiAvailable: Bool
@@ -418,10 +419,11 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
 
     private var maxCaptionLength: Int32?
 
-    public init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, glass: Bool = false, isCaption: Bool = false, isAttachment: Bool = false, isScheduledMessages: Bool = false, customEmojiAvailable: Bool, presentController: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void, getNavigationController: @escaping () -> NavigationController?) {
+    public init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, glass: Bool = false, isCaption: Bool = false, isAttachment: Bool = false, isScheduledMessages: Bool = false, customEmojiAvailable: Bool, presentController: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void, getNavigationController: @escaping () -> NavigationController?, inputPanelBottomSpacing: CGFloat? = nil) {
         self.context = context
         self.presentationInterfaceState = presentationInterfaceState
         self.glass = glass
+        self.inputPanelBottomSpacing = inputPanelBottomSpacing ?? (glass ? 11.0 : 0.0)
         self.isCaption = isCaption
         self.isAttachment = isAttachment
         self.customEmojiAvailable = customEmojiAvailable
@@ -552,6 +554,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 hasTrending: false,
                 hasStickers: false,
                 hasGifs: false,
+                maskEdge: .clip,
                 sendGif: nil
             )
         )
@@ -752,6 +755,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
 
             textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
             textInputNode.view.layoutIfNeeded()
+            // `.none` by default, and correct here: this panel does not grow a field around a moving
+            // caret, so it has nothing to say about one. See the caret-reveal design.
             textInputNode.textView.updateLayout(size: textInputNode.bounds.size)
             self.updateSpoiler()
         }
@@ -1068,7 +1073,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             }
         }
 
-        let inputPanelHeight = panelContentHeight + (self.glass ? 11.0 : 0.0)
+        let inputPanelHeight = panelContentHeight + self.inputPanelBottomSpacing
         var totalHeight = inputPanelHeight
         var inputMediaHeight: CGFloat = 0.0
         self.currentAdditionalInputHeight = 0.0
@@ -1903,7 +1908,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
 
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: layout.width - leftInset - rightInset - layout.additionalSideInsets.right, maxHeight: layout.textFieldMaxHeight, metrics: layout.metrics)
             let panelContentHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: layout.metrics)
-            let totalHeight = panelContentHeight + (self.glass ? 11.0 : 0.0) + self.currentAdditionalInputHeight
+            let totalHeight = panelContentHeight + self.inputPanelBottomSpacing + self.currentAdditionalInputHeight
             if self.currentHeight != totalHeight {
                 self.updateHeight(animated)
                 self.heightUpdated?(animated)
@@ -2139,7 +2144,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        if let speechHolder = speakText(context: self.context, text: text) {
+        if let speechHolder = speakText(text: text) {
             speechHolder.completion = { [weak self, weak speechHolder] in
                 if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
                     strongSelf.currentSpeechHolder = nil
@@ -2299,7 +2304,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let pasteboard = UIPasteboard.general
 
         var attributedString: NSAttributedString?
-        if let data = pasteboard.data(forPasteboardType: kUTTypeRTF as String) {
+        if let data = pasteboard.data(forPasteboardType: UTType.rtf.identifier) {
             attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtf)
         } else if let data = pasteboard.data(forPasteboardType: "com.apple.flat-rtfd") {
             attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)

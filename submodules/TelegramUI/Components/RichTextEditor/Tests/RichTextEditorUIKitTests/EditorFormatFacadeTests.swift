@@ -41,18 +41,18 @@ final class EditorFormatFacadeTests: XCTestCase {
 
     func test_facade_selectedGlobalRange_nilWhenCollapsed() {
         let e = editor()
-        e.canvas.anchor = 3; e.canvas.head = 3
+        e.canvas.setSelectionForTesting(anchor: 3, head: 3)
         XCTAssertNil(e.selectedGlobalRange(), "a collapsed selection has no range")
     }
     func test_facade_selectedGlobalRange_reportsOffsets() {
         let e = editor()
-        e.canvas.anchor = 1; e.canvas.head = 4
+        e.canvas.setSelectionForTesting(anchor: 1, head: 4)
         let r = e.selectedGlobalRange()
         XCTAssertEqual(r?.from, 1); XCTAssertEqual(r?.to, 4)
     }
     func test_facade_selectedGlobalRange_ordersEndpoints() {
         let e = editor()
-        e.canvas.anchor = 4; e.canvas.head = 1   // dragged backwards
+        e.canvas.setSelectionForTesting(anchor: 4, head: 1)   // dragged backwards
         let r = e.selectedGlobalRange()
         XCTAssertEqual(r?.from, 1); XCTAssertEqual(r?.to, 4)
     }

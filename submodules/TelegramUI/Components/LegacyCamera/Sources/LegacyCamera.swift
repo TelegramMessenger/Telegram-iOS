@@ -106,7 +106,7 @@ public func presentedLegacyCamera(context: AccountContext, peer: EnginePeer?, ch
             if case .user = peer {
                 controller.hasTimer = hasSchedule
             }
-            controller.hasSilentPosting = true
+            controller.hasSilentPosting = !editingMedia
         }
     }
     controller.hasSchedule = hasSchedule
@@ -264,7 +264,7 @@ public func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedM
                 nativeGenerator(_1, _2, _3, nil)
             })
             if let parentController = parentController {
-                parentController.present(context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .fromExternal(1, { peerIds, _, _, text, account, silently in
+                parentController.present(context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .fromExternal(1, { peerIds, _, _, text, account, silently in
                     guard let account = account as? ShareControllerAppAccountContext else {
                         return .single(.done)
                     }

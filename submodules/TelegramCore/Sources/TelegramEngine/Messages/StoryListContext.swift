@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 
@@ -2121,6 +2121,7 @@ public final class SearchStoryListContext: StoryListContext {
         
         deinit {
             self.requestDisposable?.dispose()
+            self.updatesDisposable?.dispose()
         }
         
         func loadMore(completion: (() -> Void)?) {

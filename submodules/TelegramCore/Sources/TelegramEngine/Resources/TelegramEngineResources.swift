@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import RangeSet
 
 public enum MediaResourceUserContentType: UInt8, Equatable {
@@ -198,6 +198,12 @@ public final class EngineMediaResource: Equatable {
     public static func ==(lhs: EngineMediaResource, rhs: EngineMediaResource) -> Bool {
         return lhs.resource.isEqual(to: rhs.resource)
     }
+}
+
+/// A cached representation of a media resource (a derived file such as a scaled image or a
+/// video's first frame). The kinds are defined by the app; TelegramCore only stores and serves
+/// them, so it declares this protocol and never enumerates them.
+public protocol EngineMediaResourceRepresentation: CachedMediaResourceRepresentation {
 }
 
 public extension EngineMediaResource.ResourceData {
@@ -425,13 +431,46 @@ public extension TelegramEngine {
         public func fetch(
             reference: MediaResourceReference,
             userLocation: MediaResourceUserLocation,
-            userContentType: MediaResourceUserContentType
+            userContentType: MediaResourceUserContentType,
+            range: (Range<Int64>, EngineMediaBoxFetchPriority)? = nil,
+            statsCategory: MediaResourceStatsCategory = .generic,
+            reportResultStatus: Bool = false,
+            preferBackgroundReferenceRevalidation: Bool = false,
+            continueInBackground: Bool = false
         ) -> Signal<FetchResourceSourceType, FetchResourceError> {
             return fetchedMediaResource(
                 mediaBox: self.account.postbox.mediaBox,
                 userLocation: userLocation,
                 userContentType: userContentType,
-                reference: reference
+                reference: reference,
+                range: range,
+                statsCategory: statsCategory,
+                reportResultStatus: reportResultStatus,
+                preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation,
+                continueInBackground: continueInBackground
+            )
+        }
+
+        public func fetch(
+            reference: MediaResourceReference,
+            userLocation: MediaResourceUserLocation,
+            userContentType: MediaResourceUserContentType,
+            ranges: [(Range<Int64>, EngineMediaBoxFetchPriority)]?,
+            statsCategory: MediaResourceStatsCategory = .generic,
+            reportResultStatus: Bool = false,
+            preferBackgroundReferenceRevalidation: Bool = false,
+            continueInBackground: Bool = false
+        ) -> Signal<FetchResourceSourceType, FetchResourceError> {
+            return fetchedMediaResource(
+                mediaBox: self.account.postbox.mediaBox,
+                userLocation: userLocation,
+                userContentType: userContentType,
+                reference: reference,
+                ranges: ranges,
+                statsCategory: statsCategory,
+                reportResultStatus: reportResultStatus,
+                preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation,
+                continueInBackground: continueInBackground
             )
         }
 
@@ -470,6 +509,51 @@ public extension TelegramEngine {
             |> map { EngineMediaResource.ResourceData($0) }
         }
 
+        public func rangeData(resource: EngineMediaResource, size: Int64, range: Range<Int64>) -> Signal<(Data, Bool), NoError> {
+            return self.account.postbox.mediaBox.resourceData(resource._asResource(), size: size, in: range)
+        }
+
+        public func cachedRepresentation(resource: EngineMediaResource, representation: EngineMediaResourceRepresentation, pathExtension: String? = nil, complete: Bool, fetch: Bool = true, attemptSynchronously: Bool = false) -> Signal<EngineMediaResource.ResourceData, NoError> {
+            return self.account.postbox.mediaBox.cachedResourceRepresentation(resource._asResource(), representation: representation, pathExtension: pathExtension, complete: complete, fetch: fetch, attemptSynchronously: attemptSynchronously)
+            |> map { EngineMediaResource.ResourceData($0) }
+        }
+
+        public func cachedRepresentationCompletePath(id: EngineMediaResource.Id, representation: EngineMediaResourceRepresentation) -> String {
+            return self.account.postbox.mediaBox.cachedRepresentationCompletePath(MediaResourceId(id.stringRepresentation), representation: representation)
+        }
+
+        public func storeCachedRepresentation(resource: EngineMediaResource, representation: EngineMediaResourceRepresentation, data: Data) {
+            self.account.postbox.mediaBox.storeCachedResourceRepresentation(resource._asResource(), representation: representation, data: data)
+        }
+
+        public func cachedRepresentationPath(id: String, representationId: String, keepDuration: EngineCachedMediaRepresentationKeepDuration) -> String {
+            return self.account.postbox.mediaBox.cachedRepresentationPathForId(id, representationId: representationId, keepDuration: keepDuration)
+        }
+
+        public func fetchedResource(resource: EngineMediaResource) -> Signal<FetchResourceSourceType, FetchResourceError> {
+            return self.account.postbox.mediaBox.fetchedResource(resource._asResource(), parameters: nil)
+        }
+
+        public func storageTotalSize() -> Signal<Int64, NoError> {
+            return self.account.postbox.mediaBox.storageBox.totalSize()
+        }
+
+        public func cacheStorageTotalSize() -> Signal<Int64, NoError> {
+            return self.account.postbox.mediaBox.cacheStorageBox.totalSize()
+        }
+
+        public func resetStorageIndex() {
+            self.account.postbox.mediaBox.storageBox.reset()
+        }
+
+        public var mediaBasePath: String {
+            return self.account.postbox.mediaBox.basePath
+        }
+
+        public func resourcePath(resource: EngineMediaResource) -> String {
+            return self.account.postbox.mediaBox.resourcePath(resource._asResource())
+        }
+
         public func shortLivedResourceCachePathPrefix(id: EngineMediaResource.Id) -> String {
             return self.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(MediaResourceId(id.stringRepresentation))
         }
@@ -488,6 +572,10 @@ public extension TelegramEngine {
 
         public func moveResourceData(id: EngineMediaResource.Id, toTempPath: String) {
             self.account.postbox.mediaBox.moveResourceData(MediaResourceId(id.stringRepresentation), toTempPath: toTempPath)
+        }
+
+        public func moveResourceData(id: EngineMediaResource.Id, fromTempPath: String) {
+            self.account.postbox.mediaBox.moveResourceData(MediaResourceId(id.stringRepresentation), fromTempPath: fromTempPath)
         }
 
         public func moveResourceData(from: EngineMediaResource.Id, to: EngineMediaResource.Id, synchronous: Bool = false) {

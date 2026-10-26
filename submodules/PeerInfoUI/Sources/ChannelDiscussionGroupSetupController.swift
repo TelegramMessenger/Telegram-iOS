@@ -16,6 +16,10 @@ import ItemListPeerActionItem
 import ChatListFilterSettingsHeaderItem
 import UndoUI
 import OldChannelsController
+import ComponentFlow
+import AlertComponent
+import AlertTransferHeaderComponent
+import AvatarComponent
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let context: AccountContext
@@ -345,7 +349,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
                 return
             }
             
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
             
             if case let .channel(channel) = groupPeer, channel.isForum {
                 let text = presentationData.strings.PeerInfo_TopicsLimitedDiscussionGroups
@@ -353,12 +357,51 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
                 return
             }
             
-            let actionSheet = ActionSheetController(presentationData: presentationData)
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ChannelDiscussionGroupActionSheetItem(context: context, channelPeer: channelPeer, groupPeer: groupPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
-                ActionSheetButtonItem(title: presentationData.strings.Channel_DiscussionGroup_LinkGroup, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    
+            let groupTitle = groupPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            let channelTitle = channelPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            let text: PresentationStrings.FormattedString
+            if case let .channel(channel) = channelPeer, let addressName = channel.addressName, !addressName.isEmpty {
+                text = presentationData.strings.Channel_DiscussionGroup_PublicChannelLink(groupTitle, channelTitle)
+            } else {
+                text = presentationData.strings.Channel_DiscussionGroup_PrivateChannelLink(groupTitle, channelTitle)
+            }
+            let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.string, font: Font.regular(15.0), textColor: presentationData.theme.actionSheet.primaryTextColor))
+            for range in text.ranges {
+                attributedText.addAttribute(.font, value: Font.semibold(15.0), range: range.range)
+            }
+
+            let content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = [
+                AnyComponentWithIdentity(
+                    id: "header",
+                    component: AnyComponent(
+                        AlertTransferHeaderComponent(
+                            fromComponent: AnyComponentWithIdentity(id: "channel", component: AnyComponent(
+                                AvatarComponent(
+                                    context: context,
+                                    theme: presentationData.theme,
+                                    peer: channelPeer
+                                )
+                            )),
+                            toComponent: AnyComponentWithIdentity(id: "group", component: AnyComponent(
+                                AvatarComponent(
+                                    context: context,
+                                    theme: presentationData.theme,
+                                    peer: groupPeer
+                                )
+                            )),
+                            type: .overlap
+                        )
+                    )
+                ),
+                AnyComponentWithIdentity(
+                    id: "text",
+                    component: AnyComponent(
+                        AlertTextComponent(content: .attributed(attributedText), alignment: .center)
+                    )
+                )
+            ]
+            let alertController = AlertScreen(configuration: AlertScreen.Configuration(actionAlignment: .vertical), content: content, actions: [
+                .init(title: presentationData.strings.Channel_DiscussionGroup_LinkGroup, type: .default, action: {
                     var applySignal: Signal<Bool, ChannelDiscussionGroupError>
                     var updatedPeerId: EnginePeer.Id? = nil
                     if case let .legacyGroup(legacyGroup) = groupPeer {
@@ -508,13 +551,10 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
                             return state
                         }
                     }))
-                })
-            ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])])
-            presentControllerImpl?(actionSheet, nil)
+                }),
+                .init(title: presentationData.strings.Common_Cancel)
+            ], updatedPresentationData: updatedPresentationData ?? (initial: presentationData, signal: context.sharedContext.presentationData))
+            presentControllerImpl?(alertController, nil)
         })
     }, unlinkGroup: {
         let _ = (context.engine.data.get(

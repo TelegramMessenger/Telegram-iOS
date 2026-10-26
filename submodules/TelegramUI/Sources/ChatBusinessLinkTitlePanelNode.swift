@@ -183,7 +183,7 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
             return
         }
         
-        interfaceInteraction.presentController(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false)), nil)
+        interfaceInteraction.presentController(self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false)), nil)
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
@@ -195,6 +195,8 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
             case let .businessLinkSetup(link):
                 self.link = link
             case .hashTagSearch:
+                break
+            case .welcomeMessages:
                 break
             }
         default:

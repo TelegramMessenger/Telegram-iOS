@@ -79,6 +79,51 @@ int sqlite3session_create(
 */
 void sqlite3session_delete(sqlite3_session *pSession);
 
+/*
+** CAPI3REF: Configure a Session Object
+** METHOD: sqlite3_session
+**
+** This method is used to configure a session object after it has been
+** created. At present the only valid values for the second parameter are
+** [SQLITE_SESSION_OBJCONFIG_SIZE] and [SQLITE_SESSION_OBJCONFIG_ROWID].
+**
+*/
+int sqlite3session_object_config(sqlite3_session*, int op, void *pArg);
+
+/*
+** CAPI3REF: Options for sqlite3session_object_config
+**
+** The following values may passed as the the 2nd parameter to
+** sqlite3session_object_config().
+**
+** <dt>SQLITE_SESSION_OBJCONFIG_SIZE <dd>
+**   This option is used to set, clear or query the flag that enables
+**   the [sqlite3session_changeset_size()] API. Because it imposes some
+**   computational overhead, this API is disabled by default. Argument
+**   pArg must point to a value of type (int). If the value is initially
+**   0, then the sqlite3session_changeset_size() API is disabled. If it
+**   is greater than 0, then the same API is enabled. Or, if the initial
+**   value is less than zero, no change is made. In all cases the (int)
+**   variable is set to 1 if the sqlite3session_changeset_size() API is
+**   enabled following the current call, or 0 otherwise.
+**
+**   It is an error (SQLITE_MISUSE) to attempt to modify this setting after 
+**   the first table has been attached to the session object.
+**
+** <dt>SQLITE_SESSION_OBJCONFIG_ROWID <dd>
+**   This option is used to set, clear or query the flag that enables
+**   collection of data for tables with no explicit PRIMARY KEY.
+**
+**   Normally, tables with no explicit PRIMARY KEY are simply ignored
+**   by the sessions module. However, if this flag is set, it behaves
+**   as if such tables have a column "_rowid_ INTEGER PRIMARY KEY" inserted
+**   as their leftmost columns.
+**
+**   It is an error (SQLITE_MISUSE) to attempt to modify this setting after 
+**   the first table has been attached to the session object.
+*/
+#define SQLITE_SESSION_OBJCONFIG_SIZE  1
+#define SQLITE_SESSION_OBJCONFIG_ROWID 2
 
 /*
 ** CAPI3REF: Enable Or Disable A Session Object
@@ -313,15 +358,32 @@ void sqlite3session_table_filter(
 ** is inserted while a session object is enabled, then later deleted while 
 ** the same session object is disabled, no INSERT record will appear in the
 ** changeset, even though the delete took place while the session was disabled.
-** Or, if one field of a row is updated while a session is disabled, and 
-** another field of the same row is updated while the session is enabled, the
-** resulting changeset will contain an UPDATE change that updates both fields.
+** Or, if one field of a row is updated while a session is enabled, and 
+** then another field of the same row is updated while the session is disabled,
+** the resulting changeset will contain an UPDATE change that updates both
+** fields.
 */
 int sqlite3session_changeset(
   sqlite3_session *pSession,      /* Session object */
   int *pnChangeset,               /* OUT: Size of buffer at *ppChangeset */
   void **ppChangeset              /* OUT: Buffer containing changeset */
 );
+
+/*
+** CAPI3REF: Return An Upper-limit For The Size Of The Changeset
+** METHOD: sqlite3_session
+**
+** By default, this function always returns 0. For it to return
+** a useful result, the sqlite3_session object must have been configured
+** to enable this API using sqlite3session_object_config() with the
+** SQLITE_SESSION_OBJCONFIG_SIZE verb.
+**
+** When enabled, this function returns an upper limit, in bytes, for the size 
+** of the changeset that might be produced if sqlite3session_changeset() were
+** called. The final changeset size might be equal to or smaller than the
+** size in bytes returned by this function.
+*/
+sqlite3_int64 sqlite3session_changeset_size(sqlite3_session *pSession);
 
 /*
 ** CAPI3REF: Load The Difference Between Tables Into A Session
@@ -371,8 +433,9 @@ int sqlite3session_changeset(
 ** database zFrom the contents of the two compatible tables would be 
 ** identical.
 **
-** It an error if database zFrom does not exist or does not contain the
-** required compatible table.
+** Unless the call to this function is a no-op as described above, it is an
+** error if database zFrom does not exist or does not contain the required 
+** compatible table.
 **
 ** If the operation is successful, SQLITE_OK is returned. Otherwise, an SQLite
 ** error code. In this case, if argument pzErrMsg is not NULL, *pzErrMsg
@@ -441,6 +504,14 @@ int sqlite3session_patchset(
 int sqlite3session_isempty(sqlite3_session *pSession);
 
 /*
+** CAPI3REF: Query for the amount of heap memory used by a session object.
+**
+** This API returns the total amount of heap memory in bytes currently 
+** used by the session object passed as the only argument.
+*/
+sqlite3_int64 sqlite3session_memory_used(sqlite3_session *pSession);
+
+/*
 ** CAPI3REF: Create An Iterator To Traverse A Changeset 
 ** CONSTRUCTOR: sqlite3_changeset_iter
 **
@@ -499,7 +570,7 @@ int sqlite3changeset_start_v2(
 ** The following flags may passed via the 4th parameter to
 ** [sqlite3changeset_start_v2] and [sqlite3changeset_start_v2_strm]:
 **
-** <dt>SQLITE_CHANGESETAPPLY_INVERT <dd>
+** <dt>SQLITE_CHANGESETSTART_INVERT <dd>
 **   Invert the changeset while iterating through it. This is equivalent to
 **   inverting a changeset using sqlite3changeset_invert() before applying it.
 **   It is an error to specify this flag with a patchset.
@@ -542,18 +613,23 @@ int sqlite3changeset_next(sqlite3_changeset_iter *pIter);
 ** call to [sqlite3changeset_next()] must have returned [SQLITE_ROW]. If this
 ** is not the case, this function returns [SQLITE_MISUSE].
 **
-** If argument pzTab is not NULL, then *pzTab is set to point to a
-** nul-terminated utf-8 encoded string containing the name of the table
-** affected by the current change. The buffer remains valid until either
-** sqlite3changeset_next() is called on the iterator or until the 
-** conflict-handler function returns. If pnCol is not NULL, then *pnCol is 
-** set to the number of columns in the table affected by the change. If
-** pbIndirect is not NULL, then *pbIndirect is set to true (1) if the change
+** Arguments pOp, pnCol and pzTab may not be NULL. Upon return, three
+** outputs are set through these pointers: 
+**
+** *pOp is set to one of [SQLITE_INSERT], [SQLITE_DELETE] or [SQLITE_UPDATE],
+** depending on the type of change that the iterator currently points to;
+**
+** *pnCol is set to the number of columns in the table affected by the change; and
+**
+** *pzTab is set to point to a nul-terminated utf-8 encoded string containing
+** the name of the table affected by the current change. The buffer remains
+** valid until either sqlite3changeset_next() is called on the iterator
+** or until the conflict-handler function returns.
+**
+** If pbIndirect is not NULL, then *pbIndirect is set to true (1) if the change
 ** is an indirect change, or false (0) otherwise. See the documentation for
 ** [sqlite3session_indirect()] for a description of direct and indirect
-** changes. Finally, if pOp is not NULL, then *pOp is set to one of 
-** [SQLITE_INSERT], [SQLITE_DELETE] or [SQLITE_UPDATE], depending on the 
-** type of change that the iterator currently points to.
+** changes.
 **
 ** If no error occurs, SQLITE_OK is returned. If an error does occur, an
 ** SQLite error code is returned. The values of the output variables may not
@@ -809,7 +885,6 @@ int sqlite3changeset_concat(
   void **ppOut                    /* OUT: Buffer containing output changeset */
 );
 
-
 /*
 ** CAPI3REF: Changegroup Handle
 **
@@ -855,6 +930,38 @@ typedef struct sqlite3_changegroup sqlite3_changegroup;
 ** versions sqlite3changegroup_add_strm() and sqlite3changegroup_output_strm().
 */
 int sqlite3changegroup_new(sqlite3_changegroup **pp);
+
+/*
+** CAPI3REF: Add a Schema to a Changegroup
+** METHOD: sqlite3_changegroup_schema
+**
+** This method may be used to optionally enforce the rule that the changesets
+** added to the changegroup handle must match the schema of database zDb
+** ("main", "temp", or the name of an attached database). If
+** sqlite3changegroup_add() is called to add a changeset that is not compatible
+** with the configured schema, SQLITE_SCHEMA is returned and the changegroup
+** object is left in an undefined state.
+**
+** A changeset schema is considered compatible with the database schema in
+** the same way as for sqlite3changeset_apply(). Specifically, for each
+** table in the changeset, there exists a database table with:
+**
+** <ul>
+**   <li> The name identified by the changeset, and
+**   <li> at least as many columns as recorded in the changeset, and
+**   <li> the primary key columns in the same position as recorded in 
+**        the changeset.
+** </ul>
+**
+** The output of the changegroup object always has the same schema as the
+** database nominated using this function. In cases where changesets passed
+** to sqlite3changegroup_add() have fewer columns than the corresponding table
+** in the database schema, these are filled in using the default column
+** values from the database schema. This makes it possible to combined 
+** changesets that have different numbers of columns for a single table
+** within a changegroup, provided that they are otherwise compatible.
+*/
+int sqlite3changegroup_schema(sqlite3_changegroup*, sqlite3*, const char *zDb);
 
 /*
 ** CAPI3REF: Add A Changeset To A Changegroup
@@ -924,15 +1031,44 @@ int sqlite3changegroup_new(sqlite3_changegroup **pp);
 ** If the new changeset contains changes to a table that is already present
 ** in the changegroup, then the number of columns and the position of the
 ** primary key columns for the table must be consistent. If this is not the
-** case, this function fails with SQLITE_SCHEMA. If the input changeset
-** appears to be corrupt and the corruption is detected, SQLITE_CORRUPT is
-** returned. Or, if an out-of-memory condition occurs during processing, this
-** function returns SQLITE_NOMEM. In all cases, if an error occurs the state
-** of the final contents of the changegroup is undefined.
+** case, this function fails with SQLITE_SCHEMA. Except, if the changegroup
+** object has been configured with a database schema using the
+** sqlite3changegroup_schema() API, then it is possible to combine changesets
+** with different numbers of columns for a single table, provided that
+** they are otherwise compatible.
 **
-** If no error occurs, SQLITE_OK is returned.
+** If the input changeset appears to be corrupt and the corruption is
+** detected, SQLITE_CORRUPT is returned. Or, if an out-of-memory condition
+** occurs during processing, this function returns SQLITE_NOMEM. 
+**
+** In all cases, if an error occurs the state of the final contents of the
+** changegroup is undefined. If no error occurs, SQLITE_OK is returned.
 */
 int sqlite3changegroup_add(sqlite3_changegroup*, int nData, void *pData);
+
+/*
+** CAPI3REF: Add A Single Change To A Changegroup
+** METHOD: sqlite3_changegroup
+**
+** This function adds the single change currently indicated by the iterator
+** passed as the second argument to the changegroup object. The rules for
+** adding the change are just as described for [sqlite3changegroup_add()].
+**
+** If the change is successfully added to the changegroup, SQLITE_OK is
+** returned. Otherwise, an SQLite error code is returned.
+**
+** The iterator must point to a valid entry when this function is called.
+** If it does not, SQLITE_ERROR is returned and no change is added to the
+** changegroup. Additionally, the iterator must not have been opened with
+** the SQLITE_CHANGESETAPPLY_INVERT flag. In this case SQLITE_ERROR is also
+** returned.
+*/
+int sqlite3changegroup_add_change(
+  sqlite3_changegroup*,
+  sqlite3_changeset_iter*
+);
+
+
 
 /*
 ** CAPI3REF: Obtain A Composite Changeset From A Changegroup
@@ -978,14 +1114,32 @@ void sqlite3changegroup_delete(sqlite3_changegroup*);
 ** update the "main" database attached to handle db with the changes found in
 ** the changeset passed via the second and third arguments. 
 **
+** All changes made by these functions are enclosed in a savepoint transaction.
+** If any other error (aside from a constraint failure when attempting to
+** write to the target database) occurs, then the savepoint transaction is
+** rolled back, restoring the target database to its original state, and an 
+** SQLite error code returned. Additionally, starting with version 3.51.0,
+** an error code and error message that may be accessed using the
+** [sqlite3_errcode()] and [sqlite3_errmsg()] APIs are left in the database
+** handle.
+**
 ** The fourth argument (xFilter) passed to these functions is the "filter
-** callback". If it is not NULL, then for each table affected by at least one
-** change in the changeset, the filter callback is invoked with
-** the table name as the second argument, and a copy of the context pointer
-** passed as the sixth argument as the first. If the "filter callback"
-** returns zero, then no attempt is made to apply any changes to the table.
-** Otherwise, if the return value is non-zero or the xFilter argument to
-** is NULL, all changes related to the table are attempted.
+** callback". This may be passed NULL, in which case all changes in the
+** changeset are applied to the database. For sqlite3changeset_apply() and
+** sqlite3_changeset_apply_v2(), if it is not NULL, then it is invoked once
+** for each table affected by at least one change in the changeset. In this
+** case the table name is passed as the second argument, and a copy of
+** the context pointer passed as the sixth argument to apply() or apply_v2()
+** as the first. If the "filter callback" returns zero, then no attempt is 
+** made to apply any changes to the table. Otherwise, if the return value is
+** non-zero, all changes related to the table are attempted.
+**
+** For sqlite3_changeset_apply_v3(), the xFilter callback is invoked once
+** per change. The second argument in this case is an sqlite3_changeset_iter 
+** that may be queried using the usual APIs for the details of the current
+** change. If the "filter callback" returns zero in this case, then no attempt
+** is made to apply the current change. If it returns non-zero, the change
+** is applied.
 **
 ** For each table that is not excluded by the filter callback, this function 
 ** tests that the target database contains a compatible table. A table is 
@@ -1006,11 +1160,11 @@ void sqlite3changegroup_delete(sqlite3_changegroup*);
 ** one such warning is issued for each table in the changeset.
 **
 ** For each change for which there is a compatible table, an attempt is made 
-** to modify the table contents according to the UPDATE, INSERT or DELETE 
-** change. If a change cannot be applied cleanly, the conflict handler 
-** function passed as the fifth argument to sqlite3changeset_apply() may be 
-** invoked. A description of exactly when the conflict handler is invoked for 
-** each type of change is below.
+** to modify the table contents according to each UPDATE, INSERT or DELETE 
+** change that is not excluded by a filter callback. If a change cannot be
+** applied cleanly, the conflict handler function passed as the fifth argument
+** to sqlite3changeset_apply() may be invoked. A description of exactly when
+** the conflict handler is invoked for each type of change is below.
 **
 ** Unlike the xFilter argument, xConflict may not be passed NULL. The results
 ** of passing anything other than a valid function pointer as the xConflict
@@ -1106,12 +1260,6 @@ void sqlite3changegroup_delete(sqlite3_changegroup*);
 ** This can be used to further customize the application's conflict
 ** resolution strategy.
 **
-** All changes made by these functions are enclosed in a savepoint transaction.
-** If any other error (aside from a constraint failure when attempting to
-** write to the target database) occurs, then the savepoint transaction is
-** rolled back, restoring the target database to its original state, and an 
-** SQLite error code returned.
-**
 ** If the output parameters (ppRebase) and (pnRebase) are non-NULL and
 ** the input is a changeset (not a patchset), then sqlite3changeset_apply_v2()
 ** may set (*ppRebase) to point to a "rebase" that may be used with the 
@@ -1161,6 +1309,23 @@ int sqlite3changeset_apply_v2(
   void **ppRebase, int *pnRebase, /* OUT: Rebase data */
   int flags                       /* SESSION_CHANGESETAPPLY_* flags */
 );
+int sqlite3changeset_apply_v3(
+  sqlite3 *db,                    /* Apply change to "main" db of this handle */
+  int nChangeset,                 /* Size of changeset in bytes */
+  void *pChangeset,               /* Changeset blob */
+  int(*xFilter)(
+    void *pCtx,                   /* Copy of sixth arg to _apply() */
+    sqlite3_changeset_iter *p     /* Handle describing change */
+  ),
+  int(*xConflict)(
+    void *pCtx,                   /* Copy of sixth arg to _apply() */
+    int eConflict,                /* DATA, MISSING, CONFLICT, CONSTRAINT */
+    sqlite3_changeset_iter *p     /* Handle describing change and conflict */
+  ),
+  void *pCtx,                     /* First argument passed to xConflict */
+  void **ppRebase, int *pnRebase, /* OUT: Rebase data */
+  int flags                       /* SESSION_CHANGESETAPPLY_* flags */
+);
 
 /*
 ** CAPI3REF: Flags for sqlite3changeset_apply_v2
@@ -1182,9 +1347,42 @@ int sqlite3changeset_apply_v2(
 **   Invert the changeset before applying it. This is equivalent to inverting
 **   a changeset using sqlite3changeset_invert() before applying it. It is
 **   an error to specify this flag with a patchset.
+**
+** <dt>SQLITE_CHANGESETAPPLY_IGNORENOOP <dd>
+**   Do not invoke the conflict handler callback for any changes that
+**   would not actually modify the database even if they were applied.
+**   Specifically, this means that the conflict handler is not invoked
+**   for:
+**    <ul>
+**    <li>a delete change if the row being deleted cannot be found, 
+**    <li>an update change if the modified fields are already set to 
+**        their new values in the conflicting row, or
+**    <li>an insert change if all fields of the conflicting row match
+**        the row being inserted.
+**    </ul>
+**
+** <dt>SQLITE_CHANGESETAPPLY_FKNOACTION <dd>
+**   If this flag it set, then all foreign key constraints in the target
+**   database behave as if they were declared with "ON UPDATE NO ACTION ON
+**   DELETE NO ACTION", even if they are actually CASCADE, RESTRICT, SET NULL
+**   or SET DEFAULT.
+**
+** <dt>SQLITE_CHANGESETAPPLY_NOUPDATELOOP <dd>
+**   Sometimes, a changeset contains two or more update statements such that
+**   although after applying all updates the database will contain no 
+**   constraint violations, no single update can be applied before the others.
+**   The simplest example of this is a pair of UPDATEs that have "swapped"
+**   two column values with a UNIQUE constraint.
+**   <p>
+**   Usually, sqlite3changeset_apply() and similar functions work hard to try
+**   to find a way to apply such a changeset. However, if this flag is set,
+**   then all such updates are considered CONSTRAINT conflicts.
 */
 #define SQLITE_CHANGESETAPPLY_NOSAVEPOINT   0x0001
 #define SQLITE_CHANGESETAPPLY_INVERT        0x0002
+#define SQLITE_CHANGESETAPPLY_IGNORENOOP    0x0004
+#define SQLITE_CHANGESETAPPLY_FKNOACTION    0x0008
+#define SQLITE_CHANGESETAPPLY_NOUPDATELOOP  0x0010
 
 /* 
 ** CAPI3REF: Constants Passed To The Conflict Handler
@@ -1559,6 +1757,23 @@ int sqlite3changeset_apply_v2_strm(
   void **ppRebase, int *pnRebase,
   int flags
 );
+int sqlite3changeset_apply_v3_strm(
+  sqlite3 *db,                    /* Apply change to "main" db of this handle */
+  int (*xInput)(void *pIn, void *pData, int *pnData), /* Input function */
+  void *pIn,                                          /* First arg for xInput */
+  int(*xFilter)(
+    void *pCtx,                   /* Copy of sixth arg to _apply() */
+    sqlite3_changeset_iter *p
+  ),
+  int(*xConflict)(
+    void *pCtx,                   /* Copy of sixth arg to _apply() */
+    int eConflict,                /* DATA, MISSING, CONFLICT, CONSTRAINT */
+    sqlite3_changeset_iter *p     /* Handle describing change and conflict */
+  ),
+  void *pCtx,                     /* First argument passed to xConflict */
+  void **ppRebase, int *pnRebase,
+  int flags
+);
 int sqlite3changeset_concat_strm(
   int (*xInputA)(void *pIn, void *pData, int *pnData),
   void *pInA,
@@ -1649,6 +1864,232 @@ int sqlite3session_config(int op, void *pArg);
 ** CAPI3REF: Values for sqlite3session_config().
 */
 #define SQLITE_SESSION_CONFIG_STRMSIZE 1
+
+/*
+** CAPI3REF: Configure a changegroup object
+**
+** Configure the changegroup object passed as the first argument. 
+** At present the only valid value for the second parameter is
+** [SQLITE_CHANGEGROUP_CONFIG_PATCHSET].
+*/
+int sqlite3changegroup_config(sqlite3_changegroup*, int, void *pArg);
+
+/*
+** CAPI3REF: Options for sqlite3changegroup_config().
+**
+** The following values may be passed as the 2nd parameter to
+** sqlite3changegroup_config().
+**
+** <dt>SQLITE_CHANGEGROUP_CONFIG_PATCHSET <dd>
+**   A changegroup object generates either a changeset or patchset. Usually,
+**   this is determined by whether the first call to sqlite3changegroup_add()
+**   is passed a changeset or a patchset. Or, if the first changes are added
+**   to the changegroup object using the sqlite3changegroup_change_xxx()
+**   APIs, then this option may be used to configure whether the changegroup
+**   object generates a changeset or patchset. 
+**
+**   When this option is invoked, parameter pArg must point to a value of
+**   type int. If the changegroup currently contains zero changes, and the
+**   value of the int variable is zero or greater than zero, then the
+**   changegroup is configured to generate a changeset or patchset,
+**   respectively. It is a no-op, not an error, if the changegroup is not
+**   configured because it has already started accumulating changes.
+**
+**   Before returning, the int variable is set to 0 if the changegroup is
+**   configured to generate a changeset, or 1 if it is configured to generate
+**   a patchset.
+*/
+#define SQLITE_CHANGEGROUP_CONFIG_PATCHSET 1
+
+
+/*
+** CAPI3REF: Begin adding a change to a changegroup
+**
+** This API is used, in concert with other sqlite3changegroup_change_xxx()
+** APIs, to add changes to a changegroup object one at a time. To add a 
+** single change, the caller must:
+**
+**   1. Invoke sqlite3changegroup_change_begin() to indicate the type of
+**      change (INSERT, UPDATE or DELETE), the affected table and whether
+**      or not the change should be marked as indirect.
+**
+**   2. Invoke sqlite3changegroup_change_int64() or one of the other four
+**      value functions - _null(), _double(), _text() or _blob() - one or
+**      more times to specify old.* and new.* values for the change being
+**      constructed.
+**
+**   3. Invoke sqlite3changegroup_change_finish() to either finish adding
+**      the change to the group, or to discard the change altogether.
+**
+** The first argument to this function must be a pointer to the existing
+** changegroup object that the change will be added to. The second argument
+** must be SQLITE_INSERT, SQLITE_UPDATE or SQLITE_DELETE. The third is the
+** name of the table that the change affects, and the fourth is a boolean
+** flag specifying whether the change should be marked as "indirect" (if
+** bIndirect is non-zero) or not indirect (if bIndirect is zero).
+**
+** Following a successful call to this function, this function may not be
+** called again on the same changegroup object until after
+** sqlite3changegroup_change_finish() has been called. Doing so is an
+** SQLITE_MISUSE error.
+**
+** The changegroup object passed as the first argument must be already 
+** configured with schema data for the specified table. It may be configured 
+** either by calling sqlite3changegroup_schema() with a database that contains
+** the table, or sqlite3changegroup_add() with a changeset that contains the 
+** table. If the changegroup object has not been configured with a schema for
+** the specified table when this function is called, SQLITE_ERROR is returned.
+**
+** If successful, SQLITE_OK is returned. Otherwise, if an error occurs, an
+** SQLite error code is returned. In this case, if argument pzErr is non-NULL,
+** then (*pzErr) may be set to point to a buffer containing a utf-8 formated,
+** nul-terminated, English language error message. It is the responsibility
+** of the caller to eventually free this buffer using sqlite3_free().
+*/
+int sqlite3changegroup_change_begin(
+  sqlite3_changegroup*,
+  int eOp,
+  const char *zTab,
+  int bIndirect,
+  char **pzErr
+);
+
+/*
+** CAPI3REF: Add a 64-bit integer to a changegroup
+**
+** This function may only be called between a successful call to 
+** sqlite3changegroup_change_begin() and its matching
+** sqlite3changegroup_change_finish() call. If it is called at any
+** other time, it is an SQLITE_MISUSE error. Calling this function 
+** specifies a 64-bit integer value to be used in the change currently being
+** added to the changegroup object passed as the first argument.
+**
+** The second parameter, bNew, specifies whether the value is to be part of
+** the new.* (if bNew is non-zero) or old.* (if bNew is zero) record of
+** the change under construction. If this does not match the type of change
+** specified by the preceding call to sqlite3changegroup_change_begin() (i.e.
+** an old.* value for an SQLITE_INSERT change, or a new.* value for an
+** SQLITE_DELETE), then SQLITE_ERROR is returned.
+**
+** The third parameter specifies the column of the old.* or new.* record that
+** the value will be a part of. If the specified table has an explicit primary
+** key, then this is the index of the table column, numbered from 0 in the order
+** specified within the CREATE TABLE statement. Or, if the table uses an 
+** implicit rowid key, then the column 0 is the rowid and the explicit columns
+** are numbered starting from 1. If the iCol parameter is less than 0 or greater
+** than the index of the last column in the table, SQLITE_RANGE is returned.
+**
+** The fourth parameter is the integer value to use as part of the old.* or
+** new.* record.
+**
+** If this call is successful, SQLITE_OK is returned. Otherwise, if an
+** error occurs, an SQLite error code is returned.
+*/
+int sqlite3changegroup_change_int64(
+  sqlite3_changegroup*, 
+  int bNew,
+  int iCol,
+  sqlite3_int64 iVal
+);
+
+/*
+** CAPI3REF: Add a NULL to a changegroup
+**
+** This function is similar to sqlite3changegroup_change_int64(). Except that
+** it configures the change currently under construction with a NULL value
+** instead of a 64-bit integer.
+*/
+int sqlite3changegroup_change_null(sqlite3_changegroup*, int, int);
+
+/*
+** CAPI3REF: Add an double to a changegroup
+**
+** This function is similar to sqlite3changegroup_change_int64(). Except that
+** it configures the change currently being constructed with a real value
+** instead of a 64-bit integer.
+*/
+int sqlite3changegroup_change_double(sqlite3_changegroup*, int, int, double);
+
+/*
+** CAPI3REF: Add a text value to a changegroup
+**
+** This function is similar to sqlite3changegroup_change_int64(). It configures
+** the currently accumulated change with a text value instead of a 64-bit
+** integer. Parameter pVal points to a buffer containing the text encoded using 
+** utf-8. Parameter nVal may either be the size of the text value in bytes, or
+** else a negative value, in which case the buffer pVal points to is assumed to
+** be nul-terminated.
+*/
+int sqlite3changegroup_change_text(
+  sqlite3_changegroup*, int, int, const char *pVal, int nVal
+);
+
+/*
+** CAPI3REF: Add a blob to a changegroup
+**
+** This function is similar to sqlite3changegroup_change_int64(). It configures
+** the currently accumulated change with a blob value instead of a 64-bit
+** integer. Parameter pVal points to a buffer containing the blob. Parameter 
+** nVal is the size of the blob in bytes.
+*/
+int sqlite3changegroup_change_blob(
+    sqlite3_changegroup*, int, int, const void *pVal, int nVal
+);
+
+/*
+** CAPI3REF: Finish adding one-at-at-time changes to a changegroup
+**
+** This function may only be called following a successful call to
+** sqlite3changegroup_change_begin(). Otherwise, it is an SQLITE_MISUSE error.
+**
+** If parameter bDiscard is non-zero, then the current change is simply
+** discarded. In this case this function is always successful and SQLITE_OK
+** returned.
+**
+** If parameter bDiscard is zero, then an attempt is made to add the current
+** change to the changegroup. Assuming the changegroup is configured to
+** produce a changeset (not a patchset), this requires that:
+**
+**   *  If the change is an INSERT or DELETE, then a value must be specified
+**      for all columns of the new.* or old.* record, respectively.
+**
+**   *  If the change is an UPDATE record, then values must be provided for
+**      the PRIMARY KEY columns of the old.* record, but must not be provided
+**      for PRIMARY KEY columns of the new.* record.
+**
+**   *  If the change is an UPDATE record, then for each non-PRIMARY KEY
+**      column in the old.* record for which a value has been provided, a
+**      value must also be provided for the same column in the new.* record.
+**      Similarly, for each non-PK column in the old.* record for which 
+**      a value is not provided, a value must not be provided for the same
+**      column in the new.* record.
+**
+**   *  All values specified for PRIMARY KEY columns must be non-NULL.
+**
+** Otherwise, it is an error. 
+**
+** If the changegroup already contains a change for the same row (identified
+** by PRIMARY KEY columns), then the current change is combined with the
+** existing change in the same way as for sqlite3changegroup_add().
+**
+** For a patchset, all of the above rules apply except that it doesn't matter
+** whether or not values are provided for the non-PK old.* record columns
+** for an UPDATE or DELETE change. This means that code used to produce
+** a changeset using the sqlite3changegroup_change_xxx() APIs may also
+** be used to produce patchsets.
+**
+** If the call is successful, SQLITE_OK is returned. Otherwise, if an error
+** occurs, an SQLite error code is returned. If an error is returned and
+** parameter pzErr is not NULL, then (*pzErr) may be set to point to a buffer
+** containing a nul-terminated, utf-8 encoded, English language error message.
+** It is the responsibility of the caller to eventually free any such error 
+** message buffer using sqlite3_free().
+*/
+int sqlite3changegroup_change_finish(
+  sqlite3_changegroup*, 
+  int bDiscard, 
+  char **pzErr
+);
 
 /*
 ** Make sure we can call this stuff from C++.

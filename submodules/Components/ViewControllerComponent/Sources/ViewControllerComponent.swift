@@ -49,12 +49,29 @@ open class ViewControllerComponentContainer: ViewController {
     
     public final class Environment: Equatable {
         public let statusBarHeight: CGFloat
+        /// The status bar height including a top-right status island, for full-screen content that must clear
+        /// the island entirely (a story card). Equal to `statusBarHeight` except on iPhone Duo's unfolded screen
+        /// in portrait, where `statusBarHeight` is the compact height a navigation bar sits under beside the island.
+        public let fullStatusBarHeight: CGFloat
         public let navigationHeight: CGFloat
         public let safeInsets: UIEdgeInsets
+        /// The blocks the system reserves in the screen's corners (iPhone Duo's status corner); `.none` elsewhere.
+        public let reservedCorners: ContainerViewLayoutCorners
+        /// How much further left a control at the top of the right edge sits to clear a top-right status island
+        /// (iPhone Duo's unfolded screen in portrait); 0 elsewhere. See `ContainerViewLayout.navigationBarTrailingButtonsInset`.
+        public let navigationBarTrailingButtonsInset: CGFloat
+        /// Where a screen that draws its own back or close button puts it when there is a side strip (iPhone Duo), in the
+        /// screen's coordinates: the strip's top, where a standard navigation bar's button goes; nil without a strip.
+        /// See `ContainerViewLayout.sideColumnNavigationButtonFrame`.
+        public let sideColumnNavigationButtonFrame: CGRect?
         public let additionalInsets: UIEdgeInsets
         public let inputHeight: CGFloat
         public let metrics: LayoutMetrics
         public let deviceMetrics: DeviceMetrics
+        /// The screen's four corner radii in this layout's coordinates (`ContainerViewLayout.screenCornerRadii`): they
+        /// differ per corner on iPhone Duo's cover screen, so a sheet reaching the bottom edge rounds each bottom corner
+        /// by its own (`CornerRadii.sheetBottomCornerRadii`); elsewhere the device's uniform `screenCornerRadius`.
+        public let screenCornerRadii: CornerRadii
         public let orientation: UIInterfaceOrientation?
         public let isVisible: Bool
         public let theme: PresentationTheme
@@ -64,12 +81,17 @@ open class ViewControllerComponentContainer: ViewController {
         
         public init(
             statusBarHeight: CGFloat,
+            fullStatusBarHeight: CGFloat? = nil,
             navigationHeight: CGFloat,
             safeInsets: UIEdgeInsets,
+            reservedCorners: ContainerViewLayoutCorners = .none,
+            navigationBarTrailingButtonsInset: CGFloat = 0.0,
+            sideColumnNavigationButtonFrame: CGRect? = nil,
             additionalInsets: UIEdgeInsets,
             inputHeight: CGFloat,
             metrics: LayoutMetrics,
             deviceMetrics: DeviceMetrics,
+            screenCornerRadii: CornerRadii? = nil,
             orientation: UIInterfaceOrientation?,
             isVisible: Bool,
             theme: PresentationTheme,
@@ -78,12 +100,17 @@ open class ViewControllerComponentContainer: ViewController {
             controller: @escaping () -> ViewController?
         ) {
             self.statusBarHeight = statusBarHeight
+            self.fullStatusBarHeight = fullStatusBarHeight ?? statusBarHeight
             self.navigationHeight = navigationHeight
             self.safeInsets = safeInsets
+            self.reservedCorners = reservedCorners
+            self.navigationBarTrailingButtonsInset = navigationBarTrailingButtonsInset
+            self.sideColumnNavigationButtonFrame = sideColumnNavigationButtonFrame
             self.additionalInsets = additionalInsets
             self.inputHeight = inputHeight
             self.metrics = metrics
             self.deviceMetrics = deviceMetrics
+            self.screenCornerRadii = screenCornerRadii ?? CornerRadii(uniform: deviceMetrics.screenCornerRadius)
             self.orientation = orientation
             self.isVisible = isVisible
             self.theme = theme
@@ -100,10 +127,22 @@ open class ViewControllerComponentContainer: ViewController {
             if lhs.statusBarHeight != rhs.statusBarHeight {
                 return false
             }
+            if lhs.fullStatusBarHeight != rhs.fullStatusBarHeight {
+                return false
+            }
             if lhs.navigationHeight != rhs.navigationHeight {
                 return false
             }
             if lhs.safeInsets != rhs.safeInsets {
+                return false
+            }
+            if lhs.reservedCorners != rhs.reservedCorners {
+                return false
+            }
+            if lhs.navigationBarTrailingButtonsInset != rhs.navigationBarTrailingButtonsInset {
+                return false
+            }
+            if lhs.sideColumnNavigationButtonFrame != rhs.sideColumnNavigationButtonFrame {
                 return false
             }
             if lhs.additionalInsets != rhs.additionalInsets {
@@ -116,6 +155,9 @@ open class ViewControllerComponentContainer: ViewController {
                 return false
             }
             if lhs.deviceMetrics != rhs.deviceMetrics {
+                return false
+            }
+            if lhs.screenCornerRadii != rhs.screenCornerRadii {
                 return false
             }
             if lhs.orientation != rhs.orientation {
@@ -135,6 +177,52 @@ open class ViewControllerComponentContainer: ViewController {
             }
             
             return true
+        }
+
+        /// A horizontal band's side insets (`bandSideInsets`) in a container `containerHeight` tall: beside iPhone Duo's
+        /// side strip a side's inset applies only where the band reaches that side's corner block, so a row away from
+        /// the camera (a bottom action button in folded portrait) spans the strip; elsewhere the safe insets.
+        public func sideInsets(forBandFrom minY: CGFloat, to maxY: CGFloat, containerHeight: CGFloat) -> (left: CGFloat, right: CGFloat) {
+            return bandSideInsets(forBandFrom: minY, to: maxY, containerHeight: containerHeight, safeInsets: self.safeInsets, reservedCorners: self.reservedCorners)
+        }
+
+        /// The side insets of a button or panel anchored to the bottom edge (`Display.bottomEdgeSideInsets`): beside
+        /// iPhone Duo's side strip a side keeps its inset only where its corner block is at the bottom (folded
+        /// landscape-left), so a bottom action button spans the strip elsewhere; the safe insets on every other device.
+        public func bottomEdgeSideInsets() -> (left: CGFloat, right: CGFloat) {
+            return Display.bottomEdgeSideInsets(safeInsets: self.safeInsets, reservedCorners: self.reservedCorners)
+        }
+
+        /// This environment with other left and right safe insets: what a sheet hands its content when the
+        /// sheet itself keeps clear of a side strip (iPhone Duo), so the content has no strip of its own to avoid
+        /// (nor to put its close button in).
+        public func withSideSafeInsets(left: CGFloat, right: CGFloat) -> Environment {
+            if self.safeInsets.left == left && self.safeInsets.right == right {
+                return self
+            }
+            var safeInsets = self.safeInsets
+            safeInsets.left = left
+            safeInsets.right = right
+            return Environment(
+                statusBarHeight: self.statusBarHeight,
+                fullStatusBarHeight: self.fullStatusBarHeight,
+                navigationHeight: self.navigationHeight,
+                safeInsets: safeInsets,
+                reservedCorners: self.reservedCorners,
+                navigationBarTrailingButtonsInset: self.navigationBarTrailingButtonsInset,
+                sideColumnNavigationButtonFrame: nil,
+                additionalInsets: self.additionalInsets,
+                inputHeight: self.inputHeight,
+                metrics: self.metrics,
+                deviceMetrics: self.deviceMetrics,
+                screenCornerRadii: self.screenCornerRadii,
+                orientation: self.orientation,
+                isVisible: self.isVisible,
+                theme: self.theme,
+                strings: self.strings,
+                dateTimeFormat: self.dateTimeFormat,
+                controller: self.controller
+            )
         }
     }
     
@@ -179,13 +267,20 @@ open class ViewControllerComponentContainer: ViewController {
             self.currentLayout = (layout, navigationHeight)
             
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                // The status height the navigation bar is laid out under, so a screen that mixes it with
+                // `navigationHeight` stays consistent (iPhone Duo unfolded portrait: compact beside the status island).
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationHeight,
                 safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
+                sideColumnNavigationButtonFrame: layout.sideColumnNavigationButtonFrame,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
+                screenCornerRadii: layout.screenCornerRadii,
                 orientation: layout.metrics.orientation,
                 isVisible: self.currentIsVisible,
                 theme: self.resolvedTheme,
@@ -288,9 +383,9 @@ open class ViewControllerComponentContainer: ViewController {
         case .none:
             navigationBarPresentationData = nil
         case .transparent:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true, style: .glass)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false)
         case .default:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, hideSeparator: true, style: .glass, edgeEffectColor: self.baseNavigationColors == .blocks ? self.presentationData.theme.list.itemBlocksBackgroundColor : nil)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, edgeEffectColor: self.baseNavigationColors == .blocks ? self.presentationData.theme.list.itemBlocksBackgroundColor : nil)
         }
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
@@ -320,9 +415,9 @@ open class ViewControllerComponentContainer: ViewController {
         case .none:
             navigationBarPresentationData = nil
         case .transparent:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true, style: .glass)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false)
         case .default:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, hideSeparator: true, style: .glass, edgeEffectColor: self.baseNavigationColors == .blocks ? self.presentationData.theme.list.itemBlocksBackgroundColor : nil)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, edgeEffectColor: self.baseNavigationColors == .blocks ? self.presentationData.theme.list.itemBlocksBackgroundColor : nil)
         }
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
@@ -368,9 +463,9 @@ open class ViewControllerComponentContainer: ViewController {
                 case .none:
                     navigationBarPresentationData = nil
                 case .transparent:
-                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true, style: .glass)
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false)
                 case .default:
-                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, hideSeparator: true, style: .glass, edgeEffectColor: strongSelf.baseNavigationColors == .blocks ? strongSelf.presentationData.theme.list.itemBlocksBackgroundColor : nil)
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, edgeEffectColor: strongSelf.baseNavigationColors == .blocks ? strongSelf.presentationData.theme.list.itemBlocksBackgroundColor : nil)
                 }
                 if let navigationBarPresentationData {
                     strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
@@ -462,5 +557,14 @@ open class ViewControllerComponentContainer: ViewController {
     public func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) {
         self.component = component
         self.node.updateComponent(component: component, transition: transition)
+    }
+}
+
+public extension ViewControllerComponentContainer.Environment {
+    /// Whether this screen shows the floating form of an optional floating presentation (a centered sheet)
+    /// instead of the phone one: wide layouts, except on a device that never shows floating panels (iPhone
+    /// Duo, folded or unfolded). See `ContainerViewLayout.presentsFloatingPanels`.
+    var presentsFloatingPanels: Bool {
+        return self.metrics.widthClass == .regular && self.deviceMetrics.presentsFloatingPanels
     }
 }

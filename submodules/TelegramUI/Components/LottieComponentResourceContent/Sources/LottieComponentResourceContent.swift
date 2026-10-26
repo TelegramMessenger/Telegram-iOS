@@ -49,11 +49,11 @@ public extension LottieComponent {
         override public func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
             let attemptSynchronously = self.attemptSynchronously
             let file = self.file
-            let mediaBox = self.context.account.postbox.mediaBox
+            let resources = self.context.engine.resources
             let providesPlaceholder = self.providesPlaceholder
             return Signal<Data?, NoError> { subscriber in
                 if attemptSynchronously {
-                    if let path = mediaBox.completedResourcePath(file.resource), let contents = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                    if let path = resources.completedResourcePath(id: EngineMediaResource.Id(file.resource.id)), let contents = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                         let result = TGGUnzipData(contents, 2 * 1024 * 1024) ?? contents
                         subscriber.putNext(result)
                         subscriber.putCompletion()
@@ -62,9 +62,9 @@ public extension LottieComponent {
                     }
                 }
                 
-                let dataDisposable = (mediaBox.resourceData(file.resource)
+                let dataDisposable = (resources.data(resource: EngineMediaResource(file.resource))
                 ).start(next: { data in
-                    if data.complete {
+                    if data.isComplete {
                         if let contents = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                             let result = TGGUnzipData(contents, 2 * 1024 * 1024) ?? contents
                             subscriber.putNext(result)
@@ -76,7 +76,7 @@ public extension LottieComponent {
                         subscriber.putNext(nil)
                     }
                 })
-                let fetchDisposable = mediaBox.fetchedResource(file.resource, parameters: nil).start()
+                let fetchDisposable = resources.fetchedResource(resource: EngineMediaResource(file.resource)).start()
                 
                 return ActionDisposable {
                     dataDisposable.dispose()

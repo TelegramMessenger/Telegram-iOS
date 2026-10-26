@@ -11,11 +11,11 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit",
         "//submodules/ComponentFlow",
         "//submodules/Display",
         "//submodules/TelegramCore",
-        "//submodules/Postbox",
         "//submodules/AccountContext",
         "//submodules/ChatListUI",
         "//submodules/MergeLists",

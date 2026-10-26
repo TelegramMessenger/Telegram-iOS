@@ -46,7 +46,7 @@
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer onlyCrop:(bool)onlyCrop inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName isScheduledMessages:(bool)isScheduledMessages hasCoverButton:(bool)hasCoverButton;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context items:(NSArray *)items focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities hasTimer:(bool)hasTimer onlyCrop:(bool)onlyCrop inhibitDocumentCaptions:(bool)inhibitDocumentCaptions hasSelectionPanel:(bool)hasSelectionPanel hasCamera:(bool)hasCamera recipientName:(NSString *)recipientName isScheduledMessages:(bool)isScheduledMessages isActionButtonDone:(bool)isActionButtonDone hasCoverButton:(bool)hasCoverButton;
 
 - (void)beginEditingCaption;
 - (void)setupGifEditing;

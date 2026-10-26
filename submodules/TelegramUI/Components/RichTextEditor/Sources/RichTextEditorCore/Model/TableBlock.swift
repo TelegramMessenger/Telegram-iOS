@@ -98,11 +98,37 @@ public struct TableBlock: Codable, Equatable {
     public var id: BlockID
     public var columns: [ColumnSpec]
     public var rows: [Row]
+    /// `pageBlockTable`'s `compact` flag: cells are laid out with half the usual padding.
+    public var compact: Bool
+    /// `pageBlockTable`'s `bordered` flag. NOT merely a paint toggle: V2 sets the whole border WIDTH to
+    /// zero when false (`bordered ? v2TableBorderWidth : 0.0`), so the 1pt gaps between cells collapse
+    /// and the grid is narrower. The editor mirrors the rule, or its table would be wider than the
+    /// message's by one border per boundary.
+    ///
+    /// Defaults to TRUE — every table authored before this flag existed drew its grid, and
+    /// `InstantPageBuilder` hard-coded `bordered: true` on the way out.
+    public var bordered: Bool
 
-    public init(id: BlockID, columns: [ColumnSpec] = [], rows: [Row] = []) {
+    public init(id: BlockID, columns: [ColumnSpec] = [], rows: [Row] = [], compact: Bool = false,
+                bordered: Bool = true) {
         self.id = id
         self.columns = columns
         self.rows = rows
+        self.compact = compact
+        self.bordered = bordered
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, columns, rows, compact, bordered }
+
+    // Hand-written so a draft persisted before `compact` / `bordered` existed still decodes.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(BlockID.self, forKey: .id)
+        self.columns = try c.decodeIfPresent([ColumnSpec].self, forKey: .columns) ?? []
+        self.rows = try c.decodeIfPresent([Row].self, forKey: .rows) ?? []
+        self.compact = try c.decodeIfPresent(Bool.self, forKey: .compact) ?? false
+        // Absent => true: an older draft's table was always bordered.
+        self.bordered = try c.decodeIfPresent(Bool.self, forKey: .bordered) ?? true
     }
 
     public var columnCount: Int { columns.count }

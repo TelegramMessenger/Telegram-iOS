@@ -99,8 +99,13 @@ final class ScrollCaretOnEditTests: XCTestCase {
         XCTAssertTrue(fired, "a setCaret-based caret move must notify the host to scroll it into view")
     }
 
-    // MARK: Façade-level: typing actually scrolls an off-screen caret back into view.
+    // MARK: Façade-level: typing brings an off-screen caret back — on the HOST's pass.
 
+    /// **Rewritten 2026-09-17.** This editor no longer scrolls itself to follow the caret: it reports
+    /// that a reveal is owed and performs one inside a host's layout pass, against the geometry that
+    /// pass applies. See the RichTextEditor `CLAUDE.md`, "The host decides when the caret is revealed".
+    /// What the case pins is unchanged — typing at an off-screen caret ends with it visible — but the
+    /// host pass that a real host runs from `onCaretRevealNeeded` is now part of the sequence.
     func test_typing_scrollsOffScreenCaretBackIntoView() {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 200))   // short viewport
         window.makeKeyAndVisible()
@@ -126,11 +131,36 @@ final class ScrollCaretOnEditTests: XCTestCase {
         editor.layoutIfNeeded()
         XCTAssertEqual(editor.contentOffsetForTesting.y, 0, accuracy: 0.5, "precondition: scrolled to the top")
 
-        // Typing at the (now off-screen) caret must scroll it back into view.
+        // Typing alone moves NOTHING now — the decision is the host's.
         editor.canvas.insertText("Z")
         editor.layoutIfNeeded()
+        XCTAssertEqual(editor.contentOffsetForTesting.y, 0, accuracy: 0.5,
+                       "the editor scrolled without being asked")
+
+        // The pass a host runs from `onCaretRevealNeeded` is what brings it back.
+        _ = editor.update(size: window.bounds.size, insets: .zero, contentMargins: .zero,
+                          scrollIndicatorInsets: nil, caretReveal: .ifNeeded(.immediate))
         XCTAssertGreaterThan(editor.contentOffsetForTesting.y, 0,
-                             "typing scrolls the off-screen caret back into the visible area")
+                             "the host's pass did not bring the off-screen caret back into view")
+    }
+
+    /// And the report itself, which is what tells the host there is anything to do.
+    func test_typing_reportsThatARevealIsOwed() {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+        let editor = RichTextEditorView(frame: window.bounds)
+        window.addSubview(editor)
+        editor.document = Document(blocks: (0..<40).map {
+            Block.paragraph(ParagraphBlock(id: BlockID("p\($0)"), runs: [TextRun(text: "Line \($0)")]))
+        })
+        editor.layoutIfNeeded()
+        XCTAssertTrue(editor.becomeFirstResponder())
+
+        var reports = 0
+        editor.onCaretRevealNeeded = { reports += 1 }
+        editor.canvas.insertText("Z")
+        XCTAssertGreaterThanOrEqual(reports, 1, "typing did not report that the caret wants a reveal")
     }
 }
 #endif

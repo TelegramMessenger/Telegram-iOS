@@ -120,7 +120,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.suggestedPeers = params.suggestedPeers
         self.excludedPeerIds = params.excludedPeerIds
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self._hasGlassStyle = true
         
@@ -218,7 +218,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                     strongSelf.tabContainerNode?.cancelAnimations()
                 }
                 if let tabContainerNode = strongSelf.tabContainerNode {
-                    tabContainerNode.update(size: CGSize(width: layout.size.width, height: 44.0), sideInset: layout.safeInsets.left, filters: tabContainerData.0, selectedFilter: filter, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: tabContainerData.2, transitionFraction: fraction, presentationData: strongSelf.presentationData, transition: transition)
+                    tabContainerNode.update(size: CGSize(width: peerSelectionTabBand(layout).width, height: 44.0), sideInset: peerSelectionTabBand(layout).sideInset, filters: tabContainerData.0, selectedFilter: filter, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: tabContainerData.2, transitionFraction: fraction, presentationData: strongSelf.presentationData, transition: transition)
                 }
             }
             
@@ -258,7 +258,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.customTitle ?? self.presentationData.strings.Conversation_ForwardTitle
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -463,8 +463,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         if let tabContainerNode = self.tabContainerNode, let mainContainerNode = self.peerSelectionNode.mainContainerNode {
             let tabContainerOffset: CGFloat = 0.0
             let navigationBarHeight = self.navigationBar?.frame.maxY ?? 0.0
-            transition.updateFrame(node: tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight - self.additionalNavigationBarHeight - 44.0 - 8.0 + tabContainerOffset), size: CGSize(width: layout.size.width, height: 44.0)))
-            tabContainerNode.update(size: CGSize(width: layout.size.width, height: 44.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: mainContainerNode.currentItemFilter, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: self.tabContainerData?.2, transitionFraction: mainContainerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+            transition.updateFrame(node: tabContainerNode, frame: CGRect(origin: CGPoint(x: peerSelectionTabBand(layout).x, y: navigationBarHeight - self.additionalNavigationBarHeight - 44.0 - 8.0 + tabContainerOffset), size: CGSize(width: peerSelectionTabBand(layout).width, height: 44.0)))
+            tabContainerNode.update(size: CGSize(width: peerSelectionTabBand(layout).width, height: 44.0), sideInset: peerSelectionTabBand(layout).sideInset, filters: self.tabContainerData?.0 ?? [], selectedFilter: mainContainerNode.currentItemFilter, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: self.tabContainerData?.2, transitionFraction: mainContainerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         }
     }
     
@@ -616,7 +616,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 if wasEmpty != isEmpty {
                     strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                 } else if let tabContainerNode = strongSelf.tabContainerNode {
-                    tabContainerNode.update(size: CGSize(width: layout.size.width, height: 44.0), sideInset: layout.safeInsets.left, filters: resolvedItems, selectedFilter: selectedEntryId, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: filtersLimit, transitionFraction: 0.0, presentationData: strongSelf.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+                    tabContainerNode.update(size: CGSize(width: peerSelectionTabBand(layout).width, height: 44.0), sideInset: peerSelectionTabBand(layout).sideInset, filters: resolvedItems, selectedFilter: selectedEntryId, isReordering: false, isEditing: false, canReorderAllChats: false, filtersLimit: filtersLimit, transitionFraction: 0.0, presentationData: strongSelf.presentationData, transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
             
@@ -676,4 +676,13 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         }
         navigationController.setViewControllers(viewControllers, animated: true)
     }
+}
+
+/// Where the folder tabs go: across the full width with the side safe inset as their inset, or, when the insets
+/// differ (iPhone Duo's side strip, whose top corner holds the status corner), in the band between them.
+private func peerSelectionTabBand(_ layout: ContainerViewLayout) -> (x: CGFloat, width: CGFloat, sideInset: CGFloat) {
+    if layout.safeInsets.left == layout.safeInsets.right {
+        return (0.0, layout.size.width, layout.safeInsets.left)
+    }
+    return (layout.safeInsets.left, layout.size.width - layout.safeInsets.left - layout.safeInsets.right, 0.0)
 }

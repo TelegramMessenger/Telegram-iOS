@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 
@@ -1382,7 +1382,7 @@ func _internal_performPasswordRecovery(network: Network, code: String, updatedPa
                 flags |= (1 << 1)
             }
 
-            guard let (updatedPasswordHash, updatedPasswordDerivation) = passwordUpdateKDF(encryptionProvider: network.encryptionProvider, password: password, derivation: authData.nextPasswordDerivation) else {
+            guard let (updatedPasswordHash, updatedPasswordDerivation) = passwordUpdateKDF(encryptionProvider: network.encryptionProvider, keychain: network.context.keychain, password: password, derivation: authData.nextPasswordDerivation) else {
                 return .fail(.invalidCode)
             }
 

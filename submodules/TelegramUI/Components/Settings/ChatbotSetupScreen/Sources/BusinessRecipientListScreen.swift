@@ -146,10 +146,6 @@ final class BusinessRecipientListScreenComponent: Component {
             
             let navigationAlphaDistance: CGFloat = 16.0
             let navigationAlpha: CGFloat = max(0.0, min(1.0, (self.scrollView.contentOffset.y - navigationRevealOffsetY) / navigationAlphaDistance))
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
-                transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
-            }
             
             var scrolledUp = false
             if navigationAlpha < 0.5 {
@@ -390,7 +386,7 @@ final class BusinessRecipientListScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
@@ -401,7 +397,10 @@ final class BusinessRecipientListScreenComponent: Component {
             }
             
             let bottomContentInset: CGFloat = 24.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
             let sectionSpacing: CGFloat = 32.0
             
             var contentHeight: CGFloat = 0.0
@@ -547,7 +546,7 @@ final class BusinessRecipientListScreenComponent: Component {
                     items: excludedSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let excludedSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: excludedSectionSize)
             if let excludedSectionView = self.excludedSection.view {
@@ -599,7 +598,7 @@ final class BusinessRecipientListScreenComponent: Component {
                     )))]
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let clearSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: clearSectionSize)
             if let clearSectionView = self.clearSection.view {

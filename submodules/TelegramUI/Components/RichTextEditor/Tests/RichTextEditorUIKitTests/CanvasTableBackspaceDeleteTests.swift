@@ -31,7 +31,7 @@ final class CanvasTableBackspaceDeleteTests: XCTestCase {
     }
     private func tableBox(_ v: DocumentCanvasView) -> TableBlockBox? { v.boxes.first { $0 is TableBlockBox } as? TableBlockBox }
     private func putCaretInTable(_ v: DocumentCanvasView) {
-        v.head = tableBox(v)!.cellTextStart(row: 1, column: 1)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: tableBox(v)!.cellTextStart(row: 1, column: 1)!, head: tableBox(v)!.cellTextStart(row: 1, column: 1)!)
     }
     private func paraTexts(_ v: DocumentCanvasView) -> [String] {
         v.currentBlocks().compactMap { if case .paragraph(let p) = $0 { return p.text } else { return nil } }
@@ -96,7 +96,7 @@ final class CanvasTableBackspaceDeleteTests: XCTestCase {
                 rows: [row("r0", ["A", "B"], header: true), row("r1", ["c", "d"])])),
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 800); v.layoutIfNeeded()
-        v.head = tableBox(v)!.cellTextStart(row: 0, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: tableBox(v)!.cellTextStart(row: 0, column: 0)!, head: tableBox(v)!.cellTextStart(row: 0, column: 0)!)
         v.selectTableRows(0...1)
         v.deleteBackward()
         v.layoutIfNeeded()

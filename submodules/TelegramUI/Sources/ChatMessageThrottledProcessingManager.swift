@@ -28,7 +28,11 @@ final class ChatMessageThrottledProcessingManager {
     }
     
     func add(_ messageIds: [EngineMessageAndThreadId]) {
-        self.queue.async {
+        self.queue.async { [weak self] in
+            guard let self else {
+                return
+            }
+
             let timestamp = CFAbsoluteTimeGetCurrent()
             
             for id in messageIds {

@@ -61,10 +61,10 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListDatePickerItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -77,13 +77,13 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListDatePickerItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animation)
@@ -144,7 +144,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
     public func asyncLayout() -> (_ item: ItemListDatePickerItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var updatedTheme: PresentationTheme?
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
@@ -250,7 +250,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight))))
-                        transition.updateFrame(node: strongSelf.maskNode, frame: strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0))
+                        transition.updateFrame(node: strongSelf.maskNode, frame: strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)))
                         transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight)))
                         transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight)))
                     }
@@ -294,7 +294,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                     datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
                    
                     let datePickerSize = CGSize(width: width, height: pickerHeight)
-                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 4.0), size: datePickerSize)
+                    datePickerNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - datePickerSize.width) / 2.0), y: 4.0), size: datePickerSize)
                     datePickerNode.updateLayout(size: datePickerSize, transition: .immediate)
                     
                     transition.updateFrame(node: strongSelf.containerNode, frame: CGRect(origin: .zero, size: CGSize(width: params.width, height: contentSize.height)))

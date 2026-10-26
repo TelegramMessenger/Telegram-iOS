@@ -614,7 +614,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, ASScrollViewDelegate {
         return self._itemInteraction!
     }
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInsets: UIEdgeInsets, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -713,8 +713,8 @@ final class ChatListSearchMediaNode: ASDisplayNode, ASScrollViewDelegate {
             
             self.initialized = true
             
-            if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
+            if let (size, sideInsets, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+                self.update(size: size, sideInsets: sideInsets, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
                 if !self.didSetReady {
                     self.didSetReady = true
                     self.ready.set(.single(true))
@@ -781,16 +781,17 @@ final class ChatListSearchMediaNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInsets: UIEdgeInsets, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let previousParams = self.currentParams
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
+        self.currentParams = (size, sideInsets, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
                 
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
         
-        let availableWidth = size.width - sideInset * 2.0
+        // Per side: on iPhone Duo one side inset is the side strip; elsewhere both are equal.
+        let availableWidth = size.width - sideInsets.left - sideInsets.right
         
         let itemsLayout: ItemsLayout
-        if let current = self.itemsLayout, previousParams?.size.width == size.width {
+        if let current = self.itemsLayout, previousParams?.size.width == size.width, previousParams?.sideInsets == sideInsets {
             itemsLayout = current
         } else {
             switch self.contentType {
@@ -803,7 +804,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         self.scrollNode.view.contentSize = CGSize(width: size.width, height: itemsLayout.contentHeight)
-        self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: synchronous)
+        self.updateVisibleItems(size: size, sideInset: sideInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: synchronous)
         
         if isScrollingLockedAtTop {
             if self.scrollNode.view.contentOffset.y > .ulpOfOne {
@@ -827,8 +828,8 @@ final class ChatListSearchMediaNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if let (size, sideInset, bottomInset, visibleHeight, _, _, presentationData) = self.currentParams {
-            self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: false)
+        if let (size, sideInsets, bottomInset, visibleHeight, _, _, presentationData) = self.currentParams {
+            self.updateVisibleItems(size: size, sideInset: sideInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: false)
             
             if scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.bounds.height * 2.0 {
                 self.loadMore?()

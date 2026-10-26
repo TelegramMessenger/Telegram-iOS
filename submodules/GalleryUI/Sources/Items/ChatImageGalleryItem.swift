@@ -29,6 +29,10 @@ import GlassBackgroundComponent
 import ComponentFlow
 import ComponentDisplayAdapters
 
+/// Upper bound on the pixel dimensions a full-screen photo is decoded and rasterized at.
+/// Photos larger than this are downscaled to fit; smaller ones are left untouched.
+private let fullScreenImageMaxSize = CGSize(width: 4096.0, height: 4096.0)
+
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
     case video(FileMediaReference)
@@ -388,7 +392,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             }
                         case .share:
                             if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
-                                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData)))
+                                let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData)))
                                 controller.present(shareController, in: .window(.root))
                             }
                         case .lookup:
@@ -399,7 +403,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                 window.rootViewController?.present(controller, animated: true)
                             }
                         case .speak:
-                            if let speechHolder = speakText(context: strongSelf.context, text: string) {
+                            if let speechHolder = speakText(text: string) {
                                 speechHolder.completion = { [weak self, weak speechHolder] in
                                     if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
                                         strongSelf.currentSpeechHolder = nil
@@ -490,10 +494,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     fileprivate func setImage(userLocation: MediaResourceUserLocation, imageReference: ImageMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: imageReference.media) {
-            if let largestSize = largestRepresentationForPhoto(imageReference.media) {
-                let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
+            if let largestSize = largestRepresentationForPhoto(imageReference.media, maxSize: PixelDimensions(fullScreenImageMaxSize)) {
+                let displaySize = largestSize.dimensions.cgSize.fitted(fullScreenImageMaxSize).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError> = chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: self.context.account.postbox, userLocation: userLocation, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: false), synchronousLoad: false)
+                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError> = chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: self.context.account.postbox, userLocation: userLocation, photoReference: imageReference, fullRepresentationSize: fullScreenImageMaxSize, tryAdditionalRepresentations: true, synchronousLoad: false), synchronousLoad: false)
                 |> map { [weak self] _, quality, generate -> (TransformImageArguments) -> DrawingContext? in
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
@@ -907,12 +911,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 
                 /*if largestSize.width > 2600 || largestSize.height > 2600 {
-                    self.dataDisposable.set((self.context.account.postbox.mediaBox.resourceData(fileReference.media.resource)
+                    self.dataDisposable.set((self.context.engine.resources.data(resource: EngineMediaResource(fileReference.media.resource))
                     |> deliverOnMainQueue).start(next: { [weak self] data in
                         guard let strongSelf = self else {
                             return
                         }
-                        if !data.complete {
+                        if !data.isComplete {
                             return
                         }
                         strongSelf.updateImageFromFile(path: data.path)
@@ -1209,7 +1213,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Fetching:
                         self.context.engine.resources.cancelInteractiveResourceFetch(id: EngineMediaResource.Id(resource.resource.id))
                     case .Remote:
-                    self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .image, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                    self.fetchDisposable.set(self.context.engine.resources.fetch(reference: resource, userLocation: (self.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, userContentType: .image, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

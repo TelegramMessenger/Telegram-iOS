@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -32,10 +33,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         }
     }
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.contentNode = ChatMessageAttachedContentNode()
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] mode in
@@ -65,7 +66,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                                 }
                             }
                             
-                            if shouldOpenUrl {
+                            if shouldOpenUrl && !strongSelf.isFromSuspiciousSender(item) {
                                 var isConcealed = true
                                 if item.message.text.contains(content.url) {
                                     isConcealed = false
@@ -94,7 +95,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     openChatMessageMode = .automaticPlayback
                 }
                 if !item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode)) {
-                    if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                    if !strongSelf.isFromSuspiciousSender(item), let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                         var isConcealed = true
                         if item.message.text.contains(content.url) {
                             isConcealed = false
@@ -116,6 +117,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
+                if strongSelf.isFromSuspiciousSender(item) {
+                    return
+                }
                 if let _ = item.message.adAttribute {
                     item.controllerInteraction.activateAdAction(item.message.id, strongSelf.contentNode.makeProgress(), false, false)
                 } else {
@@ -159,8 +163,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 return ChatMessageBubbleContentTapAction(content: .none)
             }
             
-            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            if incoming && item.associatedData.isSuspiciousPeer {
+            if self.isFromSuspiciousSender(item) {
                 return ChatMessageBubbleContentTapAction(content: .none)
             }
             
@@ -192,11 +195,17 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         fatalError("init(coder:) has not been implemented")
     }
     
+    /// A suspicious sender's link preview opens nothing, as their links do not
+    /// (`ChatMessageItemAssociatedData.isSuspiciousPeer`).
+    private func isFromSuspiciousSender(_ item: ChatMessageBubbleContentItem) -> Bool {
+        return item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId)
+    }
+    
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let currentWebpage = self.webPage
-        let currentContentNodeLayout = self.contentNode.asyncLayout()
+        let currentContentNodeLayout = self.contentNode.asyncLayout(displayGiftIcon: true)
         
-        return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
+        return { [weak self] item, layoutConstants, preparePosition, _, constrainedSize, _ in
             var webPage: TelegramMediaWebpage?
             var webPageContent: TelegramMediaWebpageLoadedContent?
             for media in item.message.media {
@@ -216,7 +225,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
             } else {
                 let updatedContentNodeValue = ChatMessageAttachedContentNode()
                 updatedContentNode = updatedContentNodeValue
-                contentNodeLayout = updatedContentNodeValue.asyncLayout()
+                contentNodeLayout = updatedContentNodeValue.asyncLayout(displayGiftIcon: true)
             }
             
             var title: String?
@@ -263,7 +272,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 
                 if let file = webpage.file, (file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayGif) || (!file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayVideo) {
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
-                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: file) {
+                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: .file(file)) {
                         automaticDownload = .full
                     }
                     if case .full = automaticDownload {
@@ -522,7 +531,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         case "telegram_newbot":
                             actionTitle = item.presentationData.strings.Chat_CreateBotLink
                         case "telegram_aicomposetone":
-                            actionTitle = "VIEW STYLE"
+                            actionTitle = item.presentationData.strings.Chat_ViewStyle
                         
                             for attribute in webpage.attributes {
                                 if case let .aiTextStyle(aiTextStyle) = attribute {
@@ -596,6 +605,14 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 displayLine = true
             }
             
+            // A suspicious sender's link preview opens nothing, so it offers no button either, and its
+            // text shows links as plain text, as their message does.
+            if item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId) {
+                actionTitle = nil
+                actionIcon = nil
+                entities = entities?.filter(\.isShownFromSuspiciousPeer)
+            }
+            
             let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, titleBadge, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -618,9 +635,12 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             let updatedPosition = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
                             
                             do {
-                                //animation.animator.updateScale(layer: self.contentNode.layer, scale: 0.9, completion: nil)
-                                animation.animator.updatePosition(layer: self.contentNode.layer, position: updatedPosition, completion: nil)
-                                animation.animator.updateAlpha(layer: self.contentNode.layer, alpha: 0.0, completion: { [weak contentNode] _ in
+                                // Bind the node locally so the completion closure captures it explicitly
+                                // rather than implicitly capturing `self` to reach the property.
+                                let contentNode = self.contentNode
+                                //animation.animator.updateScale(layer: contentNode.layer, scale: 0.9, completion: nil)
+                                animation.animator.updatePosition(layer: contentNode.layer, position: updatedPosition, completion: nil)
+                                animation.animator.updateAlpha(layer: contentNode.layer, alpha: 0.0, completion: { [weak contentNode] _ in
                                     contentNode?.removeFromSupernode()
                                 })
                             }

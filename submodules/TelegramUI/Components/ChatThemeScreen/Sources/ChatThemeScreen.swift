@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -87,6 +88,10 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
 }
 
 private class ThemeSettingsThemeIconItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let context: AccountContext
     let chatTheme: ChatTheme?
     let emojiFile: TelegramMediaFile?
@@ -125,7 +130,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ThemeSettingsThemeItemIconNode()
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
@@ -142,7 +147,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ThemeSettingsThemeItemIconNode)
             if let nodeValue = node() as? ThemeSettingsThemeItemIconNode {
@@ -367,7 +372,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         super.selected()
         
         if let animatedStickerNode = self.animatedStickerNode {
-            Queue.mainQueue().after(0.1) {
+            Queue.mainQueue().after(0.1) { [animatedStickerNode, weak self] in
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
                     animatedStickerNode.play(firstFrame: false, fromIndex: nil)
@@ -496,7 +501,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }
@@ -1338,14 +1343,14 @@ private final class ChatThemeSheetContentComponent: Component {
                     let path = accountManager.mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: CachedPreparedPatternWallpaperRepresentation())
                     if !FileManager.default.fileExists(atPath: path) {
                         let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                            let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
+                            let accountResource = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(file.file.resource), representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
                             
-                            let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file), reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
+                            let fetchedFullSize = TelegramEngine(account: account).resources.fetch(reference: .media(media: .standalone(media: file.file), resource: file.file.resource), userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file))
                             let fetchedFullSizeDisposable = fetchedFullSize.start()
                             let fullSizeDisposable = accountResource.start(next: { next in
-                                subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
+                                subscriber.putNext((next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.isComplete))
                                 
-                                if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
+                                if next.isComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
                                     accountManager.mediaBox.storeCachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
                                 }
                             }, error: subscriber.putError, completed: subscriber.putCompletion)
@@ -1619,7 +1624,8 @@ private final class ChatThemeSheetContentComponent: Component {
                             color: component.presentationData.theme.chat.inputPanel.panelControlColor,
                             startingPosition: .end,
                             size: CGSize(width: 28.0, height: 28.0),
-                            playOnce: self.switchThemePlayOnce
+                            playOnce: self.switchThemePlayOnce,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )
                     )),
                     action: { [weak self] _ in

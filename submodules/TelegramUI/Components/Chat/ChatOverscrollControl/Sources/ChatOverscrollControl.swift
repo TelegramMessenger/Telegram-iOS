@@ -675,7 +675,6 @@ private final class WallpaperBlurNode: ASDisplayNode {
 
         if let backgroundNode = self.backgroundNode {
             transition.updateFrame(node: backgroundNode, frame: CGRect(origin: CGPoint(), size: rect.size))
-            backgroundNode.update(rect: rect, within: size, transition: transition)
         }
     }
 }

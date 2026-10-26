@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 
@@ -129,6 +129,14 @@ final class HistoryViewStateValidationContexts {
             return
         }
         if case .customTag = view.tag {
+            if self.contexts[id] != nil {
+                self.contexts.removeValue(forKey: id)
+            }
+            return
+        }
+        if view.isAnchorOnlyWhileLoading {
+            // The view carries only its anchor while the hole around it is filled, and the fill re-stores
+            // that message from the server; validating it now would add a second request beside the fill.
             if self.contexts[id] != nil {
                 self.contexts.removeValue(forKey: id)
             }

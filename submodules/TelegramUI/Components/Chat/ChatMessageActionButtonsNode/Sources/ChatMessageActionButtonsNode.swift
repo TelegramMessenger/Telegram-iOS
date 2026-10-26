@@ -122,6 +122,10 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         self.view.addSubview(buttonView)
         buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
+                if let button = strongSelf.button, case .disabled = button.action {
+                    // No press feedback for a disabled button — it must not read as tappable.
+                    return
+                }
                 if highlighted {
                     //strongSelf.backgroundBlurNode.layer.removeAnimation(forKey: "opacity")
                     //strongSelf.backgroundBlurNode.alpha = 0.55
@@ -155,6 +159,10 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     }
     
     @objc func buttonPressed() {
+        if let button = self.button, case .disabled = button.action {
+            // inlineButtonTypeDisabled: a forward stripped this button's behaviour. Inert.
+            return
+        }
         if let button = self.button, let pressed = self.pressed {
             let progressPromise = Promise<Bool>()
             pressed(button, progressPromise)
@@ -212,12 +220,6 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
         
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ bubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ message: EngineMessage, _ button: ReplyMarkupButton, _ customInfo: ChatMessageActionButtonsNode.CustomInfo?, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))) {
@@ -229,8 +231,12 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             
             let messageTheme = incoming ? theme.theme.chat.message.incoming : theme.theme.chat.message.outgoing
             
-            let titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
-            
+            var titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
+            if case .disabled = button.action {
+                // inlineButtonTypeDisabled reads as present-but-unavailable, not absent.
+                titleColor = titleColor.withMultipliedAlpha(0.5)
+            }
+
             var isStarsPayment = false
             let iconImage: UIImage?
             var tintColor: UIColor?
@@ -399,12 +405,6 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         
                         node.backgroundColorNode?.frame = backgroundContent.bounds
                         
-                        if let (rect, containerSize) = node.absolutePosition {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                        }
                     } else {
                         node.backgroundBlurView?.view.isHidden = false
                     }
@@ -502,7 +502,13 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     var titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
                     
                     if button.style?.iconFileId != nil {
-                        titleFrame.origin.x = floorToScreenPixels((width - titleSize.size.width - emojiIconSize.width - emojiIconSpacing) * 0.5) + emojiIconSize.width + emojiIconSpacing
+                        let contentOriginX = floorToScreenPixels((width - titleSize.size.width - emojiIconSize.width - emojiIconSpacing) * 0.5)
+                        // The icon leads the title in reading order, so it follows the title visually in RTL.
+                        if titleSize.hasRTL {
+                            titleFrame.origin.x = contentOriginX
+                        } else {
+                            titleFrame.origin.x = contentOriginX + emojiIconSize.width + emojiIconSpacing
+                        }
                     } else if let image = node.iconNode?.image, customInfo?.icon != nil {
                         if customInfo?.icon == .actionArrow {
                             titleFrame.origin.x = floorToScreenPixels((width - titleSize.size.width - image.size.width + 1.0) * 0.5) - 0.0
@@ -566,7 +572,12 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             containerSize: emojiIconSize
                         )
                         
-                        let contentX = titleFrame.origin.x - emojiIconSize.width - emojiIconSpacing
+                        let contentX: CGFloat
+                        if titleSize.hasRTL {
+                            contentX = titleFrame.maxX + emojiIconSpacing
+                        } else {
+                            contentX = titleFrame.origin.x - emojiIconSize.width - emojiIconSpacing
+                        }
                         
                         let iconFrame = CGRect(origin: CGPoint(x: contentX, y: floor((42.0 - emojiIconSize.height) * 0.5) - 1.0), size: emojiIconSize)
                         if let iconView = icon.view {

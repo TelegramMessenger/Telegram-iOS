@@ -1,4 +1,6 @@
 
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
 objc_library(
     name = "RLottieBinding",
     module_name = "RLottieBinding",
@@ -12,7 +14,7 @@ objc_library(
         "rlottie/src/vector/stb/**/*",
         "rlottie/src/lottie/rapidjson/msinttypes/**/*",
     ]) + [
-        "LottieInstance.mm",
+        "RLottieInstance.mm",
         "config.h",
     ],
     hdrs = glob([

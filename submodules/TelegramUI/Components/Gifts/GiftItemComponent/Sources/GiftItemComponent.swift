@@ -33,6 +33,11 @@ public final class GiftItemComponent: Component {
         case preview(attributes: [StarGift.UniqueGift.Attribute], rarity: StarGift.UniqueGift.Attribute.Rarity?)
     }
     
+    public enum SelectionStyle: Equatable {
+        case inner
+        case trimmedBackground(color: UIColor)
+    }
+
     public struct Ribbon: Equatable {
         public enum Color: Equatable {
             case red
@@ -173,6 +178,7 @@ public final class GiftItemComponent: Component {
     let mode: Mode
     let cornerRadius: CGFloat?
     let allowAnimations: Bool
+    let selectionStyle: SelectionStyle
     let action: (() -> Void)?
     let contextAction: ((UIView, ContextGesture) -> Void)?
     
@@ -202,6 +208,7 @@ public final class GiftItemComponent: Component {
         mode: Mode = .generic,
         cornerRadius: CGFloat? = nil,
         allowAnimations: Bool = true,
+        selectionStyle: SelectionStyle = .inner,
         action: (() -> Void)? = nil,
         contextAction: ((UIView, ContextGesture) -> Void)? = nil
     ) {
@@ -229,6 +236,7 @@ public final class GiftItemComponent: Component {
         self.animateChanges = animateChanges
         self.mode = mode
         self.cornerRadius = cornerRadius
+        self.selectionStyle = selectionStyle
         self.allowAnimations = allowAnimations
         self.action = action
         self.contextAction = contextAction
@@ -310,6 +318,9 @@ public final class GiftItemComponent: Component {
         if lhs.allowAnimations != rhs.allowAnimations {
             return false
         }
+        if lhs.selectionStyle != rhs.selectionStyle {
+            return false
+        }
         if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
             return false
         }
@@ -342,12 +353,79 @@ public final class GiftItemComponent: Component {
         private let ribbonText = ComponentView<Empty>()
         
         private var animationLayer: InlineStickerItemLayer?
+        private var modelHidden = false
+
+        public func setModelHidden(_ hidden: Bool) {
+            self.modelHidden = hidden
+            self.animationLayer?.isHidden = hidden
+        }
+
+        private func updateBackgroundTrim(isTrimmed: Bool, backgroundSize: CGSize, cornerRadius: CGFloat, inset: CGFloat, animated: Bool) {
+            let wasTrimmed = self.isBackgroundTrimmed
+            self.isBackgroundTrimmed = isTrimmed
+            let bounds = CGRect(origin: CGPoint(), size: backgroundSize)
+            let fullPath = CGPath(roundedRect: bounds, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+            let trimmedPath = CGPath(roundedRect: bounds.insetBy(dx: inset, dy: inset), cornerWidth: max(0.0, cornerRadius - inset), cornerHeight: max(0.0, cornerRadius - inset), transform: nil)
+            let path = isTrimmed ? trimmedPath : fullPath
+
+            var targets: [(CALayer, CAShapeLayer)] = []
+            let backgroundMask: CAShapeLayer
+            if let current = self.backgroundTrimMask {
+                backgroundMask = current
+            } else {
+                backgroundMask = CAShapeLayer()
+                self.backgroundTrimMask = backgroundMask
+                self.backgroundLayer.mask = backgroundMask
+            }
+            targets.append((self.backgroundLayer, backgroundMask))
+            if let patternView = self.patternView.view {
+                let patternMask: CAShapeLayer
+                if let current = self.patternTrimMask {
+                    patternMask = current
+                } else {
+                    patternMask = CAShapeLayer()
+                    self.patternTrimMask = patternMask
+                    patternView.layer.mask = patternMask
+                }
+                targets.append((patternView.layer, patternMask))
+            }
+            for (_, mask) in targets {
+                let previousPath = mask.presentation()?.path ?? mask.path
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                mask.frame = bounds
+                mask.path = path
+                CATransaction.commit()
+                if animated, wasTrimmed != isTrimmed, let previousPath {
+                    mask.animate(from: previousPath, to: path, keyPath: "path", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                }
+            }
+        }
+
+        public func playModelOnce() {
+            self.animationLayer?.playOnce()
+        }
+
+        public func setModelTransform(_ transform: CATransform3D) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.animationLayer?.transform = transform
+            CATransaction.commit()
+        }
+
         private var selectionLayer: SimpleShapeLayer?
+        private var backgroundTrimMask: CAShapeLayer?
+        private var patternTrimMask: CAShapeLayer?
+        private var isBackgroundTrimmed = false
         private var checkLayer: CheckLayer?
         private var outlineLayer: SimpleLayer?
         private var outlineRenderState: OutlineRenderState?
         
         private var animationFile: TelegramMediaFile?
+        private let premiumGiftStickersDisposable = MetaDisposable()
+        private var premiumGiftStickersContextId: ObjectIdentifier?
+        private let premiumGiftFetchDisposable = MetaDisposable()
+        private var premiumGiftResourceId: String?
         
         private var disposables = DisposableSet()
         private var fetchedFiles = Set<Int64>()
@@ -404,6 +482,8 @@ public final class GiftItemComponent: Component {
         
         deinit {
             self.disposables.dispose()
+            self.premiumGiftStickersDisposable.dispose()
+            self.premiumGiftFetchDisposable.dispose()
             self.giftAuctionTimer?.invalidate()
         }
         
@@ -416,6 +496,29 @@ public final class GiftItemComponent: Component {
             let previousComponent = self.component
             self.component = component
             self.componentState = state
+
+            if case .premium = component.subject {
+                let contextId = ObjectIdentifier(component.context)
+                if self.premiumGiftStickersContextId != contextId {
+                    self.premiumGiftStickersContextId = contextId
+                    self.premiumGiftResourceId = nil
+                    self.premiumGiftFetchDisposable.set(nil)
+                    self.premiumGiftStickersDisposable.set((component.context.premiumGiftStickers
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        Queue.mainQueue().justDispatch { [weak self] in
+                            guard let self, self.premiumGiftStickersContextId == contextId else {
+                                return
+                            }
+                            self.componentState?.updated(transition: .immediate)
+                        }
+                    }))
+                }
+            } else if self.premiumGiftStickersContextId != nil {
+                self.premiumGiftStickersContextId = nil
+                self.premiumGiftStickersDisposable.set(nil)
+                self.premiumGiftResourceId = nil
+                self.premiumGiftFetchDisposable.set(nil)
+            }
                         
             self.isGestureEnabled = component.contextAction != nil
             
@@ -545,12 +648,25 @@ public final class GiftItemComponent: Component {
             var explicitAnimationOffset: CGFloat = 0.0
             switch component.subject {
             case let .premium(months, _):
-                emoji = ChatTextInputTextCustomEmojiAttribute(
-                    interactivelySelectedFromPackId: nil,
-                    fileId: 0,
-                    file: nil,
-                    custom: .animation(name: "Gift\(months)")
-                )
+                animationFile = component.context.premiumGiftStickersValue[months]?.file._parse()
+                if let animationFile {
+                    emoji = ChatTextInputTextCustomEmojiAttribute(
+                        interactivelySelectedFromPackId: nil,
+                        fileId: animationFile.fileId.id,
+                        file: animationFile
+                    )
+                } else {
+                    emoji = nil
+                }
+
+                let resourceId = animationFile?.resource.id.stringRepresentation
+                if self.premiumGiftResourceId != resourceId {
+                    self.premiumGiftResourceId = resourceId
+                    self.premiumGiftFetchDisposable.set(nil)
+                    if let animationFile {
+                        self.premiumGiftFetchDisposable.set(freeMediaFileResourceInteractiveFetched(postbox: component.context.account.postbox, userLocation: .other, fileReference: .stickerPack(stickerPack: .premiumGifts, media: animationFile), resource: animationFile.resource).start())
+                    }
+                }
             case let .starGift(gift, _):
                 animationFile = gift.file
                 emoji = ChatTextInputTextCustomEmojiAttribute(
@@ -699,7 +815,14 @@ public final class GiftItemComponent: Component {
             
             var animationTransition = transition
             var animateBackgroundChange = false
-            if self.animationLayer == nil || self.animationFile?.fileId != animationFile?.fileId, let emoji {
+            let animationSourceUpdated = previousComponent?.context !== component.context
+                || self.animationFile?.fileId != animationFile?.fileId
+                || self.animationFile?.resource.id != animationFile?.resource.id
+            if emoji == nil {
+                self.animationFile = nil
+                self.animationLayer?.removeFromSuperlayer()
+                self.animationLayer = nil
+            } else if self.animationLayer == nil || animationSourceUpdated, let emoji {
                 animationTransition = .immediate
                 self.animationFile = animationFile
                 var animateAppearance = false
@@ -743,7 +866,9 @@ public final class GiftItemComponent: Component {
             
             let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.mode == .generic ? animationOffset : (floorToScreenPixels((size.height - iconSize.height) / 2.0) + explicitAnimationOffset)), size: iconSize)
             if let animationLayer = self.animationLayer {
-                animationTransition.setFrame(layer: animationLayer, frame: animationFrame)
+                animationLayer.isHidden = self.modelHidden
+                animationTransition.setPosition(layer: animationLayer, position: CGPoint(x: animationFrame.midX, y: animationFrame.midY))
+                animationTransition.setBounds(layer: animationLayer, bounds: CGRect(origin: .zero, size: animationFrame.size))
             }
             
             if let backgroundColor {
@@ -1208,7 +1333,7 @@ public final class GiftItemComponent: Component {
                     }
                     
                     var ribbonOffset: CGPoint = CGPoint(x: 2.0, y: -2.0)
-                    if case .grid = component.mode {
+                    if case .grid = component.mode, component.cornerRadius == nil {
                         ribbonOffset = .zero
                     }
                     
@@ -1457,10 +1582,21 @@ public final class GiftItemComponent: Component {
                 }
             }
             
+            var drawsSelection = false
             switch component.mode {
             case .generic, .grid, .upgradePreview:
+                drawsSelection = true
+            case .profile:
+                if case .trimmedBackground = component.selectionStyle {
+                    drawsSelection = true
+                }
+            default:
+                break
+            }
+            switch component.mode {
+            case _ where drawsSelection:
                 let lineWidth: CGFloat = 2.0
-                let selectionFrame = backgroundFrame.insetBy(dx: 2.0, dy: 2.0)
+                var selectionFrame = backgroundFrame.insetBy(dx: 2.0, dy: 2.0)
                 
                 var cornerRadius: CGFloat
                 switch component.style {
@@ -1476,6 +1612,12 @@ public final class GiftItemComponent: Component {
                 var selectionColor = UIColor.white
                 if case .upgradePreview = component.mode, case let .preview(attributes, _) = component.subject, attributes.count == 1 {
                     selectionColor = component.theme.list.itemAccentColor
+                }
+                if case let .trimmedBackground(color) = component.selectionStyle {
+                    selectionFrame = backgroundFrame
+                    cornerRadius = self.backgroundLayer.cornerRadius - lineWidth * 0.5
+                    selectionColor = color
+                    self.updateBackgroundTrim(isTrimmed: component.isSelected, backgroundSize: backgroundFrame.size, cornerRadius: self.backgroundLayer.cornerRadius, inset: lineWidth * 2.0, animated: !transition.animation.isImmediate)
                 }
                 
                 if component.isSelected {

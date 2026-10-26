@@ -158,7 +158,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
 
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
 
@@ -216,7 +216,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.WallpaperColors_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
 
         if self.isNodeLoaded {
             self.controllerNode.updatePresentationData(self.presentationData)
@@ -286,40 +286,14 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
             }
         })
 
-        let transitionOffset: CGFloat
-        switch self.mode {
-        case .default:
-            transitionOffset = 30.0
-        case .peer:
-            transitionOffset = 2.0
-        }
-
         self.controllerNode.gridNode.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
-                var previousContentOffsetValue: CGFloat?
-                if let previousContentOffset = strongSelf.previousContentOffset, case let .known(value) = previousContentOffset {
-                    previousContentOffsetValue = value
-                }
-                switch offset {
-                    case let .known(value):
-                        let transition: ContainedViewLayoutTransition
-                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > transitionOffset {
-                            transition = .animated(duration: 0.2, curve: .easeInOut)
-                        } else {
-                            transition = .immediate
-                        }
-                        strongSelf.navigationBar?.updateBackgroundAlpha(min(transitionOffset, value) / transitionOffset, transition: transition)
-                    case .unknown, .none:
-                        strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
-                }
-
                 strongSelf.previousContentOffset = offset
             }
         }
 
         self._ready.set(self.controllerNode.ready.get())
 
-        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
 
         self.displayNodeDidLoad()
     }
@@ -377,7 +351,7 @@ public func standaloneColorPickerController(
     openGallery: @escaping () -> Void
 ) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false)
-    controller.requestController = { _, present in
+    controller.requestController = { [weak controller] _, present in
         let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer))
         colorPickerController.pushController = { controller in
             push(controller)

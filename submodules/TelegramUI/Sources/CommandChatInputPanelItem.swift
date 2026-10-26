@@ -11,6 +11,10 @@ import AccountContext
 import ItemListUI
 
 final class CommandChatInputPanelItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     fileprivate let context: AccountContext
     fileprivate let presentationData: ItemListPresentationData
     fileprivate let command: PeerCommand
@@ -25,12 +29,12 @@ final class CommandChatInputPanelItem: ListViewItem {
         self.commandSelected = commandSelected
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = CommandChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom) = (previousItem != nil, nextItem != nil)
+            let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
             let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
@@ -51,13 +55,13 @@ final class CommandChatInputPanelItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? CommandChatInputPanelItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (top, bottom) = (previousItem != nil, nextItem != nil)
+                    let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
@@ -125,10 +129,10 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
         self.addSubnode(self.activateAreaNode)
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = item as? CommandChatInputPanelItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: previousItem != nil, bottom: nextItem != nil)
+            let merged = (top: neighbors.previous != nil, bottom: neighbors.next != nil)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets

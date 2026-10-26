@@ -98,7 +98,7 @@ public func stringForMessageTimestampStatus(
     var displayFullDate = false
     if case .full = format, timestamp > 100000 {
         displayFullDate = true
-    } else if let forwardInfo = message.forwardInfo, message.id.peerId == context.account.peerId {
+    } else if let forwardInfo = message.forwardInfo, message.id.peerId == context.account.peerId, !associatedData.isForwardOptionsPreview {
         displayFullDate = true
         timestamp = forwardInfo.date
     }
@@ -231,6 +231,9 @@ public func stringForMessageTimestampStatus(
                 }
             }
         }
+    }
+    if (Namespaces.Message.allEphemeral.contains(message.id.namespace) || Namespaces.Message.allWelcomeMessages.contains(message.id.namespace)), let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+        authorTitle = nil
     }
     
     if let subject = associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {

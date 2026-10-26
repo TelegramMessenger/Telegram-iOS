@@ -122,7 +122,7 @@ public final class AudioTranscriptionButtonComponent: Component {
                 self.blurredBackgroundNode.frame = CGRect(origin: .zero, size: size)
             }
             
-            if self.component?.transcriptionState != component.transcriptionState {
+            if self.component?.transcriptionState != component.transcriptionState || self.component?.theme != component.theme {
                 if case .locked = component.transcriptionState {
                     if let animationView = self.animationView {
                         self.animationView = nil

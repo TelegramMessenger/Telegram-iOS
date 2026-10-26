@@ -21,17 +21,20 @@ private func callDurationString(strings: PresentationStrings, duration: Int32) -
     }
 }
 
-private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, bottomItem: ListViewItem?) -> ItemListNeighbors {
+private func callListNeighbors(item: ListViewItem, neighbors: ListViewItemNeighbors) -> ItemListNeighbors {
+    // NOTE: the `item as? ItemListItem` branch is unreachable today — neither CallListCallItem nor
+    // CallListGroupCallItem conforms to ItemListItem, and those are the only callers. Preserved
+    // verbatim rather than pruned: removing it is a behavior claim, not a refactor.
     let topNeighbor: ItemListNeighbor
-    if let topItem = topItem {
-        if let item = item as? ItemListItem, let topItem = topItem as? ItemListItem {
+    if let topDescriptor = neighbors.previous {
+        if let item = item as? ItemListItem, let topItem = topDescriptor.base(ItemListNeighborFacet.self) {
             if topItem.sectionId != item.sectionId {
                 topNeighbor = .otherSection(topItem.requestsNoInset ? .none : .full)
             } else {
                 topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
             }
         } else {
-            if item is CallListCallItem && topItem is CallListCallItem {
+            if item is CallListCallItem && topDescriptor.base(HeaderNeighborFacet.self)?.headerFamily == .callListCall {
                 topNeighbor = .sameSection(alwaysPlain: false)
             } else {
                 topNeighbor = .otherSection(.full)
@@ -42,15 +45,15 @@ private func callListNeighbors(item: ListViewItem, topItem: ListViewItem?, botto
     }
     
     let bottomNeighbor: ItemListNeighbor
-    if let bottomItem = bottomItem {
-        if let item = item as? ItemListItem, let bottomItem = bottomItem as? ItemListItem {
+    if let bottomDescriptor = neighbors.next {
+        if let item = item as? ItemListItem, let bottomItem = bottomDescriptor.base(ItemListNeighborFacet.self) {
             if bottomItem.sectionId != item.sectionId {
                 bottomNeighbor = .otherSection(bottomItem.requestsNoInset ? .none : .full)
             } else {
                 bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
             }
         } else {
-            if item is CallListCallItem && bottomItem is CallListCallItem {
+            if item is CallListCallItem && bottomDescriptor.base(HeaderNeighborFacet.self)?.headerFamily == .callListCall {
                 bottomNeighbor = .sameSection(alwaysPlain: false)
             } else {
                 bottomNeighbor = .otherSection(.full)
@@ -78,6 +81,10 @@ class CallListCallItem: ListViewItem {
     let selectable: Bool = true
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .callListCall))
+    }
     
     init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, style: ItemListStyle, topMessage: EngineMessage, messages: [EngineMessage], editing: Bool, revealed: Bool, displayHeader: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
@@ -99,12 +106,12 @@ class CallListCallItem: ListViewItem {
         }
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = CallListCallItemNode()
             let makeLayout = node.asyncLayout()
-            let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
+            let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, neighbors: neighbors)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, neighbors: neighbors))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -118,13 +125,13 @@ class CallListCallItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? CallListCallItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, topItem: previousItem, bottomItem: nextItem))
+                    let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: self, neighbors: neighbors)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, callListNeighbors(item: self, neighbors: neighbors))
                     var animated = true
                     if case .None = animation {
                         animated = false
@@ -144,14 +151,14 @@ class CallListCallItem: ListViewItem {
         self.interaction.call(self.topMessage)
     }
     
-    static func mergeType(item: CallListCallItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: CallListCallItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? CallListCallItem {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .callListCall {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -160,10 +167,10 @@ class CallListCallItem: ListViewItem {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
+        if neighbors.next != nil {
             if let header = item.header {
-                if let nextItem = nextItem as? CallListCallItem {
-                    last = header.id != nextItem.header?.id
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .callListCall {
+                    last = header.id != nextItem.headerId
                 } else {
                     last = true
                 }
@@ -266,47 +273,19 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let (item, _, _, _, _) = self.layoutParams {
-            let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
+            let (first, last, firstWithHeader) = CallListCallItem.mergeType(item: item, neighbors: neighbors)
             self.layoutParams = (item, params, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, callListNeighbors(item: item, topItem: previousItem, bottomItem: nextItem))
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, callListNeighbors(item: item, neighbors: neighbors))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply(false)
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
-        super.setHighlighted(highlighted, at: point, animated: animated)
-        
-        if highlighted {
-            self.highlightedBackgroundNode.alpha = 1.0
-            if self.highlightedBackgroundNode.supernode == nil {
-                if self.backgroundNode.supernode != nil {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.backgroundNode)
-                } else {
-                    self.insertSubnode(self.highlightedBackgroundNode, at: 0)
-                }
-            }
-        } else {
-            if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                            }
-                        }
-                    })
-                    self.highlightedBackgroundNode.alpha = 0.0
-                } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
-                }
-            }
-        }
-    }
+
     
     func asyncLayout() -> (_ item: CallListCallItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> (Signal<Void, NoError>?, (Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -574,6 +553,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             return (nodeLayout, { [weak self] synchronousLoads in
                 if let strongSelf = self {
+                    var revealTopSeparatorIsHidden = false
+                    var revealBottomSeparatorIsHidden = false
+
                     if let peer = item.topMessage.peers[item.topMessage.id.peerId] {
                         var overrideImage: AvatarNodeImageOverride?
                         if peer.isDeleted {
@@ -647,7 +629,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     if strongSelf.maskNode.supernode != nil {
                                         strongSelf.maskNode.removeFromSupernode()
                                     }
-                                    transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - separatorRightInset, height: separatorHeight)))
+                                    transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - params.rightInset - separatorRightInset, height: separatorHeight)))
                                 case .blocks:
                                     if strongSelf.backgroundNode.supernode == nil {
                                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -666,26 +648,28 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     var hasBottomCorners = false
                                     switch neighbors.top {
                                         case .sameSection(false):
-                                            strongSelf.topStripeNode.isHidden = true
+                                            revealTopSeparatorIsHidden = true
                                         default:
                                             hasTopCorners = true
-                                            strongSelf.topStripeNode.isHidden = hasCorners
+                                            revealTopSeparatorIsHidden = hasCorners
                                     }
                                     let bottomStripeInset: CGFloat
                                     switch neighbors.bottom {
                                         case .sameSection(false):
                                             bottomStripeInset = leftInset
-                                            strongSelf.bottomStripeNode.isHidden = false
+                                            revealBottomSeparatorIsHidden = false
                                         default:
                                             bottomStripeInset = 0.0
                                             hasBottomCorners = true
-                                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                                            revealBottomSeparatorIsHidden = hasCorners
                                     }
                                 
                                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                                     
                                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                                    // Per side: the margins differ beside iPhone Duo's strip.
+                                    let backgroundFrame = strongSelf.backgroundNode.frame
+                                    strongSelf.maskNode.frame = CGRect(x: backgroundFrame.minX + params.leftInset, y: backgroundFrame.minY, width: backgroundFrame.width - params.leftInset - params.rightInset, height: backgroundFrame.height)
                                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
                                     transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight)))
                             }
@@ -773,8 +757,13 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             topHighlightInset -= nodeLayout.insets.top
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                             strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
-                            strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
+                            // Plain style: the highlight spans the full-width separator's extent (ChatListItem's rule), out of the
+                            // side safe areas and ending where the separators end when there is a right inset (iPhone Duo's strip).
+                            let highlightLeftInset: CGFloat = item.style == .plain ? params.leftInset : 0.0
+                            let highlightRightInset: CGFloat = item.style == .plain && !params.rightInset.isZero ? params.rightInset + separatorRightInset : 0.0
+                            strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: highlightLeftInset, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width - highlightLeftInset - highlightRightInset, height: nodeLayout.size.height + topHighlightInset)), aboveNodes: [strongSelf.backgroundNode])
                             
+                            strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: revealTopSeparatorIsHidden, bottomIsHidden: revealBottomSeparatorIsHidden)
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                             
                             strongSelf.accessibilityArea.accessibilityLabel = titleAttributedString?.string
@@ -785,7 +774,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             
                             strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.presentationData.strings.Common_Delete, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)))]
                             
-                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                             strongSelf.setRevealOptionsOpened(item.revealed, animated: animated)
                         }
                     })
@@ -896,4 +885,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             item.interaction.delete(item.messages.map { $0.id })
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let callListCall = ListViewItemHeaderFamily("callListCall")
 }

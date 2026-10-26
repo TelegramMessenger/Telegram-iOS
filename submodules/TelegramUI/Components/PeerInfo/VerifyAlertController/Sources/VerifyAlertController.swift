@@ -8,6 +8,7 @@ import TelegramPresentationData
 import AccountContext
 import ComponentFlow
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import BalancedTextComponent
 import TextFieldComponent
 import ComponentDisplayAdapters
@@ -305,16 +306,41 @@ private final class VerifyAlertContentNode: AlertContentNode {
                 }
             }
             
-            let placeholderText = self.verifierSettings.customDescription ?? self.strings.BotVerification_Verify_Placeholder(self.verifierSettings.companyName).string
+            let placeholderText: String
+            let placeholderEntities: [MessageTextEntity]
+            if let customDescription = self.verifierSettings.customDescription {
+                placeholderText = customDescription
+                placeholderEntities = self.verifierSettings.customDescriptionEntities ?? []
+            } else {
+                placeholderText = self.strings.BotVerification_Verify_Placeholder(self.verifierSettings.companyName).string
+                placeholderEntities = []
+            }
+            let placeholderFont = Font.regular(14.0)
+            let placeholderAttributedText = stringWithAppliedEntities(
+                placeholderText,
+                entities: placeholderEntities,
+                baseColor: self.presentationTheme.actionSheet.inputPlaceholderColor,
+                linkColor: self.presentationTheme.actionSheet.inputPlaceholderColor,
+                baseFont: placeholderFont,
+                linkFont: placeholderFont,
+                boldFont: Font.semibold(14.0),
+                italicFont: Font.italic(14.0),
+                boldItalicFont: Font.semiboldItalic(14.0),
+                fixedFont: Font.monospace(14.0),
+                blockQuoteFont: placeholderFont,
+                message: nil
+            )
             
             let inputPlaceholderSize = self.inputPlaceholderView.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(
-                        string: placeholderText,
-                        font: Font.regular(14.0),
-                        textColor: self.presentationTheme.actionSheet.inputPlaceholderColor
-                    )))
+                    MultilineTextWithEntitiesComponent(
+                        context: self.context,
+                        animationCache: self.context.animationCache,
+                        animationRenderer: self.context.animationRenderer,
+                        placeholderColor: self.presentationTheme.actionSheet.inputPlaceholderColor,
+                        text: .plain(placeholderAttributedText)
+                    )
                 ),
                 environment: {},
                 containerSize: CGSize(width: inputWidth - 32.0, height: 240.0)
@@ -396,7 +422,7 @@ private final class VerifyAlertContentNode: AlertContentNode {
     }
 }
 
-public func verifyAlertController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, verifierSettings: BotVerifierSettings, verifierIcon: TelegramMediaFile?, apply: @escaping (String) -> Void) -> AlertController {
+public func verifyAlertController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, verifierSettings: BotVerifierSettings, verifierIcon: TelegramMediaFile?, apply: @escaping (String, [MessageTextEntity]) -> Void) -> AlertController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: ((Bool) -> Void)?
@@ -435,8 +461,8 @@ public func verifyAlertController(context: AccountContext, updatedPresentationDa
         guard let contentNode = contentNode else {
             return
         }
-        let (text, _) = contentNode.textAndEntities
-        apply(text)
+        let (text, entities) = contentNode.textAndEntities
+        apply(text, entities)
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)

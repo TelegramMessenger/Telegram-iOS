@@ -148,10 +148,6 @@ final class BusinessDaySetupScreenComponent: Component {
             
             let navigationAlphaDistance: CGFloat = 16.0
             let navigationAlpha: CGFloat = max(0.0, min(1.0, (self.scrollView.contentOffset.y - navigationRevealOffsetY) / navigationAlphaDistance))
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
-                transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
-            }
             
             var scrolledUp = false
             if navigationAlpha < 0.5 {
@@ -297,7 +293,7 @@ final class BusinessDaySetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
@@ -308,7 +304,10 @@ final class BusinessDaySetupScreenComponent: Component {
             }
             
             let bottomContentInset: CGFloat = 24.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
             let sectionSpacing: CGFloat = 24.0
             
             let _ = bottomContentInset
@@ -350,7 +349,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     ]
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let generalSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: generalSectionSize)
             if let generalSectionView = self.generalSection.view {
@@ -456,7 +455,7 @@ final class BusinessDaySetupScreenComponent: Component {
                         items: rangeSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let rangeSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + rangesSectionsHeight), size: rangeSectionSize)
                 if let rangeSectionView = rangeSection.view {
@@ -569,7 +568,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     ]
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let addSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + rangesSectionsHeight), size: addSectionSize)
             if let addSectionView = self.addSection.view {

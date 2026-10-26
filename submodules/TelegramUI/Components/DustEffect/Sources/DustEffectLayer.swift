@@ -70,6 +70,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         let texture: MTLTexture
         
         var phase: Float = 0
+        var duration: Double = 0
         var particleBufferIsInitialized: Bool = false
         var particleBuffer: SharedBuffer?
         
@@ -105,7 +106,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
             pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
             pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
-            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
                 return nil
             }
             self.pipelineState = pipelineState
@@ -115,6 +116,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     final class DustComputeState: ComputeState {
         let computePipelineStateInitializeParticle: MTLComputePipelineState
         let computePipelineStateUpdateParticle: MTLComputePipelineState
+        let fluidPipelines: DustFluidSimulation.Pipelines
         
         required init?(device: MTLDevice) {
             guard let library = metalLibrary(device: device) else {
@@ -124,7 +126,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             guard let functionDustEffectInitializeParticle = library.makeFunction(name: "dustEffectInitializeParticle") else {
                 return nil
             }
-            guard let computePipelineStateInitializeParticle = try? device.makeComputePipelineState(function: functionDustEffectInitializeParticle) else {
+            guard let computePipelineStateInitializeParticle = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: functionDustEffectInitializeParticle) else {
                 return nil
             }
             self.computePipelineStateInitializeParticle = computePipelineStateInitializeParticle
@@ -132,17 +134,36 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             guard let functionDustEffectUpdateParticle = library.makeFunction(name: "dustEffectUpdateParticle") else {
                 return nil
             }
-            guard let computePipelineStateUpdateParticle = try? device.makeComputePipelineState(function: functionDustEffectUpdateParticle) else {
+            guard let computePipelineStateUpdateParticle = MetalEngine.shared.pipelineCache.makeComputePipelineState(function: functionDustEffectUpdateParticle) else {
                 return nil
             }
             
             self.computePipelineStateUpdateParticle = computePipelineStateUpdateParticle
+            
+            guard let fluidPipelines = DustFluidSimulation.Pipelines(library: library, makePipelineState: { function in
+                return MetalEngine.shared.pipelineCache.makeComputePipelineState(function: function)
+            }) else {
+                return nil
+            }
+            self.fluidPipelines = fluidPipelines
         }
+    }
+    
+    // Matches ParticleFluidParams in DustEffectShaders.metal.
+    private struct ParticleFluidParams {
+        var itemOrigin: SIMD2<Float>
+        var itemSize: SIMD2<Float>
+        var cellSize: Float
+        var isEnabled: Float
     }
     
     private var updateLink: SharedDisplayLinkDriver.Link?
     private var items: [Item] = []
     private var lastTimeStep: Double = 0.0
+    
+    private var fluid: DustFluidSimulation?
+    private var pendingFluidSplats: [DustFluidSimulation.Splat] = []
+    private var randomGenerator = SystemRandomNumberGenerator()
     
     public var animationSpeed: Float = 1.0
     public var playsBackwards: Bool = false
@@ -199,18 +220,33 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         
         self.lastTimeStep = deltaTimeValue
         
+        let containerHeight = Float(self.bounds.height)
+        let verticalDirection: Float = self.animateDown ? -1.0 : 1.0
+        
         var didRemoveItems = false
         for i in (0 ..< self.items.count).reversed() {
-            self.items[i].phase += Float(deltaTimeValue) * self.animationSpeed / Float(UIView.animationDurationFactor())
+            let item = self.items[i]
+            let previousPhase = item.phase
+            item.phase += Float(deltaTimeValue) * self.animationSpeed / Float(UIView.animationDurationFactor())
+            item.duration += deltaTimeValue / UIView.animationDurationFactor()
             
-            if self.items[i].phase >= 4.0 {
+            // The last grains come loose when the sweep ends, at phase 0.8, and then live for up to 2.1 seconds (4.1 in
+            // their simulation time, which runs twice as fast; see dustEffectInitializeParticle) whatever the speed.
+            if item.phase >= 4.0 && item.duration >= 0.8 / Double(self.animationSpeed) + 2.1 {
                 self.items.remove(at: i)
                 didRemoveItems = true
+            } else {
+                let itemOrigin = SIMD2<Float>(Float(item.frame.minX), containerHeight - Float(item.frame.maxY))
+                let itemSize = SIMD2<Float>(Float(item.frame.width), Float(item.frame.height))
+                let splats = DustFluidSimulation.dissolveSplats(itemOrigin: itemOrigin, itemSize: itemSize, previousPhase: previousPhase, phase: item.phase, verticalDirection: verticalDirection, generator: &self.randomGenerator)
+                self.pendingFluidSplats.append(contentsOf: splats)
             }
         }
         self.updateNeedsAnimation()
         
         if didRemoveItems && self.items.isEmpty {
+            self.fluid = nil
+            self.pendingFluidSplats.removeAll()
             self.becameEmpty?()
         }
     }
@@ -257,10 +293,16 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             let particleCount = particleColumnCount * particleRowCount
             
             if item.particleBuffer == nil {
-                if let particleBuffer = MetalEngine.shared.sharedBuffer(spec: BufferSpec(length: particleCount * 4 * (4 + 1))) {
+                // Particle in DustEffectShaders.metal: offset, velocity, lifetime, age, displacement.
+                if let particleBuffer = MetalEngine.shared.sharedBuffer(spec: BufferSpec(length: particleCount * 4 * (2 + 2 + 1 + 1 + 2))) {
                     item.particleBuffer = particleBuffer
                 }
             }
+        }
+        
+        let fluidSize = SIMD2<Float>(Float(containerSize.width), Float(containerSize.height))
+        if !self.items.isEmpty && self.fluid?.size != fluidSize {
+            self.fluid = DustFluidSimulation(device: MetalEngine.shared.device, size: fluidSize)
         }
         
         let lastTimeStep = self.lastTimeStep
@@ -283,6 +325,14 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             
             var verticalDirection: Float = self.animateDown ? -1.0 : 1.0
             
+            let fluid = self.fluid
+            if let fluid, lastTimeStep != 0.0 {
+                var timeStep: Float = Float(lastTimeStep) / Float(UIView.animationDurationFactor())
+                timeStep *= 2.0
+                fluid.encode(encoder: computeEncoder, pipelines: state.fluidPipelines, timeStep: timeStep, splats: self.pendingFluidSplats)
+                self.pendingFluidSplats.removeAll()
+            }
+            
             for item in self.items {
                 guard let particleBuffer = item.particleBuffer else {
                     continue
@@ -291,6 +341,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                 let itemFrame = item.frame
                 let particleColumnCount = Int(itemFrame.width)
                 let particleRowCount = Int(itemFrame.height)
+                var particleCount = SIMD2<UInt32>(UInt32(particleColumnCount), UInt32(particleRowCount))
                 
                 let threadgroupSize = MTLSize(width: 32, height: 1, depth: 1)
                 let threadgroupCount = MTLSize(width: (particleRowCount * particleColumnCount + threadgroupSize.width - 1) / threadgroupSize.width, height: 1, depth: 1)
@@ -301,12 +352,12 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                     item.particleBufferIsInitialized = true
                     computeEncoder.setComputePipelineState(state.computePipelineStateInitializeParticle)
                     computeEncoder.setBytes(&verticalDirection, length: 4, index: 1)
+                    computeEncoder.setBytes(&particleCount, length: 4 * 2, index: 2)
                     computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
                 }
                 
                 if lastTimeStep != 0.0 {
                     computeEncoder.setComputePipelineState(state.computePipelineStateUpdateParticle)
-                    var particleCount = SIMD2<UInt32>(UInt32(particleColumnCount), UInt32(particleRowCount))
                     computeEncoder.setBytes(&particleCount, length: 4 * 2, index: 1)
                     var phase = item.phase
                     computeEncoder.setBytes(&phase, length: 4, index: 2)
@@ -314,6 +365,16 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                     timeStep *= 2.0
                     computeEncoder.setBytes(&timeStep, length: 4, index: 3)
                     computeEncoder.setBytes(&verticalDirection, length: 4, index: 4)
+                    
+                    var fluidParams = ParticleFluidParams(
+                        itemOrigin: SIMD2<Float>(Float(itemFrame.minX), Float(containerSize.height - itemFrame.maxY)),
+                        itemSize: SIMD2<Float>(Float(itemFrame.width), Float(itemFrame.height)),
+                        cellSize: fluid?.cellSize ?? 1.0,
+                        isEnabled: fluid != nil ? 1.0 : 0.0
+                    )
+                    computeEncoder.setBytes(&fluidParams, length: MemoryLayout<ParticleFluidParams>.stride, index: 5)
+                    // Without a fluid the kernel does not read the texture, but one must still be bound.
+                    computeEncoder.setTexture(fluid?.streamFunctionTexture ?? item.texture, index: 0)
                     computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
                 }
             }

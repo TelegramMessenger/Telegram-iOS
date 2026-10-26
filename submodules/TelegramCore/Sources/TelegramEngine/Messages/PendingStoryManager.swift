@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public enum PendingStoryUploadPhase: Equatable {
     case processing
@@ -442,8 +442,7 @@ final class PendingStoryManager {
             if let currentPendingItemContext = self.currentPendingItemContext, !localState.items.contains(where: { $0.randomId == currentPendingItemContext.item.randomId }) {
                 self.currentPendingItemContext = nil
                 self.queue.after(0.1, {
-                    let _ = currentPendingItemContext
-                    print(currentPendingItemContext)
+                    withExtendedLifetime(currentPendingItemContext) {}
                 })
             }
             self.queuedPendingItems = Set(localState.items.compactMap { item -> PeerId? in

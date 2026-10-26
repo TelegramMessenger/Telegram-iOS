@@ -40,13 +40,25 @@ public class MapSnapshotMediaResource {
 
 let TGGoogleMapsOffset: Int = 268435456
 let TGGoogleMapsRadius = Double(TGGoogleMapsOffset) / Double.pi
+private let maximumWebMercatorLatitude = 85.05112878
 
 private func yToLatitude(_ y: Int) -> Double {
     return ((Double.pi / 2.0) - 2 * atan(exp((Double(y - TGGoogleMapsOffset)) / TGGoogleMapsRadius))) * 180.0 / Double.pi;
 }
 
 private func latitudeToY(_ latitude: Double) -> Int {
-    return Int(round(Double(TGGoogleMapsOffset) - TGGoogleMapsRadius * log((1.0 + sin(latitude * Double.pi / 180.0)) / (1.0 - sin(latitude * Double.pi / 180.0))) / 2.0))
+    let clampedLatitude: Double
+    if latitude.isNaN {
+        clampedLatitude = 0.0
+    } else {
+        clampedLatitude = min(max(latitude, -maximumWebMercatorLatitude), maximumWebMercatorLatitude)
+    }
+    let y = Double(TGGoogleMapsOffset) - TGGoogleMapsRadius * log((1.0 + sin(clampedLatitude * Double.pi / 180.0)) / (1.0 - sin(clampedLatitude * Double.pi / 180.0))) / 2.0
+    guard y.isFinite else {
+        return TGGoogleMapsOffset
+    }
+    let clampedY = min(max(y, 0.0), Double(TGGoogleMapsOffset * 2))
+    return Int(round(clampedY))
 }
 
 private func adjustGMapLatitude(_ latitude: Double, offset: Int, zoom: Int) -> Double {

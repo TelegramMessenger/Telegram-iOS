@@ -63,7 +63,7 @@ private func instantPageAnchorPathSearch(
             }
         case let .cover(inner):
             if let r = instantPageAnchorPathSearch([inner], name: name, detailsOrdinal: &detailsOrdinal) { return r }
-        case let .table(title, rows, _, _):
+        case let .table(title, rows, _, _, _):
             if richTextContainsAnchor(title, name: name) { return [] }
             for row in rows {
                 for cell in row.cells {
@@ -129,6 +129,8 @@ private func richTextContainsAnchor(_ text: RichText, name: String) -> Bool {
         return richTextContainsAnchor(inner, name: name)
     case let .textAutoUrl(inner):
         return richTextContainsAnchor(inner, name: name)
+    case let .textTonAddress(inner):
+        return richTextContainsAnchor(inner, name: name)
     case let .textBankCard(inner):
         return richTextContainsAnchor(inner, name: name)
     case let .textBotCommand(inner):
@@ -151,5 +153,8 @@ private func richTextContainsAnchor(_ text: RichText, name: String) -> Bool {
         return richTextContainsAnchor(inner, name: name)
     case let .textDate(inner, _, _):
         return richTextContainsAnchor(inner, name: name)
+    case let .textButton(button):
+        // Descend into the label so an anchor inside a button's text still resolves.
+        return richTextContainsAnchor(button.text, name: name)
     }
 }

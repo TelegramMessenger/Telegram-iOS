@@ -245,7 +245,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
         case .commands:
             return nil
         case let .contextRequestResult(_, results):
-            if let results = results, (!results.results.isEmpty || results.switchPeer != nil || results.webView != nil) {
+            if let results = results, (!results.results.isEmpty || ChatContextResultsButton(results: results) != nil) {
                 switch results.presentation {
                     case .list:
                         if let currentPanel = currentPanel as? VerticalListContextResultsChatInputContextPanelNode {

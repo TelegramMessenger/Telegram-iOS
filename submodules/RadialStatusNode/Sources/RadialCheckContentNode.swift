@@ -7,10 +7,12 @@ import SwiftSignalKit
 
 private final class RadialCheckContentNodeParameters: NSObject {
     let color: UIColor
+    let lineWidth: CGFloat?
     let progress: CGFloat
     
-    init(color: UIColor, progress: CGFloat) {
+    init(color: UIColor, lineWidth: CGFloat?, progress: CGFloat) {
         self.color = color
+        self.lineWidth = lineWidth
         self.progress = progress
         
         super.init()
@@ -18,6 +20,8 @@ private final class RadialCheckContentNodeParameters: NSObject {
 }
 
 final class RadialCheckContentNode: RadialStatusContentNode {
+    private let lineWidth: CGFloat?
+
     var color: UIColor {
         didSet {
             self.setNeedsDisplay()
@@ -38,8 +42,9 @@ final class RadialCheckContentNode: RadialStatusContentNode {
     
     private var enqueuedReadyForTransition: (() -> Void)?
     
-    init(color: UIColor) {
+    init(color: UIColor, lineWidth: CGFloat?) {
         self.color = color
+        self.lineWidth = lineWidth
         
         super.init()
         
@@ -90,7 +95,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return RadialCheckContentNodeParameters(color: self.color, progress: self.effectiveProgress)
+        return RadialCheckContentNodeParameters(color: self.color, lineWidth: self.lineWidth, progress: self.effectiveProgress)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -122,7 +127,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
             let factor: CGFloat = max(0.3, diameter / 50.0)
             
             context.setStrokeColor(parameters.color.cgColor)
-            context.setLineWidth(max(1.7, pathLineWidth * factor))
+            context.setLineWidth(parameters.lineWidth ?? max(1.7, pathLineWidth * factor))
             context.setLineCap(.round)
             context.setLineJoin(.round)
             context.setMiterLimit(10.0)
@@ -169,4 +174,3 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         self.animateProgress(delay: delay)
     }
 }
-

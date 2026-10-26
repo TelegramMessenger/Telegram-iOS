@@ -4,7 +4,7 @@ final class MutableAllTypingDraftsView: MutablePostboxView {
     fileprivate var keys: Set<PeerAndThreadId>
 
     init(postbox: PostboxImpl) {
-        self.keys = Set(postbox.currentTypingDrafts.keys)
+        self.keys = Set(postbox.currentTypingDrafts.filter({ !$0.value.isStopped }).keys)
     }
 
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
@@ -13,7 +13,9 @@ final class MutableAllTypingDraftsView: MutablePostboxView {
         }
         var updated = false
         for (key, update) in transaction.updatedTypingDrafts {
-            if update.value != nil {
+            // A draft transitioning to stopped arrives as a non-nil value: it stays on
+            // screen, but it must drop out of this view so the send gate opens.
+            if let value = update.value, !value.isStopped {
                 if self.keys.insert(key).inserted {
                     updated = true
                 }
@@ -27,7 +29,7 @@ final class MutableAllTypingDraftsView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let new = Set(postbox.currentTypingDrafts.keys)
+        let new = Set(postbox.currentTypingDrafts.filter({ !$0.value.isStopped }).keys)
         if new == self.keys {
             return false
         }

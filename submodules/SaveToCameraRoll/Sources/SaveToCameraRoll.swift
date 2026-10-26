@@ -4,7 +4,7 @@ import SwiftSignalKit
 import TelegramCore
 import Photos
 import Display
-import MobileCoreServices
+import UniformTypeIdentifiers
 import DeviceAccess
 import AccountContext
 import LegacyComponents
@@ -215,7 +215,7 @@ public func copyToPasteboard(context: AccountContext, userLocation: MediaResourc
 
                 if mediaReference.media is TelegramMediaImage {
                     if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: .mappedIfSafe) {
-                        pasteboard.setData(fileData, forPasteboardType: kUTTypeJPEG as String)
+                        pasteboard.setData(fileData, forPasteboardType: UTType.jpeg.identifier)
                     }
                 }
                 subscriber.putNext(Void())

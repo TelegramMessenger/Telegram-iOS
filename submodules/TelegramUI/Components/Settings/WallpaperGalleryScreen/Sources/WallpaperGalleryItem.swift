@@ -114,6 +114,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let cropNode: WallpaperCropNode
     
     private let topButtons: ComponentView<Empty>
+    private let sideColumnCloseButton = ComponentView<Empty>()
     private var topCanShare = false
     private var topCanSwitchTheme = false
     private var topCanEdit = false
@@ -502,7 +503,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 return context
             }))
 
-            Queue.mainQueue().after(0.1) {
+            Queue.mainQueue().after(0.1) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.brightnessNode.isHidden = false
                 self.temporaryImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
                     self?.temporaryImageNode.image = nil
@@ -1376,9 +1381,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let toolbarHeight = self.arguments.toolbarHeight
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        // The buttons center over the toolbar: in its band when the side insets differ (iPhone Duo's strip, which a
+        // bottom toolbar spans, keeping clear only of a corner block at the bottom), the screen's center otherwise.
+        let toolbarBottomInsets = layout.bottomEdgeSideInsets()
+        let buttonsCenterX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? toolbarBottomInsets.left + (layout.size.width - toolbarBottomInsets.left - toolbarBottomInsets.right) / 2.0 : layout.size.width / 2.0
+        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let centerButtonFrame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - buttonSize.width / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(buttonsCenterX + buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
         
         var patternAlpha: CGFloat = 0.0
         var patternFrame = centerButtonFrame
@@ -1563,12 +1572,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             ))
         }
 
+        // iPhone Duo: with a side strip the close button goes in the strip, as every screen's back / close does; the
+        // top row keeps the other controls.
+        let sideColumnCloseFrame = layout.sideColumnNavigationButtonFrame
+
         let topButtonSideInset: CGFloat = 16.0
         let topButtonsSize = self.topButtons.update(
             transition: ComponentTransition(transition),
             component: AnyComponent(GlassControlPanelComponent(
                 theme: self.controlsGlassIsDark ? defaultDarkPresentationTheme : self.presentationData.theme,
-                leftItem: GlassControlPanelComponent.Item(
+                leftItem: sideColumnCloseFrame != nil ? nil : GlassControlPanelComponent.Item(
                     items: leftControlItems,
                     background: .panel
                 ),
@@ -1589,6 +1602,33 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.buttonsContainerNode.view.addSubview(topButtonsView)
             }
             transition.updateFrame(view: topButtonsView, frame: topButtonsFrame)
+        }
+
+        if let sideColumnCloseFrame {
+            let closeButtonSize = self.sideColumnCloseButton.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(GlassControlPanelComponent(
+                    theme: self.controlsGlassIsDark ? defaultDarkPresentationTheme : self.presentationData.theme,
+                    leftItem: GlassControlPanelComponent.Item(
+                        items: leftControlItems,
+                        background: .panel
+                    ),
+                    centralItem: nil,
+                    rightItem: nil,
+                    isDark: self.controlsGlassIsDark
+                )),
+                environment: {},
+                containerSize: CGSize(width: 44.0, height: 44.0)
+            )
+            let closeButtonFrame = CGRect(origin: CGPoint(x: sideColumnCloseFrame.midX - closeButtonSize.width / 2.0 + offset.x, y: sideColumnCloseFrame.midY - closeButtonSize.height / 2.0), size: closeButtonSize)
+            if let closeButtonView = self.sideColumnCloseButton.view {
+                if closeButtonView.superview == nil {
+                    self.buttonsContainerNode.view.addSubview(closeButtonView)
+                }
+                transition.updateFrame(view: closeButtonView, frame: closeButtonFrame)
+            }
+        } else if let closeButtonView = self.sideColumnCloseButton.view, closeButtonView.superview != nil {
+            closeButtonView.removeFromSuperview()
         }
     }
     
@@ -1726,32 +1766,32 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                    
         if !bottomMessageText.isEmpty {
             let message1 = EngineRawMessage(stableId: 2, stableVersion: 0, id: EngineMessage.Id(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil))
+            items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [EngineMessage(message1)], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil))
         }
     
         
         let message2 = EngineRawMessage(stableId: 1, stableVersion: 0, id: EngineMessage.Id(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: messageAttributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message2], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [EngineMessage(message2)], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil))
         
         if let serviceMessageText {
             let attributedText = convertMarkdownToAttributes(NSAttributedString(string: serviceMessageText))
             let entities = generateChatInputTextEntities(attributedText)
             
             let message3 = EngineRawMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66002, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: attributedText.string, entities: entities, additionalAttributes: nil))], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message3], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil))
+            items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [EngineMessage(message3)], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil))
         }
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
             for i in 0 ..< items.count {
-                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
+                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), animation: .None) { layout, apply in
                     let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
 
                     messageNodes[i].contentSize = layout.contentSize
                     messageNodes[i].insets = layout.insets
                     messageNodes[i].frame = nodeFrame
 
-                    apply(ListViewItemApply(isOnScreen: true))
+                    apply(ListViewItemApply())
                 }
             }
         } else {
@@ -1759,9 +1799,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
                 var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: i == (items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
                 itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 itemNode!.isUserInteractionEnabled = false

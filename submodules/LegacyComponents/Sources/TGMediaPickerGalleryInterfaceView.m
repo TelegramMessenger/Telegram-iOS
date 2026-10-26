@@ -170,7 +170,7 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
 
 @synthesize safeAreaInset = _safeAreaInset;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName isScheduledMessages:(bool)isScheduledMessages hasCoverButton:(bool)hasCoverButton
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName isScheduledMessages:(bool)isScheduledMessages isActionButtonDone:(bool)isActionButtonDone hasCoverButton:(bool)hasCoverButton
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -247,7 +247,10 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
         
         _muteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 40.0f, 40.0f)];
         _muteButton.hidden = true;
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _muteButton.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
         [_muteButton setBackgroundImage:[TGPhotoEditorInterfaceAssets gifBackgroundImage] forState:UIControlStateNormal];
         [_muteButton setImage:[TGPhotoEditorInterfaceAssets muteIcon] forState:UIControlStateNormal];
         [_muteButton setImage:[TGPhotoEditorInterfaceAssets muteActiveIcon] forState:UIControlStateSelected];
@@ -478,13 +481,17 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
         if (hasCameraButton)
         {
             _cameraButton = [[TGMediaPickerCameraButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 44.0f, 44.0f)];
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
             _cameraButton.adjustsImageWhenHighlighted = false;
+            #pragma clang diagnostic pop
             [_cameraButton addTarget:self action:@selector(cameraButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             
             [_wrapperView addSubview:_cameraButton];
         }
         
-        TGPhotoEditorDoneButton doneButton = isScheduledMessages ? TGPhotoEditorDoneButtonSchedule : TGPhotoEditorDoneButtonSend;
+        TGPhotoEditorDoneButton doneButton = isScheduledMessages ? TGPhotoEditorDoneButtonSchedule : (isActionButtonDone ? TGPhotoEditorDoneButtonCheck : TGPhotoEditorDoneButtonSend);
+        
         
         _portraitToolbarView = TGMediaPickerCreatePhotoToolbarView(_context, TGPhotoEditorBackButtonBack, doneButton, false, stickersContext, editingContext.sendPaidMessageStars > 0);
         _portraitToolbarView.cancelPressed = toolbarCancelPressed;
@@ -1934,10 +1941,20 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
     return frame;
 }
 
+// Beside a status island (iPhone Duo's unfolded screen) the top row stays at the top with its right control left of the
+// island, as full-screen viewers do there, instead of moving below the island with the safe area's top inset.
+- (CGFloat)_statusIslandTrailingInset
+{
+    if ([_context respondsToSelector:@selector(statusIslandTrailingInset)])
+        return [_context statusIslandTrailingInset];
+    return 0.0f;
+}
+
 - (CGRect)_checkButtonFrameForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGRect frame = CGRectZero;
-    if (_safeAreaInset.top > 20.0f)
+    CGFloat statusIslandInset = [self _statusIslandTrailingInset];
+    if (_safeAreaInset.top > 20.0f && statusIslandInset < FLT_EPSILON)
         screenEdges.top += _safeAreaInset.top;
     screenEdges.left += _safeAreaInset.left;
     screenEdges.right -= _safeAreaInset.right;
@@ -1953,7 +1970,7 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
             break;
             
         default:
-            frame = CGRectMake(screenEdges.right - 44, screenEdges.top + 5, _checkButton.frame.size.width, _checkButton.frame.size.height);
+            frame = CGRectMake(screenEdges.right - 44 - statusIslandInset, screenEdges.top + 5, _checkButton.frame.size.width, _checkButton.frame.size.height);
             break;
     }
     
@@ -1993,10 +2010,11 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
 - (void)_layoutRecipientLabelForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGFloat screenWidth = MIN(self.frame.size.width, self.frame.size.height);
-    CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 150.0f);
+    CGFloat statusIslandInset = [self _statusIslandTrailingInset];
+    CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 150.0f - statusIslandInset);
     
     CGRect frame = CGRectZero;
-    if (_safeAreaInset.top > 20.0f + FLT_EPSILON)
+    if (_safeAreaInset.top > 20.0f + FLT_EPSILON && statusIslandInset < FLT_EPSILON)
         screenEdges.top += _safeAreaInset.top;
     screenEdges.left += _safeAreaInset.left;
     screenEdges.right -= _safeAreaInset.right;
@@ -2085,10 +2103,11 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
 - (void)layoutSubviews
 {
     [super layoutSubviews];
-    
-    [_captionMixin setContentAreaHeight:self.frame.size.height];
-    
+
     UIInterfaceOrientation orientation = [self interfaceOrientation];
+    _captionMixin.interfaceOrientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
+    [_captionMixin setContentAreaHeight:self.frame.size.height];
+
     CGSize screenSize = TGScreenSize();
     if (TGIsPad())
         screenSize = [self referenceViewSize];

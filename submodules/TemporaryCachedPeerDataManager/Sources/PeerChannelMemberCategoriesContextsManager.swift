@@ -368,7 +368,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
     
     public func updateMemberBannedRights(engine: TelegramEngine, peerId: PeerId, memberId: PeerId, bannedRights: TelegramChatBannedRights?) -> Signal<Void, NoError> {
         return engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        |> mapToSignal { peer -> Signal<Void, NoError> in
+        |> mapToSignal { [self] peer -> Signal<Void, NoError> in
             if bannedRights == nil, case .community = peer {
                 return engine.peers.toggleCommunityParticipantBanned(communityId: peerId, participantId: memberId, banned: false)
                 |> `catch` { _ -> Signal<Void, NoError> in
@@ -473,8 +473,8 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func join(engine: TelegramEngine, peerId: PeerId, hash: String?) -> Signal<JoinChannelResult, JoinChannelError> {
-        return engine.peers.joinChannel(peerId: peerId, hash: hash)
+    public func join(engine: TelegramEngine, peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
+        return engine.peers.joinChannel(peerId: peerId, hash: hash, forNews: forNews)
         |> deliverOnMainQueue
         |> beforeNext { [weak self] result in
             if let self {

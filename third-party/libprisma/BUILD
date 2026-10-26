@@ -1,3 +1,6 @@
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 load(
     "@build_bazel_rules_apple//apple:resources.bzl",
     "apple_resource_bundle",
@@ -68,6 +71,41 @@ objc_library(
     sdk_frameworks = [
         "Foundation",
         "UIKit",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+# Host C++ regression test for the code-block highlighter. Compiles only the
+# pure-C++ core (not Syntaxer.mm, which needs UIKit) plus the header-only
+# boost_regex, and highlights the real shipped grammars.dat. Runs on the host
+# via `bazel test`, like the tgcalls cc_tests. See Tests/*.cpp for the case.
+cc_test(
+    name = "SyntaxHighlighterTests",
+    srcs = [
+        "Tests/SyntaxHighlighterRecursionTests.cpp",
+        "Sources/SyntaxHighlighter.cpp",
+        "Sources/SyntaxHighlighter.h",
+        "Sources/LanguageTree.cpp",
+        "Sources/LanguageTree.h",
+        "Sources/TokenList.cpp",
+        "Sources/TokenList.h",
+        "Sources/Highlight.cpp",
+        "Sources/Highlight.h",
+    ],
+    copts = [
+        "-std=c++17",
+        "-Ithird-party/libprisma/Sources",
+    ],
+    data = [
+        "Resources/grammars.dat",
+    ],
+    args = [
+        "$(location Resources/grammars.dat)",
+    ],
+    deps = [
+        "//third-party/boost_regex",
     ],
     visibility = [
         "//visibility:public",

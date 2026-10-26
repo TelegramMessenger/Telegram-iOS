@@ -9,20 +9,81 @@ import TelegramUIPreferences
 import TelegramCore
 
 public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
+    // A folder never names a secret chat. ChatListFilterPredicate resolves a secret chat's identity
+    // to its associated cloud user, so including or excluding the user silently does the same to the
+    // secret chat; and a folder can pin one, which ChatListFilterIncludePeers deliberately keeps out
+    // of `peers`. Neither shows up in the unread aggregates, so resolve the association first and
+    // feed the secret chats through the same per-peer corrections.
+    //
+    // The association is sampled once per filter change rather than observed: a secret chat created
+    // afterwards is not reflected in the badge until the filters change again or the app restarts.
     return context.engine.peers.updatedChatListFilters()
     |> distinctUntilChanged
-    |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
+    |> mapToSignal { filters -> Signal<([ChatListFilter], [EnginePeer.Id: [EnginePeer.Id]], [EnginePeer.Id: EnginePeer.Id]), NoError> in
+        var folderPeerIds = Set<EnginePeer.Id>()
+        for case let .filter(_, _, _, data) in filters {
+            folderPeerIds.formUnion(data.includePeers.peers)
+            folderPeerIds.formUnion(data.includePeers.pinnedPeers)
+            folderPeerIds.formUnion(data.excludePeers)
+        }
+        return context.account.postbox.transaction { transaction -> ([ChatListFilter], [EnginePeer.Id: [EnginePeer.Id]], [EnginePeer.Id: EnginePeer.Id]) in
+            var secretChatsByUserId: [EnginePeer.Id: [EnginePeer.Id]] = [:]
+            var userIdBySecretChatId: [EnginePeer.Id: EnginePeer.Id] = [:]
+            for peerId in folderPeerIds {
+                if peerId.namespace == Namespaces.Peer.CloudUser {
+                    let secretChatIds = transaction.getAssociatedPeerIds(peerId).filter { $0.namespace == Namespaces.Peer.SecretChat }
+                    if !secretChatIds.isEmpty {
+                        secretChatsByUserId[peerId] = secretChatIds.sorted()
+                        for secretChatId in secretChatIds {
+                            userIdBySecretChatId[secretChatId] = peerId
+                        }
+                    }
+                } else if peerId.namespace == Namespaces.Peer.SecretChat {
+                    if let associatedPeerId = transaction.getPeer(peerId)?.associatedPeerId {
+                        userIdBySecretChatId[peerId] = associatedPeerId
+                    }
+                }
+            }
+            return (filters, secretChatsByUserId, userIdBySecretChatId)
+        }
+    }
+    |> mapToSignal { filters, secretChatsByUserId, userIdBySecretChatId -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
+        // Each folder peer followed by the secret chats it carries. A no-op, and allocation-free,
+        // for an account with no secret chats in any folder.
+        func expand(_ peerIds: [EnginePeer.Id]) -> [EnginePeer.Id] {
+            if secretChatsByUserId.isEmpty {
+                return peerIds
+            }
+            var result: [EnginePeer.Id] = []
+            var seen = Set<EnginePeer.Id>()
+            for peerId in peerIds {
+                if seen.insert(peerId).inserted {
+                    result.append(peerId)
+                }
+                for secretChatId in secretChatsByUserId[peerId] ?? [] {
+                    if seen.insert(secretChatId).inserted {
+                        result.append(secretChatId)
+                    }
+                }
+            }
+            return result
+        }
+        
         var unreadCountItems: [EngineRawUnreadMessageCountsItem] = []
         unreadCountItems.append(.totalInGroup(.root))
         var additionalPeerIds = Set<EnginePeer.Id>()
         var additionalGroupIds = Set<EnginePeerGroupId>()
         for case let .filter(_, _, _, data) in filters {
-            additionalPeerIds.formUnion(data.includePeers.peers)
-            additionalPeerIds.formUnion(data.excludePeers)
+            additionalPeerIds.formUnion(expand(data.includePeers.peers))
+            additionalPeerIds.formUnion(expand(data.includePeers.pinnedPeers))
+            additionalPeerIds.formUnion(expand(data.excludePeers))
             if !data.excludeArchived {
                 additionalGroupIds.insert(Namespaces.PeerGroup.archive)
             }
         }
+        // A secret chat carries no notification settings of its own; they live on the cloud user,
+        // so its basicPeer view has to be available even when the user is not a folder peer.
+        additionalPeerIds.formUnion(userIdBySecretChatId.values)
         if !additionalPeerIds.isEmpty {
             for peerId in additionalPeerIds {
                 unreadCountItems.append(.peer(id: peerId, handleThreads: true))
@@ -68,7 +129,18 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                 case let .peer(peerId, state):
                     if let state = state, state.isUnread {
                         if let peerView = view.views[.basicPeer(peerId)] as? EngineRawBasicPeerView, let peer = peerView.peer {
-                            let tag = context.account.postbox.seedConfiguration.peerSummaryCounterTags(peer, peerView.isContact)
+                            // A secret chat carries neither contact status nor notification settings
+                            // of its own; both live on the associated cloud user. ChatListIndexTable
+                            // resolves them the same way when it files the chat into a counter
+                            // bucket, and the correction below is only correct if it agrees.
+                            let settingsView: EngineRawBasicPeerView
+                            if let userId = userIdBySecretChatId[peerId], let userView = view.views[.basicPeer(userId)] as? EngineRawBasicPeerView {
+                                settingsView = userView
+                            } else {
+                                settingsView = peerView
+                            }
+                            
+                            let tag = context.account.postbox.seedConfiguration.peerSummaryCounterTags(peer, settingsView.isContact)
                             
                             var peerCount = Int(state.count)
                             if state.isUnread {
@@ -76,11 +148,11 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                             }
                             
                             var isMuted = false
-                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                            if let notificationSettings = settingsView.notificationSettings as? TelegramPeerNotificationSettings {
                                 if case .muted = notificationSettings.muteState {
                                     isMuted = true
                                 } else if case .default = notificationSettings.muteState {
-                                    if let peer = peerView.peer {
+                                    if let peer = settingsView.peer {
                                         if peer is TelegramUser {
                                             isMuted = !globalNotificationSettings.privateChats.enabled
                                         } else if peer is TelegramGroup {
@@ -173,7 +245,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                             }
                         }
                     }
-                    for peerId in data.includePeers.peers {
+                    for peerId in expand(data.includePeers.peers + data.includePeers.pinnedPeers) {
                         if let (tag, peerCount, hasUnmuted, groupIdValue, isMuted) = peerTagAndCount[peerId], peerCount != 0, let groupId = groupIdValue {
                             var matches = true
                             if tags.contains(tag) {
@@ -203,7 +275,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                             }
                         }
                     }
-                    for peerId in data.excludePeers {
+                    for peerId in expand(data.excludePeers) {
                         if let (tag, peerCount, _, groupIdValue, isMuted) = peerTagAndCount[peerId], peerCount != 0, let groupId = groupIdValue {
                             var matches = false
                             if tags.contains(tag) {

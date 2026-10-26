@@ -2,6 +2,8 @@
 
 #import <CommonCrypto/CommonCrypto.h>
 
+#import <MtProtoKit/MTLogging.h>
+
 # define AES_MAXNR 14
 # define AES_BLOCK_SIZE 16
 
@@ -25,7 +27,33 @@ typedef struct {
 # define store_block(d, s)       memcpy((d), (s).data, AES_BLOCK_SIZE)
 #endif
 
-void MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
+// Every failure path below zeroes the whole output buffer before returning
+// false. The IGE feedback passes XOR plaintext blocks into the output, so a
+// buffer left untouched after a failed CCCrypt would carry the plaintext
+// shifted by one block; a caller that ignores the result must never be able
+// to forward that. Release builds compile assert() out, so these checks are
+// real branches rather than assertions.
+static void MTAesZeroOutput(void *outBytes, int length) {
+    if (outBytes != NULL && length > 0) {
+        memset(outBytes, 0, (size_t)length);
+    }
+}
+
+static void MTAesLogFailure(const char *operation, int status) {
+    if (MTLogEnabled()) {
+        MTLog(@"***** %s: CommonCrypto failed with status %d", operation, status);
+    }
+}
+
+bool MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
+    if (length < 0 || length % AES_BLOCK_SIZE != 0) {
+        MTAesZeroOutput(outBytes, length);
+        return false;
+    }
+    if (length == 0) {
+        return true;
+    }
+
     int len;
     size_t n;
     void const *inB;
@@ -40,6 +68,10 @@ void MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void
            0);
     
     void *tmpInBytes = malloc(length);
+    if (tmpInBytes == NULL) {
+        MTAesZeroOutput(outBytes, length);
+        return false;
+    }
     len = length / AES_BLOCK_SIZE;
     inB = inBytes;
     outB = tmpInBytes;
@@ -78,7 +110,11 @@ void MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void
     CCCryptorStatus result = CCCrypt(kCCEncrypt, kCCAlgorithmAES128, 0, key, keyLength, aesIv, tmpInBytes, length, outBytes, length, &realOutLength);
     free(tmpInBytes);
     
-    assert(result == kCCSuccess);
+    if (result != kCCSuccess || realOutLength != (size_t)length) {
+        MTAesLogFailure("MyAesIgeEncrypt", (int)result);
+        MTAesZeroOutput(outBytes, length);
+        return false;
+    }
     
     len = length / AES_BLOCK_SIZE;
     
@@ -104,11 +140,18 @@ void MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void
     
     memcpy(iv, ivp->data, AES_BLOCK_SIZE);
     memcpy(iv + AES_BLOCK_SIZE, iv2p->data, AES_BLOCK_SIZE);
+    return true;
 }
 
-void MyAesIgeDecrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
-    assert(length % 16 == 0);
-    assert(length >= 0);
+bool MyAesIgeDecrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
+    if (length < 0 || length % AES_BLOCK_SIZE != 0) {
+        MTAesZeroOutput(outBytes, length);
+        return false;
+    }
+    if (length == 0) {
+        return true;
+    }
+    void *outStart = outBytes;
     
     unsigned char aesIv[AES_BLOCK_SIZE];
     memcpy(aesIv, iv, AES_BLOCK_SIZE);
@@ -119,53 +162,69 @@ void MyAesIgeDecrypt(const void *inBytes, int length, void *outBytes, const void
            0);
     
     CCCryptorRef decryptor = NULL;
-    CCCryptorCreate(kCCDecrypt, kCCAlgorithmAES128, kCCOptionECBMode, key, keyLength, nil, &decryptor);
-    if (decryptor != NULL) {
-        int len;
-        size_t n;
+    CCCryptorStatus createStatus = CCCryptorCreate(kCCDecrypt, kCCAlgorithmAES128, kCCOptionECBMode, key, keyLength, nil, &decryptor);
+    if (createStatus != kCCSuccess || decryptor == NULL) {
+        MTAesLogFailure("MyAesIgeDecrypt (create)", (int)createStatus);
+        MTAesZeroOutput(outStart, length);
+        return false;
+    }
+    
+    int len;
+    size_t n;
+    
+    len = length / AES_BLOCK_SIZE;
+    
+    aes_block_t *ivp = (aes_block_t *)(aesIv);
+    aes_block_t *iv2p = (aes_block_t *)(ccIv);
+    
+    while (len) {
+        aes_block_t tmp;
+        aes_block_t *inp = (aes_block_t *)inBytes;
+        aes_block_t *outp = (aes_block_t *)outBytes;
         
-        len = length / AES_BLOCK_SIZE;
+        for (n = 0; n < N_WORDS; ++n)
+            tmp.data[n] = inp->data[n] ^ iv2p->data[n];
         
-        aes_block_t *ivp = (aes_block_t *)(aesIv);
-        aes_block_t *iv2p = (aes_block_t *)(ccIv);
-        
-        while (len) {
-            aes_block_t tmp;
-            aes_block_t *inp = (aes_block_t *)inBytes;
-            aes_block_t *outp = (aes_block_t *)outBytes;
-            
-            for (n = 0; n < N_WORDS; ++n)
-                tmp.data[n] = inp->data[n] ^ iv2p->data[n];
-            
-            size_t dataOutMoved = 0;
-            CCCryptorStatus result = CCCryptorUpdate(decryptor, &tmp, AES_BLOCK_SIZE, outBytes, AES_BLOCK_SIZE, &dataOutMoved);
-            assert(result == kCCSuccess);
-            assert(dataOutMoved == AES_BLOCK_SIZE);
-            
-            for (n = 0; n < N_WORDS; ++n)
-                outp->data[n] ^= ivp->data[n];
-            
-            ivp = inp;
-            iv2p = outp;
-            
-            inBytes += AES_BLOCK_SIZE;
-            outBytes += AES_BLOCK_SIZE;
-            
-            --len;
+        size_t dataOutMoved = 0;
+        CCCryptorStatus result = CCCryptorUpdate(decryptor, &tmp, AES_BLOCK_SIZE, outBytes, AES_BLOCK_SIZE, &dataOutMoved);
+        if (result != kCCSuccess || dataOutMoved != AES_BLOCK_SIZE) {
+            MTAesLogFailure("MyAesIgeDecrypt (update)", (int)result);
+            CCCryptorRelease(decryptor);
+            MTAesZeroOutput(outStart, length);
+            return false;
         }
         
-        memcpy(iv, ivp->data, AES_BLOCK_SIZE);
-        memcpy(iv + AES_BLOCK_SIZE, iv2p->data, AES_BLOCK_SIZE);
+        for (n = 0; n < N_WORDS; ++n)
+            outp->data[n] ^= ivp->data[n];
         
-        CCCryptorRelease(decryptor);
+        ivp = inp;
+        iv2p = outp;
+        
+        inBytes += AES_BLOCK_SIZE;
+        outBytes += AES_BLOCK_SIZE;
+        
+        --len;
     }
+    
+    memcpy(iv, ivp->data, AES_BLOCK_SIZE);
+    memcpy(iv + AES_BLOCK_SIZE, iv2p->data, AES_BLOCK_SIZE);
+    
+    CCCryptorRelease(decryptor);
+    return true;
 }
 
-void MyAesCbcDecrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
+bool MyAesCbcDecrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
+    if (length < 0) {
+        return false;
+    }
     size_t outLength = 0;
     CCCryptorStatus status = CCCrypt(kCCDecrypt, kCCAlgorithmAES128, 0, key, keyLength, iv, inBytes, length, outBytes, length, &outLength);
-    assert(status == kCCSuccess);
-    assert(outLength == length);
+    if (status != kCCSuccess || outLength != (size_t)length) {
+        MTAesLogFailure("MyAesCbcDecrypt", (int)status);
+        MTAesZeroOutput(outBytes, length);
+        return false;
+    }
+    return true;
 }
 
 static void ctr128_inc(unsigned char *counter)
@@ -226,7 +285,9 @@ static void ctr128_inc_aligned(unsigned char *counter)
         memset(_ecount, 0, 16);
         memcpy(_ivec, iv, 16);
         
-        CCCryptorCreate(kCCEncrypt, kCCAlgorithmAES128, kCCOptionECBMode, key, keyLength, nil, &_cryptor);
+        if (![self createCryptorWithKey:key keyLength:keyLength]) {
+            return nil;
+        }
     }
     return self;
 }
@@ -238,9 +299,34 @@ static void ctr128_inc_aligned(unsigned char *counter)
         memcpy(_ecount, ecount, 16);
         memcpy(_ivec, iv, 16);
         
-        CCCryptorCreate(kCCEncrypt, kCCAlgorithmAES128, kCCOptionECBMode, key, keyLength, nil, &_cryptor);
+        if (![self createCryptorWithKey:key keyLength:keyLength]) {
+            return nil;
+        }
     }
     return self;
+}
+
+// Without a cryptor _ecount would stay all-zero and encryptIn:out:len: would
+// copy its input through unchanged, so a failed create must fail the init.
+- (bool)createCryptorWithKey:(const void *)key keyLength:(int)keyLength {
+    CCCryptorStatus status = CCCryptorCreate(kCCEncrypt, kCCAlgorithmAES128, kCCOptionECBMode, key, keyLength, nil, &_cryptor);
+    if (status != kCCSuccess || _cryptor == NULL) {
+        MTAesLogFailure("MTAesCtr (create)", (int)status);
+        _cryptor = NULL;
+        return false;
+    }
+    return true;
+}
+
+// Advances the keystream by one block into _ecount.
+- (bool)nextKeystreamBlock {
+    size_t dataOutMoved = 0;
+    CCCryptorStatus status = CCCryptorUpdate(_cryptor, _ivec, 16, _ecount, 16, &dataOutMoved);
+    if (status != kCCSuccess || dataOutMoved != 16) {
+        MTAesLogFailure("MTAesCtr (update)", (int)status);
+        return false;
+    }
+    return true;
 }
 
 - (void)dealloc {
@@ -261,7 +347,9 @@ static void ctr128_inc_aligned(unsigned char *counter)
     memcpy(iv, _ivec, 16);
 }
 
-- (void)encryptIn:(const unsigned char *)in out:(unsigned char *)out len:(size_t)len {
+// On a keystream failure the not-yet-processed output is zeroed and false is
+// returned; the input is never copied through.
+- (bool)encryptIn:(const unsigned char *)in out:(unsigned char *)out len:(size_t)len {
     unsigned int n;
     size_t l = 0;
     
@@ -283,8 +371,10 @@ static void ctr128_inc_aligned(unsigned char *counter)
                 break;
             
             while (len >= 16) {
-                size_t dataOutMoved;
-                CCCryptorUpdate(_cryptor, _ivec, 16, _ecount, 16, &dataOutMoved);
+                if (![self nextKeystreamBlock]) {
+                    memset(out, 0, len);
+                    return false;
+                }
                 ctr128_inc_aligned(_ivec);
                 for (n = 0; n < 16; n += sizeof(size_t)) {
                     *(size_t *)(out + n) =
@@ -296,8 +386,10 @@ static void ctr128_inc_aligned(unsigned char *counter)
                 n = 0;
             }
             if (len) {
-                size_t dataOutMoved;
-                CCCryptorUpdate(_cryptor, _ivec, 16, _ecount, 16, &dataOutMoved);
+                if (![self nextKeystreamBlock]) {
+                    memset(out, 0, len);
+                    return false;
+                }
                 ctr128_inc_aligned(_ivec);
                 while (len--) {
                     out[n] = in[n] ^ _ecount[n];
@@ -305,15 +397,17 @@ static void ctr128_inc_aligned(unsigned char *counter)
                 }
             }
             _num = n;
-            return;
+            return true;
         } while (0);
     }
     /* the rest would be commonly eliminated by x86* compiler */
     
     while (l < len) {
         if (n == 0) {
-            size_t dataOutMoved;
-            CCCryptorUpdate(_cryptor, _ivec, 16, _ecount, 16, &dataOutMoved);
+            if (![self nextKeystreamBlock]) {
+                memset(out + l, 0, len - l);
+                return false;
+            }
             ctr128_inc(_ivec);
         }
         out[l] = in[l] ^ _ecount[n];
@@ -322,6 +416,7 @@ static void ctr128_inc_aligned(unsigned char *counter)
     }
     
     _num = n;
+    return true;
 }
 
 @end

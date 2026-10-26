@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -578,7 +579,8 @@ private final class AdsInfoSheetComponent: CombinedComponent {
                                     ),
                                     color: theme.chat.inputPanel.panelControlColor,
                                     size: CGSize(width: 34.0, height: 34.0),
-                                    playOnce: moreButtonPlayOnce
+                                    playOnce: moreButtonPlayOnce,
+                                    lottieSettings: context.component.context.lottieRenderingSettings
                                 )
                             )
                         ),
@@ -681,7 +683,7 @@ private final class AdsInfoSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -1035,7 +1037,7 @@ private final class AdsInfoContextReferenceContentSource: ContextReferenceConten
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView,
-            contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets),
+            contentAreaInScreenSpace: mainWindowScreenBounds.inset(by: self.insets),
             insets: self.contentInsets
         )
     }

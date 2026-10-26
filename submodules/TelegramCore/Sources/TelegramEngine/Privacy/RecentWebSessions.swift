@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 
 
@@ -65,9 +65,16 @@ func terminateWebSession(network: Network, hash: Int64) -> Signal<Bool, NoError>
 
 
 
-func terminateAllWebSessions(network: Network) -> Signal<Void, NoError> {
+func terminateAllWebSessions(network: Network) -> Signal<Bool, NoError> {
     return network.request(Api.functions.account.resetWebAuthorizations())
     |> retryRequest
-    |> map { _ in }
+    |> map { result in
+        switch result {
+        case .boolFalse:
+            return false
+        case .boolTrue:
+            return true
+        }
+    }
 }
 

@@ -1101,8 +1101,36 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         return 56.0f;
 }
 
+// iPhone Duo: its main screen is the 466x678 cover (also while unfolded), and the fixed inset table below knows neither
+// its side strip, its status corner nor the unfolded screen's status island. The hosting controller's context reports the
+// real layout's safe insets, so legacy controllers use those there.
+static bool TGViewControllerUsesContextSafeArea(id<LegacyComponentsContext> context)
+{
+    if (context == nil || TGIsPad())
+        return false;
+    // The main screen itself, not TGScreenSize(), which follows the app's window onto the inner screen.
+    CGSize screenSize = [UIScreen mainScreen].bounds.size;
+    return (int)MIN(screenSize.width, screenSize.height) == 466 && (int)MAX(screenSize.width, screenSize.height) == 678;
+}
+
+// The last context safe area read on iPhone Duo, for the class-level table lookup, which has no context (the photo
+// editor's container frames go through it). Never set on other devices.
+static bool TGViewControllerHasHostedSafeAreaInset = false;
+static UIEdgeInsets TGViewControllerHostedSafeAreaInset;
+
+static UIEdgeInsets TGViewControllerContextSafeAreaInset(id<LegacyComponentsContext> context)
+{
+    UIEdgeInsets safeAreaInset = [context safeAreaInset];
+    TGViewControllerHostedSafeAreaInset = safeAreaInset;
+    TGViewControllerHasHostedSafeAreaInset = true;
+    return safeAreaInset;
+}
+
 - (UIEdgeInsets)calculatedSafeAreaInset
 {
+    if (TGViewControllerUsesContextSafeArea(_context))
+        return TGViewControllerContextSafeAreaInset(_context);
+    
     UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
     if (self.view.frame.size.width > self.view.frame.size.height)
         orientation = UIInterfaceOrientationLandscapeLeft;
@@ -1117,6 +1145,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 + (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation hasOnScreenNavigation:(bool)hasOnScreenNavigation
 {
+    if (TGViewControllerHasHostedSafeAreaInset)
+        return TGViewControllerHostedSafeAreaInset;
+    
     int height = (int)TGScreenSize().height;
     if (!TGIsPad() && (height != 812 && height != 896 && height != 780 && height != 844 && height != 852 && height != 926 && height != 932) && !hasOnScreenNavigation)
         return UIEdgeInsetsZero;
@@ -1150,7 +1181,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
     }
     
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
+    UIEdgeInsets safeAreaInset = TGViewControllerUsesContextSafeArea(_context) ? TGViewControllerContextSafeAreaInset(_context) : [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
     
     //statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : statusBarHeight;
@@ -1505,13 +1536,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 }
 
 - (void)layoutControllerForSize:(CGSize)__unused size duration:(NSTimeInterval)__unused duration {
-}
-
-- (NSArray<id<UIPreviewActionItem>> *)previewActionItems {
-    if (self.externalPreviewActionItems != nil)
-        return self.externalPreviewActionItems();
-    
-    return [super previewActionItems];
 }
 
 - (BOOL)shouldAutomaticallyForwardAppearanceMethods {

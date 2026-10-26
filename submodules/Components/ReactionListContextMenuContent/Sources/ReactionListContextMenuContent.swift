@@ -677,7 +677,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
                 
                 self.avatarNode.frame = CGRect(origin: CGPoint(x: avatarInset, y: floor((size.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
-                self.avatarNode.setPeer(context: self.context, theme: presentationData.theme, peer: item.peer, synchronousLoad: true)
+                var overrideImage: AvatarNodeImageOverride?
+                if item.peer.isDeleted {
+                    overrideImage = .deletedIcon
+                }
+                self.avatarNode.setPeer(context: self.context, theme: presentationData.theme, peer: item.peer, overrideImage: overrideImage, synchronousLoad: true)
                 
                 let titleFontSize = presentationData.listsFontSize.baseDisplaySize * 17.0 / 17.0
                 

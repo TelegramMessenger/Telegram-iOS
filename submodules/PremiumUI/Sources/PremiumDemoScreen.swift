@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1363,7 +1364,8 @@ private final class DemoSheetContent: CombinedComponent {
                     color: .white,
                     startingPosition: .begin,
                     size: CGSize(width: 30.0, height: 30.0),
-                    loop: true
+                    loop: true,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ))))
             }
             let button = button.update(
@@ -1485,7 +1487,7 @@ private final class DemoSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: nil,
                         dismiss: { animated in

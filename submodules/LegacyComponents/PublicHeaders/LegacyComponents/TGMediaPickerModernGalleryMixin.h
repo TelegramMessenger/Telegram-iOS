@@ -43,6 +43,5 @@
 - (void)setThumbnailSignalForItem:(SSignal *(^)(id))thumbnailSignalForItem;
 
 - (UIViewController *)galleryController;
-- (void)setPreviewMode;
 
 @end

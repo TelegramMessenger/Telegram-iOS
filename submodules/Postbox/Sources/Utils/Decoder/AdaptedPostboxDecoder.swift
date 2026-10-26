@@ -115,26 +115,60 @@ extension _AdaptedPostboxDecoder: Decoder {
 
         let decoder = PostboxDecoder(buffer: MemoryBuffer(data: self.data))
 
+        // Every raw reader returns nil for a malformed value. `unkeyedContainer()`
+        // cannot throw, so the container is created empty with `isCorrupted` set and
+        // reports the corruption from its first `decode` instead.
         var content: UnkeyedContainer.Content?
+        var isCorrupted = false
         switch self.contentType {
         case .object:
             preconditionFailure()
         case .int32Array:
-            content = .int32Array(decoder.decodeInt32ArrayRaw())
+            if let array = decoder.decodeInt32ArrayRaw() {
+                content = .int32Array(array)
+            } else {
+                content = .int32Array([])
+                isCorrupted = true
+            }
         case .int64Array:
-            content = .int64Array(decoder.decodeInt64ArrayRaw())
+            if let array = decoder.decodeInt64ArrayRaw() {
+                content = .int64Array(array)
+            } else {
+                content = .int64Array([])
+                isCorrupted = true
+            }
         case .objectArray:
-            content = .objectArray(decoder.decodeObjectDataArrayRaw())
+            if let array = decoder.decodeObjectDataArrayRaw() {
+                content = .objectArray(array)
+            } else {
+                content = .objectArray([])
+                isCorrupted = true
+            }
         case .stringArray:
-            content = .stringArray(decoder.decodeStringArrayRaw())
+            if let array = decoder.decodeStringArrayRaw() {
+                content = .stringArray(array)
+            } else {
+                content = .stringArray([])
+                isCorrupted = true
+            }
         case .dataArray:
-            content = .dataArray(decoder.decodeBytesArrayRaw().map { $0.makeData() })
+            if let array = decoder.decodeBytesArrayRaw() {
+                content = .dataArray(array.map { $0.makeData() })
+            } else {
+                content = .dataArray([])
+                isCorrupted = true
+            }
         case .objectDict:
-            content = .objectDict(decoder.decodeObjectDataDictRaw())
+            if let dict = decoder.decodeObjectDataDictRaw() {
+                content = .objectDict(dict)
+            } else {
+                content = .objectDict([])
+                isCorrupted = true
+            }
         }
 
         if let content = content {
-            let container = UnkeyedContainer(data: self.data, codingPath: self.codingPath, userInfo: self.userInfo, content: content)
+            let container = UnkeyedContainer(data: self.data, codingPath: self.codingPath, userInfo: self.userInfo, content: content, isCorrupted: isCorrupted)
             self.container = container
 
             return container

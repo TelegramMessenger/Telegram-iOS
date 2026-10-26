@@ -20,6 +20,8 @@
 @property (nonatomic, copy) ChatInputTextViewImplTargetForAction * _Nullable (^ _Nullable targetForAction)(SEL _Nullable);
 @property (nonatomic, copy) bool (^ _Nullable shouldReturn)(UIKeyModifierFlags);
 @property (nonatomic, copy) void (^ _Nullable backspaceWhileEmpty)();
+/// Asked first by `deleteBackward`; returning false means the owner handled the key itself.
+@property (nonatomic, copy) bool (^ _Nullable shouldDeleteBackward)();
 @property (nonatomic, copy) void (^ _Nullable dropAutocorrectioniOS16)();
 
 - (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(NSTextContainer * _Nullable)textContainer disableTiling:(bool)disableTiling;

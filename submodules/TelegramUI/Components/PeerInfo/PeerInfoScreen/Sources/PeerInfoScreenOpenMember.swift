@@ -31,7 +31,9 @@ extension PeerInfoScreenNode {
         
         if actions.contains(.editRank) {
             let actionTitle: String
-            if case .admin = member.role {
+            if case .creator = member.role {
+                actionTitle = self.presentationData.strings.GroupInfo_ActionEditAdminRank
+            } else if case .admin = member.role {
                 actionTitle = self.presentationData.strings.GroupInfo_ActionEditAdminRank
             } else {
                 if let rank = member.rank, !rank.isEmpty {

@@ -133,8 +133,10 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
        
         let width = layout.size.width
         let insets = layout.insets(options: [])
-        let leftInset = insets.left + layout.safeInsets.left
-        let rightInset = insets.right + layout.safeInsets.right
+        // The bottom selection panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let leftInset = insets.left + bottomInsets.left
+        let rightInset = insets.right + bottomInsets.right
        
         let panelHeight: CGFloat
         if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {

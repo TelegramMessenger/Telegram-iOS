@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import MtProtoKit
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 func _internal_rateCall(account: Account, callId: CallId, starsCount: Int32, comment: String = "", userInitiated: Bool) -> Signal<Void, NoError> {
     var flags: Int32 = 0

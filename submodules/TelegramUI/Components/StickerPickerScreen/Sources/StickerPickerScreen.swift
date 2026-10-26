@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -35,6 +36,7 @@ private final class StickerSelectionComponent: Component {
     let deviceMetrics: DeviceMetrics
     let topInset: CGFloat
     let bottomInset: CGFloat
+    let sideInsets: UIEdgeInsets
     let content: StickerPickerInputData
     let backgroundColor: UIColor
     let separatorColor: UIColor
@@ -47,6 +49,7 @@ private final class StickerSelectionComponent: Component {
         deviceMetrics: DeviceMetrics,
         topInset: CGFloat,
         bottomInset: CGFloat,
+        sideInsets: UIEdgeInsets,
         content: StickerPickerInputData,
         backgroundColor: UIColor,
         separatorColor: UIColor,
@@ -58,6 +61,7 @@ private final class StickerSelectionComponent: Component {
         self.deviceMetrics = deviceMetrics
         self.topInset = topInset
         self.bottomInset = bottomInset
+        self.sideInsets = sideInsets
         self.content = content
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -78,6 +82,9 @@ private final class StickerSelectionComponent: Component {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if lhs.sideInsets != rhs.sideInsets {
             return false
         }
         if lhs.content != rhs.content {
@@ -268,6 +275,9 @@ private final class StickerSelectionComponent: Component {
             )
             
             let isFullscreen = controller?.isFullscreen == true
+            // iPhone Duo: the keyboard (tabs, grid, bottom panel) keeps to the band beside the side strip and clear of
+            // the status corner at its end; the panel background still spans the sheet. Zero elsewhere.
+            let sideInsets = component.sideInsets
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -366,7 +376,7 @@ private final class StickerSelectionComponent: Component {
                 )),
                 environment: {},
                 forceUpdate: self.forceUpdate,
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width - sideInsets.left - sideInsets.right, height: availableSize.height)
             )
             self.forceUpdate = false
             if let keyboardComponentView = self.keyboardView.view {
@@ -383,10 +393,10 @@ private final class StickerSelectionComponent: Component {
                 transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight - topInset)))
                 self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight - topInset, left: 0.0, bottom: 0.0, right: 0.0)
                 
-                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight - topInset), size: keyboardSize))
-                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
+                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: -topPanelHeight - topInset), size: keyboardSize))
+                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
                 
-                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight + topInset)))
+                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: topPanelHeight + topInset)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
                 let topPanelAlpha: CGFloat
@@ -407,7 +417,7 @@ private final class StickerSelectionComponent: Component {
                 transition.setAlpha(view: self.panelBackgroundView, alpha: topPanelAlpha)
                 transition.setAlpha(view: self.panelSeparatorView, alpha: topPanelAlpha)
                 
-                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - UIScreenPixel), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
+                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             }
             
             return availableSize
@@ -1578,7 +1588,7 @@ public class StickerPickerScreen: ViewController {
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
             if let controller = self.controller {
-                controller.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+                controller.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
             }
         }
         
@@ -1785,6 +1795,9 @@ public class StickerPickerScreen: ViewController {
                             deviceMetrics: layout.deviceMetrics,
                             topInset: controller.isFullscreen ? navigationHeight : 0.0,
                             bottomInset: bottomInset,
+                            // iPhone Duo: the side strip's inset (folded portrait: the sheet rises beside the status
+                            // corner); equal insets keep the full width, as before.
+                            sideInsets: layout.safeInsets.left != layout.safeInsets.right ? UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right) : UIEdgeInsets(),
                             content: content,
                             backgroundColor: self.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.85),
                             separatorColor: self.theme.rootController.navigationBar.separatorColor,
@@ -2159,9 +2172,12 @@ public class StickerPickerScreen: ViewController {
     }
         
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        // iPhone Duo: the unfolded screen in landscape is regular width but a phone, which shows the phone sheet rather
+        // than the floating panel (every width-class check below then reads compact). Unchanged elsewhere.
+        let layout = layout.forOptionalFloatingPresentation
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
-        
+
         let navigationHeight: CGFloat = 56.0
         
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))
@@ -2254,7 +2270,8 @@ private final class InteractiveStickerButtonContent: Component {
                                 content: LottieComponent.ResourceContent(context: component.context, file: iconFile, attemptSynchronously: true, providesPlaceholder: true),
                                 color: nil,
                                 placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.4),
-                                loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(component.iconName ?? "")
+                                loop: !["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"].contains(component.iconName ?? ""),
+                                lottieSettings: component.context.lottieRenderingSettings
                             )
                         ),
                         environment: {},
@@ -2375,12 +2392,14 @@ private final class InteractiveReactionButtonContent: Component {
             return PassthroughLayer.self
         }
                 
-        private var icon: ComponentView<Empty>
+        private var outline: ComponentView<Empty>
+        private var heart: ComponentView<Empty>
         
         private var component: InteractiveReactionButtonContent?
     
         override init(frame: CGRect) {
-            self.icon = ComponentView<Empty>()
+            self.outline = ComponentView<Empty>()
+            self.heart = ComponentView<Empty>()
             
             super.init(frame: frame)
             
@@ -2392,23 +2411,41 @@ private final class InteractiveReactionButtonContent: Component {
         }
         
         func update(component: InteractiveReactionButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            let bounds = CGRect(origin: .zero, size: CGSize(width: 54.0, height: 54.0))
-            let iconSize = self.icon.update(
+            let bounds = CGRect(origin: .zero, size: CGSize(width: 52.0, height: 52.0))
+            let outlineSize = self.outline.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
-                    name: "Media Editor/Reaction",
-                    tintColor: nil,
-                    maxSize: CGSize(width: 52.0, height: 52.0)
+                    name: "Stories/ReactionOutline",
+                    tintColor: .white,
+                    maxSize: CGSize(width: 62.0, height: 62.0)
                 )),
                 environment: {},
                 containerSize: availableSize
             )
-            
-            if let view = self.icon.view {
+            let outlineFrame = outlineSize.centered(in: bounds)
+            if let view = self.outline.view {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 2.0, y: 0.0), size: iconSize))
+                transition.setFrame(view: view, frame: outlineFrame)
+            }
+
+            let heartSize = self.heart.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: "❤️",
+                    font: Font.regular(26.0),
+                    color: .white
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+
+            if let view = self.heart.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: heartSize.centered(in: outlineFrame).offsetBy(dx: 1.0 - UIScreenPixel, dy: 1.0))
             }
  
             return bounds.size

@@ -11,7 +11,7 @@ public enum MediaArea: Codable, Equatable {
         case color
     }
         
-    public struct Coordinates: Codable, Equatable {
+    public struct Coordinates: Codable, Equatable, Sendable {
         private enum CodingKeys: CodingKey {
             case x
             case y

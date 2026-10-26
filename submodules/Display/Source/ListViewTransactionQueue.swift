@@ -39,7 +39,7 @@ public final class ListViewTransactionQueue {
     
     private func endTransaction() {
         precondition(Thread.isMainThread)
-        Queue.mainQueue().async {
+        Queue.mainQueue().async { [self] in
             self.transactionCompleted()
             if !self.transactions.isEmpty {
                 let _ = self.transactions.removeFirst()

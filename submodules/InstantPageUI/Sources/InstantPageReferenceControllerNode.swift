@@ -8,6 +8,7 @@ import TelegramPresentationData
 import AccountContext
 import OpenInExternalAppUI
 import TelegramUIPreferences
+import UrlWhitelist
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
@@ -191,14 +192,18 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
         let titleAreaHeight: CGFloat = 54.0
         var contentHeight = titleAreaHeight + bottomInset
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        // Centered, or in the band beside a side strip (iPhone Duo). The panel is anchored at the bottom: placed as
+        // `horizontalContainerFillingPlacementForLayout(anchoredAtBottom:)` describes (it spans iPhone Duo's side strip
+        // in compact width, clear only of a corner block at the bottom).
+        let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: true, anchoredAtBottom: true)
+        let width = placement.width
         
         if self.contentNode == nil || self.contentNode?.frame.width != width {
             self.contentNode?.removeFromSupernode()
             
             var media: [EngineMedia.Id: EngineMedia] = [:]
             if let instantPage = self.webPage.instantPage  {
-                media = instantPage.media.mapValues(EngineMedia.init)
+                media = instantPage.media
             }
             
             let sideInset: CGFloat = 16.0
@@ -213,7 +218,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
             contentNode.updateVisibleItems(visibleBounds: contentNode.bounds, animated: false)
         }
         
-        let sideInset = floor((layout.size.width - width) / 2.0)
+        let sideInset = placement.left
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
         let contentFrame = contentContainerFrame
         
@@ -346,7 +351,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
                                 let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: self.theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(url.url) ?? url.url),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
@@ -414,7 +419,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
                 UIPasteboard.general.string = text
             }), ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuShare, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 if let strongSelf = self, case let .Loaded(content) = strongSelf.webPage.webPage.content {
-                    strongSelf.present(strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
+                    strongSelf.present(strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
                 }
             })])
             controller.dismissed = { [weak self] in

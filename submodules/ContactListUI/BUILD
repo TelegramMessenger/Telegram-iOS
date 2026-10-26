@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramCore:TelegramCore",
@@ -40,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
         "//submodules/TelegramUI/Components/ChatListTitleView",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/TelegramUI/Components/NavigationBarComponent",
         "//submodules/ComponentFlow",
         "//submodules/TooltipUI",
         "//submodules/UndoUI",

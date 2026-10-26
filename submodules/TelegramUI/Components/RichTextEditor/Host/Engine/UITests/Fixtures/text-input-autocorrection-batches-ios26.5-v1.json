@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "runtime": {"osVersion": "26.5", "osBuild": "23F73"},
+  "udid": "FA6F7462-AA97-42FE-9E57-8DA0593CE756",
+  "subsystem": "autocorrection",
+  "rows": [
+    "interior-accept-space",
+    "interior-accept-punctuation",
+    "interior-accept-candidate",
+    "interior-reject-precommit",
+    "interior-undo-space",
+    "interior-undo-punctuation",
+    "interior-undo-candidate",
+    "before-boundary-accept-space",
+    "before-boundary-accept-punctuation",
+    "before-boundary-accept-candidate",
+    "before-boundary-reject-precommit",
+    "before-boundary-undo-space",
+    "before-boundary-undo-punctuation",
+    "before-boundary-undo-candidate",
+    "after-boundary-accept-space",
+    "after-boundary-accept-punctuation",
+    "after-boundary-accept-candidate",
+    "after-boundary-reject-precommit",
+    "after-boundary-undo-space",
+    "after-boundary-undo-punctuation",
+    "after-boundary-undo-candidate"
+  ],
+  "groups": [
+    {"id": "interior-accept", "language": "en-US", "rows": ["interior-accept-space", "interior-accept-punctuation", "interior-accept-candidate"], "stateSensitive": false, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "interior-reject-undo", "language": "en-US", "rows": ["interior-reject-precommit", "interior-undo-space", "interior-undo-punctuation"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "interior-undo-candidate", "language": "en-US", "rows": ["interior-undo-candidate"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "before-boundary-accept", "language": "en-US", "rows": ["before-boundary-accept-space", "before-boundary-accept-punctuation", "before-boundary-accept-candidate"], "stateSensitive": false, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "before-boundary-reject-undo", "language": "en-US", "rows": ["before-boundary-reject-precommit", "before-boundary-undo-space", "before-boundary-undo-punctuation"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "before-boundary-undo-candidate", "language": "en-US", "rows": ["before-boundary-undo-candidate"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "after-boundary-accept", "language": "en-US", "rows": ["after-boundary-accept-space", "after-boundary-accept-punctuation", "after-boundary-accept-candidate"], "stateSensitive": false, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "after-boundary-reject-undo", "language": "en-US", "rows": ["after-boundary-reject-precommit", "after-boundary-undo-space", "after-boundary-undo-punctuation"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "after-boundary-undo-candidate", "language": "en-US", "rows": ["after-boundary-undo-candidate"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"}
+  ]
+}

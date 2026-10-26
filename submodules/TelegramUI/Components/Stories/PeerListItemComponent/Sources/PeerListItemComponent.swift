@@ -57,6 +57,7 @@ public final class PeerListItemComponent: Component {
     
     public enum Style {
         case generic
+        case share
         case compact
         case list
     }
@@ -234,6 +235,8 @@ public final class PeerListItemComponent: Component {
     let titleAccessory: TitleAccessory
     let avatar: Avatar?
     let avatarComponent: AnyComponent<Empty>?
+    let avatarPeer: EnginePeer?
+    let avatarOverrideImage: AvatarNodeImageOverride?
     let peer: EnginePeer?
     let storyStats: EnginePeerStoryStats?
     let subtitle: Subtitle?
@@ -267,6 +270,8 @@ public final class PeerListItemComponent: Component {
         avatar: Avatar? = nil,
         avatarComponent: AnyComponent<Empty>? = nil,
         peer: EnginePeer?,
+        avatarPeer: EnginePeer? = nil,
+        avatarOverrideImage: AvatarNodeImageOverride? = nil,
         storyStats: EnginePeerStoryStats? = nil,
         subtitle: Subtitle?,
         subtitleComponent: AnyComponent<Empty>? = nil,
@@ -297,6 +302,8 @@ public final class PeerListItemComponent: Component {
         self.titleAccessory = titleAccessory
         self.avatar = avatar
         self.avatarComponent = avatarComponent
+        self.avatarPeer = avatarPeer
+        self.avatarOverrideImage = avatarOverrideImage
         self.peer = peer
         self.storyStats = storyStats
         self.subtitle = subtitle
@@ -348,6 +355,8 @@ public final class PeerListItemComponent: Component {
         if lhs.avatarComponent != rhs.avatarComponent {
             return false
         }
+        if lhs.avatarPeer != rhs.avatarPeer { return false }
+        if lhs.avatarOverrideImage != rhs.avatarOverrideImage { return false }
         if lhs.peer != rhs.peer {
             return false
         }
@@ -423,6 +432,7 @@ public final class PeerListItemComponent: Component {
         private var subtitleView: ComponentView<Empty>?
         private let separatorLayer: SimpleLayer
         private var avatarNode: AvatarNode?
+        private var communityAvatarShadow: UIImageView?
         private var avatarImageView: UIImageView?
         private let avatarButtonView: HighlightTrackingButton
         private var avatarIcon: ComponentView<Empty>?
@@ -722,7 +732,7 @@ public final class PeerListItemComponent: Component {
             
             let verticalInset: CGFloat = component.insets?.top ?? 1.0
             
-            var leftInset: CGFloat = 53.0 + component.sideInset
+            var leftInset: CGFloat = (component.style == .share ? 56.0 : 53.0) + component.sideInset
             if [.generic, .list].contains(component.style) {
                 leftInset += 9.0
             }
@@ -758,6 +768,10 @@ public final class PeerListItemComponent: Component {
             let titleFont: UIFont
             let subtitleFont: UIFont
             switch component.style {
+            case .share:
+                titleFont = Font.regular(17.0)
+                subtitleFont = Font.regular(15.0)
+                height = 60.0
             case .generic:
                 titleFont = Font.semibold(17.0)
                 subtitleFont = Font.regular(15.0)
@@ -812,7 +826,7 @@ public final class PeerListItemComponent: Component {
                 rightInset += 8.0 + rightAccessoryComponentSize.width
             }
             
-            var avatarLeftInset: CGFloat = component.sideInset + 10.0
+            var avatarLeftInset: CGFloat = component.sideInset + (component.style == .share ? 0.0 : 10.0)
             
             if case let .editing(isSelected, isTinted) = component.selectionState {
                 let checkSize: CGFloat = 22.0
@@ -824,26 +838,23 @@ public final class PeerListItemComponent: Component {
                     checkOriginX = floor((54.0 - checkSize) * 0.5)
                 case .right:
                     rightInset += 44.0
-                    checkOriginX = availableSize.width - 11.0 - checkSize
+                    checkOriginX = availableSize.width - (component.style == .share ? 16.0 : 11.0) - checkSize
                 }
                 
+                var checkTheme = CheckNodeTheme(theme: component.theme, style: .plain)
+                checkTheme.checkmarkStyle = component.style == .share ? .narrow : .regular
+                if isTinted {
+                    checkTheme.backgroundColor = checkTheme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
+                }
                 let checkLayer: CheckLayer
                 if let current = self.checkLayer {
                     checkLayer = current
-                    if themeUpdated {
-                        var theme = CheckNodeTheme(theme: component.theme, style: .plain)
-                        if isTinted {
-                            theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
-                        }
-                        checkLayer.theme = theme
+                    if checkLayer.theme != checkTheme {
+                        checkLayer.theme = checkTheme
                     }
                     checkLayer.setSelected(isSelected, animated: !transition.animation.isImmediate)
                 } else {
-                    var theme = CheckNodeTheme(theme: component.theme, style: .plain)
-                    if isTinted {
-                        theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
-                    }
-                    checkLayer = CheckLayer(theme: theme)
+                    checkLayer = CheckLayer(theme: checkTheme)
                     self.checkLayer = checkLayer
                     self.containerButton.layer.addSublayer(checkLayer)
                     checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
@@ -860,7 +871,7 @@ public final class PeerListItemComponent: Component {
                 }
             }
             
-            let avatarSize: CGFloat = component.style == .compact ? 30.0 : 40.0
+            let avatarSize: CGFloat = component.style == .compact ? 30.0 : (component.style == .share ? 44.0 : 40.0)
             
             let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floorToScreenPixels((height - verticalInset * 2.0 - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
             
@@ -933,13 +944,18 @@ public final class PeerListItemComponent: Component {
                     let clipStyle: AvatarNodeClipStyle
                     if case .community = peer {
                         clipStyle = .roundedRect
+                    } else if peer._asPeer().isMonoForum {
+                        clipStyle = .bubble
                     } else if case let .channel(channel) = peer, channel.isForumOrMonoForum {
                         clipStyle = .roundedRect
                     } else {
                         clipStyle = .round
                     }
                     
-                    if peer.smallProfileImage != nil {
+                    let peer = component.avatarPeer ?? peer
+                    if let overrideImage = component.avatarOverrideImage {
+                        avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, overrideImage: overrideImage, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                    } else if peer.smallProfileImage != nil {
                         avatarNode.setPeerV2(
                             context: component.context,
                             theme: component.theme,
@@ -977,6 +993,32 @@ public final class PeerListItemComponent: Component {
                 }
             }
             
+            if case .community = component.peer, component.avatarComponent == nil, component.avatar == nil,
+                let avatarNode = self.avatarNode, let image = UIImage(bundleImageName: "Components/CommunityShadow") {
+                let shadow: UIImageView
+                let shadowTransition: ComponentTransition
+                if let current = self.communityAvatarShadow {
+                    shadow = current
+                    shadowTransition = transition
+                } else {
+                    shadow = UIImageView()
+                    shadow.isUserInteractionEnabled = false
+                    self.communityAvatarShadow = shadow
+                    self.containerButton.addSubview(shadow)
+                    self.containerButton.layer.insertSublayer(shadow.layer, below: avatarNode.layer)
+                    shadowTransition = .immediate
+                }
+                if shadow.image == nil || previousComponent?.theme !== component.theme {
+                    shadow.image = generateTintedImage(image: image, color: component.theme.chatList.titleColor.withAlphaComponent(0.9))
+                }
+                let shadowSize = CGSize(width: floor(avatarSize * image.size.width / image.size.height * 0.84), height: floor(avatarSize * 0.97))
+                shadowTransition.setBounds(view: shadow, bounds: CGRect(origin: .zero, size: shadowSize))
+                shadowTransition.setPosition(view: shadow, position: CGPoint(x: avatarFrame.midX - 12.0 * avatarSize / 60.0 + UIScreenPixel, y: avatarFrame.midY))
+            } else if let shadow = self.communityAvatarShadow {
+                self.communityAvatarShadow = nil
+                shadow.removeFromSuperview()
+            }
+
             transition.setFrame(view: self.avatarButtonView, frame: avatarFrame)
             
             if let avatar = component.avatar {
@@ -1091,7 +1133,7 @@ public final class PeerListItemComponent: Component {
             let centralContentHeight: CGFloat
             if let subtitleComponentSize {
                 centralContentHeight = titleSize.height + subtitleComponentSize.height + titleSpacing
-            } else if labelSize.height > 0.0, [.generic, .list].contains(component.style) {
+            } else if labelSize.height > 0.0, [.generic, .share, .list].contains(component.style) {
                 centralContentHeight = titleSize.height + labelSize.height + titleSpacing
             } else {
                 centralContentHeight = titleSize.height
@@ -1138,7 +1180,7 @@ public final class PeerListItemComponent: Component {
                 nextTitleIconOriginX = titleAccessoryFrame.maxX
             }
             
-            if let statusIcon, case .generic = component.style {
+            if let statusIcon, component.style == .generic || component.style == .share {
                 let animationCache = component.context.animationCache
                 let animationRenderer = component.context.animationRenderer
                 
@@ -1219,7 +1261,7 @@ public final class PeerListItemComponent: Component {
                 
                 let labelFrame: CGRect
                 switch component.style {
-                case .generic, .list:
+                case .generic, .share, .list:
                     labelFrame = CGRect(origin: CGPoint(x: titleFrame.minX + iconLabelOffset, y: titleFrame.maxY + titleSpacing), size: labelSize)
                 case .compact:
                     labelFrame = CGRect(origin: CGPoint(x: nextTitleIconOriginX + 4.0, y: floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: labelSize)

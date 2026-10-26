@@ -260,8 +260,11 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 if itemNode is ChatMessageAvatarHeaderNode {
                     animateScale = false
                 }
-                
-                let delayFactor = itemNode.frame.minY / heightNorm
+
+                // Through the list, not off the node: a header node's own frame is host-local under a
+                // hosting backend, which would collapse every delay below to 0 and fade the whole
+                // screen in on one beat.
+                let delayFactor = (listNode.itemHeaderNodeFrame(itemNode)?.minY ?? 0.0) / heightNorm
                 let delay = Double(delayFactor * 0.2)
                 
                 itemNode.allowsGroupOpacity = true
@@ -326,7 +329,7 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 return
             }
         
-            let delayFactor = listItemNode.frame.minY / heightNorm
+            let delayFactor = (listNode.itemNodeFrame(listItemNode)?.minY ?? 0.0) / heightNorm
             let delay = Double(delayFactor * 0.1)
             
             if skipCount > 0 {
@@ -366,8 +369,8 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
                     return
                 }
             }
-            
-            let delayFactor = itemNode.frame.minY / heightNorm
+
+            let delayFactor = (listNode.itemHeaderNodeFrame(itemNode)?.minY ?? 0.0) / heightNorm
             let delay = Double(delayFactor * 0.2)
 
             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
@@ -405,12 +408,6 @@ public final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
-        }
     }
     
     public enum ChatType: Equatable {

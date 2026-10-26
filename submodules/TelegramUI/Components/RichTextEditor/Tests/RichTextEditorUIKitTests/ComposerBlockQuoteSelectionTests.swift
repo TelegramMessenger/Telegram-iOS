@@ -38,7 +38,7 @@ final class ComposerBlockQuoteSelectionTests: XCTestCase {
         ])
         let box = c.boxes[1] as! BlockQuoteBox
         let endOfChild = box.children.boxes[0].leafRegions().first!.globalStart + 2
-        c.anchor = endOfChild; c.head = endOfChild
+        c.setSelectionForTesting(anchor: endOfChild, head: endOfChild)
         XCTAssertEqual(c.composerSelectedRange.location, 5,
                        "caret after 'cd' in the quote child should be flat offset 5 (ab=2, \\n=1, cd=2)")
     }
@@ -63,7 +63,7 @@ final class ComposerBlockQuoteSelectionTests: XCTestCase {
             para("e", "ef")
         ])
         let afterBox = c.boxes[2]
-        c.anchor = afterBox.textStart; c.head = afterBox.textStart
+        c.setSelectionForTesting(anchor: afterBox.textStart, head: afterBox.textStart)
         XCTAssertEqual(c.composerSelectedRange.location, 6,
                        "start of 'ef' (after the block quote) is flat offset 6")
     }
@@ -73,7 +73,7 @@ final class ComposerBlockQuoteSelectionTests: XCTestCase {
     /// A single collapsed block quote must occupy exactly 1 flat char.
     func test_composerSelectedRange_collapsedBlockQuote_oneFlatChar() {
         let c = canvas([blockQuote("q", children: [para("c", "cd")], collapsed: true)])
-        c.anchor = c.documentSizeValue; c.head = c.documentSizeValue
+        c.setSelectionForTesting(anchor: c.documentSizeValue, head: c.documentSizeValue)
         XCTAssertEqual(c.composerSelectedRange.location, 1,
                        "collapsed block quote contributes exactly 1 flat char (like CollapsedQuoteBox)")
     }

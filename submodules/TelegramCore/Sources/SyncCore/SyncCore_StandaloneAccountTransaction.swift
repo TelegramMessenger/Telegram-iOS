@@ -61,7 +61,13 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             } else if let _ = peer as? TelegramGroup {
                 return .group
             } else if let _ = peer as? TelegramSecretChat {
-                return .nonContact
+                // isContact is resolved through the associated cloud user, matching what
+                // ChatListFilterPredicate does, so a folder counts the chats it actually shows.
+                if isContact {
+                    return .contact
+                } else {
+                    return .nonContact
+                }
             } else if let channel = peer as? TelegramChannel {
                 switch channel.info {
                 case .broadcast:
@@ -132,10 +138,12 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 }
             }
             var previousRichText: RichTextMessageAttribute?
+            var previousEphemeralReplacement: EphemeralReplacementMessageAttribute?
             for attribute in previous {
                 if let attribute = attribute as? RichTextMessageAttribute {
                     previousRichText = attribute
-                    break
+                } else if let attribute = attribute as? EphemeralReplacementMessageAttribute {
+                    previousEphemeralReplacement = attribute
                 }
             }
             
@@ -175,6 +183,9 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                         break
                     }
                 }
+            }
+            if let previousEphemeralReplacement, !updated.contains(where: { $0 is EphemeralReplacementMessageAttribute }) {
+                updated.append(previousEphemeralReplacement)
             }
         },
         decodeMessageThreadInfo: { entry in

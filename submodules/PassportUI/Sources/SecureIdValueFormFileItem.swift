@@ -127,7 +127,7 @@ final class SecureIdValueFormFileItemNode: FormEditableBlockItemNode<SecureIdVal
             self.imageNode.isHidden = false
             self.placeholderNode.isHidden = true
             
-            self.setRevealOptions((left: [], right: [ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: .none, color: theme.list.itemDisclosureActions.destructive.fillColor, iconColor: theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: theme.list.itemSecondaryTextColor)]))
+            self.setRevealOptions((left: [], right: [ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: .none, color: theme.list.itemDisclosureActions.destructive.fillColor, iconColor: theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: theme.list.itemSecondaryTextColor, isDestructive: true)]))
         } else {
             self.imageNode.isHidden = true
             self.placeholderNode.isHidden = false

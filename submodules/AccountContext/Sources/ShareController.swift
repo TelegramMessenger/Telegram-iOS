@@ -7,6 +7,17 @@ import AnimationCache
 import MultiAnimationRenderer
 import Display
 
+public enum ShareScreenSubject {
+    case fromExternal(Int, ([EnginePeer.Id], [EnginePeer.Id: Int64], [EnginePeer.Id: StarsAmount], String, ShareControllerAccountContext, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
+    case image([ImageRepresentationWithReference])
+    case media(AnyMediaReference)
+    case messages([EngineRawMessage])
+    case url(String)
+    case text(String)
+    case quote(text: String, url: String)
+    case mapMedia(TelegramMediaMap)
+}
+
 public enum StorySharingSubject {
     case messages([EngineRawMessage])
     case gift(StarGift.UniqueGift)

@@ -107,7 +107,7 @@ final class PostboxTransaction {
         if replaceRemoteContactCount != nil {
             return false
         }
-        if let replaceContactPeerIds = replaceContactPeerIds, !replaceContactPeerIds.isEmpty {
+        if replaceContactPeerIds != nil {
             return false
         }
         if currentUpdatedMasterClientId != nil {

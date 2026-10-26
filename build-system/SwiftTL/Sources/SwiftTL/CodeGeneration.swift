@@ -1,41 +1,5 @@
 import Foundation
 
-private let reservedIdentifiers: [String] = [
-    "protocol",
-    "private"
-]
-
-private extension String {
-    var camelCased: String {
-        var result = ""
-
-        var capitalizeNext = false
-        for c in self {
-            if c == "_" {
-                capitalizeNext = true
-            } else {
-                if capitalizeNext {
-                    capitalizeNext = false
-                    result.append(c.uppercased())
-                } else {
-                    result.append(c)
-                }
-            }
-        }
-
-        return result
-    }
-
-    var camelCasedAndEscaped: String {
-        var result = self.camelCased
-
-        if reservedIdentifiers.contains(result) {
-            result = "`\(result)`"
-        }
-
-        return result
-    }
-}
 
 private struct CodeWriter {
     private var code: String = ""
@@ -184,16 +148,13 @@ enum CodeGenerator {
         }
     }
     
-    static func generate(apiPrefix: String, types: [Resolver.SumType], functions: [Resolver.Function], constructorOrder: [(typeName: QualifiedName, constructorName: String)], typeOrder: [(types: [(typeName: QualifiedName, constructorNames: [String])], functions: [QualifiedName])]) throws -> [String: String] {
+    static func generate(apiPrefix: String, types: [Resolver.SumType], functions: [Resolver.Function], constructorOrder: [(typeName: QualifiedName, constructorName: String)], typeOrder: [(types: [(typeName: QualifiedName, constructorNames: [String])], functions: [QualifiedName])], layout: TLSchemaLayout, schemaHash: UInt64) throws -> [String: String] {
         var files: [String: String] = [:]
         
-        var functions = functions
-        functions.append(Resolver.Function(name: QualifiedName(namespace: "help", value: "test"), id: UInt32(bitPattern: -1058929929), arguments: [], result: .boxedType(QualifiedName(namespace: nil, value: "Bool"))))
-
-        files["\(apiPrefix)0.swift"] = try generateMainFile(apiPrefix: apiPrefix, types: types, functions: functions, constructorOrder: constructorOrder)
+        files["\(apiPrefix)0.swift"] = "import TelegramApiObjC\n" + (try generateMainFile(apiPrefix: apiPrefix, types: types, functions: functions, constructorOrder: constructorOrder, layout: layout, schemaHash: schemaHash))
         
         for index in 0 ..< typeOrder.count {
-            files["\(apiPrefix)\(index + 1).swift"] = try generateImplFile(apiPrefix: apiPrefix, types: types, functions: functions, typeOrder: typeOrder[index])
+            files["\(apiPrefix)\(index + 1).swift"] = "import TelegramApiObjC\n" + (try generateImplFile(apiPrefix: apiPrefix, types: types, functions: functions, typeOrder: typeOrder[index], layout: layout))
         }
         
         return files
@@ -517,7 +478,7 @@ enum CodeGenerator {
         writer.line()
     }
 
-    private static func generateMainFile(apiPrefix: String, types: [Resolver.SumType], functions: [Resolver.Function], constructorOrder: [(typeName: QualifiedName, constructorName: String)]) throws -> String {
+    private static func generateMainFile(apiPrefix: String, types: [Resolver.SumType], functions: [Resolver.Function], constructorOrder: [(typeName: QualifiedName, constructorName: String)], layout: TLSchemaLayout, schemaHash: UInt64) throws -> String {
         var writer = CodeWriter()
 
         writer.line()
@@ -553,45 +514,29 @@ enum CodeGenerator {
 
         writer.line()
 
-        var typeMap: [QualifiedName: Resolver.SumType] = [:]
-        for type in types {
-            typeMap[type.name] = type
-        }
-
-        writer.line("fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {")
+        writer.line("let tlTypeRegistry: [(TLObject) -> Any] = [")
         writer.indent()
-        writer.line("var dict: [Int32 : (BufferReader) -> Any?] = [:]")
-        writer.line("dict[-1471112230] = { return $0.readInt32() }")
-        writer.line("dict[570911930] = { return $0.readInt64() }")
-        writer.line("dict[571523412] = { return $0.readDouble() }")
-        writer.line("dict[0x0929C32F] = { return parseInt256($0) }")
-        writer.line("dict[-1255641564] = { return parseString($0) }")
-
-        for (typeName, constructorName) in constructorOrder {
-            guard let type = typeMap[typeName] else {
-                throw CodeGenerationError(text: "Type \(typeName) not found")
-            }
-
-            var found = false
-            for (_, constructor) in type.constructors {
-                if constructor.name.value == constructorName {
-                    found = true
-                    writer.line("dict[\(Int32(bitPattern: constructor.id))] = { return \(apiPrefix).\(type.name).parse_\(constructor.name.value)($0) }")
-                    break
-                }
-            }
-
-            if !found {
-                throw CodeGenerationError(text: "Constructor \(constructorName) not found")
-            }
+        for type in layout.types {
+            writer.line("{ \(apiPrefix).\(type.type.name)(tlObject: $0) },")
         }
-
-        writer.line("return dict")
         writer.dedent()
-        writer.line("}()")
-
+        writer.line("]")
         writer.line()
-
+        writer.line("let tlSwiftSchemaHash: UInt64 = 0x\(String(schemaHash, radix: 16))")
+        writer.line()
+        writer.line("/// Accessor offsets are compiled into clients (`@_alwaysEmitIntoClient`). This check is too:")
+        writer.line("/// a client left over from another generation (an incremental non-Bazel build) carries the")
+        writer.line("/// old literal and traps here instead of reading fields at stale offsets.")
+        writer.line("@_alwaysEmitIntoClient public func tlVerifyClientLayout() {")
+        writer.line("    if tlSchemaHashForClients() != 0x\(String(schemaHash, radix: 16)) {")
+        writer.line("        preconditionFailure(\"TelegramApi was regenerated; rebuild its clients (stale inlined field offsets)\")")
+        writer.line("    }")
+        writer.line("}")
+        writer.line()
+        writer.line("@inline(never) public func tlSchemaHashForClients() -> UInt64 {")
+        writer.line("    return tlSwiftSchemaHash")
+        writer.line("}")
+        writer.line()
         writer.line("public extension \(apiPrefix) {")
         writer.indent()
 
@@ -611,15 +556,19 @@ enum CodeGenerator {
 
         writer.line("static func parse(_ reader: BufferReader, signature: Int32) -> Any? {")
         writer.indent()
-        writer.line("if let parser = parsers[signature] {")
-        writer.indent()
-        writer.line("return parser(reader)")
-        writer.dedent()
-        writer.line("} else {")
-        writer.indent()
-        writer.line("telegramApiLog(\"Type constructor \\(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found\")")
-        writer.line("return nil")
-        writer.dedent()
+        writer.line("switch signature {")
+        writer.line("case -1471112230:")
+        writer.line("    return reader.readInt32()")
+        writer.line("case 570911930:")
+        writer.line("    return reader.readInt64()")
+        writer.line("case 571523412:")
+        writer.line("    return reader.readDouble()")
+        writer.line("case 0x0929C32F:")
+        writer.line("    return parseInt256(reader)")
+        writer.line("case -1255641564:")
+        writer.line("    return parseString(reader)")
+        writer.line("default:")
+        writer.line("    return tlParseTopLevel(reader, signature: signature)")
         writer.line("}")
         writer.dedent()
         writer.line("}")
@@ -687,25 +636,8 @@ enum CodeGenerator {
 
         writer.line("static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {")
         writer.indent()
-        writer.line("switch object {")
-
-        let typeOrder = constructorOrder.map(\.typeName).unique()
-
-        for typeName in typeOrder {
-            guard let type = typeMap[typeName] else {
-                throw CodeGenerationError(text: "Type \(typeName) not found")
-            }
-
-            writer.line("case let _1 as \(apiPrefix).\(type.name):")
-            writer.indent()
-            writer.line("_1.serialize(buffer, boxed)")
-            writer.dedent()
-        }
-
-        writer.line("default:")
-        writer.indent()
-        writer.line("break")
-        writer.dedent()
+        writer.line("if let object = object as? TLObjectBacked {")
+        writer.line("    object.serialize(buffer, boxed)")
         writer.line("}")
         writer.dedent()
         writer.line("}")
@@ -716,8 +648,9 @@ enum CodeGenerator {
         return writer.output()
     }
     
-    private static func generateImplFile(apiPrefix: String, types: [Resolver.SumType], functions: [Resolver.Function], typeOrder: (types: [(typeName: QualifiedName, constructorNames: [String])], functions: [QualifiedName])) throws -> String {
+    private static func generateImplFile(apiPrefix: String, types: [Resolver.SumType], functions: [Resolver.Function], typeOrder: (types: [(typeName: QualifiedName, constructorNames: [String])], functions: [QualifiedName]), layout: TLSchemaLayout) throws -> String {
         var writer = CodeWriter()
+        let byIdIndex = Dictionary(uniqueKeysWithValues: SchemaBlob.constructorsById(layout).enumerated().map { ($1.objcClassName, $0) })
 
         var typeMap: [QualifiedName: Resolver.SumType] = [:]
         for type in types {
@@ -733,7 +666,8 @@ enum CodeGenerator {
             }
 
             let indirectPrefix = try type.hasDirectReference(to: [type], typeMap: typeMap) ? "indirect " : ""
-            writer.line("\(indirectPrefix)enum \(typeName.value): TypeConstructorDescription {")
+            let typeLayout = layout.typeLayout(for: typeName)
+            writer.line("\(indirectPrefix)enum \(typeName.value): TypeConstructorDescription, TLObjectBacked, CustomStringConvertible {")
             writer.indent()
 
             var sortedConstructors: [Resolver.SumType.Constructor] = []
@@ -753,60 +687,19 @@ enum CodeGenerator {
 
             let useStructPattern = true
 
-            if useStructPattern {
-                for constructor in sortedConstructors {
-                    var fieldsString = ""
-                    var initParamsString = ""
-                    var initBodyString = ""
-                    var descriptionFieldsString = ""
-
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        let fieldName = argument.name.camelCasedAndEscaped
-                        let fieldType = typeReferenceRepresentation(apiPrefix, argument.type) + (argument.condition != nil ? "?" : "")
-
-                        if !fieldsString.isEmpty {
-                            fieldsString.append("\n")
-                        }
-                        fieldsString.append("public var \(fieldName): \(fieldType)")
-
-                        if !initParamsString.isEmpty {
-                            initParamsString.append(", ")
-                        }
-                        initParamsString.append("\(fieldName): \(fieldType)")
-
-                        if !initBodyString.isEmpty {
-                            initBodyString.append("\n")
-                        }
-                        initBodyString.append("self.\(fieldName) = \(fieldName)")
-
-                        if !descriptionFieldsString.isEmpty {
-                            descriptionFieldsString.append(", ")
-                        }
-                        descriptionFieldsString.append("(\"\(fieldName)\", ConstructorParameterDescription(self.\(fieldName)))")
-                    }
-
-                    if !fieldsString.isEmpty {
-                        writer.line("public class Cons_\(constructor.name.value): TypeConstructorDescription {")
-                        writer.indent()
-                        writer.lines(fieldsString)
-                        writer.line("public init(\(initParamsString)) {")
-                        writer.indent()
-                        writer.lines(initBodyString)
-                        writer.dedent()
-                        writer.line("}")
-                        writer.line("public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {")
-                        writer.indent()
-                        writer.line("return (\"\(constructor.name.value)\", [\(descriptionFieldsString)])")
-                        writer.dedent()
-                        writer.line("}")
-                        writer.dedent()
-                        writer.line("}")
-                    }
-                }
+            // Payloads: one struct per constructor over its TLObject storage; fields are read by the
+            // accessors in the extension below at the offsets of TLSchemaLayout.storageLayout.
+            for constructorLayout in typeLayout.constructors where !constructorLayout.fields.isEmpty {
+                writer.line("@frozen public struct Cons_\(constructorLayout.constructor.name.value) {")
+                writer.indent()
+                writer.line("@usableFromInline let tlObject: TLObject")
+                writer.line("init(tlObject: TLObject) {")
+                writer.indent()
+                writer.line("self.tlObject = tlObject")
+                writer.dedent()
+                writer.line("}")
+                writer.dedent()
+                writer.line("}")
             }
 
             for constructor in sortedConstructors {
@@ -838,238 +731,70 @@ enum CodeGenerator {
             }
 
             writer.line()
-            writer.line("public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {")
-            writer.indent()
-            writer.line("switch self {")
-
-            for constructor in sortedConstructors {
-                let hasFields = constructor.arguments.contains { if case .boolTrue = $0.type { return false } else { return true } }
-
-                if useStructPattern && hasFields {
-                    writer.line("case .\(constructor.name.value)(let _data):")
-                    writer.indent()
-                    writer.line("if boxed {")
-                    writer.indent()
-                    writer.line("buffer.appendInt32(\(Int32(bitPattern: constructor.id)))")
-                    writer.dedent()
-                    writer.line("}")
-
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        var argumentAccessor = "_data.\(argument.name.camelCasedAndEscaped)"
-                        if let condition = argument.condition {
-                            writer.line("if Int(_data.\(condition.fieldName.camelCasedAndEscaped)) & Int(1 << \(condition.bitIndex)) != 0 {")
-                            writer.indent()
-                            argumentAccessor.append("!")
-                            generateFieldSerialization(writer: &writer, argument: argument, argumentAccessor: argumentAccessor)
-                            writer.dedent()
-                            writer.line("}")
-                        } else {
-                            generateFieldSerialization(writer: &writer, argument: argument, argumentAccessor: argumentAccessor)
-                        }
-                    }
-                    writer.line("break")
-                    writer.dedent()
-                } else {
-                    var argumentsString = ""
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        if !argumentsString.isEmpty {
-                            argumentsString.append(", ")
-                        }
-
-                        argumentsString.append("let ")
-                        argumentsString.append(argument.name.camelCasedAndEscaped)
-                    }
-
-                    writer.line("case .\(constructor.name.value)\(argumentsString.isEmpty ? "" : "(\(argumentsString))"):")
-                    writer.indent()
-                    writer.line("if boxed {")
-                    writer.indent()
-                    writer.line("buffer.appendInt32(\(Int32(bitPattern: constructor.id)))")
-                    writer.dedent()
-                    writer.line("}")
-
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        var argumentAccessor = "\(argument.name.camelCasedAndEscaped)"
-                        if let condition = argument.condition {
-                            writer.line("if Int(\(condition.fieldName)) & Int(1 << \(condition.bitIndex)) != 0 {")
-                            writer.indent()
-                            argumentAccessor.append("!")
-                            generateFieldSerialization(writer: &writer, argument: argument, argumentAccessor: argumentAccessor)
-                            writer.dedent()
-                            writer.line("}")
-                        } else {
-                            generateFieldSerialization(writer: &writer, argument: argument, argumentAccessor: argumentAccessor)
-                        }
-                    }
-                    writer.line("break")
-                    writer.dedent()
-                }
-            }
-
-            writer.line("}")
-            writer.dedent()
-            writer.line("}")
-
             writer.line()
-            writer.line("public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {")
+            writer.line("@usableFromInline init(tlObject object: TLObject) {")
             writer.indent()
-            writer.line("switch self {")
-
-            for constructor in sortedConstructors {
-                let hasFields = constructor.arguments.contains { if case .boolTrue = $0.type { return false } else { return true } }
-
-                if useStructPattern && hasFields {
-                    var argumentSerializationString = ""
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        if !argumentSerializationString.isEmpty {
-                            argumentSerializationString.append(", ")
-                        }
-                        argumentSerializationString.append("(\"\(argument.name.camelCasedAndEscaped)\", ConstructorParameterDescription(_data.\(argument.name.camelCasedAndEscaped)))")
-                    }
-
-                    writer.line("case .\(constructor.name.value)(let _data):")
-                    writer.indent()
-                    writer.line("return (\"\(constructor.name.value)\", [\(argumentSerializationString)])")
-                    writer.dedent()
-                } else {
-                    var argumentsString = ""
-                    var argumentSerializationString = ""
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        if !argumentsString.isEmpty {
-                            argumentsString.append(", ")
-                        }
-                        if !argumentSerializationString.isEmpty {
-                            argumentSerializationString.append(", ")
-                        }
-
-                        argumentsString.append("let ")
-                        argumentsString.append(argument.name.camelCasedAndEscaped)
-
-                        argumentSerializationString.append("(\"\(argument.name.camelCasedAndEscaped)\", \(argument.name.camelCasedAndEscaped) as Any)")
-                    }
-
-                    writer.line("case .\(constructor.name.value)\(argumentsString.isEmpty ? "" : "(\(argumentsString))"):")
-                    writer.indent()
-                    writer.line("return (\"\(constructor.name.value)\", [\(argumentSerializationString)])")
-                    writer.dedent()
-                }
-            }
-
-            writer.line("}")
-            writer.dedent()
-            writer.line("}")
-
-            writer.line()
-
-            for constructor in sortedConstructors {
-                writer.line("public static func parse_\(constructor.name.value)(_ reader: BufferReader) -> \(typeName.value)? {")
+            writer.line("switch object.tl_caseIndex {")
+            for constructorLayout in typeLayout.constructors {
+                let name = constructorLayout.constructor.name.value
+                writer.line("case \(constructorLayout.caseIndex):")
                 writer.indent()
-                if constructor.arguments.contains(where: { if case .boolTrue = $0.type { return false } else { return true } }) {
-                    var argumentIndex = 0
-                    var argumentCheckString = ""
-                    var argumentCollectionString = ""
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        writer.line("var _\(argumentIndex + 1): \(typeReferenceRepresentation(apiPrefix, argument.type))?")
-
-                        if let condition = argument.condition {
-                            guard let fieldIndex = constructor.arguments.filter({ if case .boolTrue = $0.type { return false } else { return true } }).firstIndex(where: { $0.name == condition.fieldName }) else {
-                                throw CodeGenerationError(text: "Condition field \(condition.fieldName) not found")
-                            }
-
-                            writer.line("if Int(_\(fieldIndex + 1) ?? 0) & Int(1 << \(condition.bitIndex)) != 0 {")
-                            writer.indent()
-                            try generateFieldParsing(apiPrefix: apiPrefix, writer: &writer, typeMap: typeMap, argument: argument, argumentAccessor: "_\(argumentIndex + 1)")
-                            writer.dedent()
-                            writer.line("}")
-                        } else {
-                            try generateFieldParsing(apiPrefix: apiPrefix, writer: &writer, typeMap: typeMap, argument: argument, argumentAccessor: "_\(argumentIndex + 1)")
-                        }
-
-                        if !argumentCheckString.isEmpty {
-                            argumentCheckString.append(" && ")
-                        }
-                        argumentCheckString.append("_c\(argumentIndex + 1)")
-
-                        if !argumentCollectionString.isEmpty {
-                            argumentCollectionString.append(", ")
-                        }
-                        argumentCollectionString.append("\(argument.name.camelCased): _\(argumentIndex + 1)")
-                        if argument.condition == nil {
-                            argumentCollectionString.append("!")
-                        }
-
-                        argumentIndex += 1
-                    }
-
-                    var checkIndex = 0
-                    for argument in constructor.arguments {
-                        if case .boolTrue = argument.type {
-                            continue
-                        }
-
-                        if let condition = argument.condition {
-                            guard let fieldIndex = constructor.arguments.filter({ if case .boolTrue = $0.type { return false } else { return true } }).firstIndex(where: { $0.name == condition.fieldName }) else {
-                                throw CodeGenerationError(text: "Condition field \(condition.fieldName) not found")
-                            }
-
-                            writer.line("let _c\(checkIndex + 1) = (Int(_\(fieldIndex + 1) ?? 0) & Int(1 << \(condition.bitIndex)) == 0) || _\(checkIndex + 1) != nil")
-                        } else {
-                            writer.line("let _c\(checkIndex + 1) = _\(checkIndex + 1) != nil")
-                        }
-
-                        checkIndex += 1
-                    }
-
-                    writer.line("if \(argumentCheckString) {")
-                    writer.indent()
-                    if useStructPattern && !argumentCollectionString.isEmpty {
-                        writer.line("return \(apiPrefix).\(typeName).\(constructor.name.value)(Cons_\(constructor.name.value)(\(argumentCollectionString)))")
-                    } else {
-                        writer.line("return \(apiPrefix).\(typeName).\(constructor.name.value)\(argumentCollectionString.isEmpty ? "" : "(\(argumentCollectionString))")")
-                    }
-                    writer.dedent()
-                    writer.line("}")
-                    writer.line("else {")
-                    writer.indent()
-                    writer.line("return nil")
-                    writer.dedent()
-                    writer.line("}")
+                if constructorLayout.fields.isEmpty {
+                    writer.line("self = .\(name)")
                 } else {
-                    writer.line("return \(apiPrefix).\(typeName).\(constructor.name.value)")
+                    writer.line("self = .\(name)(Cons_\(name)(tlObject: object))")
                 }
-
                 writer.dedent()
-                writer.line("}")
             }
+            writer.line("default:")
+            writer.indent()
+            writer.line("preconditionFailure()")
+            writer.dedent()
+            writer.line("}")
+            writer.dedent()
+            writer.line("}")
+            writer.line()
+            writer.line("@usableFromInline var tlObject: TLObject {")
+            writer.indent()
+            writer.line("switch self {")
+            for constructorLayout in typeLayout.constructors {
+                let name = constructorLayout.constructor.name.value
+                if constructorLayout.fields.isEmpty {
+                    writer.line("case .\(name):")
+                    writer.indent()
+                    writer.line("return TLObjectSingleton(\(layout.classPrefix)ConstructorAt(\(byIdIndex[constructorLayout.objcClassName]!)))")
+                } else {
+                    writer.line("case .\(name)(let _data):")
+                    writer.indent()
+                    writer.line("return _data.tlObject")
+                }
+                writer.dedent()
+            }
+            writer.line("}")
+            writer.dedent()
+            writer.line("}")
+            writer.line()
+            writer.line("public var tlBackingObject: TLObject {")
+            writer.indent()
+            writer.line("return self.tlObject")
+            writer.dedent()
+            writer.line("}")
+            writer.line()
+            writer.line("@usableFromInline static func tlArray(_ object: TLObject, _ offset: Int) -> [\(apiPrefix).\(typeName)] {")
+            writer.indent()
+            writer.line("return tlObjectsAt(object, offset).map { \(apiPrefix).\(typeName)(tlObject: $0) }")
+            writer.dedent()
+            writer.line("}")
+
+            writer.line()
 
             writer.dedent()
             writer.line("}")
             writer.dedent()
             writer.line("}")
+            for constructorLayout in typeLayout.constructors where !constructorLayout.fields.isEmpty {
+                emitStorageExtension(writer: &writer, apiPrefix: apiPrefix, classPrefix: layout.classPrefix, constructor: constructorLayout, byIdIndex: byIdIndex[constructorLayout.objcClassName]!)
+            }
         }
 
         if !typeOrder.functions.isEmpty {
@@ -1108,48 +833,13 @@ enum CodeGenerator {
 
                 writer.line("static func \(function.name.value)(\(argumentsString)) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<\(typeReferenceRepresentation(apiPrefix, function.result))>) {")
                 writer.indent()
-                writer.line("let buffer = Buffer()")
-                writer.line("buffer.appendInt32(\(Int32(bitPattern: function.id)))")
-
-                var argumentSerializationString = ""
-                for argument in function.arguments {
-                    if case .boolTrue = argument.type {
-                        continue
-                    }
-
-                    var argumentAccessor = "\(argument.name.camelCasedAndEscaped)"
-                    if let condition = argument.condition {
-                        guard let _ = function.arguments.filter({ if case .boolTrue = $0.type { return false } else { return true } }).firstIndex(where: { $0.name == condition.fieldName }) else {
-                            throw CodeGenerationError(text: "Condition field \(condition.fieldName) not found")
-                        }
-
-                        writer.line("if Int(\(condition.fieldName)) & Int(1 << \(condition.bitIndex)) != 0 {")
-                        writer.indent()
-                        argumentAccessor.append("!")
-                        generateFieldSerialization(writer: &writer, argument: argument, argumentAccessor: argumentAccessor)
-                        writer.dedent()
-                        writer.line("}")
-                    } else {
-                        generateFieldSerialization(writer: &writer, argument: argument, argumentAccessor: argumentAccessor)
-                    }
-
-                    if !argumentSerializationString.isEmpty {
-                        argumentSerializationString.append(", ")
-                    }
-
-                    argumentSerializationString.append("(\"\(argument.name.camelCasedAndEscaped)\", ConstructorParameterDescription(\(argument.name.camelCasedAndEscaped)))")
+                guard let functionLayout = layout.functions.first(where: { $0.function.name == function.name }) else {
+                    throw CodeGenerationError(text: "Function layout \(function.name) not found")
                 }
-
-                writer.line("return (FunctionDescription(name: \"\(function.name)\", parameters: [\(argumentSerializationString)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> \(typeReferenceRepresentation(apiPrefix, function.result))? in")
-                writer.indent()
-                writer.line("let reader = BufferReader(buffer)")
-                writer.line("var result: \(typeReferenceRepresentation(apiPrefix, function.result))?")
-
-                try generateFieldParsing(apiPrefix: apiPrefix, writer: &writer, typeMap: typeMap, argument: Resolver.Argument(name: "result", type: function.result, condition: nil), argumentAccessor: "result")
-
-                writer.line("return result")
-                writer.dedent()
-                writer.line("})")
+                let functionIndex = layout.functions.firstIndex(where: { $0.function.name == function.name })!
+                writer.line("let _tlObject = TLObjectAllocate(\(layout.classPrefix)FunctionConstructorAt(\(functionIndex)))")
+                emitStores(writer: &writer, fields: functionLayout.fields, hasPresent: functionLayout.hasPresent, presentOffset: functionLayout.presentOffset)
+                writer.line("return tlFunction(_tlObject)")
 
                 writer.dedent()
                 writer.line("}")
@@ -1162,6 +852,120 @@ enum CodeGenerator {
         return writer.output()
     }
     
+    private static func apiType(_ apiPrefix: String, _ field: TLFieldLayout) -> String {
+        return "\(apiPrefix).\(field.objectType!)"
+    }
+
+    /// The getter of `field` over `self.tlObject`'s storage (layout: TLSchemaLayout.storageLayout).
+    /// Emitted inside `withExtendedLifetime(self.tlObject)`: the raw loads are not formal uses of
+    /// the reference, so without it the optimizer may release a temporary's storage first.
+    private static func accessorBody(_ apiPrefix: String, _ field: TLFieldLayout, presentOffset: Int) -> String {
+        let o = "self.tlObject"
+        let offset = field.offset
+        func nullable(_ expression: String) -> String {
+            return field.isOptional ? "tlIsNull(\(o), \(offset)) ? nil : \(expression)" : expression
+        }
+        func scalar(_ load: String) -> String {
+            return field.isOptional ? "tlIsPresent(\(o), \(presentOffset), \(field.presenceBit!)) ? \(load) : nil" : load
+        }
+        switch field.kind {
+        case .int32:
+            return scalar("tlBase(\(o)).load(fromByteOffset: \(offset), as: Int32.self)")
+        case .int64:
+            return scalar("tlBase(\(o)).load(fromByteOffset: \(offset), as: Int64.self)")
+        case .double:
+            return scalar("tlBase(\(o)).load(fromByteOffset: \(offset), as: Double.self)")
+        case .int256:
+            return scalar("tlBase(\(o)).load(fromByteOffset: \(offset), as: TLInt256.self).tlInt256")
+        case .string:
+            return nullable("tlStringAt(\(o), \(offset))")
+        case .bytes:
+            return nullable("tlBufferAt(\(o), \(offset))")
+        case .object:
+            return nullable("\(apiType(apiPrefix, field))(tlObject: tlObjectAt(\(o), \(offset)))")
+        case .vector:
+            switch field.elementKind! {
+            case .int32: return nullable("tlInt32sAt(\(o), \(offset))")
+            case .int64: return nullable("tlInt64sAt(\(o), \(offset))")
+            case .string: return nullable("tlStringsAt(\(o), \(offset))")
+            case .bytes: return nullable("tlBuffersAt(\(o), \(offset))")
+            default: return nullable("\(apiType(apiPrefix, field)).tlArray(\(o), \(offset))")
+            }
+        }
+    }
+
+    /// Stores every field of a freshly allocated `_tlObject`, in schema order (references +1).
+    /// The locals are `_tl`-prefixed so no TL field name can shadow them: `tlStore` is generic, so a
+    /// shadowed local would compile and store the wrong value.
+    private static func emitStores(writer: inout CodeWriter, fields: [TLFieldLayout], hasPresent: Bool, presentOffset: Int) {
+        if hasPresent {
+            writer.line("var _tlPresent: UInt64 = 0")
+        }
+        for field in fields {
+            let value = field.descriptionName
+            let offset = field.offset
+            func reference(_ required: String, _ optional: String) {
+                writer.line("tlStoreReference(_tlObject, \(offset), \(field.isOptional ? optional : required))")
+            }
+            switch field.kind {
+            case .int32, .int64, .double, .int256:
+                let converted: (String) -> String = { item in
+                    field.kind == .int256 ? "TLInt256(_0: \(item)._0, _1: \(item)._1, _2: \(item)._2, _3: \(item)._3)" : item
+                }
+                if field.isOptional {
+                    writer.line("if let _tlValue = \(value) { tlStore(_tlObject, \(offset), \(converted("_tlValue"))); _tlPresent |= 1 << \(field.presenceBit!) }")
+                } else {
+                    writer.line("tlStore(_tlObject, \(offset), \(converted(value)))")
+                }
+            case .string:
+                reference("\(value) as NSString", "\(value).map { value in value as NSString }")
+            case .bytes:
+                reference("\(value).makeData() as NSData", "\(value).map { value in value.makeData() as NSData }")
+            case .object:
+                reference("\(value).tlObject", "\(value)?.tlObject")
+            case .vector:
+                switch field.elementKind! {
+                case .int32:
+                    reference("tlPackInt32(\(value)) as NSData", "\(value).map { value in tlPackInt32(value) as NSData }")
+                case .int64:
+                    reference("tlPackInt64(\(value)) as NSData", "\(value).map { value in tlPackInt64(value) as NSData }")
+                case .string:
+                    reference("\(value) as NSArray", "\(value).map { value in value as NSArray }")
+                case .bytes:
+                    reference("\(value).map { item in item.makeData() } as NSArray", "\(value).map { value in value.map { item in item.makeData() } as NSArray }")
+                default:
+                    reference("\(value).map { item in item.tlObject } as NSArray", "\(value).map { value in value.map { item in item.tlObject } as NSArray }")
+                }
+            }
+        }
+        if hasPresent {
+            writer.line("tlStore(_tlObject, \(presentOffset), _tlPresent)")
+        }
+    }
+
+    /// Accessors (emitted into callers, inlined) and the storing initializer of one payload struct.
+    private static func emitStorageExtension(writer: inout CodeWriter, apiPrefix: String, classPrefix: String, constructor: TLConstructorLayout, byIdIndex: Int) {
+        writer.line("public extension \(apiPrefix).\(constructor.typeName).Cons_\(constructor.constructor.name.value) {")
+        writer.indent()
+        for field in constructor.fields {
+            writer.line("@_alwaysEmitIntoClient var \(field.descriptionName): \(field.swiftType) {")
+            writer.indent()
+            writer.line("@inline(__always) get { withExtendedLifetime(self.tlObject) { \(accessorBody(apiPrefix, field, presentOffset: constructor.presentOffset)) } }")
+            writer.dedent()
+            writer.line("}")
+        }
+        let parameters = constructor.fields.map { "\($0.descriptionName): \($0.swiftType)" }.joined(separator: ", ")
+        writer.line("init(\(parameters)) {")
+        writer.indent()
+        writer.line("let _tlObject = TLObjectAllocate(\(classPrefix)ConstructorAt(\(byIdIndex)))")
+        emitStores(writer: &writer, fields: constructor.fields, hasPresent: constructor.hasPresent, presentOffset: constructor.presentOffset)
+        writer.line("self.init(tlObject: _tlObject)")
+        writer.dedent()
+        writer.line("}")
+        writer.dedent()
+        writer.line("}")
+    }
+
     private static func generateFieldSerialization(writer: inout CodeWriter, argument: Resolver.Argument, argumentAccessor: String) {
         switch argument.type {
         case .int32:

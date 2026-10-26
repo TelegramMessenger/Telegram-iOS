@@ -36,7 +36,7 @@ extension PeerInfoScreenNode {
                         items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
+                                strongSelf.performNavigationButtonAction?(.selectionDone, nil, nil)
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                             }
                         }))
@@ -53,7 +53,7 @@ extension PeerInfoScreenNode {
                         items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
+                                strongSelf.performNavigationButtonAction?(.selectionDone, nil, nil)
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).startStandalone()
                             }
                         }))
@@ -205,7 +205,7 @@ extension PeerInfoScreenNode {
                             return false
                         }), in: .current)
                         
-                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
+                        strongSelf.performNavigationButtonAction?(.selectionDone, nil, nil)
                         
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
                             return .forward(source: id, threadId: nil, grouping: .auto, attributes: [], correlationId: nil)
@@ -240,7 +240,7 @@ extension PeerInfoScreenNode {
                         |> deliverOnMainQueue).startStandalone(completed: {
                             if let strongSelf = self {
                                 let proceed: (ChatController) -> Void = { chatController in
-                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
+                                    strongSelf.performNavigationButtonAction?(.selectionDone, nil, nil)
                                     
                                     if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                         var viewControllers = navigationController.viewControllers

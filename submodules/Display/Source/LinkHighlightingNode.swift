@@ -38,7 +38,12 @@ private func drawRectsImageContent(size: CGSize, context: CGContext, color: UICo
 
     if useModernPathCalculation {
         if rects.count == 1 {
-            let path = UIBezierPath(roundedRect: rects[0].offsetBy(dx: -topLeft.x, dy: -topLeft.y), cornerRadius: outerRadius).cgPath
+            // `inset` applies here exactly as it does in the multi-rect branch below. Omitting it
+            // drew a single-rect highlight `inset` tighter on every side than a multi-rect one in
+            // the same control — so a one-line selection or link sat 2pt inside its own text while
+            // a wrapped one hugged it, and a highlight paired with a `TextLoadingEffectView`
+            // (which uses the legacy path, where the inset always applied) visibly disagreed with it.
+            let path = UIBezierPath(roundedRect: rects[0].insetBy(dx: -inset, dy: -inset).offsetBy(dx: -topLeft.x, dy: -topLeft.y), cornerRadius: outerRadius).cgPath
             context.addPath(path)
 
             if stroke {

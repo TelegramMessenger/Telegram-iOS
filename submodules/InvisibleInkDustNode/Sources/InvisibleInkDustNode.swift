@@ -201,7 +201,11 @@ public class InvisibleInkDustView: UIView {
                 }
             }
             
-            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
+            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 textNode.alpha = 1.0
                 
                 textNode.view.mask = self.textMaskNode.view

@@ -16,7 +16,7 @@ AS_SUBCLASSING_RESTRICTED
 @interface ASCGImageBuffer : NSObject
 
 /// Init a zero-filled buffer with the given length.
-- (instancetype)initWithLength:(NSUInteger)length;
+- (nullable instancetype)initWithLength:(NSUInteger)length;
 
 @property (readonly) void *mutableBytes NS_RETURNS_INNER_POINTER;
 

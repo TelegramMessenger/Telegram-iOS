@@ -41,13 +41,18 @@ final class QuoteVerticalInsetTests: XCTestCase {
         .code(CodeBlock(id: BlockID(id), language: nil, runs: [TextRun(text: t)]))
     }
 
-    func test_sameListItems_stillStackTight() {
-        // Two items of the SAME list (same container) keep stacking tight (0 facing inset).
+    func test_sameListItems_takeTheInListGap() {
+        // Two items of the SAME list are items of one InstantPage `.list` block, so they take V2's
+        // in-list gap. (They used to stack at 0 under the editor's own pre-parity model.) The gap is
+        // carried by the LOWER item, so the upper contributes nothing below it.
         let v = canvas([listItem("a", "one"), listItem("b", "two")])
         let a = v.boxes[0] as! BlockBox
         let b = v.boxes[1] as! BlockBox
         XCTAssertEqual(a.bottomInset, 0, accuracy: 0.01)
-        XCTAssertEqual(b.topInset, 0, accuracy: 0.01)
+        XCTAssertEqual(b.topInset,
+                       richTextSpacingBetweenBlocks(upper: .paragraph, lower: .paragraph,
+                                                    kind: .list, metrics: .default),
+                       accuracy: 0.01)
     }
 
     func test_twoAdjacentCodeBlocks_haveExternalSeparation() {

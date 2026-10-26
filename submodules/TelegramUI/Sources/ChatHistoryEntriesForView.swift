@@ -142,7 +142,7 @@ func chatHistoryEntriesForView(
     
     var count = 0
     loop: for entry in view.entries {
-        var message = entry.message
+        var message = entry.message.withAppliedEphemeralReplacementMessage()
         var isRead = entry.isRead
         
         var pinToTop = false
@@ -274,6 +274,8 @@ func chatHistoryEntriesForView(
                         
                         var currentMessages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)] = []
                         
+                        var currentAttributes = currentAttributes
+                        currentAttributes.groupStableId = nil
                         currentMessages.append((currentMessage, currentIsRead, currentSelection, currentAttributes, currentLocation))
                         if reverseGroupedMessages {
                             currentMessages.insert((message, isRead, selection, attributes, entry.location), at: 0)
@@ -295,6 +297,12 @@ func chatHistoryEntriesForView(
                     }
                 }
                 if !found {
+                    var attributes = attributes
+                    if groupMessages {
+                        // Alone so far: keep the identity of the album entry it becomes once another of
+                        // the album's messages loads. Not when albums are split into messages below.
+                        attributes.groupStableId = groupStableId
+                    }
                     entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, attributes))
                 }
             } else {
@@ -782,10 +790,28 @@ func chatHistoryEntriesForView(
         }
     }
     
-    if let subject = associatedData.subject, case let .customChatContents(customChatContents) = subject, case let .quickReplyMessageInput(_, shortcutType) = customChatContents.kind, case .generic = shortcutType {
-        if !view.isLoading && view.laterId == nil && !view.entries.isEmpty {
-            for i in 0 ..< 2 {
-                let string = i == 1 ? presentationData.strings.Chat_QuickReply_ServiceHeader1 : presentationData.strings.Chat_QuickReply_ServiceHeader2
+    if let subject = associatedData.subject, case let .customChatContents(customChatContents) = subject {
+        var serviceHeaders: [String] = []
+        switch customChatContents.kind {
+        case let .quickReplyMessageInput(_, shortcutType):
+            if case .generic = shortcutType {
+                serviceHeaders = [
+                    presentationData.strings.Chat_QuickReply_ServiceHeader1,
+                    presentationData.strings.Chat_QuickReply_ServiceHeader2
+                ]
+            }
+        case .welcomeMessages:
+            serviceHeaders = [
+                presentationData.strings.WelcomeMessages_ServiceHeader1,
+                presentationData.strings.WelcomeMessages_ServiceHeader2
+            ]
+        case .businessLinkSetup, .hashTagSearch:
+            break
+        }
+
+        if !serviceHeaders.isEmpty && !view.isLoading && view.laterId == nil && !view.entries.isEmpty {
+            let peerId = view.entries[0].message.id.peerId
+            for (i, string) in serviceHeaders.reversed().enumerated() {
                 let formattedString = parseMarkdownIntoAttributedString(
                     string,
                     attributes: MarkdownAttributes(
@@ -812,7 +838,7 @@ func chatHistoryEntriesForView(
                 let message = Message(
                     stableId: UInt32.max - 1001 - UInt32(i),
                     stableVersion: 0,
-                    id: MessageId(peerId: context.account.peerId, namespace: Namespaces.Message.Local, id: Int32.max - 100 - Int32(i)),
+                    id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: Int32.max - 100 - Int32(i)),
                     globallyUniqueId: nil,
                     groupingKey: nil,
                     groupInfo: nil,

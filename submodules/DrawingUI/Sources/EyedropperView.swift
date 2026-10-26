@@ -52,7 +52,7 @@ public final class EyedropperView: UIView {
     private let ringLayer: SimpleLayer
     private let selectionLayer: SimpleLayer
     
-    private let sourceImage: (data: Data, size: CGSize, bytesPerRow: Int, info: CGBitmapInfo)?
+    private let sourceImage: (data: Data, size: CGSize, bytesPerRow: Int, info: CGBitmapInfo, colorSpace: CGColorSpace?)?
     
     var completed: (DrawingColor) -> Void = { _ in }
     var dismissed: () -> Void = { }
@@ -65,7 +65,7 @@ public final class EyedropperView: UIView {
         self.zoomedView.layer.magnificationFilter = .nearest
         
         if let cgImage = sourceImage.cgImage, let pixelData = cgImage.dataProvider?.data as? Data {
-            self.sourceImage = (pixelData, sourceImage.size, cgImage.bytesPerRow, cgImage.bitmapInfo)
+            self.sourceImage = (pixelData, sourceImage.size, cgImage.bytesPerRow, cgImage.bitmapInfo, cgImage.colorSpace)
         } else {
             self.sourceImage = nil
         }
@@ -177,6 +177,10 @@ public final class EyedropperView: UIView {
         guard var sourceImage = self.sourceImage, point.x >= 0 && point.x < sourceImage.size.width && point.y >= 0 && point.y < sourceImage.size.height else {
             return UIColor.black
         }
+
+        guard let sourceColorSpace = sourceImage.colorSpace, let sRGBColorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+            return nil
+        }
                 
         let x = Int(point.x)
         let y = Int(point.y)
@@ -193,11 +197,17 @@ public final class EyedropperView: UIView {
             let g = srcPixel.advanced(by: 1).pointee
             let b = srcPixel.advanced(by: 2).pointee
             
+            let components: [CGFloat]
             if sourceImage.info.contains(.byteOrder32Little) {
-                color = UIColor(red: CGFloat(b) / 255.0, green: CGFloat(g) / 255.0, blue: CGFloat(r) / 255.0, alpha: 1.0)
+                components = [CGFloat(b) / 255.0, CGFloat(g) / 255.0, CGFloat(r) / 255.0, 1.0]
             } else {
-                color = UIColor(red: CGFloat(r) / 255.0, green: CGFloat(g) / 255.0, blue: CGFloat(b) / 255.0, alpha: 1.0)
+                components = [CGFloat(r) / 255.0, CGFloat(g) / 255.0, CGFloat(b) / 255.0, 1.0]
             }
+
+            guard let sourceColor = CGColor(colorSpace: sourceColorSpace, components: components), let convertedColor = sourceColor.converted(to: sRGBColorSpace, intent: .defaultIntent, options: nil) else {
+                return
+            }
+            color = UIColor(cgColor: convertedColor)
         }
         return color
     }

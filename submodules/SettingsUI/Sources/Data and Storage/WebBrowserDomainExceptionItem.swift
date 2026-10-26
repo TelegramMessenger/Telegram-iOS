@@ -55,10 +55,10 @@ final class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
         self.deleted = deleted
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = WebBrowserDomainExceptionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -71,13 +71,13 @@ final class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? WebBrowserDomainExceptionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -95,6 +95,7 @@ final class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
 }
 
 final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
+    private let highlightedBackgroundNode = ASDisplayNode()
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -176,7 +177,7 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                       
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var updatedTheme: PresentationTheme?
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
@@ -237,6 +238,9 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
+                    var revealTopSeparatorIsHidden = false
+                    var revealBottomSeparatorIsHidden = false
+
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
@@ -248,6 +252,7 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         strongSelf.iconPlaceholderNode.backgroundColor = item.presentationData.theme.list.mediaPlaceholderColor
                     }
                     
@@ -322,26 +327,26 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                         var hasBottomCorners = false
                         switch neighbors.top {
                             case .sameSection(false):
-                                strongSelf.topStripeNode.isHidden = true
+                                revealTopSeparatorIsHidden = true
                             default:
                                 hasTopCorners = true
-                                strongSelf.topStripeNode.isHidden = hasCorners
+                                revealTopSeparatorIsHidden = hasCorners
                         }
                         let bottomStripeInset: CGFloat
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
-                                strongSelf.bottomStripeNode.isHidden = false
+                                revealBottomSeparatorIsHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true
-                                strongSelf.bottomStripeNode.isHidden = hasCorners
+                                revealBottomSeparatorIsHidden = hasCorners
                         }
                         
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight))
                     }
@@ -365,10 +370,12 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                     
                     strongSelf.iconNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 7.0), imageSize: imageSize, boundingSize: iconSize, intrinsicInsets: .zero))()
                     
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: .zero, size: contentSize), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
+                    strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: revealTopSeparatorIsHidden, bottomIsHidden: revealBottomSeparatorIsHidden)
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     var revealOptions: [ItemListRevealOption] = []
-                    revealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                    revealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true))
                     strongSelf.setRevealOptions((left: [], right: revealOptions))
                 }
             })

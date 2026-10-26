@@ -17,6 +17,7 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
 
     private var cachedBoundingWidth: CGFloat?
     private var cachedThemeIdentity: ObjectIdentifier?
+    private var cachedFontSize: PresentationFontSize?
     private var cachedContentSize: CGSize = .zero
 
     var view: UIView {
@@ -72,7 +73,7 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
 
     func update(boundingWidth: CGFloat, presentationData: PresentationData, transition: ComponentTransition) -> CGSize {
         let themeIdentity = ObjectIdentifier(presentationData.theme)
-        if self.cachedBoundingWidth == boundingWidth, self.cachedThemeIdentity == themeIdentity {
+        if self.cachedBoundingWidth == boundingWidth, self.cachedThemeIdentity == themeIdentity, self.cachedFontSize == presentationData.chatFontSize {
             return self.cachedContentSize
         }
 
@@ -82,30 +83,21 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
         let messageTheme = presentationData.theme.chat.message.outgoing
         let mainColor = messageTheme.accentTextColor
 
-        let codeBlockBackgroundColor: UIColor
         if isDark {
-            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.25)
         } else {
-            codeBlockBackgroundColor = mainColor.withMultipliedAlpha(0.1)
         }
 
-        let textCategories = InstantPageTextCategories(
-            kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
-            header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
-            subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
-            paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
-            caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: messageTheme.secondaryTextColor),
-            credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: messageTheme.secondaryTextColor),
-            table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
-            article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 18.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
-            codeBlock: InstantPageTextAttributes(font: InstantPageFont(style: .monospace, size: 14.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor)
+        let textCategories = InstantPageTextCategories.chatMessage(
+            primaryText: messageTheme.primaryTextColor,
+            secondaryText: messageTheme.secondaryTextColor
         )
         let pageTheme = InstantPageTheme(
             type: isDark ? .dark : .light,
             pageBackgroundColor: .clear,
             textCategories: textCategories,
             serif: false,
-            codeBlockBackgroundColor: codeBlockBackgroundColor,
+            // Matches the bubble this previews: the highlighted-table-cell fill, not an accent tint.
+            codeBlockBackgroundColor: messageTheme.accentControlColor.withMultipliedAlpha(0.1),
             linkColor: messageTheme.linkTextColor,
             textHighlightColor: messageTheme.accentTextColor.withMultipliedAlpha(0.1),
             linkHighlightColor: messageTheme.linkTextColor.withMultipliedAlpha(0.1),
@@ -138,7 +130,9 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
             dateTimeFormat: presentationData.dateTimeFormat,
             cachedMessageSyntaxHighlight: nil,
             expandedDetails: [:],
-            fitToWidth: true
+            fitToWidth: true,
+            // The bubble this previews follows Text Size, so the preview must too or it stops being one.
+            contentScale: instantPageChatMessageContentScale(baseFontSize: presentationData.chatFontSize.baseDisplaySize)
         )
         self.pageView.update(layout: layout, theme: pageTheme, animation: .None)
         // The parent (MessageItemView) owns and sets `pageView`'s frame; `update` only
@@ -147,6 +141,7 @@ final class ChatSendMessageRichTextPreview: ChatSendMessageContextScreenRichText
 
         self.cachedBoundingWidth = boundingWidth
         self.cachedThemeIdentity = themeIdentity
+        self.cachedFontSize = presentationData.chatFontSize
         self.cachedContentSize = layout.contentSize
         return layout.contentSize
     }

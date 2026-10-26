@@ -60,12 +60,6 @@ public final class ChatRecentActionsEmptyNode: ASDisplayNode {
     
     public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
-        }
     }
     
     public func updateLayout(presentationData: ChatPresentationData, backgroundNode: WallpaperBackgroundNode, size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -136,12 +130,6 @@ public final class ChatRecentActionsEmptyNode: ASDisplayNode {
             self.backgroundNode.isHidden = true
             backgroundContent.cornerRadius = 14.0
             backgroundContent.frame = backgroundFrame
-            if let (rect, containerSize) = self.absolutePosition {
-                var backgroundFrame = backgroundContent.frame
-                backgroundFrame.origin.x += rect.minX
-                backgroundFrame.origin.y += rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-            }
         } else {
             self.backgroundNode.isHidden = false
         }

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import AVFoundation
 import UIKit
 import AsyncDisplayKit
@@ -839,7 +840,7 @@ final class VideoChatScreenComponent: Component {
                             return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
                         })]
                     }
-                    let shareController = groupCall.accountContext.sharedContext.makeShareController(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                    let shareController = groupCall.accountContext.sharedContext.makeShareScreen(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
                         guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                             return
                         }
@@ -888,7 +889,7 @@ final class VideoChatScreenComponent: Component {
                     return
                 }
                 
-                let shareController = groupCall.accountContext.sharedContext.makeShareController(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                let shareController = groupCall.accountContext.sharedContext.makeShareScreen(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
                     guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                         return
                     }
@@ -1473,6 +1474,7 @@ final class VideoChatScreenComponent: Component {
         
         func update(component: VideoChatScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
+            let lottieSettings = component.initialCall.accountContext.lottieRenderingSettings
             defer {
                 self.isUpdating = false
             }
@@ -2295,7 +2297,8 @@ final class VideoChatScreenComponent: Component {
                             name: "anim_profilemore"
                         ),
                         color: .white,
-                        size: CGSize(width: 34.0, height: 34.0)
+                        size: CGSize(width: 34.0, height: 34.0),
+                        lottieSettings: lottieSettings
                     )),
                     background: AnyComponent(
                         GlassBackgroundComponent(size: CGSize(width: navigationButtonDiameter, height: navigationButtonDiameter), cornerRadius: navigationButtonDiameter * 0.5, isDark: true, tintColor: .init(kind: .custom(style: .default, color: panelColor)))
@@ -2345,7 +2348,21 @@ final class VideoChatScreenComponent: Component {
                 alphaTransition.setAlpha(view: navigationLeftButtonView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
             }
             
-            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset - navigationButtonAreaWidth + floor((navigationButtonAreaWidth - navigationRightButtonSize.width) * 0.5) + navigationButtonInset, y: topInset + floor((navigationBarHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
+            // iPhone Duo, unfolded portrait: the status island is wider than the side controls column's inset, so the
+            // close button keeps the island's inset from the edge instead of adding it to the column's.
+            let navigationRightButtonRowInset = max(rightInset, max(environment.safeInsets.right, 16.0) + environment.navigationBarTrailingButtonsInset)
+            let navigationRightButtonRowFrame = CGRect(origin: CGPoint(x: availableSize.width - navigationRightButtonRowInset - navigationButtonAreaWidth + floor((navigationButtonAreaWidth - navigationRightButtonSize.width) * 0.5) + navigationButtonInset, y: topInset + floor((navigationBarHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
+            // iPhone Duo: the close button goes in the side strip, as a bar's back button does (this screen draws its own
+            // bar). Not where the column of call controls occupies the strip (folded landscape-left).
+            let navigationRightButtonFrame: CGRect
+            let isNavigationRightButtonInSideColumn: Bool
+            if let sideColumnFrame = environment.sideColumnNavigationButtonFrame, !(buttonsOnTheSide && sideColumnFrame.midX > availableSize.width * 0.5) {
+                navigationRightButtonFrame = CGRect(origin: CGPoint(x: sideColumnFrame.minX + floor((sideColumnFrame.width - navigationRightButtonSize.width) * 0.5), y: sideColumnFrame.minY + floor((sideColumnFrame.height - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
+                isNavigationRightButtonInSideColumn = true
+            } else {
+                navigationRightButtonFrame = navigationRightButtonRowFrame
+                isNavigationRightButtonInSideColumn = false
+            }
             if let navigationRightButtonView = self.navigationRightButton.view {
                 if navigationRightButtonView.superview == nil {
                     self.containerView.addSubview(navigationRightButtonView)
@@ -2387,7 +2404,10 @@ final class VideoChatScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: navigationButtonDiameter, height: navigationButtonDiameter)
                 )
-                let navigationSidebarButtonFrameValue = CGRect(origin: CGPoint(x: navigationRightButtonFrame.minX - 21.0 - navigationSidebarButtonSize.width, y: topInset + floor((navigationBarHeight - navigationSidebarButtonSize.height) * 0.5)), size: navigationSidebarButtonSize)
+                // With the close button in the side strip, the sidebar button takes its place at the end of the row, flush
+                // with the band's edge (not the close button's outward nudge, which would reach under the corner block).
+                let navigationSidebarButtonX: CGFloat = isNavigationRightButtonInSideColumn ? (availableSize.width - navigationRightButtonRowInset - navigationSidebarButtonSize.width) : (navigationRightButtonRowFrame.minX - 21.0 - navigationSidebarButtonSize.width)
+                let navigationSidebarButtonFrameValue = CGRect(origin: CGPoint(x: navigationSidebarButtonX, y: topInset + floor((navigationBarHeight - navigationSidebarButtonSize.height) * 0.5)), size: navigationSidebarButtonSize)
                 navigationSidebarButtonFrame = navigationSidebarButtonFrameValue
                 if let navigationSidebarButtonView = navigationSidebarButton.view {
                     var animateIn = false
@@ -2440,6 +2460,16 @@ final class VideoChatScreenComponent: Component {
             var maxTitleWidth: CGFloat = availableSize.width - leftInset - rightInset - navigationButtonAreaWidth * 2.0 - 4.0 * 2.0
             if isTwoColumnLayout {
                 maxTitleWidth -= 110.0
+            }
+            if environment.navigationBarTrailingButtonsInset > 0.0 {
+                // iPhone Duo, unfolded portrait: the buttons on the right sit clear of the status island. A centered
+                // title keeps clear of it on both sides; a left-aligned one (the wide layout) runs up to those buttons.
+                if isLandscape {
+                    let titleMaxX = (navigationSidebarButtonFrame ?? navigationRightButtonRowFrame).minX - 8.0
+                    maxTitleWidth = min(maxTitleWidth, max(1.0, titleMaxX - (navigationLeftButtonFrame.maxX + 20.0)))
+                } else {
+                    maxTitleWidth -= environment.navigationBarTrailingButtonsInset * 2.0
+                }
             }
             
             let titleSize = self.title.update(
@@ -2579,8 +2609,11 @@ final class VideoChatScreenComponent: Component {
                     let maxEncryptionKeyX: CGFloat
                     if let navigationSidebarButtonFrame {
                         maxEncryptionKeyX = navigationSidebarButtonFrame.minX - 8.0 - encryptionKeySize.width
+                    } else if isNavigationRightButtonInSideColumn {
+                        // The close button is in the side strip: the key may run to the end of the row.
+                        maxEncryptionKeyX = navigationRightButtonRowFrame.maxX - encryptionKeySize.width
                     } else {
-                        maxEncryptionKeyX = navigationRightButtonFrame.minX - 8.0 - encryptionKeySize.width
+                        maxEncryptionKeyX = navigationRightButtonRowFrame.minX - 8.0 - encryptionKeySize.width
                     }
                     
                     let idealEncryptionKeyX: CGFloat
@@ -2811,6 +2844,28 @@ final class VideoChatScreenComponent: Component {
                 fourthActionButtonFrame.origin.y = thirdActionButtonFrame.maxY + landscapeControlsSpacing
             }
             
+            if buttonsOnTheSide {
+                // iPhone Duo: the column of controls at the right edge keeps 8pt clear of a status corner block at that
+                // edge (folded landscape-left: 84x82 at the bottom right, which the 3- and 5-button columns reach).
+                let columnFrames = [firstActionButtonFrame, secondActionButtonFrame, microphoneButtonFrame, thirdActionButtonFrame, fourthActionButtonFrame]
+                let columnMinY = columnFrames.map({ $0.minY }).min() ?? 0.0
+                let columnMaxY = columnFrames.map({ $0.maxY }).max() ?? 0.0
+                var columnOffsetY: CGFloat = 0.0
+                if let bottomRight = environment.reservedCorners.bottomRight {
+                    columnOffsetY = min(0.0, max(8.0 - columnMinY, availableSize.height - bottomRight.height - 8.0 - columnMaxY))
+                }
+                if let topRight = environment.reservedCorners.topRight {
+                    columnOffsetY = max(columnOffsetY, topRight.height + 8.0 - columnMinY)
+                }
+                if columnOffsetY != 0.0 {
+                    firstActionButtonFrame.origin.y += columnOffsetY
+                    secondActionButtonFrame.origin.y += columnOffsetY
+                    microphoneButtonFrame.origin.y += columnOffsetY
+                    thirdActionButtonFrame.origin.y += columnOffsetY
+                    fourthActionButtonFrame.origin.y += columnOffsetY
+                }
+            }
+            
             let participantsSize = availableSize
             
             let columnSpacing: CGFloat = 14.0
@@ -2856,7 +2911,9 @@ final class VideoChatScreenComponent: Component {
             let participantsExpandedInsets: UIEdgeInsets
             if isTwoColumnLayout {
                 participantsExpandedInsets = UIEdgeInsets(
-                    top: navigationHeight,
+                    // iPhone Duo, unfolded portrait: with the sidebar hidden the expanded video spans the width, and the
+                    // bar beside the status island ends above the island's bottom, so its pin control sat under the island.
+                    top: self.isTwoColumnSidebarHidden ? max(navigationHeight, environment.fullStatusBarHeight) : navigationHeight,
                     left: max(14.0, participantsSafeInsets.left),
                     bottom: participantsSafeInsets.bottom,
                     right: max(14.0, participantsSafeInsets.right)
@@ -3419,7 +3476,9 @@ final class VideoChatScreenComponent: Component {
                 ComponentTransition.easeInOut(duration: 0.25).setAlpha(view: self.inputDimView, alpha: 1.0)
                 
                 let inputPanelInnerInset: CGFloat = 8.0
-                let inputPanelAvailableWidth = isTwoColumnLayout ? mainColumnWidth + inputPanelInnerInset * 2.0 : min(440.0 + inputPanelInnerInset * 2.0, availableSize.width - environment.safeInsets.left - environment.safeInsets.right)
+                // The bottom input panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                let inputPanelSideInsets = environment.bottomEdgeSideInsets()
+                let inputPanelAvailableWidth = isTwoColumnLayout ? mainColumnWidth + inputPanelInnerInset * 2.0 : min(440.0 + inputPanelInnerInset * 2.0, availableSize.width - inputPanelSideInsets.left - inputPanelSideInsets.right)
                 var inputPanelAvailableHeight = 103.0
 
                 let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
@@ -3506,7 +3565,7 @@ final class VideoChatScreenComponent: Component {
                     }
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.2) {
+                            Queue.mainQueue().after(0.2) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })
@@ -3655,7 +3714,9 @@ final class VideoChatScreenComponent: Component {
                         inputPanelOriginX = availableSize.width - mainColumnWidth - inputPanelInnerInset - rightInset
                     }
                 } else {
-                    inputPanelOriginX = floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0)
+                    // Sized to the band between the side insets, so centered in it (the screen's center unless one
+                    // inset is iPhone Duo's strip).
+                    inputPanelOriginX = inputPanelSideInsets.left + floorToScreenPixels((availableSize.width - inputPanelSideInsets.left - inputPanelSideInsets.right - inputPanelSize.width) / 2.0)
                 }
                 let inputPanelFrame = CGRect(origin: CGPoint(x: inputPanelOriginX, y: availableSize.height - inputPanelBottomInset - inputPanelSize.height - 3.0), size: inputPanelSize)
                 if let inputPanelView = self.inputPanel.view {
@@ -3697,7 +3758,7 @@ final class VideoChatScreenComponent: Component {
                     }
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.2) {
+                            Queue.mainQueue().after(0.2) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })
@@ -4014,7 +4075,7 @@ final class VideoChatScreenComponent: Component {
                     messageListOriginX = availableSize.width - mainColumnWidth - rightInset
                 }
             } else {
-                messageListOriginX = floorToScreenPixels((availableSize.width - messagesListSize.width) / 2.0)
+                messageListOriginX = environment.safeInsets.left + floorToScreenPixels((availableSize.width - environment.safeInsets.left - environment.safeInsets.right - messagesListSize.width) / 2.0)
             }
             let messagesListFrame = CGRect(origin: CGPoint(x: messageListOriginX, y: availableSize.height - messagesListSize.height - messagesBottomInset), size: messagesListSize)
             if let messagesListView = self.messagesList.view {

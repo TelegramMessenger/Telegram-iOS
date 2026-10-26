@@ -275,9 +275,12 @@ public final class MediaStreamComponent: CombinedComponent {
         let moreAnimationTag = local.moreAnimationTag
         
         let makeBody: () -> CGSize = { [weak local] in
-            let canEnforceOrientation = UIDevice.current.model != "iPad"
-            var forceFullScreenInLandscape: Bool { canEnforceOrientation && true }
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
+            // iPhone Duo's unfolded screen cannot be rotated on request — in portrait the status island marks it, in
+            // landscape its regular width — so like an iPad it expands to full screen in place instead of rotating, which
+            // would undo the expansion (or, in landscape, never leave full screen).
+            let canEnforceOrientation = UIDevice.current.model != "iPad" && environment.navigationBarTrailingButtonsInset == 0.0 && environment.metrics.widthClass == .compact
+            var forceFullScreenInLandscape: Bool { canEnforceOrientation && true }
             if environment.isVisible {
             } else {
                 context.state.dismissOffset = 0.0
@@ -348,7 +351,10 @@ public final class MediaStreamComponent: CombinedComponent {
             let isFullyDragged = context.availableSize.height - requiredSheetHeight + state.dismissOffset - safeAreaTopInView < 30.0
             
             var dragOffset = context.state.dismissOffset
-            if isFullyDragged {
+            // In full screen beside iPhone Duo's status island (unfolded portrait, where the window's safe area top is
+            // the island's 82pt) the video stays centred on the screen instead of being held below the safe area.
+            let fullscreenBesideStatusIsland = state.isFullscreen && environment.navigationBarTrailingButtonsInset > 0.0
+            if isFullyDragged && !fullscreenBesideStatusIsland {
                 dragOffset = max(context.state.dismissOffset, requiredSheetHeight - context.availableSize.height + safeAreaTopInView)
             }
             
@@ -650,7 +656,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             }
                             
                             func transitionInfo() -> ContextControllerReferenceViewInfo? {
-                                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+                                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
                             }
                         }
                         
@@ -661,8 +667,13 @@ public final class MediaStreamComponent: CombinedComponent {
             }
             
             let navigationComponent = NavigationBarComponent(
-                topInset: environment.statusBarHeight,
+                // The bar reaches the top edge; in full screen beside iPhone Duo's status island (unfolded portrait) its
+                // 44pt row is centred on the island's clock line (compact status height + 31), elsewhere at the top.
+                topInset: (isFullscreen && environment.navigationBarTrailingButtonsInset > 0.0) ? environment.statusBarHeight + 31.0 - 22.0 : 0.0,
                 sideInset: environment.safeInsets.left,
+                // Right items keep clear of a side strip and its status corner (iPhone Duo; the folded screen's 84x170
+                // block reaches the sheet's header) and, in full screen, of the status island beside the bar.
+                rightInset: environment.safeInsets.right + (isFullscreen ? environment.navigationBarTrailingButtonsInset : 0.0),
                 backgroundVisible: isFullscreen,
                 leftItem: topLeftButton,
                 rightItems: navigationRightItems,
@@ -737,7 +748,8 @@ public final class MediaStreamComponent: CombinedComponent {
                         }
                     } else {
                         if isFullyDragged {
-                            state.updateDismissOffset(value: requiredSheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                            // Full screen beside the status island rests at 0, not below the window's safe area.
+                            state.updateDismissOffset(value: fullscreenBesideStatusIsland ? 0.0 : requiredSheetHeight - availableSize.height + safeAreaTop, interactive: false)
                         } else {
                             if velocity.y < -200 {
                                 // Expand
@@ -777,9 +789,13 @@ public final class MediaStreamComponent: CombinedComponent {
             let presentationData = call.accountContext.sharedContext.currentPresentationData.with { $0 }
             
             let imageRenderScale = UIScreen.main.scale
+            // The bottom rows span iPhone Duo's side strip; they keep clear only of a corner block at the bottom. In
+            // portrait the sheet's bottom row stays symmetric, as before.
+            let bottomInsets = environment.bottomEdgeSideInsets()
             let bottomComponent = AnyComponent(ButtonsRowComponent(
                 bottomInset: environment.safeInsets.bottom,
-                sideInset: environment.safeInsets.left,
+                sideInset: bottomInsets.left,
+                rightInset: isLandscape ? bottomInsets.right : bottomInsets.left,
                 leftItem: AnyComponent(Button(
                     content: AnyComponent(RoundGradientButtonComponent(
                         gradientColors: [UIColor(red: 0.165, green: 0.173, blue: 0.357, alpha: 1).cgColor],
@@ -925,7 +941,8 @@ public final class MediaStreamComponent: CombinedComponent {
             
             let fullScreenToolbarComponent = AnyComponent(ToolbarComponent(
                 bottomInset: environment.safeInsets.bottom,
-                sideInset: environment.safeInsets.left,
+                sideInset: bottomInsets.left,
+                rightInset: bottomInsets.right,
                 leftItem: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Chat/Input/Accessory Panels/MessageSelectionForward",
@@ -1209,7 +1226,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
                 
                 var segmentedValues: [ShareControllerSegmentedValue]?
                 segmentedValues = nil
-                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: defaultDarkPresentationTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: defaultDarkPresentationTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
                     if let strongSelf = self {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
@@ -1259,6 +1276,8 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
 private final class NavigationBarComponent: CombinedComponent {
     let topInset: CGFloat
     let sideInset: CGFloat
+    /// The right side's inset (iPhone Duo: a side strip, or a status island beside the bar); `sideInset` by default.
+    let rightInset: CGFloat
     let leftItem: AnyComponent<Empty>?
     let rightItems: [AnyComponentWithIdentity<Empty>]
     let centerItem: AnyComponent<Empty>?
@@ -1267,13 +1286,15 @@ private final class NavigationBarComponent: CombinedComponent {
     init(
         topInset: CGFloat,
         sideInset: CGFloat,
+        rightInset: CGFloat? = nil,
         backgroundVisible: Bool,
         leftItem: AnyComponent<Empty>?,
         rightItems: [AnyComponentWithIdentity<Empty>],
         centerItem: AnyComponent<Empty>?
     ) {
-        self.topInset = 0 // topInset
+        self.topInset = topInset
         self.sideInset = sideInset
+        self.rightInset = rightInset ?? sideInset
         self.backgroundVisible = backgroundVisible
         
         self.leftItem = leftItem
@@ -1286,6 +1307,9 @@ private final class NavigationBarComponent: CombinedComponent {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.rightInset != rhs.rightInset {
             return false
         }
         if lhs.leftItem != rhs.leftItem {
@@ -1366,7 +1390,7 @@ private final class NavigationBarComponent: CombinedComponent {
                 centerLeftInset += leftItem.size.width + 4.0
             }
             
-            var rightItemX = context.availableSize.width - sideInset
+            var rightItemX = context.availableSize.width - 16.0 - context.component.rightInset
             for item in rightItemList.reversed() {
                 context.add(item
                     .position(CGPoint(x: rightItemX - item.size.width / 2.0, y: context.component.topInset + contentHeight / 2.0))
@@ -1724,6 +1748,8 @@ private final class OriginInfoComponent: CombinedComponent {
 private final class ToolbarComponent: CombinedComponent {
     let bottomInset: CGFloat
     let sideInset: CGFloat
+    /// The right side's inset (iPhone Duo: a side strip); `sideInset` by default.
+    let rightInset: CGFloat
     let leftItem: AnyComponent<Empty>?
     let rightItem: AnyComponent<Empty>?
     let centerItem: AnyComponent<Empty>?
@@ -1731,12 +1757,14 @@ private final class ToolbarComponent: CombinedComponent {
     init(
         bottomInset: CGFloat,
         sideInset: CGFloat,
+        rightInset: CGFloat? = nil,
         leftItem: AnyComponent<Empty>?,
         rightItem: AnyComponent<Empty>?,
         centerItem: AnyComponent<Empty>?
     ) {
         self.bottomInset = bottomInset
         self.sideInset = sideInset
+        self.rightInset = rightInset ?? sideInset
         self.leftItem = leftItem
         self.rightItem = rightItem
         self.centerItem = centerItem
@@ -1747,6 +1775,9 @@ private final class ToolbarComponent: CombinedComponent {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.rightInset != rhs.rightInset {
             return false
         }
         if lhs.leftItem != rhs.leftItem {
@@ -1771,6 +1802,7 @@ private final class ToolbarComponent: CombinedComponent {
         return { context in
             var availableWidth = context.availableSize.width
             let sideInset: CGFloat = 16.0 + context.component.sideInset
+            let rightSideInset: CGFloat = 16.0 + context.component.rightInset
             
             let contentHeight: CGFloat = 44.0
             let size = CGSize(width: context.availableSize.width, height: contentHeight + context.component.bottomInset)
@@ -1823,10 +1855,10 @@ private final class ToolbarComponent: CombinedComponent {
                 centerLeftInset += leftItem.size.width + 4.0
             }
             
-            var centerRightInset = sideInset
+            var centerRightInset = rightSideInset
             if let rightItem = rightItem {
                 context.add(rightItem
-                    .position(CGPoint(x: context.availableSize.width - sideInset - rightItem.size.width / 2.0, y: contentHeight / 2.0))
+                    .position(CGPoint(x: context.availableSize.width - rightSideInset - rightItem.size.width / 2.0, y: contentHeight / 2.0))
                 )
                 centerRightInset += rightItem.size.width + 4.0
             }
@@ -1834,7 +1866,8 @@ private final class ToolbarComponent: CombinedComponent {
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0, y: contentHeight / 2.0 - temporaryOffsetForSmallerSubtitle))
+                    // Centred between the side insets (the screen's centre unless they differ, beside iPhone Duo's side strip).
+                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0 + (sideInset - rightSideInset) / 2.0, y: contentHeight / 2.0 - temporaryOffsetForSmallerSubtitle))
                 )
             }
             
@@ -1846,6 +1879,8 @@ private final class ToolbarComponent: CombinedComponent {
 private final class ButtonsRowComponent: CombinedComponent {
     let bottomInset: CGFloat
     let sideInset: CGFloat
+    /// The right side's inset (iPhone Duo: a side strip); `sideInset` by default.
+    let rightInset: CGFloat
     let leftItem: AnyComponent<Empty>?
     let rightItem: AnyComponent<Empty>?
     let centerItem: AnyComponent<Empty>?
@@ -1853,12 +1888,14 @@ private final class ButtonsRowComponent: CombinedComponent {
     init(
         bottomInset: CGFloat,
         sideInset: CGFloat,
+        rightInset: CGFloat? = nil,
         leftItem: AnyComponent<Empty>?,
         rightItem: AnyComponent<Empty>?,
         centerItem: AnyComponent<Empty>?
     ) {
         self.bottomInset = bottomInset
         self.sideInset = sideInset
+        self.rightInset = rightInset ?? sideInset
         self.leftItem = leftItem
         self.rightItem = rightItem
         self.centerItem = centerItem
@@ -1869,6 +1906,9 @@ private final class ButtonsRowComponent: CombinedComponent {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.rightInset != rhs.rightInset {
             return false
         }
         if lhs.leftItem != rhs.leftItem {
@@ -1892,6 +1932,7 @@ private final class ButtonsRowComponent: CombinedComponent {
         return { context in
             var availableWidth = context.availableSize.width
             let sideInset: CGFloat = 48.0 + context.component.sideInset
+            let rightSideInset: CGFloat = 48.0 + context.component.rightInset
             
             let contentHeight: CGFloat = 80.0
             let size = CGSize(width: context.availableSize.width, height: contentHeight + context.component.bottomInset)
@@ -1937,10 +1978,10 @@ private final class ButtonsRowComponent: CombinedComponent {
                 centerLeftInset += leftItem.size.width + 4.0
             }
             
-            var centerRightInset = sideInset
+            var centerRightInset = rightSideInset
             if let rightItem = rightItem {
                 context.add(rightItem
-                    .position(CGPoint(x: context.availableSize.width - sideInset - rightItem.size.width / 2.0, y: contentHeight / 2.0))
+                    .position(CGPoint(x: context.availableSize.width - rightSideInset - rightItem.size.width / 2.0, y: contentHeight / 2.0))
                 )
                 centerRightInset += rightItem.size.width + 4.0
             }
@@ -1948,7 +1989,8 @@ private final class ButtonsRowComponent: CombinedComponent {
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0, y: contentHeight / 2.0))
+                    // Centred between the side insets (the screen's centre unless they differ, beside iPhone Duo's side strip).
+                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0 + (sideInset - rightSideInset) / 2.0, y: contentHeight / 2.0))
                 )
             }
             

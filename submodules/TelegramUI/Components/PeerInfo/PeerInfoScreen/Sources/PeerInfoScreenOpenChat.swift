@@ -4,6 +4,7 @@ import Display
 import AccountContext
 import SwiftSignalKit
 import TelegramCore
+import PeerInfoPaneNode
 
 extension PeerInfoScreenNode {
     func openChatWithMessageSearch() {
@@ -124,6 +125,116 @@ extension PeerInfoScreenNode {
         })
     }
 
+    /// Where "View in Chat" opens a message listed in the shared-media panes.
+    func sharedMediaMessageChatDestination(message: EngineMessage) -> PeerInfoMessageChatDestination? {
+        var listedThread: ChatReplyThreadMessage?
+        if case let .replyThread(thread) = self.sharedMediaChatLocation.chatLocation {
+            listedThread = thread
+        }
+        return peerInfoMessageChatDestination(message: message, listedPeer: self.data?.chatPeer, listedThread: listedThread)
+    }
+    
+    /// How "View in Chat" leaves the profile. The destination refines it: a forum topic always
+    /// resolves through `navigateToForumThread`, and a thread returns to an open copy of it when
+    /// there is one.
+    enum SharedMediaChatNavigation {
+        /// Push the chat on top of the profile; the chat's first purposeful action then removes the
+        /// profile (and, for a plain chat, older copies of the profile's chat). The shared-media
+        /// context menus.
+        case push
+        /// Go back to an open copy of the chat, or replace the stack. The media calendar.
+        case returnToExisting
+    }
+    
+    /// "View in Chat" for a message listed in the shared-media panes.
+    func openSharedMediaChat(destination: PeerInfoMessageChatDestination, messageId: EngineMessage.Id, navigation: SharedMediaChatNavigation) {
+        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+            return
+        }
+        // navigateToForumThread always highlights the message, so every destination does.
+        let subject: ChatControllerSubject = .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)
+        
+        switch destination {
+        case let .forumTopic(peerId, threadId):
+            let keepStack: NavigateToChatKeepStack
+            switch navigation {
+            case .push:
+                keepStack = .default
+            case .returnToExisting:
+                keepStack = .never
+            }
+            let _ = self.context.sharedContext.navigateToForumThread(context: self.context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: keepStack, animated: true).startStandalone()
+        case let .replyThread(thread):
+            // The navigator goes back to an open copy of a forum or direct-messages thread, which
+            // pops the profile as well. It never matches any other thread (a Saved Messages
+            // sub-chat, a comment thread), so there a second copy is pushed, and its first
+            // purposeful action removes this profile and the copy the profile was opened from.
+            // Nothing else: the `.peer` cleanup below would also drop the channel's own chat
+            // further down the stack, and a filter on the controller type would drop unrelated
+            // profiles.
+            let openCopies = navigationController.viewControllers.filter { controller in
+                guard let controller = controller as? ChatController else {
+                    return false
+                }
+                return controller.chatLocation.peerId == thread.peerId && controller.chatLocation.threadId == thread.threadId
+            }
+            var purposefulAction: (() -> Void)?
+            if let openCopy = openCopies.last as? ChatController, thread.isForumPost || thread.isMonoforumPost {
+                // The navigator installs the action on the copy it returns to (the topmost one);
+                // keep that copy's own.
+                purposefulAction = openCopy.purposefulAction
+            } else if case .push = navigation {
+                var removedControllers: [Weak<UIViewController>] = openCopies.map { Weak($0) }
+                if let controller = self.controller {
+                    removedControllers.append(Weak(controller))
+                }
+                purposefulAction = {
+                    navigationController.setViewControllers(navigationController.viewControllers.filter { controller in
+                        return !removedControllers.contains(where: { $0.value === controller })
+                    }, animated: false)
+                }
+            }
+            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .replyThread(thread), subject: subject, keepStack: navigation == .push ? .always : .never, useExisting: true, purposefulAction: purposefulAction))
+        case let .peer(peer):
+            switch navigation {
+            case .push:
+                let currentPeerId = self.peerId
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, useExisting: false, purposefulAction: {
+                    var viewControllers = navigationController.viewControllers
+                    var indexesToRemove = Set<Int>()
+                    var keptCurrentChatController = false
+                    var index: Int = viewControllers.count - 1
+                    for controller in viewControllers.reversed() {
+                        if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
+                            if peerId == currentPeerId && !keptCurrentChatController {
+                                keptCurrentChatController = true
+                            } else {
+                                indexesToRemove.insert(index)
+                            }
+                        } else if controller is PeerInfoScreen {
+                            indexesToRemove.insert(index)
+                        }
+                        index -= 1
+                    }
+                    for i in indexesToRemove.sorted().reversed() {
+                        viewControllers.remove(at: i)
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
+                }))
+            case .returnToExisting:
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: subject, keepStack: .never, useExisting: true))
+            }
+        }
+    }
+    
+    /// "View in Chat" from the shared-media context menus.
+    func openSharedMediaMessageInChat(message: EngineRawMessage) {
+        guard let destination = self.sharedMediaMessageChatDestination(message: EngineMessage(message)) else {
+            return
+        }
+        self.openSharedMediaChat(destination: destination, messageId: message.id, navigation: .push)
+    }
+    
     func openChatWithClearedHistory(type: InteractiveHistoryClearingType) {
         guard let peer = self.data?.chatPeer, let navigationController = self.controller?.navigationController as? NavigationController else {
             return

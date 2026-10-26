@@ -1,15 +1,17 @@
 #import <LegacyComponents/TGFileUtils.h>
 
-#import <MobileCoreServices/MobileCoreServices.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 NSString *TGMimeTypeForFileExtension(NSString *fileExtension)
 {
-    return TGMimeTypeForFileUTI((__bridge_transfer NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)fileExtension, NULL));
+    if (fileExtension == nil)
+        return TGMimeTypeForFileUTI(nil);
+    return TGMimeTypeForFileUTI([UTType typeWithFilenameExtension:fileExtension].identifier);
 }
 
 NSString *TGMimeTypeForFileUTI(NSString *fileUTI)
 {
-    NSString *mimeType = (__bridge_transfer NSString *)UTTypeCopyPreferredTagWithClass((__bridge CFStringRef)fileUTI, kUTTagClassMIMEType);
+    NSString *mimeType = fileUTI != nil ? [UTType typeWithIdentifier:fileUTI].preferredMIMEType : nil;
     if (mimeType == nil)
         mimeType = @"application/octet-stream";
     return mimeType;

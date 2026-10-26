@@ -22,8 +22,9 @@ public enum DocumentTree {
             return .paragraph(id: p.id,
                               children: [.text(length: p.utf16Count, ref: .paragraph(p.id))])
         case .media(let img):
-            if img.kind == .audio {
-                // Audio is a caption-less atom — no caption paragraph node (nodeSize = 1 atom + 2 wrapper = 3).
+            if img.kind.isCaptionless {
+                // Audio and document are caption-less atoms — no caption paragraph node
+                // (nodeSize = 1 atom + 2 wrapper = 3).
                 return .mediaBlock(id: img.id, children: [.mediaAtom(id: img.id)])
             }
             return .mediaBlock(id: img.id, children: [
@@ -38,10 +39,19 @@ public enum DocumentTree {
                 })
             })
         case .code(let cb):
-            // A code block reuses the paragraph node shape (content + 2 tokens); only the ref
-            // distinguishes it so position mapping can identify it as code.
-            return .paragraph(id: cb.id,
-                              children: [.text(length: cb.utf16Count, ref: .code(cb.id))])
+            // A code block is a CONTAINER of two paragraph children: the always-present language line and
+            // the code text. `.blockQuote` is reused purely as a TOKEN SHAPE (`PositionMapping` /
+            // `PositionResolver` are generic over `children`/`nodeSize`/`isLeaf` and special-case only
+            // `.text`), exactly as `.pullQuote` reuses it for [text, author]. Canvas-side
+            // `isInsideBlockQuote(_:)` tests `box is BlockQuoteBox`, so this does NOT make code positions
+            // read as "inside a block quote".
+            // The language child is NEVER content-gated — unlike a quote author, which appears only once
+            // its quote has content. The field is always visible, so it is always on the axis, and the
+            // code text's offset therefore does not shift when a language is added or cleared.
+            return .blockQuote(id: cb.id, children: [
+                .paragraph(id: cb.id, children: [.text(length: cb.languageUTF16Count, ref: .codeLanguage(cb.id))]),
+                .paragraph(id: cb.id, children: [.text(length: cb.utf16Count, ref: .code(cb.id))]),
+            ])
         case .pullQuote(let pq):
             // Always a `.blockQuote` container so the pull text stays at nodeStart+1 whether the author is
             // shown or hidden. The trailing author paragraph is present only when the quote has content
@@ -66,6 +76,27 @@ public enum DocumentTree {
                 children.append(.paragraph(id: bq.id, children: [.text(length: bq.authorUTF16Count, ref: .quoteAuthor(bq.id))]))
             }
             return .blockQuote(id: bq.id, children: children)
+        case .details(let d):
+            // Title is ALWAYS a leading, editable paragraph child (unlike the content-gated block-quote author).
+            // Body children are on the editable axis only when expanded; when folded they are preserved in the
+            // Block model but OFF the position axis (the title stays a caret target either way).
+            var children: [DocNode] = [
+                .paragraph(id: d.id, children: [.text(length: d.titleUTF16Count, ref: .detailsTitle(d.id))]),
+            ]
+            if d.expanded {
+                children.append(contentsOf: d.children.map(node(for:)))
+            }
+            return .details(id: d.id, children: children)
+        case .buttonRow(let r):
+            // A text-free block. Reuses `.mediaBlock` + `.mediaAtom` exactly as a COLLAPSED block
+            // quote already does (see the `bq.collapsed` arm above and `BlockQuoteBox`'s comment):
+            // `PositionMapping` / `PositionResolver` are generic over `children`/`nodeSize`/`isLeaf`
+            // and special-case only `.text`, so a container of bare atoms needs no new DocNode case.
+            // One atom per pill gives the caret a stop per pill; an EMPTY row still gets one atom so
+            // it remains selectable and deletable (a zero-child container would have nodeSize 2 with
+            // no interior position to place a caret at).
+            let atomCount = max(1, r.buttons.count)
+            return .mediaBlock(id: r.id, children: Array(repeating: .mediaAtom(id: r.id), count: atomCount))
         }
     }
 

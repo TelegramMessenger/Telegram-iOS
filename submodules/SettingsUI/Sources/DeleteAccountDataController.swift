@@ -148,7 +148,7 @@ private func deleteAccountDataEntries(presentationData: PresentationData, mode: 
     
     switch mode {
     case .peers:
-        headerAnimation = "Delete1"
+        headerAnimation = "Files"
         headerTitle = presentationData.strings.DeleteAccount_CloudStorageTitle
         headerText = presentationData.strings.DeleteAccount_CloudStorageText
     case .groups:

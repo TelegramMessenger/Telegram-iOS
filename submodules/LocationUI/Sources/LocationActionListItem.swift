@@ -136,6 +136,10 @@ private func generateLiveLocationIcon(theme: PresentationTheme, type: LiveLocati
 }
 
 final class LocationActionListItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: nil, headerFamily: .locationAction))
+    }
+
     let presentationData: ItemListPresentationData
     let engine: TelegramEngine
     let title: String
@@ -158,11 +162,11 @@ final class LocationActionListItem: ListViewItem {
         self.highlighted = highlighted
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = LocationActionListItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem is LocationActionListItem || nextItem is LocationLiveListItem)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, [ListViewItemHeaderFamily.locationAction, .locationLive].contains(neighbors.next?.base(HeaderNeighborFacet.self)?.headerFamily))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -170,12 +174,12 @@ final class LocationActionListItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? LocationActionListItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem is LocationActionListItem || nextItem is LocationLiveListItem)
+                    let (nodeLayout, apply) = layout(self, params, [ListViewItemHeaderFamily.locationAction, .locationLive].contains(neighbors.next?.base(HeaderNeighborFacet.self)?.headerFamily))
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)
@@ -250,10 +254,10 @@ final class LocationActionListItemNode: ListViewItemNode {
         }
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, nextItem is LocationActionListItem)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, neighbors.next?.base(HeaderNeighborFacet.self)?.headerFamily == .locationAction)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
@@ -477,4 +481,8 @@ final class LocationActionListItemNode: ListViewItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let locationAction = ListViewItemHeaderFamily("locationAction")
 }

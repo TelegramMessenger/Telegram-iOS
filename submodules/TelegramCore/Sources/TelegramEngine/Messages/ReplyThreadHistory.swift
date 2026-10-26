@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 private struct DiscussionMessage {
     var messageId: MessageId
@@ -283,6 +283,7 @@ private class ReplyThreadHistoryContextImpl {
     deinit {
         self.initialStateDisposable?.dispose()
         self.holesDisposable?.dispose()
+        self.readStateDisposable?.dispose()
         self.readDisposable.dispose()
         self.updateInitialStateDisposable?.dispose()
     }

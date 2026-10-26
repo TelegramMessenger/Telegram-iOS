@@ -145,10 +145,10 @@ private final class CommunitiesScreenComponent: Component {
                 transition.setScale(view: navigationTitleView, scale: titleScale)
             }
 
-            if let controller = environment.controller(), let navigationBar = controller.navigationBar, let edgeEffectView = navigationBar.edgeEffectView {
+            if let controller = environment.controller(), let navigationBar = controller.navigationBar {
                 let edgeEffectAlphaDistance = max(1.0, self.titleTransformContainer.center.y - titleCenterY)
                 let edgeEffectAlpha = max(0.0, min(1.0, self.scrollView.contentOffset.y / edgeEffectAlphaDistance))
-                transition.setAlpha(view: edgeEffectView, alpha: edgeEffectAlpha)
+                navigationBar.setBackdropAlpha(edgeEffectAlpha, transition: transition.containedViewLayoutTransition)
             }
         }
 
@@ -313,6 +313,10 @@ private final class CommunitiesScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let sideInset: CGFloat = 16.0
             let sectionSpacing: CGFloat = 24.0
+            // iPhone Duo: the content keeps to the band beside the side strip and is centered in it. With equal
+            // side insets (every other device) the band is the full width, as before.
+            let bandMinX: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left : 0.0
+            let bandWidth: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? availableSize.width - environment.safeInsets.left - environment.safeInsets.right : availableSize.width
 
             self.backgroundColor = theme.list.blocksBackgroundColor
             self.scrollView.backgroundColor = theme.list.blocksBackgroundColor
@@ -337,7 +341,7 @@ private final class CommunitiesScreenComponent: Component {
                     }
                     let avatarFrame = CGRect(
                         origin: CGPoint(
-                            x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0),
+                            x: bandMinX + floorToScreenPixels((bandWidth - avatarSize.width) / 2.0),
                             y: contentHeight
                         ),
                         size: avatarSize
@@ -369,11 +373,11 @@ private final class CommunitiesScreenComponent: Component {
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 32.0, height: 44.0)
+                containerSize: CGSize(width: bandWidth - 32.0, height: 44.0)
             )
             let navigationTitleFrame = CGRect(
                 origin: CGPoint(
-                    x: floorToScreenPixels((availableSize.width - navigationTitleSize.width) / 2.0),
+                    x: bandMinX + floorToScreenPixels((bandWidth - navigationTitleSize.width) / 2.0),
                     y: contentHeight
                 ),
                 size: navigationTitleSize
@@ -432,7 +436,7 @@ private final class CommunitiesScreenComponent: Component {
                     lineSpacing: 0.25
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 48.0, height: 1000.0)
+                containerSize: CGSize(width: bandWidth - sideInset * 2.0 - 48.0, height: 1000.0)
             )
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
@@ -440,7 +444,7 @@ private final class CommunitiesScreenComponent: Component {
                 }
                 transition.setFrame(view: subtitleView, frame: CGRect(
                     origin: CGPoint(
-                        x: floorToScreenPixels((availableSize.width - subtitleSize.width) / 2.0),
+                        x: bandMinX + floorToScreenPixels((bandWidth - subtitleSize.width) / 2.0),
                         y: contentHeight
                     ),
                     size: subtitleSize
@@ -485,13 +489,13 @@ private final class CommunitiesScreenComponent: Component {
                         items: createItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: bandWidth - sideInset * 2.0, height: 1000.0)
                 )
                 if let createSectionView = self.createSection.view {
                     if createSectionView.superview == nil {
                         self.scrollView.addSubview(createSectionView)
                     }
-                    transition.setFrame(view: createSectionView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: createSectionSize))
+                    transition.setFrame(view: createSectionView, frame: CGRect(origin: CGPoint(x: bandMinX + sideInset, y: contentHeight), size: createSectionSize))
                     transition.setAlpha(view: createSectionView, alpha: 1.0)
                 }
                 contentHeight += createSectionSize.height + sectionSpacing
@@ -560,13 +564,13 @@ private final class CommunitiesScreenComponent: Component {
                         items: communityItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: bandWidth - sideInset * 2.0, height: 1000.0)
                 )
                 if let communitiesSectionView = self.communitiesSection.view {
                     if communitiesSectionView.superview == nil {
                         self.scrollView.addSubview(communitiesSectionView)
                     }
-                    transition.setFrame(view: communitiesSectionView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: communitiesSectionSize))
+                    transition.setFrame(view: communitiesSectionView, frame: CGRect(origin: CGPoint(x: bandMinX + sideInset, y: contentHeight), size: communitiesSectionSize))
                 }
                 contentHeight += communitiesSectionSize.height
             }

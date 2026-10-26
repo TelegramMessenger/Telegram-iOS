@@ -1,7 +1,7 @@
 
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 
 func telegramMediaWebpageAttributeFromApiWebpageAttribute(_ attribute: Api.WebPageAttribute) -> TelegramMediaWebpageAttribute? {

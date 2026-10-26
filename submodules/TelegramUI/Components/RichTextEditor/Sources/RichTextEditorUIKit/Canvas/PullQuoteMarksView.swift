@@ -11,8 +11,8 @@ import AppBundle
 /// asset is unavailable (SwiftPM/Demo/tests, or a failed load) a generated stub image stands in, so the image —
 /// and thus the mark geometry, which is sized from `UIImage.size` — is never nil.
 @available(iOS 13.0, *)
-final class PullQuoteMarksView: UIView {
-    var accentColor: UIColor = .systemBlue { didSet { for (o, c) in pool { o.tintColor = accentColor; c.tintColor = accentColor } } }
+public final class PullQuoteMarksView: UIView {
+    public var accentColor: UIColor = .systemBlue { didSet { for (o, c) in pool { o.tintColor = accentColor; c.tintColor = accentColor } } }
     private var pool: [(open: UIImageView, close: UIImageView)] = []
 
     /// Fixed size of the generated stub mark (matches the shipped `RichText/QuoteOpen`/`QuoteClose` assets),
@@ -46,19 +46,19 @@ final class PullQuoteMarksView: UIView {
     /// Natural point size (`UIImage.size`) of each mark asset — the source of truth for the mark frame
     /// dimensions in `pullQuoteMarkRects()`. Always available (a generated stub stands in where the bundled
     /// asset is not).
-    static var openImageNaturalSize: CGSize { openImage.size }
-    static var closeImageNaturalSize: CGSize { closeImage.size }
+    public static var openImageNaturalSize: CGSize { openImage.size }
+    public static var closeImageNaturalSize: CGSize { closeImage.size }
 
-    override init(frame: CGRect) {
+    public override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear
         isOpaque = false
         isUserInteractionEnabled = false   // decorative — never intercept touches
     }
-    required init?(coder: NSCoder) { fatalError("init(coder:) not used") }
+    public required init?(coder: NSCoder) { fatalError("init(coder:) not used") }
 
     /// Reconciles two image views per pill. Extra pooled views are hidden.
-    func sync(marks: [(open: CGRect, close: CGRect)]) {
+    public func sync(marks: [(open: CGRect, close: CGRect)]) {
         for (i, m) in marks.enumerated() {
             let pair = i < pool.count ? pool[i] : {
                 let o = UIImageView(); let c = UIImageView()

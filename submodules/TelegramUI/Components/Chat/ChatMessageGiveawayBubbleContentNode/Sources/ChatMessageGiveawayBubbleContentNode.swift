@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -76,13 +77,15 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
     }
     
     private var currentProgressDisposable: Disposable?
+    private let animationFetchDisposable = MetaDisposable()
+    private var currentAnimationSourceId: String?
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.alpha = 0.75
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
         
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.prizeTitleNode = TextNode()
@@ -110,7 +113,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         self.buttonNode = ChatMessageAttachedContentButtonNode()
         self.channelButtons = PeerButtonsStackNode()
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.addSubnode(self.prizeTitleNode)
         self.addSubnode(self.prizeTextNode)
@@ -165,6 +168,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
     
     deinit {
         self.currentProgressDisposable?.dispose()
+        self.animationFetchDisposable.dispose()
     }
 
     override public func didLoad() {
@@ -230,7 +234,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 
         let currentItem = self.item
         
-        return { item, layoutConstants, _, _, constrainedSize, _ in
+        return { [weak self] item, layoutConstants, _, _, constrainedSize, _ in
             var giveaway: TelegramMediaGiveaway?
             var giveawayResults: TelegramMediaGiveawayResults?
             for media in item.message.media {
@@ -483,7 +487,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             let hideHeaders = item.message.forwardInfo == nil
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: hideHeaders, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, hidesHeaders: hideHeaders)
             
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let sideInsets = layoutConstants.text.bubbleInsets.right * 2.0
                 let maxTextWidth = min(200.0, max(1.0, constrainedSize.width - 7.0 - sideInsets))
                 
@@ -596,7 +600,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 
                 let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
                 
-                let animationName: String
+                let animationFile: TelegramMediaFile?
+                let animationName: String?
                 var months: Int32 = 0
                 if let giveaway {
                     switch giveaway.prize {
@@ -612,18 +617,20 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                         }
                     }
                 }
-                if let _ = giveaway {
+                if giveaway != nil {
+                    let premiumGiftMonths: Int32
                     switch months {
                     case 12:
-                        animationName = "Gift12"
+                        premiumGiftMonths = 12
                     case 6:
-                        animationName = "Gift6"
-                    case 3:
-                        animationName = "Gift3"
+                        premiumGiftMonths = 6
                     default:
-                        animationName = "Gift3"
+                        premiumGiftMonths = 3
                     }
+                    animationFile = item.associatedData.premiumGiftStickers[premiumGiftMonths]?.file._parse()
+                    animationName = nil
                 } else {
+                    animationFile = nil
                     animationName = "Celebrate"
                 }
                 
@@ -661,7 +668,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
-                return (contentWidth, { boundingWidth in
+                return (contentWidth, { [weak self] boundingWidth in
                     let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, 33.0)
                     let buttonSpacing: CGFloat = 4.0
                     
@@ -704,7 +711,28 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                                     animationNode.displaysAsynchronously = false
                                     animationNode.forceSynchronous = true
                                 }
-                                strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
+                            }
+
+                            let animationSourceId: String?
+                            if let animationFile {
+                                animationSourceId = "premium:\(animationFile.resource.id.stringRepresentation)"
+                            } else if let animationName {
+                                animationSourceId = "local:\(animationName)"
+                            } else {
+                                animationSourceId = nil
+                            }
+                            strongSelf.animationNode.isHidden = animationSourceId == nil
+
+                            if strongSelf.currentAnimationSourceId != animationSourceId {
+                                strongSelf.currentAnimationSourceId = animationSourceId
+                                strongSelf.animationFetchDisposable.set(nil)
+
+                                if let animationFile {
+                                    strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: animationFile.resource, isVideo: animationFile.mimeType == "video/webm"), width: 384, height: 384, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
+                                    strongSelf.animationFetchDisposable.set(freeMediaFileResourceInteractiveFetched(postbox: item.context.account.postbox, userLocation: .other, fileReference: .stickerPack(stickerPack: .premiumGifts, media: animationFile), resource: animationFile.resource).start())
+                                } else if let animationName {
+                                    strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
+                                }
                             }
                             strongSelf.item = item
                             strongSelf.giveaway = giveaway
@@ -1047,7 +1075,7 @@ private final class PeerButtonsStackNode: ASDisplayNode {
                     buttonLayoutsAndApply.append(buttonApply(maxWidth, displayAsynchronously))
                 }
                 
-                return (CGSize(width: maxWidth, height: max(0, originY - verticalButtonSpacing)), {
+                return (CGSize(width: maxWidth, height: max(0, originY - verticalButtonSpacing)), { [targetNode] in
                     targetNode.buttonNodes = buttonNodes
                     
                     for i in 0 ..< buttonNodes.count {

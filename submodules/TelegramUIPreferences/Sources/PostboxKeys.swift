@@ -9,11 +9,18 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case mediaAutoSaveSettings = 20
     case ageVerificationState = 21
     case textProcessingEditingState = 22
+    case walletState = 23
+    case qrStudioLook = 24
+    case qrStudioPeerLook = 25
+    // TSupport keys live far above upstream's sequential range so upstream's own additions
+    // never collide with them on a merge (they first used 23/24, which upstream later
+    // assigned to walletState/qrStudioLook). Same convention as
+    // `Namespaces.CachedItemCollection.supportPeerInfo`.
     // TSupport: persisted per-account "my template language" preference (D35). Support
     // accounts only; unused (never read or written) for regular accounts.
-    case supportTemplateSettings = 23
+    case supportTemplateSettings = 120
     // TSupport: local-only User Templates collection (D33, Round B). Support accounts only.
-    case supportUserTemplates = 24
+    case supportUserTemplates = 121
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -23,9 +30,18 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let widgetSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.widgetSettings.rawValue)
     public static let mediaAutoSaveSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.mediaAutoSaveSettings.rawValue)
     public static let ageVerificationState: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.ageVerificationState.rawValue)
+    public static let walletState: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.walletState.rawValue)
+    public static let qrStudioLook: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.qrStudioLook.rawValue)
     public static let supportTemplateSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.supportTemplateSettings.rawValue)
     public static let supportUserTemplates: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.supportUserTemplates.rawValue)
     
+    public static func qrStudioPeerLook(peerId: EnginePeer.Id) -> EngineDataBuffer {
+        let key = EngineDataBuffer(length: 4 + 8)
+        key.setInt32(0, value: ApplicationSpecificPreferencesKeyValues.qrStudioPeerLook.rawValue)
+        key.setInt64(4, value: peerId.toInt64())
+        return key
+    }
+
     public static func textProcessingEditingState(peerId: EnginePeer.Id) -> EngineDataBuffer {
         let key = EngineDataBuffer(length: 4 + 8)
         key.setInt32(0, value: ApplicationSpecificPreferencesKeyValues.textProcessingEditingState.rawValue)
@@ -102,8 +118,10 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case webAppPermissionsState = 14
     case richTextArticleDrafts = 15
     // TSupport: one entry per language, holding that language's parsed official templates
-    // (D32). Support accounts only.
-    case supportTemplateCache = 16
+    // (D32). Support accounts only. Far above upstream's sequential range (it was 16, upstream's
+    // next free value). Resolves to collection id 64 + 55 = 119, clear of the core
+    // `supportPeerInfo` id 120 (= 64 + 56).
+    case supportTemplateCache = 55
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {

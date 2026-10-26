@@ -8,6 +8,28 @@ import ChatControllerInteraction
 import ChatHistoryEntry
 import ChatMessageBubbleItemNode
 
+/// The list index (newest first, as `ListViewScrollToItem` counts) of the entry that is, or whose album
+/// contains, `messageId`.
+func chatHistoryListIndex(ofMessageId messageId: EngineMessage.Id, in view: ChatHistoryView) -> Int? {
+    var index = view.filteredEntries.count - 1
+    for entry in view.filteredEntries {
+        switch entry {
+        case let .MessageEntry(message, _, _, _, _, _):
+            if message.id == messageId {
+                return index
+            }
+        case let .MessageGroupEntry(_, messages, _):
+            if messages.contains(where: { $0.0.id == messageId }) {
+                return index
+            }
+        default:
+            break
+        }
+        index -= 1
+    }
+    return nil
+}
+
 func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, source: ChatHistoryListSource, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, scrollAnimationCurve: ListViewAnimationCurve?, initialData: EngineInitialMessageHistoryData?, keyboardButtonsMessage: EngineRawMessage?, cachedData: EngineCachedPeerData?, cachedDataMessages: [EngineMessage.Id: EngineRawMessage]?, readStateData: [EnginePeer.Id: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool, messageTransitionNode: ChatMessageTransitionNodeImpl?, allUpdated: Bool) -> ChatHistoryViewTransition {
     var mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
     let allUpdated = allUpdated || (fromView?.associatedData != toView.associatedData)
@@ -83,6 +105,8 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     var maxAnimatedInsertionIndex = -1
     var stationaryItemRange: (Int, Int)?
     var scrollToItem: ListViewScrollToItem?
+    var pinnedAnchor: EngineMessage.Index?
+    var keepInPlaceAnchor: EngineMessage.Index?
     
     switch reason {
     case let .Initial(fadeIn):
@@ -141,7 +165,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     let curve: ListViewAnimationCurve = scrollAnimationCurve ?? .Default(duration: nil)
     
     var isSavedMusic = false
-    if case let .custom(_, _, _, isSavedMusicValue, _, _) = source {
+    if case let .custom(_, _, _, isSavedMusicValue, _, _, _) = source {
         isSavedMusic = isSavedMusicValue
     }
     
@@ -213,6 +237,17 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         index += 1
                     }
                 }
+            case let .pinnedAnchor(anchorIndex):
+                // The cached post shown before its surroundings load: at the bottom of the visible
+                // area (list top). A post taller than the area is re-aligned by the history node once
+                // its height is known.
+                pinnedAnchor = anchorIndex
+                if let listIndex = chatHistoryListIndex(ofMessageId: anchorIndex.id, in: toView) {
+                    scrollToItem = ListViewScrollToItem(index: listIndex, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
+                }
+            case let .keepInPlace(anchorIndex):
+                // Resolved by the history node from the post's current frame, which only it can read.
+                keepInPlaceAnchor = anchorIndex
             case let .index(scrollSubject, position, directionHint, animated, highlight, displayLink, _):
                 let scrollIndex = scrollSubject
                 var position = position
@@ -282,9 +317,43 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         }
     }
     
+    if let scrollPosition, let currentScrollToItem = scrollToItem {
+        // A scroll to a message holds it where it lands until the next touch or scroll (the CoreList
+        // backend honours this; ListViewImpl ignores it). Scrolls to either end of the history do not,
+        // and keep-in-place issues its own scroll (or none) in the history node. The unread line holds
+        // nothing when the chat opens on its newest messages: the chat is then at the bottom, and a
+        // message arriving (or one under the line growing) has to push it up as it would anywhere else.
+        let hold: ListViewScrollHold
+        switch scrollPosition {
+        case .unread:
+            hold = .yieldingToNewestEdge
+        case .positionRestoration, .pinnedAnchor:
+            hold = .always
+        case let .index(subject, _, _, _, _, _, _):
+            if case .message = subject.index {
+                hold = .always
+            } else {
+                hold = .none
+            }
+        case .keepInPlace:
+            hold = .none
+        }
+        scrollToItem = currentScrollToItem.withHold(hold)
+    }
+    
     if updatedMessageSelection {
         options.insert(.Synchronous)
     }
     
-    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, scrolledToSomeIndex: scrolledToSomeIndex || scrolledToIndex != nil, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators)
+    if keepInPlaceAnchor != nil {
+        // The surroundings of a pinned cached post land in place without animation; the shimmer's crossfade is the only motion.
+        options.remove(.AnimateInsertion)
+        options.remove(.AnimateAlpha)
+        options.remove(.AnimateCrossfade)
+        options.remove(.AnimateTopItemPosition)
+        options.remove(.RequestItemInsertionAnimations)
+        animateIn = false
+    }
+    
+    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, scrolledToSomeIndex: scrolledToSomeIndex || scrolledToIndex != nil, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators, pinnedAnchor: pinnedAnchor, keepInPlaceAnchor: keepInPlaceAnchor)
 }

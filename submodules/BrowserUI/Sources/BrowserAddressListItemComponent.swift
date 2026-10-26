@@ -169,7 +169,9 @@ final class BrowserAddressListItemComponent: Component {
             let iconSize = CGSize(width: 40.0, height: 40.0)
             let height: CGFloat = 60.0
             let leftInset: CGFloat = component.insets.left + 11.0 + iconSize.width + 11.0
-            let rightInset: CGFloat = 16.0
+            // Beside iPhone Duo's side strip (the side insets differ) the text stops at the strip; equal insets keep
+            // the old full-width text.
+            let rightInset: CGFloat = 16.0 + (component.insets.left != component.insets.right ? component.insets.right : 0.0)
             let titleSpacing: CGFloat = 2.0
             let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
                 

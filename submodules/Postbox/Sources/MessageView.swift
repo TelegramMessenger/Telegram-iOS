@@ -13,6 +13,7 @@ final class MutableMessageView {
     
     func replay(postbox: PostboxImpl, operations: [MessageHistoryOperation], updatedMedia: [MediaId: Media?]) -> Bool {
         var updated = false
+        var reloadForMedia = false
         for operation in operations {
             switch operation {
                 case let .Remove(indices):
@@ -22,6 +23,7 @@ final class MutableMessageView {
                             if index == messageIndex {
                                 self.message = nil
                                 updated = true
+                                reloadForMedia = false
                                 break
                             }
                         }
@@ -31,14 +33,29 @@ final class MutableMessageView {
                         self.message = postbox.renderIntermediateMessage(message)
                         self.stableId = message.stableId
                         updated = true
+                        reloadForMedia = false
                     }
-                case .UpdateEmbeddedMedia:
-                    break
+                case let .UpdateEmbeddedMedia(index, _):
+                    // By id only: the timestamp can have moved without this view following it.
+                    if let message = self.message, message.id == index.id {
+                        reloadForMedia = true
+                    }
                 case .UpdateTimestamp:
                     break
                 default:
                     break
             }
+        }
+        // Media shared by several messages lives in a record of its own; updating it
+        // rewrites that record and reports the id here, with no history operation.
+        if !reloadForMedia, let message = self.message, message.referencesAnyMedia(in: updatedMedia) {
+            reloadForMedia = true
+        }
+        // Re-read the message this view currently holds (it may have followed an id
+        // change through its stable id); the table already has the new media.
+        if reloadForMedia, let current = self.message, let reloaded = postbox.getMessage(current.id) {
+            self.message = reloaded
+            updated = true
         }
         return updated
     }

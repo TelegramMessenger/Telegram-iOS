@@ -19,15 +19,29 @@ public struct RichTextEditorPlaceholders: Equatable {
     public var blockQuote: String
     /// Shown in an empty code block.
     public var codeBlock: String
+    /// Shown on a code block's EMPTY language line (the line is always visible).
+    public var codeLanguage: String
+    /// Shown in an empty detail-block title (summary) line.
+    public var detailsTitle: String
+    /// Shown on an empty author line in a block quote or pull quote.
+    public var quoteAuthor: String
+    /// Shown centered below media when its caption is empty.
+    public var caption: String
 
     public init(body: String, listEnd: String, listOutdent: String, pullQuote: String = "Type a quote here",
-                blockQuote: String = "Type a quote here", codeBlock: String = "Type code here") {
+                blockQuote: String = "Type a quote here", codeBlock: String = "Type code here",
+                codeLanguage: String = "Language",
+                detailsTitle: String = "Title", quoteAuthor: String = "Add author", caption: String = "Add caption") {
         self.body = body
         self.listEnd = listEnd
         self.listOutdent = listOutdent
         self.pullQuote = pullQuote
         self.blockQuote = blockQuote
         self.codeBlock = codeBlock
+        self.codeLanguage = codeLanguage
+        self.detailsTitle = detailsTitle
+        self.quoteAuthor = quoteAuthor
+        self.caption = caption
     }
 
     public static let `default` = RichTextEditorPlaceholders(
@@ -36,7 +50,11 @@ public struct RichTextEditorPlaceholders: Equatable {
         listOutdent: "Press return to outdent",
         pullQuote: "Type a quote here",
         blockQuote: "Type a quote here",
-        codeBlock: "Type code here"
+        codeBlock: "Type code here",
+        codeLanguage: "Language",
+        detailsTitle: "Title",
+        quoteAuthor: "Add author",
+        caption: "Add caption"
     )
 }
 
@@ -134,11 +152,37 @@ final class BlockBox {
                                  width: max(width, 1))
     }
 
+    /// Mirrors `InstantPageBuilder`'s dispatch order exactly: a standalone formula wins over the list
+    /// check, which wins over the style switch.
+    ///
+    /// The formula test is the layout-side equivalent of `ParagraphBlock.standaloneFormulaLatex` (which
+    /// is the definition — see it in Core) rather than a call to it: reaching the model would mean
+    /// `currentParagraph()`, which re-derives every run from the attributed string, and this is read on
+    /// every layout pass for every block.
+    var spacingKind: RichTextBlockSpacingKind {
+        if style == .body, listMembership == nil, layout.length == 1,
+           layout.attributedString.attribute(.attachment, at: 0, effectiveRange: nil) is FormulaTextAttachment {
+            return .formula
+        }
+        if listMembership != nil { return .list }
+        switch style {
+        case .heading1, .heading2, .heading3, .heading4, .heading5, .heading6: return .heading
+        case .body, .caption: return .paragraph
+        case .pullQuote: return .pullQuote
+        }
+    }
+
+    /// The text height without the stack-owned inter-block insets.
+    func measuredContentHeight(forWidth width: CGFloat) -> CGFloat {
+        max(layout.correctedBoundingHeight(forWidth: max(width - textInset.x * 2, 1)), emptyLineHeight)
+    }
+
     var length: Int { layout.length }
     var textRef: TextNodeRef { .paragraph(id) }
-    var height: CGFloat { max(layout.boundingHeight, emptyLineHeight) + topInset + bottomInset }
+    var height: CGFloat { max(layout.correctedBoundingHeight, emptyLineHeight) + topInset + bottomInset }
     func measuredHeight(forWidth width: CGFloat) -> CGFloat {
-        max(layout.boundingHeight(forWidth: max(width - textInset.x * 2, 1)), emptyLineHeight) + topInset + bottomInset
+        max(layout.correctedBoundingHeight(forWidth: max(width - textInset.x * 2, 1)), emptyLineHeight)
+            + topInset + bottomInset
     }
     var textOrigin: CGPoint { CGPoint(x: frame.minX + textInset.x, y: frame.minY + topInset) }
 
@@ -150,10 +194,11 @@ final class BlockBox {
         guard layout.length == 0 else { return 0 }
         let font = (mapper.attributes(for: CharacterAttributes(), style: style)[.font] as? UIFont)
             ?? UIFont.preferredFont(forTextStyle: .body)
-        let ps = mapper.styleSheet.paragraphStyle(for: style, attributes: paragraphAttributes, list: listMembership,
-                                                   baseWritingDirection: writingDirectionOverride ?? mapper.baseWritingDirection)
-        let mult = ps.lineHeightMultiple > 0 ? ps.lineHeightMultiple : 1
-        return font.lineHeight * mult
+        // V2's height for a single line: `ascender + |descender|`, not one pitch. Keeping these in
+        // agreement is what stops a document changing height when its first character is typed.
+        let sheet = mapper.styleSheet
+        return RichTextRenderMetrics.textHeight(font, factor: sheet.metrics.spec(for: style).lineSpacingFactor,
+                                                lineCount: 1)
     }
 
     /// Leading text indent (the paragraph style's `firstLineHeadIndent` — the list-marker spacing or
@@ -177,14 +222,11 @@ final class BlockBox {
     /// is typed (an empty TextKit 2 layout has no fragment to measure).
     func listMarkerBaselineFromTop(markerFont: UIFont) -> CGFloat {
         if let baseline = layout.firstLineBaselineFromTop { return baseline }
-        let ps = mapper.styleSheet.paragraphStyle(for: style, attributes: paragraphAttributes, list: listMembership,
-                                                   baseWritingDirection: writingDirectionOverride ?? mapper.baseWritingDirection)
-        let mult = ps.lineHeightMultiple > 0 ? ps.lineHeightMultiple : 1
-        // Mirror the render centering (`BlockLayout.centeringDelta`): TextKit dumps the multiple's extra
-        // leading ABOVE the glyphs, then centering raises them by HALF of it. Using the full extra leading
-        // here would put the empty item's marker ~1pt BELOW a non-empty item's (whose baseline comes from
-        // the already-centered `firstLineBaselineFromTop`).
-        return markerFont.ascender + (mult - 1) * markerFont.lineHeight / 2
+        // An empty paragraph lays out no fragment, so the baseline is computed analytically. Under the
+        // pinned-box model that is simply V2's first-baseline position — the font's ascender — which is
+        // exactly what `firstLineBaselineFromTop` returns once a glyph exists. Keeping the two in
+        // agreement is what stops an empty item's marker jumping when the first glyph is typed.
+        return RichTextRenderMetrics.firstBaselineFromTop(markerFont)
     }
 
     /// This box's list-marker draw (label + canvas-coordinate origin + font), or nil when it has no
@@ -235,13 +277,10 @@ final class BlockBox {
     func placeholderDraw() -> (text: String, origin: CGPoint, font: UIFont)? {
         guard isTopLevelBlock, layout.length == 0, let text = placeholderText else { return nil }
         let font = mapper.styleSheet.font(for: style, attributes: .plain)
-        let ps = mapper.styleSheet.paragraphStyle(for: style, attributes: paragraphAttributes, list: listMembership,
-                                                   baseWritingDirection: writingDirectionOverride ?? mapper.baseWritingDirection)
-        let mult = ps.lineHeightMultiple > 0 ? ps.lineHeightMultiple : 1
-        // Half the extra leading — the render-centering shift (see `listMarkerBaselineFromTop` /
-        // `BlockLayout.centeringDelta`) — so the hint sits where centered typed text will appear and stays
-        // aligned with the marker, rather than ~1pt low.
-        let baselineShift = (mult - 1) * font.lineHeight / 2
+        // No baseline shift: under the pinned-box model the first baseline is the font's ascender, which
+        // is where a natural draw at `textOrigin` already puts it. (Under the previous
+        // `lineHeightMultiple` model this needed half the extra leading.)
+        let baselineShift: CGFloat = 0
         let origin = CGPoint(x: textOrigin.x + emptyLineLeadingIndent, y: textOrigin.y + baselineShift)
         return (text, origin, font)
     }

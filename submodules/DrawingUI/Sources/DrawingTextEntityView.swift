@@ -6,7 +6,7 @@ import AccountContext
 import TextFormat
 import EmojiTextAttachmentView
 import MediaEditor
-import MobileCoreServices
+import UniformTypeIdentifiers
 import ImageTransparency
 
 extension DrawingTextEntity.Alignment {
@@ -107,22 +107,22 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         var animatedImageData: Data?
         for item in pasteboard.items {
             print(item.keys)
-            if let data = item["public.heics"] as? Data, let image = item[kUTTypePNG as String] as? UIImage {
+            if let data = item["public.heics"] as? Data, let image = item[UTType.png.identifier] as? UIImage {
                 animatedImageData = data
                 images.append(image)
             } else if let imageData = item["com.apple.png-sticker"] as? Data, let image = UIImage(data: imageData) {
                 images.append(image)
                 isPNG = true
                 isMemoji = true
-            } else if let image = item[kUTTypePNG as String] as? UIImage {
+            } else if let image = item[UTType.png.identifier] as? UIImage {
                 images.append(image)
                 isPNG = true
             } else if let image = item["com.apple.uikit.image"] as? UIImage {
                 images.append(image)
                 isPNG = true
-            } else if let image = item[kUTTypeJPEG as String] as? UIImage {
+            } else if let image = item[UTType.jpeg.identifier] as? UIImage {
                 images.append(image)
-            } else if let image = item[kUTTypeGIF as String] as? UIImage {
+            } else if let image = item[UTType.gif.identifier] as? UIImage {
                 images.append(image)
             }
         }

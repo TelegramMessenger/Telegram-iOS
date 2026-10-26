@@ -213,13 +213,10 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         var entries: [VerticalListContextResultsChatInputContextPanelEntry] = []
         var index = 0
         var resultIds = Set<VerticalChatContextResultsEntryStableId>()
-        if let switchPeer = results.switchPeer {
-            let entry: VerticalListContextResultsChatInputContextPanelEntry = .action(self.theme, switchPeer.text)
-            entries.append(entry)
-            resultIds.insert(entry.stableId)
-        }
-        if let webView = results.webView {
-            let entry: VerticalListContextResultsChatInputContextPanelEntry = .action(self.theme, webView.text)
+        // One row: a response that carries both switch_pm and switch_webview still has a single button,
+        // and there is only one `.action` stable id for it.
+        if let button = ChatContextResultsButton(results: results) {
+            let entry: VerticalListContextResultsChatInputContextPanelEntry = .action(self.theme, button.title)
             entries.append(entry)
             resultIds.insert(entry.stableId)
         }
@@ -240,17 +237,10 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private func prepareTransition(from: [VerticalListContextResultsChatInputContextPanelEntry]?, to: [VerticalListContextResultsChatInputContextPanelEntry], results: ChatContextResultCollection) {
         let firstTime = self.currentEntries == nil
         let transition = preparedTransition(from: from ?? [], to: to, engine: self.context.engine, actionSelected: { [weak self] in
-            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                if let switchPeer = results.switchPeer {
-                    interfaceInteraction.botSwitchChatWithPayload(results.botId, switchPeer.startParam)
-                } else if let webView = results.webView {
-                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: results.botId))
-                    |> deliverOnMainQueue).startStandalone(next: { bot in
-                        if let bot {
-                            interfaceInteraction.openWebView(webView.text, webView.url, true, .inline(bot: bot))
-                        }
-                    })
-                }
+            // Resolved at tap time: an `.action` entry compares only its title, so a later answer with the same
+            // button text keeps this closure, and the captured `results` would carry the old payload or bot.
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let results = strongSelf.currentProcessedResults {
+                ChatContextResultsButton(results: results)?.activate(context: strongSelf.context, interfaceInteraction: interfaceInteraction, botId: results.botId)
             }
         }, resultSelected: { [weak self] result, node, rect in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
@@ -286,7 +276,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: validLayout.0, bottomInset: validLayout.3, hasSwitchPeer: self.currentExternalResults?.switchPeer != nil || self.currentExternalResults?.webView != nil)
+            insets.top = topInsetForLayout(size: validLayout.0, bottomInset: validLayout.3, hasSwitchPeer: self.currentExternalResults.flatMap(ChatContextResultsButton.init(results:)) != nil)
             insets.left = validLayout.1
             insets.right = validLayout.2
             insets.bottom = validLayout.3
@@ -337,7 +327,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         )
         
         var insets = UIEdgeInsets()
-        insets.top = self.topInsetForLayout(size: size, bottomInset: bottomInset, hasSwitchPeer: self.currentExternalResults?.switchPeer != nil || self.currentExternalResults?.webView != nil)
+        insets.top = self.topInsetForLayout(size: size, bottomInset: bottomInset, hasSwitchPeer: self.currentExternalResults.flatMap(ChatContextResultsButton.init(results:)) != nil)
         insets.left = leftInset
         insets.right = rightInset
         insets.bottom = bottomInset

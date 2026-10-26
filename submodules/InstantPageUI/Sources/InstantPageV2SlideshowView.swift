@@ -9,8 +9,9 @@ import TelegramPresentationData
 // A paged carousel for an `InstantPageBlock.slideshow`. Ports V1's InstantPageSlideshowNode /
 // InstantPageSlideshowPagerNode (InstantPageSlideshowItemNode.swift), simplified to create all pages
 // eagerly (slideshows are short; this avoids V1's central±1 index bookkeeping and makes the gallery
-// transition source available for every page). Each image page hosts an `InstantPageImageNode` exactly
-// like the static media views; non-image medias render an empty page (matches V1).
+// transition source available for every page). Each photo/video page hosts an `InstantPageImageNode`
+// exactly like the static media views (a video renders as a poster + play badge, tap opens the gallery);
+// any other media kind renders an empty page.
 final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollViewDelegate {
     private(set) var item: InstantPageV2SlideshowItem
     var itemFrame: CGRect { return self.item.frame }
@@ -82,7 +83,14 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
             let pageView = UIView()
             pageView.clipsToBounds = true
             pageView.backgroundColor = .black   // black letterbox behind each page, not the media placeholder color
-            if case .image = media.media {
+            // Both photos (`.image`) and videos (`.file`) get a page: `InstantPageImageNode` renders a
+            // video `.file` as a poster + play badge (tap opens the gallery), like a collage video cell.
+            let isRenderableMedia: Bool
+            switch media.media {
+            case .image, .file: isRenderableMedia = true
+            default: isRenderableMedia = false
+            }
+            if isRenderableMedia {
                 let node = makeMediaWrapper(
                     frame: CGRect(origin: .zero, size: self.item.frame.size),
                     media: media,
@@ -92,13 +100,14 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
                     theme: self.theme,
                     openMedia: openMedia,
                     longPressMedia: { _ in },
-                    emptyColor: .black
+                    emptyColor: .black,
+                    fit: true   // letterbox each page: one shared block frame (tallest media) would otherwise crop shorter items
                 )
                 pageView.addSubview(node.view)
                 self.pageImageNodes.append(node)
             }
-            // Non-image medias (none in practice — layoutSlideshow filters to images) get an empty page
-            // to keep page indices aligned with the page control.
+            // Any other media kind (none in practice — layoutSlideshow emits only image/video) gets an
+            // empty page to keep page indices aligned with the page control.
             self.scrollView.addSubview(pageView)
             self.pageViews.append(pageView)
         }
@@ -169,6 +178,20 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
             let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
             for node in self.pageImageNodes {
                 node.update(strings: strings, theme: theme)
+                node.captureProtected = renderContext.captureProtected
+                // The reuse check above compares only the INDEX list, so a page keeps its node while
+                // its media value moves underneath it. The node's `media` is what a tap hands to the
+                // gallery's lookup, so it has to be re-pointed or tap-to-open silently stops working
+                // (see `InstantPageImageNode.updateMediaValue`). Matched by index rather than by
+                // position: a non-renderable media contributes a page but no node.
+                guard let updated = self.item.medias.first(where: { $0.index == node.media.index }), updated != node.media else {
+                    continue
+                }
+                if updated.media.id != node.media.media.id {
+                    node.updateInteractiveMediaBinding(sourceLocation: renderContext.sourceLocation, media: updated, imageReferenceForMedia: renderContext.imageReference, fileReferenceForMedia: renderContext.fileReference)
+                } else {
+                    node.updateMediaValue(updated)
+                }
             }
         }
         self.setNeedsLayout()

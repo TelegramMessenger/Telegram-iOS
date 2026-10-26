@@ -163,14 +163,7 @@ final class CommandMenuChatInputContextPanelNode: ChatInputContextPanelNode {
                             }
                         }
                         if let range = commandQueryRange {
-                            let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
-                            
-                            let replacementText = command.command.text + " "
-                            inputText.replaceCharacters(in: range, with: replacementText)
-                            
-                            let selectionPosition = range.lowerBound + (replacementText as NSString).length
-                            
-                            return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
+                            return (textInputState.replacingFlatRange(range, with: command.command.text + " "), inputMode)
                         } else {
                             let inputText = NSMutableAttributedString(string: "/" + command.command.text + " ")
                             let selectionPosition = (inputText.string as NSString).length + 1

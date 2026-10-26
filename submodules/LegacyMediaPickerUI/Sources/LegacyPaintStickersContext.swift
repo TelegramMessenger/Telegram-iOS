@@ -235,7 +235,12 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                 }
             }))
         } else {
-            self.queue.async {
+            self.queue.async { [weak self] in
+                guard let self else {
+                    completion(nil)
+                    return
+                }
+
                 var image: CIImage?
                 if let cachedImage = self.cachedCIImage {
                     image = cachedImage
@@ -596,7 +601,7 @@ private final class LegacyMediaPickerSendActionMenuReferenceContentSource: Conte
         guard let sourceView = self.sourceView else {
             return nil
         }
-        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .top)
+        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top)
     }
 }
 

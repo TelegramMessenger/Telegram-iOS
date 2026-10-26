@@ -4,7 +4,6 @@ import UIKit
 import Display
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 import ContextUI
@@ -135,17 +134,17 @@ private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
 
 private final class VisualMediaItemInteraction {
-    let openMessage: (Message) -> Void
-    let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    let toggleSelection: (MessageId, Bool) -> Void
+    let openMessage: (EngineMessage) -> Void
+    let openMessageContextActions: (EngineMessage, ASDisplayNode, CGRect, ContextGesture?) -> Void
+    let toggleSelection: (EngineMessage.Id, Bool) -> Void
     
-    var hiddenMedia: [MessageId: [Media]] = [:]
-    var selectedMessageIds: Set<MessageId>?
+    var hiddenMedia: [EngineMessage.Id: [EngineMedia]] = [:]
+    var selectedMessageIds: Set<EngineMessage.Id>?
     
     init(
-        openMessage: @escaping (Message) -> Void,
-        openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
-        toggleSelection: @escaping (MessageId, Bool) -> Void
+        openMessage: @escaping (EngineMessage) -> Void,
+        openMessageContextActions: @escaping (EngineMessage, ASDisplayNode, CGRect, ContextGesture?) -> Void,
+        toggleSelection: @escaping (EngineMessage.Id, Bool) -> Void
     ) {
         self.openMessage = openMessage
         self.openMessageContextActions = openMessageContextActions
@@ -154,7 +153,7 @@ private final class VisualMediaItemInteraction {
 }
 
 private final class VisualMediaHoleAnchor: SparseItemGrid.HoleAnchor {
-    let messageId: MessageId
+    let messageId: EngineMessage.Id
     override var id: AnyHashable {
         return AnyHashable(self.messageId)
     }
@@ -169,7 +168,7 @@ private final class VisualMediaHoleAnchor: SparseItemGrid.HoleAnchor {
         return self.localMonthTimestamp
     }
 
-    init(index: Int, messageId: MessageId, localMonthTimestamp: Int32) {
+    init(index: Int, messageId: EngineMessage.Id, localMonthTimestamp: Int32) {
         self.indexValue = index
         self.messageId = messageId
         self.localMonthTimestamp = localMonthTimestamp
@@ -182,7 +181,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
         return self.indexValue
     }
     let localMonthTimestamp: Int32
-    let message: Message
+    let message: EngineMessage
 
     override var id: AnyHashable {
         return AnyHashable(self.message.stableId)
@@ -196,7 +195,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
         return VisualMediaHoleAnchor(index: self.index, messageId: self.message.id, localMonthTimestamp: self.localMonthTimestamp)
     }
     
-    init(index: Int, message: Message, localMonthTimestamp: Int32) {
+    init(index: Int, message: EngineMessage, localMonthTimestamp: Int32) {
         self.indexValue = index
         self.message = message
         self.localMonthTimestamp = localMonthTimestamp
@@ -558,7 +557,7 @@ private final class ItemView: UIView, SparseItemGridView {
             context: context,
             chatLocation: chatLocation,
             interaction: interaction,
-            message: item.message,
+            message: item.message._asMessage(),
             selection: isSelected.flatMap { isSelected in
                 return .selectable(selected: isSelected, num: nil)
             } ?? .none,
@@ -569,17 +568,17 @@ private final class ItemView: UIView, SparseItemGridView {
         let messageItemNode: ListViewItemNode
         if let current = self.messageItemNode {
             messageItemNode = current
-            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), neighbors: .none, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
                 current.contentSize = layout.contentSize
                 current.insets = layout.insets
 
-                apply(ListViewItemApply(isOnScreen: true))
+                apply(ListViewItemApply())
             })
         } else {
             var itemNode: ListViewItemNode?
-            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), synchronousLoads: false, neighbors: .none, completion: { node, apply in
                 itemNode = node
-                apply().1(ListViewItemApply(isOnScreen: true))
+                apply().1(ListViewItemApply())
             })
             messageItemNode = itemNode!
             self.messageItemNode = messageItemNode
@@ -601,11 +600,11 @@ private final class ItemView: UIView, SparseItemGridView {
 
     func update(size: CGSize, insets: UIEdgeInsets) {
         if let messageItem = self.messageItem, let messageItemNode = self.messageItemNode {
-            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), neighbors: .none, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
                 messageItemNode.contentSize = layout.contentSize
                 messageItemNode.insets = layout.insets
 
-                apply(ListViewItemApply(isOnScreen: true))
+                apply(ListViewItemApply())
             })
             
             messageItemNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -685,7 +684,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     var getShimmerColorsImpl: (() -> SparseItemGrid.ShimmerColors)?
     var updateShimmerLayersImpl: ((SparseItemGridDisplayItem) -> Void)?
     
-    var revealedSpoilerMessageIds = Set<MessageId>()
+    var revealedSpoilerMessageIds = Set<EngineMessage.Id>()
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
@@ -722,7 +721,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
             return image
         } else {
             let fakeFile = TelegramMediaFile(
-                fileId: MediaId(namespace: 0, id: 1),
+                fileId: EngineMedia.Id(namespace: 0, id: 1),
                 partialReference: nil,
                 resource: EmptyMediaResource(),
                 previewRepresentations: [],
@@ -733,10 +732,10 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 attributes: [.FileName(fileName: "file")],
                 alternativeRepresentations: []
             )
-            let fakeMessage = Message(
+            let fakeMessage = EngineMessage(
                 stableId: 1,
                 stableVersion: 1,
-                id: MessageId(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(1)), namespace: 0, id: 1),
+                id: EngineMessage.Id(peerId: EnginePeer.Id(namespace: EnginePeer.Id.Namespace._internalFromInt32Value(0), id: EnginePeer.Id.Id._internalFromInt64Value(1)), namespace: 0, id: 1),
                 globallyUniqueId: nil,
                 groupingKey: nil,
                 groupInfo: nil,
@@ -750,9 +749,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 author: nil,
                 text: "",
                 attributes: [],
-                media: [fakeFile],
-                peers: SimpleDictionary<PeerId, Peer>(),
-                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                media: [.file(fakeFile)],
+                peers: [:],
+                associatedMessages: [:],
                 associatedMessageIds: [],
                 associatedMedia: [:],
                 associatedThreadInfo: nil,
@@ -763,15 +762,15 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 context: self.context,
                 chatLocation: self.chatLocation,
                 interaction: self.listItemInteraction,
-                message: fakeMessage,
+                message: fakeMessage._asMessage(),
                 selection: .none,
                 displayHeader: false
             )
 
             var itemNode: ListViewItemNode?
-            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: 400.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: 400.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, neighbors: .none, completion: { node, apply in
                 itemNode = node
-                apply().1(ListViewItemApply(isOnScreen: true))
+                apply().1(ListViewItemApply())
             })
 
             guard let fileItemNode = itemNode as? ListMessageFileItemNode else {
@@ -891,29 +890,29 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     }
                 }
 
-                let message = item.message
+                let message = item.message._asMessage()
                 var hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !self.revealedSpoilerMessageIds.contains(message.id)
                 if message.isSensitiveContent(platform: "ios") {
                     hasSpoiler = true
                 }
                 layer.updateHasSpoiler(hasSpoiler: hasSpoiler)
                 
-                var selectedMedia: Media?
+                var selectedMedia: EngineMedia?
                 for media in message.effectiveMedia {
                     if let image = media as? TelegramMediaImage {
-                        selectedMedia = image
+                        selectedMedia = .image(image)
                         break
                     } else if let file = media as? TelegramMediaFile {
                         if let cover = file.videoCover {
-                            selectedMedia = cover
+                            selectedMedia = .image(cover)
                         } else {
-                            selectedMedia = file
+                            selectedMedia = .file(file)
                         }
                         break
                     }
                 }
 
-                if let selectedMedia = selectedMedia {
+                if let selectedMedia = selectedMedia?._asMedia() {
                     if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler, synchronous: synchronous == .full) {
                         if let image = result.image {
                             layer.setContents(image)
@@ -1071,7 +1070,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     }
 }
 
-private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> MessageTags {
+private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> EngineMessage.Tags {
     switch type {
     case .photoOrVideo:
         return .photoOrVideo
@@ -1122,7 +1121,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     }
     
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private let chatLocation: ChatLocation
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let chatControllerInteraction: ChatControllerInteraction
@@ -1183,7 +1182,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
 
-    private let stateTag: MessageTags
+    private let stateTag: EngineMessage.Tags
     private var storedStateDisposable: Disposable?
 
     private weak var currentGestureItem: SparseItemGridDisplayItem?
@@ -1191,7 +1190,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
-    public init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, contentType: ContentType, captureProtected: Bool, initialFocusMessageIndex: EngineMessage.Index?) {
+    public init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: EnginePeer.Id, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, contentType: ContentType, captureProtected: Bool, initialFocusMessageIndex: EngineMessage.Index?) {
         self.context = context
         self.peerId = peerId
         self.chatLocation = chatLocation
@@ -1330,10 +1329,10 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 }
                 strongSelf.chatControllerInteraction.toggleMessagesSelection([item.message.id], toggledValue)
             } else {
-                if item.message.isSensitiveContent(platform: "ios") {
+                if item.message._asMessage().isSensitiveContent(platform: "ios") {
 //                    strongSelf.context.currentContentSettings.with { $0 }.ignoreContentRestrictionReasons
                 } else {
-                    let _ = strongSelf.chatControllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                    let _ = strongSelf.chatControllerInteraction.openMessage(item.message._asMessage(), OpenMessageParams(mode: .default))
                 }
             }
         }
@@ -1371,6 +1370,11 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         var processedOnBeginFastScrolling = false
         self.itemGridBinding.onBeginFastScrollingImpl = { [weak self] in
             guard let strongSelf = self else {
+                return
+            }
+            // The tooltip points to the calendar, which a pane without one (a thread) does not
+            // offer; showing it anyway would also spend the one-time notice.
+            if strongSelf.calendarSource == nil {
                 return
             }
             if processedOnBeginFastScrolling {
@@ -1433,10 +1437,10 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         
         self._itemInteraction = VisualMediaItemInteraction(
             openMessage: { [weak self] message in
-                let _ = self?.chatControllerInteraction.openMessage(message, OpenMessageParams(mode: .default))
+                let _ = self?.chatControllerInteraction.openMessage(message._asMessage(), OpenMessageParams(mode: .default))
             },
             openMessageContextActions: { [weak self] message, sourceNode, sourceRect, gesture in
-                self?.chatControllerInteraction.openMessageContextActions(message, sourceNode, sourceRect, gesture)
+                self?.chatControllerInteraction.openMessageContextActions(message._asMessage(), sourceNode, sourceRect, gesture)
             },
             toggleSelection: { [weak self] id, value in
                 self?.chatControllerInteraction.toggleMessagesSelection([id], value)
@@ -1522,7 +1526,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             }
             let rect = strongSelf.itemGrid.frameForItem(layer: itemLayer)
 
-            strongSelf.chatControllerInteraction.openMessageContextActions(message, strongSelf, rect, gesture)
+            strongSelf.chatControllerInteraction.openMessageContextActions(message._asMessage(), strongSelf, rect, gesture)
 
             strongSelf.itemGrid.cancelGestures()
         }
@@ -1542,10 +1546,10 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             guard let strongSelf = self else {
                 return
             }
-            var hiddenMedia: [MessageId: [Media]] = [:]
+            var hiddenMedia: [EngineMessage.Id: [EngineMedia]] = [:]
             for id in ids {
                 if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
-                    hiddenMedia[messageId] = [media]
+                    hiddenMedia[messageId] = [EngineMedia(media)]
                 }
             }
             strongSelf.itemInteraction.hiddenMedia = hiddenMedia
@@ -1577,8 +1581,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
 
         self.statusPromise.set((self.contentTypePromise.get()
         |> distinctUntilChanged
-        |> mapToSignal { contentType -> Signal<(ContentType, [MessageTags: Int32]), NoError> in
-            var summaries: [MessageTags] = []
+        |> mapToSignal { contentType -> Signal<(ContentType, [EngineMessage.Tags: Int32]), NoError> in
+            var summaries: [EngineMessage.Tags] = []
             switch contentType {
             case .photoOrVideo:
                 summaries.append(.photo)
@@ -1600,8 +1604,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             return context.engine.data.subscribe(EngineDataMap(
                 summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: chatLocation.threadId, tag: $0) }
             ))
-            |> map { summaries -> (ContentType, [MessageTags: Int32]) in
-                var result: [MessageTags: Int32] = [:]
+            |> map { summaries -> (ContentType, [EngineMessage.Tags: Int32]) in
+                var result: [EngineMessage.Tags: Int32] = [:]
                 for (key, count) in summaries {
                     result[key.tag] = count.flatMap(Int32.init) ?? 0
                 }
@@ -1802,7 +1806,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 for item in list.items {
                     switch item.content {
                     case let .message(message, isLocal):
-                        mappedItems.append(VisualMediaItem(index: item.index, message: message, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                        mappedItems.append(VisualMediaItem(index: item.index, message: EngineMessage(message), localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
                         if !isLocal {
                             mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: message.id, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
                         }
@@ -1889,7 +1893,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 continue
             }
             if item.message.id == id {
-                return EngineMessage(item.message)
+                return item.message
             }
         }
         return nil
@@ -1993,7 +1997,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     
     private func messageAtPoint(_ location: CGPoint) -> EngineMessage? {
         if let itemView = self.itemGrid.item(at: location)?.view as? ItemView, let message = itemView.item?.message {
-            return EngineMessage(message)
+            return message
         }
         return nil
     }
@@ -2221,7 +2225,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             switch self.contentType {
             case .files, .music, .voiceAndVideoMessages:
                 let fakeFile = TelegramMediaFile(
-                    fileId: MediaId(namespace: 0, id: 1),
+                    fileId: EngineMedia.Id(namespace: 0, id: 1),
                     partialReference: nil,
                     resource: EmptyMediaResource(),
                     previewRepresentations: [],
@@ -2232,10 +2236,10 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                     attributes: [.FileName(fileName: "file")],
                     alternativeRepresentations: []
                 )
-                let fakeMessage = Message(
+                let fakeMessage = EngineMessage(
                     stableId: 1,
                     stableVersion: 1,
-                    id: MessageId(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(1)), namespace: 0, id: 1),
+                    id: EngineMessage.Id(peerId: EnginePeer.Id(namespace: EnginePeer.Id.Namespace._internalFromInt32Value(0), id: EnginePeer.Id.Id._internalFromInt64Value(1)), namespace: 0, id: 1),
                     globallyUniqueId: nil,
                     groupingKey: nil,
                     groupInfo: nil,
@@ -2249,9 +2253,9 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                     author: nil,
                     text: "",
                     attributes: [],
-                    media: [fakeFile],
-                    peers: SimpleDictionary<PeerId, Peer>(),
-                    associatedMessages: SimpleDictionary<MessageId, Message>(),
+                    media: [.file(fakeFile)],
+                    peers: [:],
+                    associatedMessages: [:],
                     associatedMessageIds: [],
                     associatedMedia: [:],
                     associatedThreadInfo: nil,
@@ -2262,15 +2266,15 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                     context: self.itemGridBinding.context,
                     chatLocation: self.itemGridBinding.chatLocation,
                     interaction: self.itemGridBinding.listItemInteraction,
-                    message: fakeMessage,
+                    message: fakeMessage._asMessage(),
                     selection: .none,
                     displayHeader: false
                 )
 
                 var itemNode: ListViewItemNode?
-                messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, neighbors: .none, completion: { node, apply in
                     itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
 
                 if let itemNode = itemNode {
@@ -2430,8 +2434,8 @@ public final class VisualMediaStoredState: Codable {
     }
 }
 
-public func visualMediaStoredState(engine: TelegramEngine, peerId: PeerId, messageTag: MessageTags) -> Signal<VisualMediaStoredState?, NoError> {
-    let key = ValueBoxKey(length: 8 + 4)
+public func visualMediaStoredState(engine: TelegramEngine, peerId: EnginePeer.Id, messageTag: EngineMessage.Tags) -> Signal<VisualMediaStoredState?, NoError> {
+    let key = EngineDataBuffer(length: 8 + 4)
     key.setInt64(0, value: peerId.toInt64())
     key.setUInt32(8, value: messageTag.rawValue)
     
@@ -2441,8 +2445,8 @@ public func visualMediaStoredState(engine: TelegramEngine, peerId: PeerId, messa
     }
 }
 
-public func updateVisualMediaStoredState(engine: TelegramEngine, peerId: PeerId, messageTag: MessageTags, state: VisualMediaStoredState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8 + 4)
+public func updateVisualMediaStoredState(engine: TelegramEngine, peerId: EnginePeer.Id, messageTag: EngineMessage.Tags, state: VisualMediaStoredState?) -> Signal<Never, NoError> {
+    let key = EngineDataBuffer(length: 8 + 4)
     key.setInt64(0, value: peerId.toInt64())
     key.setUInt32(8, value: messageTag.rawValue)
     

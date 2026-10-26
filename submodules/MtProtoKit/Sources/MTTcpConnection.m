@@ -13,6 +13,8 @@
 #import <Security/SecRandom.h>
 
 #import <MtProtoKit/MTInternalId.h>
+#import <MtProtoKit/MTQuickAck.h>
+#import <MtProtoKit/MTTransport.h>
 
 #import <MtProtoKit/MTContext.h>
 #import <MtProtoKit/MTApiEnvironment.h>
@@ -73,8 +75,11 @@ static void generate_public_key(unsigned char key[32], id<EncryptionProvider> pr
     
     id<MTBignum> x = [context create];
     while (1) {
-        int randomResult = SecRandomCopyBytes(kSecRandomDefault, 32, key);
-        assert(randomResult == errSecSuccess);
+        if (SecRandomCopyBytes(kSecRandomDefault, 32, key) != errSecSuccess) {
+            // Only fails when the system entropy source is unavailable; never
+            // continue with whatever the buffer held. arc4random_buf cannot fail.
+            arc4random_buf(key, 32);
+        }
         
         key[31] &= 127;
         [context assignBinTo:x value:[NSData dataWithBytesNoCopy:key length:32 freeWhenDone:false]];
@@ -847,6 +852,7 @@ struct ctr_state {
     NSString *_mtpIp;
     int32_t _mtpPort;
     MTProxySecret *_mtpSecret;
+    bool _isWebProxy;
     NSData *_helloRandom;
     NSData *_currentHelloResponse;
     
@@ -911,6 +917,7 @@ struct ctr_state {
         }
         
         if (context.apiEnvironment.socksProxySettings != nil) {
+            _isWebProxy = context.apiEnvironment.socksProxySettings.webProxy;
             if (context.apiEnvironment.socksProxySettings.secret != nil) {
                 _mtpIp = context.apiEnvironment.socksProxySettings.ip;
                 _mtpPort = context.apiEnvironment.socksProxySettings.port;
@@ -992,11 +999,41 @@ struct ctr_state {
     {
         if (_socket == nil)
         {
+            // The injected interface must be paired with `_isWebProxy`, because the WEB
+            // carrier ignores the address it is handed. Derived contexts copy the factory
+            // while deliberately carrying DIFFERENT proxy settings - MTBackupAddressSignals
+            // nils them to fetch a backup address off-proxy, MTProxyConnectivity swaps in
+            // the server it is pinging - so an ungated factory silently routes those through
+            // the carrier to the relay's own backend instead of the address they asked for.
+            id<MTTcpConnectionInterface> injected = nil;
             if (_makeTcpConnectionInterface) {
-                _socket = _makeTcpConnectionInterface(self, [[MTTcpConnection tcpQueue] nativeQueue]);
+                injected = _makeTcpConnectionInterface(self, [[MTTcpConnection tcpQueue] nativeQueue]);
             }
-            if (_socket == nil) {
-                _socket = [[MTGcdAsyncSocketTcpConnectionInterface alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
+            bool injectedIsWebProxyCarrier = injected != nil
+                && [injected respondsToSelector:@selector(isWebProxyCarrier)]
+                && [injected isWebProxyCarrier];
+
+            if (_isWebProxy) {
+                if (!injectedIsWebProxyCarrier) {
+                    // Fail closed. There is no local endpoint to dial - the carrier is not a
+                    // loopback listener - and falling back to a socket would reach the
+                    // destination directly, defeating the proxy the user chose. This is the
+                    // state an app extension is in: it shares the settings but never runs a
+                    // carrier.
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTTcpConnection#%" PRIxPTR " no WEB proxy carrier; failing]", (intptr_t)self);
+                    }
+                    [injected resetDelegate];
+                    [self closeAndNotifyWithError:true];
+                    return;
+                }
+                _socket = injected;
+            } else {
+                _socket = injectedIsWebProxyCarrier ? nil : injected;
+                if (_socket == nil) {
+                    [injected resetDelegate];
+                    _socket = [[MTGcdAsyncSocketTcpConnectionInterface alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
+                }
             }
             
             [_socket setGetLogPrefix:_getLogPrefix];
@@ -1005,7 +1042,18 @@ struct ctr_state {
             NSString *addressIp = _scheme.address.ip;
             MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:addressIp port:_scheme.address.port isSocks:false]];
             
-            if (_socksIp != nil) {
+            if (_isWebProxy) {
+                // Resolve NOTHING, and keep the default signal above. This branch is
+                // load-bearing even though the carrier ignores whatever address it is
+                // handed: `_socksIp` is nil for a WEB proxy and `_mtpIp` is the relay
+                // HOSTNAME, so falling through would reach `MTDNS resolveHostnameUniversal`
+                // below - a direct, unproxied `https://google.com/resolve?name=<relay host>`
+                // that leaks the hostname off the very proxy the user chose, on exactly the
+                // networks a WEB proxy exists for, stalls up to 10s when that lookup is
+                // blocked, and then has its answer discarded. It previously substituted a
+                // `127.0.0.1:443` endpoint, which read as though the app ran a local
+                // listener and hid why the branch had to exist at all.
+            } else if (_socksIp != nil) {
                 bool isHostname = true;
                 struct in_addr ip4;
                 struct in6_addr ip6;
@@ -1066,6 +1114,8 @@ struct ctr_state {
                             } else {
                                 MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting to %@:%d via %@:%d using %@:%@]", (intptr_t)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
                             }
+                        } else if (strongSelf->_mtpIp != nil && strongSelf->_isWebProxy) {
+                            MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting via WEB proxy %@:%d]", (intptr_t)strongSelf, strongSelf->_mtpIp, (int)strongSelf->_mtpPort);
                         } else if (strongSelf->_mtpIp != nil) {
                             MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting to %@:%d via mtp://%@:%d:%@]", (intptr_t)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
                         } else {
@@ -1283,7 +1333,16 @@ struct ctr_state {
                             MTAesCtr *incomingAesCtr = [[MTAesCtr alloc] initWithKey:incomingAesKey.bytes keyLength:32 iv:incomingAesIv.bytes decrypt:false];
                             
                             uint8_t encryptedControlBytes[64];
-                            [outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];
+                            if (outgoingAesCtr == nil || incomingAesCtr == nil || ![outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64]) {
+                                if (MTLogEnabled()) {
+                                    MTLog(@"***** %s: could not set up the obfuscation cipher", __PRETTY_FUNCTION__);
+                                }
+                                [self closeAndNotifyWithError:true];
+                                if (dataToSend.completion) {
+                                    dataToSend.completion(false);
+                                }
+                                return;
+                            }
                             
                             uint32_t intHeader = 0;
                             memcpy(&intHeader, encryptedControlBytes, 4);
@@ -1820,10 +1879,22 @@ struct ctr_state {
 - (void)processReceivedData:(NSData *)rawData tag:(int)tag networkType:(int32_t)networkType {
     _lastNetworkType = networkType;
     
-    NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
-    [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
-    
-    NSData *data = decryptedData;
+    NSMutableData *decryptedData = nil;
+    NSUInteger decryptOffset = 0;
+    if (tag == MTTcpReadTagPacketBody && _packetHead != nil) {
+        // A large packet arrives as a 128-byte head (already decrypted, used for
+        // progress tokens) followed by the rest. Decrypt the rest straight after the
+        // head so the packet never has to be reassembled with a second copy.
+        decryptOffset = _packetHead.length;
+        decryptedData = [[NSMutableData alloc] initWithLength:decryptOffset + rawData.length];
+        memcpy(decryptedData.mutableBytes, _packetHead.bytes, decryptOffset);
+        _packetHead = nil;
+    } else {
+        decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
+    }
+    [_incomingAesCtr encryptIn:rawData.bytes out:((uint8_t *)decryptedData.mutableBytes) + decryptOffset len:rawData.length];
+
+    NSMutableData *data = decryptedData;
     
     if (tag == MTTcpReadTagPacketShortLength) {
 #ifdef DEBUG
@@ -1887,10 +1958,8 @@ struct ctr_state {
         [data getBytes:&length length:4];
         
         if ((length & 0x80000000) == 0x80000000) {
-            int32_t ackId = length;
-            ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
-            ackId = (int32_t)OSSwapInt32(ackId);
-            
+            int32_t ackId = MTQuickAckTokenFromIntermediateWord(length);
+
             id<MTTcpConnectionDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)])
                 [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
@@ -1901,7 +1970,7 @@ struct ctr_state {
                 [self requestReadDataWithLength:1 tag:MTTcpReadTagPacketShortLength];
             }
         } else {
-            if (length > 16 * 1024 * 1024) {
+            if (length < 4 || (NSUInteger)length > MTMaxTransportPayloadLength) {
                 if (MTLogEnabled()) {
                     MTLog(@"[MTTcpConnection#%" PRIxPTR " received invalid length %d]", (intptr_t)self, length);
                 }
@@ -1945,18 +2014,11 @@ struct ctr_state {
         _packetHeadDecodeToken = -1;
         _packetProgressToken = nil;
         
-        NSData *packetData = data;
-        if (_packetHead != nil) {
-            NSMutableData *combinedData = [[NSMutableData alloc] initWithCapacity:_packetHead.length + data.length];
-            [combinedData appendData:_packetHead];
-            [combinedData appendData:data];
-            packetData = combinedData;
-            _packetHead = nil;
-        }
-        
+        // `data` already holds head + rest for large packets (see the decrypt above).
+        NSMutableData *packetData = data;
+
         if (packetData.length % 4 != 0) {
-            int32_t realLength = ((int32_t)packetData.length) & (~3);
-            packetData = [packetData subdataWithRange:NSMakeRange(0, (NSUInteger)realLength)];
+            [packetData setLength:packetData.length & ~((NSUInteger)3)];
         }
         
         bool ignorePacket = false;
@@ -1965,11 +2027,10 @@ struct ctr_state {
             [packetData getBytes:&header length:4];
             if (header == 0xffffffff) {
                 if (packetData.length >= 8) {
-                    int32_t ackId = 0;
-                    [packetData getBytes:&ackId range:NSMakeRange(4, 4)];
-                    ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
-                    ackId = (int32_t)OSSwapInt32(ackId);
-                    
+                    int32_t ackWord = 0;
+                    [packetData getBytes:&ackWord range:NSMakeRange(4, 4)];
+                    int32_t ackId = MTQuickAckTokenFromIntermediateWord(ackWord);
+
                     id<MTTcpConnectionDelegate> delegate = _delegate;
                     if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)]) {
                         [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];
@@ -2003,12 +2064,11 @@ struct ctr_state {
         NSAssert(data.length == 3, @"data length should be equal to 3");
 #endif
         
-        int32_t ackId = 0;
-        ((uint8_t *)&ackId)[0] = _quickAckByte;
-        memcpy(((uint8_t *)&ackId) + 1, data.bytes, 3);
-        ackId = (int32_t)OSSwapInt32(ackId);
-        ackId &= ((uint32_t)0xffffffff ^ (uint32_t)(((uint32_t)1) << 31));
-        
+        uint8_t ackBytes[4];
+        ackBytes[0] = _quickAckByte;
+        memcpy(ackBytes + 1, data.bytes, 3);
+        int32_t ackId = MTQuickAckTokenFromAbridgedBytes(ackBytes);
+
         id<MTTcpConnectionDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(tcpConnectionReceivedQuickAck:quickAck:)])
             [delegate tcpConnectionReceivedQuickAck:self quickAck:ackId];

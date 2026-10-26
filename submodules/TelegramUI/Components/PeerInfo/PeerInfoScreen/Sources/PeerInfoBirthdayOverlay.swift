@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -95,7 +96,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
         let pixelSize = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
         let animationSize = dimensions.cgSize.aspectFitted(CGSize(width: minSide, height: minSide))
         
-        let animationNode = DefaultAnimatedStickerNodeImpl()
+        let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.media.resource, fitzModifier: nil)
         let pathPrefix = self.context.engine.resources.shortLivedResourceCachePathPrefix(id: EngineMediaResource.Id(file.media.resource.id))
         animationNode.setup(source: source, width: Int(pixelSize.width), height: Int(pixelSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
@@ -129,7 +130,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
             let animationSize = dimensions.cgSize.aspectFitted(CGSize(width: 144.0, height: 144.0))
             let pixelSize = dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))
             
-            let animationNode = DefaultAnimatedStickerNodeImpl()
+            let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.media.resource, fitzModifier: nil)
             let pathPrefix: String? = self.context.engine.resources.shortLivedResourceCachePathPrefix(id: EngineMediaResource.Id(file.media.resource.id))
             animationNode.setup(source: source, width: Int(pixelSize.width), height: Int(pixelSize.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))

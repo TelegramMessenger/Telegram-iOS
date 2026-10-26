@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 func _internal_requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool, sourceMessageId: MessageId? = nil) -> Signal<Void, NoError> {

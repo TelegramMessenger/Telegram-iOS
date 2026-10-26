@@ -462,16 +462,17 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     public func audioRecorder(
         resumeData: AudioRecorderResumeData?,
         beginWithTone: Bool,
+        pauseMusicOnRecording: Bool,
         applicationBindings: TelegramApplicationBindings,
         beganWithTone: @escaping (Bool) -> Void
     ) -> Signal<ManagedAudioRecorder?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
-            self.queue.async {
+            self.queue.async { [applicationBindings] in
                 let audioRecorder = ManagedAudioRecorderImpl(mediaManager: self, resumeData: resumeData, pushIdleTimerExtension: { [weak applicationBindings] in
                     return applicationBindings?.pushIdleTimerExtension() ?? EmptyDisposable
-                }, beginWithTone: beginWithTone, beganWithTone: beganWithTone)
+                }, beginWithTone: beginWithTone, pauseMusicOnRecording: pauseMusicOnRecording, beganWithTone: beganWithTone)
                 subscriber.putNext(audioRecorder)
                 
                 disposable.set(ActionDisposable {

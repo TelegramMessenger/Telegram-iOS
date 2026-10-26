@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 struct AccumulatedPeers {
@@ -992,17 +992,24 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     let chats: [Api.Chat]
                     let users: [Api.User]
                     var channelPts: Int32?
+                    var serverCount: Int32?
+                    var serverOffsetIdOffset: Int32?
+                    var serverInexact = false
                     switch result {
                         case let .messages(messagesData):
                             let (apiMessages, _, apiChats, apiUsers) = (messagesData.messages, messagesData.topics, messagesData.chats, messagesData.users)
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
+                            serverCount = Int32(clamping: apiMessages.count)
                         case let .messagesSlice(messagesSliceData):
                             let (apiMessages, apiChats, apiUsers) = (messagesSliceData.messages, messagesSliceData.chats, messagesSliceData.users)
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
+                            serverCount = messagesSliceData.count
+                            serverOffsetIdOffset = messagesSliceData.offsetIdOffset
+                            serverInexact = (messagesSliceData.flags & (1 << 1)) != 0
                         case let .channelMessages(channelMessagesData):
                             let (pts, apiMessages, apiTopics, apiChats, apiUsers) = (channelMessagesData.pts, channelMessagesData.messages, channelMessagesData.topics, channelMessagesData.chats, channelMessagesData.users)
                             messages = apiMessages
@@ -1010,6 +1017,9 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             chats = apiChats
                             users = apiUsers
                             channelPts = pts
+                            serverCount = channelMessagesData.count
+                            serverOffsetIdOffset = channelMessagesData.offsetIdOffset
+                            serverInexact = (channelMessagesData.flags & (1 << 1)) != 0
                         case .messagesNotModified:
                             messages = []
                             chats = []
@@ -1032,9 +1042,35 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                     }
                     
-                    return withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: true, { transaction, additionalParsedPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
+                    /// The version each fetched message had once the first transaction stored it; the
+                    /// follow-up re-adds a message only while it is still that version.
+                    final class StoredVersions {
+                        var byId: [MessageId: UInt32] = [:]
+                    }
+                    let storedVersions = StoredVersions()
+                    
+                    /// Stores the fetched messages, closes the hole and reports what was filled.
+                    let storeAndCloseHole: (Transaction) -> FetchMessageHistoryHoleResult? = { transaction in
                         let _ = transaction.addMessages(storeMessages, location: .Random)
-                        let _ = transaction.addMessages(additionalMessages, location: .Random)
+                        var storedIds = Set<MessageId>()
+                        for message in storeMessages {
+                            if case let .Id(id) = message.id {
+                                storedIds.insert(id)
+                            }
+                        }
+                        // Only a message that references something outside this fetch can be re-added
+                        // later; `getMessage` is a full render, so it runs for those alone.
+                        for message in storeMessages {
+                            guard case let .Id(id) = message.id else {
+                                continue
+                            }
+                            let referencesOutside = message.attributes.contains(where: { attribute in
+                                attribute.associatedMessageIds.contains(where: { !storedIds.contains($0) })
+                            })
+                            if referencesOutside, let stored = transaction.getMessage(id) {
+                                storedVersions.byId[id] = stored.stableVersion
+                            }
+                        }
                         var filledRange: ClosedRange<MessageId.Id>
                         var strictFilledIndices: IndexSet
                         let ids = storeMessages.compactMap { message -> MessageId.Id? in
@@ -1101,7 +1137,14 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             let messageRange = ids.min()! ... ids.max()!
                             switch direction {
                             case let .aroundId(aroundId):
-                                filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
+                                // The server's position facts behind aroundHoleFillRange were measured for
+                                // messages.getHistory on a channel (no thread, the everywhere space, the Cloud
+                                // namespace); every other request shape keeps the fetched span until traced.
+                                var inferredRange: ClosedRange<MessageId.Id>?
+                                if case let .direct(_, directThreadId) = peerInput, directThreadId == nil, case .everywhere = space, namespace == Namespaces.Message.Cloud {
+                                    inferredRange = aroundHoleFillRange(anchorId: aroundId.id, ids: ids, totalCount: serverCount, offsetIdOffset: serverOffsetIdOffset, inexact: serverInexact)
+                                }
+                                filledRange = inferredRange ?? (min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound))
                                 strictFilledIndices = IndexSet(integersIn: Int(min(aroundId.id, messageRange.lowerBound)) ... Int(max(aroundId.id, messageRange.upperBound)))
                                 var shouldFillAround = false
                                 if peerInput.requestThreadId(accountPeerId: accountPeerId, peer: peer) != nil || peerInput.requestSubPeerId(accountPeerId: accountPeerId, peer: peer) != nil {
@@ -1137,7 +1180,6 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             }
                         }
                         
-                        
                         switch peerInput {
                         case let .direct(peerId, threadId):
                             transaction.removeHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: filledRange)
@@ -1145,17 +1187,86 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             break
                         }
                         
-                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers.union(with: additionalParsedPeers))
+                        // A fill that reached the top of a channel's history knows that history is
+                        // contiguous up to its newest id: the poll's next too-long answer seeds its gap
+                        // hole from this value, and a stale one re-covered a range the fill had closed
+                        // (measured 2026-10-13). Only an existing state is advanced; a state is never
+                        // made up here, because its pts is the poll's to set.
+                        if case let .direct(peerId, threadId) = peerInput, threadId == nil, case .everywhere = space, namespace == Namespaces.Message.Cloud, peerId.namespace == Namespaces.Peer.CloudChannel, filledRange.upperBound == Int32.max - 1, let maxId = ids.max() {
+                            if let current = transaction.getPeerChatState(peerId) as? ChannelState, (current.synchronizedUntilMessageId ?? 0) < maxId {
+                                transaction.setPeerChatState(peerId, state: current.withUpdatedSynchronizedUntilMessageId(maxId))
+                            }
+                        }
                         
-                        let result = FetchMessageHistoryHoleResult(
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                        
+                        return FetchMessageHistoryHoleResult(
                             removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),
                             strictRemovedIndices: strictFilledIndices,
                             actualPeerId: storeMessages.first?.id.peerId,
                             actualThreadId: storeMessages.first?.threadId,
                             ids: fullIds
                         )
-                        return result
-                    })
+                    }
+                    
+                    /// Stores what the fetched messages reference (reply targets, custom emoji files,
+                    /// stories) and re-adds the messages whose reply targets just arrived, so a view
+                    /// re-renders them with the target attached (a view watches its own chat only).
+                    let storeReferencedData: (Transaction, AccumulatedPeers, [StoreMessage]) -> Void = { transaction, additionalParsedPeers, additionalMessages in
+                        let _ = transaction.addMessages(additionalMessages, location: .Random)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: additionalParsedPeers)
+                        
+                        var additionalIds = Set<MessageId>()
+                        for message in additionalMessages {
+                            if case let .Id(id) = message.id {
+                                additionalIds.insert(id)
+                            }
+                        }
+                        if additionalIds.isEmpty {
+                            return
+                        }
+                        let referencingMessages = storeMessages.filter { message in
+                            guard case let .Id(id) = message.id, let version = storedVersions.byId[id] else {
+                                return false
+                            }
+                            let referencesAdditional = message.attributes.contains(where: { attribute in
+                                attribute.associatedMessageIds.contains(where: { additionalIds.contains($0) })
+                            })
+                            if !referencesAdditional {
+                                return false
+                            }
+                            guard let current = transaction.getMessage(id), current.stableVersion == version else {
+                                return false
+                            }
+                            return true
+                        }
+                        if !referencingMessages.isEmpty {
+                            let _ = transaction.addMessages(referencingMessages, location: .Random)
+                        }
+                    }
+                    
+                    if peer.isForumOrMonoForum {
+                        // Topic headers read thread infos at render time: a forum resolves before it stores.
+                        return withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: true, { transaction, additionalParsedPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
+                            let result = storeAndCloseHole(transaction)
+                            storeReferencedData(transaction, additionalParsedPeers, additionalMessages)
+                            return result
+                        })
+                    } else {
+                        // The view loads after one round trip; what the messages reference follows.
+                        return postbox.transaction { transaction -> FetchMessageHistoryHoleResult? in
+                            return storeAndCloseHole(transaction)
+                        }
+                        |> mapToSignal { result -> Signal<FetchMessageHistoryHoleResult?, NoError> in
+                            // Detached on purpose: ReplyThreadHistory disposes a fill as soon as the
+                            // thread's hole changes, which the first transaction just did, and what
+                            // the messages reference must still arrive.
+                            let _ = withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, parsedPeers: parsedPeers, storeMessages: storeMessages, resolveThreads: false, { transaction, additionalParsedPeers, additionalMessages -> Void in
+                                storeReferencedData(transaction, additionalParsedPeers, additionalMessages)
+                            }).startStandalone()
+                            return .single(result)
+                        }
+                    }
                 }
                 |> switchToLatest
             }

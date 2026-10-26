@@ -11,6 +11,17 @@ public enum SearchDisplayControllerMode {
     case navigation
 }
 
+/// The search bar's frame in `.list` mode. With no status bar height the bar starts 20pt above the top, which suits the
+/// legacy fields, drawn at the bar's bottom. A glass field is drawn at the top of its frame, in a search row already
+/// placed below the status bar, so its frame starts at the row's top instead (offset, the field sat 20pt above the row:
+/// iPhone Duo's unfolded landscape, whose list pane has no status bar). The frame's bottom stays where it was.
+private func listSearchBarFrame(navigationBarFrame: CGRect, fieldStyle: SearchBarStyle) -> CGRect {
+    if case .glass = fieldStyle, navigationBarFrame.minY < 0.0 {
+        return CGRect(x: navigationBarFrame.minX, y: 0.0, width: navigationBarFrame.width, height: navigationBarFrame.maxY)
+    }
+    return navigationBarFrame
+}
+
 public final class SearchDisplayController {
     private final class BackgroundNode: ASDisplayNode {
         var isTransparent: Bool = false
@@ -159,7 +170,9 @@ public final class SearchDisplayController {
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let defaultNavigationBarHeight = navigationBarHeight
         
-        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        // The status height a navigation bar sits under (compact beside iPhone Duo's status island, which the
+        // search bar's trailing inset then clears).
+        let statusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
         let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
         let navigationBarOffset: CGFloat
         if statusBarHeight.isZero {
@@ -187,11 +200,11 @@ public final class SearchDisplayController {
                     searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
                 }
             } else {
-                searchBarFrame = navigationBarFrame
+                searchBarFrame = listSearchBarFrame(navigationBarFrame: navigationBarFrame, fieldStyle: searchBar.fieldStyle)
                 navigationBarHeight = navigationBarFrame.maxY + 8.0
             }
             transition.updateFrame(node: searchBar, frame: searchBarFrame)
-            searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right + layout.navigationBarTrailingButtonsInset, transition: transition)
         }
         
         self.containerLayout = (layout, navigationBarHeight)
@@ -207,7 +220,7 @@ public final class SearchDisplayController {
         //safeInsets.left += 20.0
         //safeInsets.right += 20.0
         
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
     public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?, focus: Bool = true) {
@@ -234,7 +247,7 @@ public final class SearchDisplayController {
         let safeInsets = layout.safeInsets
         //safeInsets.left += 20.0
         //safeInsets.right += 20.0
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         var contentNavigationBarHeight = navigationBarHeight
         if layout.statusBarHeight == nil {
@@ -266,7 +279,7 @@ public final class SearchDisplayController {
         let navigationBarFrame: CGRect
         switch self.mode {
             case .list:
-                let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+                let statusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
                 let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
                 let navigationBarOffset: CGFloat
                 if statusBarHeight.isZero {
@@ -284,7 +297,11 @@ public final class SearchDisplayController {
         }
         
         if !self.searchBarIsExternal, let searchBar = self.searchBar {
-            searchBar.frame = navigationBarFrame
+            if case .list = self.mode {
+                searchBar.frame = listSearchBarFrame(navigationBarFrame: navigationBarFrame, fieldStyle: searchBar.fieldStyle)
+            } else {
+                searchBar.frame = navigationBarFrame
+            }
             insertSubnode(searchBar, true)
             searchBar.layout()
             

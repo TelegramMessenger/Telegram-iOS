@@ -29,6 +29,33 @@ public struct EditableTokenListToken {
     }
 }
 
+/// The chat a peer token stands for when that chat is not the peer itself. Your own peer is Saved
+/// Messages and the replies bot is Replies; the token is titled and drawn as that chat, so both the
+/// title and the avatar must follow this one answer.
+public enum EditableTokenListPeerAlias: Equatable {
+    case savedMessages
+    case replies
+
+    public init?(peer: EnginePeer, accountPeerId: EnginePeer.Id) {
+        if peer.id == accountPeerId {
+            self = .savedMessages
+        } else if peer.id.isReplies {
+            self = .replies
+        } else {
+            return nil
+        }
+    }
+
+    public var avatarOverride: AvatarNodeImageOverride {
+        switch self {
+        case .savedMessages:
+            return .savedMessagesIcon
+        case .replies:
+            return .repliesIcon
+        }
+    }
+}
+
 private func generateRemoveIcon(_ color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: .zero, size: size))
@@ -110,7 +137,7 @@ private final class TokenNode: ASDisplayNode {
         switch token.subject {
         case let .peer(peer):
             self.addSubnode(self.avatarNode)
-            self.avatarNode.setPeer(context: context, theme: theme, peer: peer)
+            self.avatarNode.setPeer(context: context, theme: theme, peer: peer, overrideImage: EditableTokenListPeerAlias(peer: peer, accountPeerId: context.account.peerId)?.avatarOverride)
         case let .category(image):
             self.addSubnode(self.categoryAvatarNode)
             self.categoryAvatarNode.image = image

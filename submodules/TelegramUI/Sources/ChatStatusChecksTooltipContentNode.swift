@@ -196,7 +196,11 @@ class ChatStatusChecksTooltipContentNode: ASDisplayNode, TooltipControllerCustom
         self.deliveredChecksNode.updateState(false, animated: true)
         self.readChecksNode.updateState(false, animated: true)
         
-        Queue.mainQueue().after(0.25) {
+        Queue.mainQueue().after(0.25) { [weak self] in
+            guard let self else {
+                return
+            }
+
             self.deliveredChecksNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, delay: 0.0, removeOnCompletion: false, completion: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.deliveredChecksNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
@@ -209,7 +213,11 @@ class ChatStatusChecksTooltipContentNode: ASDisplayNode, TooltipControllerCustom
                 }
             })
             
-            Queue.mainQueue().after(0.5) {
+            Queue.mainQueue().after(0.5) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.readChecksNode.updateState(true, animated: true)
                 
                 self.readChecksNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in

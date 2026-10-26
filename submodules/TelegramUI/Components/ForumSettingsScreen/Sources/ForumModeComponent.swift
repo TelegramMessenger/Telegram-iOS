@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -14,17 +15,22 @@ final class ForumModeComponent: Component {
         case tabs
         case list
     }
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let mode: Mode?
     let modeUpdated: (Mode) -> Void
     
     init(
+    
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         mode: Mode?,
         modeUpdated: @escaping (Mode) -> Void
     ) {
+    
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.mode = mode
@@ -72,6 +78,7 @@ final class ForumModeComponent: Component {
                     PlainButtonComponent(
                         content: AnyComponent(
                             ItemComponent(
+                                context: component.context,
                                 theme: component.theme,
                                 animation: "ForumTabs",
                                 title: component.strings.PeerInfo_Topics_Tabs,
@@ -101,6 +108,7 @@ final class ForumModeComponent: Component {
                     PlainButtonComponent(
                         content: AnyComponent(
                             ItemComponent(
+                                context: component.context,
                                 theme: component.theme,
                                 animation: "ForumList",
                                 title: component.strings.PeerInfo_Topics_List,
@@ -138,17 +146,20 @@ final class ForumModeComponent: Component {
 }
 
 private final class ItemComponent: Component {
+    let context: AccountContext
     let theme: PresentationTheme
     let animation: String
     let title: String
     let isSelected: Bool
     
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         animation: String,
         title: String,
         isSelected: Bool
     ) {
+        self.context = context
         self.theme = theme
         self.animation = animation
         self.title = title
@@ -202,7 +213,8 @@ private final class ItemComponent: Component {
                     LottieComponent(
                         content: LottieComponent.AppBundleContent(name: component.animation),
                         color: component.isSelected ? component.theme.list.itemCheckColors.fillColor : component.theme.list.itemSecondaryTextColor,
-                        loop: false
+                        loop: false,
+                        lottieSettings: component.context.lottieRenderingSettings
                     )
                 ),
                 environment: {},

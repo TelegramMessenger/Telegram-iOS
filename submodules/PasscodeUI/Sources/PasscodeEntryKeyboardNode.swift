@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
-import GradientBackground
+import GlassBackgroundComponent
 
 private let regularTitleFont = Font.regular(36.0)
 private let regularSubtitleFont: UIFont = {
@@ -16,28 +16,15 @@ private let largeSubtitleFont: UIFont = {
     return UIFont.systemFont(ofSize: 12.0, weight: UIFont.Weight.bold)
 }()
 
-private func generateButtonImage(background: PasscodeBackground, frame: CGRect, title: String, subtitle: String, highlighted: Bool) -> UIImage? {
-    return generateImage(frame.size, contextGenerator: { size, context in
+private func generateButtonContentImage(size: CGSize, title: String, subtitle: String) -> UIImage? {
+    return generateImage(size, contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - background.size.height + frame.size.height
-            , width: background.size.width, height: background.size.height)
         
         context.beginPath()
         context.addEllipse(in: bounds)
         context.clip()
         
-        context.setAlpha(0.8)
-        if let foregroundImage = background.foregroundImage {
-            context.draw(foregroundImage.cgImage!, in: relativeFrame)
-        }
-        if highlighted {
-            context.setFillColor(UIColor(white: 1.0, alpha: 0.65).cgColor)
-            context.fillEllipse(in: bounds)
-        }
-        
-        context.setAlpha(1.0)
         context.textMatrix = .identity
         
         let titleFont: UIFont
@@ -92,67 +79,54 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
     })
 }
 
-final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
+final class PasscodeEntryButtonNode: ASDisplayNode {
     private var presentationData: PresentationData
-    private var background: PasscodeBackground
     let title: String
     private let subtitle: String
     
-    private var currentImage: UIImage?
-    private var regularImage: UIImage?
-    private var highlightedImage: UIImage?
-    
-    private var blurredBackgroundNode: NavigationBackgroundNode?
-    private var gradientBackgroundNode: GradientBackgroundNode.CloneNode?
-    private let backgroundNode: ASImageNode
+    private let backgroundView: GlassBackgroundView
+    private let button: HighlightTrackingButton
+    private let contentNode: ASImageNode
     
     var action: (() -> Void)?
     var cancelAction: (() -> Void)?
     
-    init(presentationData: PresentationData, background: PasscodeBackground, title: String, subtitle: String) {
+    init(presentationData: PresentationData, title: String, subtitle: String) {
         self.presentationData = presentationData
-        self.background = background
         self.title = title
         self.subtitle = subtitle
         
-        if let background = background as? CustomPasscodeBackground {
-            let blurredBackgroundColor = (background.inverted ? UIColor(rgb: 0xffffff, alpha: 0.1) : UIColor(rgb: 0x000000, alpha: 0.2), dateFillNeedsBlur(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper))
-            let blurredBackgroundNode = NavigationBackgroundNode(color: blurredBackgroundColor.0, enableBlur: blurredBackgroundColor.1)
-            self.blurredBackgroundNode = blurredBackgroundNode
-            
-            if isReduceTransparencyEnabled() {
-                blurredBackgroundNode.alpha = 0.1
-            }
-        }
+        self.backgroundView = GlassBackgroundView()
+
+        self.button = HighlightTrackingButton()
+        self.button.accessibilityLabel = title
+        self.button.accessibilityTraits = .keyboardKey
         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.isUserInteractionEnabled = false
+        self.contentNode = ASImageNode()
+        self.contentNode.displaysAsynchronously = false
+        self.contentNode.displayWithoutProcessing = true
+        self.contentNode.isUserInteractionEnabled = false
         
         super.init()
         
-        self.accessibilityLabel = title
-        self.accessibilityTraits = .keyboardKey
-        
-        if let gradientBackgroundNode = self.gradientBackgroundNode {
-            self.addSubnode(gradientBackgroundNode)
-        }
-        if let blurredBackgroundNode = self.blurredBackgroundNode {
-            self.addSubnode(blurredBackgroundNode)
-        }
-        self.addSubnode(self.backgroundNode)
-        
-        self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                strongSelf.updateState(highlighted: highlighted)
-            }
-        }
-        
-        self.addTarget(self, action: #selector(self.nop), forControlEvents: .touchUpInside)
+        self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchDown)
+        self.button.addTarget(self, action: #selector(self.buttonCancelled), for: [.touchUpOutside, .touchCancel])
     }
     
-    @objc private func nop() {
+    override func didLoad() {
+        super.didLoad()
+
+        self.view.addSubview(self.backgroundView)
+        self.backgroundView.contentView.addSubview(self.button)
+        self.button.addSubview(self.contentNode.view)
+    }
+
+    @objc private func buttonPressed() {
+        self.action?()
+    }
+
+    @objc private func buttonCancelled() {
+        self.cancelAction?()
     }
     
     override var frame: CGRect {
@@ -165,70 +139,23 @@ final class PasscodeEntryButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    func updateBackground(_ presentationData: PresentationData, _ background: PasscodeBackground) {
+    func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
-        self.background = background
         self.updateGraphics()
+        self.setNeedsLayout()
     }
     
     private func updateGraphics() {
-        self.regularImage = generateButtonImage(background: self.background, frame: self.frame, title: self.title, subtitle: self.subtitle, highlighted: false)
-        self.highlightedImage = generateButtonImage(background: self.background, frame: self.frame, title: self.title, subtitle: self.subtitle, highlighted: true)
-        self.updateState(highlighted: self.isHighlighted)
-        
-        if let gradientBackgroundNode = self.gradientBackgroundNode {
-            let containerSize = self.background.size
-            let shiftedContentsRect = CGRect(origin: CGPoint(x: self.frame.minX / containerSize.width, y: self.frame.minY / containerSize.height), size: CGSize(width: self.frame.width / containerSize.width, height: self.frame.height / containerSize.height))
-            gradientBackgroundNode.layer.contentsRect = shiftedContentsRect
-        }
-    }
-    
-    private func updateState(highlighted: Bool) {
-        let image = highlighted ? self.highlightedImage : self.regularImage
-        if self.currentImage !== image {
-            let currentContents = self.backgroundNode.layer.contents
-            self.backgroundNode.layer.removeAnimation(forKey: "contents")
-            if let currentContents = currentContents, let image = image {
-                self.backgroundNode.image = image
-                self.backgroundNode.layer.animate(from: currentContents as AnyObject, to: image.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: image === self.regularImage ? 0.45 : 0.05)
-            } else {
-                self.backgroundNode.image = image
-            }
-            self.currentImage = image
-        }
+        self.contentNode.image = generateButtonContentImage(size: self.bounds.size, title: self.title, subtitle: self.subtitle)
     }
     
     override func layout() {
         super.layout()
         
-        if let gradientBackgroundNode = self.gradientBackgroundNode {
-            gradientBackgroundNode.frame = self.bounds
-        }
-        if let blurredBackgroundNode = self.blurredBackgroundNode {
-            blurredBackgroundNode.frame = self.bounds
-            blurredBackgroundNode.update(size: blurredBackgroundNode.bounds.size, cornerRadius: blurredBackgroundNode.bounds.height / 2.0, transition: .immediate)
-        }
-        self.backgroundNode.frame = self.bounds
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesBegan(touches, with: event)
-        
-        self.action?()
-    }
-    
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesEnded(touches, with: event)
-        
-        if let touchPosition = touches.first?.location(in: self.view), !self.view.bounds.contains(touchPosition) {
-            self.cancelAction?()
-        }
-    }
-    
-    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
-        super.touchesCancelled(touches, with: event)
-        
-        self.cancelAction?()
+        self.backgroundView.frame = self.bounds
+        self.backgroundView.update(size: self.bounds.size, cornerRadius: self.bounds.height / 2.0, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .clear), isInteractive: true, transition: .immediate)
+        self.button.frame = self.bounds
+        self.contentNode.frame = self.bounds
     }
 }
 
@@ -248,29 +175,51 @@ private let buttonsData = [
 final class PasscodeEntryKeyboardNode: ASDisplayNode {
     private var presentationData: PresentationData?
     private var background: PasscodeBackground?
+
+    private let backgroundContainer = GlassBackgroundContainerView()
+    private var buttonNodes: [PasscodeEntryButtonNode] = []
     
     var charactedEntered: ((String) -> Void)?
     var backspace: (() -> Void)?
+
+    override func didLoad() {
+        super.didLoad()
+
+        self.view.addSubview(self.backgroundContainer)
+        for buttonNode in self.buttonNodes {
+            self.backgroundContainer.contentView.addSubview(buttonNode.view)
+        }
+    }
+
+    override func layout() {
+        super.layout()
+
+        self.backgroundContainer.frame = self.bounds
+        self.backgroundContainer.update(size: self.bounds.size, isDark: self.presentationData?.theme.overallDarkAppearance ?? false, transition: .immediate)
+    }
     
     private func updateButtons() {
-        guard let presentationData = self.presentationData, let background = self.background else {
+        guard let presentationData = self.presentationData, self.background != nil else {
             return
         }
         
-        if let subnodes = self.subnodes, !subnodes.isEmpty {
-            for case let button as PasscodeEntryButtonNode in subnodes {
-                button.updateBackground(presentationData, background)
+        if !self.buttonNodes.isEmpty {
+            for button in self.buttonNodes {
+                button.updatePresentationData(presentationData)
             }
         } else {
             for (title, subtitle) in buttonsData {
-                let buttonNode = PasscodeEntryButtonNode(presentationData: presentationData, background: background, title: title, subtitle: subtitle)
+                let buttonNode = PasscodeEntryButtonNode(presentationData: presentationData, title: title, subtitle: subtitle)
                 buttonNode.action = { [weak self] in
                     self?.charactedEntered?(title)
                 }
                 buttonNode.cancelAction = { [weak self] in
                     self?.backspace?()
                 }
-                self.addSubnode(buttonNode)
+                self.buttonNodes.append(buttonNode)
+                if self.isNodeLoaded {
+                    self.backgroundContainer.contentView.addSubview(buttonNode.view)
+                }
             }
         }
     }
@@ -279,24 +228,22 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         self.presentationData = presentationData
         self.background = background
         self.updateButtons()
+        self.setNeedsLayout()
     }
     
     func animateIn() {
-        if let subnodes = self.subnodes {
-            for i in 0 ..< subnodes.count {
-                let subnode = subnodes[i]
-                var delay: Double = 0.001
-                if i / 3 == 1 {
-                    delay = 0.05
-                }
-                else if i / 3 == 2 {
-                    delay = 0.1
-                }
-                else if i / 3 == 3 {
-                    delay = 0.15
-                }
-                subnode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: delay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+        for (i, buttonNode) in self.buttonNodes.enumerated() {
+            var delay: Double = 0.001
+            if i / 3 == 1 {
+                delay = 0.05
             }
+            else if i / 3 == 2 {
+                delay = 0.1
+            }
+            else if i / 3 == 3 {
+                delay = 0.15
+            }
+            buttonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: delay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
         }
     }
     
@@ -332,33 +279,31 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
             keyboardSize = layout.keyboard.size
         }
         
-        if let subnodes = self.subnodes {
-            for i in 0 ..< subnodes.count {
-                var origin = origin
-                if i % 3 == 0 {
-                    origin.x += 0.0
-                } else if (i % 3 == 1) {
-                    origin.x += horizontalSecond
-                }
-                else {
-                    origin.x += horizontalThird
-                }
-                
-                if i / 3 == 0 {
-                    origin.y += 0.0
-                }
-                else if i / 3 == 1 {
-                    origin.y += verticalSecond
-                }
-                else if i / 3 == 2 {
-                    origin.y += verticalThird
-                }
-                else if i / 3 == 3 {
-                    origin.x += horizontalSecond
-                    origin.y += verticalFourth
-                }
-                transition.updateFrame(node: subnodes[i], frame: CGRect(origin: origin, size: CGSize(width: buttonSize, height: buttonSize)))
+        for (i, buttonNode) in self.buttonNodes.enumerated() {
+            var origin = origin
+            if i % 3 == 0 {
+                origin.x += 0.0
+            } else if (i % 3 == 1) {
+                origin.x += horizontalSecond
             }
+            else {
+                origin.x += horizontalThird
+            }
+
+            if i / 3 == 0 {
+                origin.y += 0.0
+            }
+            else if i / 3 == 1 {
+                origin.y += verticalSecond
+            }
+            else if i / 3 == 2 {
+                origin.y += verticalThird
+            }
+            else if i / 3 == 3 {
+                origin.x += horizontalSecond
+                origin.y += verticalFourth
+            }
+            transition.updateFrame(node: buttonNode, frame: CGRect(origin: origin, size: CGSize(width: buttonSize, height: buttonSize)))
         }
         return (CGRect(origin: origin, size: keyboardSize), CGSize(width: buttonSize, height: buttonSize))
     }

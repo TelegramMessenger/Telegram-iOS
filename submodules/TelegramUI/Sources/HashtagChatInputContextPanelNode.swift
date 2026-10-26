@@ -235,14 +235,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     }
                     
                     if let range = hashtagQueryRange {
-                        let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
-                        
-                        let replacementText = text
-                        inputText.replaceCharacters(in: range, with: replacementText)
-                        
-                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
-                        
-                        return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
+                        return (textInputState.replacingFlatRange(range, with: text), inputMode)
                     }
                     return (textInputState, inputMode)
                 }

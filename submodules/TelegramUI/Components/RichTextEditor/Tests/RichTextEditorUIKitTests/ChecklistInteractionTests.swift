@@ -15,8 +15,7 @@ final class ChecklistInteractionTests: XCTestCase {
 
     func test_setList_checklist_seedsUncheckedState() {
         let v = canvas([ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "Buy milk")])])
-        v.anchor = v.boxes[0].textStart
-        v.head = v.boxes[0].textStart + 1
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart + 1)
         v.setList(.checklist)
         let m = (v.boxes[0] as! BlockBox).listMembership
         XCTAssertEqual(m?.marker, .checklist)
@@ -25,7 +24,7 @@ final class ChecklistInteractionTests: XCTestCase {
 
     func test_setList_checklist_preservesCheckedState_onReapply() {
         let v = canvas([ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "Buy milk")])])
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart + 1
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart + 1)
         v.setList(.checklist)
         (v.boxes[0] as! BlockBox).listMembership = ListMembership(marker: .checklist, level: 0, checked: true)
         v.setList(.checklist)   // re-apply must NOT uncheck
@@ -120,7 +119,7 @@ extension ChecklistInteractionTests {
         let v = canvas([ParagraphBlock(id: BlockID("a"),
                                        list: ListMembership(marker: .checklist, level: 0, checked: true),
                                        runs: [TextRun(text: "Task")])])
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart)
         v.indent()
         XCTAssertEqual((v.boxes[0] as! BlockBox).listMembership?.level, 1)
         XCTAssertEqual((v.boxes[0] as! BlockBox).listMembership?.checked, true, "indent must preserve checked")
@@ -217,7 +216,14 @@ extension ChecklistInteractionTests {
         XCTAssertEqual(v.checklistMarkerViews.count, 1)
         let hosted = v.checklistMarkerViews[BlockID("a")]
         XCTAssertEqual((hosted?.view as? StubCheckbox)?.checked, true)
-        XCTAssertEqual(hosted?.view.frame, (v.boxes[0] as! BlockBox).checklistMarkerCanvasRect())
+        // Compared component-wise with a tolerance: exact CGRect equality trips on a ~1e-15 difference
+        // in the accumulated inset arithmetic, which is float noise rather than a placement change.
+        let expected = (v.boxes[0] as! BlockBox).checklistMarkerCanvasRect()
+        let actual = hosted?.view.frame
+        XCTAssertEqual(actual?.minX ?? .nan, expected?.minX ?? .nan, accuracy: 0.01)
+        XCTAssertEqual(actual?.minY ?? .nan, expected?.minY ?? .nan, accuracy: 0.01)
+        XCTAssertEqual(actual?.width ?? .nan, expected?.width ?? .nan, accuracy: 0.01)
+        XCTAssertEqual(actual?.height ?? .nan, expected?.height ?? .nan, accuracy: 0.01)
     }
 
     func test_removingChecklist_removesCheckboxView() {
@@ -227,7 +233,7 @@ extension ChecklistInteractionTests {
                            runs: [TextRun(text: "Task")])])
         v.syncChecklistMarkerViews()
         XCTAssertEqual(v.checklistMarkerViews.count, 1)
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart + 1
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart + 1)
         v.setList(nil)
         v.syncChecklistMarkerViews()
         XCTAssertEqual(v.checklistMarkerViews.count, 0)

@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public struct EmojiInteraction: Equatable {
     public struct Animation: Equatable {
@@ -19,7 +19,7 @@ public struct EmojiInteraction: Equatable {
         self.animations = animations
     }
     
-    public init?(apiDataJson: Api.DataJSON) {
+    init?(apiDataJson: Api.DataJSON) {
         if case let .dataJSON(dataJSONData) = apiDataJson {
             let string = dataJSONData.data
             if let data = string.data(using: .utf8) {
@@ -56,7 +56,7 @@ public struct EmojiInteraction: Equatable {
     
     fileprivate let roundingBehavior = NSDecimalNumberHandler(roundingMode: .plain, scale: 2, raiseOnExactness: false, raiseOnOverflow: false, raiseOnUnderflow: false, raiseOnDivideByZero: true)
 
-    public var apiDataJson: Api.DataJSON {
+    var apiDataJson: Api.DataJSON {
         let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": NSDecimalNumber(value: $0.timeOffset).rounding(accordingToBehavior: roundingBehavior)] as [String : Any] })] as [String : Any]
         if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let dataString = String(data: data, encoding: .utf8) {
             return .dataJSON(.init(data: dataString))
@@ -160,6 +160,8 @@ extension PeerInputActivity {
         case .sendMessageRichMessageDraftAction:
             return nil
         case .inputSendMessageRichMessageDraftAction:
+            return nil
+        case .sendMessageStopDraftAction:
             return nil
         }
     }

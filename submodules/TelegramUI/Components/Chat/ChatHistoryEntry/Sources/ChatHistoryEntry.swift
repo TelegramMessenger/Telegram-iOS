@@ -20,8 +20,13 @@ public struct ChatMessageEntryAttributes: Equatable {
     public var authorStoryStats: EnginePeerStoryStats?
     public var displayContinueThreadFooter: Bool
     public var pinToTop: Bool
+    public var isGiftMessageComposerPreview: Bool
+    /// Set on a message of an album shown alone, before the rest of the album is loaded: the stable id
+    /// of the album entry it becomes. The entry keeps that identity, so the album replaces it in place
+    /// rather than as a new row (a row held where it was scrolled to would otherwise be lost).
+    public var groupStableId: Int64?
     
-    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool) {
+    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: EnginePeerStoryStats?, displayContinueThreadFooter: Bool, pinToTop: Bool, isGiftMessageComposerPreview: Bool = false) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
@@ -31,6 +36,8 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.authorStoryStats = authorStoryStats
         self.displayContinueThreadFooter = displayContinueThreadFooter
         self.pinToTop = pinToTop
+        self.isGiftMessageComposerPreview = isGiftMessageComposerPreview
+        self.groupStableId = nil
     }
     
     public init() {
@@ -43,6 +50,8 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.authorStoryStats = nil
         self.displayContinueThreadFooter = false
         self.pinToTop = false
+        self.isGiftMessageComposerPreview = false
+        self.groupStableId = nil
     }
 }
 
@@ -62,6 +71,9 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
     public var stableId: UInt64 {
         switch self {
         case let .MessageEntry(message, _, _, _, _, attributes):
+            if let groupStableId = attributes.groupStableId {
+                return UInt64(bitPattern: groupStableId) | ((UInt64(2) << 40))
+            }
             let type: UInt64
             switch attributes.contentTypeHint {
             case .generic:

@@ -113,10 +113,8 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
     
     init(context: AccountContext, presentationData: PresentationData) {
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-            let preferences = WKPreferences()
-            preferences.javaScriptEnabled = false
             let configuration = WKWebViewConfiguration()
-            configuration.preferences = preferences
+            configuration.defaultWebpagePreferences.allowsContentJavaScript = false
             let webView = WKWebView(frame: CGRect(), configuration: configuration)
             webView.allowsLinkPreview = false
             webView.allowsBackForwardNavigationGestures = false
@@ -155,7 +153,10 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
-        self.webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - 44.0 - layout.insets(options: []).bottom))
+        // Beside a side strip (iPhone Duo) the document keeps to the band; equal side insets keep the full width.
+        let bandMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        self.webView.frame = CGRect(origin: CGPoint(x: bandMinX, y: navigationBarHeight), size: CGSize(width: bandWidth, height: layout.size.height - navigationBarHeight - 44.0 - layout.insets(options: []).bottom))
         
         let statusSize = CGSize(width: 50.0, height: 50.0)
         transition.updateFrame(node: self.statusNodeContainer, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - statusSize.width) / 2.0), y: floor((layout.size.height - statusSize.height) / 2.0)), size: statusSize))

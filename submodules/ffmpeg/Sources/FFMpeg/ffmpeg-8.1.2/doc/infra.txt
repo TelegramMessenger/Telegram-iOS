@@ -1,0 +1,168 @@
+FFmpeg Infrastructure:
+======================
+
+Trademark:
+~~~~~~~~~~
+ffmpeg trademark registered in france by ffmpeg creator.
+
+
+Domain + NS:
+~~~~~~~~~~~~
+ffmpeg.org domain name
+ns1.avcodec.org Primary Name server (provided by Telepoint, hosted at Telepoint in bulgaria)
+ns2.avcodec.org Replica Name server (provided by an ffmpeg developer, hosted at Hetzner in germany)
+ns3.avcodec.org Replica Name server (provided by an ffmpeg developer, hosted at Prometeus Cdlan in italy)
+
+
+Servers:
+~~~~~~~~
+
+
+Main Server:
+------------
+Our Main server is hosted at telepoint.bg
+for more details see: https://www.ffmpeg.org/#thanks_sponsor_0001
+Nothing runs on our main server directly, instead several VMs run on it.
+
+Main server security:
+---------------------
+Telepoint is one of the largest Bulgarian DC providers with multiple sibling companies offering
+Internet, SDH, DWDM, peering exchange and hosting. They have multiple DC buildings in Sofia and
+FFmpeg is hosted in XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. The building is locked down and accessible
+only with personal key cards that are registered. People who are granted access to a rack have
+to go through the access center with their ID to get logged and receive a one-time access card
+that can open the service elevator and only the hall where the destination rack is. All racks are
+locked, once access is granted to someone they will get a key for the rack for the duration of
+their visit. There are security cameras everywhere and personnel in the access center 24/7. As for
+software security, our BIOS and IPMI are protected by password and encrypted connection, and
+the machines can be accessed only by root administrators with their SSH keys. They're using
+a Ubuntu LTS release and get regular security updates as they are released. We also get
+notified by email for various security related events (e.g. failed sudo).
+
+Side note - Telepoint provides the rack and physical infrastructure, their sibling company called
+            Telehouse which is an ISP provides the connectivity, they are directly connected with
+            over 15 tier-1 service providers and have over 100 PoPs (points of presence)
+            in various cities. You can see more on www.telehouse.bg
+
+
+ffmpeg.org VM:
+--------------
+Web, mail, and public facing git, also website git
+
+
+fftrac VM:
+----------
+trac.ffmpeg.org         Issue tracking
+gpg encrypted backups of the trac repositories are created once a day
+and can be downloaded by any of the admins.
+
+
+ffaux VM:
+---------
+patchwork.ffmpeg.org    Patch tracking
+vote.ffmpeg.org         Condorcet voting
+
+
+fate:
+-----
+fate.ffmpeg.org         FFmpeg automated testing environment
+
+
+coverage:
+---------
+coverage.ffmpeg.org     Fate code coverage
+
+
+The main and fate server as well as VMs currently run ubuntu
+
+
+
+Cronjobs:
+~~~~~~~~~
+Part of the docs is in the main ffmpeg repository as texi files, this part is build by a cronjob. So is the
+doxygen stuff as well as the FFmpeg git snapshot.
+These 3 scripts are under the ffcron user
+
+
+
+Git:
+~~~~
+Public facing git is provided by our infra, (https://git.ffmpeg.org/gitweb)
+main developer ffmpeg git repository for historic reasons is provided by (git@source.ffmpeg.org:ffmpeg)
+Other developer git repositories are provided via git@git.ffmpeg.org:<NAME_OF_REPOSITORY>
+git mirrors are available on https://github.com/FFmpeg
+(there are some exceptions where primary repositories are on github or elsewhere instead of the mirrors)
+
+Github mirrors are redundantly synced by multiple people
+
+You need a new git repository related to FFmpeg ? contact root at ffmpeg.org
+
+git repositories are managed by gitolite, every change to permissions is
+logged, including when, what and by whom
+
+
+Fate:
+~~~~~
+fatesamples are provided via rsync. Every FFmpeg developer who has a shell account in ffmpeg.org
+should be in the samples group and be able to upload samples.
+See https://www.ffmpeg.org/fate.html#Uploading-new-samples-to-the-fate-suite
+
+
+
+Accounts:
+~~~~~~~~~
+You need an account for some FFmpeg work? Send mail to root at ffmpeg.org
+
+
+
+VMs:
+~~~~
+You need a VM, docker container for FFmpeg? contact root at ffmpeg.org
+(for docker, CC Andriy)
+
+
+
+Multimedia Wiki:
+~~~~~~~~~~~~~~~~
+The Multimedia Wiki http://wiki.multimedia.cx is ran by Mike Melanson.
+While not directly part of FFmpeg infrastructure, technical codec and format
+information written by FFmpeg developers can be found within.
+It is our unofficial official tech wiki. For access contact Mike.
+
+
+
+IRC:
+~~~~
+irc channels are at https://libera.chat/
+irc channel archives are at https://libera.irclog.whitequark.org
+
+#ffmpeg and #ffmpeg-devel founder/admins: BtbN, Michael, Compn
+#ffmpeg-meeting founder/admins: BtbN, Michael
+
+
+Twitter aka X:
+~~~~~~~~~~~~~~
+https://twitter.com/FFmpeg or https://x.com/FFmpeg
+
+If you would like to post to twitter please contact twitter MAINTAINERS
+for access. We want more developers posting to twitter!
+
+
+
+Reddit:
+~~~~~~~
+https://www.reddit.com/r/ffmpeg/
+moderated by Gyan
+
+
+
+Facebook:
+~~~~~~~~~
+https://www.facebook.com/ffmpeg
+???
+
+
+
+Wikipedia entry:
+~~~~~~~~~~~~~~~~
+https://en.wikipedia.org/wiki/FFmpeg

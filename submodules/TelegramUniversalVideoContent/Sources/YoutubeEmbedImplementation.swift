@@ -7,6 +7,18 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import AppBundle
 
+private func accumulateTimecode(_ base: Int, _ value: Int, times multiplier: Int) -> Int {
+    let (product, productOverflow) = value.multipliedReportingOverflow(by: multiplier)
+    if productOverflow {
+        return Int.max
+    }
+    let (sum, sumOverflow) = base.addingReportingOverflow(product)
+    if sumOverflow {
+        return Int.max
+    }
+    return sum
+}
+
 func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
     guard let url = URL(string: url), let host = url.host?.lowercased() else {
         return nil
@@ -35,7 +47,7 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             if let hoursRange = value.range(of: "h", options: .caseInsensitive, range: range, locale: nil) {
                                 let subvalue = String(value[range.lowerBound ..< hoursRange.lowerBound])
                                 if let hours = Int(subvalue) {
-                                    timestamp = timestamp + hours * 3600
+                                    timestamp = accumulateTimecode(timestamp, hours, times: 3600)
                                 }
                                 range = hoursRange.upperBound..<value.endIndex
                             }
@@ -43,7 +55,7 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             if let minutesRange = value.range(of: "m", options: .caseInsensitive, range: range, locale: nil) {
                                 let subvalue = String(value[range.lowerBound ..< minutesRange.lowerBound])
                                 if let minutes = Int(subvalue) {
-                                    timestamp = timestamp + minutes * 60
+                                    timestamp = accumulateTimecode(timestamp, minutes, times: 60)
                                 }
                                 range = minutesRange.upperBound..<value.endIndex
                             }
@@ -51,7 +63,7 @@ func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             if let secondsRange = value.range(of: "s", options: .caseInsensitive, range: range, locale: nil) {
                                 let subvalue = String(value[range.lowerBound ..< secondsRange.lowerBound])
                                 if let seconds = Int(subvalue) {
-                                    timestamp = timestamp + seconds
+                                    timestamp = accumulateTimecode(timestamp, seconds, times: 1)
                                 }
                             }
                         } else {
@@ -441,7 +453,7 @@ public class YoutubeEmbedStoryboardMediaResource: TelegramMediaResource {
     }
 }
 
-public final class YoutubeEmbedStoryboardMediaResourceRepresentation: EngineRawCachedMediaResourceRepresentation {
+public final class YoutubeEmbedStoryboardMediaResourceRepresentation: EngineMediaResourceRepresentation {
     public let keepDuration: EngineCachedMediaRepresentationKeepDuration = .shortLived
 
     public var uniqueId: String {
@@ -483,9 +495,9 @@ public func fetchYoutubeEmbedStoryboardResource(resource: YoutubeEmbedStoryboard
 
 private func youtubeEmbedStoryboardData(account: Account, resource: YoutubeEmbedStoryboardMediaResource) -> Signal<Data?, NoError> {
     return Signal<Data?, NoError> { subscriber in
-        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: YoutubeEmbedStoryboardMediaResourceRepresentation(), complete: true).start(next: { next in
-            if next.size != 0 {
-                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+        let dataDisposable = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(resource), representation: YoutubeEmbedStoryboardMediaResourceRepresentation(), complete: true).start(next: { next in
+            if next.availableSize != 0 {
+                subscriber.putNext(next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
             }
         }, error: subscriber.putError, completed: subscriber.putCompletion)
         

@@ -32,8 +32,6 @@ public protocol ListView: ASDisplayNode {
     var insets: UIEdgeInsets { get }
     var visibleSize: CGSize { get }
     var isTracking: Bool { get }
-    var trackingOffset: CGFloat { get }
-    var beganTrackingAtTopOrigin: Bool { get }
     var isDragging: Bool { get }
     var edgeEffectExtension: CGFloat { get }
     var displayedItemRange: ListViewDisplayedItemRange { get }

@@ -112,7 +112,7 @@ private final class HistoryPreloadEntry: Comparable {
                 |> mapToSignal { download -> Signal<Never, NoError> in
                     switch hole.hole {
                     case let .peer(peerHole):
-                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerInput: .direct(peerId: peerHole.peerId, threadId: nil), namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, count: 60)
+                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerInput: .direct(peerId: peerHole.peerId, threadId: peerHole.threadId), namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, count: 60)
                         |> ignoreValues
                     }
                 }
@@ -381,7 +381,7 @@ final class ChatHistoryPreloadManager {
         indices.removeAll()
         #endif*/
         
-        self.queue.async {
+        self.queue.async { [self] in
             var validEntityIds = Set(indices.map { $0.0.entity })
             for peerId in additionalPeerIds {
                 validEntityIds.insert(.peer(peerId: peerId, threadId: nil))

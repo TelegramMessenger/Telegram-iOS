@@ -675,7 +675,7 @@ public extension CombinedComponent {
                 component: self,
                 availableSize: availableSize,
                 transition: transition,
-                add: { updatedChild, optionalContainer in
+                add: { [viewContext] updatedChild, optionalContainer in
                     if !addedChildIds.insert(updatedChild.id).inserted {
                         preconditionFailure("Child component can only be added once")
                     }

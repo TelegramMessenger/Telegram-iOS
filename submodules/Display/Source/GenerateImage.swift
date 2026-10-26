@@ -299,7 +299,7 @@ public func generateSmallHorizontalStretchableFilledCircleImage(diameter: CGFloa
     })?.stretchableImage(withLeftCapWidth: Int(diameter / 2), topCapHeight: Int(diameter / 2))
 }
 
-public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {
+public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil, flipHorizontally: Bool = false) -> UIImage? {
     guard let image = image else {
         return nil
     }
@@ -316,7 +316,7 @@ public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor
         let imageRect = CGRect(origin: CGPoint(), size: imageSize)
         context.saveGState()
         context.translateBy(x: imageRect.midX, y: imageRect.midY)
-        context.scaleBy(x: 1.0, y: -1.0)
+        context.scaleBy(x: flipHorizontally ? -1.0 : 1.0, y: -1.0)
         context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
         context.clip(to: imageRect, mask: image.cgImage!)
         context.setFillColor(color.cgColor)
@@ -637,7 +637,10 @@ public class DrawingContext {
         self.bytesPerRow = bytesPerRow ?? DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(scaledSize.width))
         self.length = self.bytesPerRow * Int(scaledSize.height)
 
-        self.imageBuffer = ASCGImageBuffer(length: UInt(self.length))
+        guard let imageBuffer = ASCGImageBuffer(length: UInt(self.length)) else {
+            return nil
+        }
+        self.imageBuffer = imageBuffer
 
         if opaque {
             self.bitmapInfo = DeviceGraphicsContextSettings.shared.opaqueBitmapInfo

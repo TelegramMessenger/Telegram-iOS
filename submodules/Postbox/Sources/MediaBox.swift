@@ -199,7 +199,7 @@ public final class MediaBox {
             postboxLog(string)
         }), basePath: basePath + "/cache-storage", isMainProcess: isMainProcess)
         
-        self.timeBasedCleanup = TimeBasedCleanup(storageBox: self.storageBox, generalPaths: [
+        self.timeBasedCleanup = TimeBasedCleanup(storageBox: self.storageBox, cacheStorageBox: self.cacheStorageBox, generalPaths: [
             self.basePath + "/cache",
             self.basePath + "/animation-cache"
         ], totalSizeBasedPath: self.basePath, shortLivedPaths: [
@@ -209,6 +209,12 @@ public final class MediaBox {
         self.dataFileManager = MediaBoxFileManager(queue: self.dataQueue)
         
         let _ = self.ensureDirectoryCreated
+        
+        if isMainProcess {
+            Queue.concurrentBackgroundQueue().after(30.0, { [weak self] in
+                self?.removeStaleEmptyPartialFiles(olderThan: Int(Date().timeIntervalSince1970) - 24 * 60 * 60, completion: { _ in })
+            })
+        }
     }
     
     public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
@@ -423,7 +429,7 @@ public final class MediaBox {
                         
                         if let statusUpdateDisposable = statusUpdateDisposable {
                             let statusQueue = self.statusQueue
-                            self.dataQueue.async {
+                            self.dataQueue.async { [statusContext] in
                                 if let (fileContext, releaseContext) = self.fileContext(for: resourceId) {
                                     let statusDisposable = fileContext.status(next: { [weak statusContext] value in
                                         statusQueue.async {
@@ -905,7 +911,7 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             let dataQueue = self.dataQueue
-            self.dataQueue.async {
+            self.dataQueue.async { [self] in
                 let context: MediaBoxKeepResourceContext
                 if let current = self.keepResourceContexts[id] {
                     context = current
@@ -1014,7 +1020,7 @@ public final class MediaBox {
                     if attemptSynchronously && complete {
                         subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                     }
-                    self.dataQueue.async {
+                    self.dataQueue.async { [self] in
                         let key = CachedMediaResourceRepresentationKey(resourceId: resource.id.stringRepresentation, representation: representation.uniqueId)
                         let context: CachedMediaResourceRepresentationContext
                         if let currentContext = self.cachedRepresentationContexts[key] {
@@ -1051,7 +1057,10 @@ public final class MediaBox {
                             subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                         }
                         
-                        disposable.set(ActionDisposable { [weak context] in
+                        disposable.set(ActionDisposable { [weak self, weak context] in
+                            guard let self else {
+                                return
+                            }
                             self.dataQueue.async {
                                 if let currentContext = self.cachedRepresentationContexts[key], currentContext === context {
                                     currentContext.dataSubscribers.remove(index)
@@ -1202,7 +1211,7 @@ public final class MediaBox {
                     if attemptSynchronously && complete {
                         subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                     }
-                    self.dataQueue.async {
+                    self.dataQueue.async { [self] in
                         let key = CachedMediaResourceRepresentationKey(resourceId: baseResourceId, representation: id)
                         let context: CachedMediaResourceRepresentationContext
                         if let currentContext = self.cachedRepresentationContexts[key] {
@@ -1239,7 +1248,10 @@ public final class MediaBox {
                             subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: 0, complete: false))
                         }
 
-                        disposable.set(ActionDisposable { [weak context] in
+                        disposable.set(ActionDisposable { [weak self, weak context] in
+                            guard let self else {
+                                return
+                            }
                             self.dataQueue.async {
                                 if let currentContext = self.cachedRepresentationContexts[key], currentContext === context {
                                     currentContext.dataSubscribers.remove(index)
@@ -1859,6 +1871,68 @@ public final class MediaBox {
         }
     }
     
+    func removeStaleEmptyPartialFiles(olderThan minTimestamp: Int, completion: @escaping (Int) -> Void) {
+        let basePath = self.basePath
+        Queue.concurrentBackgroundQueue().async { [weak self] in
+            var candidateIds: [String] = []
+            var seenIds = Set<String>()
+            for name in (try? FileManager.default.contentsOfDirectory(atPath: basePath)) ?? [] {
+                let id: String
+                if name.hasSuffix("_partial.meta") {
+                    id = String(name.dropLast("_partial.meta".count))
+                } else if name.hasSuffix("_partial") {
+                    id = String(name.dropLast("_partial".count))
+                } else {
+                    continue
+                }
+                if id.isEmpty || seenIds.contains(id) {
+                    continue
+                }
+                let partialPath = basePath + "/" + id + "_partial"
+                if staleEmptyPartialFileState(partialPath: partialPath, metaPath: partialPath + ".meta", olderThan: minTimestamp) != nil {
+                    seenIds.insert(id)
+                    candidateIds.append(id)
+                }
+            }
+            guard let strongSelf = self, !candidateIds.isEmpty else {
+                completion(0)
+                return
+            }
+            strongSelf.removeStaleEmptyPartialFiles(candidateIds: candidateIds, from: 0, olderThan: minTimestamp, removedCount: 0, completion: completion)
+        }
+    }
+    
+    private func removeStaleEmptyPartialFiles(candidateIds: [String], from startIndex: Int, olderThan minTimestamp: Int, removedCount: Int, completion: @escaping (Int) -> Void) {
+        self.dataQueue.justDispatch {
+            var removedCount = removedCount
+            let endIndex = min(startIndex + 64, candidateIds.count)
+            for index in startIndex ..< endIndex {
+                let id = MediaResourceId(candidateIds[index])
+                if self.fileContexts[id] != nil || self.keepResourceContexts[id] != nil {
+                    continue
+                }
+                let paths = self.storePathsForId(id)
+                let metaPath = paths.partial + ".meta"
+                switch staleEmptyPartialFileState(partialPath: paths.partial, metaPath: metaPath, olderThan: minTimestamp) {
+                case .emptyPartial:
+                    unlink(paths.partial)
+                    unlink(metaPath)
+                    removedCount += 1
+                case .orphanedMeta:
+                    unlink(metaPath)
+                    removedCount += 1
+                case nil:
+                    break
+                }
+            }
+            if endIndex < candidateIds.count {
+                self.removeStaleEmptyPartialFiles(candidateIds: candidateIds, from: endIndex, olderThan: minTimestamp, removedCount: removedCount, completion: completion)
+            } else {
+                completion(removedCount)
+            }
+        }
+    }
+    
     public func removeCachedResourcesWithResult(_ ids: [MediaResourceId], force: Bool = false, notify: Bool = false) -> Signal<[MediaResourceId], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
@@ -2045,3 +2119,31 @@ private final class ScanFilesContext {
     
     return result
 }*/
+
+private enum StaleEmptyPartialFileState {
+    case emptyPartial
+    case orphanedMeta
+}
+
+private func staleEmptyPartialFileState(partialPath: String, metaPath: String, olderThan minTimestamp: Int) -> StaleEmptyPartialFileState? {
+    var metaStat = stat()
+    let hasMeta = lstat(metaPath, &metaStat) == 0
+    if hasMeta {
+        if (metaStat.st_mode & S_IFMT) != S_IFREG || metaStat.st_mtimespec.tv_sec >= minTimestamp {
+            return nil
+        }
+    }
+    var partialStat = stat()
+    let partialResult = lstat(partialPath, &partialStat)
+    let partialError = errno
+    if partialResult != 0 {
+        if partialError == ENOENT && hasMeta {
+            return .orphanedMeta
+        }
+        return nil
+    }
+    if (partialStat.st_mode & S_IFMT) != S_IFREG || partialStat.st_size != 0 || partialStat.st_nlink != 1 || partialStat.st_mtimespec.tv_sec >= minTimestamp {
+        return nil
+    }
+    return .emptyPartial
+}

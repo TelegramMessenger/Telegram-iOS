@@ -59,7 +59,7 @@ public final class ThemePreviewController: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationTheme.set(.single(previewTheme))
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
         self._hasGlassStyle = true
         
@@ -157,7 +157,7 @@ public final class ThemePreviewController: ViewController {
                 let titleView = CounterControllerTitleView(theme: strongSelf.previewTheme)
                 titleView.title = CounterControllerTitle(title: themeName, counter: hasInstallsCount ? strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)) : "")
                 strongSelf.navigationItem.titleView = titleView
-                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings, style: .glass), transition: .immediate)
+                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings), transition: .immediate)
             }
         })
         
@@ -524,7 +524,7 @@ public final class ThemePreviewController: ViewController {
                 subject = .media(media, nil)
                 preferredAction = .default
         }
-        let controller = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction))
+        let controller = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction))
         self.present(controller, in: .window(.root), blockInteraction: true)
     }
 }

@@ -342,13 +342,16 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         transition.updateFrame(node: self.actionButtonPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: layout.size.width, height: bottomPanelHeight)))
         transition.updateFrame(node: self.actionButtonPanelSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
 
-        let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
+        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom, as the
+        // checkout's Pay button does. Equal insets keep the screen-wide button.
+        let actionButtonStripInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? layout.bottomEdgeSideInsets() : (0.0, 0.0)
+        let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset + actionButtonStripInsets.left, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0 - actionButtonStripInsets.left - actionButtonStripInsets.right, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
         self.actionButton.updateLayout(absoluteRect: actionButtonFrame.offsetBy(dx: self.actionButtonPanelNode.frame.minX, dy: self.actionButtonPanelNode.frame.minY), containerSize: layout.size, transition: transition)
 
         updatedInsets.bottom = bottomPanelHeight
 
-        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
+        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), navigationBarHeight: navigationBarHeight, transition: transition, additionalInsets: additionalInsets)
     }
     
     @objc func actionButtonPressed() {

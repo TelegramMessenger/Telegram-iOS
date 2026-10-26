@@ -119,8 +119,10 @@ public final class AuthorizationSequenceSplashController: ViewController {
         self.controller.animateIn()
     }
     
+    // The intro view may sit in a band (iPhone Duo's side strip, see introFrame(layout:)); these frames are
+    // handed to the next screen's node, which fills the window, so they are offset out of the intro view.
     var buttonFrame: CGRect {
-        return self.startButton.frame
+        return self.startButton.frame.offsetBy(dx: self.controller.defaultFrame.minX, dy: self.controller.defaultFrame.minY)
     }
     
     var buttonTitle: String {
@@ -128,18 +130,37 @@ public final class AuthorizationSequenceSplashController: ViewController {
     }
     
     var animationSnapshot: UIView? {
-        return self.controller.createAnimationSnapshot()
+        let snapshotView: UIView? = self.controller.createAnimationSnapshot()
+        guard let snapshot = snapshotView else {
+            return nil
+        }
+        snapshot.frame = snapshot.frame.offsetBy(dx: self.controller.defaultFrame.minX, dy: self.controller.defaultFrame.minY)
+        return snapshot
     }
     
     var textSnaphot: UIView? {
-        return self.controller.createTextSnapshot()
+        let snapshotView: UIView? = self.controller.createTextSnapshot()
+        guard let snapshot = snapshotView else {
+            return nil
+        }
+        snapshot.frame = snapshot.frame.offsetBy(dx: self.controller.defaultFrame.minX, dy: self.controller.defaultFrame.minY)
+        return snapshot
+    }
+    
+    // iPhone Duo: beside a side strip the intro (logo, pages, Start Messaging) keeps to the band between the
+    // side insets. With equal insets (every other phone) it fills the window as before.
+    private func introFrame(layout: ContainerViewLayout) -> CGRect {
+        if layout.safeInsets.left != layout.safeInsets.right {
+            return CGRect(origin: CGPoint(x: layout.safeInsets.left, y: 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
+        }
+        return CGRect(origin: CGPoint(), size: layout.size)
     }
     
     private func addControllerIfNeeded() {
         if !self.controller.isViewLoaded || self.controller.view.superview == nil {
             self.displayNode.view.addSubview(self.controller.view)
             if let layout = self.validLayout {
-                controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+                controller.view.frame = self.introFrame(layout: layout)
             }
             self.controller.viewDidAppear(false)
         }
@@ -173,7 +194,7 @@ public final class AuthorizationSequenceSplashController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
-        let controllerFrame = CGRect(origin: CGPoint(), size: layout.size)
+        let controllerFrame = self.introFrame(layout: layout)
         self.controller.defaultFrame = controllerFrame
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)

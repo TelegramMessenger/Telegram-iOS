@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramStringFormatting
 import AccountContext
 import TelegramUIPreferences
 import TelegramCallsUI
@@ -315,7 +316,14 @@ public final class GlobalControlPanelsContext {
             }
             
             if chatListNotices {
-                let twoStepData: Signal<TwoStepVerificationConfiguration?, NoError> = .single(nil) |> then(context.engine.auth.twoStepVerificationConfiguration() |> map(Optional.init))
+                let needsPasswordSetup: Signal<Bool?, NoError> = context.twoStepAuthData.get()
+                |> map { data -> Bool? in
+                    guard let data else {
+                        return nil
+                    }
+                    return data.currentPasswordDerivation == nil && data.unconfirmedEmailPattern == nil
+                }
+                |> distinctUntilChanged
                 
                 let accountFreezeConfiguration = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.appConfiguration))
                                                   |> map { view -> AppConfiguration in
@@ -332,7 +340,7 @@ public final class GlobalControlPanelsContext {
                 let suggestedChatListNoticeSignal: Signal<ChatListNotice?, NoError> = combineLatest(
                     context.engine.notices.getServerProvidedSuggestions(),
                     context.engine.notices.getServerDismissedSuggestions(),
-                    twoStepData,
+                    needsPasswordSetup,
                     newSessionReviews(postbox: context.account.postbox),
                     newBotConnectionReviews(postbox: context.account.postbox),
                     context.engine.data.subscribe(
@@ -343,7 +351,7 @@ public final class GlobalControlPanelsContext {
                     starsSubscriptionsContextPromise.get(),
                     accountFreezeConfiguration
                 )
-                |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, newBotConnectionReviews, data, birthdays, starsSubscriptionsContext, accountFreezeConfiguration -> Signal<ChatListNotice?, NoError> in
+                |> mapToSignal { suggestions, dismissedSuggestions, needsPasswordSetup, newSessionReviews, newBotConnectionReviews, data, birthdays, starsSubscriptionsContext, accountFreezeConfiguration -> Signal<ChatListNotice?, NoError> in
                     let (accountPeer, birthday) = data
                     
                     if let newSessionReview = newSessionReviews.first {
@@ -361,25 +369,15 @@ public final class GlobalControlPanelsContext {
                             )
                         }
                     }
-                    if suggestions.contains(.setupPassword), let configuration {
-                        var notSet = false
-                        switch configuration {
-                        case let .notSet(pendingEmail):
-                            if pendingEmail == nil {
-                                notSet = true
-                            }
-                        case .set:
-                            break
-                        }
-                        if notSet {
-                            return .single(.setupPassword)
-                        }
+                    if suggestions.contains(.setupPassword), needsPasswordSetup == true {
+                        return .single(.setupPassword)
                     }
                     
-                    let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                    let currentDate = Date()
+                    let currentTimeZone = TimeZone.current
                     var todayBirthdayPeerIds: [EnginePeer.Id] = []
                     for (peerId, birthday) in birthdays {
-                        if birthday.day == today {
+                        if relativeDateForBirthday(birthday, relativeTo: currentDate, timeZone: currentTimeZone) == .today {
                             todayBirthdayPeerIds.append(peerId)
                         }
                     }
@@ -522,7 +520,7 @@ public final class GlobalControlPanelsContext {
                     |> distinctUntilChanged(isEqual: { lhs, rhs in
                         return lhs.0 == rhs.0
                     })
-                    |> mapToSignal { activeCall, peer -> Signal<AccountGroupCallContextImpl.GroupCallPanelData?, NoError> in
+                    |> mapToSignal { [context] activeCall, peer -> Signal<AccountGroupCallContextImpl.GroupCallPanelData?, NoError> in
                         guard let activeCall = activeCall else {
                             return .single(nil)
                         }

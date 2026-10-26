@@ -14,7 +14,11 @@ def import_certificates(certificatesPath):
 
     existing_keychains = run_executable_with_output('security', arguments=['list-keychains'], check_result=True)
     if keychain_name in existing_keychains:
-        run_executable_with_output('security', arguments=['delete-keychain'], check_result=True)
+        # The keychain name is required. Without it `security` fails with
+        # "SecKeychainDelete: The specified keychain is not a valid keychain file",
+        # which only happens on a second build inside one VM -- unreachable while every
+        # build got a fresh ephemeral VM, and hit on every reuse of a persistent one.
+        run_executable_with_output('security', arguments=['delete-keychain', keychain_name], check_result=True)
 
     run_executable_with_output('security', arguments=[
         'create-keychain',

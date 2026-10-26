@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -35,7 +36,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var activeConferenceUpdateTimer: SwiftSignalKit.Timer?
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.titleNode = TextNode()
         self.labelNode = TextNode()
         
@@ -47,7 +48,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode = HighlightableButtonNode()
         self.buttonNode.isAccessibilityElement = false
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
                 
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .topLeft
@@ -91,9 +92,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makePeopleTextLayout = TextNode.asyncLayout(self.peopleTextNode)
         
-        return { item, layoutConstants, _, _, _, _ in
+        return { [weak self] item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
@@ -118,14 +119,21 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     if let action = media as? TelegramMediaAction, case let .phoneCall(_, discardReason, duration, isVideoValue) = action.action {
                         isVideo = isVideoValue
                         callDuration = duration
+                        let callConnected = (duration ?? 0) > 0
                         if let discardReason = discardReason {
                             switch discardReason {
                                 case .disconnect:
-                                    callSuccessful = false
-                                    if isVideo {
-                                        titleString = item.presentationData.strings.Notification_VideoCallCanceled
-                                    } else {
-                                        titleString = item.presentationData.strings.Notification_CallCanceled
+                                    // `.disconnect` means the transport died, which says nothing
+                                    // about whether the call connected: a non-zero duration means
+                                    // it was answered and ran, so the connection was merely lost at
+                                    // the end of a real conversation rather than cancelled.
+                                    if !callConnected {
+                                        callSuccessful = false
+                                        if isVideo {
+                                            titleString = item.presentationData.strings.Notification_VideoCallCanceled
+                                        } else {
+                                            titleString = item.presentationData.strings.Notification_CallCanceled
+                                        }
                                     }
                                 case .missed, .busy:
                                     callSuccessful = false
@@ -290,7 +298,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 boundingSize.width += 54.0
                 
-                return (boundingSize.width, { boundingWidth in
+                return (boundingSize.width, { [weak self] boundingWidth in
                     return (boundingSize, { [weak self] animation, _, _ in
                         if let strongSelf = self {
                             strongSelf.item = item

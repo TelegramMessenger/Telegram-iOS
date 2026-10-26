@@ -13,6 +13,7 @@ import TextFormat
 import SwiftSignalKit
 import ViewControllerComponent
 import RichTextEditorUIKit
+import RichTextEngineEditor
 
 /// Hosts the Telegram emoji keyboard (`ChatEntityKeyboardInputNode`, emoji-only) as a bottom panel for
 /// a `RichTextEditorView`. Unicode emoji insert as text; custom emoji insert as inline custom-emoji
@@ -20,7 +21,7 @@ import RichTextEditorUIKit
 @available(iOS 13.0, *)
 final class RichTextEmojiKeyboardController {
     private let context: AccountContext
-    private weak var editor: RichTextEditorView?
+    private weak var editor: (any RichTextEditor)?
     private let requestLayout: () -> Void
 
     private let stateContext = ChatEntityKeyboardInputNode.StateContext()
@@ -56,7 +57,7 @@ final class RichTextEmojiKeyboardController {
 
     private(set) var isEmojiMode = false
 
-    init(context: AccountContext, editor: RichTextEditorView, requestLayout: @escaping () -> Void) {
+    init(context: AccountContext, editor: any RichTextEditor, requestLayout: @escaping () -> Void) {
         self.context = context
         self.editor = editor
         self.requestLayout = requestLayout

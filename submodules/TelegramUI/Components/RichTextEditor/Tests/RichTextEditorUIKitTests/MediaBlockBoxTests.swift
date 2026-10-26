@@ -80,9 +80,12 @@ final class MediaBlockBoxTests: XCTestCase {
         // does NOT collapse to 0.
         let chrome = box.verticalInset * 2 + box.imageAreaHeight + box.captionGap
         let reserved = box.height - chrome
-        let bodyLine = mapper.styleSheet.font(for: .body, attributes: .plain).lineHeight
-        XCTAssertGreaterThan(reserved, bodyLine * 0.9, "empty caption must reserve ~a full line")
-        XCTAssertLessThan(reserved, bodyLine * 2.0, "empty caption reserves exactly one line, not more")
+        // "One line" is V2's single-line item height for the CAPTION style (the caption renders at
+        // `.caption`, not `.body`) — ascender + |descender|, not a scaled font.lineHeight.
+        let captionLine = RichTextRenderMetrics.textHeight(
+            mapper.styleSheet.font(for: .caption, attributes: .plain),
+            factor: mapper.styleSheet.metrics.caption.lineSpacingFactor, lineCount: 1)
+        XCTAssertEqual(reserved, captionLine, accuracy: 0.5, "empty caption reserves exactly one V2 line")
     }
 
     func test_emptyCaption_showsAddCaptionPlaceholder() {

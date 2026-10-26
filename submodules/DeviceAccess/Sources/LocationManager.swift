@@ -11,7 +11,7 @@ public final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     func requestWhenInUseAuthorization(completion: @escaping (CLAuthorizationStatus) -> Void) {
-        let status = CLLocationManager.authorizationStatus()
+        let status = self.manager.authorizationStatus
         if status == .notDetermined {
             self.manager.requestWhenInUseAuthorization()
             self.pendingCompletion = (completion, .authorizedWhenInUse)
@@ -21,7 +21,7 @@ public final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     func requestAlwaysAuthorization(completion: @escaping (CLAuthorizationStatus) -> Void) {
-        let status = CLLocationManager.authorizationStatus()
+        let status = self.manager.authorizationStatus
         if status == .notDetermined {
             self.manager.requestWhenInUseAuthorization()
             self.pendingCompletion = (completion, .authorizedAlways)

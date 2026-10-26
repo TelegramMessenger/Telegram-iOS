@@ -3,6 +3,7 @@ import UIKit
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
+import UnsupportedContentPill
 
 public enum InstantPageFontStyle {
     case sans
@@ -11,14 +12,28 @@ public enum InstantPageFontStyle {
 }
 
 public struct InstantPageFont {
+    /// Deliberately narrow rather than a re-export of `Font.Weight`: every case here has a real
+    /// resolution path. A weight enum whose cases are silently ignored type-checks, reads as
+    /// working, and does nothing. Widen it only when a new weight actually gets resolved.
+    ///
+    /// `.medium` and `.semibold` both resolve serif runs to the system serif design (New York),
+    /// which ships real Medium and Semibold faces — neither is a synthesised weight.
+    public enum Weight {
+        case regular
+        case medium
+        case semibold
+    }
+
     let style: InstantPageFontStyle
     let size: CGFloat
     let lineSpacingFactor: CGFloat
+    let weight: Weight
 
-    public init(style: InstantPageFontStyle, size: CGFloat, lineSpacingFactor: CGFloat) {
+    public init(style: InstantPageFontStyle, size: CGFloat, lineSpacingFactor: CGFloat, weight: Weight = .regular) {
         self.style = style
         self.size = size
         self.lineSpacingFactor = lineSpacingFactor
+        self.weight = weight
     }
 }
 
@@ -38,7 +53,7 @@ public struct InstantPageTextAttributes {
     }
     
     func withUpdatedFontStyles(sizeMultiplier: CGFloat, lineSpacingFactor: CGFloat, forceSerif: Bool) -> InstantPageTextAttributes {
-        return InstantPageTextAttributes(font: InstantPageFont(style: forceSerif ? .serif : self.font.style, size: floor(self.font.size * sizeMultiplier), lineSpacingFactor: self.font.lineSpacingFactor * lineSpacingFactor), color: self.color, underline: self.underline)
+        return InstantPageTextAttributes(font: InstantPageFont(style: forceSerif ? .serif : self.font.style, size: floor(self.font.size * sizeMultiplier), lineSpacingFactor: self.font.lineSpacingFactor * lineSpacingFactor, weight: self.font.weight), color: self.color, underline: self.underline)
     }
 }
 
@@ -115,12 +130,26 @@ public struct InstantPageTextCategories {
     }
 }
 
+/// The nominal `subheader` size every `InstantPageTextCategories` declares.
+///
+/// The H1–H6 ladder in `InstantPageTheme.headingTextAttributes` is authored against a 22pt subheader
+/// (H2 = 20 sits one step below it), and scales by the theme's `fontSizeMultiplier` — NOT by a ratio
+/// recovered from the live subheader size, which is already floored and so drifts by a point at some
+/// steps. Reference this at the category construction sites rather than repeating `22.0`, so a
+/// subheader that moves off the ladder's baseline is a deliberate opt-out, not an accident.
+public let instantPageNominalSubheaderFontSize: CGFloat = 22.0
+
 public final class InstantPageTheme {
     public let type: InstantPageThemeType
     public let pageBackgroundColor: UIColor
     
     public let textCategories: InstantPageTextCategories
     public let serif: Bool
+    /// The product of every `sizeMultiplier` applied to this theme's categories through
+    /// `withUpdatedFontStyles` — exactly 1.0 for a theme built straight from its table. The heading
+    /// ladder scales by THIS rather than by a ratio recovered from the already-floored subheader:
+    /// at the chat `.large` step the recovered 24/22 (1.091) put H2 on 21 where floor(20 × 19/17) is 22.
+    public let fontSizeMultiplier: CGFloat
     
     public let codeBlockBackgroundColor: UIColor
     
@@ -144,7 +173,48 @@ public final class InstantPageTheme {
     public let secondaryControlColor: UIColor
     public let quoteAccentColor: UIColor
 
-    public init(type: InstantPageThemeType, pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, serif: Bool, codeBlockBackgroundColor: UIColor, linkColor: UIColor, textHighlightColor: UIColor, linkHighlightColor: UIColor, markerColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor, tableBorderColor: UIColor, tableHeaderColor: UIColor, controlColor: UIColor, imageTintColor: UIColor?, overlayPanelColor: UIColor, separatorColor: UIColor, secondaryControlColor: UIColor, quoteAccentColor: UIColor) {
+    /// Pill fill and label for `richButtonStyle` bg_danger / bg_success on InstantPage buttons.
+    /// `InstantPageTheme` has no destructive/success colour of its own; the chat bubble passes
+    /// PresentationTheme-derived values, and the standalone Instant View themes fall back to these
+    /// defaults (a 15% tint with a full-strength label). The pair is split because a tint only reads
+    /// on a neutral page: over a saturated bubble (e.g. an outgoing Day Blue bubble) a translucent
+    /// red fill mixes into the bubble colour and the red label loses contrast.
+    public let buttonDangerBackgroundColor: UIColor
+    public let buttonDangerForegroundColor: UIColor
+    public let buttonSuccessBackgroundColor: UIColor
+    public let buttonSuccessForegroundColor: UIColor
+
+    /// Task-list checkbox colours (`InstantPageListItem` checkboxes): `checkboxFill` is the box fill
+    /// when checked, `checkboxForeground` the checkmark drawn on it. Same arrangement as the button
+    /// colours above — the chat bubble passes theme-derived values, standalone Instant View themes take
+    /// these defaults.
+    public let checkboxFill: UIColor
+    public let checkboxForeground: UIColor
+
+    /// The un-styled InstantPage button — a `pageButton` with no `richButtonStyle`, i.e. neither
+    /// primary, danger nor success. Read by the **block-level** `pageBlockButtonRow` pill
+    /// (`instantPageButtonColors(isInline: false)`), which previously borrowed `tableHeaderColor` /
+    /// `panelPrimaryColor`. An inline neutral pill still takes `panelBackgroundColor` /
+    /// `panelAccentColor` — the two are deliberately different, so changing these does not affect it.
+    public let neutralButtonBackgroundColor: UIColor
+    public let neutralButtonForegroundColor: UIColor
+
+    /// Fill for the unsupported-content pill when the host supplies no wallpaper node, and the
+    /// colour of its title, badge glyph and button label. Hosts inside a chat pass the
+    /// service-message colours so the pill matches the standalone unsupported bubble.
+    public let unsupportedPillFillColor: UIColor
+    public let unsupportedPillPrimaryColor: UIColor
+
+    /// The pill's colour pack. `isDark` is derived rather than stored — one source of truth.
+    var unsupportedPillColors: UnsupportedContentPillColors {
+        return UnsupportedContentPillColors(
+            fill: self.unsupportedPillFillColor,
+            primaryText: self.unsupportedPillPrimaryColor,
+            isDark: self.type == .dark
+        )
+    }
+
+    public init(type: InstantPageThemeType, pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, serif: Bool, codeBlockBackgroundColor: UIColor, linkColor: UIColor, textHighlightColor: UIColor, linkHighlightColor: UIColor, markerColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor, tableBorderColor: UIColor, tableHeaderColor: UIColor, controlColor: UIColor, imageTintColor: UIColor?, overlayPanelColor: UIColor, separatorColor: UIColor, secondaryControlColor: UIColor, quoteAccentColor: UIColor, buttonDangerBackgroundColor: UIColor = UIColor(rgb: 0xff3b30).withMultipliedAlpha(0.15), buttonDangerForegroundColor: UIColor = UIColor(rgb: 0xff3b30), buttonSuccessBackgroundColor: UIColor = UIColor(rgb: 0x34c759).withMultipliedAlpha(0.15), buttonSuccessForegroundColor: UIColor = UIColor(rgb: 0x34c759), checkboxFill: UIColor = UIColor(rgb: 0x007aff), checkboxForeground: UIColor = .white, neutralButtonBackgroundColor: UIColor = UIColor(rgb: 0xf3f4f5), neutralButtonForegroundColor: UIColor = .black, unsupportedPillFillColor: UIColor = UIColor(white: 0.0, alpha: 0.1), unsupportedPillPrimaryColor: UIColor = .white, fontSizeMultiplier: CGFloat = 1.0) {
         self.type = type
         self.pageBackgroundColor = pageBackgroundColor
         self.textCategories = textCategories
@@ -167,44 +237,63 @@ public final class InstantPageTheme {
         self.separatorColor = separatorColor
         self.secondaryControlColor = secondaryControlColor
         self.quoteAccentColor = quoteAccentColor
-    }
-    
-    public func withUpdatedFontStyles(sizeMultiplier: CGFloat, lineSpacingFactor: CGFloat, forceSerif: Bool) -> InstantPageTheme {
-        return InstantPageTheme(type: type, pageBackgroundColor: pageBackgroundColor, textCategories: self.textCategories.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, lineSpacingFactor: lineSpacingFactor, forceSerif: forceSerif), serif: forceSerif, codeBlockBackgroundColor: codeBlockBackgroundColor, linkColor: linkColor, textHighlightColor: textHighlightColor, linkHighlightColor: linkHighlightColor, markerColor: markerColor, panelBackgroundColor: panelBackgroundColor, panelHighlightedBackgroundColor: panelHighlightedBackgroundColor, panelPrimaryColor: panelPrimaryColor, panelSecondaryColor: panelSecondaryColor, panelAccentColor: panelAccentColor, tableBorderColor: tableBorderColor, tableHeaderColor: tableHeaderColor, controlColor: controlColor, imageTintColor: imageTintColor, overlayPanelColor: overlayPanelColor, separatorColor: separatorColor, secondaryControlColor: secondaryControlColor, quoteAccentColor: quoteAccentColor)
+        self.buttonDangerBackgroundColor = buttonDangerBackgroundColor
+        self.buttonDangerForegroundColor = buttonDangerForegroundColor
+        self.buttonSuccessBackgroundColor = buttonSuccessBackgroundColor
+        self.buttonSuccessForegroundColor = buttonSuccessForegroundColor
+        self.checkboxFill = checkboxFill
+        self.checkboxForeground = checkboxForeground
+        self.neutralButtonBackgroundColor = neutralButtonBackgroundColor
+        self.neutralButtonForegroundColor = neutralButtonForegroundColor
+        self.unsupportedPillFillColor = unsupportedPillFillColor
+        self.unsupportedPillPrimaryColor = unsupportedPillPrimaryColor
+        self.fontSizeMultiplier = fontSizeMultiplier
     }
 
+    public func withUpdatedFontStyles(sizeMultiplier: CGFloat, lineSpacingFactor: CGFloat, forceSerif: Bool) -> InstantPageTheme {
+        // NOTE: this reconstructs the whole struct field by field. Any field omitted here silently
+        // reverts to its `init` default — for the button danger/success colours that would reset a
+        // chat bubble's theme-derived button colours the moment the user changes Instant View font
+        // size or forces serif. Nothing warns; it compiles. Keep this list exhaustive.
+        return InstantPageTheme(type: type, pageBackgroundColor: pageBackgroundColor, textCategories: self.textCategories.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, lineSpacingFactor: lineSpacingFactor, forceSerif: forceSerif), serif: forceSerif, codeBlockBackgroundColor: codeBlockBackgroundColor, linkColor: linkColor, textHighlightColor: textHighlightColor, linkHighlightColor: linkHighlightColor, markerColor: markerColor, panelBackgroundColor: panelBackgroundColor, panelHighlightedBackgroundColor: panelHighlightedBackgroundColor, panelPrimaryColor: panelPrimaryColor, panelSecondaryColor: panelSecondaryColor, panelAccentColor: panelAccentColor, tableBorderColor: tableBorderColor, tableHeaderColor: tableHeaderColor, controlColor: controlColor, imageTintColor: imageTintColor, overlayPanelColor: overlayPanelColor, separatorColor: separatorColor, secondaryControlColor: secondaryControlColor, quoteAccentColor: quoteAccentColor, buttonDangerBackgroundColor: buttonDangerBackgroundColor, buttonDangerForegroundColor: buttonDangerForegroundColor, buttonSuccessBackgroundColor: buttonSuccessBackgroundColor, buttonSuccessForegroundColor: buttonSuccessForegroundColor, checkboxFill: checkboxFill, checkboxForeground: checkboxForeground, neutralButtonBackgroundColor: neutralButtonBackgroundColor, neutralButtonForegroundColor: neutralButtonForegroundColor, unsupportedPillFillColor: unsupportedPillFillColor, unsupportedPillPrimaryColor: unsupportedPillPrimaryColor, fontSizeMultiplier: self.fontSizeMultiplier * sizeMultiplier)
+    }
+
+    /// The H1–H6 ladder: **22 / 20 / 18 / 17 / 16 / 15**, serif medium.
+    ///
+    /// Every level carries its own base size here. H1 and H2 deliberately do NOT reuse the `header` /
+    /// `subheader` categories — those stay at 24 / 22 for what they actually style: the page title and
+    /// subtitle, and the `pageBlockHeader` / `pageBlockSubheader` blocks. A heading is a different
+    /// thing from a page header, and while the two shared a size, resizing the heading ladder also
+    /// resized the title. Colour, line spacing and underline still come from `subheader`, so a heading
+    /// keeps the theme's big-text look and only its size is its own.
+    ///
+    /// `fontSizeMultiplier` is exactly 1.0 in the default case, so the base sizes below ARE the rendered
+    /// default sizes; it departs from 1.0 only when the reader's font-size slider or the chat's Text Size
+    /// has scaled the categories, and then the whole ladder scales proportionally — by the multiplier
+    /// that was applied, floored once, so it agrees with `withUpdatedFontStyles` at every step.
     func headingTextAttributes(level: Int32, link: Bool) -> InstantPageTextAttributes {
         let clampedLevel = max(Int32(1), min(level, Int32(6)))
 
-        // H1/H2 reuse the theme's existing big-text categories verbatim, so they
-        // pick up the theme color, line-spacing, and any dynamic-type scaling.
-        switch clampedLevel {
-        case 1:
-            return self.textCategories.header.withUnderline(link)
-        case 2:
-            return self.textCategories.subheader.withUnderline(link)
-        default:
-            break
-        }
-
-        // H3–H6: serif at a per-level base size, scaled by the same dynamic-type
-        // multiplier the subheader category uses (subheader.size / 19.0).
         let subheaderAttributes = self.textCategories.subheader
         let baseSize: CGFloat
         switch clampedLevel {
+        case 1:
+            baseSize = 22.0
+        case 2:
+            baseSize = 20.0
         case 3:
-            baseSize = 17.0
+            baseSize = 18.0
         case 4:
-            baseSize = 16.0
+            baseSize = 17.0
         case 5:
-            baseSize = 15.0
+            baseSize = 16.0
         default:
-            baseSize = 13.0
+            baseSize = 15.0
         }
 
-        let sizeMultiplier = subheaderAttributes.font.size / 18.0
+        let sizeMultiplier = self.fontSizeMultiplier
         let attributes = InstantPageTextAttributes(
-            font: InstantPageFont(style: .serif, size: floor(baseSize * sizeMultiplier), lineSpacingFactor: subheaderAttributes.font.lineSpacingFactor),
+            font: InstantPageFont(style: .serif, size: floor(baseSize * sizeMultiplier), lineSpacingFactor: subheaderAttributes.font.lineSpacingFactor, weight: .medium),
             color: subheaderAttributes.color,
             underline: subheaderAttributes.underline
         )
@@ -217,8 +306,8 @@ private let lightTheme = InstantPageTheme(
     pageBackgroundColor: .white,
     textCategories: InstantPageTextCategories(
         kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: .black),
-        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685), color: .black),
-        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: .black),
+        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685, weight: .medium), color: .black),
+        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: instantPageNominalSubheaderFontSize, lineSpacingFactor: 0.685, weight: .medium), color: .black),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: .black),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x79828b)),
         credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x79828b)),
@@ -244,7 +333,9 @@ private let lightTheme = InstantPageTheme(
     overlayPanelColor: .white,
     separatorColor: UIColor(rgb: 0xe2e2e2),
     secondaryControlColor: .black,
-    quoteAccentColor: .black
+    quoteAccentColor: .black,
+    neutralButtonBackgroundColor: UIColor(rgb: 0xf3f4f5),
+    neutralButtonForegroundColor: .black
 )
 
 private let sepiaTheme = InstantPageTheme(
@@ -252,8 +343,8 @@ private let sepiaTheme = InstantPageTheme(
     pageBackgroundColor: UIColor(rgb: 0xf8f1e2),
     textCategories: InstantPageTextCategories(
         kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0x4f321d)),
-        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0x4f321d)),
-        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0x4f321d)),
+        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685, weight: .medium), color: UIColor(rgb: 0x4f321d)),
+        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: instantPageNominalSubheaderFontSize, lineSpacingFactor: 0.685, weight: .medium), color: UIColor(rgb: 0x4f321d)),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x4f321d)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x927e6b)),
         credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x927e6b)),
@@ -279,7 +370,9 @@ private let sepiaTheme = InstantPageTheme(
     overlayPanelColor: UIColor(rgb: 0xf8f1e2),
     separatorColor: UIColor(rgb: 0xe2e2e2),
     secondaryControlColor: .black,
-    quoteAccentColor: UIColor(rgb: 0x4f321d)
+    quoteAccentColor: UIColor(rgb: 0x4f321d),
+    neutralButtonBackgroundColor: UIColor(rgb: 0xefe7d6),
+    neutralButtonForegroundColor: UIColor(rgb: 0x4f321d)
 )
 
 private let grayTheme = InstantPageTheme(
@@ -287,8 +380,8 @@ private let grayTheme = InstantPageTheme(
     pageBackgroundColor: UIColor(rgb: 0x5a5a5c),
     textCategories: InstantPageTextCategories(
         kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xcecece)),
-        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xcecece)),
-        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xcecece)),
+        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685, weight: .medium), color: UIColor(rgb: 0xcecece)),
+        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: instantPageNominalSubheaderFontSize, lineSpacingFactor: 0.685, weight: .medium), color: UIColor(rgb: 0xcecece)),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xcecece)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xa0a0a0)),
         credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xa0a0a0)),
@@ -314,7 +407,9 @@ private let grayTheme = InstantPageTheme(
     overlayPanelColor: UIColor(rgb: 0x5a5a5c),
     separatorColor: UIColor(rgb: 0x484848),
     secondaryControlColor: .black,
-    quoteAccentColor: UIColor(rgb: 0xcecece)
+    quoteAccentColor: UIColor(rgb: 0xcecece),
+    neutralButtonBackgroundColor: UIColor(rgb: 0x555556),
+    neutralButtonForegroundColor: UIColor(rgb: 0xcecece)
 )
 
 private let darkTheme = InstantPageTheme(
@@ -322,8 +417,8 @@ private let darkTheme = InstantPageTheme(
     pageBackgroundColor: UIColor(rgb: 0x000000),
     textCategories: InstantPageTextCategories(
         kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xb0b0b0)),
-        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xb0b0b0)),
-        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xb0b0b0)),
+        header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 0.685, weight: .medium), color: UIColor(rgb: 0xb0b0b0)),
+        subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: instantPageNominalSubheaderFontSize, lineSpacingFactor: 0.685, weight: .medium), color: UIColor(rgb: 0xb0b0b0)),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xb0b0b0)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x6a6a6a)),
         credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x6a6a6a)),
@@ -349,7 +444,9 @@ private let darkTheme = InstantPageTheme(
     overlayPanelColor: UIColor(rgb: 0x232323),
     separatorColor: UIColor(rgb: 0x303030),
     secondaryControlColor: UIColor(rgb: 0xb0b0b0),
-    quoteAccentColor: UIColor(rgb: 0xb0b0b0)
+    quoteAccentColor: UIColor(rgb: 0xb0b0b0),
+    neutralButtonBackgroundColor: UIColor(rgb: 0x131313),
+    neutralButtonForegroundColor: UIColor(rgb: 0xb0b0b0)
 )
 
 private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFontSize) -> CGFloat {

@@ -37,10 +37,10 @@ public class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = IncreaseLimitHeaderItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -53,7 +53,7 @@ public class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? IncreaseLimitHeaderItemNode else {
                 assertionFailure()
@@ -63,7 +63,7 @@ public class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
             let makeLayout = nodeValue.asyncLayout()
             
             async {
-                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                 Queue.mainQueue().async {
                     completion(layout, { _ in
                         apply()
@@ -81,7 +81,7 @@ private let boldTextFont = Font.semibold(15.0)
 class IncreaseLimitHeaderItemNode: ListViewItemNode {
     private var hostView: ComponentHostView<Empty>?
     
-    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGSize)?
+    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGSize, CGFloat, CGFloat)?
     
     private let titleNode: TextNode
     private let textNode: TextNode
@@ -112,28 +112,28 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         self.hostView = hostView
         self.view.addSubview(hostView)
         
-        if let (component, containerSize, layout, textSize) = self.params {
+        if let (component, containerSize, layout, textSize, leftInset, rightInset) = self.params {
             var size = hostView.update(
                 transition: .immediate,
                 component: component,
                 environment: {},
                 containerSize: containerSize
             )
-            hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
+            hostView.frame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((layout.size.width - leftInset - rightInset - size.width) / 2.0), y: -30.0), size: size)
             
             if let item = self.item, item.isPremiumDisabled {
                 size.height -= 54.0
             }
             
             let textSpacing: CGFloat = -6.0
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: size.height + textSpacing), size: textSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((layout.size.width - leftInset - rightInset - textSize.width) / 2.0), y: size.height + textSpacing), size: textSize)
         }
     }
     
     func asyncLayout() -> (_ item: IncreaseLimitHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let topInset: CGFloat = 2.0
             
             let badgeHeight: CGFloat = 200.0
@@ -213,11 +213,11 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                         if item.isPremiumDisabled {
                             size.height -= 54.0
                         }
-                        hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
+                        hostView.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((layout.size.width - params.leftInset - params.rightInset - size.width) / 2.0), y: -30.0), size: size)
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((layout.size.width - params.leftInset - params.rightInset - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
                     }
                     
-                    strongSelf.params = (component, containerSize, layout, textLayout.size)
+                    strongSelf.params = (component, containerSize, layout, textLayout.size, params.leftInset, params.rightInset)
                 }
             })
         }

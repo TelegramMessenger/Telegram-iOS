@@ -12,6 +12,20 @@ public enum QrCodeIcon {
     case custom(UIImage?)
 }
 
+private enum QrCodePreheater {
+    static let once: Void = {
+        DispatchQueue.global(qos: .utility).async {
+            autoreleasepool {
+                let _ = qrCode(string: "https://t.me/telegram", color: .black, icon: .none, ecl: "Q").start()
+            }
+        }
+    }()
+}
+
+public func preheatQrCode() {
+    let _ = QrCodePreheater.once
+}
+
 private func floorToContextPixels(_ value: CGFloat, scale: CGFloat? = UIScreenScale) -> CGFloat {
     let scale = scale ?? UIScreenScale
     return floor(value * scale) / scale

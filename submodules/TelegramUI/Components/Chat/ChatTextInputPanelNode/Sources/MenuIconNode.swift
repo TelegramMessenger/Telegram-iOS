@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -15,8 +16,8 @@ final class MenuIconNode: ManagedAnimationNode {
     private let duration: Double = 0.33
     var iconState: MenuIconNodeState = .menu
     
-    init() {
-        super.init(size: CGSize(width: 30.0, height: 30.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 30.0, height: 30.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
     }

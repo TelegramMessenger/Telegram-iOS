@@ -91,59 +91,6 @@ func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl
 }
 
 extension ChatControllerImpl {
-//    func openMessageShareMenu(id: EngineMessage.Id) {
-//        guard let messages = self.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first else {
-//            return
-//        }
-//        
-//        let chatPresentationInterfaceState = self.presentationInterfaceState
-//        var warnAboutPrivate = false
-//        var canShareToStory = false
-//        if case .peer = chatPresentationInterfaceState.chatLocation, let channel = message.peers[message.id.peerId] as? TelegramChannel {
-//            if case .broadcast = channel.info {
-//                canShareToStory = true
-//                if let message = messages.first, message.media.contains(where: { media in
-//                    if media is TelegramMediaContact || media is TelegramMediaPoll || media is TelegramMediaTodo {
-//                        return true
-//                    } else if let file = media as? TelegramMediaFile, file.isSticker || file.isAnimatedSticker || file.isVideoSticker {
-//                        return true
-//                    } else {
-//                        return false
-//                    }
-//                }) {
-//                    canShareToStory = false
-//                }
-//                if message.text.containsOnlyEmoji {
-//                    canShareToStory = false
-//                }
-//            }
-//            if channel.addressName == nil {
-//                warnAboutPrivate = true
-//            }
-//        }
-//        
-//        let _ = warnAboutPrivate
-//        
-////        let shareScreen = self.context.sharedContext.makeShareController(
-////            context: self.context,
-////            subject: .messages(messages),
-////            forceExternal: false,
-////            shareStory: canShareToStory ? { [weak self] in
-////                guard let self else {
-////                    return
-////                }
-////                Queue.mainQueue().after(0.15) {
-////                    let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .messages(messages), parentController: self)
-////                    self.push(controller)
-////                }
-////            } : nil,
-////            enqueued: nil,
-////            actionCompleted: nil
-////        )
-//        self.chatDisplayNode.dismissInput()
-//        self.push(shareScreen)
-//    }
-    
     func openMessageShareMenu(id: EngineMessage.Id) {
         guard let messages = self.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first else {
             return
@@ -185,7 +132,7 @@ extension ChatControllerImpl {
             }
         } : nil
 
-        let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .messages(messages), updatedPresentationData: self.updatedPresentationData, shareAsLink: true, actionCompleted: { [weak self] in
+        let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .messages(messages), updatedPresentationData: self.updatedPresentationData, shareAsLink: true, actionCompleted: { [weak self] in
             guard let self else {
                 return
             }
@@ -273,6 +220,7 @@ extension ChatControllerImpl {
             })
         }, shareStory: shareStory, parentNavigationController: self.navigationController as? NavigationController))
         self.chatDisplayNode.dismissInput()
-        self.present(shareController, in: .window(.root), blockInteraction: true)
+        self.shareSheetController = shareController
+        self.context.sharedContext.mainWindow?.present(shareController, on: .root, blockInteraction: true)
     }
 }

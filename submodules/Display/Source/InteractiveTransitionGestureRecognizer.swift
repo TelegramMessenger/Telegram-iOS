@@ -66,7 +66,10 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
-    private var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
+    public private(set) var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
+    /// The view whose restrictions (horizontal gestures, `disablesInteractiveTransitionGestureRecognizer…`) apply at a
+    /// point, when it is not the one `view.hitTest` returns (a container that takes every touch during a transition).
+    public var gestureRestrictionsHitTest: ((CGPoint, UIEvent?) -> UIView?)?
     
     public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections, edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth = .constant(16.0)) {
         self.allowedDirections = allowedDirections
@@ -103,7 +106,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         
         self.firstLocation = point
         
-        if let target = self.view?.hitTest(self.firstLocation, with: event) {
+        if let target = self.gestureRestrictionsHitTest?(self.firstLocation, event) ?? self.view?.hitTest(self.firstLocation, with: event) {
             let horizontalGestures = hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target))
             switch horizontalGestures {
             case .some, .strict:

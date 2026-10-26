@@ -30,20 +30,19 @@ final class ImageSelectionHighlightTests: XCTestCase {
     }
     func test_isImageSelected_whenRangeCoversAtom() {
         let v = canvas(); let i = img(v)
-        v.anchor = v.boxes[0].textStart + 1     // inside "Above"
-        v.head = v.boxes[2].textStart + 1       // inside "Below" → spans the image
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 1, head: v.boxes[2].textStart + 1)   // inside "Above" inside "Below" → spans the image
         XCTAssertTrue(v.isImageSelected(i))
         XCTAssertNotNil(v.imageSelectionTintRect(for: i))
     }
     func test_notSelected_forCollapsedGapCaret() {
         let v = canvas(); let i = img(v)
-        v.anchor = i.nodeStart; v.head = i.nodeStart   // collapsed caret on the gap
+        v.setSelectionForTesting(anchor: i.nodeStart, head: i.nodeStart)   // collapsed caret on the gap
         XCTAssertFalse(v.isImageSelected(i))
         XCTAssertNil(v.imageSelectionTintRect(for: i))
     }
     func test_notSelected_forCaptionOnlySelection() {
         let v = canvas(); let i = img(v)
-        v.anchor = i.textStart; v.head = i.textStart + 3   // within the caption only
+        v.setSelectionForTesting(anchor: i.textStart, head: i.textStart + 3)   // within the caption only
         XCTAssertFalse(v.isImageSelected(i))
     }
     func test_clearImageSelection_resetsFlag() {
@@ -187,7 +186,7 @@ final class ImageSelectionHighlightTests: XCTestCase {
         let i = v.boxes[0] as! MediaBlockBox
         v.selectImage(i)
         let t = v.boxes[1] as! TableBlockBox
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(0)
         XCTAssertNil(v.imageSelection, "selecting a table clears the image selection")
         XCTAssertNotNil(v.tableSelection)
@@ -195,7 +194,7 @@ final class ImageSelectionHighlightTests: XCTestCase {
     func test_selectImage_clearsTableSelection() {
         let v = canvasWithImageAndTable()
         let t = v.boxes[1] as! TableBlockBox
-        v.head = t.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 1, column: 0)!, head: t.cellTextStart(row: 1, column: 0)!)
         v.selectTableColumn(0)
         XCTAssertNotNil(v.tableSelection)
         let i = v.boxes[0] as! MediaBlockBox
@@ -245,7 +244,7 @@ final class ImageSelectionHighlightTests: XCTestCase {
         // range covering the atom tints it there — not in the image's block view.
         func render(coverAtom: Bool) -> [UInt8] {
             let v = canvas(); let i = img(v)
-            if coverAtom { v.anchor = v.boxes[0].textStart + 1; v.head = i.textStart }  // gap+atom, stops at caption start
+            if coverAtom { v.setSelectionForTesting(anchor: v.boxes[0].textStart + 1, head: i.textStart) }  // gap+atom, stops at caption start
             let fmt = UIGraphicsImageRendererFormat(); fmt.opaque = false; fmt.scale = 1
             let image = UIGraphicsImageRenderer(bounds: v.bounds, format: fmt).image { ctx in
                 v.drawNonTableSelectionHighlight(in: ctx.cgContext)
@@ -260,7 +259,7 @@ final class ImageSelectionHighlightTests: XCTestCase {
 
     func test_notSelected_forRangeEndingAtGap() {
         let v = canvas(); let i = img(v)
-        v.anchor = v.boxes[0].textStart + 1; v.head = i.nodeStart   // ends exactly at the gap, before the atom
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 1, head: i.nodeStart)   // ends exactly at the gap, before the atom
         XCTAssertFalse(v.isImageSelected(i))
     }
 }

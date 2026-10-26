@@ -41,10 +41,10 @@ final class GroupStickerPackCurrentItem: ListViewItem, ItemListItem {
         self.remove = remove
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = GroupStickerPackCurrentItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -57,7 +57,7 @@ final class GroupStickerPackCurrentItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? GroupStickerPackCurrentItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -68,7 +68,7 @@ final class GroupStickerPackCurrentItem: ListViewItem, ItemListItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animated)
@@ -251,7 +251,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
@@ -326,7 +326,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, userLocation: .other, file: file, small: false)
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: stickerPackFileReference(file).resourceReference(file.resource))
+                    updatedFetchSignal = TelegramEngine(account: item.account).resources.fetch(reference: stickerPackFileReference(file).resourceReference(file.resource), userLocation: .other, userContentType: .sticker)
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()
@@ -417,7 +417,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.removeButtonIcon.image = PresentationResourcesItemList.itemListRemoveIconImage(item.theme)
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight)))
                     

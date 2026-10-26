@@ -462,6 +462,18 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
     let style: ItemListStyle
     public let tag: ItemListItemTag?
     let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ItemListHeaderNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isTextItem: false,
+            hasActiveRevealOptions: self.hasActiveRevealOptions,
+            headerId: self.header?.id,
+            headerFamily: .itemListPeer
+        ))
+    }
     let shimmering: ItemListPeerItemShimmering?
     let displayDecorations: Bool
     let displayBackground: Bool
@@ -649,10 +661,10 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
         self.openStories = openStories
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPeerItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), self.getHeaderAtTop(top: previousItem, bottom: nextItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), self.getHeaderAtTop(top: neighbors.previous))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -665,10 +677,10 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
         }
     }
     
-    private func getHeaderAtTop(top: ListViewItem?, bottom: ListViewItem?) -> Bool {
+    private func getHeaderAtTop(top: AnyEquatable?) -> Bool {
         var headerAtTop = false
-        if let top = top as? ItemListPeerItem, top.header != nil {
-            if top.header?.id != self.header?.id {
+        if let top = top?.base(HeaderNeighborFacet.self), top.headerFamily == .itemListPeer, top.headerId != nil {
+            if top.headerId != self.header?.id {
                 headerAtTop = true
             }
         } else if self.header != nil {
@@ -678,7 +690,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
         return headerAtTop
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListPeerItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -689,7 +701,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem, ItemListRevealO
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), self.getHeaderAtTop(top: previousItem, bottom: nextItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), self.getHeaderAtTop(top: neighbors.previous))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(false, animated)
@@ -915,7 +927,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         let currentHasBadge = self.labelBadgeNode.image != nil
         
-        return { item, params, neighbors, headerAtTop in
+        return { [weak self] item, params, neighbors, headerAtTop in
             var updateArrowImage: UIImage?
             
             let statusFontSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0)
@@ -1023,12 +1035,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 color = item.presentationData.theme.list.itemDisclosureActions.accent.fillColor
                                 textColor = item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor
                         }
-                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, iconColor: textColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, iconColor: textColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: option.type == .destructive))
                         index += 1
                     }
                     peerRevealOptions = mappedOptions
                 } else {
-                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]
+                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]
                 }
             } else {
                 peerRevealOptions = []
@@ -1473,7 +1485,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight)))
                     
@@ -1581,7 +1593,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 }
                             }
                         }
-                        currentSwitchNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - switchSize.width - 15.0, y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
+                        currentSwitchNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - switchSize.width - 15.0 - max(0.0, params.rightInset - params.leftInset), y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
                         if let switchValue = item.switchValue {
                             currentSwitchNode.setOn(switchValue.value, animated: animated)
                         }
@@ -1805,7 +1817,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         }
                     }
                     
-                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel)), transition: transition)
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel)), transition: transition, aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
                     if let presence = item.presence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
@@ -1869,7 +1881,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     }
                     
                     strongSelf.backgroundNode.isHidden = !item.displayDecorations
-                    strongSelf.highlightedBackgroundNode.isHidden = !item.displayDecorations || !item.highlightable
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
@@ -1887,7 +1898,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     var isHighlighted = false
     
     var reallyHighlighted: Bool {
-        var reallyHighlighted = self.isHighlighted || self.isRevealOptionsActive
+        var reallyHighlighted = self.isHighlighted
         if let (item, _, _, _) = self.layoutParams, item.highlighted {
             reallyHighlighted = true
         }
@@ -1895,6 +1906,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     }
     
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        if let item = self.layoutParams?.0 {
+            // Embedded rows forward their touch highlight here as well, so a
+            // swipe can continue on the same surface without a second overlay.
+            self.highlightedBackgroundNode.isHidden = !item.highlightable
+        }
         self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.reallyHighlighted, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
     
@@ -2244,16 +2260,17 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel))
         
         let sideInset: CGFloat = 15.0 + leftInset
+        let rightSideInset: CGFloat = 15.0 + rightInset
         
-        let actionTextSize = self.actionTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
-        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - actionTextSize.width - 8.0, height: size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: max(1.0, size.width - sideInset * 2.0 - actionTextSize.width - 8.0 - additionalTextSize.width), height: size.height))
+        let actionTextSize = self.actionTextNode.updateLayout(CGSize(width: size.width - sideInset - rightSideInset, height: size.height))
+        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: size.width - sideInset - rightSideInset - actionTextSize.width - 8.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: max(1.0, size.width - sideInset - rightSideInset - actionTextSize.width - 8.0 - additionalTextSize.width), height: size.height))
         
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 7.0), size: textSize)
         self.textNode.frame = textFrame
         self.additionalTextNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX, y: 7.0), size: additionalTextSize)
-        self.actionTextNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 7.0), size: actionTextSize)
-        self.actionButton.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 0.0), size: CGSize(width: actionTextSize.width, height: size.height))
+        self.actionTextNode.frame = CGRect(origin: CGPoint(x: size.width - rightSideInset - actionTextSize.width, y: 7.0), size: actionTextSize)
+        self.actionButton.frame = CGRect(origin: CGPoint(x: size.width - rightSideInset - actionTextSize.width, y: 0.0), size: CGSize(width: actionTextSize.width, height: size.height))
     }
     
     override public func animateRemoved(duration: Double) {
@@ -2278,4 +2295,8 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
             }
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let itemListPeer = ListViewItemHeaderFamily("itemListPeer")
 }

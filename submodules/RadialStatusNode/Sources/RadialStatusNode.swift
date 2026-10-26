@@ -39,7 +39,7 @@ public enum RadialStatusNodeState: Equatable {
     case pause(UIColor)
     case progress(color: UIColor, lineWidth: CGFloat?, value: CGFloat?, cancelEnabled: Bool, animateRotation: Bool)
     case cloudProgress(color: UIColor, strokeBackgroundColor: UIColor, lineWidth: CGFloat, value: CGFloat?)
-    case check(UIColor)
+    case check(UIColor, lineWidth: CGFloat? = nil)
     case customIcon(UIImage)
     case staticTimeout
     case secretTimeout(color: UIColor, icon: SecretTimeoutIcon, beginTime: Double, timeout: Double, sparks: Bool)
@@ -82,8 +82,8 @@ public enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
-            case let .check(lhsColor):
-                if case let .check(rhsColor) = rhs, lhsColor.isEqual(rhsColor) {
+            case let .check(lhsColor, lhsLineWidth):
+                if case let .check(rhsColor, rhsLineWidth) = rhs, lhsColor.isEqual(rhsColor), lhsLineWidth == rhsLineWidth {
                     return true
                 } else {
                     return false
@@ -195,8 +195,8 @@ public enum RadialStatusNodeState: Equatable {
                 return RadialStatusIconContentNode(icon: .pause(color), synchronous: synchronous)
             case let .customIcon(image):
                 return RadialStatusIconContentNode(icon: .custom(image), synchronous: synchronous)
-            case let .check(color):
-                return RadialCheckContentNode(color: color)
+            case let .check(color, lineWidth):
+                return RadialCheckContentNode(color: color, lineWidth: lineWidth)
             case let .progress(color, lineWidth, value, cancelEnabled, animateRotation):
                 if let current = current as? RadialProgressContentNode, current.displayCancel == cancelEnabled, current.animateRotation == animateRotation {
                     if !current.color.isEqual(color) {

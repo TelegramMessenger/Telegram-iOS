@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -20,7 +21,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     let strings: PresentationStrings
     let theme: PresentationTheme
     
-    let countryButton: ASButtonNode
+    let countryButton: CountryButtonNode
     let countryButtonArrow: ASImageNode
     let phoneBackground: ASImageNode
     let phoneInputNode: PhoneInputNode
@@ -84,7 +85,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             context.strokePath()
         })?.stretchableImage(withLeftCapWidth: 95, topCapHeight: 2)
         
-        self.countryButton = ASButtonNode()
+        self.countryButton = CountryButtonNode()
         self.countryButton.displaysAsynchronously = false
         self.countryButton.setBackgroundImage(countryButtonBackground, for: [])
         self.countryButton.titleNode.maximumNumberOfLines = 1
@@ -152,24 +153,22 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                                 
                 if strongSelf.processNumberChange(number: strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
-                    let flagString = emojiFlagForISOCountryCode(name)
                     var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
                     if name == "FT" {
                         localizedName = strongSelf.strings.Login_AnonymousNumbers
                     }
-                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.countryButton.setCountryTitle(countryId: name, name: localizedName, font: Font.regular(20.0), color: theme.list.itemAccentColor)
                     strongSelf.hasCountry = true
                     
                     if strongSelf.phoneInputNode.mask == nil {
                         strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                     }
                 } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
-                    let flagString = emojiFlagForISOCountryCode(countryId)
                     var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
                     if countryId == "FT" {
                         localizedName = strongSelf.strings.Login_AnonymousNumbers
                     }
-                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.countryButton.setCountryTitle(countryId: countryId, name: localizedName, font: Font.regular(20.0), color: theme.list.itemAccentColor)
                     strongSelf.hasCountry = true
                     
                     if strongSelf.phoneInputNode.mask == nil {
@@ -213,12 +212,11 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     
     func processNumberChange(number: String) -> Bool {
         if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: self.preferredCountryIdForCode) {
-            let flagString = emojiFlagForISOCountryCode(country.id)
             var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: self.strings) ?? country.name
             if country.id == "FT" {
                 localizedName = self.strings.Login_AnonymousNumbers
             }
-            self.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: self.theme.list.itemAccentColor, for: [])
+            self.countryButton.setCountryTitle(countryId: country.id, name: localizedName, font: Font.regular(20.0), color: self.theme.list.itemAccentColor)
             self.hasCountry = true
             
             let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
@@ -395,10 +393,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.debugAction = debugAction
         self.hasOtherAccounts = hasOtherAccounts
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroPhone"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         
-        self.managedAnimationNode = ManagedPhoneAnimationNode()
+        self.managedAnimationNode = ManagedPhoneAnimationNode(lottieSettings: .noAccountFallback)
         self.managedAnimationNode.isHidden = true
         
         self.titleNode = ASTextNode()
@@ -611,8 +609,20 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: self.account == nil ? self.strings.Login_NewNumber : self.strings.Login_PhoneTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
+        // insets (every other phone) it keeps the full width.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        
         let inset: CGFloat = 24.0
-        let maximumWidth: CGFloat = min(430.0, layout.size.width)
+        let maximumWidth: CGFloat = min(430.0, bandWidth)
+        
+        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let bottomSideInsets = layout.bottomEdgeSideInsets()
+        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
+        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        let bottomMaximumWidth: CGFloat = min(430.0, bottomBandWidth)
         
         let animationSize = CGSize(width: 100.0, height: 100.0)
         let titleSize = self.titleNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -620,8 +630,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         let noticeInset: CGFloat = self.account == nil ? 32.0 : 0.0
         
         let noticeSize = self.noticeNode.updateLayout(CGSize(width: min(274.0 + noticeInset, maximumWidth - 28.0), height: CGFloat.greatestFiniteMagnitude))
-        let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
-        let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
+        let proceedHeight = self.proceedNode.updateLayout(width: bottomMaximumWidth - inset * 2.0, transition: transition)
+        let proceedSize = CGSize(width: bottomMaximumWidth - inset * 2.0, height: proceedHeight)
         
         var items: [AuthorizationLayoutItem] = [
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: titleInset, maxValue: titleInset), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
@@ -653,14 +663,14 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         if let forcedButtonFrame = self.forcedButtonFrame, (layout.inputHeight ?? 0.0).isZero {
             buttonFrame = forcedButtonFrame
         } else {
-            buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
+            buttonFrame = CGRect(origin: CGPoint(x: bottomBandMinX + floorToScreenPixels((bottomBandWidth - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
         }
         
         transition.updateFrame(node: self.proceedNode, frame: buttonFrame)
         
         self.animationNode.updateLayout(size: animationSize)
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: bandMinX, y: insets.top), size: CGSize(width: bandWidth, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         
         transition.updateFrame(node: self.managedAnimationNode, frame: self.animationNode.frame)
         
@@ -1053,7 +1063,13 @@ final class PhoneConfirmationController: ViewController {
             let sideInset: CGFloat = 8.0
             let innerInset: CGFloat = 18.0
             
-            let maximumWidth: CGFloat = min(430.0, layout.size.width)
+            // iPhone Duo: beside a side strip the card keeps to the band between the side insets. With equal
+            // insets (every other phone) it is centered on the full width.
+            let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+            let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+            let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+            
+            let maximumWidth: CGFloat = min(430.0, bandWidth)
             
             transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: -layout.size.width, y: 0.0), size: CGSize(width: layout.size.width * 3.0, height: layout.size.height)))
             
@@ -1071,10 +1087,10 @@ final class PhoneConfirmationController: ViewController {
                 }
             }
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: originY), size: backgroundSize)
+            let backgroundFrame = CGRect(origin: CGPoint(x: bandMinX + floorToScreenPixels((bandWidth - backgroundSize.width) / 2.0), y: originY), size: backgroundSize)
             transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
               
-            let maxWidth = layout.size.width - 20.0
+            let maxWidth = bandWidth - 20.0
             if !hadLayout {
                 var fontSize = 34.0
                 if layout.size.width < 375.0 {
@@ -1239,7 +1255,7 @@ private final class ManagedPhoneAnimationNode: ManagedAnimationNode {
     private let plateNode: ASDisplayNode
     private var nodes: [PhoneKeyNode]
     
-    init() {
+    init(lottieSettings: LottieRenderingSettings) {
         self.plateNode = ASDisplayNode()
         self.plateNode.backgroundColor = UIColor(rgb: 0xc30023)
         self.plateNode.frame = CGRect(x: 27.0, y: 38.0, width: 46.0, height: 32.0)
@@ -1276,7 +1292,7 @@ private final class ManagedPhoneAnimationNode: ManagedAnimationNode {
         }
         self.nodes = nodes
         
-        super.init(size: CGSize(width: 100.0, height: 100.0))
+        super.init(size: CGSize(width: 100.0, height: 100.0), lottieSettings: lottieSettings)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
         

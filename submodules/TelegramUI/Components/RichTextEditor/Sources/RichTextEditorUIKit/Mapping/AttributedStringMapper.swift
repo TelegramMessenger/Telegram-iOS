@@ -1,5 +1,6 @@
 #if canImport(UIKit)
 import UIKit
+import CoreText
 import RichTextEditorCore
 
 @available(iOS 13.0, *)
@@ -8,16 +9,27 @@ extension NSAttributedString.Key {
     /// + subtle background; on read-back it round-trips to `CharacterAttributes.inlineCode` (and
     /// suppresses fontFamily/highlight derivation so the mono font + code background don't leak into
     /// the model).
-    static let rtInlineCode = NSAttributedString.Key("RTInlineCode")
+    /// PUBLIC because it is a cross-module contract, not an implementation detail: the mapper, the
+    /// legacy canvas and the engine host's inline-code contributor must all agree on this exact
+    /// string. The alternative — redeclaring `NSAttributedString.Key("RTInlineCode")` in the engine
+    /// module — would put the same literal in two places with nothing to keep them in step, and the
+    /// two backends would silently disagree about the same document. The other `rt*` keys stay
+    /// internal until something outside this module actually needs them.
+    public static let rtInlineCode = NSAttributedString.Key("RTInlineCode")
     /// Marks a run as a spoiler. Render-only storage marker (the `rtInlineCode` precedent); the visible
     /// hide is a SEPARATE display-only `.foregroundColor` rendering attribute (see `BlockLayout`), so this
     /// marker carries no styling and round-trips cleanly to `CharacterAttributes.spoiler`.
-    static let rtSpoiler = NSAttributedString.Key("RTSpoiler")
+    /// PUBLIC for the same reason as `rtInlineCode` and `rtBold`: a cross-module contract. The engine
+    /// host hides spoiler runs through its display-decoration channel and must recognise them.
+    public static let rtSpoiler = NSAttributedString.Key("RTSpoiler")
     /// Marks a run as USER-bold (the toolbar/model `CharacterAttributes.bold`), decoupling model bold from the
     /// rendered font's `.traitBold` — which the iOS "Bold Text" accessibility setting forces onto the script
     /// font TextKit substitutes for Arabic/Hebrew/CJK regardless of user intent. Render-only (the `rtInlineCode`
     /// precedent); read back to `CharacterAttributes.bold`, never persisted to the Core model.
-    static let rtBold = NSAttributedString.Key("RTBold")
+    /// PUBLIC for the same reason as `rtInlineCode`: it is a cross-module contract. The engine host
+    /// must read it because the engine marks bold with its OWN key (`IDInlineTextBold`) and otherwise
+    /// recovers bold from the rendered font — which this mapper flattens for code runs.
+    public static let rtBold = NSAttributedString.Key("RTBold")
     /// Marks a formula run. With a host renderer the visible storage is one `U+FFFC` attachment; without
     /// one it falls back to raw LaTeX text. In both cases read-back restores `CharacterAttributes.formula`.
     static let rtFormula = NSAttributedString.Key("RTFormula")
@@ -39,16 +51,27 @@ public struct AttributedStringMapper {
     /// Host-provided formula renderer. `nil` (or returning nil for invalid LaTeX) makes formula runs
     /// display as raw LaTeX while preserving semantic metadata.
     public var formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)?
+    /// Host-provided button type icon, already tinted to the colour it is handed. A nil RETURN means
+    /// this action has no icon, and the pill then reserves no width for one either — one question with
+    /// one answer, so what is drawn and what was measured cannot disagree. (An icon that exists but
+    /// whose image could not be loaded is a non-nil `RichTextButtonIcon` with a nil `image`; see there.)
+    ///
+    /// It has to come from the host: the icon depends on the button's ACTION, and the editor's
+    /// Telegram-free model carries every action it cannot name as an opaque `.unsupported` blob. Only
+    /// the host can decode that back into the action the renderer will resolve an icon from.
+    public var buttonIconProvider: ((ButtonAction) -> RichTextButtonIcon?)?
 
     public init(styleSheet: StyleSheet = .default, emojiScale: CGFloat = 1.0,
                 theme: RichTextEditorTheme = .default,
                 baseWritingDirection: NSWritingDirection = .natural,
-                formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)? = nil) {
+                formulaRenderer: ((RichTextFormulaRenderContext) -> RichTextFormulaRenderResult?)? = nil,
+                buttonIconProvider: ((ButtonAction) -> RichTextButtonIcon?)? = nil) {
         self.styleSheet = styleSheet
         self.emojiScale = emojiScale
         self.theme = theme
         self.baseWritingDirection = baseWritingDirection
         self.formulaRenderer = formulaRenderer
+        self.buttonIconProvider = buttonIconProvider
     }
 
     /// A copy of this mapper that renders table-cell content (a smaller body/quote base size, see
@@ -57,17 +80,38 @@ public struct AttributedStringMapper {
     /// via their source box's `mapper`).
     public func tableCellVariant() -> AttributedStringMapper {
         AttributedStringMapper(styleSheet: .tableCells, emojiScale: emojiScale, theme: theme,
-                               baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer)
+                               baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer,
+                               buttonIconProvider: buttonIconProvider)
     }
 
-    /// A copy that renders body/pull-quote content at `size` base points, PRESERVING this mapper's
+    /// A copy that renders body/pull-quote content at `size` points, PRESERVING this mapper's
     /// stylesheet customizations (quote insets, spacing, metrics), emoji scale, theme, and writing direction.
     /// (Unlike `tableCellVariant()`, which swaps in the fixed `.tableCells` stylesheet.)
-    public func withBodyBaseSize(_ size: CGFloat) -> AttributedStringMapper {
+    public func withBodyFontSize(_ size: CGFloat) -> AttributedStringMapper {
         var s = styleSheet
-        s.bodyBaseSize = size
+        s.metrics.body.size = size
         return AttributedStringMapper(styleSheet: s, emojiScale: emojiScale, theme: theme,
-                                      baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer)
+                                      baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer,
+                                      buttonIconProvider: buttonIconProvider)
+    }
+
+    /// A copy that lays out with `metrics`, preserving this mapper's other stylesheet
+    /// customizations, emoji scale, theme and writing direction. The counterpart of
+    /// `RichTextEditorView.renderMetrics` for a host that owns its own mapper.
+    public func withRenderMetrics(_ metrics: RichTextRenderMetrics) -> AttributedStringMapper {
+        var s = styleSheet
+        s.metrics = metrics
+        return withStyleSheet(s)
+    }
+
+    /// The same mapper over a different stylesheet, carrying every other field across. Callers that
+    /// resolve several stylesheet fields at once (code geometry, quote geometry) go through this
+    /// rather than re-listing the initializer, which is how a field gets silently dropped.
+    public func withStyleSheet(_ styleSheet: StyleSheet) -> AttributedStringMapper {
+        AttributedStringMapper(styleSheet: styleSheet, emojiScale: emojiScale, theme: theme,
+                               baseWritingDirection: baseWritingDirection,
+                               formulaRenderer: formulaRenderer,
+                               buttonIconProvider: buttonIconProvider)
     }
 
     /// Points to enlarge a rendered inline emoji beyond its glyph box, per paragraph style (decoupled from
@@ -93,6 +137,101 @@ public struct AttributedStringMapper {
         return FormulaTextAttachment(latex: latex, renderResult: result)
     }
 
+    /// The ONE construction path for both inline and block-row pills — they must agree on whether `size`
+    /// includes the padding, because the label centring reads exactly `size.width - 2 * horizontalPadding`.
+    /// Two independent constructions drifted apart once already in the renderer.
+    /// `horizontalPadding` overrides the padding this pill kind would otherwise take. Passed by the row
+    /// packer's tight-fallback measurement (`richTextMeasureRowButton`); every other caller leaves it nil.
+    func buttonAttachment(button: ButtonRef, isBlockPill: Bool, maxWidth: CGFloat?,
+                          horizontalPadding: CGFloat? = nil) -> ButtonTextAttachment {
+        let metrics = styleSheet.metrics.button
+        // A link-styled ROW pill draws no background, so it takes no inner padding either — its label
+        // sits flush and reads as a link. Mirrors `instantPageBlockButtonPadding(for:)` in the renderer.
+        let hPad: CGFloat
+        if let horizontalPadding {
+            hPad = horizontalPadding
+        } else if isBlockPill {
+            hPad = button.isLink ? 0.0 : metrics.blockHorizontalPadding
+        } else {
+            hPad = metrics.inlineHorizontalPadding
+        }
+        let vPad = metrics.verticalPadding
+        let fontSize = isBlockPill ? metrics.blockFontSize : metrics.inlineFontSize
+
+        // A button label carries its OWN typography rather than inheriting the paragraph's: semibold, at a
+        // fixed size that does not scale with any host font-size setting (the renderer does the same).
+        let label = NSMutableAttributedString()
+        for run in button.label {
+            var attrs = attributes(for: run.attributes, style: .body)
+            // Strip only a NESTED BUTTON attachment (not representable inside a label). An EMOJI
+            // attachment must survive: it reserves the emoji's advance in the measured label, and
+            // `ButtonPillView.syncEmoji` locates it to host a live view over the pill.
+            if attrs[.attachment] is ButtonTextAttachment {
+                attrs.removeValue(forKey: .attachment)
+            }
+            attrs[.paragraphStyle] = nil
+            label.append(NSAttributedString(string: run.text, attributes: attrs))
+        }
+        if label.length > 0 {
+            label.addAttribute(.font, value: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+                               range: NSRange(location: 0, length: label.length))
+        }
+        let colors = theme.resolvedButtonColors(color: button.color, isDisabled: button.action == .disabled,
+                                                isLink: isBlockPill && button.isLink)
+        // Resolved BEFORE measuring, because whether there is an icon is also whether there is width to
+        // reserve for one. One question, one answer — a separate "does it have an icon" predicate could
+        // disagree with what is actually drawn.
+        let icon = buttonIconProvider?(button.action)
+        // Only an INLINE pill pays width for its icon; a block pill's badge overlays its fill and the
+        // row packer keeps the label clear of it with `blockIconReserve` instead.
+        let iconReserve: CGFloat = (icon != nil && !isBlockPill) ? styleSheet.metrics.button.inlineIconReserve : 0.0
+
+        var effective: NSAttributedString = label
+        var truncated = false
+        if let maxWidth {
+            (effective, truncated) = truncatedButtonLabel(label, availableWidth: max(0.0, maxWidth - hPad * 2.0 - iconReserve))
+        }
+
+        var ascent: CGFloat = 0.0
+        var descent: CGFloat = 0.0
+        var inkWidth: CGFloat = 0.0
+        if effective.length > 0 {
+            let line = CTLineCreateWithAttributedString(effective)
+            inkWidth = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, nil))
+        } else {
+            // An empty label still needs a real box, or the pill collapses and cannot be tapped.
+            let font = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+            ascent = font.ascender
+            descent = -font.descender
+        }
+        return ButtonTextAttachment(
+            button: button,
+            labelString: effective,
+            size: CGSize(width: inkWidth + hPad * 2.0 + iconReserve, height: ascent + descent + vPad * 2.0),
+            ascent: ascent + vPad,
+            descent: descent + vPad,
+            horizontalPadding: hPad,
+            isTruncated: truncated,
+            colors: colors,
+            icon: icon,
+            iconReserve: iconReserve,
+            isBlockPill: isBlockPill
+        )
+    }
+
+    /// Whether a button carries a type icon — the RESERVE question, asked without rasterising.
+    ///
+    /// Falls back to `richTextButtonHasBadge` when no host provider is registered. That coarse rule is
+    /// what the row packer used before there was a provider, so an unconfigured editor (a preview, a
+    /// test) keeps the geometry it had rather than silently re-flowing its rows; a configured one gets
+    /// the renderer's exact answer, including for the actions the editor's own model cannot name.
+    func buttonHasIcon(_ action: ButtonAction) -> Bool {
+        if let buttonIconProvider {
+            return buttonIconProvider(action) != nil
+        }
+        return richTextButtonHasBadge(action)
+    }
+
     func attributedFormulaString(latex: String, attributes baseAttributes: [NSAttributedString.Key: Any]) -> NSAttributedString {
         var attrs = baseAttributes
         attrs[.rtFormula] = latex
@@ -108,16 +247,49 @@ public struct AttributedStringMapper {
     public func attributes(for ca: CharacterAttributes, style: ParagraphStyleName) -> [NSAttributedString.Key: Any] {
         if let emoji = ca.emoji {
             // An emoji run is purely the inline atom: an invisible square spacer sized to the style font.
-            // No other char attributes apply (they'd be ignored on read-back anyway).
-            return [.font: styleSheet.font(for: style, attributes: ca),
-                    .attachment: EmojiTextAttachment(ref: emoji, scale: emojiScale,
-                                                     renderBoost: emojiRenderBoost(for: style))]
+            // No other char attributes apply — EXCEPT `spoiler`, below.
+            var dict: [NSAttributedString.Key: Any] = [
+                .font: styleSheet.font(for: style, attributes: ca),
+                .attachment: EmojiTextAttachment(ref: emoji, scale: emojiScale,
+                                                 renderBoost: emojiRenderBoost(for: style)),
+            ]
+            // SPOILER SURVIVES AN EMOJI RUN. It used to be dropped here, and the old comment said the
+            // other attributes "would be ignored on read-back anyway" — which was true only because
+            // read-back returned early too, so the claim justified itself. The effect was that an emoji
+            // inside a spoiler lost its spoiler in BOTH directions: the marker never reached the
+            // attributed string, so nothing could hide it, and `ca.spoiler` was dropped on the next
+            // round trip. `emoji` and `spoiler` are independent model fields and both must survive.
+            if ca.spoiler { dict[.rtSpoiler] = true }
+            return dict
+        }
+        if let button = ca.button {
+            // A button run is purely the inline atom, like an emoji: no other character attribute
+            // applies, because a pill draws its own label typography.
+            var dict: [NSAttributedString.Key: Any] = [
+                .font: styleSheet.font(for: style, attributes: ca),
+                .attachment: buttonAttachment(button: button, isBlockPill: false, maxWidth: nil),
+            ]
+            // SPOILER SURVIVES A BUTTON RUN, for the identical reason it survives an emoji run above
+            // — this branch had the SAME defect and the same self-justifying comment ("they would be
+            // ignored on read-back anyway"), which was true only because read-back returned early
+            // too. The emoji branch was fixed; this one was not, so an inline button inside a
+            // spoiler lost its spoiler in BOTH directions: no marker reached the attributed string,
+            // so nothing could hide it, and `ca.spoiler` was dropped on the next round trip.
+            // `button` and `spoiler` are independent model fields and both must survive.
+            if ca.spoiler { dict[.rtSpoiler] = true }
+            return dict
         }
         var dict: [NSAttributedString.Key: Any] = [:]
         dict[.font] = styleSheet.font(for: style, attributes: ca)
         if let formula = ca.formula {
             dict[.rtFormula] = formula
             dict[.foregroundColor] = ca.foreground?.uiColor ?? (style == .caption ? theme.secondaryText : theme.primaryText)
+            // SPOILER SURVIVES A FORMULA RUN. This is a FOURTH early return that dropped it, and
+            // the one that made the formula case look half-fixed: the spoiler line at the end of
+            // this function is never reached for a formula, so the marker never reached the
+            // attributed string and the read-back below had nothing to recover. Emoji, button and
+            // formula all drop through here now.
+            if ca.spoiler { dict[.rtSpoiler] = true }
             return dict
         }
         if ca.bold { dict[.rtBold] = true }   // user-intent marker (read back as CharacterAttributes.bold)
@@ -140,7 +312,18 @@ public struct AttributedStringMapper {
         if let b = ca.baselineOffset { dict[.baselineOffset] = b }
         if ca.inlineCode {
             let size = styleSheet.font(for: style, attributes: ca).pointSize
-            dict[.font] = UIFont.monospacedSystemFont(ofSize: size, weight: .regular)
+            var codeFont = UIFont.monospacedSystemFont(ofSize: size, weight: .regular)
+            // ITALIC SURVIVES INLINE CODE. The face is the only carrier of italic (bold has `.rtBold`,
+            // italic has no marker), and the read-back below derives `ca.italic` from it — so a
+            // monospace face without the trait dropped the user's italic from the model on the next
+            // read. Measured on the engine editor (composer harness, 2026-09-23,
+            // `HarnessMonospaceItalicTests`): `[i,m] "st pa"` came back `[m]` after typing anywhere.
+            if ca.italic,
+               let descriptor = codeFont.fontDescriptor.withSymbolicTraits(
+                   codeFont.fontDescriptor.symbolicTraits.union(.traitItalic)) {
+                codeFont = UIFont(descriptor: descriptor, size: size)
+            }
+            dict[.font] = codeFont
             dict[.backgroundColor] = theme.inlineCodeBackground
             dict[.rtInlineCode] = true
         }
@@ -172,10 +355,29 @@ public struct AttributedStringMapper {
         var ca = CharacterAttributes()
         if let att = dict[.attachment] as? FormulaTextAttachment {
             ca.formula = att.latex
+            // ...except the spoiler marker, which is a model field in its own right — the same
+            // exception the button and emoji branches make. This was the THIRD and last early
+            // return that dropped it, completing the set. Unlike the button case the forward path
+            // was already right: `ca.formula` is handled in the GENERAL branch, which carries the
+            // marker, so only the read-back was losing it.
+            if (dict[.rtSpoiler] as? Bool) == true { ca.spoiler = true }
+            return ca
+        }
+        if let att = dict[.attachment] as? ButtonTextAttachment {
+            ca.button = att.button   // button-only; the render-time label/colour never enter the model
+            // ...except the spoiler marker, which is a model field in its own right — the same
+            // exception the emoji branch below makes, and for the same reason. Without it the
+            // forward path's marker was written and then discarded here, so a spoilered inline
+            // button still lost its spoiler on every round trip even once the marker reached the
+            // attributed string. BOTH halves are needed; fixing either alone leaves the loss.
+            if (dict[.rtSpoiler] as? Bool) == true { ca.spoiler = true }
             return ca
         }
         if let att = dict[.attachment] as? EmojiTextAttachment {
             ca.emoji = att.ref   // emoji-only; never leak the spacer font/etc. into the model
+            // ...except the spoiler marker, which is a model field in its own right. See the forward
+            // path for why dropping it here was self-justifying and wrong.
+            if (dict[.rtSpoiler] as? Bool) == true { ca.spoiler = true }
             return ca
         }
         let isCode = (dict[.rtInlineCode] as? Bool) == true
@@ -234,7 +436,20 @@ public struct AttributedStringMapper {
 
     public func attributedString(for block: ParagraphBlock) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let paragraphStyle = styleSheet.paragraphStyle(for: block.style, attributes: block.paragraph,
+        // A STANDALONE formula is CENTERED, whatever alignment the paragraph carries. That is the
+        // InstantPage V2 renderer's behaviour — `InstantPageV2FormulaItem.centeringBounds` is "the
+        // horizontal band a block formula is centered within", nil only for an inline run or a wide
+        // scrollable one — and the editor lays out to match what will be sent. The stored alignment
+        // is overridden rather than consulted because the renderer ignores it too: a block formula
+        // reaches the wire as `InstantPageBlock.formula`, which carries no alignment at all.
+        //
+        // Keyed on `standaloneFormulaLatex`, the Core definition that already exists so the send
+        // path and the block-spacing classification cannot drift. This is its third consumer.
+        var paragraphAttributes = block.paragraph
+        if block.standaloneFormulaLatex != nil {
+            paragraphAttributes.alignment = .center
+        }
+        let paragraphStyle = styleSheet.paragraphStyle(for: block.style, attributes: paragraphAttributes,
                                                        list: block.list,
                                                        baseWritingDirection: baseWritingDirection)
         for run in block.runs {
@@ -259,4 +474,36 @@ public struct AttributedStringMapper {
         return runs
     }
 }
+
+/// Tail-ellipsis truncation on CLUSTER boundaries, with the ellipsis inheriting the label's own
+/// attributes. A pill wider than its line cannot be re-broken by the line-breaker (that recovery path
+/// requires the line to hold more than the pill), so the label must shrink instead of overflowing.
+///
+/// `truncated` is reported rather than inferred from the returned string: a one-character label
+/// replaced by a bare ellipsis keeps the same length, so a length comparison would miss exactly the
+/// case that is cut hardest.
+@available(iOS 13.0, *)
+private func truncatedButtonLabel(_ labelString: NSAttributedString, availableWidth: CGFloat) -> (label: NSAttributedString, truncated: Bool) {
+    guard labelString.length > 0 else {
+        return (labelString, false)
+    }
+    let fullWidth = CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(labelString), nil, nil, nil))
+    guard fullWidth > availableWidth else {
+        return (labelString, false)
+    }
+    let tailAttributes = labelString.attributes(at: labelString.length - 1, effectiveRange: nil)
+    let ellipsis = NSAttributedString(string: "\u{2026}", attributes: tailAttributes)
+    let ellipsisWidth = CGFloat(CTLineGetTypographicBounds(CTLineCreateWithAttributedString(ellipsis), nil, nil, nil))
+    let widthForText = availableWidth - ellipsisWidth
+    guard widthForText > 0.0 else {
+        return (ellipsis, true)
+    }
+    let typesetter = CTTypesetterCreateWithAttributedString(labelString)
+    let fittingCount = CTTypesetterSuggestClusterBreak(typesetter, 0, Double(widthForText))
+    let result = NSMutableAttributedString(attributedString: labelString.attributedSubstring(
+        from: NSRange(location: 0, length: min(fittingCount, labelString.length))))
+    result.append(ellipsis)
+    return (result, true)
+}
+
 #endif

@@ -47,6 +47,21 @@ enum TelegramDeviceContactImportIdentifier: Hashable, Comparable, Equatable {
     }
 }
 
+/// The user the server matched a device phone number to when the app last imported it; nil when
+/// it matched nobody, is waiting for a retry, or was never imported (contact sync is off, or has
+/// not run since the number was saved).
+///
+/// `number` is the number exactly as the device stores it (`CNPhoneNumber.stringValue`), because
+/// that is what the app imports and keys the record by. A national-format number ("600 00 00 00")
+/// is only meaningful in the account's own country, and it is the server that reads it that way,
+/// so this record is the one mapping from such a number to a user that the device can trust.
+public func deviceContactImportedPeerId(transaction: Transaction, number: DeviceContactNormalizedPhoneNumber) -> PeerId? {
+    guard let value = transaction.getDeviceContactImportInfo(TelegramDeviceContactImportIdentifier.phoneNumber(number).key) as? TelegramDeviceContactImportedData, case let .imported(_, _, peerId) = value else {
+        return nil
+    }
+    return peerId
+}
+
 func _internal_deviceContactsImportedByCount(postbox: Postbox, contacts: [(String, [DeviceContactNormalizedPhoneNumber])]) -> Signal<[String: Int32], NoError> {
     return postbox.transaction { transaction -> [String: Int32] in
         var result: [String: Int32] = [:]

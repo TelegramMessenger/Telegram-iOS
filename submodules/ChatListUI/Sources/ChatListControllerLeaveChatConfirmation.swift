@@ -13,7 +13,11 @@ import OwnershipTransferController
 
 extension ChatListControllerImpl {
     func presentLeaveChatConfirmation(peer: EnginePeer, nextCreator: EnginePeer, completion: @escaping (Bool) -> Void) {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
             let accountPeer = await (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))).get()
             
             guard let accountPeer else {

@@ -8,6 +8,8 @@ static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
 static const void *customDisplayNodeKey = &customDisplayNodeKey;
 static const void *backButtonAppearanceKey = &backButtonAppearanceKey;
 static const void *customActionKey = &customActionKey;
+static const void *requiresOwnSectionKey = &requiresOwnSectionKey;
+static const void *staysInRowKey = &staysInRowKey;
 
 @implementation UIBarButtonItem (Proxy)
 
@@ -43,6 +45,22 @@ static const void *customActionKey = &customActionKey;
 
 - (bool)backButtonAppearance {
     return [[self associatedObjectForKey:backButtonAppearanceKey] boolValue];
+}
+
+- (bool)requiresOwnSection {
+    return [[self associatedObjectForKey:requiresOwnSectionKey] boolValue];
+}
+
+- (void)setRequiresOwnSection:(bool)requiresOwnSection {
+    [self setAssociatedObject:@(requiresOwnSection) forKey:requiresOwnSectionKey];
+}
+
+- (bool)staysInRow {
+    return [[self associatedObjectForKey:staysInRowKey] boolValue];
+}
+
+- (void)setStaysInRow:(bool)staysInRow {
+    [self setAssociatedObject:@(staysInRow) forKey:staysInRowKey];
 }
 
 - (void)setCustomAction:(void (^)())customAction {

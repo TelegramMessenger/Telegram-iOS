@@ -10,6 +10,12 @@
 
 - (void)datacenterTransferAuthActionCompleted:(MTDatacenterTransferAuthAction *)action;
 
+@optional
+
+// The transfer ended without a token. Without this method a failure is
+// reported through datacenterTransferAuthActionCompleted:.
+- (void)datacenterTransferAuthActionFailed:(MTDatacenterTransferAuthAction *)action;
+
 @end
 
 @interface MTDatacenterTransferAuthAction : NSObject

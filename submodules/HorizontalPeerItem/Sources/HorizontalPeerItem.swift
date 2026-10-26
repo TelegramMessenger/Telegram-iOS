@@ -22,6 +22,10 @@ public enum HorizontalPeerItemMode {
 private let badgeFont = Font.regular(14.0)
 
 public final class HorizontalPeerItem: ListViewItem {
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let theme: PresentationTheme
     let strings: PresentationStrings
     let mode: HorizontalPeerItemMode
@@ -79,7 +83,7 @@ public final class HorizontalPeerItem: ListViewItem {
         self.unreadBadge = unreadBadge
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = HorizontalPeerItemNode()
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
@@ -96,7 +100,7 @@ public final class HorizontalPeerItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is HorizontalPeerItemNode)
             if let nodeValue = node() as? HorizontalPeerItemNode {
@@ -215,7 +219,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 animateContent = true
             }
             
-            return (itemLayout, { animated, synchronousLoads in
+            return (itemLayout, { [item] animated, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.peerNode.theme = itemTheme

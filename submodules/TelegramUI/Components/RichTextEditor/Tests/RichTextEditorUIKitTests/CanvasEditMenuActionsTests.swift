@@ -21,7 +21,7 @@ final class CanvasEditMenuActionsTests: XCTestCase {
 
     func test_customMenu_forSelection_hasFormatLookUpShare() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5   // "Hello"
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // "Hello"
         let t = titles(v.customEditMenuElements())
         XCTAssertTrue(t.contains("Format"))
         XCTAssertTrue(t.contains("Look Up"))
@@ -29,7 +29,7 @@ final class CanvasEditMenuActionsTests: XCTestCase {
     }
     func test_hook_appendsCustomAfterSuggestedActions() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)
         let suggested: [UIMenuElement] = [UIAction(title: "SysA") { _ in }, UIAction(title: "SysB") { _ in }]
         let interaction = UIEditMenuInteraction(delegate: nil)
         let cfg = UIEditMenuConfiguration(identifier: nil, sourcePoint: .zero)
@@ -42,12 +42,12 @@ final class CanvasEditMenuActionsTests: XCTestCase {
     }
     func test_customMenu_collapsedCaret_isEmpty() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 2; v.head = r.globalStart + 2
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 2)
         XCTAssertTrue(v.customEditMenuElements().isEmpty)
     }
     func test_formatSubmenu_hasBoldItalicUnderline() {
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)
         let format = v.customEditMenuElements().compactMap { $0 as? UIMenu }.first { $0.title == "Format" }
         XCTAssertNotNil(format)
         let childTitles = Set((format?.children ?? []).compactMap { ($0 as? UIAction)?.title })
@@ -65,7 +65,7 @@ final class CanvasEditMenuActionsTests: XCTestCase {
     func test_customMenu_forSelection_hasTranslate() {
         guard #available(iOS 17.4, *) else { return }   // Translate item is gated to 17.4+
         let v = canvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)
         XCTAssertTrue(titles(v.customEditMenuElements()).contains("Translate"))
     }
 }

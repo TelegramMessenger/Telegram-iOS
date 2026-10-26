@@ -12,12 +12,34 @@ public class EdgeEffectView: UIView {
     }
 
     private let contentView: UIView
-    private let contentMaskView: UIImageView
+    private let contentMaskView: UIView
+    private let contentMaskGradientView: UIImageView
+    private let contentMaskFillView: UIView
+    private var contentMaskEdgeSize: CGFloat?
     private var blurView: VariableBlurView?
-    
+
+    /// A stop of a custom content gradient: at `location` (0 at the edge's outer side, 1 at its inner end) the
+    /// content colour shows at `alpha`.
+    public struct GradientStop: Equatable {
+        public var location: CGFloat
+        public var alpha: CGFloat
+
+        public init(location: CGFloat, alpha: CGFloat) {
+            self.location = location
+            self.alpha = alpha
+        }
+    }
+
+    private var currentContentGradient: [GradientStop]?
+
     public override init(frame: CGRect) {
         self.contentView = UIView()
-        self.contentMaskView = UIImageView()
+        self.contentMaskView = UIView()
+        self.contentMaskGradientView = UIImageView()
+        self.contentMaskFillView = UIView()
+        self.contentMaskFillView.backgroundColor = .black
+        self.contentMaskView.addSubview(self.contentMaskGradientView)
+        self.contentMaskView.addSubview(self.contentMaskFillView)
         self.contentView.mask = self.contentMaskView
         
         super.init(frame: frame)
@@ -32,8 +54,13 @@ public class EdgeEffectView: UIView {
     public func updateColor(color: UIColor, transition: ComponentTransition) {
         transition.setBackgroundColor(view: self.contentView, color: color)
     }
+
+    /// The layer whose background colour is the effect's colour, for a caller animating it with its own keyframes.
+    public var colorLayer: CALayer {
+        return self.contentView.layer
+    }
     
-    public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
+    public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, contentGradient: [GradientStop]? = nil, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
         #if DEBUG && false
         let content: UIColor = .blue
         //let blur: Bool = !"".isEmpty
@@ -48,16 +75,50 @@ public class EdgeEffectView: UIView {
         transition.setFrame(view: self.contentView, frame: bounds)
         transition.setFrame(view: self.contentMaskView, frame: bounds)
         
-        if self.contentMaskView.image?.size.height != edgeSize {
-            if edgeSize > 0.0 {
-                self.contentMaskView.image = EdgeEffectView.generateEdgeGradient(baseHeight: edgeSize, isInverted: edge == .bottom)
+        if self.contentMaskEdgeSize != edgeSize || self.currentContentGradient != contentGradient {
+            self.contentMaskEdgeSize = edgeSize
+            self.currentContentGradient = contentGradient
+            if edgeSize <= 0.0 {
+                self.contentMaskGradientView.image = nil
+            } else if let contentGradient {
+                // The caller's stops over exactly `edgeSize`: the content's alpha follows them and nothing else.
+                self.contentMaskGradientView.image = generateGradientImage(
+                    size: CGSize(width: 1.0, height: edgeSize),
+                    colors: contentGradient.map { UIColor(white: 0.0, alpha: $0.alpha) },
+                    locations: contentGradient.map(\.location),
+                    isInverted: edge == .bottom
+                )
             } else {
-                self.contentMaskView.image = nil
+                self.contentMaskGradientView.image = EdgeEffectView.generateEdgeGradient(baseHeight: edgeSize, isInverted: edge == .bottom).resizableImage(withCapInsets: .zero, resizingMode: .stretch)
             }
         }
-        
+        let gradientFrame: CGRect
+        let fillFrame: CGRect
+        if edgeSize <= 0.0 {
+            gradientFrame = CGRect(origin: .zero, size: CGSize(width: bounds.width, height: 0.0))
+            fillFrame = bounds
+        } else if contentGradient != nil {
+            gradientFrame = bounds
+            fillFrame = CGRect(origin: CGPoint(x: 0.0, y: edge == .bottom ? bounds.height : 0.0), size: CGSize(width: bounds.width, height: 0.0))
+        } else {
+            let gradientHeight = min(edgeSize, bounds.height)
+            if edge == .bottom {
+                gradientFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: gradientHeight)
+                fillFrame = CGRect(x: 0.0, y: gradientHeight, width: bounds.width, height: bounds.height - gradientHeight)
+            } else {
+                gradientFrame = CGRect(x: 0.0, y: bounds.height - gradientHeight, width: bounds.width, height: gradientHeight)
+                fillFrame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height - gradientHeight)
+            }
+        }
+        transition.setFrame(view: self.contentMaskGradientView, frame: gradientFrame)
+        transition.setFrame(view: self.contentMaskFillView, frame: fillFrame)
+        self.contentMaskFillView.isHidden = edgeSize <= 0.0 || contentGradient != nil
+
         if blur {
-            let blurHeight: CGFloat = max(edgeSize, bounds.height - 14.0)
+            // Clamp to the effect's own bounds: the `max(edgeSize, ...)` floor below would
+            // otherwise let the blur spill past `rect` whenever the caller asks for a gradient
+            // longer than the region it is painting into, blurring unrelated content underneath.
+            let blurHeight: CGFloat = min(bounds.height, max(edgeSize, bounds.height - 14.0))
             let blurFrame = CGRect(origin: CGPoint(x: 0.0, y: edge == .bottom ? (bounds.height - blurHeight) : 0.0), size: CGSize(width: bounds.width, height: blurHeight))
             
             let blurView: VariableBlurView

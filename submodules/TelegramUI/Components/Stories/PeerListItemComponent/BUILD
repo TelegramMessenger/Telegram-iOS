@@ -18,7 +18,6 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramCore",
-        "//submodules/Postbox",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/AvatarNode",

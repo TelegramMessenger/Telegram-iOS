@@ -22,6 +22,8 @@ final class StoryResultsPanelComponent: CombinedComponent {
     let peer: EnginePeer?
     let state: SearchState
     let sideInset: CGFloat
+    /// The right-side inset when it differs from `sideInset` (iPhone Duo's side strip); nil keeps them equal.
+    let rightSideInset: CGFloat?
     let action: () -> Void
     
     public init(
@@ -32,6 +34,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
         peer: EnginePeer?,
         state: SearchState,
         sideInset: CGFloat,
+        rightSideInset: CGFloat? = nil,
         action: @escaping () -> Void
     ) {
         self.context = context
@@ -41,6 +44,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
         self.peer = peer
         self.state = state
         self.sideInset = sideInset
+        self.rightSideInset = rightSideInset
         self.action = action
     }
     
@@ -63,6 +67,9 @@ final class StoryResultsPanelComponent: CombinedComponent {
         if lhs.sideInset != rhs.sideInset {
             return false
         }
+        if lhs.rightSideInset != rhs.rightSideInset {
+            return false
+        }
         return true
     }
     
@@ -80,6 +87,9 @@ final class StoryResultsPanelComponent: CombinedComponent {
             let component = context.component
             
             let spacing: CGFloat = 3.0
+            let rightSideInset = component.rightSideInset ?? component.sideInset
+            // What the text gives up on the right beyond what it already did: nothing with equal insets.
+            let rightInsetExcess = max(0.0, rightSideInset - component.sideInset)
             
             var textLeftInset: CGFloat = 16.0 + component.sideInset
             let textTopInset: CGFloat = 9.0
@@ -168,7 +178,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
                         items: titlePrefixString,
                         noDelay: true
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - textLeftInset - 64.0, height: context.availableSize.height),
+                    availableSize: CGSize(width: context.availableSize.width - textLeftInset - 64.0 - rightInsetExcess, height: context.availableSize.height),
                     transition: context.transition
                 )
                 titlePrefixOffset = titlePrefix.size.width + 1.0
@@ -181,7 +191,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 1
                 ),
-                availableSize: CGSize(width: context.availableSize.width - textLeftInset - 64.0 - titlePrefixOffset, height: CGFloat.greatestFiniteMagnitude),
+                availableSize: CGSize(width: context.availableSize.width - textLeftInset - 64.0 - titlePrefixOffset - rightInsetExcess, height: CGFloat.greatestFiniteMagnitude),
                 transition: context.transition
             )
 
@@ -192,7 +202,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
                     items: textString,
                     noDelay: true
                 ),
-                availableSize: CGSize(width: context.availableSize.width - textLeftInset, height: context.availableSize.height),
+                availableSize: CGSize(width: context.availableSize.width - textLeftInset - rightInsetExcess, height: context.availableSize.height),
                 transition: context.transition
             )
             
@@ -274,7 +284,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
             )
             
             context.add(arrow
-                .position(CGPoint(x: context.availableSize.width - arrow.size.width - component.sideInset, y: size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width - arrow.size.width - rightSideInset, y: size.height / 2.0))
             )
             
             context.add(button

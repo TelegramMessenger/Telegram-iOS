@@ -4,247 +4,487 @@
 <dict>
 	<key>files</key>
 	<dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
 		<data>
-		4VDxU6SZ65gQBn3rUWCCNqxbb2Q=
+		7IIdD3Nk899vJD/yksdZqcIq6PA=
 		</data>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Info.plist</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Info.plist</key>
 		<data>
-		lLz/4hKuGngSXx+1idP1Qd7K96Q=
+		dD0rmPn+anBwI04P2Crf5+6zWIY=
 		</data>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
 		<data>
-		EhXEo2CcyN6grvu7hRiGTj5N5/Q=
+		EgsEWpDDy4rjfIEQODnsKEGXn9o=
 		</data>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
 		<data>
-		HKWaSFA8HkKEhv60fJePQ6MMw6A=
+		0MFk6utGiXfXkNJIyZy5vzaTwfs=
 		</data>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64e.swiftdoc</key>
 		<data>
-		e79+f2szYbQmmcycLjb4qvAm9ic=
+		3I4l3XQVjUDxTip88quvd73W1UU=
 		</data>
-		<key>ios-arm64/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64e.swiftinterface</key>
 		<data>
-		d34/WdITFALLLJjkSHGiQSA6Z3Y=
+		qRLvnQeyAZxPahISRKNkj44oup8=
 		</data>
-		<key>ios-arm64/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
 		<data>
-		Vl9+I/cFYuo5INyhscdU7ZKuJKM=
+		Dd16NO18kpilscMOvm3nqSLYsbk=
+		</data>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<data>
+		1y24S6hxVvVt9t7Kdl/BaKhBdes=
+		</data>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<data>
+		GgnnIRLrFoYJAUV0S6cCG0L3GdI=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
 		<data>
-		4VDxU6SZ65gQBn3rUWCCNqxbb2Q=
+		7IIdD3Nk899vJD/yksdZqcIq6PA=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Info.plist</key>
 		<data>
-		qvXMamMsVpa8+m+Nzwchfsvt/eE=
+		giyq7UzxMdQHocOzrCJgC1q7TyI=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
 		<data>
-		U/f1XLQrWkvQeR+Px1/pRwRc/cc=
+		jxWt2PHOD10oUq5TjlJgPzLTlN4=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
 		<data>
-		spJ76Pm8/Wr3VMBn4v2XqjpgBVQ=
+		9ObYA2FZy2BlFlyIIZt3wMOn52Q=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/x86_64.swiftdoc</key>
 		<data>
-		f96x+pLmntLoPnADpTqimN2ipfI=
+		P/L4ujCEbcadBIX9FYfh8ATzaao=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/x86_64.swiftinterface</key>
 		<data>
-		s1JZ2QV5QeLTytibw4yKa97YXMg=
+		xHzU0OW3+cuzQN3KEAGq4gY2VYY=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
 		<data>
-		e79+f2szYbQmmcycLjb4qvAm9ic=
+		Dd16NO18kpilscMOvm3nqSLYsbk=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
 		<data>
-		d34/WdITFALLLJjkSHGiQSA6Z3Y=
+		1y24S6hxVvVt9t7Kdl/BaKhBdes=
 		</data>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
 		<data>
-		Bj5s+c75uv9OG+DFaJDzCJQdNR4=
+		jSrZok9+TK/SsfVahQ5pD4xd6qo=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
+		<data>
+		7IIdD3Nk899vJD/yksdZqcIq6PA=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Info.plist</key>
+		<data>
+		Rb90Xv9s/y5sxeIWeDeMZ8ORYS8=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
+		<data>
+		iSvJIXuMYO3Z3X3pXtVUoQ8Pqkw=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
+		<data>
+		TXbBcvOUHtAEwSZmR0acV4QYP2s=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
+		<data>
+		Dd16NO18kpilscMOvm3nqSLYsbk=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<data>
+		1y24S6hxVvVt9t7Kdl/BaKhBdes=
+		</data>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<data>
+		thQUwgFn4xTyl4ldOXJazQnzy5Q=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
+		<data>
+		7IIdD3Nk899vJD/yksdZqcIq6PA=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Info.plist</key>
+		<data>
+		57NKSw9l/+whid2D7UY6yCaTI4Y=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
+		<data>
+		nGAtZbxNuo9p68J3VyQ+zRLLfKo=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
+		<data>
+		mEZ+sumGqJfHBPVlCs1Fsb5ckEI=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
+		<data>
+		Dd16NO18kpilscMOvm3nqSLYsbk=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<data>
+		1y24S6hxVvVt9t7Kdl/BaKhBdes=
+		</data>
+		<key>xros-arm64/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<data>
+		+ZPF2YnKxTDYfHVHDYNqTd4bgb8=
 		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			4VDxU6SZ65gQBn3rUWCCNqxbb2Q=
+			7IIdD3Nk899vJD/yksdZqcIq6PA=
 			</data>
 			<key>hash2</key>
 			<data>
-			DVSRC0UZpbiuicyY3o0XyRn5J4W67BXA3EZoseXSJ+E=
+			MClr0c91b1g349XLBDU3wTWa4PYd7mz91hK8JWVGPGs=
 			</data>
 		</dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Info.plist</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Info.plist</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			lLz/4hKuGngSXx+1idP1Qd7K96Q=
+			dD0rmPn+anBwI04P2Crf5+6zWIY=
 			</data>
 			<key>hash2</key>
 			<data>
-			69AqI/t+mFQl1WdbSZTMvyjw8Arr/BaO45RgklSi/OY=
+			sH8hLTdykb2Empk3hgX1lq9mngvYOsQm9hDblOUdub4=
 			</data>
 		</dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			EhXEo2CcyN6grvu7hRiGTj5N5/Q=
+			EgsEWpDDy4rjfIEQODnsKEGXn9o=
 			</data>
 			<key>hash2</key>
 			<data>
-			FjQ9BxuUBuAipikhZdGTwdVPGVtsVSoqgo5laiu4cGk=
+			335G/QXKnQ4W+G6ps5V+TVC1Ah3Du0eSTje8zeCRvJM=
 			</data>
 		</dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			HKWaSFA8HkKEhv60fJePQ6MMw6A=
+			0MFk6utGiXfXkNJIyZy5vzaTwfs=
 			</data>
 			<key>hash2</key>
 			<data>
-			01O3JDW+YCBhgBZ+F9hJi88lBiR0CKI8XKA7R9aJ5M4=
+			f6izw0+4je/TYCdimicTNzfZqtXk1Ejao+lZqYpKD6A=
 			</data>
 		</dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64e.swiftdoc</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			e79+f2szYbQmmcycLjb4qvAm9ic=
+			3I4l3XQVjUDxTip88quvd73W1UU=
 			</data>
 			<key>hash2</key>
 			<data>
-			PteZu5hZeSnScpxe2bKzAkh/J6tvZqHOPjJPPX9L3B0=
+			3hOd0CUlse/q7p2gUq/T13RP2M2q76jtdOOb6i9CnY8=
 			</data>
 		</dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64e.swiftinterface</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			d34/WdITFALLLJjkSHGiQSA6Z3Y=
+			qRLvnQeyAZxPahISRKNkj44oup8=
 			</data>
 			<key>hash2</key>
 			<data>
-			9ogbL0FljSMHAXmM5vR4v1xZZKB2oE8aTODyTk0qUj8=
+			KP4N7AOs6tAXfJSWbxM36mBSlV3jNhtF/1FtYwql/jQ=
 			</data>
 		</dict>
-		<key>ios-arm64/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			Vl9+I/cFYuo5INyhscdU7ZKuJKM=
+			Dd16NO18kpilscMOvm3nqSLYsbk=
 			</data>
 			<key>hash2</key>
 			<data>
-			vQn3SxzkE8c0pSwmCUM4R8oKZsHxVsafDddQf0HeFTo=
+			eZhUitY04WEzcMtCRkjWQtEALHwP+rM8snMqTpeBv9g=
+			</data>
+		</dict>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			1y24S6hxVvVt9t7Kdl/BaKhBdes=
+			</data>
+			<key>hash2</key>
+			<data>
+			qPVm8hDA62OUU6F7Lr4q+c2uN9t4VYPry/YrlNKXJzY=
+			</data>
+		</dict>
+		<key>ios-arm64_arm64e/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			GgnnIRLrFoYJAUV0S6cCG0L3GdI=
+			</data>
+			<key>hash2</key>
+			<data>
+			1NvVaSpvR+W/pBZHjdqgT3Dm64YuL2E4Pa+HND5WCJk=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			4VDxU6SZ65gQBn3rUWCCNqxbb2Q=
+			7IIdD3Nk899vJD/yksdZqcIq6PA=
 			</data>
 			<key>hash2</key>
 			<data>
-			DVSRC0UZpbiuicyY3o0XyRn5J4W67BXA3EZoseXSJ+E=
+			MClr0c91b1g349XLBDU3wTWa4PYd7mz91hK8JWVGPGs=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Info.plist</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			qvXMamMsVpa8+m+Nzwchfsvt/eE=
+			giyq7UzxMdQHocOzrCJgC1q7TyI=
 			</data>
 			<key>hash2</key>
 			<data>
-			jnZiaN642xbrWF2l7fQF33YSTgePAQACl0FbRUmayMI=
+			XEDPlYRxOaG55WroUVT2W2YLhtmh4oAcfChctkqLifE=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			U/f1XLQrWkvQeR+Px1/pRwRc/cc=
+			jxWt2PHOD10oUq5TjlJgPzLTlN4=
 			</data>
 			<key>hash2</key>
 			<data>
-			tuY9mB+LTHtCEGJRwTeUGym5ANc4iiGERy3vedGcZqo=
+			oW82xQ1w3bMgrcDSWPiEVkOQxPs51MrQPxEhrIE9WjU=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			spJ76Pm8/Wr3VMBn4v2XqjpgBVQ=
+			9ObYA2FZy2BlFlyIIZt3wMOn52Q=
 			</data>
 			<key>hash2</key>
 			<data>
-			vlFk7bczYlw+XSHD42G8VkhH755HVehFT7fD1snaME4=
+			t/qzXEh6cKq3tlYmO9qjdLGaBHukRwQDbFJifXtDef8=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/x86_64.swiftdoc</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			f96x+pLmntLoPnADpTqimN2ipfI=
+			P/L4ujCEbcadBIX9FYfh8ATzaao=
 			</data>
 			<key>hash2</key>
 			<data>
-			zHc1oXV0xksHw1i1q0HYnVIF0FJ3244NSbUty6NT3g8=
+			mMOImE5T5vs837tKxSSjFRHrYKtgQmqtDWvniAje2Hg=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/x86_64.swiftinterface</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			s1JZ2QV5QeLTytibw4yKa97YXMg=
+			xHzU0OW3+cuzQN3KEAGq4gY2VYY=
 			</data>
 			<key>hash2</key>
 			<data>
-			5enubvBpufjdyyeqCZwbNZnVGNchHIwyNhUx56fzXto=
+			08s8WOFtOa/klvIgu7da/hK+zFmujElA9u1+66tj5zg=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			e79+f2szYbQmmcycLjb4qvAm9ic=
+			Dd16NO18kpilscMOvm3nqSLYsbk=
 			</data>
 			<key>hash2</key>
 			<data>
-			PteZu5hZeSnScpxe2bKzAkh/J6tvZqHOPjJPPX9L3B0=
+			eZhUitY04WEzcMtCRkjWQtEALHwP+rM8snMqTpeBv9g=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			d34/WdITFALLLJjkSHGiQSA6Z3Y=
+			1y24S6hxVvVt9t7Kdl/BaKhBdes=
 			</data>
 			<key>hash2</key>
 			<data>
-			9ogbL0FljSMHAXmM5vR4v1xZZKB2oE8aTODyTk0qUj8=
+			qPVm8hDA62OUU6F7Lr4q+c2uN9t4VYPry/YrlNKXJzY=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			Bj5s+c75uv9OG+DFaJDzCJQdNR4=
+			jSrZok9+TK/SsfVahQ5pD4xd6qo=
 			</data>
 			<key>hash2</key>
 			<data>
-			dwEBfc7UHwM0emsKXMYVXM6SRC1m7w/jOCVveRoW9jY=
+			hOBnotXhvS+RsR4BlFODjSM/LV1AE3b+/hSPKoZjbHQ=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			7IIdD3Nk899vJD/yksdZqcIq6PA=
+			</data>
+			<key>hash2</key>
+			<data>
+			MClr0c91b1g349XLBDU3wTWa4PYd7mz91hK8JWVGPGs=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Info.plist</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			Rb90Xv9s/y5sxeIWeDeMZ8ORYS8=
+			</data>
+			<key>hash2</key>
+			<data>
+			DIXF0oJ1GRyd8KskQAsNzzhk1zBWpcoKDbW+2E0P59Q=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			iSvJIXuMYO3Z3X3pXtVUoQ8Pqkw=
+			</data>
+			<key>hash2</key>
+			<data>
+			5C+p8FMkmWejGQ+UI09aKgcP91rquon7vcZWtml0Rvg=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			TXbBcvOUHtAEwSZmR0acV4QYP2s=
+			</data>
+			<key>hash2</key>
+			<data>
+			YCAtPScxtND/i4xwAZjKk2GhA6aLmlMvSDSFVIxQiyg=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			Dd16NO18kpilscMOvm3nqSLYsbk=
+			</data>
+			<key>hash2</key>
+			<data>
+			eZhUitY04WEzcMtCRkjWQtEALHwP+rM8snMqTpeBv9g=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			1y24S6hxVvVt9t7Kdl/BaKhBdes=
+			</data>
+			<key>hash2</key>
+			<data>
+			qPVm8hDA62OUU6F7Lr4q+c2uN9t4VYPry/YrlNKXJzY=
+			</data>
+		</dict>
+		<key>xros-arm64-simulator/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			thQUwgFn4xTyl4ldOXJazQnzy5Q=
+			</data>
+			<key>hash2</key>
+			<data>
+			Gi+Glp720jSGmAdb5/4/YDokT8ssYews8jrAzbzvY9g=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Headers/RecaptchaEnterprise.h</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			7IIdD3Nk899vJD/yksdZqcIq6PA=
+			</data>
+			<key>hash2</key>
+			<data>
+			MClr0c91b1g349XLBDU3wTWa4PYd7mz91hK8JWVGPGs=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Info.plist</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			57NKSw9l/+whid2D7UY6yCaTI4Y=
+			</data>
+			<key>hash2</key>
+			<data>
+			VeY5HGbnTQYl7Z90ae34aWcLi0SrNZ7zM1vUcDhVESc=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftdoc</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			nGAtZbxNuo9p68J3VyQ+zRLLfKo=
+			</data>
+			<key>hash2</key>
+			<data>
+			axmLLHF2cGKt7zbBUve20W7OJovs4Bj6ZdvE+BePGbk=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Modules/RecaptchaEnterprise.swiftmodule/arm64.swiftinterface</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			mEZ+sumGqJfHBPVlCs1Fsb5ckEI=
+			</data>
+			<key>hash2</key>
+			<data>
+			BU0y+J11uHzkELfV7n16ROBWRUvIN9xMp1REY5l1Owc=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/Modules/module.modulemap</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			Dd16NO18kpilscMOvm3nqSLYsbk=
+			</data>
+			<key>hash2</key>
+			<data>
+			eZhUitY04WEzcMtCRkjWQtEALHwP+rM8snMqTpeBv9g=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/PrivacyInfo.xcprivacy</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			1y24S6hxVvVt9t7Kdl/BaKhBdes=
+			</data>
+			<key>hash2</key>
+			<data>
+			qPVm8hDA62OUU6F7Lr4q+c2uN9t4VYPry/YrlNKXJzY=
+			</data>
+		</dict>
+		<key>xros-arm64/RecaptchaEnterprise.framework/RecaptchaEnterprise</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			+ZPF2YnKxTDYfHVHDYNqTd4bgb8=
+			</data>
+			<key>hash2</key>
+			<data>
+			+540Ts8t5oMzbxoKmu+vfgXoBAy3Qk2PkGtDOkH7ahk=
 			</data>
 		</dict>
 	</dict>

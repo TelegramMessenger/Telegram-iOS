@@ -138,7 +138,10 @@ final class SectionHeaderComponent: Component {
                             view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                         }
                     }
-                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - leftInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
+                    // Per side: beside iPhone Duo's side strip the right inset is the strip's. Equal insets give the
+                    // old position.
+                    let actionRightInset: CGFloat = 16.0 + component.insets.right
+                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - actionRightInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
                     view.frame = actionFrame
                 }
             } else if let view = self.action.view, view.superview != nil {

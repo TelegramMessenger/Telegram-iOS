@@ -35,6 +35,11 @@ final class RTFImportCorpusTests: XCTestCase {
                 result.append(pq.text)
             case .blockQuote:
                 break
+            case .details:
+                break
+            case .buttonRow:
+                // A button row holds no paragraph text; RTF import never produces one.
+                break
             }
         }
         return result

@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
@@ -18,6 +17,7 @@ import ContextUI
 import TranslateUI
 import Pasteboard
 import ChatRichTextEditorComposer
+import UrlWhitelist
 
 final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private weak var controller: InstantPageController?
@@ -67,8 +67,8 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     var currentWebEmbedHeights: [Int : CGFloat] = [:]
     var currentExpandedDetails: [Int : Bool]?
     var currentDetailsItems: [InstantPageDetailsItem] = []
-    private var resolvedExternalMediaDimensions: [MediaId: PixelDimensions] = [:]
-    private var pendingResolvedExternalMediaDimensions = Set<MediaId>()
+    private var resolvedExternalMediaDimensions: [EngineMedia.Id: PixelDimensions] = [:]
+    private var pendingResolvedExternalMediaDimensions = Set<EngineMedia.Id>()
     
     var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
@@ -146,7 +146,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.navigationBar.back = navigateBack
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(content.url), actionCompleted: { [weak self] in
+                let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url(content.url), actionCompleted: { [weak self] in
                     if let strongSelf = self {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
@@ -413,7 +413,10 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         let maxBarHeight: CGFloat
-        if !layout.safeInsets.top.isZero {
+        if layout.topBarStatusIsland != nil, let statusBarHeight = layout.navigationBarStatusBarHeight {
+            // iPhone Duo, unfolded portrait: a compact bar beside the status island, whose buttons clear it.
+            maxBarHeight = statusBarHeight + 44.0
+        } else if !layout.safeInsets.top.isZero {
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight > 34.0 {
                 maxBarHeight = statusBarHeight + 44.0
             } else {
@@ -804,7 +807,11 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let maxBarHeight: CGFloat
         let minBarHeight: CGFloat
-        if !containerLayout.safeInsets.top.isZero {
+        if containerLayout.topBarStatusIsland != nil, let statusBarHeight = containerLayout.navigationBarStatusBarHeight {
+            // iPhone Duo, unfolded portrait: a compact bar beside the status island, whose buttons clear it.
+            maxBarHeight = statusBarHeight + 44.0
+            minBarHeight = statusBarHeight + 28.0
+        } else if !containerLayout.safeInsets.top.isZero {
             if let statusBarHeight = containerLayout.statusBarHeight, statusBarHeight > 34.0 {
                 maxBarHeight = statusBarHeight + 44.0
             } else {
@@ -883,7 +890,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
-        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: pageProgress, transition: transition)
+        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right + containerLayout.navigationBarTrailingButtonsInset, title: title, pageProgress: pageProgress, transition: transition)
         
         transition.animateView {
             self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: containerLayout.intrinsicInsets.bottom, right: 0.0)
@@ -1031,7 +1038,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     private func configureExternalMediaDimensionsUpdates(for itemNode: InstantPageNode) {
-        let update: (MediaId, PixelDimensions) -> Void = { [weak self] mediaId, dimensions in
+        let update: (EngineMedia.Id, PixelDimensions) -> Void = { [weak self] mediaId, dimensions in
             self?.updateExternalMediaDimensions(mediaId, dimensions)
         }
         if let itemNode = itemNode as? InstantPageExternalMediaDimensionsNode {
@@ -1042,7 +1049,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    private func updateExternalMediaDimensions(_ mediaId: MediaId, _ dimensions: PixelDimensions) {
+    private func updateExternalMediaDimensions(_ mediaId: EngineMedia.Id, _ dimensions: PixelDimensions) {
         if self.resolvedExternalMediaDimensions[mediaId] == dimensions {
             return
         }
@@ -1065,7 +1072,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let detailsStateMaps = self.captureExpandedDetailsStateMaps()
         let viewportTop = self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentInset.top
-        var oldFrames: [MediaId: CGRect] = [:]
+        var oldFrames: [EngineMedia.Id: CGRect] = [:]
         for mediaId in mediaIds {
             if let frame = self.effectiveFrameForMedia(mediaId, detailsStateMaps: detailsStateMaps) {
                 oldFrames[mediaId] = frame
@@ -1074,7 +1081,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.updateLayout()
         
-        var newFrames: [MediaId: CGRect] = [:]
+        var newFrames: [EngineMedia.Id: CGRect] = [:]
         for mediaId in mediaIds {
             if let frame = self.effectiveFrameForMedia(mediaId, detailsStateMaps: detailsStateMaps) {
                 newFrames[mediaId] = frame
@@ -1100,7 +1107,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    private func compensatedViewportTop(oldFrames: [MediaId: CGRect], newFrames: [MediaId: CGRect], viewportTop: CGFloat) -> CGFloat? {
+    private func compensatedViewportTop(oldFrames: [EngineMedia.Id: CGRect], newFrames: [EngineMedia.Id: CGRect], viewportTop: CGFloat) -> CGFloat? {
         var pairedFrames: [(old: CGRect, new: CGRect)] = []
         for (mediaId, oldFrame) in oldFrames {
             if let newFrame = newFrames[mediaId] {
@@ -1162,14 +1169,14 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return path.map(String.init).joined(separator: ".")
     }
     
-    private func effectiveFrameForMedia(_ mediaId: MediaId, detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
+    private func effectiveFrameForMedia(_ mediaId: EngineMedia.Id, detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
         guard let currentLayout = self.currentLayout else {
             return nil
         }
         return self.effectiveFrameForMedia(mediaId, items: currentLayout.items, origin: .zero, expandedDetails: self.currentExpandedDetails, path: [], detailsStateMaps: detailsStateMaps)
     }
     
-    private func effectiveFrameForMedia(_ mediaId: MediaId, items: [InstantPageItem], origin: CGPoint, expandedDetails: [Int: Bool]?, path: [Int], detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
+    private func effectiveFrameForMedia(_ mediaId: EngineMedia.Id, items: [InstantPageItem], origin: CGPoint, expandedDetails: [Int: Bool]?, path: [Int], detailsStateMaps: [String: [Int: Bool]]) -> CGRect? {
         var collapseOffset: CGFloat = 0.0
         var detailsIndex = -1
         
@@ -1221,7 +1228,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return contentHeight
     }
     
-    private func itemContainsMedia(_ item: InstantPageItem, mediaId: MediaId) -> Bool {
+    private func itemContainsMedia(_ item: InstantPageItem, mediaId: EngineMedia.Id) -> Bool {
         for media in item.medias {
             if media.media.id == mediaId {
                 return true
@@ -1241,8 +1248,9 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var instantPageUpdated = false
         var effectiveInstantPage = instantPage
         if let instantPage {
-            var media = instantPage.media
-            for (mediaId, currentMedia) in instantPage.media {
+            let currentMediaById = instantPage.media
+            var media = currentMediaById
+            for (mediaId, currentMedia) in currentMediaById {
                 if let updatedMedia = self.updatedMediaIfNeeded(currentMedia) {
                     media[mediaId] = updatedMedia
                     instantPageUpdated = true
@@ -1301,12 +1309,13 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return (TelegramMediaWebpage(webpageId: webPage.webpageId, content: .Loaded(effectiveContent)), effectiveInstantPage)
     }
     
-    private func updatedMediaIfNeeded(_ media: Media) -> Media? {
-        if let image = media as? TelegramMediaImage {
-            return self.updatedImageIfNeeded(image)
-        } else if let file = media as? TelegramMediaFile {
-            return self.updatedFileIfNeeded(file)
-        } else {
+    private func updatedMediaIfNeeded(_ media: EngineMedia) -> EngineMedia? {
+        switch media {
+        case let .image(image):
+            return self.updatedImageIfNeeded(image).flatMap(EngineMedia.image)
+        case let .file(file):
+            return self.updatedFileIfNeeded(file).flatMap(EngineMedia.file)
+        default:
             return nil
         }
     }
@@ -1415,17 +1424,17 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private func longPressMedia(_ media: InstantPageMedia) {
         let controller = makeContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, case let .image(image) = media.media {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                let media = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = copyToPasteboard(context: strongSelf.context, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_LinkDialogSave, accessibilityLabel: self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, case let .image(image) = media.media {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                let media = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = saveToCameraRoll(context: strongSelf.context, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .image(image) = media.media {
-                strongSelf.present(strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) })))), nil)
+                strongSelf.present(strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) })))), nil)
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
@@ -1455,7 +1464,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 let openText = canOpenIn ? self.strings.Conversation_FileOpenIn : self.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(url.url) ?? url.url),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
@@ -1539,7 +1548,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 }), ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuShare, accessibilityLabel: strings.Conversation_ContextMenuShare), action: { [weak self] in
                     if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                        strongSelf.present(strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
+                        strongSelf.present(strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
                     }
                 })]
                 
@@ -1924,7 +1933,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
             }, openInSafari: { [weak self] in
                 if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    strongSelf.context.sharedContext.applicationBindings.openUrl(content.url)
+                    strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: content.url, forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {})
                 }
             })
             self.addSubnode(settingsNode)

@@ -11,6 +11,21 @@ public enum RichTextEditorClipboard {
     /// composers). The richest of the three representations the editor reads on paste, ahead of RTF and plain.
     public static let fragmentUTI = "org.telegram.richtexteditor.fragment"
 
+    /// Private pasteboard UTI carrying, as UTF-8, the EXACT text a one-line field (an author, a code
+    /// language, a details title) takes from the editor's own copy: every character of the range the copy
+    /// took — and a Cut deletes — on one line, atoms as their text. The fragment cannot say this: a partial
+    /// copy of a code body carries the block's language as metadata, which the range never held (composer
+    /// harness p22). Written by the editor's own Copy / Cut only; absent, a field falls back to the fragment.
+    public static let oneLineFieldTextUTI = "org.telegram.richtexteditor.one-line-field-text"
+
+    /// Private pasteboard UTI carrying a JSON-encoded `Document`: the editor's own copy as the TEXT the range
+    /// covered (`Document.extractFragmentAsCoveredText`) — a code block's language as a line only when the
+    /// range held its language line. What a destination that holds only RUNS (a table cell, a media caption,
+    /// a pull quote's body) pastes: from the fragment it cannot tell a covered language from the metadata one
+    /// a partial copy carries, and it dropped both, so Cut + Paste of a code block into a cell deleted the
+    /// language (composer harness p23). Written by the editor's own Copy / Cut only.
+    public static let coveredTextFragmentUTI = "org.telegram.richtexteditor.covered-text-fragment"
+
     /// The pasteboard item for a whole `Document`: the private fragment UTI (JSON, lossless), `public.rtf`
     /// (cross-app), and `public.utf8-plain-text`. Assign as a single pasteboard item, e.g.
     /// `UIPasteboard.general.items = [RichTextEditorClipboard.pasteboardItem(for: document)]`.

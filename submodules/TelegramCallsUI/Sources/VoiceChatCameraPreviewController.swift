@@ -411,12 +411,17 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, A
         } else {
             isLandscape = false
         }
+        // The centred card is the floating presentation: iPhone Duo's unfolded landscape is regular width but a phone,
+        // and the card (870x690) does not fit its 951x669 screen beside the side strip.
         let isTablet: Bool
-        if case .regular = layout.metrics.widthClass {
+        if layout.presentsFloatingPanels {
             isTablet = true
         } else {
             isTablet = false
         }
+        // In landscape the preview centres between the side insets: beside a side strip (iPhone Duo) a screen-centred
+        // one reaches under the status corner block. Equal insets keep it, its title and its button screen-centred.
+        let landscapeBandOffset: CGFloat = isLandscape ? layout.safeInsets.left - layout.safeInsets.right : 0.0
         
         var insets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
@@ -456,7 +461,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, A
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let titleSize = self.titleNode.measure(CGSize(width: contentFrame.width, height: .greatestFiniteMagnitude))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 20.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width + landscapeBandOffset) / 2.0), y: 20.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
                 
         var previewSize: CGSize
@@ -465,7 +470,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, A
         if isLandscape {
             let previewHeight = contentFrame.height
             previewSize = CGSize(width: min(contentFrame.width - layout.safeInsets.left - layout.safeInsets.right, ceil(previewHeight * previewAspectRatio)), height: previewHeight)
-            previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
+            previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - previewSize.width + landscapeBandOffset) / 2.0), y: 0.0), size: previewSize)
         } else {
             previewSize = CGSize(width: contentFrame.width, height: min(contentFrame.height, ceil(contentFrame.width * previewAspectRatio)))
             previewFrame = CGRect(origin: CGPoint(), size: previewSize)
@@ -496,7 +501,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, A
         
         let buttonWidth = min(buttonMaxWidth, contentFrame.width - buttonInset * 2.0)
         let doneButtonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: floorToScreenPixels((contentFrame.width - buttonWidth) / 2.0), y: previewFrame.maxY - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: floorToScreenPixels((contentFrame.width - buttonWidth + landscapeBandOffset) / 2.0), y: previewFrame.maxY - doneButtonHeight - buttonInset, width: buttonWidth, height: doneButtonHeight))
         self.broadcastPickerView?.frame = self.doneButton.frame
         
         let wheelFrame = CGRect(origin: CGPoint(x: 16.0 + previewFrame.minX, y: previewFrame.maxY - doneButtonHeight - buttonInset - 36.0 - 20.0), size: CGSize(width: previewFrame.width - 32.0, height: 36.0))

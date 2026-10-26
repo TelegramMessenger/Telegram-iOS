@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -307,7 +308,8 @@ public final class MediaRecordingPanelComponent: Component {
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "BinRed"),
                     color: UIColor(rgb: 0xFF3B30),
-                    startingPosition: .begin
+                    startingPosition: .begin,
+                    lottieSettings: .noAccountFallback
                 )),
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)

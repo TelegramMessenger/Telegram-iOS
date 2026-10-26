@@ -176,7 +176,9 @@ final class AlertControllerNode: ASDisplayNode {
         let contentAvailableFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: layout.size.width - insets.right, height: layout.size.height - insets.top - insets.bottom))
         let contentSize = self.contentNode.updateLayout(size: contentAvailableFrame.size, transition: transition)
         let containerSize = CGSize(width: contentSize.width, height: contentSize.height)
-        let containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)), size: containerSize)
+        // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this is
+        // the full width's center.
+        let containerFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - containerSize.width) / 2.0), y: contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)), size: containerSize)
         
         let outerEdge: CGFloat = 100.0
         

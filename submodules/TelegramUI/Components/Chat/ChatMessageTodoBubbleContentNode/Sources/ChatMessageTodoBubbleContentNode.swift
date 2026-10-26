@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1045,7 +1046,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.textNode = TextNodeWithEntities()
         self.textNode.textNode.isUserInteractionEnabled = false
         self.textNode.textNode.contentMode = .topLeft
@@ -1068,7 +1069,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.statusNode = ChatMessageDateAndStatusNode()
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.typeNode)
@@ -1093,10 +1094,10 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        return { item, layoutConstants, _, _, _, _ in
+        return { [weak self] item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let message = item.message
                 
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
@@ -1314,7 +1315,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 boundingSize.width = max(boundingSize.width, min(270.0, constrainedSize.width))
                 
-                return (boundingSize.width, { boundingWidth in
+                return (boundingSize.width, { [weak self] boundingWidth in
                     var resultSize = CGSize(width: max(boundingSize.width, boundingWidth), height: boundingSize.height)
                     
                     let titleTypeSpacing: CGFloat = -4.0

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import SwiftSignalKit
 import Display
@@ -98,7 +99,11 @@ private final class GiftUpgradeCostScreenComponent: Component {
                                     
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
 
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
                        
             let isFirstTime = self.component == nil
             self.component = component
@@ -140,9 +145,9 @@ private final class GiftUpgradeCostScreenComponent: Component {
                     inversed: true
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 110.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 110.0)
             )
-            let barFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - barSize.width) * 0.5), y: contentHeight), size: barSize)
+            let barFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - barSize.width * 0.5), y: contentHeight), size: barSize)
             if let barView = self.bar.view {
                 if barView.superview == nil {
                     self.addSubview(barView)
@@ -165,9 +170,9 @@ private final class GiftUpgradeCostScreenComponent: Component {
                     lineSpacing: 0.2
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 50.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - 50.0, height: .greatestFiniteMagnitude)
             )
-            let descriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - descriptionSize.width) * 0.5), y: contentHeight), size: descriptionSize)
+            let descriptionFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - descriptionSize.width * 0.5), y: contentHeight), size: descriptionSize)
             if let descriptionView = self.descriptionText.view {
                 if descriptionView.superview == nil {
                     self.addSubview(descriptionView)
@@ -204,9 +209,9 @@ private final class GiftUpgradeCostScreenComponent: Component {
                     items: tableItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
             )
-            let tableFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - tableSize.width) * 0.5), y: contentHeight), size: tableSize)
+            let tableFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - tableSize.width * 0.5), y: contentHeight), size: tableSize)
             if let tableView = self.table.view {
                 if tableView.superview == nil {
                     self.addSubview(tableView)
@@ -229,9 +234,9 @@ private final class GiftUpgradeCostScreenComponent: Component {
                     lineSpacing: 0.2
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 50.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - 50.0, height: .greatestFiniteMagnitude)
             )
-            let additionalDescriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - additionalDescriptionSize.width) * 0.5), y: contentHeight), size: additionalDescriptionSize)
+            let additionalDescriptionFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - additionalDescriptionSize.width * 0.5), y: contentHeight), size: additionalDescriptionSize)
             if let additionalDescriptionView = self.additionalDescription.view {
                 if additionalDescriptionView.superview == nil {
                     self.addSubview(additionalDescriptionView)
@@ -323,7 +328,8 @@ private final class SheetContainerComponent: CombinedComponent {
                 color: environment.theme.list.itemCheckColors.foregroundColor,
                 startingPosition: .begin,
                 size: CGSize(width: 28.0, height: 28.0),
-                playOnce: playButtonAnimation
+                playOnce: playButtonAnimation,
+                lottieSettings: component.context.lottieRenderingSettings
             ))))
             buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
                 text: environment.strings.Gift_UpgradeCost_Done,
@@ -393,7 +399,7 @@ private final class SheetContainerComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

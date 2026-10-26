@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -98,8 +99,8 @@ private final class SheetContent: CombinedComponent {
             })
             self.animator?.isPaused = true
             
-            self.initialBrightness = UIScreen.main.brightness
-            self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, 1.0)
+            self.initialBrightness = mainWindowScreen.brightness
+            self.brightnessArguments = (CACurrentMediaTime(), 0.3, mainWindowScreen.brightness, 1.0)
             self.updateBrightness()
         }
         
@@ -107,8 +108,8 @@ private final class SheetContent: CombinedComponent {
             self.idleTimerExtensionDisposable.dispose()
             self.animator?.invalidate()
             
-            if UIScreen.main.brightness > 0.99, let initialBrightness = self.initialBrightness {
-                self.brightnessArguments = (CACurrentMediaTime(), 0.3, UIScreen.main.brightness, initialBrightness)
+            if mainWindowScreen.brightness > 0.99, let initialBrightness = self.initialBrightness {
+                self.brightnessArguments = (CACurrentMediaTime(), 0.3, mainWindowScreen.brightness, initialBrightness)
                 self.updateBrightness()
             }
         }
@@ -120,7 +121,7 @@ private final class SheetContent: CombinedComponent {
                 let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
                 let value = initial + (target - initial) * t
                 
-                UIScreen.main.brightness = value
+                mainWindowScreen.brightness = value
                 
                 if t >= 1.0 {
                     self.brightnessArguments = nil
@@ -436,7 +437,7 @@ private final class QrCodeSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -508,6 +509,11 @@ public final class QrCodeScreen: ViewControllerComponentContainer {
                     if let password, !password.isEmpty {
                         link += "&pass=\(password.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
                     }
+                case .web:
+                    // Always the t.me form, regardless of `externalLink`: webProxySettingsLink
+                    // only builds that one, and parseWebProxySettingsLink accepts it alongside
+                    // tg://webproxy. The public frontend has no /webproxy route yet.
+                    link = webProxySettingsLink(server) ?? ""
                 }
                 return link
             }
@@ -667,7 +673,8 @@ private final class QrCodeComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: "PlaneLogo"),
-                        loop: true
+                        loop: true,
+                        lottieSettings: .noAccountFallback
                     )),
                     environment: {},
                     containerSize: cutoutFrame.size

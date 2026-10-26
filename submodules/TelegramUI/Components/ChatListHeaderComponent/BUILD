@@ -23,9 +23,10 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/SearchUI",
-        "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/SideColumnLayout",
+        "//submodules/TelegramUI/Components/NavigationBarComponent",
     ],
     visibility = [
         "//visibility:public",

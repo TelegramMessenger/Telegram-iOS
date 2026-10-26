@@ -77,53 +77,6 @@ public struct ItemListNeighbors {
     }
 }
 
-public func itemListNeighbors(item: ItemListItem, topItem: ItemListItem?, bottomItem: ItemListItem?) -> ItemListNeighbors {
-    let topNeighbor: ItemListNeighbor
-    if let topItem = topItem {
-        if topItem.sectionId != item.sectionId {
-            let topInset: ItemListInsetWithOtherSection
-            if topItem.requestsNoInset {
-                topInset = .none
-            } else {
-                if topItem is ItemListTextItem {
-                    topInset = .reduced
-                } else {
-                    topInset = .full
-                }
-            }
-            topNeighbor = .otherSection(topInset)
-        } else {
-            topNeighbor = .sameSection(alwaysPlain: topItem.isAlwaysPlain)
-        }
-    } else {
-        topNeighbor = .none
-    }
-    
-    let bottomNeighbor: ItemListNeighbor
-    if let bottomItem = bottomItem {
-        if bottomItem.sectionId != item.sectionId {
-            let bottomInset: ItemListInsetWithOtherSection
-            if bottomItem.requestsNoInset {
-                bottomInset = .none
-            } else {
-                bottomInset = .full
-            }
-            bottomNeighbor = .otherSection(bottomInset)
-        } else {
-            bottomNeighbor = .sameSection(alwaysPlain: bottomItem.isAlwaysPlain)
-        }
-    } else {
-        bottomNeighbor = .none
-    }
-    
-    return ItemListNeighbors(
-        top: topNeighbor,
-        bottom: bottomNeighbor,
-        topHasActiveRevealOptions: (topItem as? ItemListRevealOptionsStatefulItem)?.hasActiveRevealOptions ?? false,
-        bottomHasActiveRevealOptions: (bottomItem as? ItemListRevealOptionsStatefulItem)?.hasActiveRevealOptions ?? false
-    )
-}
-
 public func itemListNeighborsPlainInsets(_ neighbors: ItemListNeighbors) -> UIEdgeInsets {
     var insets = UIEdgeInsets()
     switch neighbors.top {

@@ -139,14 +139,24 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
         self.rightActionButton.isEnabled = isEnabled
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, visibleInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    /// `safeInsets`: the layout's safe insets. Only their sides are read, and only when they differ (iPhone Duo's side
+    /// strip): the texts and the field then center in the band between them. `reservedCorners`: the layout's corner
+    /// blocks; the action buttons at the bottom span the strip and keep clear only of a block at the bottom (folded
+    /// landscape-left put the right action under the status block). Equal sides change nothing.
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, visibleInsets: UIEdgeInsets, safeInsets: UIEdgeInsets = UIEdgeInsets(), reservedCorners: ContainerViewLayoutCorners = .none, transition: ContainedViewLayoutTransition) {
         let sidePadding: CGFloat = 20.0
         let sideButtonInset: CGFloat = 16.0
-        let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
-        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
+        let insetsDiffer = safeInsets.left != safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? size.width - safeInsets.left - safeInsets.right : size.width
+        let bottomSideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: reservedCorners)
+        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
+        let bottomBandWidth: CGFloat = insetsDiffer ? size.width - bottomSideInsets.left - bottomSideInsets.right : size.width
+        let titleSize = self.titleNode.updateLayout(CGSize(width: bandWidth - sidePadding * 2.0, height: .greatestFiniteMagnitude))
+        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: bandWidth - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         
-        let leftButtonSize = self.leftActionButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
-        let rightButtonSize = self.rightActionButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
+        let leftButtonSize = self.leftActionButton.measure(CGSize(width: bottomBandWidth - sidePadding * 2.0, height: .greatestFiniteMagnitude))
+        let rightButtonSize = self.rightActionButton.measure(CGSize(width: bottomBandWidth - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let buttonsHeight: CGFloat
         if self.leftActionButton.supernode != nil || self.rightActionButton.supernode != nil {
             buttonsHeight = 56.0
@@ -158,18 +168,18 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
         
         let textHeight = titleSize.height + titleSubtitleSpacing + subtitleSize.height
         let inputHeight: CGFloat = 44.0
-        let inputWidth: CGFloat = min(300.0, size.width - 37.0 * 2.0)
+        let inputWidth: CGFloat = min(300.0, bandWidth - 37.0 * 2.0)
         
         let minContentHeight = textHeight + inputHeight
         let contentHeight = min(215.0, max(size.height - insets.top - insets.bottom - 40.0, minContentHeight))
         let contentOrigin = max(56.0, insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentOrigin), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - titleSize.width) / 2.0), y: contentOrigin), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize))
-        transition.updateFrame(node: self.inputSeparator, frame: CGRect(origin: CGPoint(x: floor((size.width - inputWidth) / 2.0), y: contentOrigin + contentHeight - UIScreenPixel), size: CGSize(width: inputWidth, height: UIScreenPixel)))
-        transition.updateFrame(node: self.inputNode, frame: CGRect(origin: CGPoint(x: floor((size.width - inputWidth) / 2.0), y: contentOrigin + contentHeight - inputHeight), size: CGSize(width: inputWidth, height: inputHeight)))
-        transition.updateFrame(node: self.leftActionButton, frame: CGRect(origin: CGPoint(x: sideButtonInset, y: size.height - visibleInsets.bottom - buttonsHeight + floor((buttonsHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
-        transition.updateFrame(node: self.rightActionButton, frame: CGRect(origin: CGPoint(x: size.width - sideButtonInset - rightButtonSize.width, y: size.height - visibleInsets.bottom - buttonsHeight + floor((buttonsHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - subtitleSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize))
+        transition.updateFrame(node: self.inputSeparator, frame: CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - inputWidth) / 2.0), y: contentOrigin + contentHeight - UIScreenPixel), size: CGSize(width: inputWidth, height: UIScreenPixel)))
+        transition.updateFrame(node: self.inputNode, frame: CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - inputWidth) / 2.0), y: contentOrigin + contentHeight - inputHeight), size: CGSize(width: inputWidth, height: inputHeight)))
+        transition.updateFrame(node: self.leftActionButton, frame: CGRect(origin: CGPoint(x: bottomBandMinX + sideButtonInset, y: size.height - visibleInsets.bottom - buttonsHeight + floor((buttonsHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
+        transition.updateFrame(node: self.rightActionButton, frame: CGRect(origin: CGPoint(x: bottomBandMinX + bottomBandWidth - sideButtonInset - rightButtonSize.width, y: size.height - visibleInsets.bottom - buttonsHeight + floor((buttonsHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
     }
     
     func activate() {

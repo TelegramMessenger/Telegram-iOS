@@ -1,10 +1,10 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public final class PeerMediaUploadingItem: Equatable {
-    public enum ProgressValue {
+    enum ProgressValue {
         case progress(Float)
         case done(Api.Updates)
     }

@@ -1844,7 +1844,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
     switch selectedMedia {
     case let .image(image):
         if let representation = largestImageRepresentation(image.representations) {
-            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: representation.resource), range: nil)
+            signals.append(context.engine.resources.fetch(reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: representation.resource), userLocation: .peer(info.peer.id), userContentType: .story, range: nil)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
@@ -1862,19 +1862,19 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
         }
         
         if let representation = file.previewRepresentations.first {
-            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: representation.resource), range: nil)
+            signals.append(context.engine.resources.fetch(reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: representation.resource), userLocation: .peer(info.peer.id), userContentType: .story, range: nil)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
             })
         }
         
-        signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: file.resource), range: fetchRange)
+        signals.append(context.engine.resources.fetch(reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: file.resource), userLocation: .peer(info.peer.id), userContentType: .story, range: fetchRange)
         |> ignoreValues
         |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
         })
-        signals.append(context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
+        signals.append(context.engine.resources.cachedRepresentation(resource: EngineMediaResource(file.resource), representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
         |> ignoreValues)
     default:
         break
@@ -2073,7 +2073,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                     |> ignoreValues
                 )
                 
-                loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyItem.id, media: selectedMedia._asMedia()), resource: representation.resource), range: nil)
+                loadSignals.append(context.engine.resources.fetch(reference: .media(media: .story(peer: peer, id: storyItem.id, media: selectedMedia._asMedia()), resource: representation.resource), userLocation: .peer(peer.id), userContentType: .story, range: nil)
                 |> ignoreValues
                 |> `catch` { _ -> Signal<Never, NoError> in
                     return .complete()
@@ -2103,12 +2103,12 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                 |> ignoreValues
             )
             
-            loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyItem.id, media: selectedMedia._asMedia()), resource: file.resource), range: fetchRange)
+            loadSignals.append(context.engine.resources.fetch(reference: .media(media: .story(peer: peer, id: storyItem.id, media: selectedMedia._asMedia()), resource: file.resource), userLocation: .peer(peer.id), userContentType: .story, range: fetchRange)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
             })
-            loadSignals.append(context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
+            loadSignals.append(context.engine.resources.cachedRepresentation(resource: EngineMediaResource(file.resource), representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
             |> ignoreValues)
         default:
             break

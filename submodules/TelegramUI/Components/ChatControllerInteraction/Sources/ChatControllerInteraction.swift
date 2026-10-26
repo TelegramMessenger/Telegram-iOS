@@ -57,6 +57,12 @@ public enum ChatControllerInteractionReaction {
     case reaction(MessageReaction.Reaction)
 }
 
+public enum WalletTransferArrivalState {
+    case queued(rise: Bool)
+    case playing(startTime: Double, rise: Bool)
+    case finished
+}
+
 public struct UnreadMessageRangeKey: Hashable {
     public var peerId: EnginePeer.Id
     public var namespace: Int32
@@ -116,11 +122,13 @@ public struct OpenMessageParams {
     public var mode: ChatControllerInteractionOpenMessageMode
     public var mediaSubject: GalleryMediaSubject?
     public var progress: Promise<Bool>?
+    public var decryptWalletComment: Bool
     
-    public init(mode: ChatControllerInteractionOpenMessageMode, mediaSubject: GalleryMediaSubject? = nil, progress: Promise<Bool>? = nil) {
+    public init(mode: ChatControllerInteractionOpenMessageMode, mediaSubject: GalleryMediaSubject? = nil, progress: Promise<Bool>? = nil, decryptWalletComment: Bool = false) {
         self.mode = mode
         self.mediaSubject = mediaSubject
         self.progress = progress
+        self.decryptWalletComment = decryptWalletComment
     }
 }
 
@@ -285,7 +293,10 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let commitEmojiInteraction: (EngineMessage.Id, String, EmojiInteraction, TelegramMediaFile) -> Void
     public let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     public let openJoinLink: (String) -> Void
-    public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
+    /// The trailing promise reports the open request's progress. Supply one from a surface that can
+    /// show the loading state on the button itself (an InstantPage V2 pill); pass nil from a surface
+    /// that cannot, and `openWebAppImpl` falls back to the `.requestInProgress` title panel.
+    public let openWebView: (String, String, Bool, ChatOpenWebViewSource, Promise<Bool>?) -> Void
     public let activateAdAction: (EngineMessage.Id, Promise<Bool>?, Bool, Bool) -> Void
     public let adContextAction: (EngineRawMessage, ASDisplayNode, ContextGesture?) -> Void
     public let removeAd: (Data) -> Void
@@ -341,6 +352,10 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var searchTextHighightState: (String, [EngineMessage.Index])?
     public var unreadMessageRange: [UnreadMessageRangeKey: Range<Int32>] = [:]
     public var seenOneTimeAnimatedMedia = Set<EngineMessage.Id>()
+    public var freshWalletTransferMessageIds = Set<EngineMessage.Id>()
+    public var requestWalletTransferArrival: ((EngineRawMessage) -> Void)?
+    public var walletTransferArrivalState: ((EngineMessage.Id) -> WalletTransferArrivalState?)?
+    public var cancelWalletTransferArrival: ((EngineMessage.Id) -> Void)?
     public var currentMessageWithLoadingReplyThread: EngineMessage.Id?
     public var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let presentationContext: ChatPresentationContext
@@ -352,6 +367,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var summarizedMessageIds: Set<EngineMessage.Id> = Set()
     public var focusedTextInputIsMedia: Bool = false
     public var focusedPollAddOptionMessageId: EngineMessage.Id?
+    public var isAwaitingWalletTransferFlight: ((EngineRawMessage) -> Bool)?
     
     private var isOpeningMediaValue: Bool = false
     public var isOpeningMedia: Bool {
@@ -470,7 +486,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         commitEmojiInteraction: @escaping (EngineMessage.Id, String, EmojiInteraction, TelegramMediaFile) -> Void,
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
-        openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
+        openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource, Promise<Bool>?) -> Void,
         activateAdAction: @escaping (EngineMessage.Id, Promise<Bool>?, Bool, Bool) -> Void,
         adContextAction: @escaping (EngineRawMessage, ASDisplayNode, ContextGesture?) -> Void,
         removeAd: @escaping (Data) -> Void,

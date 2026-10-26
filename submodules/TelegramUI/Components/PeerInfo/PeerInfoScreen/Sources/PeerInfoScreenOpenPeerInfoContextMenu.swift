@@ -56,7 +56,7 @@ extension PeerInfoScreenNode {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
                 |> take(1)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] sharedData in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self, sourceNode] sharedData in
                     let translationSettings: TranslationSettings
                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
                         translationSettings = current

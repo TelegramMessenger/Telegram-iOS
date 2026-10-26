@@ -44,7 +44,11 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
         return self.audioSource != nil
     }
     
-    public init(content: Content, isVideo: Bool, codecName: String?) {
+    public convenience init(content: Content, isVideo: Bool, codecName: String?) {
+        self.init(content: content, isVideo: isVideo, codecName: codecName, ignoreEditList: false)
+    }
+
+    public init(content: Content, isVideo: Bool, codecName: String?, ignoreEditList: Bool) {
         self.content = content
         self.isVideo = isVideo
         
@@ -100,14 +104,14 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
             }
             #endif*/
             
-            if let videoSource = FFMpegFileReader(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, selectedStream: .mediaType(.video), seek: seek, maxReadablePts: maxReadablePts) {
+            if let videoSource = FFMpegFileReader(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, selectedStream: .mediaType(.video), seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: ignoreEditList) {
                 self.videoSource = videoSource
             } else {
                 self.videoSource = nil
             }
             self.audioSource = nil
         } else {
-            if let audioSource = FFMpegFileReader(source: source, passthroughDecoder: false, useHardwareAcceleration: false, selectedStream: .mediaType(.audio), seek: seek, maxReadablePts: maxReadablePts) {
+            if let audioSource = FFMpegFileReader(source: source, passthroughDecoder: false, useHardwareAcceleration: false, selectedStream: .mediaType(.audio), seek: seek, maxReadablePts: maxReadablePts, ignoreEditList: ignoreEditList) {
                 self.audioSource = audioSource
             } else {
                 self.audioSource = nil
@@ -169,7 +173,11 @@ public final class FFMpegMediaDataReaderV1: MediaDataReader {
         return self.audioSource != nil
     }
     
-    public init(filePath: String, isVideo: Bool, codecName: String?) {
+    public convenience init(filePath: String, isVideo: Bool, codecName: String?) {
+        self.init(filePath: filePath, isVideo: isVideo, codecName: codecName, ignoreEditList: false)
+    }
+
+    public init(filePath: String, isVideo: Bool, codecName: String?, ignoreEditList: Bool) {
         self.isVideo = isVideo
         
         if self.isVideo {
@@ -185,7 +193,7 @@ public final class FFMpegMediaDataReaderV1: MediaDataReader {
             }
             self.audioSource = nil
         } else {
-            let audioSource = SoftwareAudioSource(path: filePath)
+            let audioSource = SoftwareAudioSource(path: filePath, ignoreEditList: ignoreEditList)
             if audioSource.hasStream {
                 self.audioSource = audioSource
             } else {

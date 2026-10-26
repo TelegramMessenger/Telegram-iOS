@@ -1,10 +1,10 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
 import AnimatedStickerNode
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import AccountContext
 import TelegramAnimatedStickerNode
@@ -860,10 +860,14 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         contentSize.height = self.contentTopInset + self.currentContentHeight
         
         let sideInset: CGFloat
+        // The right side's own inset (iPhone Duo's side strip makes them differ); equal insets give `sideInset`.
+        let rightSideInset: CGFloat
         if self.forceTailToRight {
             sideInset = insets.left
+            rightSideInset = insets.right
         } else {
             sideInset = 11.0 + insets.left
+            rightSideInset = 11.0 + insets.right
         }
         let backgroundOffset: CGPoint = CGPoint(x: 22.0, y: -7.0)
         
@@ -881,18 +885,18 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
         rect.origin.x = max(sideInset, rect.origin.x)
         rect.origin.y = max(insets.top + sideInset, rect.origin.y)
-        rect.origin.x = min(containerSize.width - contentSize.width - sideInset, rect.origin.x)
+        rect.origin.x = min(containerSize.width - contentSize.width - rightSideInset, rect.origin.x)
         
-        let rightEdge = containerSize.width - sideInset
+        let rightEdge = containerSize.width - rightSideInset
         if rect.maxX > rightEdge {
-            rect.origin.x = containerSize.width - sideInset - rect.width
+            rect.origin.x = containerSize.width - rightSideInset - rect.width
         }
         if rect.minX < sideInset {
             rect.origin.x = sideInset
         }
         
         if centerAligned {
-            rect.origin.x = floor((containerSize.width - rect.width) / 2.0)
+            rect.origin.x = insets.left + floor((containerSize.width - insets.left - insets.right - rect.width) / 2.0)
         }
         
         let cloudSourcePoint: CGFloat
@@ -1459,7 +1463,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                             }
                         }
                         if let emojiView = reactionSelectionComponentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
-                            var initialPositionAndFrame: [MediaId: (frame: CGRect, cornerRadius: CGFloat, frameIndex: Int, placeholder: UIImage)] = [:]
+                            var initialPositionAndFrame: [EngineMedia.Id: (frame: CGRect, cornerRadius: CGFloat, frameIndex: Int, placeholder: UIImage)] = [:]
                             for (_, itemNode) in self.visibleItemNodes {
                                 guard let itemNode = itemNode as? ReactionNode else {
                                     continue
@@ -1734,7 +1738,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             openSearch: {
             },
             addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
-                guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {
+                guard let strongSelf = self, let collectionId = groupId.base as? EngineItemCollectionId else {
                     return
                 }
                 
@@ -2087,7 +2091,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                         
                                         var items: [EmojiPagerContentComponent.Item] = []
                                         
-                                        var existingIds = Set<MediaId>()
+                                        var existingIds = Set<EngineMedia.Id>()
                                         for item in result {
                                             if let itemFile = item.1 {
                                                 if existingIds.contains(itemFile.fileId) {
@@ -2130,7 +2134,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                         combinedSets = foundLocalPacks
                                         combinedSets = combinedSets.merge(with: foundPacks.sets)
                                         
-                                        var existingCollectionIds = Set<ItemCollectionId>()
+                                        var existingCollectionIds = Set<EngineItemCollectionId>()
                                         for (collectionId, info, _, _) in combinedSets.infos {
                                             if !existingCollectionIds.contains(collectionId) {
                                                 existingCollectionIds.insert(collectionId)
@@ -2351,7 +2355,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                         |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                             var items: [EmojiPagerContentComponent.Item] = []
                             
-                            var existingIds = Set<MediaId>()
+                            var existingIds = Set<EngineMedia.Id>()
                             for itemFile in files {
                                 if existingIds.contains(itemFile.fileId) {
                                     continue
@@ -2759,7 +2763,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let additionalAnimation = additionalAnimation {
-            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             additionalAnimationNode = additionalAnimationNodeValue
             if self.didTriggerExpandedReaction {
                 if incomingMessage {
@@ -2937,7 +2941,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 maxDuration = 2.0
             }
             
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, maxDuration * UIView.animationDurationFactor()), execute: {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, maxDuration * UIView.animationDurationFactor()), execute: { [self] in
                 if self.didTriggerExpandedReaction {
                     self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
                         if let strongSelf = self, strongSelf.didTriggerExpandedReaction, let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
@@ -3328,13 +3332,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, onHit: (() -> Void)? = nil, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: TelegramMediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, onHit: (() -> Void)? = nil, completion: @escaping () -> Void) {
         self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, customEffectResource: customEffectResource, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, playCenterReaction: playCenterReaction, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, onHit: onHit, completion: completion)
     }
         
     public var currentDismissAnimation: (() -> Void)?
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, onHit: (() -> Void)? = nil, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: TelegramMediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, onHit: (() -> Void)? = nil, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -3455,7 +3459,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: isLarge, isPreviewing: false, transition: .immediate)
         }
         
-        var additionalAnimationResource: MediaResource?
+        var additionalAnimationResource: TelegramMediaResource?
         if isLarge && !forceSmallEffectAnimation {
             additionalAnimationResource = reaction.largeApplicationAnimation?._parse().resource
         } else if case .stars = reaction.reaction.rawValue {
@@ -3473,9 +3477,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         if let additionalAnimationResource {
             let additionalAnimationNodeValue: AnimatedStickerNode
             if self.useDirectRendering {
-                additionalAnimationNodeValue = DirectAnimatedStickerNode()
+                additionalAnimationNodeValue = DirectAnimatedStickerNode(lottieSettings: context.lottieRenderingSettings)
             } else {
-                additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
+                additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
             }
             additionalAnimationNode = additionalAnimationNodeValue
             
@@ -3504,9 +3508,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             if let effectURL {
                 let additionalAnimationNodeValue: AnimatedStickerNode
                 if self.useDirectRendering {
-                    additionalAnimationNodeValue = DirectAnimatedStickerNode()
+                    additionalAnimationNodeValue = DirectAnimatedStickerNode(lottieSettings: context.lottieRenderingSettings)
                 } else {
-                    additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
+                    additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
                 }
                 additionalAnimationNode = additionalAnimationNodeValue
                 
@@ -3912,7 +3916,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
         
         if let additionalAnimation = additionalAnimation {
-            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
             additionalAnimationNode = additionalAnimationNodeValue
             if didTriggerExpandedReaction {
                 if incomingMessage {

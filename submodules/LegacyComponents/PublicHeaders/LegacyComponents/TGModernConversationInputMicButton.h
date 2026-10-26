@@ -82,6 +82,9 @@
 @property (nonatomic, assign) bool blocking;
 @property (nonatomic, readonly) bool locked;
 @property (nonatomic) bool fadeDisabled;
+// Set while the host animates the decoration out itself (flying it into the sent message): -animateOut: then
+// leaves the decoration alone and does not dismiss the presentation; the host calls -dismiss when it is done.
+@property (nonatomic) bool decorationAnimatesOutExternally;
 
 - (void)animateIn;
 - (void)animateOut:(BOOL)toSmallSize;

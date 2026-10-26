@@ -47,6 +47,21 @@ public enum ListViewAnimationCurve {
     case Spring(duration: Double)
     case Default(duration: Double?)
     case Custom(duration: Double, Float, Float, Float, Float)
+    /// A `CASpringAnimation` with explicit parameters, time-scaled so that it settles within `duration`.
+    /// Mirrors `ContainedViewLayoutTransitionCurve.customSpring`, so list scrolling can share one spring with
+    /// content that is animated through a `ContainedViewLayoutTransition`.
+    case CustomSpring(duration: Double, mass: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat)
+}
+
+/// Whether a list keeps a scroll's target where the scroll lands it, until the next touch or scroll.
+/// Honoured by the chat's CoreList backend only; `ListViewImpl` ignores it.
+public enum ListViewScrollHold {
+    case none
+    case always
+    /// As `.always`, except that a landing resting on the list's newest edge (the edge item 0 rests
+    /// on: the chat's newest message) holds nothing. The list then follows that edge, so an item
+    /// arriving there pushes the content away from it instead of landing under the inset.
+    case yieldingToNewestEdge
 }
 
 public struct ListViewScrollToItem {
@@ -56,14 +71,25 @@ public struct ListViewScrollToItem {
     public let curve: ListViewAnimationCurve
     public let directionHint: ListViewScrollToItemDirectionHint
     public let displayLink: Bool
-    
-    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false) {
+    public let hold: ListViewScrollHold
+    /// Positions the target's own content: `.top` and `.bottom` leave out the space it reserves for a header
+    /// attached to it (the chat's date header), so the content stays put when that header moves to another
+    /// item. Honoured by the chat's CoreList backend only; `ListViewImpl` ignores it.
+    public let excludesAttachedHeaderSpace: Bool
+
+    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false, hold: ListViewScrollHold = .none, excludesAttachedHeaderSpace: Bool = false) {
         self.index = index
         self.position = position
         self.animated = animated
         self.curve = curve
         self.directionHint = directionHint
         self.displayLink = displayLink
+        self.hold = hold
+        self.excludesAttachedHeaderSpace = excludesAttachedHeaderSpace
+    }
+
+    public func withHold(_ hold: ListViewScrollHold) -> ListViewScrollToItem {
+        return ListViewScrollToItem(index: self.index, position: self.position, animated: self.animated, curve: self.curve, directionHint: self.directionHint, displayLink: self.displayLink, hold: hold, excludesAttachedHeaderSpace: self.excludesAttachedHeaderSpace)
     }
 }
 
@@ -160,17 +186,33 @@ public struct ListViewUpdateSizeAndInsets {
 public struct ListViewItemRange: Equatable {
     public let firstIndex: Int
     public let lastIndex: Int
+
+    public init(firstIndex: Int, lastIndex: Int) {
+        self.firstIndex = firstIndex
+        self.lastIndex = lastIndex
+    }
 }
 
 public struct ListViewVisibleItemRange: Equatable {
     public let firstIndex: Int
     public let firstIndexFullyVisible: Bool
     public let lastIndex: Int
+
+    public init(firstIndex: Int, firstIndexFullyVisible: Bool, lastIndex: Int) {
+        self.firstIndex = firstIndex
+        self.firstIndexFullyVisible = firstIndexFullyVisible
+        self.lastIndex = lastIndex
+    }
 }
 
 public struct ListViewDisplayedItemRange: Equatable {
     public let loadedRange: ListViewItemRange?
     public let visibleRange: ListViewVisibleItemRange?
+
+    public init(loadedRange: ListViewItemRange?, visibleRange: ListViewVisibleItemRange?) {
+        self.loadedRange = loadedRange
+        self.visibleRange = visibleRange
+    }
 }
 
 struct IndexRange {

@@ -115,7 +115,7 @@ public final class MediaPlaybackHeaderPanelComponent: Component {
                 let delayedStatus = component.context.sharedContext.mediaManager.globalMediaPlayerState
                 |> mapToSignal { value -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
                     guard let value = value else {
-                        return .single(nil)
+                        return .complete()
                     }
                     switch value.1 {
                     case .state:
@@ -259,6 +259,43 @@ public final class MediaPlaybackHeaderPanelComponent: Component {
                 panel.tapAction = { [weak self] in
                     self?.performAction({ [weak self] in
                         guard let self, let component = self.component, let controller = component.controller(), let navigationController = controller.navigationController as? NavigationController else {
+                            return
+                        }
+
+                        // A RICH message's audio plays out of an `InstantPageMediaPlaylist` — the file lives in
+                        // the message's `RichTextMessageAttribute`, not in `message.media` — so neither the item
+                        // id nor the location is a `PeerMessages*` one and the branch below never matched: the
+                        // mini player was inert for it. Open the same overlay music player the chat-history
+                        // playlists open, anchored on the message the playlist came from. That works because a
+                        // rich message IS `.music`-tagged (`tagsForStoreMessage` folds the attribute's media in),
+                        // so the player's own music-tagged history list finds it.
+                        if let instantPageLocation = component.data.playlistLocation as? InstantPagePlaylistLocation {
+                            // An Instant View page has no message to open — leave it inert, as before.
+                            guard let messageId = instantPageLocation.messageId else {
+                                return
+                            }
+                            guard case .music = component.data.kind else {
+                                // Voice / instant video: jump to the message, mirroring the non-music arm below.
+                                component.context.sharedContext.navigateToChat(accountId: component.context.account.id, peerId: messageId.peerId, messageId: messageId)
+                                return
+                            }
+                            let controllerContext: AccountContext
+                            if component.data.account.id == component.context.account.id {
+                                controllerContext = component.context
+                            } else {
+                                controllerContext = component.context.sharedContext.makeTempAccountContext(account: component.data.account)
+                            }
+                            // The queue is built from synthesized Local-id rows, one per track, so it
+                            // must be anchored on the PLAYING track's synthesized id — the rich
+                            // message's own id is not among those rows.
+                            var anchorMessageId = messageId
+                            if let indexProviding = component.data.item.id as? InstantPagePlaylistItemIndexProviding {
+                                anchorMessageId = EngineMessage.Id(peerId: messageId.peerId, namespace: Namespaces.Message.Local, id: Int32(clamping: indexProviding.instantPageMediaIndex))
+                            }
+                            let playerController = component.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, chatLocation: .peer(id: messageId.peerId), type: component.data.kind, initialMessageId: anchorMessageId, initialOrder: component.data.playbackOrder, playlistLocation: instantPageLocation, parentNavigationController: navigationController)
+                            self.window?.endEditing(true)
+                            playerController.navigationPresentation = .flatModal
+                            controller.push(playerController)
                             return
                         }
 

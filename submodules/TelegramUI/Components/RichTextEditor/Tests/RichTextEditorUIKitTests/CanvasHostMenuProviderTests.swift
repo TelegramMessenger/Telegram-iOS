@@ -16,7 +16,7 @@ final class CanvasHostMenuProviderTests: XCTestCase {
         v.allLeafRegions().first { $0.ref == .paragraph(BlockID("h")) }!
     }
     private func select(_ v: DocumentCanvasView, length: Int) {
-        let r = region(v); v.anchor = r.globalStart; v.head = r.globalStart + length
+        let r = region(v); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + length)
     }
     private func menu(_ v: DocumentCanvasView, suggested: [UIMenuElement] = []) -> UIMenu? {
         let interaction = UIEditMenuInteraction(delegate: nil)
@@ -48,7 +48,7 @@ final class CanvasHostMenuProviderTests: XCTestCase {
 
     func testProviderNotConsultedForCollapsedCaret() {
         let v = canvas()
-        let r = region(v); v.anchor = r.globalStart + 2; v.head = r.globalStart + 2
+        let r = region(v); v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 2)
         var invoked = false
         v.hostContextMenuItemsProvider = { invoked = true; return $0 }
         _ = menu(v)
@@ -72,7 +72,7 @@ final class CanvasHostMenuProviderTests: XCTestCase {
         c.setBlocks([.paragraph(ParagraphBlock(id: BlockID("h"), runs: [TextRun(text: "Hello world")]))], width: 320)
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 600); c.layoutIfNeeded()
         let r = c.allLeafRegions().first { $0.ref == .paragraph(BlockID("h")) }!
-        c.anchor = r.globalStart; c.head = r.globalStart + 5   // "Hello"
+        c.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // "Hello"
         XCTAssertEqual(view.selectedText(), "Hello")
     }
 

@@ -74,7 +74,11 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
         }
         self.controllerNode.navigationController = self.parentNavigationController
         
-        Queue.mainQueue().after(0.1) {
+        Queue.mainQueue().after(0.1) { [weak self] in
+            guard let self else {
+                return
+            }
+
             self.controllerNode.updateStickerPack(self.stickerPack, verifiedStickers: Set(), declinedStickers: Set(), uploadedStickerResources: [:])
             
             if case .image = self.stickerPack.type.contentType {

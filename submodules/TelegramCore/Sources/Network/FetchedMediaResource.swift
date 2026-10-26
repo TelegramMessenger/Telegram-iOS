@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 extension MediaResourceReference {
     var apiFileReference: Data? {
@@ -220,6 +220,18 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
             return result
         }
         if let file = game.file, let result = findMediaResource(media: file, previousMedia: previousMedia, resource: resource) {
+            return result
+        }
+    } else if let poll = media as? TelegramMediaPoll {
+        if let attachedMedia = poll.attachedMedia, let result = findMediaResource(media: attachedMedia, previousMedia: previousMedia, resource: resource) {
+            return result
+        }
+        for option in poll.options {
+            if let optionMedia = option.media, let result = findMediaResource(media: optionMedia, previousMedia: previousMedia, resource: resource) {
+                return result
+            }
+        }
+        if let solutionMedia = poll.results.solution?.media, let result = findMediaResource(media: solutionMedia, previousMedia: previousMedia, resource: resource) {
             return result
         }
     } else if let action = media as? TelegramMediaAction {
@@ -906,7 +918,7 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         // stale instant-page audio/image file reference can revalidate.
                         for attribute in message.attributes {
                             if let attribute = attribute as? RichTextMessageAttribute {
-                                for (_, pageMedia) in attribute.instantPage.media {
+                                for (_, pageMedia) in attribute.instantPage.rawMedia {
                                     if let updatedResource = findUpdatedMediaResource(media: pageMedia, previousMedia: previousMedia, resource: resource) {
                                         return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                                     }

@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 func isPeerHiddenByCollapsedCommunity(transaction: Transaction, peerId: PeerId, peer: Peer? = nil) -> Bool {
     if let channel = (peer ?? transaction.getPeer(peerId)) as? TelegramChannel, let linkedCommunityId = channel.linkedCommunityId {
@@ -10,6 +10,18 @@ func isPeerHiddenByCollapsedCommunity(transaction: Transaction, peerId: PeerId, 
     }
 
     return false
+}
+
+/// Membership decides, not `in_news`. A joined channel appears everywhere, in News or not. A channel marked
+/// `in_news` without being joined is a light join (joinChannel for_news): it is followed in News and, like any
+/// channel the user is not a member of, stays out of Chats.
+func channelShouldBeExcludedFromChatList(_ channel: TelegramChannel, isHiddenByCollapsedCommunity: () -> Bool) -> Bool {
+    switch channel.participationStatus {
+    case .member:
+        return isHiddenByCollapsedCommunity()
+    default:
+        return true
+    }
 }
 
 func shouldExcludePeerFromChatList(transaction: Transaction, peerId: PeerId, peer: Peer? = nil) -> Bool {
@@ -28,12 +40,9 @@ func shouldExcludePeerFromChatList(transaction: Transaction, peerId: PeerId, pee
             return true
         }
     } else if let channel = peer as? TelegramChannel {
-        switch channel.participationStatus {
-        case .member:
+        return channelShouldBeExcludedFromChatList(channel, isHiddenByCollapsedCommunity: {
             return isPeerHiddenByCollapsedCommunity(transaction: transaction, peerId: peerId, peer: channel)
-        default:
-            return true
-        }
+        })
     } else if let community = peer as? TelegramCommunity {
         return community.participationStatus != .member || community.collapsedInDialogs != true
     } else {
@@ -188,12 +197,24 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
             } else if !isMin && storiesUnavailable {
                 transaction.clearStoryItemsInexactMaxId(peerId: chat.peerId)
             }
+            
+            if let pinnedUpdate = cachedPinnedMessageIdUpdate(chat: chat) {
+                transaction.updatePeerCachedData(peerIds: [chat.peerId], update: { peerId, current in
+                    return cachedChannelData(applying: pinnedUpdate, peerId: peerId, to: current)
+                })
+            }
         default:
             break
         }
     }
+    let now = CFAbsoluteTimeGetCurrent()
     for (_, peer) in peers.peers {
-        parsedPeers.append(peer)
+        if let channel = peer as? TelegramChannel {
+            // A server channel keeps the client's own recent Add to News / Remove from News (ChannelInNewsLocalChanges).
+            parsedPeers.append(channelApplyingLocalInNews(channel, localInNews: ChannelInNewsLocalChanges.shared.localInNews(accountPeerId: accountPeerId, channelId: channel.id, at: now)))
+        } else {
+            parsedPeers.append(peer)
+        }
     }
     updatePeersCustom(transaction: transaction, peers: parsedPeers, update: { _, updated in updated })
     
@@ -318,6 +339,11 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
                 let isMember = updated.participationStatus == .member
                 if isMember != wasMember || updated.storiesHidden != wasHidden {
                     _internal_updateChannelMembership(transaction: transaction, channel: updated, isMember: isMember, justJoined: previous == nil || wasHidden == nil)
+                }
+                // The channel still holds the read state it had as a non-member
+                // (NonMemberChannelReadState.swift), and the join may not fetch the dialog.
+                if channelJoinNeedsServerReadState(previous: previous, updated: updated) {
+                    transaction.setNeedsIncomingReadStateSynchronization(peerId)
                 }
             }
         }

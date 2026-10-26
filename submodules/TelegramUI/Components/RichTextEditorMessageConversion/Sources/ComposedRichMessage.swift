@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import Postbox
 import RichTextEditorCore
 
 /// Serialize a RichTextEditor `Document` into a `ComposedRichMessage`.
@@ -8,7 +7,7 @@ import RichTextEditorCore
 /// `forSendPreview`: when set, a blockquote forces the rich (InstantPage) path even though it is otherwise
 /// entity-expressible. The attachment-menu rich editor opts in so a quote is sent as a rich message and renders
 /// through InstantPage; the default keeps quotes on the entity path (the composer / edit / send-options gates).
-public func composeRichMessage(from document: Document, media: [String: Media] = [:], forSendPreview: Bool = false) -> ComposedRichMessage {
+public func composeRichMessage(from document: Document, media: [String: EngineMedia] = [:], forSendPreview: Bool = false) -> ComposedRichMessage {
     let blocks = trimmedTrailingEmpty(normalizedBlocks(document.blocks, media: media))
     if blocks.isEmpty {
         return .empty
@@ -26,11 +25,11 @@ public func composeRichMessage(from document: Document, media: [String: Media] =
 
 /// Pass paragraphs/tables through. Keep a media block whose `mediaID` resolves (it becomes an image/video
 /// block downstream); for an UNresolvable media block, fall back to its caption as a body paragraph.
-func normalizedBlocks(_ blocks: [Block], media: [String: Media]) -> [Block] {
+func normalizedBlocks(_ blocks: [Block], media: [String: EngineMedia]) -> [Block] {
     var out: [Block] = []
     for block in blocks {
         switch block {
-        case .paragraph, .table, .code, .pullQuote:
+        case .paragraph, .table, .code, .pullQuote, .buttonRow:
             out.append(block)
         case let .media(mediaBlock):
             if media[mediaBlock.mediaID] != nil {
@@ -40,6 +39,9 @@ func normalizedBlocks(_ blocks: [Block], media: [String: Media]) -> [Block] {
             }
         case .blockQuote:
             // Pass through; children are resolved in downstream builders.
+            out.append(block)
+        case .details:
+            // Pass through; children are resolved in downstream builders (buildInstantPage recurses).
             out.append(block)
         }
     }
@@ -67,7 +69,7 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
         case .table:
             return true
         case let .paragraph(paragraph):
-            if runsContainFormula(paragraph.runs) {
+            if runsContainFormula(paragraph.runs) || runsContainButton(paragraph.runs) {
                 return true
             }
             if paragraph.list != nil {
@@ -89,7 +91,7 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
         case let .code(code):
             // A code block is entity-expressible (.Pre) and does NOT force the rich path — it round-trips
             // through the normal text+entities builder (buildEntityMessage).
-            if runsContainFormula(code.runs) {
+            if runsContainFormula(code.runs) || runsContainButton(code.runs) {
                 return true
             }
             break
@@ -99,6 +101,12 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
         case .blockQuote:
             // A block quote has no entity form → always forces the rich path.
             return true
+        case .details:
+            // A detail (folding) block has no entity form → always forces the rich path.
+            return true
+        case .buttonRow:
+            // A button has no entity form at all → always forces the rich path.
+            return true
         }
     }
     return false
@@ -107,6 +115,17 @@ func documentNeedsRichLayout(_ blocks: [Block], forSendPreview: Bool = false) ->
 private func runsContainFormula(_ runs: [TextRun]) -> Bool {
     for run in runs {
         if run.attributes.formula != nil {
+            return true
+        }
+    }
+    return false
+}
+
+/// True when any run carries an inline button. A button has no message-entity form, so its presence
+/// forces the rich (InstantPage) path exactly as a formula does.
+private func runsContainButton(_ runs: [TextRun]) -> Bool {
+    for run in runs {
+        if run.attributes.button != nil {
             return true
         }
     }

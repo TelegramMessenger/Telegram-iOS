@@ -82,12 +82,31 @@ public struct RenderSize: Equatable {
 }
 
 public struct RenderLayerSpec: Equatable {
+    public enum PixelFormat {
+        case bgra8Unorm
+        case rgba16Float
+
+        fileprivate var metalFormat: MTLPixelFormat {
+            switch self {
+            case .bgra8Unorm: return .bgra8Unorm
+            case .rgba16Float: return .rgba16Float
+            }
+        }
+    }
+
     public var size: RenderSize
     public var edgeInset: Int
+    public var pixelFormat: PixelFormat
+    /// Allocate a surface sized to this layer alone instead of packing it into a shared surface. Shared surfaces
+    /// are at least 1024x512 (2048x2048 for small layers), and a surface is loaded and stored whole on every
+    /// frame it is rendered to, so a layer that updates every frame on its own is cheaper in a surface of its own.
+    public var prefersDedicatedSurface: Bool
     
-    public init(size: RenderSize, edgeInset: Int = 0) {
+    public init(size: RenderSize, edgeInset: Int = 0, pixelFormat: PixelFormat = .bgra8Unorm, prefersDedicatedSurface: Bool = false) {
         self.size = size
         self.edgeInset = edgeInset
+        self.pixelFormat = pixelFormat
+        self.prefersDedicatedSurface = prefersDedicatedSurface
     }
 }
 
@@ -111,8 +130,15 @@ public struct RenderLayerPlacement: Equatable {
 
 public protocol RenderToLayerState: AnyObject {
     var pipelineState: MTLRenderPipelineState { get }
+    func pipelineState(for pixelFormat: RenderLayerSpec.PixelFormat) -> MTLRenderPipelineState?
     
     init?(device: MTLDevice)
+}
+
+public extension RenderToLayerState {
+    func pipelineState(for pixelFormat: RenderLayerSpec.PixelFormat) -> MTLRenderPipelineState? {
+        return pixelFormat == .bgra8Unorm ? self.pipelineState : nil
+    }
 }
 
 public protocol ComputeState: AnyObject {
@@ -161,6 +187,16 @@ open class MetalEngineSubjectLayer: SimpleLayer {
     
     override public init(layer: Any) {
         super.init(layer: layer)
+    }
+    
+    /// Gives the layer's rendering surface back to the engine and clears its contents, for a layer that is kept but
+    /// will not be drawn for a while: otherwise the surface is freed only when the layer is deallocated. The next
+    /// render of the layer allocates a new one. Main thread only.
+    public func releaseSurface() {
+        assert(Thread.isMainThread)
+        MetalEngine.shared.impl.removeLayerSurfaceAllocation(layer: self)
+        self.surfaceAllocation = nil
+        self.contents = nil
     }
     
     required public init?(coder: NSCoder) {
@@ -523,35 +559,50 @@ public final class MetalEngine {
         let id: Int
         let width: Int
         let height: Int
+        let pixelFormat: RenderLayerSpec.PixelFormat
+        let isDedicated: Bool
         
         let ioSurface: IOSurface
         let texture: MTLTexture
         let packContext: ShelfPackContext
+        /// A dedicated surface holds one layer in two fixed slots (left and right halves), one per phase, and is
+        /// not packed.
+        private var isOccupied: Bool = false
         
         var isEmpty: Bool {
+            if self.isDedicated {
+                return !self.isOccupied
+            }
             return self.packContext.isEmpty
         }
         
-        init?(id: Int, device: MTLDevice, width: Int, height: Int) {
+        init?(id: Int, device: MTLDevice, width: Int, height: Int, pixelFormat: RenderLayerSpec.PixelFormat, isDedicated: Bool) {
             self.id = id
             self.width = width
             self.height = height
+            self.pixelFormat = pixelFormat
+            self.isDedicated = isDedicated
             
             self.packContext = ShelfPackContext(width: Int32(width), height: Int32(height))
             
             let ioSurfaceProperties: [String: Any] = [
                 kIOSurfaceWidth as String: width,
                 kIOSurfaceHeight as String: height,
-                kIOSurfaceBytesPerElement as String: 4,
-                kIOSurfacePixelFormat as String: kCVPixelFormatType_32BGRA
+                kIOSurfaceBytesPerElement as String: pixelFormat == .rgba16Float ? 8 : 4,
+                kIOSurfacePixelFormat as String: pixelFormat == .rgba16Float ? kCVPixelFormatType_64RGBAHalf : kCVPixelFormatType_32BGRA
             ]
             guard let ioSurface = IOSurfaceCreate(ioSurfaceProperties as CFDictionary) else {
                 return nil
             }
             self.ioSurface = ioSurface
+            if pixelFormat == .rgba16Float,
+               let colorSpace = CGColorSpace(name: CGColorSpace.extendedSRGB),
+               let propertyList = colorSpace.copyPropertyList() {
+                IOSurfaceSetValue(ioSurface, kIOSurfaceColorSpace, propertyList)
+            }
             
             let textureDescriptor = MTLTextureDescriptor()
-            textureDescriptor.pixelFormat = .bgra8Unorm
+            textureDescriptor.pixelFormat = pixelFormat.metalFormat
             textureDescriptor.width = Int(width)
             textureDescriptor.height = Int(height)
             textureDescriptor.storageMode = .shared
@@ -579,6 +630,7 @@ public final class MetalEngine {
         }
         
         func allocateIfPossible(renderingParameters: RenderLayerSpec) -> SurfaceAllocation? {
+            guard renderingParameters.pixelFormat == self.pixelFormat else { return nil }
             let width = renderingParameters.allocationWidth
             let height = renderingParameters.allocationHeight
             
@@ -628,7 +680,64 @@ public final class MetalEngine {
         }
         
         func removeAllocation(id: Int32) {
+            if self.isDedicated {
+                self.isOccupied = false
+                return
+            }
             self.packContext.removeItem(id)
+        }
+        
+        /// Whether a dedicated surface can hold `renderingParameters` in its slots without wasting more than
+        /// half of them.
+        func canHoldDedicated(renderingParameters: RenderLayerSpec) -> Bool {
+            guard self.isDedicated, renderingParameters.pixelFormat == self.pixelFormat else {
+                return false
+            }
+            let slotWidth = self.width / 2
+            let width = renderingParameters.allocationWidth
+            let height = renderingParameters.allocationHeight
+            if width > slotWidth || height > self.height {
+                return false
+            }
+            return width * height * 2 >= slotWidth * self.height
+        }
+        
+        /// Places a dedicated allocation in the slots. The slots do not move when the size changes, so the slot
+        /// on screen is never drawn into.
+        func allocateDedicated(renderingParameters: RenderLayerSpec, currentPhase: Int) -> SurfaceAllocation {
+            self.isOccupied = true
+            
+            let size = CGSize(width: CGFloat(renderingParameters.allocationWidth), height: CGFloat(renderingParameters.allocationHeight))
+            let layout0 = AllocationLayout(
+                baseRect: CGRect(origin: CGPoint(), size: size),
+                edgeSize: CGFloat(renderingParameters.edgeInset),
+                surfaceWidth: self.width,
+                surfaceHeight: self.height
+            )
+            let layout1 = AllocationLayout(
+                baseRect: CGRect(origin: CGPoint(x: CGFloat(self.width / 2), y: 0.0), size: size),
+                edgeSize: CGFloat(renderingParameters.edgeInset),
+                surfaceWidth: self.width,
+                surfaceHeight: self.height
+            )
+            var allocation = SurfaceAllocation(
+                surfaceId: self.id,
+                allocationId0: -1,
+                allocationId1: -1,
+                renderingParameters: renderingParameters,
+                phase0: SurfaceAllocation.Phase(
+                    subRect: layout0.subRect,
+                    renderingRect: layout0.renderingRect,
+                    contentsRect: layout0.contentsRect
+                ),
+                phase1: SurfaceAllocation.Phase(
+                    subRect: layout1.subRect,
+                    renderingRect: layout1.renderingRect,
+                    contentsRect: layout1.contentsRect
+                )
+            )
+            allocation.currentPhase = currentPhase
+            return allocation
         }
     }
     
@@ -645,6 +754,14 @@ public final class MetalEngine {
         let library: MTLLibrary
         let commandQueue: MTLCommandQueue
         let clearPipelineState: MTLRenderPipelineState
+        let pipelineCache: MetalPipelineCache
+        private lazy var hdrClearPipelineState: MTLRenderPipelineState? = {
+            let descriptor = MTLRenderPipelineDescriptor()
+            descriptor.vertexFunction = self.library.makeFunction(name: "clearVertex")
+            descriptor.fragmentFunction = self.library.makeFunction(name: "clearFragment")
+            descriptor.colorAttachments[0].pixelFormat = .rgba16Float
+            return self.pipelineCache.makeRenderPipelineState(descriptor: descriptor)
+        }()
         
         #if targetEnvironment(simulator)
         let _layer: CALayer
@@ -670,9 +787,10 @@ public final class MetalEngine {
         fileprivate var renderStates: [ObjectIdentifier: RenderToLayerState] = [:]
         fileprivate var computeStates: [ObjectIdentifier: ComputeState] = [:]
         
-        init?(device: MTLDevice) {
+        init?(device: MTLDevice, pipelineCache: MetalPipelineCache) {
             
             self.device = device
+            self.pipelineCache = pipelineCache
             
             guard let commandQueue = device.makeCommandQueue() else {
                 return nil
@@ -712,7 +830,7 @@ public final class MetalEngine {
             pipelineDescriptor.vertexFunction = vertexFunction
             pipelineDescriptor.fragmentFunction = fragmentFunction
             pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-            guard let clearPipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+            guard let clearPipelineState = pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
                 return nil
             }
             self.clearPipelineState = clearPipelineState
@@ -754,11 +872,11 @@ public final class MetalEngine {
             fatalError("init(coder:) has not been implemented")
         }
         
-        private func addSurface(width: Int, height: Int) -> Surface? {
+        private func addSurface(width: Int, height: Int, pixelFormat: RenderLayerSpec.PixelFormat, isDedicated: Bool = false) -> Surface? {
             let surfaceId = self.nextSurfaceId
             self.nextSurfaceId += 1
             
-            let surface = Surface(id: surfaceId, device: self.device, width: width, height: height)
+            let surface = Surface(id: surfaceId, device: self.device, width: width, height: height, pixelFormat: pixelFormat, isDedicated: isDedicated)
             self.surfaces[surfaceId] = surface
             
             return surface
@@ -772,6 +890,13 @@ public final class MetalEngine {
                 previousSurfaceId = allocation.surfaceId
                 
                 if renderSpec != allocation.renderingParameters {
+                    if layer.internalId != -1, renderSpec.prefersDedicatedSurface, let surface = self.surfaces[allocation.surfaceId], surface.canHoldDedicated(renderingParameters: renderSpec) {
+                        // Resized within its own surface: draw into the slot that is not on screen.
+                        let updatedAllocation = surface.allocateDedicated(renderingParameters: renderSpec, currentPhase: allocation.currentPhase == 0 ? 1 : 0)
+                        layer.surfaceAllocation = updatedAllocation
+                        layer.contentsRect = updatedAllocation.effectivePhase.contentsRect
+                        return
+                    }
                     layer.surfaceAllocation = nil
                     self.scheduledClearAllocations.append(allocation)
                 }
@@ -787,11 +912,22 @@ public final class MetalEngine {
                     updatedSurfaceId = updatedAllocation.surfaceId
                     layer.contentsRect = updatedAllocation.effectivePhase.contentsRect
                 } else {
-                    if renderingParameters.allocationWidth >= 1024 || renderingParameters.allocationHeight >= 1024 {
+                    if renderingParameters.prefersDedicatedSurface {
+                        // Two slots side by side, nothing else.
+                        let surfaceWidth = alignUp(renderingParameters.allocationWidth, alignment: 64) * 2
+                        let surfaceHeight = alignUp(renderingParameters.allocationHeight, alignment: 64)
+                        
+                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight, pixelFormat: renderSpec.pixelFormat, isDedicated: true) {
+                            let allocation = surface.allocateDedicated(renderingParameters: renderingParameters, currentPhase: 0)
+                            layer.surfaceAllocation = allocation
+                            layer.contentsRect = allocation.effectivePhase.contentsRect
+                            updatedSurfaceId = allocation.surfaceId
+                        }
+                    } else if renderingParameters.allocationWidth >= 1024 || renderingParameters.allocationHeight >= 1024 {
                         let surfaceWidth = max(1024, alignUp(renderingParameters.allocationWidth * 2, alignment: 64))
                         let surfaceHeight = max(512, alignUp(renderingParameters.allocationHeight, alignment: 64))
                         
-                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight) {
+                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight, pixelFormat: renderSpec.pixelFormat) {
                             if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
                                 layer.surfaceAllocation = allocation
                                 layer.contentsRect = allocation.effectivePhase.contentsRect
@@ -800,6 +936,9 @@ public final class MetalEngine {
                         }
                     } else {
                         for (_, surface) in self.surfaces {
+                            if surface.isDedicated {
+                                continue
+                            }
                             if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
                                 layer.surfaceAllocation = allocation
                                 layer.contentsRect = allocation.effectivePhase.contentsRect
@@ -809,10 +948,13 @@ public final class MetalEngine {
                         }
                     }
                     if updatedSurfaceId == nil {
-                        let surfaceWidth = alignUp(2048, alignment: 64)
-                        let surfaceHeight = alignUp(2048, alignment: 64)
+                        // EDR is normally used by one expanded subject. Avoid a full 32 MB atlas.
+                        let surfaceWidth = renderSpec.pixelFormat == .rgba16Float
+                            ? alignUp(renderSpec.allocationWidth * 2, alignment: 64) : 2048
+                        let surfaceHeight = renderSpec.pixelFormat == .rgba16Float
+                            ? alignUp(renderSpec.allocationHeight, alignment: 64) : 2048
                         
-                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight) {
+                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight, pixelFormat: renderSpec.pixelFormat) {
                             if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
                                 layer.surfaceAllocation = allocation
                                 layer.contentsRect = allocation.effectivePhase.contentsRect
@@ -857,8 +999,44 @@ public final class MetalEngine {
         }
         
         func removeLayerSurfaceAllocation(layer: MetalEngineSubjectLayer) {
-            if let allocation = layer.surfaceAllocation {
-                self.scheduledClearAllocations.append(allocation)
+            guard let allocation = layer.surfaceAllocation else {
+                return
+            }
+            // A layer can be released on any thread; the engine's state is only touched on the main one.
+            if Thread.isMainThread {
+                self.scheduleClearAllocation(allocation)
+            } else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.scheduleClearAllocation(allocation)
+                }
+            }
+        }
+        
+        private func scheduleClearAllocation(_ allocation: SurfaceAllocation) {
+            self.scheduledClearAllocations.append(allocation)
+            // Surfaces are released in display(), which otherwise only runs when a subject updates.
+            self.setNeedsDisplay()
+        }
+        
+        private func setNeedsDisplay() {
+            #if targetEnvironment(simulator)
+            if #available(iOS 13.0, *) {
+                self.layer.setNeedsDisplay()
+            }
+            #else
+            self.layer.setNeedsDisplay()
+            #endif
+        }
+        
+        private func removeEmptySurfaces() {
+            var removeSurfaceIds: [Int] = []
+            for (id, surface) in self.surfaces {
+                if surface.isEmpty {
+                    removeSurfaceIds.append(id)
+                }
+            }
+            for id in removeSurfaceIds {
+                self.surfaces.removeValue(forKey: id)
             }
         }
         
@@ -888,13 +1066,7 @@ public final class MetalEngine {
             }
             
             if isFirst {
-                #if targetEnvironment(simulator)
-                if #available(iOS 13.0, *) {
-                    self.layer.setNeedsDisplay()
-                }
-                #else
-                self.layer.setNeedsDisplay()
-                #endif
+                self.setNeedsDisplay()
             }
         }
         
@@ -907,10 +1079,9 @@ public final class MetalEngine {
                     }
                 }
                 self.scheduledClearAllocations.removeAll()
-                
-                //TODO:remove clear empty surfaces
             }
             if self.updatedSubjects.isEmpty {
+                self.removeEmptySurfaces()
                 return
             }
             
@@ -998,7 +1169,9 @@ public final class MetalEngine {
                         }
                     }
                     
-                    if !subjectContext.renderToLayerOperationsGroupedByState.isEmpty || !clearQuads.isEmpty {
+                    // Every operation on this surface contributes a clear quad, so none means nothing to draw. A pass
+                    // loads and stores the whole surface, so skip it.
+                    if !clearQuads.isEmpty {
                         let renderPass = MTLRenderPassDescriptor()
                         renderPass.colorAttachments[0].texture = surface.texture
                         renderPass.colorAttachments[0].loadAction = .load
@@ -1009,7 +1182,11 @@ public final class MetalEngine {
                         }
                         
                         if !clearQuads.isEmpty {
-                            renderEncoder.setRenderPipelineState(self.clearPipelineState)
+                            guard let clearPipeline = surface.pixelFormat == .rgba16Float ? self.hdrClearPipelineState : self.clearPipelineState else {
+                                renderEncoder.endEncoding()
+                                continue
+                            }
+                            renderEncoder.setRenderPipelineState(clearPipeline)
                             
                             //TODO:use buffer if too many vertices
                             renderEncoder.setVertexBytes(clearQuads, length: 4 * clearQuads.count * 2, index: 0)
@@ -1022,9 +1199,9 @@ public final class MetalEngine {
                             guard let state = self.renderStates[stateId] else {
                                 continue
                             }
-                            if !renderToLayerOperations.isEmpty {
-                                renderEncoder.setRenderPipelineState(state.pipelineState)
-                            }
+                            guard renderToLayerOperations.contains(where: { $0.layer?.surfaceAllocation?.surfaceId == id }),
+                                  let pipeline = state.pipelineState(for: surface.pixelFormat) else { continue }
+                            renderEncoder.setRenderPipelineState(pipeline)
                             for renderToLayerOperation in renderToLayerOperations {
                                 guard let layer = renderToLayerOperation.layer else {
                                     continue
@@ -1059,15 +1236,7 @@ public final class MetalEngine {
                 }
             }
             
-            var removeSurfaceIds: [Int] = []
-            for (id, surface) in self.surfaces {
-                if surface.isEmpty {
-                    removeSurfaceIds.append(id)
-                }
-            }
-            for id in removeSurfaceIds {
-                self.surfaces.removeValue(forKey: id)
-            }
+            self.removeEmptySurfaces()
 
             commandBuffer.commit()
             commandBuffer.waitUntilScheduled()
@@ -1090,8 +1259,15 @@ public final class MetalEngine {
         return self.impl.device
     }
     
+    /// Pipeline states compiled once per app version and kept across launches. Make pipelines for this engine's
+    /// device through it rather than through the device. Thread-safe.
+    public let pipelineCache: MetalPipelineCache
+    
     private init() {
-        self.impl = Impl(device: MTLCreateSystemDefaultDevice()!)!
+        let device = MTLCreateSystemDefaultDevice()!
+        let pipelineCache = MetalPipelineCache(device: device)
+        self.pipelineCache = pipelineCache
+        self.impl = Impl(device: device, pipelineCache: pipelineCache)!
     }
     
     public func pooledTexture(spec: TextureSpec) -> PooledTexture {

@@ -3,7 +3,6 @@ import MediaPlayer
 import AVFAudio
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import PassKit
@@ -235,7 +234,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                 if immediateShare {
-                    let controller = params.context.sharedContext.makeShareController(context: params.context, params: ShareControllerParams(subject: .media(.standalone(media: file), nil), immediateExternalShare: true))
+                    let controller = params.context.sharedContext.makeShareScreen(context: params.context, params: ShareControllerParams(subject: .media(.standalone(media: file), nil), immediateExternalShare: true))
                     params.present(controller, nil, .window(.root))
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
@@ -446,7 +445,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }
             case let .chatAvatars(controller, media):
                 params.dismissInput()
-                params.chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> MessageId? in
+                params.chatAvatarHiddenMedia(controller.hiddenMedia |> map { value -> EngineMessage.Id? in
                     if value != nil {
                         return params.message.id
                     } else {
@@ -478,8 +477,8 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     return false
 }
 
-public func makeInstantPageControllerImpl(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController? {
-    guard let (webpage, anchor) = instantPageAndAnchor(message: EngineMessage(message)) else {
+public func makeInstantPageControllerImpl(context: AccountContext, message: EngineMessage, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController? {
+    guard let (webpage, anchor) = instantPageAndAnchor(message: message) else {
         return nil
     }
     let sourceLocation = InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: sourcePeerType ?? .channel)
@@ -490,7 +489,8 @@ public func makeInstantPageControllerImpl(context: AccountContext, webPage: Tele
     return BrowserScreen(context: context, subject: .instantPage(webPage: webPage, anchor: anchor, sourceLocation: sourceLocation, preloadedResources: nil))
 }
 
-func openChatWallpaperImpl(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+func openChatWallpaperImpl(context: AccountContext, message: EngineMessage, present: @escaping (ViewController, Any?) -> Void) {
+    let message = message._asMessage()
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: content.url, skipUrlAuth: true)
@@ -514,7 +514,8 @@ func openChatWallpaperImpl(context: AccountContext, message: Message, present: @
     }
 }
 
-func openChatTheme(context: AccountContext, message: Message, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+func openChatTheme(context: AccountContext, message: EngineMessage, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    let message = message._asMessage()
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: content.url, skipUrlAuth: true)

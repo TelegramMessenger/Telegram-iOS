@@ -1001,7 +1001,7 @@ public final class CalendarMessageScreen: ViewController {
         private let dayEnvironment: DayEnvironment
 
         private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
-        private var scrollLayout: (width: CGFloat, contentHeight: CGFloat, frames: [Int: CGRect])?
+        private var scrollLayout: (width: CGFloat, sideInsets: UIEdgeInsets, contentHeight: CGFloat, frames: [Int: CGRect])?
 
         private var calendarState: SparseMessageCalendar.State?
 
@@ -1246,7 +1246,11 @@ public final class CalendarMessageScreen: ViewController {
                 options.insert(.input)
             }
             let bottomInset: CGFloat = layout.insets(options: options).bottom
-            if !layout.safeInsets.left.isZero {
+            // The compact landscape toolbar wherever a compact layout has a side inset in landscape: iPhone Duo's folded
+            // screen has one on the left OR the right (its side strip), so testing the left one alone gave its two
+            // landscapes different toolbars. Elsewhere a left inset implies landscape and the right one is equal.
+            let hasLandscapeSideInset = layout.metrics.widthClass == .compact && layout.size.width > layout.size.height && (!layout.safeInsets.left.isZero || !layout.safeInsets.right.isZero)
+            if !layout.safeInsets.left.isZero || hasLandscapeSideInset {
                 tabBarHeight = 34.0 + bottomInset
             } else {
                 tabBarHeight = 49.0 + bottomInset
@@ -1281,11 +1285,13 @@ public final class CalendarMessageScreen: ViewController {
                     toolbarText = self.presentationData.strings.MessageCalendar_ClearHistoryForTheseDays
                 }
                 
+                // The bottom selection toolbar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                let bottomSideInsets = layout.bottomEdgeSideInsets()
                 if let currrent = self.selectionToolbarNode {
                     selectionToolbarNode = currrent
-                    
+
                     transition.updateFrame(node: selectionToolbarNode, frame: tabBarFrame)
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: bottomSideInsets.left, rightInset: bottomSideInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
                 } else {
                     selectionToolbarNode = ToolbarNode(
                         theme: ToolbarTheme(
@@ -1300,7 +1306,7 @@ public final class CalendarMessageScreen: ViewController {
                         }
                     )
                     selectionToolbarNode.frame = tabBarFrame
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: .immediate)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: bottomSideInsets.left, rightInset: bottomSideInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: .immediate)
                     self.addSubnode(selectionToolbarNode)
                     self.selectionToolbarNode = selectionToolbarNode
                     transition.animatePositionAdditive(node: selectionToolbarNode, offset: CGPoint(x: 0.0, y: tabBarFrame.height))
@@ -1568,7 +1574,10 @@ public final class CalendarMessageScreen: ViewController {
             guard let (layout, navigationHeight) = self.validLayout else {
                 return false
             }
-            if self.scrollLayout?.width == layout.size.width {
+            // The month frames depend on the side insets too: iPhone Duo's folded landscape-left and landscape-right
+            // are equally wide but put the side strip on opposite sides.
+            let sideInsets = UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right)
+            if let scrollLayout = self.scrollLayout, scrollLayout.width == layout.size.width, scrollLayout.sideInsets == sideInsets {
                 return false
             }
 
@@ -1594,9 +1603,12 @@ public final class CalendarMessageScreen: ViewController {
                     environment: {
                         self.dayEnvironment
                     },
-                    containerSize: CGSize(width: layout.size.width, height: 10000.0
+                    containerSize: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: 10000.0
                 ))
-                let monthFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: monthSize)
+                // iPhone Duo: the months are laid out in the band between the side safe insets (one is the side
+                // strip). The scroll view is rotated by pi, so its x runs from the right edge: the band starts at
+                // the RIGHT inset. Equal insets (0 on phones in portrait) give the old frame.
+                let monthFrame = CGRect(origin: CGPoint(x: layout.safeInsets.right, y: contentHeight), size: monthSize)
                 contentHeight += monthSize.height
                 if i != self.months.count {
                     contentHeight += 16.0
@@ -1605,7 +1617,7 @@ public final class CalendarMessageScreen: ViewController {
             }
             contentHeight += navigationHeight
 
-            self.scrollLayout = (layout.size.width, contentHeight, frames)
+            self.scrollLayout = (layout.size.width, sideInsets, contentHeight, frames)
 
             self.contextGestureContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
             self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
@@ -1616,7 +1628,7 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         func updateMonthViews(transition: ComponentTransition) {
-            guard let (width, _, frames) = self.scrollLayout else {
+            guard let (width, sideInsets, _, frames) = self.scrollLayout else {
                 return
             }
             
@@ -1645,6 +1657,10 @@ public final class CalendarMessageScreen: ViewController {
                     self.monthViews[i] = monthView
                     self.scrollView.addSubview(monthView)
                 }
+                // Beside iPhone Duo's side strip (the side insets differ) the month is drawn at the band width it was
+                // measured at: drawn screen-wide in its band-wide frame it ran under the strip, or past the screen's
+                // edge with the strip on the left. Equal insets keep the old width.
+                let monthWidth: CGFloat = sideInsets.left != sideInsets.right ? monthFrame.width : width
                 let _ = monthView.update(
                     transition: monthTransition,
                     component: AnyComponent(MonthComponent(
@@ -1735,7 +1751,7 @@ public final class CalendarMessageScreen: ViewController {
                     environment: {
                         self.dayEnvironment
                     },
-                    containerSize: CGSize(width: width, height: 10000.0
+                    containerSize: CGSize(width: monthWidth, height: 10000.0
                 ))
                 monthView.frame = monthFrame
             }
@@ -1863,7 +1879,7 @@ public final class CalendarMessageScreen: ViewController {
 
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
 
         self._hasGlassStyle = true
         self.navigationPresentation = .modal

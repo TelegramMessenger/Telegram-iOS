@@ -72,17 +72,20 @@ public final class SegmentControlComponent: Component {
     let theme: Theme
     let items: [Item]
     let selectedId: AnyHashable?
+    let fillWidth: Bool
     let action: (AnyHashable) -> Void
 
     public init(
         theme: Theme,
         items: [Item],
         selectedId: AnyHashable?,
+        fillWidth: Bool = false,
         action: @escaping (AnyHashable) -> Void
     ) {
         self.theme = theme
         self.items = items
         self.selectedId = selectedId
+        self.fillWidth = fillWidth
         self.action = action
     }
 
@@ -90,12 +93,14 @@ public final class SegmentControlComponent: Component {
         theme: PresentationTheme,
         items: [Item],
         selectedId: AnyHashable?,
+        fillWidth: Bool = false,
         action: @escaping (AnyHashable) -> Void
     ) {
         self.init(
             theme: Theme(theme: theme),
             items: items,
             selectedId: selectedId,
+            fillWidth: fillWidth,
             action: action
         )
     }
@@ -108,6 +113,9 @@ public final class SegmentControlComponent: Component {
             return false
         }
         if lhs.selectedId != rhs.selectedId {
+            return false
+        }
+        if lhs.fillWidth != rhs.fillWidth {
             return false
         }
         return true
@@ -190,6 +198,8 @@ public final class SegmentControlComponent: Component {
                     self.nativeSegmentedView = segmentedView
                     self.addSubview(segmentedView)
                 }
+
+                segmentedView.selectedSegmentIndex = component.items.firstIndex(where: { $0.id == component.selectedId }) ?? 0
                 
                 if themeUpdated {
                     segmentedView.setTitleTextAttributes([
@@ -201,7 +211,11 @@ public final class SegmentControlComponent: Component {
                 }
                 
                 controlSize = segmentedView.sizeThatFits(availableSize)
-                controlSize.width = min(availableSize.width - 32.0, max(300.0, controlSize.width))
+                if component.fillWidth {
+                    controlSize.width = availableSize.width
+                } else {
+                    controlSize.width = min(availableSize.width - 32.0, max(300.0, controlSize.width))
+                }
                 controlSize.height = 36.0
                 segmentedView.frame = CGRect(origin: .zero, size: controlSize)
             } else {
@@ -229,8 +243,14 @@ public final class SegmentControlComponent: Component {
                         component.action(component.items[index].id)
                     }
                 }
+
+                segmentedNode.selectedIndex = component.items.firstIndex(where: { $0.id == component.selectedId }) ?? 0
                 
-                controlSize = segmentedNode.updateLayout(SegmentedControlLayout.sizeToFit(maximumWidth: availableSize.width, minimumWidth: min(availableSize.width, 300.0), height: 36.0), transition: transition.containedViewLayoutTransition)
+                controlSize = segmentedNode.updateLayout(SegmentedControlLayout.sizeToFit(
+                    maximumWidth: availableSize.width,
+                    minimumWidth: component.fillWidth ? availableSize.width : min(availableSize.width, 300.0),
+                    height: 36.0
+                ), transition: transition.containedViewLayoutTransition)
                 transition.containedViewLayoutTransition.updateFrame(node: segmentedNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: controlSize))
             }
             

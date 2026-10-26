@@ -93,7 +93,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationWindows() -> [UIWindow]! {
-        return legacyComponentsApplication?.windows ?? []
+        return legacyComponentsApplication?.allWindowSceneWindows ?? []
     }
     
     public func applicationStatusBarWindow() -> UIWindow! {
@@ -101,7 +101,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationKeyboardWindow() -> UIWindow! {
-        for window in legacyComponentsApplication?.windows ?? [] {
+        for window in legacyComponentsApplication?.allWindowSceneWindows ?? [] {
             if isKeyboardWindow(window: window) {
                 return window
             }

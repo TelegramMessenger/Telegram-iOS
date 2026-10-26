@@ -121,6 +121,115 @@ final class RichTextEditorViewTests: XCTestCase {
         XCTAssertGreaterThan(twoLines, oneLine, "more content → taller measured height")
     }
 
+    // A document TALLER than the viewport must open resting BELOW the top inset (offset == −insets.top),
+    // not scrolled under it. UIScrollView only CLAMPS the offset when an inset changes: a short document's
+    // only valid offset IS −top so it snaps there, but for a tall document offset 0 stays in range — so the
+    // first screenful sat under the navigation bar (the reported article-editor bug).
+    func test_update_tallDocument_restsBelowTheTopInset() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
+        editor.document = Document(blocks: (0..<40).map {
+            .paragraph(ParagraphBlock(id: BlockID("p\($0)"), runs: [TextRun(text: "Line \($0)")]))
+        })
+        _ = editor.update(size: CGSize(width: 320, height: 400),
+                          insets: UIEdgeInsets(top: 100, left: 0, bottom: 0, right: 0))
+        XCTAssertGreaterThan(editor.scrollContentHeightForTesting, 400,
+                             "precondition: the content is taller than the viewport")
+        XCTAssertEqual(editor.contentOffsetForTesting.y, -100, accuracy: 0.5,
+                       "a tall document opens at the top of its content, below the top inset")
+    }
+
+    // The rest-at-top adjustment must not yank a user who has scrolled away — it only applies when the
+    // scroll view is resting at the top AND the top inset actually changes (initial application, rotation,
+    // a navigation-height change). A bottom-inset-only update (keyboard) leaves the offset alone.
+    func test_update_doesNotResetAScrolledOffset() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
+        editor.document = Document(blocks: (0..<40).map {
+            .paragraph(ParagraphBlock(id: BlockID("p\($0)"), runs: [TextRun(text: "Line \($0)")]))
+        })
+        let insets = UIEdgeInsets(top: 100, left: 0, bottom: 0, right: 0)
+        _ = editor.update(size: CGSize(width: 320, height: 400), insets: insets)
+        editor.contentOffsetForTesting = CGPoint(x: 0, y: 200)
+        _ = editor.update(size: CGSize(width: 320, height: 400),
+                          insets: UIEdgeInsets(top: 100, left: 0, bottom: 260, right: 0))
+        XCTAssertEqual(editor.contentOffsetForTesting.y, 200, accuracy: 0.5,
+                       "a scrolled editor keeps its offset across an update")
+    }
+
+    // The scroll content must cover every laid-out block. Under the V2 rhythm a gap next to a block that
+    // cannot own it (a button row / table / media at a sequence edge, or two such neighbours) is laid down
+    // by `BlockStack.layout` as BARE space belonging to no box frame — so a content height summed from box
+    // heights alone under-reports the laid-out extent and the trailing block falls below the scrollable
+    // range (unreachable, overlapping the bottom inset band).
+    func test_documentEndingInAButtonRow_scrollContentCoversEveryBlock() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
+        var blocks: [Block] = (0..<30).map {
+            .paragraph(ParagraphBlock(id: BlockID("p\($0)"), runs: [TextRun(text: "Line \($0)")]))
+        }
+        blocks.append(.buttonRow(ButtonRowBlock(id: BlockID("row"), buttons: [
+            ButtonRef(label: [TextRun(text: "Open")], action: .url("https://telegram.org"))
+        ])))
+        editor.document = Document(blocks: blocks)
+        let margins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
+        _ = editor.update(size: CGSize(width: 320, height: 400),
+                          insets: UIEdgeInsets(top: 0, left: 0, bottom: 120, right: 0),
+                          contentMargins: margins)
+        assertScrollContentCoversLayout(editor, margins: margins)
+    }
+
+    // Same invariant from the other edge: a document STARTING with a non-paragraph block gets a bare
+    // leading gap, which likewise belongs to no box frame.
+    func test_documentStartingWithAButtonRow_scrollContentCoversEveryBlock() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
+        var blocks: [Block] = [.buttonRow(ButtonRowBlock(id: BlockID("row"), buttons: [
+            ButtonRef(label: [TextRun(text: "Open")], action: .url("https://telegram.org"))
+        ]))]
+        blocks += (0..<30).map {
+            .paragraph(ParagraphBlock(id: BlockID("p\($0)"), runs: [TextRun(text: "Line \($0)")]))
+        }
+        editor.document = Document(blocks: blocks)
+        let margins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
+        _ = editor.update(size: CGSize(width: 320, height: 400),
+                          insets: UIEdgeInsets(top: 0, left: 0, bottom: 120, right: 0),
+                          contentMargins: margins)
+        assertScrollContentCoversLayout(editor, margins: margins)
+    }
+
+    // The accumulating case, and the one the report described: several non-paragraph blocks, each
+    // contributing its own bare gap. One 4pt shortfall is subtle; five is a visibly clipped document.
+    func test_documentWithSeveralNonTextBlocks_scrollContentCoversEveryBlock() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
+        func row(_ id: String) -> Block {
+            .buttonRow(ButtonRowBlock(id: BlockID(id), buttons: [
+                ButtonRef(label: [TextRun(text: "Open")], action: .url("https://telegram.org"))
+            ]))
+        }
+        var blocks: [Block] = (0..<30).map {
+            .paragraph(ParagraphBlock(id: BlockID("p\($0)"), runs: [TextRun(text: "Line \($0)")]))
+        }
+        blocks += [row("b1"), .paragraph(ParagraphBlock(id: BlockID("mid"), runs: [TextRun(text: "Middle")])),
+                   row("b2"), .code(CodeBlock(id: BlockID("c"), runs: [TextRun(text: "let x = 1")])), row("b3")]
+        editor.document = Document(blocks: blocks)
+        let margins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
+        _ = editor.update(size: CGSize(width: 320, height: 400),
+                          insets: UIEdgeInsets(top: 0, left: 0, bottom: 120, right: 0),
+                          contentMargins: margins)
+        assertScrollContentCoversLayout(editor, margins: margins)
+    }
+
+    /// The scroll content must equal the LAID-OUT extent (`root.contentHeight` + the content margins) and
+    /// reach past the last block — the bare gaps the V2 rhythm lays between blocks that cannot own them
+    /// belong to no box frame, so a height summed from box heights alone silently under-reports.
+    private func assertScrollContentCoversLayout(_ editor: RichTextEditorView, margins: UIEdgeInsets,
+                                                 file: StaticString = #filePath, line: UInt = #line) {
+        let laidOut = editor.canvas.root.contentHeight + margins.top + margins.bottom
+        XCTAssertEqual(editor.scrollContentHeightForTesting, laidOut, accuracy: 0.5,
+                       "the scroll content must equal the laid-out extent", file: file, line: line)
+        let lastBlockBottom = editor.canvas.boxes.last?.frame.maxY ?? 0
+        XCTAssertGreaterThanOrEqual(editor.scrollContentHeightForTesting, lastBlockBottom + margins.bottom,
+                                    "the scroll content must reach past the last block plus the bottom margin",
+                                    file: file, line: line)
+    }
+
     func test_update_appliesBottomInset() {
         let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
         editor.document = Document(blocks: [.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "Hi")]))])

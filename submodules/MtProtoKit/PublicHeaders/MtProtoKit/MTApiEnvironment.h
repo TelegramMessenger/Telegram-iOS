@@ -38,8 +38,10 @@
 @property (nonatomic, strong, readonly) NSString * _Nullable username;
 @property (nonatomic, strong, readonly) NSString * _Nullable password;
 @property (nonatomic, strong, readonly) NSData * _Nullable secret;
+@property (nonatomic, readonly) bool webProxy;
 
 - (instancetype _Nonnull)initWithIp:(NSString * _Nonnull )ip port:(uint16_t)port username:(NSString * _Nullable)username password:(NSString * _Nullable)password secret:(NSData * _Nullable)secret;
+- (instancetype _Nonnull)initWithIp:(NSString * _Nonnull )ip port:(uint16_t)port username:(NSString * _Nullable)username password:(NSString * _Nullable)password secret:(NSData * _Nullable)secret webProxy:(bool)webProxy;
 
 @end
 

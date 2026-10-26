@@ -211,7 +211,10 @@ public class ChatMessagePaymentAlertController: AlertScreen {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                     }
                 }
-                balanceTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - balanceSize.width) / 2.0), y: insets.top + 5.0), size: balanceSize))
+                // Centered in the band between the side safe insets, on the alert's own axis (iPhone Duo's side
+                // strip); with equal insets this is the full width's center.
+                let balanceX = layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - balanceSize.width) / 2.0)
+                balanceTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: balanceX, y: insets.top + 5.0), size: balanceSize))
             }
         }
     }

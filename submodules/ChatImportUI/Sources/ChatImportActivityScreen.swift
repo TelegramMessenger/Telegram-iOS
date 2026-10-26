@@ -1,3 +1,4 @@
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -357,8 +358,8 @@ public final class ChatImportActivityScreen: ViewController {
             
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
-            self.animationNode = DefaultAnimatedStickerNodeImpl()
-            self.doneAnimationNode = DefaultAnimatedStickerNodeImpl()
+            self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            self.doneAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             self.doneAnimationNode.isHidden = true
             
             self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
@@ -548,11 +549,16 @@ public final class ChatImportActivityScreen: ViewController {
                 effectiveProgress = 1.0
             }
             
+            // iPhone Duo: beside a side strip the content centres in the band between the side insets. Elsewhere the
+            // insets are equal and the band is the whole width, as before.
+            let bandInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
+            let bandWidth = layout.size.width - bandInsets.left - bandInsets.right
+            
             self.radialStatusText.attributedText = NSAttributedString(string: "\(Int(effectiveProgress * 100.0))%", font: Font.with(size: floor(36.0 * maxK), design: .round, weight: .semibold), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             
             self.progressText.attributedText = NSAttributedString(string: "\(dataSizeString(Int(effectiveProgress * CGFloat(self.totalBytes)), formatting: DataSizeStringFormatting(presentationData: self.presentationData))) of \(dataSizeString(Int(1.0 * CGFloat(self.totalBytes)), formatting: DataSizeStringFormatting(presentationData: self.presentationData)))", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-            let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+            let progressTextSize = self.progressText.updateLayout(CGSize(width: bandWidth - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             switch self.state {
             case .progress, .done:
@@ -560,7 +566,7 @@ public final class ChatImportActivityScreen: ViewController {
             case .error:
                 self.statusButtonText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_Retry, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
             }
-            let statusButtonTextSize = self.statusButtonText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+            let statusButtonTextSize = self.statusButtonText.updateLayout(CGSize(width: bandWidth - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             switch self.state {
             case .progress:
@@ -584,7 +590,7 @@ public final class ChatImportActivityScreen: ViewController {
                 self.statusText.attributedText = NSAttributedString(string: self.presentationData.strings.ChatImportActivity_Success, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             }
             
-            let statusTextSize = self.statusText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+            let statusTextSize = self.statusText.updateLayout(CGSize(width: bandWidth - 16.0 * 2.0, height: .greatestFiniteMagnitude))
             
             let contentHeight: CGFloat
             var hideIcon = false
@@ -609,40 +615,40 @@ public final class ChatImportActivityScreen: ViewController {
             
             let contentOriginY = navigationHeight + floor((layout.size.height - contentHeight) / 2.0)
             
-            self.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
+            self.animationNode.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
             self.animationNode.updateLayout(size: iconSize)
-            self.doneAnimationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
+            self.doneAnimationNode.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - iconSize.width) / 2.0), y: contentOriginY), size: iconSize)
             self.doneAnimationNode.updateLayout(size: iconSize)
             
-            self.radialStatus.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOriginY + iconSize.height + maxIconStatusSpacing), size: radialStatusSize)
+            self.radialStatus.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - radialStatusSize.width) / 2.0), y: contentOriginY + iconSize.height + maxIconStatusSpacing), size: radialStatusSize)
             let checkSize: CGFloat = 130.0
             self.radialCheck.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
             self.radialStatusBackground.frame = self.radialStatus.frame
             
             self.radialStatusText.frame = CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize)
             
-            self.progressText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: hideIcon ? contentOriginY : (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize)
+            self.progressText.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - progressTextSize.width) / 2.0), y: hideIcon ? contentOriginY : (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize)
             
             if case .progress = self.state {
-                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.maxY + progressStatusSpacing), size: statusTextSize)
+                self.statusText.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - statusTextSize.width) / 2.0), y: self.progressText.frame.maxY + progressStatusSpacing), size: statusTextSize)
                 self.statusButtonText.isHidden = true
                 self.statusButton.isHidden = true
                 self.doneButton.isHidden = true
                 self.progressText.isHidden = false
             } else if case .error = self.state {
-                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusText.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
                 self.statusButtonText.isHidden = false
                 self.statusButton.isHidden = false
                 self.doneButton.isHidden = true
                 self.progressText.isHidden = true
             } else {
-                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusText.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
                 self.statusButtonText.isHidden = false
                 self.statusButton.isHidden = false
                 self.doneButton.isHidden = true
                 self.progressText.isHidden = true
             }/* else {
-                self.statusText.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
+                self.statusText.frame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - statusTextSize.width) / 2.0), y: self.progressText.frame.minY), size: statusTextSize)
                 self.statusButtonText.isHidden = true
                 self.statusButton.isHidden = true
                 self.doneButton.isHidden = false
@@ -650,14 +656,14 @@ public final class ChatImportActivityScreen: ViewController {
             }*/
             
             let buttonSideInset: CGFloat = 75.0
-            let buttonWidth = max(240.0, min(layout.size.width - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset)))
+            let buttonWidth = max(240.0, min(bandWidth - buttonSideInset * 2.0, horizontalContainerFillingSizeForLayout(layout: layout, sideInset: buttonSideInset)))
             
             let buttonHeight = self.doneButton.updateLayout(width: buttonWidth, transition: .immediate)
             
-            let doneButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing + 10.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+            let doneButtonFrame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - buttonWidth) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing + 10.0), size: CGSize(width: buttonWidth, height: buttonHeight))
             self.doneButton.frame = doneButtonFrame
             
-            let statusButtonTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusButtonTextSize.width) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing), size: statusButtonTextSize)
+            let statusButtonTextFrame = CGRect(origin: CGPoint(x: bandInsets.left + floor((bandWidth - statusButtonTextSize.width) / 2.0), y: self.statusText.frame.maxY + statusButtonSpacing), size: statusButtonTextSize)
             self.statusButtonText.frame = statusButtonTextFrame
             self.statusButton.frame = statusButtonTextFrame.insetBy(dx: -10.0, dy: -10.0)
             

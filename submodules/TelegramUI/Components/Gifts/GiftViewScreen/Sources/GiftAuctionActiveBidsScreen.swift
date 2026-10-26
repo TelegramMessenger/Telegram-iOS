@@ -87,6 +87,8 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
         private var isUpdating: Bool = false
         private var environment: ViewControllerComponentContainer.Environment?
         private var itemLayout: ItemLayout?
+        /// The container's bottom corners where the screen's differ (iPhone Duo's cover screen); nil elsewhere.
+        private var containerBottomCornerRadii: CornerRadii?
                 
         override init(frame: CGRect) {
             self.dimView = UIView()
@@ -213,7 +215,9 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
             containerTransform = CATransform3DTranslate(containerTransform, 0.0, scaledTranslation, 0.0)
             containerTransform = CATransform3DScale(containerTransform, scale, scale, scale)
             transition.setTransform(view: self.containerView, transform: containerTransform)
-            transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            if !self.containerView.layer.applyCornerRadiiIfNeeded(self.containerBottomCornerRadii) {
+                transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            }
         }
         
         func animateIn() {
@@ -246,11 +250,16 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
+            // Narrowed by the side safe insets only where there is one on each side. Beside iPhone Duo's side strip
+            // (one side only) the screen-centered sheet keeps its width: in landscape it already sits clear of the
+            // strip, and in folded portrait it spans the strip as a bottom panel. Subtracting the left inset twice
+            // made it 168pt narrower in landscape-right than in landscape-left.
+            let fillingSideInset: CGFloat = environment.safeInsets.left == environment.safeInsets.right ? environment.safeInsets.left : 0.0
             let fillingSize: CGFloat
             if case .regular = environment.metrics.widthClass {
-                fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, 414.0) - fillingSideInset * 2.0
             } else {
-                fillingSize = min(availableSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, availableSize.height) - fillingSideInset * 2.0
             }
             let rawSideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5)
             let sideInset: CGFloat = rawSideInset + 16.0
@@ -451,6 +460,11 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
             
             self.scrollContentClippingView.layer.cornerRadius = 38.0
             
+            // iPhone Duo's cover screen: the container's bottom corners, which reach the screen's, follow each screen
+            // corner (8pt on the hinge side, 59pt outside) instead of one radius. Nil where the corners are uniform.
+            self.containerBottomCornerRadii = environment.screenCornerRadii.sheetBottomCornerRadii(inset: 0.0).map { CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: $0.left, bottomRight: $0.right) }
+            // The scroll content's clip keeps its bottom corners within the container's.
+            let _ = self.scrollContentClippingView.layer.applyCornerRadiiIfNeeded(self.containerBottomCornerRadii.map { CornerRadii(topLeft: 38.0, topRight: 38.0, bottomLeft: min(38.0, $0.bottomLeft), bottomRight: min(38.0, $0.bottomRight)) })
             self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, containerCornerRadius: environment.deviceMetrics.screenCornerRadius, bottomInset: environment.safeInsets.bottom, topInset: topInset)
             
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: contentHeight)))
@@ -486,11 +500,14 @@ private final class GiftAuctionActiveBidsScreenComponent: Component {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }

@@ -13,6 +13,7 @@ import SearchUI
 import AppBundle
 import ContextUI
 import ChatListHeaderComponent
+import NavigationBarComponent
 import ChatListTitleView
 import ComponentFlow
 import SwiftUI
@@ -301,14 +302,14 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let tabsNodeIsSearch = false
         
         let title: String
-        let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
-        let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>]
+        let leftButton: NavigationBarComponent.Button?
+        let rightButtons: [NavigationBarComponent.Button]
         
         if let selectionState = self.contactListNode.selectionState {
             title = self.presentationData.strings.Contacts_SelectedContacts(Int32(selectionState.selectedPeerIndices.count))
-            leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+            leftButton = NavigationBarComponent.Button(id: "done",
                 content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
-                pressed: { [weak self] sourceView in
+                action: { [weak self] sourceView in
                     guard let self else {
                         return
                     }
@@ -316,34 +317,33 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         return nil
                     }
                 }
-            )))
+            )
             rightButtons = []
         } else {
             title = self.presentationData.strings.Contacts_Title
-            leftButton = AnyComponentWithIdentity(id: "sort", component: AnyComponent(NavigationButtonComponent(
+            leftButton = NavigationBarComponent.Button(id: "sort",
                 content: .text(title: self.presentationData.strings.Contacts_Sort, isBold: false),
-                pressed: { [weak self] sourceView in
+                action: { [weak self] sourceView in
                     guard let self else {
                         return
                     }
                     
                     self.controller?.presentSortMenu(sourceView: sourceView, gesture: nil)
                 }
-            )))
-            rightButtons = [AnyComponentWithIdentity(id: "add", component: AnyComponent(NavigationButtonComponent(
+            )
+            rightButtons = [NavigationBarComponent.Button(id: "add",
                 content: .icon(imageName: "Chat List/AddIcon"),
-                pressed: { [weak self] _ in
+                action: { [weak self] _ in
                     guard let self else {
                         return
                     }
                     self.controller?.addPressed()
                 }
-            )))]
+            )]
         }
         
         let primaryContent = ChatListHeaderComponent.Content(
             title: self.presentationData.strings.Contacts_Title,
-            navigationBackTitle: nil,
             titleComponent: nil,
             chatListTitle: NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
             leftButton: leftButton,
@@ -357,8 +357,10 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 context: self.context,
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
-                sideInset: layout.safeInsets.left,
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                leftInset: layout.safeInsets.left,
+                rightInset: layout.safeInsets.right,
+                trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 search: ChatListNavigationBar.Search(isEnabled: true),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: primaryContent,
@@ -435,7 +437,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top = navigationBarLayout.navigationHeight - navigationBarLayout.storiesInset - ChatListNavigationBar.searchScrollHeight
         
-        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(innerLayout, navigationBarHeight: navigationBarLayout.navigationHeight, transition: transition)
@@ -502,7 +504,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }
-        }, fieldStyle: placeholderNode?.fieldStyle ?? .modern, searchBarIsExternal: placeholderNode == nil)
+        }, fieldStyle: placeholderNode?.fieldStyle ?? .modern)
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
@@ -542,11 +544,11 @@ private final class ContactContextExtractedContentSource: ContextExtractedConten
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

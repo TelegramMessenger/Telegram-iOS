@@ -2768,7 +2768,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             return
                         }
                         
-                        let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(
+                        let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(
                             subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: EngineStoryId(peerId: peer.id, id: item.id), isMention: false)), nil),
                             externalShare: false
                         ))
@@ -3704,11 +3704,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 deviceMetrics: deviceMetrics,
                 intrinsicInsets: UIEdgeInsets(top: mapOverscrollInset, left: 0.0, bottom: 0.0, right: 0.0),
                 safeInsets: UIEdgeInsets(),
+                reservedCorners: .none,
+                division: nil,
                 additionalInsets: UIEdgeInsets(),
                 statusBarHeight: nil,
                 inputHeight: nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false
+                inVoiceOver: false,
+                presentedInFormSheet: false
             ),
             navigationBarHeight: 0.0,
             topPadding: mapOverscrollInset + self.additionalNavigationHeight,
@@ -3769,7 +3772,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             
             let mapInfoFrame = CGRect(origin: CGPoint(x: 0.0, y: mapFrame.maxY + mapInfoTopInset), size: mapInfoLayout.contentSize)
             transition.updateFrame(node: mapInfoNode, frame: mapInfoFrame)
-            mapInfoReadyAndApply().1(ListViewItemApply(isOnScreen: true))
+            mapInfoReadyAndApply().1(ListViewItemApply())
             
             self.effectiveMapHeight += mapInfoLayout.contentSize.height + mapInfoTopInset
             
@@ -4576,7 +4579,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         context: self.context,
                         theme: presentationData.theme,
                         fitToHeight: self.isProfileEmbedded,
-                        animationName: "StoryListEmpty",
+                        animationName: "Photos",
                         title: isArchived ? presentationData.strings.StoryList_ArchivedEmptyState_Title : presentationData.strings.StoryList_SavedEmptyPosts_Title,
                         text: isArchived ? presentationData.strings.StoryList_ArchivedEmptyState_Text : presentationData.strings.StoryList_SavedEmptyPosts_Text,
                         actionTitle: (isArchived || !self.canManageStories) ? nil : presentationData.strings.StoryList_SavedAddAction,
@@ -5361,7 +5364,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 urlBase = "\(peer.id.id._internalGetInt64Value())"
             }
             
-            let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(
+            let shareController = self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(
                 subject: .url("https://t.me/\(urlBase)/a/\(id)"),
                 externalShare: false,
                 actionCompleted: { [weak self] in
@@ -5565,11 +5568,11 @@ private final class ExtractedContentSourceImpl: ContextExtractedContentSource {
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -5800,11 +5803,11 @@ private final class ItemExtractedContentSource: ContextExtractedContentSource {
         
         return ContextControllerTakeViewInfo(
             containingItem: .node(self.sourceNode),
-            contentAreaInScreenSpace: contentArea ?? UIScreen.main.bounds
+            contentAreaInScreenSpace: contentArea ?? mainWindowScreenBounds
         )
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

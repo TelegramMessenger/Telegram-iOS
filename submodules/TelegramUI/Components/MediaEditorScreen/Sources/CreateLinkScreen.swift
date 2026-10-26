@@ -33,6 +33,8 @@ private final class SheetContent: CombinedComponent {
     let link: String
     let webpage: TelegramMediaWebpage?
     let state: CreateLinkSheetComponent.State
+    /// The size of the screen the sheet rises in, to keep the header clear of a top corner block it can reach.
+    let screenSize: CGSize
     let dismiss: () -> Void
     
     init(
@@ -41,6 +43,7 @@ private final class SheetContent: CombinedComponent {
         link: String,
         webpage: TelegramMediaWebpage?,
         state: CreateLinkSheetComponent.State,
+        screenSize: CGSize,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
@@ -48,6 +51,7 @@ private final class SheetContent: CombinedComponent {
         self.link = link
         self.webpage = webpage
         self.state = state
+        self.screenSize = screenSize
         self.dismiss = dismiss
     }
     
@@ -62,6 +66,9 @@ private final class SheetContent: CombinedComponent {
             return false
         }
         if lhs.webpage != rhs.webpage {
+            return false
+        }
+        if lhs.screenSize != rhs.screenSize {
             return false
         }
         return true
@@ -152,9 +159,6 @@ private final class SheetContent: CombinedComponent {
                 ),
                 availableSize: context.availableSize,
                 transition: .immediate
-            )
-            context.add(doneButton
-                .position(CGPoint(x: context.availableSize.width - sideInset - doneButton.size.width / 2.0, y: 16.0 + doneButton.size.height / 2.0))
             )
             
             let title = title.update(
@@ -305,6 +309,18 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += 32.0
             
             contentSize.height += max(environment.inputHeight, environment.safeInsets.bottom)
+            
+            // The keyboard raises the sheet beside the status corner (iPhone Duo, folded portrait: 84x170 at the top
+            // right): Done keeps clear of it. The sheet is bottom-anchored and centred, its top `contentSize.height` (and
+            // the glass inset) up. In landscape the sheet keeps to the band beside the strip, where its environment has no
+            // side insets, and needs nothing.
+            var doneCornerInset: CGFloat = 0.0
+            if environment.safeInsets.left > 0.0 || environment.safeInsets.right > 0.0 || environment.navigationBarTrailingButtonsInset > 0.0 {
+                doneCornerInset = sheetHeaderCornerInsets(containerWidth: component.screenSize.width, sheetMinX: floorToScreenPixels((component.screenSize.width - context.availableSize.width) / 2.0), sheetWidth: context.availableSize.width, sheetMinY: component.screenSize.height - contentSize.height - 6.0, reservedCorners: environment.reservedCorners).right
+            }
+            context.add(doneButton
+                .position(CGPoint(x: context.availableSize.width - sideInset - doneCornerInset - doneButton.size.width / 2.0, y: 16.0 + doneButton.size.height / 2.0))
+            )
 
             return contentSize
         }
@@ -542,6 +558,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                         link: link,
                         webpage: webpage,
                         state: context.state,
+                        screenSize: context.availableSize,
                         dismiss: {
                             animateOut.invoke(Action { _ in
                                 if let controller = controller() {
@@ -563,7 +580,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

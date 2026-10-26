@@ -155,8 +155,13 @@ enum RTFConversion {
         return out
     }
 
+    /// IMPORT of external RTF. A link whose anchor text is its own URL — the shape a copied web link takes —
+    /// is stripped to plain text (`strippingSelfReferentialLinks`): it pins a destination the plain URL
+    /// already carries, and the recipient's client detects the URL anyway. A genuine text link is kept.
     static func fragment(fromRTF data: Data) -> Document? {
-        if let parsed = RTFImport.document(fromRTF: data) { return parsed }   // custom parser first
+        if let parsed = RTFImport.document(fromRTF: data) {                   // custom parser first
+            return parsed.strippingSelfReferentialLinks()
+        }
         guard let attr = try? NSAttributedString(data: data,
             options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil)
         else { return nil }
@@ -177,7 +182,7 @@ enum RTFConversion {
                 blocks.append(.paragraph(ParagraphBlock(id: .generate(), runs: lineRuns)))
             }
         }
-        return Document(blocks: blocks)
+        return Document(blocks: blocks).strippingSelfReferentialLinks()
     }
 
     /// Maps the attribute runs in `range` to clean TextRuns (supported inline flags + link only).

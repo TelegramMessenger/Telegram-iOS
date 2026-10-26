@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -308,9 +309,6 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                         let bubbleBackgroundFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -backgroundInsets, dy: -backgroundInsets)
                         if let bubbleBackgroundNode = strongSelf.bubbleBackgroundNode {
                             animation.animator.updateFrame(layer: bubbleBackgroundNode.layer, frame: bubbleBackgroundFrame, completion: nil)
-                            if let (rect, containerSize) = strongSelf.absoluteRect {
-                                bubbleBackgroundNode.update(rect: rect, within: containerSize, transition: animation.transition)
-                            }
                         } else if strongSelf.bubbleBackgroundNode == nil {
                             if let bubbleBackgroundNode = backgroundNode.makeBubbleBackground(for: .free) {
                                 strongSelf.bubbleBackgroundNode = bubbleBackgroundNode
@@ -522,29 +520,11 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
     public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
         self.absoluteRect = (rect, containerSize)
         
-        if let bubbleBackgroundNode = self.bubbleBackgroundNode {
-            bubbleBackgroundNode.update(rect: rect, within: containerSize, transition: transition)
-        }
     }
     
     public func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
         self.absoluteRect = (rect, containerSize)
         
-        if let bubbleBackgroundNode = self.bubbleBackgroundNode {
-            bubbleBackgroundNode.update(rect: rect, within: containerSize, transition: transition)
-        }
-    }
-    
-    public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        if let bubbleBackgroundNode = self.bubbleBackgroundNode {
-            bubbleBackgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
-        }
-    }
-    
-    public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-        if let bubbleBackgroundNode = self.bubbleBackgroundNode {
-            bubbleBackgroundNode.offsetSpring(value: value, duration: duration, damping: damping)
-        }
     }
     
     public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
@@ -584,10 +564,10 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
 public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode {
     private let buttonsNode: MessageReactionButtonsNode
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.buttonsNode = MessageReactionButtonsNode()
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.addSubnode(self.buttonsNode)
         
@@ -615,7 +595,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let buttonsNode = self.buttonsNode
         
-        return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
+        return { [weak self] item, layoutConstants, preparePosition, _, constrainedSize, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             let topOffset: CGFloat
@@ -625,7 +605,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
                 topOffset = 0.0
             }
             
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)) ?? ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [], topPeers: [])
                 let buttonsUpdate = buttonsNode.prepareUpdate(
                     context: item.context,
@@ -633,7 +613,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
                     presentationContext: item.controllerInteraction.presentationContext,
                     availableReactions: item.associatedData.availableReactions, savedMessageTags: item.associatedData.savedMessageTags, reactions: reactionsAttribute, accountPeer: item.associatedData.accountPeer, message: EngineMessage(item.message), associatedData: item.associatedData, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
                      
-                return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { boundingWidth in
+                return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { [weak self] boundingWidth in
                     var boundingSize = CGSize()
                     
                     let buttonsSizeAndApply = buttonsUpdate.continueLayout(boundingWidth - (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right))
@@ -839,11 +819,4 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         self.buttonsNode.update(rect: rect, within: containerSize, transition: transition)
     }
     
-    public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        self.buttonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
-    }
-    
-    public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-        self.buttonsNode.offsetSpring(value: value, duration: duration, damping: damping)
-    }
 }

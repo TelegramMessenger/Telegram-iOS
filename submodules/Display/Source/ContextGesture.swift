@@ -182,32 +182,6 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         super.touchesMoved(touches, with: event)
         
         if let touch = touches.first {
-            if #available(iOS 9.0, *) {
-                let maxForce: CGFloat = max(2.5, min(3.0, touch.maximumPossibleForce))
-                if touch.force >= maxForce {
-                    if !self.isValidated {
-                        self.isValidated = true
-                    }
-                    
-                    switch self.state {
-                    case .possible:
-                        self.delayTimer?.invalidate()
-                        self.animator?.invalidate()
-                        self.activated?(self, touch.location(in: self.view))
-                        self.wasActivated = true
-                        if let view = self.view?.superview {
-                            if let window = view.window {
-                                cancelOtherGestures(gesture: self, view: window)
-                            }
-                            cancelParentGestures(view: view)
-                        }
-                        self.state = .began
-                    default:
-                        break
-                    }
-                }
-            }
-            
             self.externalUpdated?(self.view, touch.location(in: self.view))
         }
     }

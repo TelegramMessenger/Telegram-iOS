@@ -19,7 +19,7 @@ final class CanvasTableTabTests: XCTestCase {
     func test_tabFromCellA_movesToCellB() {
         let v = canvas()
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
-        v.anchor = cellA.globalStart + 1; v.head = v.anchor
+        v.setSelectionForTesting(anchor: cellA.globalStart + 1, head: cellA.globalStart + 1)
         v.moveToCell(forward: true)
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
         XCTAssertEqual(v.head, cellB.globalStart)
@@ -28,7 +28,7 @@ final class CanvasTableTabTests: XCTestCase {
     func test_shiftTabFromCellB_movesToCellA() {
         let v = canvas()
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellB.globalStart + 1; v.head = v.anchor
+        v.setSelectionForTesting(anchor: cellB.globalStart + 1, head: cellB.globalStart + 1)
         v.moveToCell(forward: false)
         let cellA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         XCTAssertEqual(v.head, cellA.globalStart)
@@ -51,7 +51,7 @@ final class CanvasTableTabTests: XCTestCase {
         let v = canvasTableThenPara()
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
         let after = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("after")) }!
-        v.anchor = cellB.globalStart + 1; v.head = v.anchor
+        v.setSelectionForTesting(anchor: cellB.globalStart + 1, head: cellB.globalStart + 1)
         v.moveToCell(forward: true)
         XCTAssertEqual(v.head, after.globalStart, "Tab in the last cell moves to the start of the block after the table")
         XCTAssertEqual(v.anchor, v.head)
@@ -63,7 +63,7 @@ final class CanvasTableTabTests: XCTestCase {
     func test_tabFromLastCell_tableIsLastBlock_isNoOp() {
         let v = canvas()   // table is the only block
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = cellB.globalStart + 1; v.head = v.anchor
+        v.setSelectionForTesting(anchor: cellB.globalStart + 1, head: cellB.globalStart + 1)
         let before = v.head
         v.moveToCell(forward: true)
         XCTAssertEqual(v.head, before, "no block after the table → no-op")
@@ -82,7 +82,7 @@ final class CanvasTableTabTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 340, height: 500); v.layoutIfNeeded()
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
         let imageBox = v.boxes.first { $0 is MediaBlockBox }!
-        v.anchor = cellB.globalStart + 1; v.head = v.anchor
+        v.setSelectionForTesting(anchor: cellB.globalStart + 1, head: cellB.globalStart + 1)
         v.moveToCell(forward: true)
         XCTAssertEqual(v.head, imageBox.nodeStart, "Tab exits to the gap before the image after the table")
     }
@@ -99,7 +99,7 @@ final class CanvasTableTabTests: XCTestCase {
         v.frame = CGRect(x: 0, y: 0, width: 340, height: 600); v.layoutIfNeeded()
         let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
         let cellC = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("cp")) }!   // table 2's (0,0)
-        v.anchor = cellB.globalStart + 1; v.head = v.anchor
+        v.setSelectionForTesting(anchor: cellB.globalStart + 1, head: cellB.globalStart + 1)
         v.moveToCell(forward: true)
         XCTAssertEqual(v.head, cellC.globalStart, "Tab exits to the first cell of the following table")
     }

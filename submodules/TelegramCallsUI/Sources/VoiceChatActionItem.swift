@@ -40,6 +40,10 @@ public enum VoiceChatActionItemIcon : Equatable {
 }
 
 class VoiceChatActionItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let presentationData: ItemListPresentationData
     let title: String
     let icon: VoiceChatActionItemIcon
@@ -52,10 +56,10 @@ class VoiceChatActionItem: ListViewItem {
         self.action = action
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = VoiceChatActionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, previousItem == nil || previousItem is VoiceChatTilesGridItem, nextItem == nil)
+            let (layout, apply) = node.asyncLayout()(self, params, neighbors.previous == nil || neighbors.previous?.base(HeaderNeighborFacet.self)?.headerFamily == .voiceChatTilesGrid, neighbors.next == nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -68,13 +72,13 @@ class VoiceChatActionItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? VoiceChatActionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, previousItem == nil || previousItem is VoiceChatTilesGridItem, nextItem == nil)
+                    let (layout, apply) = makeLayout(self, params, neighbors.previous == nil || neighbors.previous?.base(HeaderNeighborFacet.self)?.headerFamily == .voiceChatTilesGrid, neighbors.next == nil)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -155,7 +159,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
-        return { item, params, first, last in
+        return { [weak self] item, params, first, last in
             var updatedTheme: PresentationTheme?
             var updatedContent = false
             

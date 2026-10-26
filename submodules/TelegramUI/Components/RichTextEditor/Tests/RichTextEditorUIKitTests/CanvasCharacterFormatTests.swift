@@ -39,7 +39,7 @@ final class CanvasCharacterFormatTests: XCTestCase {
     /// Select [globalStart+lo, globalStart+hi) within the leaf region for paragraph `id`.
     func selectParagraph(_ v: DocumentCanvasView, _ id: String, _ lo: Int, _ hi: Int) {
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID(id)) }!
-        v.anchor = r.globalStart + lo; v.head = r.globalStart + hi
+        v.setSelectionForTesting(anchor: r.globalStart + lo, head: r.globalStart + hi)
     }
 
     func test_toggleBold_appliesToSelectionOnly() {
@@ -60,7 +60,7 @@ final class CanvasCharacterFormatTests: XCTestCase {
         let v = canvas()
         let h = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("h")) }!
         let w = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("w")) }!
-        v.anchor = h.globalStart + 2; v.head = w.globalStart + 3   // "llo" + "Wor"
+        v.setSelectionForTesting(anchor: h.globalStart + 2, head: w.globalStart + 3)   // "llo" + "Wor"
         v.toggleBold()
         XCTAssertEqual(text(v, "h") { $0.bold }, "llo")
         XCTAssertEqual(text(v, "w") { $0.bold }, "Wor")
@@ -69,7 +69,7 @@ final class CanvasCharacterFormatTests: XCTestCase {
         let v = canvas()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let b = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = a.globalStart + 1; v.head = b.globalStart + 3   // "lpha" + "Bet"
+        v.setSelectionForTesting(anchor: a.globalStart + 1, head: b.globalStart + 3)   // "lpha" + "Bet"
         v.toggleBold()
         // Both cells are in the header row (row 0), whose bold is render-only and stripped from the
         // model on extraction (markdown-clean invariant) — so neither persists user bold.
@@ -83,7 +83,7 @@ final class CanvasCharacterFormatTests: XCTestCase {
                    Row(id: BlockID("r1"), cells: [cell("c", "Ada"), cell("d", "Eng")])]))], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
         let c = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("cp")) }!
-        v.anchor = c.globalStart; v.head = c.globalStart + 3       // "Ada" in a body cell
+        v.setSelectionForTesting(anchor: c.globalStart, head: c.globalStart + 3)   // "Ada" in a body cell
         v.toggleBold()
         // Body rows have no render-only bold, so user bold persists in the model.
         XCTAssertEqual(cellRuns(v, 1, 0).filter { $0.attributes.bold }.map { $0.text }.joined(), "Ada")
@@ -142,7 +142,7 @@ final class CanvasCharacterFormatTests: XCTestCase {
     func test_toggleBold_appliesToSelectedRow() {
         let (v, t) = tableCanvas()
         let start = t.cellTextStart(row: 1, column: 0)!
-        v.anchor = start; v.head = start          // caret in the table so a row can be selected
+        v.setSelectionForTesting(anchor: start, head: start)   // caret in the table so a row can be selected
         v.selectTableRow(1)
         XCTAssertNotNil(v.tableSelection)
         v.toggleBold()                            // no text selection — drives off the row selection
@@ -153,7 +153,7 @@ final class CanvasCharacterFormatTests: XCTestCase {
     func test_toggleItalic_appliesToSelectedColumn() {
         let (v, t) = tableCanvas()
         let start = t.cellTextStart(row: 0, column: 1)!
-        v.anchor = start; v.head = start
+        v.setSelectionForTesting(anchor: start, head: start)
         v.selectTableColumn(1)
         XCTAssertNotNil(v.tableSelection)
         v.toggleItalic()                          // applies to every cell in column 1 (header + body)

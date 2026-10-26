@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 
@@ -17,7 +17,7 @@ public enum JoinChannelResult {
     case webView(JoinChatWebView)
 }
 
-func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> Signal<JoinChannelResult, JoinChannelError> {
+func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
     return account.postbox.loadedPeerWithId(peerId)
     |> take(1)
     |> castError(JoinChannelError.self)
@@ -26,7 +26,13 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
         if let hash = hash {
             request = account.network.request(Api.functions.messages.importChatInvite(hash: hash))
         } else if let inputChannel = apiInputChannel(peer) {
+#if TELEGRAM_NEWS_FEED_API
+            request = account.network.request(Api.functions.channels.joinChannel(flags: forNews ? (1 << 0) : 0, channel: inputChannel))
+#else
+            // The feed API is parked (layer 232): there is no News-only join; with News hidden nothing asks for one.
+            assert(!forNews, "a News-only join while the feed API is parked would be a full join")
             request = account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
+#endif
         } else {
             request = .fail(.init())
         }
@@ -62,6 +68,22 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
                 |> switchToLatest
             }
 
+#if TELEGRAM_NEWS_FEED_API
+            if forNews {
+                // The client owns `in_news` for a while: it is stored before success is reported, and server channel
+                // objects keep it (ChannelInNewsLocalChanges), the ones in these updates and in responses to requests
+                // sent before the join alike. A News-only subscription may not be reported as membership, so the
+                // participant fetch below could fail a join that succeeded.
+                return account.postbox.transaction { transaction -> Void in
+                    _internal_storeLocalInNews(transaction: transaction, accountPeerId: account.peerId, channelId: peerId, isInNews: true)
+                }
+                |> castError(JoinChannelError.self)
+                |> map { _ -> JoinChannelResult in
+                    account.stateManager.addUpdates(updates)
+                    return .joined(nil)
+                }
+            }
+#endif
             account.stateManager.addUpdates(updates)
             if hash == nil {
                 let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId, forceUpdate: true).startStandalone()

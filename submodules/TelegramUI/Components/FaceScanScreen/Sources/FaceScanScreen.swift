@@ -432,7 +432,11 @@ final class FaceScanScreenComponent: Component {
             let widthRadius = ceil(radius * 1.05)
             let heightRadius = widthRadius //radius //floor(widthRadius * 1.17778)
             
-            let center = CGPoint(x: availableSize.width / 2, y: environment.statusBarHeight + 10.0 + widthRadius * 1.3)
+            // Centred in the band between the side insets, beside iPhone Duo's side strip clear of its status corner (the
+            // screen's centre when the insets are equal). The camera preview moves with it, so the face target stays in
+            // the cutout.
+            let bandCenterX = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
+            let center = CGPoint(x: bandCenterX, y: environment.statusBarHeight + 10.0 + widthRadius * 1.3)
             
             var previewScale = 0.85
             if self.processState == .tracking || self.processState == .readyToStart || self.processState == .completed || self.transitioningToViewFinder {
@@ -447,11 +451,11 @@ final class FaceScanScreenComponent: Component {
             transition.setShapeLayerPath(layer: self.cutoutLayer, path: path)
             
             self.previewLayer.bounds = CGRect(origin: .zero, size: availableSize)
-            self.previewLayer.position = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0 - 200)
+            self.previewLayer.position = CGPoint(x: bandCenterX, y: availableSize.height / 2.0 - 200)
             transition.setTransform(layer: self.previewLayer, transform: CATransform3DMakeScale(previewScale, previewScale, 1.0))
             
             let frameViewSize = CGSize(width: 330.0, height: 330.0)
-            let frameViewFrame = CGRect(x: (availableSize.width - frameViewSize.width) / 2.0, y: center.y - frameViewSize.height * 0.5, width: frameViewSize.width, height: frameViewSize.height)
+            let frameViewFrame = CGRect(x: bandCenterX - frameViewSize.width / 2.0, y: center.y - frameViewSize.height * 0.5, width: frameViewSize.width, height: frameViewSize.height)
             self.frameView.frame = frameViewFrame
             self.frameView.update(size: frameViewFrame.size)
             
@@ -489,7 +493,7 @@ final class FaceScanScreenComponent: Component {
                 environment: {},
                 containerSize: availableSize
             )
-            let instructionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - instructionSize.width) / 2.0), y: 484.0), size: instructionSize)
+            let instructionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - instructionSize.width / 2.0), y: 484.0), size: instructionSize)
             if let instructionView = self.instruction.view {
                 if instructionView.superview == nil {
                     self.addSubview(instructionView)
@@ -518,7 +522,7 @@ final class FaceScanScreenComponent: Component {
                 environment: {},
                 containerSize: availableSize
             )
-            let cancelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - cancelSize.width) / 2.0), y: availableSize.height - cancelSize.height - environment.safeInsets.bottom - 22.0), size: cancelSize)
+            let cancelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - cancelSize.width / 2.0), y: availableSize.height - cancelSize.height - environment.safeInsets.bottom - 22.0), size: cancelSize)
             if let cancelView = self.cancel.view {
                 if cancelView.superview == nil {
                     self.addSubview(cancelView)

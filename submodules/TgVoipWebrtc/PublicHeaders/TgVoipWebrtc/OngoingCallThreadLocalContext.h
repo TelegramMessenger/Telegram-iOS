@@ -57,9 +57,24 @@
 
 + (void)setupAudioSession;
 
+/// Server killswitch `ios_killswitch_disable_call_audio_device_fixes`. When enabled, devices created
+/// afterwards run the pre-2026-09-05 code paths: a one-shot start that neither checks its results nor
+/// retries, unconditional forwarding of every audio-session state value to RTCAudioSession, and
+/// RTCAudioSession allowed to deactivate the AVAudioSession after an interruption. Off by default.
++ (void)setLegacyBehaviorEnabled:(bool)enabled;
++ (bool)legacyBehaviorEnabled;
+
+/// Called on the WebRTC worker thread after every attempt to start the real audio unit. `started`
+/// is false while attempts fail (`failure` names the failed step) and true once the device runs,
+/// with `failedAttempts` counting the failures that preceded it.
+@property (copy, nullable) void (^startResultHandler)(bool started, NSString * _Nullable failure, int failedAttempts);
+
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
 
 - (void)setTone:(CallAudioTone * _Nullable)tone;
+
+/// Stops the real device for good and ignores every later activation change.
+- (void)stop;
 
 @end
 
@@ -266,6 +281,11 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 + (int32_t)maxLayer;
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference;
 
+/// Updates the shared RTCAudioSessionConfiguration only, leaving the live AVAudioSession alone.
+/// Callers that have not yet taken ownership of the audio session must use this rather than
+/// -setupAudioSession, which also applies the configuration and would stomp whichever holder is
+/// currently active.
++ (void)setupSharedAudioSessionConfiguration;
 + (void)setupAudioSession;
 
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc, OngoingCallRemoteAudioStateWebrtc, OngoingCallRemoteBatteryLevelWebrtc, float);

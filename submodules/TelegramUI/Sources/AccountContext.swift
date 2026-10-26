@@ -1,7 +1,9 @@
+import PasscodeCore
+import PasscodeUI
+import LocalAuthentication
 import Foundation
 import SwiftSignalKit
 import UIKit
-import Postbox
 import TelegramCore
 import Display
 import DeviceAccess
@@ -23,7 +25,12 @@ import MultiAnimationRenderer
 import DCTAnimationCacheImpl
 import DCTMultiAnimationRendererImpl
 import AppBundle
+import LottieSettings
 import DirectMediaImageCache
+import WalletContext
+import WalletConnectScreen
+import AlertUI
+import MetalEngine
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -40,7 +47,7 @@ private final class DeviceSpecificContactImportContext {
 private final class DeviceSpecificContactImportContexts {
     private let queue: Queue
     
-    private var contexts: [PeerId: DeviceSpecificContactImportContext] = [:]
+    private var contexts: [EnginePeer.Id: DeviceSpecificContactImportContext] = [:]
     
     init(queue: Queue) {
         self.queue = queue
@@ -50,8 +57,8 @@ private final class DeviceSpecificContactImportContexts {
         assert(self.queue.isCurrent())
     }
     
-    func update(account: Account, deviceContactDataManager: DeviceContactDataManager, references: [PeerId: DeviceContactBasicDataWithReference]) {
-        var validIds = Set<PeerId>()
+    func update(account: Account, deviceContactDataManager: DeviceContactDataManager, references: [EnginePeer.Id: DeviceContactBasicDataWithReference]) {
+        var validIds = Set<EnginePeer.Id>()
         for (peerId, reference) in references {
             validIds.insert(peerId)
             
@@ -97,7 +104,7 @@ private final class DeviceSpecificContactImportContexts {
             }
         }
         
-        var removeIds: [PeerId] = []
+        var removeIds: [EnginePeer.Id] = []
         for peerId in self.contexts.keys {
             if !validIds.contains(peerId) {
                 removeIds.append(peerId)
@@ -130,6 +137,19 @@ public final class AccountContextImpl: AccountContext {
     public let inAppPurchaseManager: InAppPurchaseManager?
     public let starsContext: StarsContext?
     public let tonContext: StarsContext?
+    public let walletContext: WalletContext?
+    private let walletTonConnectDisposable = MetaDisposable()
+    private let walletTonConnectDecisionDisposable = MetaDisposable()
+    private var walletTonConnectState: WalletContext.TonConnectState?
+    private var walletTonConnectController: ViewController?
+    private var walletTonConnectPresentationId: String?
+    private var walletTonConnectPresentationToken: UUID?
+    private var walletTonConnectDismissedId: String?
+    private var walletTonConnectCompletion: ((Result<Void, WalletContext.WalletError>) -> Void)?
+    private var walletTonConnectDiagnosticId: UUID?
+    private var walletTonConnectDiagnosticController: ViewController?
+
+    public let twoStepAuthData = Promise<TwoStepAuthData?>(nil)
     public let giftAuctionsManager: GiftAuctionsManager?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
@@ -148,6 +168,14 @@ public final class AccountContextImpl: AccountContext {
     
     public var currentAppConfiguration: Atomic<AppConfiguration>
     private let _appConfiguration = Promise<AppConfiguration>()
+
+    /// Resolved once and refreshed from the two subscriptions that feed it,
+    /// rather than recomputed per read: this is consulted on every animated
+    /// sticker and on every LottieComponent construction, and resolving it
+    /// copies the whole ExperimentalUISettings struct (retaining its string and
+    /// array fields) and hashes a dictionary key — far too much work to repeat
+    /// per playback.
+    private let cachedLottieRenderingSettings: Atomic<LottieRenderingSettings>
     public var appConfiguration: Signal<AppConfiguration, NoError> {
         return self._appConfiguration.get()
     }
@@ -179,6 +207,20 @@ public final class AccountContextImpl: AccountContext {
     private let animatedEmojiStickersPromise = Promise<[String: [StickerPackItem]]>()
     public var animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> {
         return self.animatedEmojiStickersPromise.get()
+    }
+
+    private var premiumGiftStickersDisposable: Disposable?
+    public private(set) var premiumGiftStickersValue: [Int32: StickerPackItem] = [:]
+    private let premiumGiftStickersPromise = Promise<[Int32: StickerPackItem]>()
+    public var premiumGiftStickers: Signal<[Int32: StickerPackItem], NoError> {
+        return self.premiumGiftStickersPromise.get()
+    }
+
+    private var tonGiftStickersDisposable: Disposable?
+    public private(set) var tonGiftStickersValue: [Int32: StickerPackItem] = [:]
+    private let tonGiftStickersPromise = Promise<[Int32: StickerPackItem]>()
+    public var tonGiftStickers: Signal<[Int32: StickerPackItem], NoError> {
+        return self.tonGiftStickersPromise.get()
     }
     
     private var additionalAnimatedEmojiStickersPromise: Promise<[String: [Int: StickerPackItem]]>?
@@ -309,6 +351,29 @@ public final class AccountContextImpl: AccountContext {
             self.inAppPurchaseManager = InAppPurchaseManager(engine: .authorized(self.engine))
             self.starsContext = self.engine.payments.peerStarsContext()
             self.tonContext = self.engine.payments.peerTonContext()
+            let accountIsCurrent = sharedContext.activeAccountContexts
+            |> map { primary, _, _ in
+                return primary?.account.id == account.id
+            }
+            |> distinctUntilChanged
+            let networkAvailable = account.networkState
+            |> map { state -> Bool in
+                if case .waitingForNetwork = state {
+                    return false
+                } else {
+                    return true
+                }
+            }
+            |> distinctUntilChanged
+            let environment = account.testingEnvironment ? "test" : "production"
+            self.walletContext = WalletContext(
+                engine: self.engine,
+                storageNamespace: "telegram.\(environment).\(UInt64(bitPattern: account.peerId.toInt64()))",
+                applicationInForeground: sharedContext.applicationBindings.applicationInForeground,
+                accountIsCurrent: accountIsCurrent,
+                networkAvailable: networkAvailable,
+                applicationIsPasscodeLocked: sharedContext.appLockContext.isPasscodeLocked
+            )
             self.giftAuctionsManager = GiftAuctionsManager(account: account)
         } else {
             self.prefetchManager = nil
@@ -317,6 +382,7 @@ public final class AccountContextImpl: AccountContext {
             self.inAppPurchaseManager = nil
             self.starsContext = nil
             self.tonContext = nil
+            self.walletContext = nil
             self.giftAuctionsManager = nil
         }
         
@@ -326,8 +392,8 @@ public final class AccountContextImpl: AccountContext {
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
         
         let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
-        self.animationCache = DCTAnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
+        self.animationCache = DCTAnimationCacheImpl(basePath: self.engine.resources.mediaBasePath + "/animation-cache", allocateTempFile: {
+            return EngineTempBox.shared.tempFile(fileName: "file").path
         }, updateStorageStats: { path, size in
             if let pathData = path.data(using: .utf8) {
                 cacheStorageBox.update(id: pathData, size: size)
@@ -362,12 +428,26 @@ public final class AccountContextImpl: AccountContext {
         
         let updatedAppConfiguration = getAppConfiguration(engine: self.engine)
         self.currentAppConfiguration = Atomic(value: appConfiguration)
+        self.cachedLottieRenderingSettings = Atomic(value: AccountContextImpl.resolveLottieRenderingSettings(
+            appConfiguration: appConfiguration,
+            experimentalSettings: sharedContext.immediateExperimentalUISettings
+        ))
         self._appConfiguration.set(.single(appConfiguration) |> then(updatedAppConfiguration))
                 
         let currentAppConfiguration = self.currentAppConfiguration
+        let cachedLottieRenderingSettings = self.cachedLottieRenderingSettings
+        let lottieSharedContext = sharedContext
         self.appConfigurationDisposable = (self._appConfiguration.get()
         |> deliverOnMainQueue).start(next: { value in
             let _ = currentAppConfiguration.swap(value)
+            let _ = cachedLottieRenderingSettings.swap(AccountContextImpl.resolveLottieRenderingSettings(
+                appConfiguration: value,
+                experimentalSettings: lottieSharedContext.immediateExperimentalUISettings
+            ))
+            
+            // Switches off the on-disk archive of compiled Metal pipelines (now, and on later launches until the key
+            // is removed); pipelines are then compiled on first use as before.
+            MetalEngine.shared.pipelineCache.setArchiveDisabled(value.data?["ios_killswitch_disable_metal_pipeline_cache"] != nil)
             
             guard let data = appConfiguration.data else {
                 return
@@ -380,7 +460,7 @@ public final class AccountContextImpl: AccountContext {
             if let url = data["ios_update_url"] as? String, !url.isEmpty {
                 let _ = (sharedContext.accountManager.transaction { transaction -> Void in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.updateSettings, { _ in
-                        return PreferencesEntry(UpdateSettings(url: url))
+                        return EnginePreferencesEntry(UpdateSettings(url: url))
                     })
                 }).start()
             }
@@ -442,6 +522,62 @@ public final class AccountContextImpl: AccountContext {
             }
             strongSelf.animatedEmojiStickersValue = stickers
             strongSelf.animatedEmojiStickersPromise.set(.single(stickers))
+        })
+
+        self.premiumGiftStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .premiumGifts, forceActualized: false)
+        |> map { premiumGifts -> [Int32: StickerPackItem] in
+            let durations: [Int32] = [1, 3, 6, 12, 24]
+            var premiumGiftStickers: [Int32: StickerPackItem] = [:]
+            if case let .result(_, items, _) = premiumGifts {
+                for item in items {
+                    var displayText: String?
+                    for attribute in item.file._parse().attributes {
+                        if case let .Sticker(value, _, _) = attribute {
+                            displayText = value
+                            break
+                        }
+                    }
+                    if let value = displayText?.unicodeScalars.first?.value, value >= 49 && value <= 53 {
+                        premiumGiftStickers[durations[Int(value - 49)]] = item
+                    }
+                }
+            }
+            return premiumGiftStickers
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] stickers in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.premiumGiftStickersValue = stickers
+            strongSelf.premiumGiftStickersPromise.set(.single(stickers))
+        })
+
+        self.tonGiftStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .tonGifts, forceActualized: false)
+        |> map { tonGifts -> [Int32: StickerPackItem] in
+            let dividers: [Int32] = [0, 10, 50]
+            var tonGiftStickers: [Int32: StickerPackItem] = [:]
+            if case let .result(_, items, _) = tonGifts {
+                for item in items {
+                    var displayText: String?
+                    for attribute in item.file._parse().attributes {
+                        if case let .Sticker(value, _, _) = attribute {
+                            displayText = value
+                            break
+                        }
+                    }
+                    if let value = displayText?.unicodeScalars.first?.value, value >= 49 && value <= 51 {
+                        tonGiftStickers[dividers[Int(value - 49)]] = item
+                    }
+                }
+            }
+            return tonGiftStickers
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] stickers in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.tonGiftStickersValue = stickers
+            strongSelf.tonGiftStickersPromise.set(.single(stickers))
         })
         
         self.userLimitsConfigurationDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
@@ -536,10 +672,64 @@ public final class AccountContextImpl: AccountContext {
                 return
             }
             (self.animationRenderer as? DCTMultiAnimationRendererImpl)?.useYuvA = settings.compressedEmojiCache
+
+            let _ = self.cachedLottieRenderingSettings.swap(AccountContextImpl.resolveLottieRenderingSettings(
+                appConfiguration: self.currentAppConfiguration.with { $0 },
+                experimentalSettings: settings
+            ))
         })
+
+        self.twoStepAuthData.set(
+            .single(nil)
+            |> then(
+                self.engine.auth.twoStepAuthData()
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
+                    return .single(nil)
+                }
+            )
+        )
+
+        if let walletContext = self.walletContext {
+            self.account.walletTransferTasksRunning.set(walletContext.hasTransferBackgroundTasks)
+            self.walletTonConnectDisposable.set((walletContext.tonConnectState
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                self?.updateWalletTonConnectPresentation(state)
+            }))
+            walletContext.setAuthorizationPresenter { [weak self] request in
+                guard let self else {
+                    throw PasscodeError.cancelled
+                }
+                if request.reason == "TON Connect" {
+                    let canPresent = await MainActor.run {
+                        WalletConfiguration.with(appConfiguration: self.currentAppConfiguration.with { $0 }).isAvailable
+                            || self.walletTonConnectPresentationId != nil
+                            || self.walletTonConnectState?.active?.status == .processing
+                    }
+                    guard canPresent else {
+                        throw PasscodeError.cancelled
+                    }
+                }
+                let settings = try walletProtectionSettings()
+                let authenticateBiometrics: ((LAContext) throws -> PasscodeSession)?
+                if settings.enabled && settings.biometricsEnabled {
+                    authenticateBiometrics = { context in
+                        try authenticateWalletBiometrics(namespace: request.namespace, lifetime: request.lifetime, context: context)
+                    }
+                } else {
+                    authenticateBiometrics = nil
+                }
+                return try await requestPasscodeAuthentication(context: self, scope: .resource(namespace: request.namespace), lifetime: request.lifetime, biometricReason: self.sharedContext.currentPresentationData.with { $0 }.strings.Wallet_AuthenticationReason, authenticateBiometrics: authenticateBiometrics)
+            }
+        }
     }
-    
+
     deinit {
+        if self.walletContext != nil {
+            self.account.walletTransferTasksRunning.set(.single(false))
+        }
+        self.walletTonConnectDisposable.dispose()
+        self.walletTonConnectDecisionDisposable.dispose()
         self.limitsConfigurationDisposable?.dispose()
         self.managedAppSpecificContactsDisposable?.dispose()
         self.contentSettingsDisposable?.dispose()
@@ -547,6 +737,8 @@ public final class AccountContextImpl: AccountContext {
         self.countriesConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.animatedEmojiStickersDisposable?.dispose()
+        self.premiumGiftStickersDisposable?.dispose()
+        self.tonGiftStickersDisposable?.dispose()
         self.userLimitsConfigurationDisposable?.dispose()
         self.peerNameColorsConfigurationDisposable?.dispose()
         self.isFrozenDisposable?.dispose()
@@ -574,7 +766,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput {
+    public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> EngineChatLocationInput {
         switch location {
         case let .peer(peerId):
             return .peer(peerId: peerId, threadId: nil)
@@ -590,16 +782,16 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError> {
+    public func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<EngineMessage.Id?, NoError> {
         switch location {
         case .peer:
             return .single(nil)
         case let .replyThread(data):
             if data.isForumPost, let peerId = location.peerId {
                 return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.ThreadInfo(peerId: data.peerId, threadId: data.threadId))
-                |> map { threadData -> MessageId? in
+                |> map { threadData -> EngineMessage.Id? in
                     if let threadData {
-                        return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadData.maxOutgoingReadId)
+                        return EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadData.maxOutgoingReadId)
                     } else {
                         return nil
                     }
@@ -640,7 +832,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex) {
+    public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: EngineMessage.Index) {
         switch location {
         case .peer:
             let _ = self.engine.messages.applyMaxReadIndexInteractively(index: messageIndex).start()
@@ -652,11 +844,11 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func scheduleGroupCall(peerId: PeerId, parentController: ViewController) {
+    public func scheduleGroupCall(peerId: EnginePeer.Id, parentController: ViewController) {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true, parentController: parentController)
     }
     
-    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {
+    public func joinGroupCall(peerId: EnginePeer.Id, invite: String?, requestJoinAsPeerId: ((@escaping (EnginePeer.Id?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {
         let callResult = self.sharedContext.callManager?.joinGroupCall(context: self, peerId: peerId, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentCallType) = callResult {
             if case let .peer(currentPeerId) = currentCallType, currentPeerId == peerId {
@@ -855,7 +1047,7 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
-    public func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void) {
+    public func requestCall(peerId: EnginePeer.Id, isVideo: Bool, completion: @escaping () -> Void) {
         guard let callResult = self.sharedContext.callManager?.requestCall(context: self, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false) else {
             return
         }
@@ -930,6 +1122,24 @@ public final class AccountContextImpl: AccountContext {
             return value
         }
         return nil
+    }
+
+    public var lottieRenderingSettings: LottieRenderingSettings {
+        return self.cachedLottieRenderingSettings.with { $0 }
+    }
+
+    fileprivate static func resolveLottieRenderingSettings(appConfiguration: AppConfiguration, experimentalSettings: ExperimentalUISettings) -> LottieRenderingSettings {
+        // Default on; the server can roll it back and outranks the debug switch,
+        // because the point of a killswitch is that setting it guarantees no
+        // tlottie in the field. The device-local opt-out is the switch itself.
+        var backend: LottieBackend = .tlottie
+        if experimentalSettings.forceRLottieBackend {
+            backend = .rlottie
+        }
+        if let data = appConfiguration.data, data["ios_killswitch_disable_tlottie"] != nil {
+            backend = .rlottie
+        }
+        return LottieRenderingSettings(backend: backend)
     }
 }
 
@@ -1019,4 +1229,171 @@ private func loadCountryCodes() -> [Country] {
     }
         
     return result
+}
+
+private extension AccountContextImpl {
+    func dismissWalletTonConnectController() {
+        let controller = self.walletTonConnectController
+        self.walletTonConnectController = nil
+        self.walletTonConnectPresentationId = nil
+        self.walletTonConnectPresentationToken = nil
+        self.walletTonConnectCompletion = nil
+        self.walletTonConnectDecisionDisposable.set(nil)
+        if let controller = controller as? WalletConnectScreen { controller.tonConnectClosed = nil }
+        if let controller = controller as? WalletTransferScreen { controller.tonConnectClosed = nil }
+        controller?.dismiss(animated: false)
+    }
+
+    func updateWalletTonConnectPresentation(_ state: WalletContext.TonConnectState) {
+        let isWalletAvailable = WalletConfiguration.with(appConfiguration: self.currentAppConfiguration.with { $0 }).isAvailable
+        self.walletTonConnectState = state
+        guard state.presentationEnabled else {
+            self.dismissWalletTonConnectController()
+            self.walletTonConnectDiagnosticController?.dismiss()
+            self.walletTonConnectDiagnosticController = nil
+            self.walletTonConnectDiagnosticId = nil
+            return
+        }
+        if self.walletTonConnectDiagnosticId != state.diagnostic?.id {
+            self.walletTonConnectDiagnosticController?.dismiss()
+            self.walletTonConnectDiagnosticController = nil
+            self.walletTonConnectDiagnosticId = nil
+        }
+        if isWalletAvailable, let diagnostic = state.diagnostic, self.walletTonConnectDiagnosticId != diagnostic.id {
+            self.walletTonConnectDiagnosticId = diagnostic.id
+            let strings = self.sharedContext.currentPresentationData.with { $0 }.strings
+            let actions: [TextAlertAction]
+            if let requestId = diagnostic.requestId, let walletContext = self.walletContext {
+                actions = [
+                    TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {
+                        walletContext.closeTonConnectPresentation(id: requestId)
+                    }),
+                    TextAlertAction(type: .defaultAction, title: "Retry", action: {
+                        walletContext.retryTonConnectRequest(id: requestId)
+                    })
+                ]
+            } else {
+                actions = [TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]
+            }
+            let controller = textAlertController(context: self, title: nil, text: diagnostic.failure.message,
+                actions: actions, dismissOnOutsideTap: diagnostic.requestId == nil)
+            self.walletTonConnectDiagnosticController = controller
+            self.sharedContext.presentGlobalController(controller, nil)
+        }
+        guard let active = state.active, let walletContext = self.walletContext else {
+            self.dismissWalletTonConnectController()
+            return
+        }
+        if self.walletTonConnectPresentationId != nil && self.walletTonConnectPresentationId != active.id {
+            self.dismissWalletTonConnectController()
+        }
+        guard isWalletAvailable || self.walletTonConnectPresentationId == active.id else {
+            return
+        }
+        switch active.status {
+        case .invalidated:
+            self.dismissWalletTonConnectController()
+            walletContext.closeTonConnectPresentation(id: active.id)
+            return
+        case let .completed(decision):
+            if self.walletTonConnectCompletion != nil { return }
+            self.dismissWalletTonConnectController()
+            walletContext.closeTonConnectPresentation(id: active.id)
+            self.returnFromWalletTonConnect(decision.returnTarget)
+            return
+        case .ready, .processing:
+            break
+        }
+        if self.walletTonConnectDismissedId == active.id { return }
+        if self.walletTonConnectPresentationId == active.id, let controller = self.walletTonConnectController {
+            if let controller = controller as? WalletConnectScreen {
+                switch active.content {
+                case let .connect(request): controller.updateRequest(request)
+                default: break
+                }
+            }
+            controller.view.isUserInteractionEnabled = active.status != .processing
+            return
+        }
+        guard let rootController = self.sharedContext.mainWindow?.viewController as? NavigationController else {
+            return
+        }
+        let id = active.id
+        let token = UUID()
+        self.walletTonConnectPresentationId = id
+        self.walletTonConnectPresentationToken = token
+        self.walletTonConnectDismissedId = nil
+        let cancelled: () -> Void = { [weak self] in
+            guard let self, self.walletTonConnectPresentationToken == token else { return }
+            self.walletTonConnectDismissedId = id
+            self.walletTonConnectController = nil
+            self.walletTonConnectPresentationId = nil
+            self.walletTonConnectPresentationToken = nil
+            self.walletTonConnectCompletion = nil
+            self.walletTonConnectDecisionDisposable.set(nil)
+            walletContext.rejectTonConnectRequest(id: id)
+        }
+        let confirm: (@escaping (Result<Void, WalletContext.WalletError>) -> Void) -> Void = { [weak self] completion in
+            guard let self, self.walletTonConnectPresentationToken == token, self.walletTonConnectCompletion == nil else { return }
+            self.walletTonConnectCompletion = completion
+            self.walletTonConnectDecisionDisposable.set((walletContext.decideTonConnectRequest(id: id, approve: true)
+            |> deliverOnMainQueue).start(next: { [weak self] decision in
+                guard let self, self.walletTonConnectPresentationToken == token else { return }
+                let callback = self.walletTonConnectCompletion
+                self.walletTonConnectCompletion = nil
+                if decision.failure != nil {
+                    self.dismissWalletTonConnectController()
+                    walletContext.closeTonConnectPresentation(id: id)
+                } else {
+                    callback?(.success(()))
+                }
+            }, error: { [weak self] error in
+                guard let self, self.walletTonConnectPresentationToken == token else { return }
+                let callback = self.walletTonConnectCompletion
+                self.walletTonConnectCompletion = nil
+                callback?(.failure(error))
+            }))
+        }
+        let closed: () -> Void = { [weak self] in
+            guard let self, self.walletTonConnectPresentationToken == token else { return }
+            self.walletTonConnectController = nil
+            self.walletTonConnectPresentationId = nil
+            self.walletTonConnectPresentationToken = nil
+            self.walletTonConnectCompletion = nil
+            self.walletTonConnectDecisionDisposable.set(nil)
+            if let current = self.walletTonConnectState?.active, current.id == id,
+               case let .completed(decision) = current.status {
+                walletContext.closeTonConnectPresentation(id: id)
+                self.returnFromWalletTonConnect(decision.returnTarget)
+            }
+        }
+        let controller: ViewController
+        switch active.content {
+        case let .connect(request):
+            let screen = WalletConnectScreen(context: self, walletContext: walletContext, request: request, cancelled: cancelled, connect: confirm)
+            screen.tonConnectClosed = closed
+            controller = screen
+        case let .operation(request):
+            let screen = WalletTransferScreen(context: self, walletContext: walletContext, request: request, cancelled: cancelled, confirm: confirm)
+            screen.tonConnectClosed = closed
+            controller = screen
+        case let .signData(data):
+            let request = WalletContext.TonConnectOperationRequest(id: data.id, applicationName: data.applicationName,
+                domain: data.domain, icon: data.icon, method: .signData, messages: [], feeNanograms: nil,
+                validUntil: nil, relayerWillSubmit: false, needsWalletStateInit: false, warnings: [], actions: [], signData: data)
+            let screen = WalletTransferScreen(context: self, walletContext: walletContext, request: request, cancelled: cancelled, confirm: confirm)
+            screen.tonConnectClosed = closed
+            controller = screen
+        }
+        self.walletTonConnectController = controller
+        controller.view.isUserInteractionEnabled = active.status != .processing
+        rootController.pushViewController(controller)
+    }
+
+    func returnFromWalletTonConnect(_ target: WalletContext.TonConnectReturn) {
+        if case let .url(url) = target {
+            self.sharedContext.openExternalUrl(context: self, urlContext: .external, url: url, forceExternal: true,
+                presentationData: self.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+        }
+    }
 }

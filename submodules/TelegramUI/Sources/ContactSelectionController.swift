@@ -131,7 +131,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             self.presentationData = self.presentationData.withUpdated(theme: self.presentationData.theme.withModalBlocksBackground())
         }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: glass, hideSeparator: glass, style: .glass), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
         self._hasGlassStyle = true
         
@@ -308,11 +308,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        var glass = false
-        if case .glass = self.style {
-            glass = true
-        }
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme, hideBackground: glass, hideSeparator: glass, style: .glass), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), transition: .immediate)
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), transition: .immediate)
         (self.searchContentNode as? NavigationBarSearchContentNode)?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.titleProducer(self.presentationData.strings)
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
@@ -663,6 +659,6 @@ private final class ContactContextReferenceContentSource: ContextReferenceConten
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

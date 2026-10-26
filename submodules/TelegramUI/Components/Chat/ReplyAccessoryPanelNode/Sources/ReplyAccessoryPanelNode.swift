@@ -175,11 +175,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     }
                 } else {
                     let textColor = isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor
-                    let mutablePreviewText = NSMutableAttributedString(attributedString: previewText)
-                    mutablePreviewText.addAttributes([
-                        .font: textFont,
-                        .foregroundColor: textColor
-                    ], range: NSRange(location: 0, length: mutablePreviewText.length))
+                    let mutablePreviewText = styleInstantPagePreview(previewText, font: textFont, italicFont: Font.italic(textFont.pointSize), textColor: textColor)
                     messageText = renderInstantPagePreviewIcons(mutablePreviewText, font: textFont, textColor: textColor)
                 }
                 
@@ -333,7 +329,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 } else {
                     headerString = strongSelf.strings.Chat_ReplyPanel_AccessibilityReplyToMessage
                 }
-                strongSelf.actionArea.accessibilityLabel = "\(headerString).\n\(text)"
+                strongSelf.actionArea.accessibilityLabel = "\(headerString).\n\(instantPagePreviewPlainText(previewText))"
                 
                 if let applyImage = applyImage {
                     applyImage()

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public enum AddressNameValidationStatus: Equatable {
     case checking
@@ -588,8 +588,8 @@ public extension TelegramEngine {
             return _internal_updateGroupSpecificEmojiset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
         }
 
-        public func joinChannel(peerId: PeerId, hash: String?) -> Signal<JoinChannelResult, JoinChannelError> {
-            return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash)
+        public func joinChannel(peerId: PeerId, hash: String?, forNews: Bool = false) -> Signal<JoinChannelResult, JoinChannelError> {
+            return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash, forNews: forNews)
         }
 
         public func removePeerMember(peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
@@ -693,6 +693,10 @@ public extension TelegramEngine {
 
         public func sendBotRequestedPeer(peerId: PeerId, requestId: String, buttonId: Int32, requestedPeerIds: [PeerId]) -> Signal<Void, SendBotRequestedPeerError> {
             return _internal_sendBotRequestedPeer(account: self.account, peerId: peerId, messageId: nil, requestId: requestId, buttonId: buttonId, requestedPeerIds: requestedPeerIds)
+        }
+        
+        public func checkBotUsername(_ username: String) -> Signal<BotUsernameAvailability, NoError> {
+            return _internal_checkBotUsername(account: self.account, username: username)
         }
 
         public func createBot(name: String, username: String, managerPeerId: PeerId, viaDeeplink: Bool) -> Signal<EnginePeer, CreateBotError> {
@@ -1445,6 +1449,30 @@ public extension TelegramEngine {
         
         public func exportContactToken() -> Signal<ExportedContactToken?, NoError> {
             return _internal_exportContactToken(account: self.account)
+        }
+
+        public func getShareTheme(peerId: EnginePeer.Id) -> Signal<TelegramShareTheme?, NoError> {
+            return _internal_getShareTheme(account: self.account, peerId: peerId)
+        }
+
+        public func preloadShareTheme(peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+            return _internal_preloadShareTheme(account: self.account, peerId: peerId)
+        }
+
+        public func setShareTheme(peerId: EnginePeer.Id, theme: TelegramShareThemeUpdate) -> Signal<Never, SetShareThemeError> {
+            return _internal_setShareTheme(account: self.account, peerId: peerId, theme: theme)
+        }
+
+        public func shareThemeBackdrops() -> Signal<[TelegramShareThemeBackdrop], NoError> {
+            return _internal_shareThemeBackdrops(account: self.account)
+        }
+
+        public func exportNoPaidMessagesToken(revoke: Bool, temporary: Bool) -> Signal<ExportedNoPaidMessagesToken?, NoError> {
+            return _internal_exportNoPaidMessagesToken(account: self.account, revoke: revoke, temporary: temporary)
+        }
+
+        public func importNoPaidMessagesToken(peerId: EnginePeer.Id, token: String) -> Signal<EnginePeer, ImportNoPaidMessagesTokenError> {
+            return _internal_importNoPaidMessagesToken(account: self.account, peerId: peerId, token: token)
         }
         
         public func updateChannelMembersHidden(peerId: EnginePeer.Id, value: Bool) -> Signal<Never, NoError> {

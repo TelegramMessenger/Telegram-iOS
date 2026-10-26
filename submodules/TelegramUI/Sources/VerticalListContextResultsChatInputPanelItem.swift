@@ -10,6 +10,10 @@ import PhotoResources
 import StickerResources
 
 final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     fileprivate let engine: TelegramEngine
     fileprivate let theme: PresentationTheme
     fileprivate let result: ChatContextResult
@@ -24,12 +28,12 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
         self.resultSelected = resultSelected
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = VerticalListContextResultsChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom) = (previousItem != nil, nextItem != nil)
+            let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
             let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
@@ -50,13 +54,13 @@ final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? VerticalListContextResultsChatInputPanelItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (top, bottom) = (previousItem != nil, nextItem != nil)
+                    let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
@@ -132,10 +136,10 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         statusDisposable.dispose()
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = item as? VerticalListContextResultsChatInputPanelItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: previousItem != nil, bottom: nextItem != nil)
+            let merged = (top: neighbors.previous != nil, bottom: neighbors.next != nil)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets

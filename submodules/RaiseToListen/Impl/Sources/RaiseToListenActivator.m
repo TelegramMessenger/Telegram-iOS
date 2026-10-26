@@ -80,6 +80,10 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         _deactivate = [deactivate copy];
         
         _enabled = false;
+        // Objective-C zero-initialises this, and 0 is a VALID DeviceProximityBag key belonging to
+        // whichever subscriber registered first. stopCheckingProximity only guards against -1, so
+        // without this the first call on a fresh activator removes someone else's subscriber.
+        _proximityStateIndex = -1;
     }
     return self;
 }

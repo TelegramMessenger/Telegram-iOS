@@ -1,9 +1,9 @@
 import Foundation
+import LottieSettings
 import AVFoundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -121,6 +121,10 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
 
 
 private class ThemeSettingsThemeIconItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let context: AccountContext
     let emoticon: String?
     let emojiFile: TelegramMediaFile?
@@ -147,7 +151,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ThemeSettingsThemeItemIconNode()
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
@@ -164,7 +168,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ThemeSettingsThemeItemIconNode)
             if let nodeValue = node() as? ThemeSettingsThemeItemIconNode {
@@ -385,7 +389,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         super.selected()
         
         if let animatedStickerNode = self.animatedStickerNode {
-            Queue.mainQueue().after(0.1) {
+            Queue.mainQueue().after(0.1) { [animatedStickerNode, weak self] in
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
                     animatedStickerNode.play(firstFrame: false, fromIndex: nil)
@@ -505,7 +509,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }
@@ -572,7 +576,7 @@ public final class ChatQrCodeScreenImpl: ViewController, ChatQrCodeScreen {
     
     public enum Subject {
         case peer(peer: EnginePeer, threadId: Int64?, temporary: Bool)
-        case messages([Message])
+        case messages([EngineMessage])
         
         public var fileName: String {
             switch self {
@@ -1065,14 +1069,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
                         let path = accountManager.mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: CachedPreparedPatternWallpaperRepresentation())
                         if !FileManager.default.fileExists(atPath: path) {
                             let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                                let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
+                                let accountResource = TelegramEngine(account: account).resources.cachedRepresentation(resource: EngineMediaResource(file.file.resource), representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
                                 
-                                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file), reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
+                                let fetchedFullSize = TelegramEngine(account: account).resources.fetch(reference: .media(media: .standalone(media: file.file), resource: file.file.resource), userLocation: .other, userContentType: MediaResourceUserContentType(file: file.file))
                                 let fetchedFullSizeDisposable = fetchedFullSize.start()
                                 let fullSizeDisposable = accountResource.start(next: { next in
-                                    subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
+                                    subscriber.putNext((next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.isComplete))
                                     
-                                    if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
+                                    if next.isComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
                                         accountManager.mediaBox.storeCachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
                                     }
                                 }, error: subscriber.putError, completed: subscriber.putCompletion)
@@ -1197,7 +1201,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
             let themeCrossfadeDuration: Double = 0.3
             let themeCrossfadeDelay: Double = 0.25
             
-            Queue.mainQueue().after(themeCrossfadeDelay) {
+            Queue.mainQueue().after(themeCrossfadeDelay) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.switchThemeIconAnimator = DisplayLinkAnimator(duration: themeCrossfadeDuration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
                     self?.animationNode.setColors(colors: interpolateColors(from: previousIconColors, to: newIconColors, fraction: value))
                 }, completion: { [weak self] in
@@ -1369,7 +1377,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         let offset = self.bounds.size.height - self.contentBackgroundView.frame.minY
         
         if let (layout, _) = self.containerLayout {
-            self.scrollNodeContentNode.cornerRadius = layout.deviceMetrics.screenCornerRadius
+            self.setScrollContentCornerRadii(layout.screenCornerRadii)
         }
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -1378,7 +1386,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         transition.animateView({
             self.bounds = targetBounds
         }, completion: { _ in
-            self.scrollNodeContentNode.cornerRadius = 0.0
+            self.setScrollContentCornerRadii(CornerRadii(uniform: 0.0))
         })
     }
     
@@ -1415,11 +1423,29 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         guard let (layout, _) = self.containerLayout else {
             return
         }
-        self.scrollNodeContentNode.cornerRadius = layout.deviceMetrics.screenCornerRadius
+        self.setScrollContentCornerRadii(layout.screenCornerRadii)
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        self.scrollNodeContentNode.cornerRadius = 0.0
+        self.setScrollContentCornerRadii(CornerRadii(uniform: 0.0))
+    }
+    
+    private var scrollContentUsesCornerRadii = false
+    
+    /// The moving content follows the screen's corners. They differ per corner on iPhone Duo's cover screen (8pt on
+    /// the hinge side, 59pt outside), where the OS has per-corner radii; elsewhere one radius, as before.
+    private func setScrollContentCornerRadii(_ radii: CornerRadii) {
+        if !radii.isUniform, CALayer.cornerRadiiSupported {
+            self.scrollContentUsesCornerRadii = true
+            self.scrollNodeContentNode.layer.setCornerRadii(radii)
+        } else {
+            let radius = max(max(radii.topLeft, radii.topRight), max(radii.bottomLeft, radii.bottomRight))
+            if self.scrollContentUsesCornerRadii {
+                self.scrollContentUsesCornerRadii = false
+                self.scrollNodeContentNode.layer.setCornerRadii(CornerRadii(uniform: radius))
+            }
+            self.scrollNodeContentNode.cornerRadius = radius
+        }
     }
     
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1433,7 +1459,12 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: cleanInsets.bottom, innerDiameter: buttonHeight, sideInset: 30.0)
         let contentHeight = titleHeight + 10.0 + 188.0 + buttonHeight + buttonSpacing + buttonInsets.bottom
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+        if case .iPhoneDuo = layout.deviceMetrics, case .compact = layout.metrics.widthClass {
+            // iPhone Duo's screens are wider than the 440pt cap for compact layouts (466pt folded, 669pt unfolded),
+            // which left the sheet ~20pt from each edge. It spans the screen like the other glass sheets, 6pt in.
+            width = layout.size.width
+        }
         
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight - 6.0), size: CGSize(width: width, height: contentHeight)).insetBy(dx: 6.0, dy: 0.0)
@@ -1446,7 +1477,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
     
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         
-        self.contentBackgroundView.update(size: contentFrame.size, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor, topCornerRadius: 38.0, bottomCornerRadius: layout.deviceMetrics.screenCornerRadius - 2.0, transition: .immediate)
+        self.contentBackgroundView.update(size: contentFrame.size, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor, topCornerRadius: 38.0, bottomCornerRadius: layout.deviceMetrics.screenCornerRadius - 2.0, bottomCornerRadii: layout.screenCornerRadii.sheetBottomCornerRadii(inset: 2.0), transition: .immediate)
         transition.updateFrame(view: self.contentBackgroundView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         
         let barButtonSize = CGSize(width: 44.0, height: 44.0)
@@ -1617,6 +1648,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         self.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + titleHeight + 12.0)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
+        self.contentNode.sideInsets = UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right)
+        if let qrContentNode = self.contentNode as? QrContentNode {
+            if case .iPhoneDuo = layout.deviceMetrics {
+                qrContentNode.fitsCardToAvailableHeight = true
+            } else {
+                qrContentNode.fitsCardToAvailableHeight = false
+            }
+        }
         self.contentNode.updateLayout(size: layout.size, topInset: 44.0, bottomInset: contentHeight, transition: transition)
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
     }
@@ -1633,6 +1672,8 @@ private protocol ContentNode: ASDisplayNode {
     func generateVideo(completion: @escaping (URL) -> Void)
     func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?)
     func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition)
+    /// The side safe insets; content is centered in the band between them.
+    var sideInsets: UIEdgeInsets { get set }
 }
 
 private class QrContentNode: ASDisplayNode, ContentNode {
@@ -1644,6 +1685,9 @@ private class QrContentNode: ASDisplayNode, ContentNode {
     
     fileprivate let containerNode: ASDisplayNode
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
+    var sideInsets: UIEdgeInsets = .zero
+    /// iPhone Duo: scale the card down when it and its avatar do not fit above the sheet (the 678pt folded screen).
+    var fitsCardToAvailableHeight = false
     private let codeBackgroundNode: ASDisplayNode
     private let codeForegroundNode: ASDisplayNode
     private var codeForegroundContentNode: ASDisplayNode?
@@ -1710,7 +1754,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         self.codeMarkersNode = TransformImageNode()
         self.codeIconBackgroundNode = ASImageNode()
         
-        self.codePlaceholderNode = DefaultAnimatedStickerNodeImpl()
+        self.codePlaceholderNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         
         if isStatic {
             let codeStaticIconNode = ASImageNode()
@@ -1720,7 +1764,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = codeStaticIconNode
             self.codeAnimatedIconNode = nil
         } else {
-            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl()
+            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             codeAnimatedIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 120, height: 120, mode: .direct(cachePathPrefix: nil))
             codeAnimatedIconNode.visibility = true
             self.codeAnimatedIconNode = codeAnimatedIconNode
@@ -2021,10 +2065,10 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         let textLength = self.codeTextNode.attributedText?.string.count ?? 0
         
         var topInset = topInset
-        let avatarSize: CGSize
+        var avatarSize: CGSize
         let codeInset: CGFloat
-        let imageSide: CGFloat
-        let fontSize: CGFloat
+        var imageSide: CGFloat
+        var fontSize: CGFloat
         if size.width > 320.0 {
             avatarSize = CGSize(width: 100.0, height: 100.0)
             codeInset = 45.0
@@ -2057,11 +2101,33 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             }
         }
         
+        // Centered in the band between the side safe insets (iPhone Duo's side strip, beside the status
+        // corner); with equal insets this is the full width's center.
+        let bandWidth = size.width - self.sideInsets.left - self.sideInsets.right
+        var codeBackgroundWidth = min(300.0, bandWidth - codeInset * 2.0)
+        var codeBackgroundY = topInset + floor((size.height - bottomInset - floor(codeBackgroundWidth * 1.1)) / 2.0)
+        if self.fitsCardToAvailableHeight {
+            // iPhone Duo's folded screen is 678pt tall: the card with the avatar above it (391pt) is taller than the
+            // space above the sheet (302pt), so the avatar ran off the top and the username went under the sheet. The
+            // card, code, avatar and text scale down together to fit, centred in that space.
+            let margin: CGFloat = 16.0
+            let availableHeight = size.height - bottomInset - margin * 2.0
+            let blockHeight = floor(codeBackgroundWidth * 1.1) + floor(avatarSize.height * 0.7)
+            if blockHeight > availableHeight {
+                let scale = max(0.5, availableHeight / blockHeight)
+                codeBackgroundWidth = floor(codeBackgroundWidth * scale)
+                avatarSize = CGSize(width: floor(avatarSize.width * scale), height: floor(avatarSize.height * scale))
+                imageSide = floor(imageSide * scale)
+                fontSize = floor(fontSize * scale)
+                let scaledBlockHeight = floor(codeBackgroundWidth * 1.1) + floor(avatarSize.height * 0.7)
+                codeBackgroundY = margin + floor((availableHeight - scaledBlockHeight) / 2.0) + floor(avatarSize.height * 0.7)
+            }
+        }
+        
         self.codeTextNode.attributedText = NSAttributedString(string: self.codeTextNode.attributedText?.string ?? "", font: Font.with(size: fontSize, design: .round, weight: .bold, traits: [.monospacedNumbers]), textColor: .black)
         
-        let codeBackgroundWidth = min(300.0, size.width - codeInset * 2.0)
         let codeBackgroundHeight = floor(codeBackgroundWidth * 1.1)
-        let codeBackgroundFrame = CGRect(x: floor((size.width - codeBackgroundWidth) / 2.0), y: topInset + floor((size.height - bottomInset - codeBackgroundHeight) / 2.0), width: codeBackgroundWidth, height: codeBackgroundHeight)
+        let codeBackgroundFrame = CGRect(x: self.sideInsets.left + floor((bandWidth - codeBackgroundWidth) / 2.0), y: codeBackgroundY, width: codeBackgroundWidth, height: codeBackgroundHeight)
         transition.updateFrame(node: self.codeBackgroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeForegroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeMaskNode, frame: CGRect(origin: CGPoint(), size: codeBackgroundFrame.size))
@@ -2096,7 +2162,8 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         let codeCountdownSize = self.codeCountdownNode.updateLayout(size: CGSize(width: codeBackgroundFrame.width - floor(imageFrame.minX * 1.2), height: codeBackgroundFrame.height), animated: true)
         transition.updateFrame(node: self.codeCountdownNode, frame: CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - codeCountdownSize.width) / 2.0), y: imageFrame.maxY + floor((codeBackgroundHeight - imageFrame.maxY - codeCountdownSize.height) / 2.0) - 5.0), size: codeCountdownSize))
         
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarSize.width) / 2.0), y: codeBackgroundFrame.minY - floor(avatarSize.height * 0.7)), size: avatarSize))
+        // Over the card's centre, which is the band's beside iPhone Duo's side strip (the screen's elsewhere).
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: self.sideInsets.left + floorToScreenPixels((bandWidth - avatarSize.width) / 2.0), y: codeBackgroundFrame.minY - floor(avatarSize.height * 0.7)), size: avatarSize))
         
         if let qrCodeSize = self.qrCodeSize {
             let (_, cutoutFrame, _) = qrCodeCutout(size: qrCodeSize, dimensions: imageSize, scale: nil)
@@ -2123,13 +2190,14 @@ private class QrContentNode: ASDisplayNode, ContentNode {
 
 private class MessageContentNode: ASDisplayNode, ContentNode {
     private let context: AccountContext
-    private let messages: [Message]
+    private let messages: [EngineMessage]
     private let isStatic: Bool
     
     private var mediaFrame: CGRect?
     
     fileprivate let containerNode: ASDisplayNode
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
+    var sideInsets: UIEdgeInsets = .zero
     
     private let backgroundNode: ASDisplayNode
     private let backgroundImageNode: ASImageNode
@@ -2174,7 +2242,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         }
     }
     
-    init(context: AccountContext, messages: [Message], isStatic: Bool = false) {
+    init(context: AccountContext, messages: [EngineMessage], isStatic: Bool = false) {
         self.context = context
         self.messages = messages
         self.isStatic = isStatic
@@ -2365,9 +2433,14 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         
         let inset: CGFloat = 24.0
         let contentInset: CGFloat = 16.0
-        
+
+        // The message is laid out in the band between the side safe insets (iPhone Duo's side strip, beside the
+        // status corner), as the QR code is; with equal insets this is the full width.
+        let bandMinX = self.sideInsets.left
+        let bandWidth = size.width - self.sideInsets.left - self.sideInsets.right
+
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        
+
         let messageTheme = theme.chat.message.incoming
         
         let title: String
@@ -2399,14 +2472,14 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         var mediaFrame = CGRect()
         var mediaDuration: Int32 = 0
         if let message = self.messages.first {
-            let mediaFitSize = CGSize(width: size.width - inset * 2.0 - 5.0, height: size.width - inset * 2.0)
+            let mediaFitSize = CGSize(width: bandWidth - inset * 2.0 - 5.0, height: bandWidth - inset * 2.0)
             for media in message.media {
                 if let image = media as? TelegramMediaImage, let representation = largestRepresentationForPhoto(image) {
                     mediaSize = representation.dimensions.cgSize.aspectFitted(mediaFitSize)
                     mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
                     
                     if !wasInitialized {
-                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true, highQuality: true))
+                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message._asMessage()), media: image), synchronousLoad: true, highQuality: true))
                         let imageLayout = self.imageNode.asyncLayout()
                         
                         let arguments = TransformImageArguments(corners: ImageCorners(radius: 0.0), imageSize: mediaSize, boundingSize: mediaSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .black, custom: nil)
@@ -2429,7 +2502,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                                 videoSnapshotView.frame = mediaFrame
                             }
                         } else {
-                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
+                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message._asMessage()), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
                             let videoNode = UniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
                             
                             self.videoStatusDisposable.set((videoNode.status
@@ -2504,7 +2577,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
             
             let attributedText: NSAttributedString
             if let entities = entities {
-                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false, message: message)
+                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false, message: message._asMessage())
             } else if !message.text.isEmpty {
                 attributedText = NSAttributedString(string: message.text, font: textFont, textColor: messageTheme.primaryTextColor)
             } else {
@@ -2513,7 +2586,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
             
             self.textNode.attributedText = attributedText
         }
-        let textSize = self.textNode.updateLayout(CGSize(width: size.width - inset * 2.0 - contentInset * 2.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: bandWidth - inset * 2.0 - contentInset * 2.0, height: size.height))
         let textFrame = CGRect(origin: CGPoint(x: contentInset, y: 55.0 + mediaSize.height + 4.0), size: textSize)
         self.textNode.frame = textFrame
         
@@ -2525,8 +2598,8 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
             contentHeight += textSize.height
         }
         
-        let backgroundSize = CGSize(width: size.width - inset * 2.0, height: contentHeight)
-        let backgroundFrame = CGRect(origin: CGPoint(x: inset, y: max(topInset, floorToScreenPixels((size.height - topInset - bottomInset - backgroundSize.height) / 2.0))), size: backgroundSize)
+        let backgroundSize = CGSize(width: bandWidth - inset * 2.0, height: contentHeight)
+        let backgroundFrame = CGRect(origin: CGPoint(x: bandMinX + inset, y: max(topInset, floorToScreenPixels((size.height - topInset - bottomInset - backgroundSize.height) / 2.0))), size: backgroundSize)
         self.backgroundNode.frame = backgroundFrame
         self.backgroundImageNode.frame = CGRect(x: -5.0, y: 0.0, width: backgroundSize.width + 5.0, height: backgroundSize.height)
         
@@ -2543,7 +2616,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         let linkSize = self.linkTextNode.updateLayout(size)
         
         let linkBackgroundSize = CGSize(width: linkSize.width + 49.0, height: 33.0)
-        let linkBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - linkBackgroundSize.width) / 2.0), y: backgroundFrame.maxY + 10.0), size: linkBackgroundSize)
+        let linkBackgroundFrame = CGRect(origin: CGPoint(x: bandMinX + floorToScreenPixels((bandWidth - linkBackgroundSize.width) / 2.0), y: backgroundFrame.maxY + 10.0), size: linkBackgroundSize)
         self.linkBackgroundNode.frame = linkBackgroundFrame
         self.linkBackgroundDimNode.frame = CGRect(origin: CGPoint(), size: linkBackgroundSize)
         

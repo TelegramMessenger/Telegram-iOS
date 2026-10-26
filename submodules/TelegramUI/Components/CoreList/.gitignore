@@ -1,0 +1,18 @@
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
+
+# Vendored Xcode project. The root telegram-ios .gitignore ignores *.xcodeproj, but this one is
+# committed so the CoreList demo + tests can be built and run on the K2 simulator directly from
+# within telegram-ios (this checkout is the source of truth; ~/Documents/CoreListDemo is a stale
+# backup). Same negation trick as Telegram/WatchApp's !tgwatch.xcodeproj. The project uses
+# PBXFileSystemSynchronizedRootGroup, so it tracks the CoreListDemo/ + CoreListDemoTests/ sources on
+# disk automatically. Per-user state inside it stays ignored via the xcuserdata/ rule above.
+!CoreListDemo.xcodeproj
+
+# Claude Code local (per-machine) settings + transient runtime state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Xcode build output (DerivedData-style)
+build/

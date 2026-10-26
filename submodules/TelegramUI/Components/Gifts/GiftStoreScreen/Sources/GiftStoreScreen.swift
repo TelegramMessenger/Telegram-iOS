@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -183,9 +184,12 @@ public final class GiftStoreContentComponent: Component {
             let visibleBounds = bounds.insetBy(dx: 0.0, dy: -10.0)
             if let starGifts = self.effectiveGifts {
                 let sideInset: CGFloat = 16.0 + component.safeInsets.left
+                // iPhone Duo: the right margin is the right side's own (the side strip), so the third column stays out of
+                // the strip. With equal insets this is the old width.
+                let rightSideInset: CGFloat = 16.0 + component.safeInsets.right
                 
                 let optionSpacing: CGFloat = 10.0
-                let optionWidth = (availableWidth - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
+                let optionWidth = (availableWidth - sideInset - rightSideInset - optionSpacing * 2.0) / 3.0
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
                 
                 var validIds: [AnyHashable] = []
@@ -265,8 +269,8 @@ public final class GiftStoreContentComponent: Component {
                                                 acceptedPrice: nil,
                                                 skipConfirmation: false,
                                                 starsTopUpOptions: starsTopUpOptions,
-                                                buyGift: { [weak self] slug, peerId, price in
-                                                    return self?.starGiftsContext?.buyStarGift(slug: slug, peerId: peerId, price: price) ?? .complete()
+                                                buyGift: { [weak self] slug, peerId, price, hideName, text, entities in
+                                                    return self?.starGiftsContext?.buyStarGift(slug: slug, peerId: peerId, price: price, hideName: hideName, text: text, entities: entities) ?? .complete()
                                                 },
                                                 getController: controller,
                                                 updateProgress: { _ in },
@@ -300,8 +304,8 @@ public final class GiftStoreContentComponent: Component {
                                                     subject: .uniqueGift(uniqueGift, component.peerId),
                                                     allSubjects: allSubjects,
                                                     index: index,
-                                                    buyGift: { slug, peerId, price in
-                                                        return self.starGiftsContext?.buyStarGift(slug: slug, peerId: peerId, price: price) ?? .complete()
+                                                    buyGift: { slug, peerId, price, hideName, text, entities in
+                                                        return self.starGiftsContext?.buyStarGift(slug: slug, peerId: peerId, price: price, hideName: hideName, text: text, entities: entities) ?? .complete()
                                                     },
                                                     updateResellStars: { _, price in
                                                         return self.starGiftsContext?.updateStarGiftResellPrice(slug: uniqueGift.slug, price: price) ?? .complete()
@@ -421,7 +425,8 @@ public final class GiftStoreContentComponent: Component {
                 let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     environment: {},
                     containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
@@ -917,6 +922,10 @@ public final class GiftStoreContentComponent: Component {
                     let previousItems = self.starGiftsState?.gifts
                     self.starGiftsState = state
                     
+                    if case .loading = state.dataState, case let .ready(_, nextOffset) = previousDataState, nextOffset != nil {
+                        self.showLoading = false
+                    }
+                    
                     var transition: ComponentTransition = .immediate
                     if let previousFilterAttributes, previousFilterAttributes != state.filterAttributes {
                         transition = .easeInOut(duration: 0.25)
@@ -954,6 +963,8 @@ public final class GiftStoreContentComponent: Component {
                                     
             let bottomContentInset: CGFloat = 56.0
             let sideInset: CGFloat = 16.0 + component.safeInsets.left
+            // iPhone Duo: the right side's own margin (the side strip), matching `updateScrolling`.
+            let rightSideInset: CGFloat = 16.0 + component.safeInsets.right
                         
             var contentHeight: CGFloat = 0.0
             contentHeight += component.navigationHeight
@@ -964,7 +975,7 @@ public final class GiftStoreContentComponent: Component {
             }
             
             let optionSpacing: CGFloat = 10.0
-            let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
+            let optionWidth = (availableSize.width - sideInset - rightSideInset - optionSpacing * 2.0) / 3.0
                          
             var sortingTitle = strings.Gift_Store_Sort_Date
             var sortingIcon: String = "GiftFilterDate"
@@ -1000,7 +1011,7 @@ public final class GiftStoreContentComponent: Component {
                 iconName: sortingIcon,
                 title: sortingTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.sort)
                         self.openSortContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1042,7 +1053,7 @@ public final class GiftStoreContentComponent: Component {
                 index: Int(modelCount),
                 title: modelTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.model)
                         self.openModelContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1054,7 +1065,7 @@ public final class GiftStoreContentComponent: Component {
                 index: Int(backdropCount),
                 title: backdropTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.backdrop)
                         self.openBackdropContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1066,7 +1077,7 @@ public final class GiftStoreContentComponent: Component {
                 index: Int(symbolCount),
                 title: symbolTitle,
                 action: { [weak self] view in
-                    if let self {
+                    if let self, !self.effectiveIsLoading {
                         self.selectedFilterId = AnyHashable(FilterItemId.symbol)
                         self.openSymbolContextMenu(sourceView: view)
                         self.state?.updated()
@@ -1204,6 +1215,7 @@ final class GiftStoreScreenComponent: Component {
         
         override init(frame: CGRect) {
             self.balanceBackgroundView = GlassContextExtractableContainer()
+            self.balanceBackgroundView.morphsIntoContextMenu = true
             
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -1264,8 +1276,8 @@ final class GiftStoreScreenComponent: Component {
             }
             let tonBalance = tonContext.currentState?.balance.value ?? 0
             if tonBalance == 0 {
-                let controller = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: starsContext)
-                controller.push(controller)
+                let starsController = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: starsContext)
+                controller.push(starsController)
                 return
             }
             
@@ -1279,7 +1291,7 @@ final class GiftStoreScreenComponent: Component {
                 tonContext.state
             )
             |> take(1)
-            |> map { starsState, tonState -> [ContextMenuItem] in
+            |> map { [weak self] starsState, tonState -> [ContextMenuItem] in
                 let starsBalance = starsState?.balance ?? .zero
                 let tonBalance = tonState?.balance.value ?? 0
                 
@@ -1393,7 +1405,7 @@ final class GiftStoreScreenComponent: Component {
                 }
                 balanceView.frame = balanceFrame
 
-                let balanceBackgroundFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - 16.0 - balanceSize.width, y: environment.navigationHeight - 60.0 + 2.0 + floor((60.0 - 44.0) * 0.5)), size: balanceSize)
+                let balanceBackgroundFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 16.0 - balanceSize.width, y: environment.navigationHeight - 60.0 + 2.0 + floor((60.0 - 44.0) * 0.5)), size: balanceSize)
                 
                 transition.setFrame(view: self.balanceBackgroundView, frame: balanceBackgroundFrame)
                 self.balanceBackgroundView.update(size: balanceBackgroundFrame.size, cornerRadius: balanceBackgroundFrame.height * 0.5, isDark: environment.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
@@ -1636,6 +1648,6 @@ private final class GiftStoreReferenceContentSource: ContextReferenceContentSour
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

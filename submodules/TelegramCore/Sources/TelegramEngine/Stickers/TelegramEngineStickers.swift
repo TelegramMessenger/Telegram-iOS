@@ -1,6 +1,6 @@
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public extension TelegramEngine {
     final class Stickers {
@@ -24,6 +24,16 @@ public extension TelegramEngine {
 
         public func loadedStickerPack(reference: StickerPackReference, forceActualized: Bool, ignoreCache: Bool = false) -> Signal<LoadedStickerPack, NoError> {
             return _internal_loadedStickerPack(postbox: self.account.postbox, network: self.account.network, reference: reference, forceActualized: forceActualized, ignoreCache: ignoreCache)
+        }
+
+        /// The pack a custom emoji comes from, as a final answer. Unlike `loadedStickerPack` it
+        /// emits exactly once: the loaded pack (always `.result`), or nil when the emoji names no
+        /// pack or its pack cannot be loaded, which is how a pack deleted by its owner arrives.
+        public func customEmojiPack(file: TelegramMediaFile) -> Signal<LoadedStickerPack?, NoError> {
+            let account = self.account
+            return _internal_customEmojiPack(file: file, loadPack: { reference in
+                return _internal_loadedStickerPack(postbox: account.postbox, network: account.network, reference: reference, forceActualized: false)
+            })
         }
 
         public func randomGreetingSticker() -> Signal<FoundStickerItem?, NoError> {

@@ -17,6 +17,10 @@ import ButtonComponent
 import BundleIconComponent
 
 final class LocationLiveListItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: nil, headerFamily: .locationLive))
+    }
+
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
@@ -48,11 +52,11 @@ final class LocationLiveListItem: ListViewItem {
         self.walkingAction = walkingAction
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = LocationLiveListItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem is LocationLiveListItem)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, neighbors.next?.base(HeaderNeighborFacet.self)?.headerFamily == .locationLive)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -60,12 +64,12 @@ final class LocationLiveListItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? LocationLiveListItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem is LocationLiveListItem)
+                    let (nodeLayout, apply) = layout(self, params, neighbors.next?.base(HeaderNeighborFacet.self)?.headerFamily == .locationLive)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)
@@ -112,10 +116,10 @@ final class LocationLiveListItemNode: ListViewItemNode {
         self.addSubnode(self.avatarNode)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, nextItem is LocationLiveListItem)
+            let (nodeLayout, nodeApply) = makeLayout(item, params, neighbors.next?.base(HeaderNeighborFacet.self)?.headerFamily == .locationLive)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
@@ -413,4 +417,8 @@ final class LocationLiveListItemNode: ListViewItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let locationLive = ListViewItemHeaderFamily("locationLive")
 }

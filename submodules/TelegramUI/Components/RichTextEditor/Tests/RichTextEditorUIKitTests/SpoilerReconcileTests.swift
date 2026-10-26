@@ -29,16 +29,16 @@ final class SpoilerReconcileTests: XCTestCase {
         c.layoutIfNeeded()
         c.simulateParentLayout()
         let start = c.boxes[0].textStart
-        c.anchor = start + 5; c.head = start + 11      // "secret"
+        c.setSelectionForTesting(anchor: start + 5, head: start + 11)   // "secret"
         c.toggleSpoiler()
-        c.anchor = start; c.head = start               // caret outside → hidden
+        c.setSelectionForTesting(anchor: start, head: start)   // caret outside → hidden
         c.layoutIfNeeded()
         guard let layout = c.boxes[0].textLayout as? BlockLayout else {
             throw XCTSkip("spoiler-hide display is TextKit-2 only (disabled on the TK1 back-port)")
         }
         XCTAssertTrue(isHiddenClear(layout, atLocal: 7), "hidden spoiler text is drawn clear")
         let beforeReveal = layout.renderVersion
-        c.anchor = start + 7; c.head = start + 7       // caret inside → reveal
+        c.setSelectionForTesting(anchor: start + 7, head: start + 7)   // caret inside → reveal
         c.refreshSelectionUI()
         XCTAssertFalse(isHiddenClear(layout, atLocal: 7), "revealed text is no longer clear → it renders")
         XCTAssertGreaterThan(layout.renderVersion, beforeReveal, "reveal bumps renderVersion → paragraph repaints")
@@ -52,9 +52,9 @@ final class SpoilerReconcileTests: XCTestCase {
         c.layoutIfNeeded()
         c.simulateParentLayout()
         let start = c.boxes[0].textStart
-        c.anchor = start + 5; c.head = start + 11      // "secret"
+        c.setSelectionForTesting(anchor: start + 5, head: start + 11)   // "secret"
         c.toggleSpoiler()
-        c.anchor = start; c.head = start               // caret at the very start (outside the spoiler)
+        c.setSelectionForTesting(anchor: start, head: start)   // caret at the very start (outside the spoiler)
         c.layoutIfNeeded()
         return c
     }
@@ -70,7 +70,7 @@ final class SpoilerReconcileTests: XCTestCase {
     func test_spoilerRevealed_whenCaretInside_noDust() {
         let c = canvasWithSpoiler()
         let start = c.boxes[0].textStart
-        c.anchor = start + 7; c.head = start + 7       // inside "secret"
+        c.setSelectionForTesting(anchor: start + 7, head: start + 7)   // inside "secret"
         c.refreshSelectionUI()
         XCTAssertFalse(c.spoilerRunsForTesting[0].hidden)
         XCTAssertEqual(c.spoilerDustCountForTesting, 0)
@@ -79,7 +79,7 @@ final class SpoilerReconcileTests: XCTestCase {
     func test_spoilerRevealed_whenSelectionOverlaps() {
         let c = canvasWithSpoiler()
         let start = c.boxes[0].textStart
-        c.anchor = start; c.head = start + 7           // selection crosses into "secret"
+        c.setSelectionForTesting(anchor: start, head: start + 7)   // selection crosses into "secret"
         c.refreshSelectionUI()
         XCTAssertFalse(c.spoilerRunsForTesting[0].hidden)
     }
@@ -105,9 +105,9 @@ final class SpoilerReconcileTests: XCTestCase {
         c.layoutIfNeeded()
         c.simulateParentLayout()
         let p2start = c.boxes[1].textStart
-        c.anchor = p2start + 5; c.head = p2start + 11    // "secret"
+        c.setSelectionForTesting(anchor: p2start + 5, head: p2start + 11)   // "secret"
         c.toggleSpoiler()
-        c.anchor = c.boxes[0].textStart; c.head = c.boxes[0].textStart   // caret in p1 → spoiler hidden
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart)   // caret in p1 → spoiler hidden
         c.layoutIfNeeded()
         c.simulateParentLayout()
         return c
@@ -123,7 +123,7 @@ final class SpoilerReconcileTests: XCTestCase {
         XCTAssertNotNil(dustBefore)
 
         // Type at the END of the first paragraph (above the spoiler). This shifts p2's globalStart by 1.
-        c.anchor = c.boxes[0].textStart + 8; c.head = c.anchor      // end of "top line"
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart + 8, head: c.boxes[0].textStart + 8)   // end of "top line"
         c.insertText("X")
         c.layoutIfNeeded()
         c.simulateParentLayout()
@@ -150,7 +150,7 @@ final class SpoilerReconcileTests: XCTestCase {
         XCTAssertFalse(c.documentHasSpoilers)
         let before = c.boxes[0].textLayout.renderVersion
         // Simulate caret moves (the per-keystroke/arrow path).
-        for i in 0..<5 { c.anchor = c.boxes[0].textStart + i; c.head = c.anchor; c.refreshSelectionUI() }
+        for i in 0..<5 { c.setSelectionForTesting(anchor: c.boxes[0].textStart + i, head: c.boxes[0].textStart + i); c.refreshSelectionUI() }
         XCTAssertEqual(c.boxes[0].textLayout.renderVersion, before, "caret moves in a spoiler-free doc must not bump renderVersion")
     }
 
@@ -159,10 +159,10 @@ final class SpoilerReconcileTests: XCTestCase {
         c.setBlocks([.paragraph(ParagraphBlock(id: BlockID("p1"), runs: [TextRun(text: "secret")]))], width: 320)
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 400); c.layoutIfNeeded()
         XCTAssertFalse(c.documentHasSpoilers)
-        c.anchor = c.boxes[0].textStart; c.head = c.boxes[0].textStart + 6
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart + 6)
         c.toggleSpoiler()
         XCTAssertTrue(c.documentHasSpoilers, "flag set after spoilering")
-        c.anchor = c.boxes[0].textStart; c.head = c.boxes[0].textStart + 6
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart + 6)
         c.toggleSpoiler()
         XCTAssertFalse(c.documentHasSpoilers, "flag cleared after the last spoiler is removed")
         c.layoutIfNeeded()

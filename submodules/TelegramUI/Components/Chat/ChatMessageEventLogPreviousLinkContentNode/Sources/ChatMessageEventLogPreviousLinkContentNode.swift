@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -17,10 +18,10 @@ public final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubble
         }
     }
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.contentNode = ChatMessageAttachedContentNode()
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
         
         self.addSubnode(self.contentNode)
     }
@@ -32,7 +33,7 @@ public final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubble
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
-        return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
+        return { [weak self] item, layoutConstants, preparePosition, _, constrainedSize, _ in
             var messageEntities: [MessageTextEntity]?
             
             for attribute in item.message.attributes {

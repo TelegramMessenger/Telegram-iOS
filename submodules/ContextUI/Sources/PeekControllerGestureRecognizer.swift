@@ -205,20 +205,6 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
 //                            (presentedController.displayNode as? PeekControllerNode)?.applyDraggingOffset(offset)
                         }
                     case .press:
-                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                            if touch.force >= 2.5 {
-                                if presentedController.isNodeLoaded {
-                                    (presentedController.displayNode as? PeekControllerNodeProtocol)?.activateMenu(immediately: false)
-                                    self.menuActivation = nil
-                                    self.presentedController = nil
-                                    self.candidateContent = nil
-                                    self.state = .ended
-                                    self.candidateContentDisposable.set(nil)
-                                    return
-                                }
-                            }
-                        }
-                        
                         if self.pressTimer != nil {
                             let dX = touchLocation.x - initialTapLocation.x
                             let dY = touchLocation.y - initialTapLocation.y
@@ -297,13 +283,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                                                 case .drag:
                                                     break
                                                 case .press:
-                                                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                                                        if presentedController.traitCollection.forceTouchCapability != .available {
-                                                            strongSelf.startPressTimer()
-                                                        }
-                                                    } else {
-                                                        strongSelf.startPressTimer()
-                                                    }
+                                                    strongSelf.startPressTimer()
                                             }
                                         }
                                     } else {

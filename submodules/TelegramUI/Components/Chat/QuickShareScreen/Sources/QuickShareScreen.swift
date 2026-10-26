@@ -309,9 +309,12 @@ private final class QuickShareScreenComponent: Component {
             let widthExtension: CGFloat = self.selectedPeerId != nil ? selectedItemSize.width - itemSize.width : 0.0
             
             let size = CGSize(width: itemSize.width * CGFloat(itemsCount) + spacing * CGFloat(itemsCount - 1) + padding * 2.0 + widthExtension, height: itemSize.height + padding * 2.0)
+            // iPhone Duo: the popup and the names above it keep clear of the side strip (and the status corner at its
+            // end) as well as of the screen edge. With equal side insets they keep to the screen edges as before.
+            let stripInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
             let contentRect = CGRect(
                 origin: CGPoint(
-                    x: max(sideInset, min(availableSize.width - sideInset - size.width, sourceRect.maxX + itemSize.width + spacing - size.width)),
+                    x: max(stripInsets.left + sideInset, min(availableSize.width - stripInsets.right - sideInset - size.width, sourceRect.maxX + itemSize.width + spacing - size.width)),
                     y: sourceRect.minY - size.height - padding * 2.0
                 ),
                 size: size
@@ -346,7 +349,7 @@ private final class QuickShareScreenComponent: Component {
                                 theme: environment.theme,
                                 strings: environment.strings,
                                 peer: peer,
-                                safeInsets: UIEdgeInsets(top: 0.0, left: contentRect.minX + effectiveItemFrame.minX, bottom: 0.0, right: availableSize.width - contentRect.maxX + contentRect.width - effectiveItemFrame.maxX),
+                                safeInsets: UIEdgeInsets(top: 0.0, left: contentRect.minX - stripInsets.left + effectiveItemFrame.minX, bottom: 0.0, right: availableSize.width - stripInsets.right - contentRect.maxX + contentRect.width - effectiveItemFrame.maxX),
                                 isFocused: isFocused
                             )
                         ),

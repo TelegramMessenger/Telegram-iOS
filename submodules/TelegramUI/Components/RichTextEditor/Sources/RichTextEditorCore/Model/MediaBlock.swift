@@ -65,6 +65,8 @@ public struct MediaBlock: Codable, Equatable {
     public var naturalSize: Size2D { items.first?.naturalSize ?? Size2D(width: 0, height: 0) }
     /// True for an audio block (always single-item).
     public var isAudio: Bool { items.first?.kind == .audio }
+    /// True for a caption-less row block (audio or document; both always single-item).
+    public var isCaptionless: Bool { items.first?.kind.isCaptionless ?? false }
 
     public var captionUTF16Count: Int { caption.reduce(0) { $0 + $1.utf16Count } }
 

@@ -528,7 +528,7 @@ final class ComposeTodoScreenComponent: Component {
                     targetFrame.origin.y = availableSize.height
                     transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
                         if let inputMediaNode {
-                            Queue.mainQueue().after(0.3) {
+                            Queue.mainQueue().after(0.3) { [inputMediaNode] in
                                 inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
                                     inputMediaNode?.view.removeFromSuperview()
                                 })
@@ -641,6 +641,7 @@ final class ComposeTodoScreenComponent: Component {
                         hasStickers: false,
                         hasGifs: false,
                         hideBackground: true,
+                        maskEdge: .clip,
                         sendGif: nil
                     )
                 )
@@ -769,7 +770,11 @@ final class ComposeTodoScreenComponent: Component {
             
             let topInset: CGFloat = 8.0
             let bottomInset: CGFloat = 8.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let sectionSpacing: CGFloat = 30.0
             
             if themeUpdated {
@@ -842,7 +847,7 @@ final class ComposeTodoScreenComponent: Component {
                     items: todoTextSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let todoTextSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: todoTextSectionSize)
             if let todoTextSectionView = self.todoTextSection.view as? ListSectionComponent.View {
@@ -863,7 +868,11 @@ final class ComposeTodoScreenComponent: Component {
             
             var todoItemsSectionReadyItems: [ListSectionContentView.ReadyItem] = []
             
-            let processTodoItemItem: (Int) -> Void = { i in
+            // Strong capture on purpose: this closure never escapes update(). Swift 6.4
+            // miscompiles `[weak self]` here (a local closure that also captures a mutable
+            // local): the weak slot is destroyed before the closure is called, so an
+            // NSObject-derived self traps in objc_loadWeak ("not in the weak references table").
+            let processTodoItemItem: (Int) -> Void = { [self] i in
                 let todoItem = self.todoItems[i]
                 
                 let optionId = todoItem.id
@@ -1004,7 +1013,7 @@ final class ComposeTodoScreenComponent: Component {
                     transition: itemTransition,
                     component: item.component,
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: availableSize.height)
                 )
                 
                 todoItemsSectionReadyItems.append(ListSectionContentView.ReadyItem(
@@ -1082,7 +1091,7 @@ final class ComposeTodoScreenComponent: Component {
                     extendsItemHighlightToSection: false,
                     background: .all
                 ),
-                width: availableSize.width - sideInset * 2.0,
+                width: availableSize.width - sideInset - rightSideInset,
                 leftInset: 0.0,
                 readyItems: todoItemsSectionReadyItems,
                 transition: transition
@@ -1100,7 +1109,7 @@ final class ComposeTodoScreenComponent: Component {
                     maximumNumberOfLines: 0
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sectionHeaderSideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - sectionHeaderSideInset * 2.0, height: 1000.0)
             )
             let todoItemsSectionHeaderFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: todoItemsSectionHeaderSize)
             if let todoItemsSectionHeaderView = self.todoItemsSectionHeader.view {
@@ -1219,7 +1228,7 @@ final class ComposeTodoScreenComponent: Component {
                 transition: todoItemsFooterTransition,
                 component: todoItemsComponent,
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sectionHeaderSideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - sectionHeaderSideInset * 2.0, height: 1000.0)
             )
             let todoItemsSectionFooterFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: todoItemsSectionFooterSize)
             
@@ -1311,7 +1320,7 @@ final class ComposeTodoScreenComponent: Component {
                         items: todoSettingsSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let todoSettingsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: todoSettingsSectionSize)
                 if let todoSettingsSectionView = self.todoSettingsSection.view {
@@ -1475,10 +1484,10 @@ final class ComposeTodoScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
                 
-                let viewFrame = CGRect(origin: CGPoint(x: min(availableSize.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
+                let viewFrame = CGRect(origin: CGPoint(x: min(availableSize.width - rightSideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
                 currentEmojiSuggestionView.frame = viewFrame
                 if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
                     componentView.adjustBackground(relativePositionX: floor(globalPosition.x + 10.0))
@@ -1588,7 +1597,7 @@ final class ComposeTodoScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 40.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - titleSize.width / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     component.overNavigationContainer.addSubview(titleView)
@@ -1620,12 +1629,31 @@ final class ComposeTodoScreenComponent: Component {
                 environment: {},
                 containerSize: barButtonSize
             )
-            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            // iPhone Duo: with a side strip the screen's own Close leaves the header row for the strip, centred where a
+            // standard bar's back or close goes. The strip reaches below the bar, so the button then stands above the bar
+            // in the screen's view (as the bar's own strip button does) rather than inside it.
+            let sideColumnButtonFrame = environment.sideColumnNavigationButtonFrame
+            let cancelButtonFrame: CGRect
+            if let sideColumnButtonFrame {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sideColumnButtonFrame.midX - cancelButtonSize.width * 0.5), y: floorToScreenPixels(sideColumnButtonFrame.midY - cancelButtonSize.height * 0.5)), size: cancelButtonSize)
+            } else {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            }
             if let cancelButtonView = self.cancelButton.view {
-                if cancelButtonView.superview == nil {
+                var cancelButtonTransition = transition
+                if sideColumnButtonFrame != nil, let navigationBarView = environment.controller()?.navigationBar?.view, let screenView = navigationBarView.superview {
+                    if cancelButtonView.superview !== screenView {
+                        screenView.insertSubview(cancelButtonView, aboveSubview: navigationBarView)
+                        cancelButtonTransition = .immediate
+                    }
+                } else if cancelButtonView.superview !== component.overNavigationContainer {
+                    let isMoving = cancelButtonView.superview != nil
                     component.overNavigationContainer.addSubview(cancelButtonView)
+                    if isMoving {
+                        cancelButtonTransition = .immediate
+                    }
                 }
-                transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
+                cancelButtonTransition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
             }
             
             let isValid = self.validatedInput() != nil

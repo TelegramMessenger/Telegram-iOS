@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
@@ -98,7 +97,7 @@ public func supportTemplateLanguageSetting(context: AccountContext) -> Signal<St
 
 public func updateSupportTemplateLanguage(context: AccountContext, language: String) -> Signal<Never, NoError> {
     return context.engine.preferences.update(id: ApplicationSpecificPreferencesKeys.supportTemplateSettings, { _ in
-        return SharedPreferencesEntry(SupportTemplateSettings(language: language))
+        return EnginePreferencesEntry(SupportTemplateSettings(language: language))
     })
 }
 
@@ -115,7 +114,7 @@ private func cachedSupportTemplates(context: AccountContext, key: String) -> Sig
 private func fetchAndStoreSupportTemplates(context: AccountContext, url: String, cacheKey: String) -> Signal<Never, NoError> {
     return fetchHttpResource(url: url)
     |> map(Optional.init)
-    |> `catch` { _ -> Signal<MediaResourceDataFetchResult?, NoError> in
+    |> `catch` { _ -> Signal<EngineMediaResourceDataFetchResult?, NoError> in
         return .single(nil)
     }
     |> mapToSignal { result -> Signal<Never, NoError> in

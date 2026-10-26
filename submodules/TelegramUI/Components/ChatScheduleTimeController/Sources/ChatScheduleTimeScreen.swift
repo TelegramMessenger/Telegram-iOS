@@ -40,6 +40,8 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
     let suggestedTime: Int32?
     let minimalTime: Int32?
     let silentPosting: Bool
+    /// The size of the screen the sheet rises in, to keep the header clear of a top corner block it can reach.
+    let screenSize: CGSize
     let externalState: ExternalState
     let dismiss: () -> Void
     
@@ -51,6 +53,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
         suggestedTime: Int32?,
         minimalTime: Int32?,
         silentPosting: Bool,
+        screenSize: CGSize,
         externalState: ExternalState,
         dismiss: @escaping () -> Void
     ) {
@@ -61,11 +64,15 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
         self.suggestedTime = suggestedTime
         self.minimalTime = minimalTime
         self.silentPosting = silentPosting
+        self.screenSize = screenSize
         self.externalState = externalState
         self.dismiss = dismiss
     }
     
     static func ==(lhs: ChatScheduleTimeSheetContentComponent, rhs: ChatScheduleTimeSheetContentComponent) -> Bool {
+        if lhs.screenSize != rhs.screenSize {
+            return false
+        }
         return true
     }
     
@@ -689,6 +696,17 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             
+            // The calendar's header row (month arrows) keeps clear of a top corner block the sheet rises beside (iPhone
+            // Duo, folded portrait: 84x170 at the top right), as the mute button does; see `sheetHeaderCornerInsets`.
+            if let datePicker = self.datePicker {
+                var headerTrailingInset: CGFloat = 0.0
+                if environment.safeInsets.left > 0.0 || environment.safeInsets.right > 0.0 || environment.navigationBarTrailingButtonsInset > 0.0 {
+                    let sheetMinY = component.screenSize.height - contentHeight - 6.0
+                    headerTrailingInset = sheetHeaderCornerInsets(containerWidth: component.screenSize.width, sheetMinX: floorToScreenPixels((component.screenSize.width - availableSize.width) / 2.0), sheetWidth: availableSize.width, sheetMinY: sheetMinY + datePicker.frame.minY, reservedCorners: environment.reservedCorners).right
+                }
+                datePicker.headerTrailingInset = headerTrailingInset
+            }
+            
             if self.isPickingTime, let timeValueFrame {
                 let _ = self.timePicker.update(
                     transition: transition,
@@ -899,7 +917,21 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                     environment: {},
                     containerSize: barButtonSize
                 )
-                let silentFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - silentSize.width, y: 16.0), size: silentSize)
+                // A tall sheet rises beside the status corner (iPhone Duo, folded portrait: 84x170 at the top right): the
+                // button keeps clear of it. The sheet is bottom-anchored and centred, its top `contentHeight` (and the glass
+                // inset) up. In landscape the sheet keeps to the band beside the strip, where its environment has no side
+                // insets, and needs nothing.
+                var sheetCornerRightInset: CGFloat = 0.0
+                if environment.safeInsets.left > 0.0 || environment.safeInsets.right > 0.0 || environment.navigationBarTrailingButtonsInset > 0.0 {
+                    sheetCornerRightInset = sheetHeaderCornerInsets(containerWidth: component.screenSize.width, sheetMinX: floorToScreenPixels((component.screenSize.width - availableSize.width) / 2.0), sheetWidth: availableSize.width, sheetMinY: component.screenSize.height - contentHeight - 6.0, reservedCorners: environment.reservedCorners).right
+                }
+                let silentFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - sheetCornerRightInset - silentSize.width, y: 16.0), size: silentSize)
+                if sheetCornerRightInset > 0.0, let titleView = self.title.view {
+                    // The title stays between Cancel and the moved button (a long localized title would reach it).
+                    let titleMinX = (self.cancel.view?.frame.maxX ?? 60.0) + 8.0
+                    let titleOrigin = CGPoint(x: horizontallyCenteredOrigin(width: titleView.bounds.width, containerWidth: availableSize.width, minX: titleMinX, maxX: silentFrame.minX - 8.0), y: titleView.frame.minY)
+                    transition.setFrame(view: titleView, frame: CGRect(origin: titleOrigin, size: titleView.bounds.size))
+                }
                 if let silentView = self.silent.view {
                     if silentView.superview == nil {
                         self.addSubview(silentView)
@@ -1001,7 +1033,7 @@ private final class ChatScheduleTimeScreenComponent: Component {
                 metrics: environment.metrics,
                 deviceMetrics: environment.deviceMetrics,
                 isDisplaying: environment.isVisible,
-                isCentered: environment.metrics.widthClass == .regular,
+                isCentered: environment.presentsFloatingPanels,
                 hasInputHeight: !environment.inputHeight.isZero,
                 regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                 dismiss: { [weak self] _ in
@@ -1026,6 +1058,7 @@ private final class ChatScheduleTimeScreenComponent: Component {
                         suggestedTime: component.suggestedTime,
                         minimalTime: component.minimalTime,
                         silentPosting: component.silentPosting,
+                        screenSize: availableSize,
                         externalState: self.contentExternalState,
                         dismiss: { [weak self] in
                             guard let self else {
@@ -1067,11 +1100,14 @@ private final class ChatScheduleTimeScreenComponent: Component {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: max(sideInset, environment.safeInsets.left), bottom: 0.0, right: max(sideInset, environment.safeInsets.right)),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -158,6 +159,7 @@ public struct ChatMessageBubbleContentTapAction {
         case timecode(Double, String)
         case tooltip(String, ASDisplayNode?, CGRect?)
         case bankCard(String)
+        case tonAddress(String)
         case ignore
         case openPollResults(Data)
         case copy(String)
@@ -229,12 +231,29 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     public var updateIsTextSelectionActive: ((Bool) -> Void)?
     public var requestInlineUpdate: (() -> Void)?
     public var requestFullUpdate: ((ControlledTransition?) -> Void)?
+    /// Performs a message-button action on behalf of a content node. Wired by
+    /// `ChatMessageBubbleItemNode`, which owns `performMessageButtonAction` — a content node cannot
+    /// reach its item view directly, and the dispatch is not on `ControllerInteraction`.
+    public var performRichTextButtonAction: ((ReplyMarkupButton, Promise<Bool>) -> Void)?
+    /// Fires when a downloaded `.document` row in a rich message is tapped, with that exact file.
+    public var openRichTextDocument: ((TelegramMediaFile) -> Void)?
     
     open var disablesClipping: Bool {
         return false
     }
     
-    required public override init() {
+    /// Which Lottie rasterizer this node's animations should use.
+    ///
+    /// Carried on every content node rather than only the three that animate
+    /// today: content nodes are built through a metatype in
+    /// ChatMessageBubbleItemNode, before their item exists, so a node that
+    /// later adds an animation has no other way to reach an AccountContext at
+    /// construction time.
+    public let lottieSettings: LottieRenderingSettings
+
+    required public init(lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
+
         super.init()
     }
     
@@ -266,6 +285,16 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
 
     open func getAnchorRect(anchor: String) -> CGRect? {
         return nil
+    }
+
+    /// Rects, in this node's own coordinate space, that the host bubble should tear out of its
+    /// background — so that content this node cannot render sits in a gap rather than on top of a
+    /// bubble. Read after this node's apply closure has run.
+    ///
+    /// Plural because one message can hold two runs of unsupported blocks separated by supported
+    /// content: a run collapses to one pill, but two runs stay two pills.
+    open func unsupportedContentAreas() -> [CGRect] {
+        return []
     }
 
     open func updateHiddenMedia(_ media: [EngineRawMedia]?) -> Bool {
@@ -302,12 +331,6 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
     }
 
-    open func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-    }
-
-    open func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
-    }
-    
     open func unreadMessageRangeUpdated() {
     }
     

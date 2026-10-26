@@ -38,6 +38,12 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
             }
         }
         self.entries = internalEntries
+        // `currentText` is what Translate / Share / Look Up receive for a selection, so the inline-attachment
+        // placeholder (`U+FFFC`) must not reach them as a literal object-replacement box. Substituting a
+        // space is safe for every OTHER consumer because it is length-preserving in UTF-16 — the offsets
+        // `attributesAtPoint` and `textRangeRects(in:)` hand out stay valid — and `markdownForRange` reads
+        // the per-entry strings, not this one, so the emoji marker it emits is unaffected.
+        combined.replaceOccurrences(ofPlaceholder: instantPageInlineAttachmentPlaceholder, with: " ")
         self.combinedString = combined
         super.init()
         self.isUserInteractionEnabled = false
@@ -110,6 +116,81 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
             return nil
         }
         return (allRects, start, end)
+    }
+
+    /// Every stamped run (`InstantPageQuoteLeafAttribute`) a selection of the combined text touches,
+    /// as the node it shows and the flat range of that node the selection covers. A run of an atom
+    /// counts whole. In display order, which is not document order (a table's spanning cell is laid
+    /// out after its last row's cells): `richQuoteSelectionBoundaries` orders them.
+    ///
+    /// V2 lays one node's string into exactly one text item (`layoutTextItem`), so a run never spans
+    /// two entries; `longestEffectiveRange` recovers a run's full extent when another attribute splits it.
+    public func richQuoteRuns(for range: NSRange) -> [(id: InstantPageTextNodeId, range: Range<Int>)] {
+        var result: [(id: InstantPageTextNodeId, range: Range<Int>)] = []
+        for entry in self.entries {
+            let string = entry.item.attributedString
+            let intersection = NSIntersectionRange(range, NSRange(location: entry.charOffset, length: string.length))
+            if intersection.length == 0 {
+                continue
+            }
+            let localRange = NSRange(location: intersection.location - entry.charOffset, length: intersection.length)
+            string.enumerateAttribute(InstantPageQuoteLeafAttribute, in: localRange, options: []) { value, runRange, _ in
+                guard let leaf = value as? InstantPageQuoteLeaf else {
+                    return
+                }
+                var leafRange = NSRange()
+                let _ = string.attribute(InstantPageQuoteLeafAttribute, at: runRange.location, longestEffectiveRange: &leafRange, in: NSRange(location: 0, length: string.length))
+                let lower: Int
+                let upper: Int
+                if leaf.isAtomic {
+                    lower = leaf.flatStart
+                    upper = leaf.flatStart + leaf.flatLength
+                } else {
+                    lower = leaf.flatStart + min(leaf.flatLength, runRange.location - leafRange.location)
+                    upper = leaf.flatStart + min(leaf.flatLength, runRange.location + runRange.length - leafRange.location)
+                }
+                result.append((id: leaf.node, range: lower ..< max(lower, upper)))
+            }
+        }
+        return result
+    }
+
+    /// The combined-text ranges showing the given flat range of each node, adjacent runs joined: a
+    /// highlight measures each range on its own and takes one rect per line (`LinkHighlightingNode`
+    /// reads consecutive rects as consecutive lines), so a range per run split a line of an emoji and
+    /// bold text into the emoji's top half and the text's bottom half.
+    public func ranges(showing nodeRanges: [(id: InstantPageTextNodeId, range: Range<Int>)]) -> [NSRange] {
+        var result: [NSRange] = []
+        func append(_ range: NSRange) {
+            if let last = result.last, last.location + last.length == range.location {
+                result[result.count - 1].length += range.length
+            } else {
+                result.append(range)
+            }
+        }
+        for entry in self.entries {
+            let string = entry.item.attributedString
+            string.enumerateAttribute(InstantPageQuoteLeafAttribute, in: NSRange(location: 0, length: string.length), options: []) { value, runRange, _ in
+                guard let leaf = value as? InstantPageQuoteLeaf, let quoted = nodeRanges.first(where: { $0.id == leaf.node })?.range else {
+                    return
+                }
+                let leafLower = leaf.flatStart
+                let leafUpper = leaf.flatStart + leaf.flatLength
+                if leaf.isAtomic {
+                    let overlaps = leafLower == leafUpper ? (quoted.lowerBound < leafLower && leafLower < quoted.upperBound) : (leafLower < quoted.upperBound && leafUpper > quoted.lowerBound)
+                    if overlaps {
+                        append(NSRange(location: entry.charOffset + runRange.location, length: runRange.length))
+                    }
+                    return
+                }
+                let lower = max(leafLower, quoted.lowerBound)
+                let upper = min(leafUpper, quoted.upperBound)
+                if lower < upper {
+                    append(NSRange(location: entry.charOffset + runRange.location + (lower - leafLower), length: upper - lower))
+                }
+            }
+        }
+        return result
     }
 
     public func markdownForRange(_ range: NSRange) -> String {
@@ -253,6 +334,28 @@ public final class InstantPageMultiTextAdapter: ASDisplayNode, TextNodeProtocol 
     }
 }
 
+private extension NSMutableAttributedString {
+    /// Swaps every occurrence of a ONE-character placeholder for another one-character string, keeping
+    /// each occurrence's attributes (`replaceCharacters(in:with:)` inherits them from the first replaced
+    /// character) and, because both sides are one UTF-16 unit, every offset into the string.
+    func replaceOccurrences(ofPlaceholder placeholder: String, with replacement: String) {
+        guard placeholder.utf16.count == 1, replacement.utf16.count == 1 else {
+            assertionFailure("both sides must be one UTF-16 unit or offsets shift")
+            return
+        }
+        var searchRange = NSRange(location: 0, length: self.length)
+        while true {
+            let found = (self.string as NSString).range(of: placeholder, options: [], range: searchRange)
+            guard found.location != NSNotFound else {
+                return
+            }
+            self.replaceCharacters(in: found, with: replacement)
+            let next = found.upperBound
+            searchRange = NSRange(location: next, length: self.length - next)
+        }
+    }
+}
+
 private func escapeSelectionMarkdown(_ string: String) -> String {
     var result = ""
     result.reserveCapacity(string.count)
@@ -280,14 +383,21 @@ private func inlineMarkdown(from slice: NSAttributedString) -> String {
     var result = ""
 
     slice.enumerateAttributes(in: fullRange, options: []) { attributes, range, _ in
-        let substring = (slice.string as NSString).substring(with: range)
+        // Every inline attachment (emoji / image / formula / button pill) occupies one
+        // `instantPageInlineAttachmentPlaceholder` (`U+FFFC`) cell. That character is layout machinery
+        // and must never reach the clipboard: the emoji branch below replaces it with its marker, and
+        // for the attachments this converter has no markdown for (image / formula / pill) a space is
+        // what a reader expects to see in its place — which is also the pre-`U+FFFC` behaviour.
+        let substring = (slice.string as NSString)
+            .substring(with: range)
+            .replacingOccurrences(of: instantPageInlineAttachmentPlaceholder, with: " ")
 
         // Custom emoji: emit the shared marker carrying the fileId. The display
-        // placeholder may have no real alt (often a single space), so alt is
-        // best-effort; whole-message copy / edit reconstruction have the true alt.
+        // placeholder carries no real alt, so alt is best-effort; whole-message copy /
+        // edit reconstruction have the true alt.
         if let emojiAttribute = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
             // Non-empty link text required: CommonMark drops `[](url)` on re-parse.
-            let alt = substring.isEmpty ? " " : substring
+            let alt = substring.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : substring
             result += "[\(escapeCustomEmojiMarkdownAlt(alt))](\(customEmojiMarkdownURL(fileId: emojiAttribute.fileId)))"
             return
         }

@@ -116,7 +116,9 @@ final class StarsTransactionsListPanelComponent: Component {
     
     class View: UIView, UIScrollViewDelegate {
         private let scrollView: ScrollViewImpl
-        
+        private let listBackgroundView: UIImageView
+        private let listMaskView: UIImageView
+
         private let measureItem = ComponentView<Empty>()
         private var visibleItems: [AnyHashable: ComponentView<Empty>] = [:]
         private var separatorLayers: [AnyHashable: SimpleLayer] = [:]
@@ -134,9 +136,23 @@ final class StarsTransactionsListPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.scrollView = ScrollViewImpl()
-            
+
+            self.listBackgroundView = UIImageView()
+            self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+            self.listMaskView = UIImageView()
+            self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: 26.0 * 2.0, height: 26.0 * 2.0)))
+            })?.stretchableImage(withLeftCapWidth: 16 + 26, topCapHeight: 26).withRenderingMode(.alwaysTemplate)
+
             super.init(frame: frame)
-            
+
+            self.addSubview(self.listBackgroundView)
+
             self.scrollView.delaysContentTouches = true
             self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
@@ -153,7 +169,8 @@ final class StarsTransactionsListPanelComponent: Component {
             self.scrollView.delegate = self
             self.scrollView.clipsToBounds = true
             self.addSubview(self.scrollView)
-            
+            self.addSubview(self.listMaskView)
+
             self.scrollView.layer.addSublayer(self.highlightLayer)
         }
         
@@ -177,6 +194,7 @@ final class StarsTransactionsListPanelComponent: Component {
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
+                self.updateListBackground(transition: .immediate)
             }
         }
         
@@ -257,6 +275,34 @@ final class StarsTransactionsListPanelComponent: Component {
             }
         }
         
+        private func updateListBackground(transition: ComponentTransition) {
+            guard let itemLayout = self.itemLayout else {
+                return
+            }
+
+            self.listBackgroundView.isHidden = itemLayout.itemCount == 0
+            self.listMaskView.isHidden = itemLayout.itemCount == 0
+            guard itemLayout.itemCount != 0, itemLayout.containerWidth != 0.0 else {
+                return
+            }
+
+            let scrollingOffset = self.scrollView.contentOffset.y
+            let distanceToTop = max(-100.0, itemLayout.containerInsets.top - scrollingOffset)
+            let itemsContentHeight = self.scrollView.contentSize.height - itemLayout.containerInsets.bottom
+            let distanceToBottom = max(-100.0, self.scrollView.bounds.height - (itemsContentHeight - scrollingOffset))
+
+            let listBackgroundFrame = CGRect(
+                origin: CGPoint(x: itemLayout.containerInsets.left, y: distanceToTop),
+                size: CGSize(
+                    width: max(1.0, itemLayout.containerWidth - itemLayout.containerInsets.left - itemLayout.containerInsets.right),
+                    height: max(1.0, self.scrollView.bounds.height - distanceToBottom - distanceToTop)
+                )
+            )
+            let listMaskFrame = CGRect(origin: CGPoint(x: listBackgroundFrame.minX - 16.0, y: listBackgroundFrame.minY), size: CGSize(width: listBackgroundFrame.width + 16.0 * 2.0, height: listBackgroundFrame.height))
+            transition.setFrame(view: self.listBackgroundView, frame: listBackgroundFrame)
+            transition.setFrame(view: self.listMaskView, frame: listMaskFrame)
+        }
+
         private func updateScrolling(transition: ComponentTransition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
@@ -631,7 +677,9 @@ final class StarsTransactionsListPanelComponent: Component {
             
             let environment = environment[StarsTransactionsPanelEnvironment.self].value
             self.environment = environment
-            
+            self.listBackgroundView.tintColor = environment.theme.list.itemBlocksBackgroundColor
+            self.listMaskView.tintColor = environment.theme.list.blocksBackgroundColor
+
             let fontBaseDisplaySize = 17.0
             let measureItemSize = self.measureItem.update(
                 transition: .immediate,
@@ -710,7 +758,8 @@ final class StarsTransactionsListPanelComponent: Component {
             }
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
-            
+            self.updateListBackground(transition: transition)
+
             if let _ = environment.externalScrollBounds {
                 return CGSize(width: availableSize.width, height: contentSize.height)
             } else {

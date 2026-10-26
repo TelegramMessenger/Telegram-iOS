@@ -61,6 +61,12 @@ public func shouldDisplayNotificationsPermissionWarning(status: AccessType, supp
     }
 }
 
+// A single shared probe used only to read authorization state. The iOS 14 replacements for
+// `CLLocationManager.authorizationStatus()` are instance properties, and allocating a manager
+// per subscription (on whichever queue happened to subscribe) is both wasteful and at odds
+// with CLLocationManager's threading guidance, so keep exactly one.
+private let sharedLocationAuthorizationManager = CLLocationManager()
+
 public final class DeviceAccess {
     private static let contactsPromise = Promise<Bool?>(nil)
     static var contacts: Signal<Bool?, NoError> {
@@ -226,7 +232,7 @@ public final class DeviceAccess {
                 }
             case .location:
                 return Signal { subscriber in
-                    let status = CLLocationManager.authorizationStatus()
+                    let status = sharedLocationAuthorizationManager.authorizationStatus
                     switch status {
                         case .authorizedAlways, .authorizedWhenInUse:
                             subscriber.putNext(.allowed)
@@ -445,10 +451,10 @@ public final class DeviceAccess {
                         })
                     }
                 case let .location(locationSubject):
-                    let status = CLLocationManager.authorizationStatus()
+                    let status = sharedLocationAuthorizationManager.authorizationStatus
                     let hasPreciseLocation: Bool
                     if #available(iOS 14.0, *) {
-                        if case .fullAccuracy = CLLocationManager().accuracyAuthorization {
+                        if case .fullAccuracy = sharedLocationAuthorizationManager.accuracyAuthorization {
                             hasPreciseLocation = true
                         } else {
                             hasPreciseLocation = false

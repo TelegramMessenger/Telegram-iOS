@@ -15,25 +15,33 @@ public final class AvatarComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
-    let peer: EnginePeer
+    let peer: EnginePeer?
     let clipStyle: ClipStyle
+    let overrideImage: AvatarNodeImageOverride?
     let icon: AnyComponent<Empty>?
     let size: CGSize?
+    /// Whether the photo is decoded on the main thread as the view is updated. A view built ahead of being
+    /// shown (a list row entering during a scroll) can pass false and stay blank until it loads.
+    let synchronousLoad: Bool
 
     public init(
         context: AccountContext,
         theme: PresentationTheme,
-        peer: EnginePeer,
+        peer: EnginePeer?,
         clipStyle: ClipStyle = .round,
+        overrideImage: AvatarNodeImageOverride? = nil,
         icon: AnyComponent<Empty>? = nil,
-        size: CGSize? = nil
+        size: CGSize? = nil,
+        synchronousLoad: Bool = true
     ) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.clipStyle = clipStyle
+        self.overrideImage = overrideImage
         self.icon = icon
         self.size = size
+        self.synchronousLoad = synchronousLoad
     }
 
     public static func ==(lhs: AvatarComponent, rhs: AvatarComponent) -> Bool {
@@ -49,10 +57,16 @@ public final class AvatarComponent: Component {
         if lhs.clipStyle != rhs.clipStyle {
             return false
         }
+        if lhs.overrideImage != rhs.overrideImage {
+            return false
+        }
         if lhs.icon != rhs.icon {
             return false
         }
         if lhs.size != rhs.size {
+            return false
+        }
+        if lhs.synchronousLoad != rhs.synchronousLoad {
             return false
         }
         return true
@@ -122,8 +136,9 @@ public final class AvatarComponent: Component {
                 context: component.context,
                 theme: component.theme,
                 peer: component.peer,
+                overrideImage: component.overrideImage,
                 clipStyle: clipStyle,
-                synchronousLoad: true,
+                synchronousLoad: component.synchronousLoad,
                 displayDimensions: size,
                 cutoutRect: cutoutRect
             )

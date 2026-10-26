@@ -2,12 +2,44 @@
 import UIKit
 import RichTextEditorCore
 
+/// Which input backend this editor should be built for. Deliberately a KIND, not a backend
+/// type: no backend type is part of this view's public API (spec: "No backend type becomes part
+/// of `RichTextEditorView`'s public API"). External consumers cannot implement a backend, only
+/// name one of these.
+@available(iOS 13.0, *)
+public enum RichTextEditorInputBackendPreference {
+    case legacy
+    /// Use the InputDec backend when the runtime supports it; fall back to legacy otherwise.
+    case inputDecIfSupported
+    /// Debug/comparison only: trap instead of falling back.
+    case inputDecRequired
+}
+
+@available(iOS 13.0, *)
+extension RichTextEditorInputBackendPreference {
+    /// Maps the public KIND onto the module-internal factory preference, so
+    /// `RichTextInputBackendPreference` never leaks into this file's public surface.
+    /// `fileprivate`, not `private`: a `private` member of an extension is visible only to that
+    /// type's own declaration and extensions in this file, and `RichTextEditorView.init` is
+    /// neither.
+    fileprivate var internalPreference: RichTextInputBackendPreference {
+        switch self {
+        case .legacy:
+            return .legacy
+        case .inputDecIfSupported:
+            return .inputDecIfSupported
+        case .inputDecRequired:
+            return .inputDecRequired
+        }
+    }
+}
+
 /// Public façade. Renders all block types (paragraphs, images, tables) in a vertical canvas
 /// with continuous cross-block selection.
 @available(iOS 13.0, *)
 public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     private let scrollView = GripYieldingScrollView()
-    let canvas = DocumentCanvasView()
+    let canvas: DocumentCanvasView
 
     /// Floor for the content height returned by `update(...)`/`performLayout`. Defaults to 44pt (a document
     /// editor wants a tappable minimum body). A compact host (e.g. the chat composer) sets it to 0 so the
@@ -60,6 +92,20 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         }
     }
 
+    /// Per-host code-block geometry (vertical inset, language-line gap). Both fields default to nil,
+    /// meaning "use the shared render metrics" — so an unset host matches the InstantPage V2 renderer.
+    /// Side padding is deliberately not a knob: it is the paragraph inset at the block's nesting level.
+    public var codeStyle: CodeStyle = .default {
+        didSet {
+            guard codeStyle != oldValue else { return }
+            canvas.applyCodeStyle(codeStyle)
+            if bounds.width > 0.0 {
+                canvas.reload(self.document.blocks, width: bounds.width)
+            }
+            canvas.setNeedsDisplay()
+        }
+    }
+
     /// Per-host media geometry (horizontal bleed). Defaults reproduce the editor's built-in edge-to-edge
     /// look; the compact chat composer assigns `MediaBlockStyle(horizontalBleed: 0)` so media insets like
     /// the text paragraphs. Set before the first `update(...)`/document seed (the compact-host knob
@@ -86,15 +132,28 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         }
     }
 
-    /// Per-host tunable text-layout metrics (body/caption line height + paragraph spacing; a growable set).
-    /// Defaults reproduce the editor's built-in document look (`.default` — 1.10 line height, 8pt paragraph
-    /// gap); the compact chat composer assigns `.compact` (natural 1.0 line height, no spacing) so multi-line
-    /// text reads tight like the legacy input. Set before the first `update(...)`/document seed (the
-    /// compact-host knob convention); assigning it after content rebuilds the boxes so the new metrics take
-    /// effect (like `quoteStyle`).
-    public var textLayoutMetrics: TextLayoutMetrics = .default {
+    /// Host-injected fold chevron for detail blocks — the V2 `ExpandingItemVerticalRegularArrow` (template).
+    /// `nil` (default) ⇒ a drawn-arrow fallback. Assigning it reloads so `DetailsBox`es pick up the image.
+    public var detailsChevronImage: UIImage? = nil {
         didSet {
-            canvas.applyTextLayoutMetrics(textLayoutMetrics)
+            canvas.detailsChevronImage = detailsChevronImage
+            if bounds.width > 0.0 {
+                canvas.reload(self.document.blocks, width: bounds.width)
+            }
+            canvas.setNeedsDisplay()
+        }
+    }
+
+    /// The render metrics the editor lays text out with — fonts, per-style line-spacing factors, and
+    /// the block-rhythm scalars. Defaults to the chat-message look, which is what a rich message
+    /// renders as in a bubble. A host that renders its content through a differently-configured
+    /// InstantPage V2 surface passes that surface's metrics here instead. Set before the first
+    /// `update(...)`/document seed (the compact-host knob convention); assigning it after content
+    /// rebuilds the boxes so the new metrics take effect (like `quoteStyle`).
+    public var renderMetrics: RichTextRenderMetrics = .default {
+        didSet {
+            guard renderMetrics != oldValue else { return }
+            canvas.applyRenderMetrics(renderMetrics)
             if bounds.width > 0.0 {
                 canvas.reload(self.document.blocks, width: bounds.width)
             }
@@ -120,6 +179,16 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// selection/caret move. The host responds by re-running its own layout (which calls
     /// `update(size:insets:)`). May fire more than once per logical change; treat it as idempotent.
     public var onChange: (() -> Void)?
+    /// See `RichTextEditor.onCaretRevealNeeded`: the synchronous report that a reveal is owed.
+    /// Separate from `onChange` precisely because the selection-driven half of that is coalesced
+    /// to a trailing async call, and a reveal a turn late races the next arrow key.
+    public var onCaretRevealNeeded: (() -> Void)?
+    /// Set when a text or selection change asks for a reveal, cleared by the pass that performs one.
+    /// It is what makes `ifNeeded` mean "something asked" rather than "the caret is out of band": a
+    /// host re-lays out for reasons that have nothing to do with the caret, and without this every
+    /// such pass would drag the document back to the caret from wherever the user had scrolled it.
+    /// The engine editor holds the same flag, on the engine (`tgid_caretRevealPending`).
+    private var isCaretRevealOwed = false
 
     /// Fires once when the editor gains first-responder focus (the editing surface becomes first
     /// responder) — not on a repeat tap while already focused. A host can react by showing chrome.
@@ -136,6 +205,12 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     public var canPasteMedia: (() -> Bool)? { didSet { canvas.canPasteMedia = canPasteMedia } }
     public var onPasteMedia: (() -> Bool)? { didSet { canvas.onPasteMedia = onPasteMedia } }
 
+    /// Host transform for pasted PLAIN text. When set and it returns a `Document`, that document is
+    /// spliced at the caret (one undo step) instead of the built-in newline-split paste. Returning nil
+    /// falls back to the built-in behavior. The package attaches no meaning to the string — a host uses
+    /// this to convert e.g. markdown to rich content without the package depending on any markdown code.
+    public var plainTextFragmentTransformer: ((String) -> Document?)? { didSet { canvas.plainTextFragmentTransformer = plainTextFragmentTransformer } }
+
     /// A HARDWARE-keyboard Return (plain or ⌘) is offered to the host before the editor inserts a newline, so
     /// a chat composer can implement send-on-Enter / send-on-⌘-Enter. Return `true` to have the editor insert
     /// a newline (the default when unset); `false` when the host consumed the Return (e.g. sent the message).
@@ -150,6 +225,12 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// (hit area = the drag tolerance around the endpoint caret), so the effect is scoped to knob interaction
     /// rather than the whole editor surface.
     public var configureSelectionHandleView: ((UIView) -> Void)? { didSet { canvas.configureSelectionHandleView = configureSelectionHandleView } }
+
+    /// Localized titles for the editor's custom edit-menu items on all supported iOS versions.
+    public var editMenuStrings: RichTextEditorMenuStrings {
+        get { canvas.editMenuStrings }
+        set { canvas.editMenuStrings = newValue }
+    }
 
     /// Transform the editor's default edit-menu elements into the final set. `defaultElements` is the system
     /// suggested actions (Cut/Copy/Paste/Select + Writing Tools) followed by the editor's own custom items
@@ -198,6 +279,11 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         public let link: String?
         public let hasSelection: Bool
         public let isInTable: Bool
+        /// True when the caret/selection is inside a table whose `compact` flag is set (halved cell
+        /// padding). False when not in a table at all, so a host needs no optional handling.
+        public let isTableCompact: Bool
+        /// Whether the caret's table draws its grid. `true` when the caret isn't in a table.
+        public let isTableBordered: Bool
         /// True when a non-empty selection touches only paragraph text — no media or table block, and
         /// neither endpoint is inside a table cell. A list marker can only be meaningfully applied to
         /// paragraph blocks, so a host toolbar uses this to gate a per-selection List action. False for
@@ -208,12 +294,68 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         /// Number of `Block.blockQuote` containers enclosing the caret (0 = not in a quote; N = nested N levels
         /// deep). Drives a host toolbar's Quote check-state (≥1 → checked). Pure: reads canvas state only.
         public let blockQuoteDepth: Int
+
+        /// Public so a second editor implementation can report its own state. The memberwise init is
+        /// internal, which is invisible until another module conforms to `RichTextEditor` — the
+        /// engine editor now does, for the article-editor host.
+        public init(bold: Bool,
+                italic: Bool,
+                underline: Bool,
+                strikethrough: Bool,
+                code: Bool,
+                spoiler: Bool,
+                paragraphStyle: ParagraphStyleName?,
+                isCodeBlock: Bool,
+                isPullQuote: Bool,
+                listMarker: ListMarker?,
+                link: String?,
+                hasSelection: Bool,
+                isInTable: Bool,
+                isTableCompact: Bool,
+                isTableBordered: Bool,
+                selectionIsTextOnly: Bool,
+                canUndo: Bool,
+                canRedo: Bool,
+                blockQuoteDepth: Int) {
+        self.bold = bold
+        self.italic = italic
+        self.underline = underline
+        self.strikethrough = strikethrough
+        self.code = code
+        self.spoiler = spoiler
+        self.paragraphStyle = paragraphStyle
+        self.isCodeBlock = isCodeBlock
+        self.isPullQuote = isPullQuote
+        self.listMarker = listMarker
+        self.link = link
+        self.hasSelection = hasSelection
+        self.isInTable = isInTable
+        self.isTableCompact = isTableCompact
+        self.isTableBordered = isTableBordered
+        self.selectionIsTextOnly = selectionIsTextOnly
+        self.canUndo = canUndo
+        self.canRedo = canRedo
+        self.blockQuoteDepth = blockQuoteDepth
+        }
     }
 
     public func currentState() -> EditorState { canvas.currentState() }
 
-    public override init(frame: CGRect) {
+    public override convenience init(frame: CGRect) {
+        self.init(frame: frame, inputBackend: .legacy)
+    }
+
+    /// Designated initializer. `inputBackend` names WHICH input backend the canvas is built for;
+    /// production reaches the editor through the convenience initializer above and therefore stays
+    /// on `.legacy`. The body below is `commonInit()` — deliberately extracted rather than
+    /// duplicated, so the two entry points can never drift.
+    public init(frame: CGRect, inputBackend: RichTextEditorInputBackendPreference) {
+        self.canvas = RichTextInputCanvasFactory.make(inputBackend.internalPreference)
         super.init(frame: frame)
+        commonInit()
+    }
+
+    private func commonInit() {
         addSubview(scrollView)
         scrollView.clipsToBounds = false
         // Don't hold touches during pan-arbitration (~150ms) before delivering them to the canvas's tap
@@ -231,7 +373,16 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         // The canvas is sized frame-based in layoutSubviews, so a content-height change (typing wraps a
         // line, a cell grows, undo, …) must re-trigger our layout — otherwise it only updates on the next
         // layout pass (e.g. a rotation).
-        canvas.onContentSizeChange = { [weak self] in self?.onChange?() }   // pure relay; the host re-lays-out via update()
+        canvas.onContentSizeChange = { [weak self] in
+            guard let self else { return }
+            self.onChange?()                 // pure relay; the host re-lays-out via update()
+            self.isCaretRevealOwed = true    // …and that pass is where the caret is revealed
+            // An edit reports its selection change right after this, and that report asks for the
+            // reveal; asking here too cost every keystroke a second host reveal pass.
+            if !self.canvas.selectionChangeFollowsContentSizeChange {
+                self.onCaretRevealNeeded?()
+            }
+        }
         // The OS moves the caret via arrows through the canvas's selectedTextRange setter, which can land
         // it off-screen (e.g. arrowing up out of a tall image to the block above). Scroll it back into view.
         // `scrollCaretIntoView` stays SYNCHRONOUS (arrow-key scroll-follow must settle before the setter
@@ -242,8 +393,12 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         // range and flare a selection-gated toolbar into its "has selection" state and back out. Coalescing
         // to one trailing async call lets the host see only the settled selection. Content-size changes still
         // relay synchronously (above), so typed text lays out immediately.
+        // The caret is no longer followed from here: this REPORTS that one is owed and the host's
+        // next pass decides. The scroll that used to sit on this line decided against geometry the
+        // host was about to change, which is the whole of what this design replaces.
         canvas.onSelectionChange = { [weak self] in
-            self?.scrollCaretIntoView()
+            self?.isCaretRevealOwed = true
+            self?.onCaretRevealNeeded?()
             self?.scheduleSelectionDrivenOnChange()
         }
         // Surface first-responder transitions (the canvas is the actual first responder) to the host.
@@ -300,13 +455,44 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// position instead of following the keyboard/panel overlap. It is purely visual (scrollbar geometry):
     /// it does NOT enter `performLayout` / the content-size math. Supplied every `update`, so there is no
     /// stored override for a later `update` to clobber.
+    /// The four-argument spelling, kept for the call sites that have it and for the ones that mean
+    /// it: a pass with nothing to say about the caret. It forwards `.none`, which is exactly that.
     @discardableResult
     public func update(size: CGSize, insets: UIEdgeInsets, contentMargins: UIEdgeInsets = .zero,
                        scrollIndicatorInsets: UIEdgeInsets? = nil) -> CGFloat {
+        update(size: size, insets: insets, contentMargins: contentMargins,
+               scrollIndicatorInsets: scrollIndicatorInsets, caretReveal: .none)
+    }
+
+    @discardableResult
+    public func update(size: CGSize, insets: UIEdgeInsets, contentMargins: UIEdgeInsets,
+                       scrollIndicatorInsets: UIEdgeInsets?,
+                       caretReveal: RichTextEditorCaretReveal) -> CGFloat {
+        // THIS pass is where the caret is revealed, against the geometry it applies. The editor's
+        // own follow from `canvas.onSelectionChange` is still in place until the task that removes
+        // it, so for now a reveal can happen twice — the second is a no-op, because the first left
+        // the caret visible.
+        // A changed TOP inset must re-seat a scroll view that is resting at the top — UIKit only CLAMPS
+        // `contentOffset` when an inset changes, and with `contentInsetAdjustmentBehavior = .never` nothing
+        // else re-seats it. For a SHORT document the clamp is enough (the visible-height floor in
+        // `performLayout` makes −top the only valid offset), but a document TALLER than the viewport leaves
+        // offset 0 in range, so its first screenful stayed hidden under the top inset band (the article
+        // editor opened scrolled under the navigation bar). Captured BEFORE the inset is written; `<=`
+        // admits a rubber-band overscroll above the top, which is still "at the top".
+        let previousTopInset = scrollView.contentInset.top
+        let wasRestingAtTop = scrollView.contentOffset.y <= -previousTopInset + 0.5
         scrollView.contentInset = insets
         scrollView.verticalScrollIndicatorInsets = scrollIndicatorInsets ?? insets
         canvas.contentMargins = contentMargins
-        return performLayout(size: size)
+        let contentHeight = performLayout(size: size)
+        if case let .ifNeeded(animation) = caretReveal { revealCaret(animation, layoutIsCurrent: true) }
+        // After `performLayout`, so the new content size is in place (an offset write can be clamped by it).
+        // Gated on the top inset actually CHANGING, so an update driven by anything else — a keyboard-driven
+        // bottom inset, a re-layout after an edit — never re-seats a scroll the user owns.
+        if abs(insets.top - previousTopInset) > 0.01, wasRestingAtTop {
+            scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: -insets.top)
+        }
+        return contentHeight
     }
 
     /// Sizes the scroll view + canvas to `size` and returns the measured CONTENT height (min 44). The
@@ -320,6 +506,7 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// (rotation, etc.) never clobbers the parent-applied inset; only `update(size:insets:)` changes them.
     @discardableResult
     private func performLayout(size: CGSize) -> CGFloat {
+        performLayoutCountForTesting += 1
         scrollView.frame = CGRect(origin: .zero, size: size)
         canvas.setParagraphsWidthIfNeeded(size.width)
         let contentHeight = max(canvas.intrinsicContentSize.height, self.minimumContentHeight)
@@ -348,6 +535,15 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// against the live `contentMargins`, matching the previous behavior for hosts that update before measuring.
     public func height(forWidth width: CGFloat, contentMargins: UIEdgeInsets? = nil) -> CGFloat {
         max(canvas.measuredContentHeight(forWidth: width, contentMargins: contentMargins), minimumContentHeight)
+    }
+
+    /// Explicit arity so the `RichTextEditor` protocol's `height(forWidth:)` requirement is
+    /// witnessed (`RichTextEngineEditor/RichTextEditorProtocol.swift`) — a method with a defaulted
+    /// parameter does NOT satisfy a protocol requirement that omits it, so this plain-arity
+    /// forwarder exists purely to close that gap. No behaviour of its own beyond forwarding with
+    /// `contentMargins: nil`, matching this method's own default.
+    public func height(forWidth width: CGFloat) -> CGFloat {
+        height(forWidth: width, contentMargins: nil)
     }
 
     /// Measures the content height `lineCount` body paragraphs would occupy at `width`, using a THROWAWAY probe
@@ -383,8 +579,13 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     }
     /// Test accessor: the underlying canvas (to set up selection in unit tests).
     var canvasForTesting: DocumentCanvasView { canvas }
+    /// Test seam: how many synchronous layout passes have run (`CaretRevealLayoutPassTests`).
+    var performLayoutCountForTesting = 0
 
     public func toggleBold() { canvas.toggleBold() }
+    /// The chat's ⇧⌘N: removes every inline mark from the selection as one undo step (see the canvas's
+    /// `clearInlineFormatting`). Also the `RichTextEditor` protocol's requirement, whose default does nothing.
+    public func clearInlineFormatting() { canvas.clearInlineFormatting() }
     public func toggleItalic() { canvas.toggleItalic() }
     public func toggleStrikethrough() { canvas.toggleStrikethrough() }
     public func toggleUnderline() { canvas.toggleUnderline() }
@@ -397,6 +598,24 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     public func wrapInBlockQuote() { canvas.wrapInBlockQuote() }
     public func unwrapBlockQuoteLevel() { canvas.unwrapBlockQuoteLevel() }
 
+    // TASK 39b — **these two deliberately do NOT wrap `synchronizingExternalChange`, and that is the
+    // whole ruling, not an omission.** `effectiveUndoManager?.undo()` INVOKES `registerUndo`'s closure
+    // (`DocumentCanvasView+Editing.swift`), which carries the bracket; wrapping here as well would emit
+    // TWO external changes for one user-visible undo. The closure is also the only placement that emits
+    // exactly once on BOTH entry paths — this facade one and the responder's system Cmd-Z, which never
+    // passes through here at all.
+    //
+    // The task brief specified `.commitBeforeChange` for this path, on the grounds that
+    // `canvas.finalizeMarkedText()` below IS commit-before-change. It is — and the two policies are
+    // INDISTINGUISHABLE in the backend anyway: `.discard` and `.commitBeforeChange` are the same
+    // statement (`markedRangeStorage = nil`) in `reconcileMarkedTextForExternalChange`, so swapping
+    // either the bodies or the case labels is a textual no-op nothing in the package can see. That is
+    // the load-bearing half of the argument (review fix round 1). The weaker half, still true: by the
+    // time the closure runs there is no marked text left to commit, so the two describe the identical
+    // state here. The policy value DESCRIBES what happened to the marked range; on this path
+    // the answer is "already finalized upstream". Making the facade's intent visible to a
+    // self-re-registering `UndoManager` closure would need a transient flag for zero behavioural
+    // difference. Pinned by `ExternalSynchronizationTests.test_theFacadeUndoPathSynchronizesExactlyOnce`.
     public func undo() { canvas.finalizeMarkedText(); canvas.effectiveUndoManager?.undo(); onChange?() }
     public func redo() { canvas.finalizeMarkedText(); canvas.effectiveUndoManager?.redo(); onChange?() }
     // The trailing `onChange?()` is load-bearing for a host toolbar's undo/redo availability. The undo/redo
@@ -416,6 +635,14 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     public func deleteTableColumn() { canvas.deleteTableColumn() }
     /// Deletes the table the caret is in (no-op otherwise).
     public func deleteTable() { canvas.deleteTable() }
+
+    /// Flips the caret's table between compact (halved cell padding) and normal, as one undo step.
+    /// No-op when the caret is not in a table.
+    public func toggleTableCompact() { canvas.toggleTableCompact() }
+
+    /// Shows / hides the caret table's grid. An unbordered table also lays out flush (zero-width
+    /// borders), matching how the sent message renders it.
+    public func toggleTableBordered() { canvas.toggleTableBordered() }
     /// Copies the caret's current table to the pasteboard (app fragment + RTF table + plain-text flatten). No-op outside a table.
     public func copyCurrentTable() { canvas.copyCurrentTable() }
     /// Replaces the caret's current table with body paragraphs (one per row, cells space-joined), one undo step. No-op outside a table.
@@ -428,6 +655,10 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// Inserts an empty `rows`×`cols` table (row 0 a header) at the caret. No-op unless the caret is in
     /// a top-level paragraph.
     public func insertTable(rows: Int, cols: Int) { canvas.insertTable(rows: rows, columns: cols) }
+
+    /// Inserts a fresh, expanded detail (folding) block at the caret (empty title + one empty body paragraph),
+    /// with the caret placed in the title. No-op unless the caret is in a top-level paragraph.
+    public func insertDetailsBlock() { canvas.insertDetailsBlock() }
 
     /// Sets `url` as a link over the current selection (no-op if the selection is empty).
     public func setLink(_ url: String) { canvas.setLink(url) }
@@ -446,8 +677,15 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// The current selection as global position offsets, or `nil` when the selection is collapsed. Used by a
     /// host (the attachment screen's AI-edit-on-selection) to scope an edit to the selected range.
     public func selectedGlobalRange() -> (from: Int, to: Int)? {
-        guard let range = canvas.selectedTextRange as? DocumentTextRange else { return nil }
-        let from = range.from.offset, to = range.to.offset
+        // TASK 44: was `canvas.selectedTextRange as? DocumentTextRange`, then two `.offset` reads.
+        // `canonicalSelection` IS the store that getter builds its range from
+        // (`LegacyRichTextInputBackend.selectedTextRange`'s getter returns
+        // `LegacyTextRange(anchor, head)` verbatim, unordered, on every path), so this reads the same
+        // two numbers one hop earlier and the facade names no identity type. The `min`/`max` normalise
+        // here, exactly as before — an unordered pair is load-bearing INSIDE the seam, not at this
+        // public boundary, whose contract is `(from, to)` ascending.
+        let selection = canvas.canonicalSelection
+        let from = selection.anchor.utf16Offset, to = selection.head.utf16Offset
         guard from != to else { return nil }
         return (min(from, to), max(from, to))
     }
@@ -475,6 +713,56 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// registered renderer, invalid/unrenderable formula content degrades to visible raw LaTeX.
     public func insertFormula(latex: String) { canvas.insertFormula(latex: latex) }
 
+    /// Legacy's `insertFormula` IS the inline one — it inserts a single atom at the caret — so the
+    /// engine's block/inline split collapses to the same call here.
+    public func insertInlineFormula(latex: String) { canvas.insertFormula(latex: latex) }
+
+    /// The selection's text becomes an inline formula. A genuine thin forwarder: the canvas's
+    /// `insertFormula` already replaces the selection and inserts one inline atom at the caret, so
+    /// reading the selection as the latex is the only thing this adds.
+    public func makeSelectionInlineFormula() {
+        guard let range = canvas.selectedTextRange, let latex = canvas.text(in: range),
+              !latex.isEmpty else { return }
+        canvas.insertFormula(latex: latex)
+    }
+
+    /// Inserts a button row (one default pill) at the caret. Top-level only: a row inside a table or a
+    /// block quote is preserved and rendered if it arrives via the edit round-trip, but not created.
+    public func insertButtonRow() { canvas.insertButtonRow() }
+
+    /// Converts the current selection into ONE inline pill whose label is the selected text — the Link
+    /// flow's analogue. No-op with a collapsed caret or an empty selection.
+    public func makeSelectionInlineButton() { canvas.makeSelectionInlineButton() }
+
+    /// Inserts one inline pill carrying `button` at the caret, replacing any selection.
+    ///
+    /// Composed from the verbs the canvas already has rather than a canvas-side insert: the label is
+    /// typed as plain text, selected, turned into a pill by `makeSelectionInlineButton`, and the pill
+    /// is then given the authored button — three undo steps where the engine editor's `insertInlineButton`
+    /// costs one. An empty label is typed as a single space, so there is a run to convert; the pill
+    /// itself carries the authored (empty) label, as the engine's does.
+    public func insertInlineButton(_ button: ButtonRef) {
+        // A code block holds plain text only, so the label goes in as text — `insertFormula`'s rule
+        // (`InlineButtonInCodeTests`). A pill's U+FFFC there was read back as a raw character.
+        if canvas.caretIsInCodeRegion {
+            if !button.labelText.isEmpty { canvas.insertText(button.labelText) }
+            return
+        }
+        let label = button.labelText.isEmpty ? " " : button.labelText
+        guard let start = canvas.selectedTextRange?.start else { return }
+        canvas.insertText(label)
+        guard let end = canvas.selectedTextRange?.end,
+              let range = canvas.textRange(from: start, to: end) else { return }
+        canvas.selectedTextRange = range
+        canvas.makeSelectionInlineButton()
+        // The conversion parks the caret right after the pill, so the pill's own position is one
+        // back. Read from the canonical selection, not `selectedGlobalRange()`, which answers nil
+        // for exactly this collapsed caret.
+        let caret = canvas.canonicalSelection.head.utf16Offset
+        guard caret > 0 else { return }
+        canvas.replaceInlineButton(at: caret - 1, with: button)
+    }
+
     /// Deletes one unit before the caret (drives a custom keyboard's backspace key).
     public func deleteBackward() { canvas.deleteBackward() }
 
@@ -494,6 +782,18 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// Registers the closure that turns an emoji `id` (+ requested square size) into a FRESH, non-
     /// interactive view. The editor owns/positions/removes it, makes it ride scrolling, and keeps its
     /// `dynamicColor` synced to the current text color (so a template custom emoji tints to the text).
+    /// Register the host's syntax highlighter. The editor detects which code blocks need highlighting,
+    /// debounces, caches answers and applies them; the host only turns (language, text) into colours and
+    /// calls `completion` on the main queue whenever it is ready. Answering late is expected; never
+    /// answering leaves the block plain. The editor cannot do this itself — it cannot see libprisma.
+    public func registerSyntaxHighlighter(
+        _ provider: ((_ language: String, _ text: String,
+                      _ completion: @escaping ([RichTextSyntaxToken]) -> Void) -> Void)?
+    ) {
+        self.canvas.syntaxHighlighter = provider
+        self.canvas.scheduleSyntaxHighlightPass()
+    }
+
     public func registerEmojiViewProvider(_ provider: @escaping (_ id: String, _ size: CGSize) -> (UIView & RichTextEmojiView)?) {
         canvas.emojiViewProvider = provider
     }
@@ -509,8 +809,42 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         }
     }
 
+    /// Registers a host-provided button type icon. The icon depends on the button's ACTION, and this
+    /// package's Telegram-free model carries every action it cannot name as an opaque blob — only the
+    /// host can decode that back into the action its InstantPage V2 counterpart resolves an icon from.
+    ///
+    /// It is geometry as much as decoration: an inline pill grows by `inlineIconReserve` to hold its
+    /// icon, so registering (or not) moves the line break of any paragraph holding a button. Register it
+    /// alongside the other providers, before the first reload, exactly as with the formula renderer.
+    public func registerButtonIconProvider(_ provider: @escaping (ButtonAction) -> RichTextButtonIcon?) {
+        canvas.mapper.buttonIconProvider = provider
+        let blocks = canvas.currentBlocks()
+        if !blocks.isEmpty {
+            canvas.reload(blocks, width: canvas.effectiveWidth)
+            performLayout(size: bounds.size)
+        }
+    }
+
     /// Called when the user taps an existing formula atom. The host presents UI and invokes `completion`
     /// with the replacement LaTeX.
+    /// Asked to present the pill property sheet when a pill is tapped — for BOTH pill kinds. The
+    /// completion applies the edit; passing `nil` deletes the pill (and its row, if it was the last).
+    /// Mirrors `onEditFormulaRequested`. While unset, tapping a pill just places the caret.
+    ///
+    /// `isBlockPill` says which kind was tapped (`true` = a `pageBlockButtonRow` pill, `false` = an
+    /// inline `RichText.textButton`) — the same distinction `AttributedStringMapper.buttonAttachment`
+    /// and the renderer's `isInline` draw with. A host offers different properties per kind: the article
+    /// editor drops the link style for a row pill, where a chrome-less button is not something an author
+    /// should create, and keeps it inline (where it IS the plain-link rendering).
+    public var onEditButtonRequested: ((_ button: ButtonRef, _ isBlockPill: Bool, _ completion: @escaping (ButtonRef?) -> Void) -> Void)? {
+        didSet { canvas.buttonEditRequested = onEditButtonRequested }
+    }
+
+    /// Asked to present a button row's alignment/delete menu. Mirrors `onRequestTableStructuralMenu`.
+    public var onRequestButtonRowMenu: ((ButtonRowMenuRequest) -> Void)? {
+        didSet { canvas.buttonRowMenuRequested = onRequestButtonRowMenu }
+    }
+
     public var onEditFormulaRequested: ((_ latex: String, _ completion: @escaping (String) -> Void) -> Void)? {
         get { canvas.formulaEditRequested }
         set { canvas.formulaEditRequested = newValue }
@@ -595,9 +929,17 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// Demo helper: tap the first hidden spoiler (drives the reveal — text shows + dust dissolves).
     public func revealFirstSpoiler() { canvas.tapFirstSpoilerForTesting() }
 
+    /// Selects the whole STRUCTURAL range, `[0, documentSize]`.
+    ///
+    /// TASK 44 note, because the obvious "cleanup" here is a behaviour change: this is deliberately
+    /// NOT `canvas.documentEndOffset`. That is the last RENDERABLE slot (`snapToRenderable`
+    /// backwards from the close token) and is strictly less than `documentSizeValue` whenever the
+    /// document ends in a structural token — `selectAllText()` (`+SelectionActions.swift`) is the
+    /// renderable-bounded variant and even it falls back to the structural range for a degenerate
+    /// document. The facade's Select-All has always been the structural one; the endpoints are
+    /// unchanged, only the object construction moved behind the backend.
     public func selectAll() {
-        canvas.selectedTextRange = DocumentTextRange(DocumentTextPosition(0),
-                                                     DocumentTextPosition(canvas.documentSizeValue))
+        canvas.setSelectedGlobalRange(from: 0, to: canvas.documentSizeValue)
     }
 
     /// Collapses the selection to a caret at the last renderable position (end of the document). A host uses
@@ -605,8 +947,14 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// sits at offset 0 (a structural slot that touches no paragraph), so a command applied there no-ops /
     /// lands at the start. `endOfDocument` already snaps past the closing structural token to a real slot.
     public func moveCaretToDocumentEnd() {
-        guard let end = canvas.endOfDocument as? DocumentTextPosition else { return }
-        canvas.selectedTextRange = DocumentTextRange(end, end)
+        // TASK 44: was `guard let end = canvas.endOfDocument as? DocumentTextPosition else { return }`
+        // followed by `DocumentTextRange(end, end)`. `documentEndOffset` is that same downcast of that
+        // same member, and the `guard` is preserved rather than collapsed — under the legacy backend
+        // it is unreachable, but under any other one it is the difference between doing nothing (what
+        // this method has always done) and jumping the caret to offset 0 (fix round 1, review Minor 2).
+        // The write takes the identical `selectedTextRange` path it took before.
+        guard let end = canvas.documentEndOffset else { return }
+        canvas.setSelectedGlobalRange(from: end, to: end)
     }
 
     @discardableResult
@@ -618,21 +966,71 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// scroll mutates `contentOffset` mid-flight, and a second arrow then computes its destination against
     /// that in-flux state → non-deterministic arrow results (the reported "random" behaviour). Only scrolls
     /// when the caret is actually outside the visible band, so in-screen nav/typing never churns the scroll.
-    private func scrollCaretIntoView(animated: Bool = false) {
+    /// Access widened `private` → internal (Task 18) so `TelegramPresentationInputClient.requestReveal`
+    /// can call it directly as the "outer vertical reveal" authority, alongside the canvas's own
+    /// `scrollCaretIntoViewIfNeeded()` (table-cell horizontal reveal) — the existing two-authority split
+    /// this method's doc-comment above describes is preserved verbatim, not repaired. No behavior change:
+    /// every existing call site (`onSelectionChange` below) is unaffected by the wider access.
+    /// The shared contract's reveal, through the solver both editors use
+    /// (see the RichTextEditor `CLAUDE.md`, "The host decides when the caret is revealed"). Called from
+    /// `update(…caretReveal:)` — the host's pass — and from
+    /// `TelegramPresentationInputClient.requestReveal`, which is an input-backend seam rather than a
+    /// host seam and is a caller like any other.
+    ///
+    /// `animation` is accepted and not used: legacy's reveal has always been immediate, and its own
+    /// comment records why an animated one is dangerous — it mutates `contentOffset` mid-flight, so a
+    /// rapid second arrow key computes its destination against in-flux state. The parameter exists so
+    /// the two editors answer one contract, not so this one grows a motion it does not want.
+    func revealCaret(_ animation: RichTextEditorAnimation, layoutIsCurrent: Bool = false) {
+        _ = animation
+        guard isCaretRevealOwed else { return }
+        // Cleared whatever the outcome, including when the guards below decline: the host asked, so
+        // the editor is no longer owed one.
+        isCaretRevealOwed = false
         guard canvas.isFirstResponder else { return }
         // Lay the canvas out explicitly so `caretRect` + the scrollable extent reflect the latest edit
         // before we measure/scroll — the editor convention is parent-driven layout, so we don't rely on a
-        // pending self-scheduled pass. Idempotent for arrow nav (content unchanged → same layout).
-        performLayout(size: bounds.size)
-        var caret = canvas.caretRect(for: DocumentTextPosition(canvas.head))
+        // pending self-scheduled pass. Idempotent for arrow nav (content unchanged → same layout). Skipped
+        // when `update` has just laid out at this size: a second full pass measured nothing new.
+        if !layoutIsCurrent {
+            performLayout(size: bounds.size)
+        }
+        var caret = canvas.caretRect(atGlobal: canvas.head)
         guard caret != .zero, !caret.isNull else { return }
         // An image-gap caret is full-image-height; its whole rect would never fit the visible band (→ always
         // scroll) and would jump/oscillate. Track a short band at its top edge instead.
         if caret.height > 64 { caret = CGRect(x: caret.minX, y: caret.minY, width: caret.width, height: 24) }
-        let target = caret.insetBy(dx: 0, dy: -12)
-        let visible = scrollView.bounds.inset(by: scrollView.adjustedContentInset)
-        guard !visible.contains(target) else { return }   // already visible → no scroll (kills churn + race)
-        scrollView.scrollRectToVisible(target, animated: animated)
+        let insets = scrollView.adjustedContentInset
+        // The band's padding is what the visible height leaves, at most 12pt: in a field shorter than
+        // the caret plus 24pt, a full band cannot be shown, and revealing it aligned one of ITS edges
+        // and cut the caret (`ShortFieldCaretRevealTests`).
+        let visibleHeight = scrollView.bounds.height - insets.top - insets.bottom
+        let padding = max(0.0, min(12.0, (visibleHeight - caret.height) / 2.0))
+        let target = caret.insetBy(dx: 0, dy: -padding)
+        // The document's two ends are nil here: this canvas has no cheap answer for either, and its
+        // reveal has always worked against the ±12 band above instead. The solver reads nil as "do
+        // the ordinary minimum scroll", which is exactly legacy's behaviour — parity, not a downgrade.
+        let input = RichTextCaretRevealInput(
+            caret: target,
+            firstLineTop: nil,
+            lastLineBottom: nil,
+            contentHeight: scrollView.contentSize.height,
+            viewportHeight: scrollView.bounds.height,
+            topInset: insets.top,
+            bottomInset: insets.bottom,
+            offsetY: scrollView.contentOffset.y)
+        guard let offsetY = RichTextCaretRevealSolver.offsetY(for: input) else { return }
+        scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: offsetY)
+    }
+
+    /// The spelling `TelegramPresentationInputClient` and this file's own selection hook still use.
+    /// The spelling `TelegramPresentationInputClient` and this file's own selection hook still use.
+    /// It ASKS and then reveals, because those callers are the ones doing the asking — the gate
+    /// exists to stop an unrelated host layout from revealing, not to stop a deliberate request.
+    func scrollCaretIntoView(animated: Bool = false) {
+        _ = animated
+        isCaretRevealOwed = true
+        revealCaret(.immediate)
     }
 
     private var isSelectionOnChangeScheduled = false

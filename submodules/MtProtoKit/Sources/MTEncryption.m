@@ -49,6 +49,15 @@ void MTRawSha256(void const *inData, NSUInteger length, void *outData)
     CC_SHA256(inData, (CC_LONG)length, outData);
 }
 
+void MTRawSha256TwoParts(void const *part1, NSUInteger length1, void const *part2, NSUInteger length2, void *outData)
+{
+    CC_SHA256_CTX context;
+    CC_SHA256_Init(&context);
+    CC_SHA256_Update(&context, part1, (CC_LONG)length1);
+    CC_SHA256_Update(&context, part2, (CC_LONG)length2);
+    CC_SHA256_Final(outData, &context);
+}
+
 #if defined(_MSC_VER)
 
 #define FORCE_INLINE    __forceinline
@@ -165,28 +174,46 @@ int32_t MTMurMurHash32(const void *bytes, int length)
     return result;
 }
 
-void MTAesEncryptInplace(NSMutableData *data, NSData *key, NSData *iv)
-{
-    unsigned char aesIv[16 * 2];
-    memcpy(aesIv, iv.bytes, iv.length);
-    
-    void *outData = malloc(data.length);
-    MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
-    memcpy(data.mutableBytes, outData, data.length);
+// Shared tail of the in-place helpers: on success the ciphertext replaces the
+// plaintext; on failure the plaintext is wiped so it cannot be sent as if it
+// were ciphertext.
+static bool MTAesFinishInplace(void *data, NSUInteger length, void *outData, bool success) {
+    if (outData != NULL && success) {
+        memcpy(data, outData, length);
+    } else {
+        if (MTLogEnabled()) {
+            MTLog(@"***** MTAes: in-place AES failed, wiping %lu bytes", (unsigned long)length);
+        }
+        memset(data, 0, length);
+        success = false;
+    }
     free(outData);
+    return success;
 }
 
-void MTAesEncryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
+bool MTAesEncryptInplace(NSMutableData *data, NSData *key, NSData *iv)
 {
     unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
     
     void *outData = malloc(data.length);
-    MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
-    memcpy(data.mutableBytes, outData, data.length);
-    free(outData);
+    bool success = outData != NULL && MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    return MTAesFinishInplace(data.mutableBytes, data.length, outData, success);
+}
+
+bool MTAesEncryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
+{
+    unsigned char aesIv[16 * 2];
+    memcpy(aesIv, iv.bytes, iv.length);
+    
+    void *outData = malloc(data.length);
+    bool success = outData != NULL && MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    if (!MTAesFinishInplace(data.mutableBytes, data.length, outData, success)) {
+        return false;
+    }
     
     memcpy(iv.mutableBytes, aesIv, 16 * 2);
+    return true;
 }
 
 void MTAesEncryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv) {
@@ -194,38 +221,90 @@ void MTAesEncryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *k
     memcpy(aesIv, iv, 32);
     
     void *outData = malloc(length);
-    MyAesIgeEncrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
-    memcpy(data, outData, length);
-    free(outData);
+    bool success = outData != NULL && MyAesIgeEncrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
+    if (!MTAesFinishInplace(data, (NSUInteger)length, outData, success)) {
+        return;
+    }
     
     memcpy(iv, aesIv, 32);
 }
 
-void MTAesEncryptRaw(void const *data, void *outData, NSInteger length, void const *key, void const *iv) {
-    unsigned char aesIv[32];
-    memcpy(aesIv, iv, 32);
-    
-    MyAesIgeEncrypt(data, (int)length, outData, key, 32, aesIv);
+// MyAesIge{En,De}crypt load and store whole 16-byte blocks through word-typed
+// pointers and assert word alignment of both buffers. Callers usually pass
+// malloc-backed buffers, which are aligned; the two helpers below bounce through
+// a temporary only when handed an odd slice (e.g. an NSData subrange), so the
+// alignment requirement is met in one place rather than at every call site.
+static bool MTIsWordAligned(void const *pointer) {
+    return (((uintptr_t)pointer) % sizeof(long)) == 0;
 }
 
-void MTAesDecryptRaw(void const *data, void *outData, NSInteger length, void const *key, void const *iv) {
-    unsigned char aesIv[32];
-    memcpy(aesIv, iv, 32);
-    
-    MyAesIgeDecrypt(data, (int)length, outData, key, 32, aesIv);
+static bool MTAesIgeRawWithAlignedBuffers(void const *data, void *outData, NSInteger length, void const *key, unsigned char aesIv[32], bool encrypt) {
+    void *alignedIn = NULL;
+    void *alignedOut = NULL;
+    void const *in = data;
+    void *out = outData;
+    if (!MTIsWordAligned(in)) {
+        alignedIn = malloc((size_t)length);
+        if (alignedIn == NULL) {
+            memset(outData, 0, (size_t)length);
+            return false;
+        }
+        memcpy(alignedIn, data, (size_t)length);
+        in = alignedIn;
+    }
+    if (!MTIsWordAligned(out)) {
+        alignedOut = malloc((size_t)length);
+        if (alignedOut == NULL) {
+            free(alignedIn);
+            memset(outData, 0, (size_t)length);
+            return false;
+        }
+        out = alignedOut;
+    }
+
+    bool success;
+    if (encrypt) {
+        success = MyAesIgeEncrypt(in, (int)length, out, key, 32, aesIv);
+    } else {
+        success = MyAesIgeDecrypt(in, (int)length, out, key, 32, aesIv);
+    }
+
+    if (alignedOut != NULL) {
+        // On failure `out` holds zeros, which is what the caller must see.
+        memcpy(outData, alignedOut, (size_t)length);
+        free(alignedOut);
+    }
+    free(alignedIn);
+    return success;
 }
 
-void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
+bool MTAesEncryptRaw(void const *data, void *outData, NSInteger length, void const *key, void const *iv) {
+    unsigned char aesIv[32];
+    memcpy(aesIv, iv, 32);
+
+    return MTAesIgeRawWithAlignedBuffers(data, outData, length, key, aesIv, true);
+}
+
+bool MTAesDecryptRaw(void const *data, void *outData, NSInteger length, void const *key, void const *iv) {
+    unsigned char aesIv[32];
+    memcpy(aesIv, iv, 32);
+
+    return MTAesIgeRawWithAlignedBuffers(data, outData, length, key, aesIv, false);
+}
+
+bool MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
 {
     unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
     
     void *outData = malloc(data.length);
-    MyAesIgeDecrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
-    memcpy(data.mutableBytes, outData, data.length);
-    free(outData);
+    bool success = outData != NULL && MyAesIgeDecrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    if (!MTAesFinishInplace(data.mutableBytes, data.length, outData, success)) {
+        return false;
+    }
     
     memcpy(iv.mutableBytes, aesIv, 16 * 2);
+    return true;
 }
 
 void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *key, void *iv) {
@@ -233,9 +312,10 @@ void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *k
     memcpy(aesIv, iv, 16 * 2);
     
     void *outData = malloc(length);
-    MyAesIgeDecrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
-    memcpy(data, outData, length);
-    free(outData);
+    bool success = outData != NULL && MyAesIgeDecrypt(data, (int)length, outData, key.bytes, (int)key.length, aesIv);
+    if (!MTAesFinishInplace(data, (NSUInteger)length, outData, success)) {
+        return;
+    }
     
     memcpy(iv, aesIv, 16 * 2);
 }
@@ -245,9 +325,10 @@ void MTAesDecryptRawInplaceAndModifyIv(void *data, NSInteger length, void *key, 
     memcpy(aesIv, iv, 16 * 2);
     
     void *outData = malloc(length);
-    MyAesIgeDecrypt(data, (int)length, outData, key, 32, aesIv);
-    memcpy(data, outData, length);
-    free(outData);
+    bool success = outData != NULL && MyAesIgeDecrypt(data, (int)length, outData, key, 32, aesIv);
+    if (!MTAesFinishInplace(data, (NSUInteger)length, outData, success)) {
+        return;
+    }
     
     memcpy(iv, aesIv, 16 * 2);
 }
@@ -266,7 +347,13 @@ NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv)
     memcpy(aesIv, iv.bytes, iv.length);
     
     void *outData = malloc(data.length);
-    MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    if (outData == NULL) {
+        return nil;
+    }
+    if (!MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv)) {
+        free(outData);
+        return nil;
+    }
     return [[NSData alloc] initWithBytesNoCopy:outData length:data.length freeWhenDone:true];
 }
 
@@ -284,7 +371,9 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
     
     unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
-    MyAesIgeDecrypt(data.bytes, (int)data.length, resultData.mutableBytes, key.bytes, (int)key.length, aesIv);
+    if (!MyAesIgeDecrypt(data.bytes, (int)data.length, resultData.mutableBytes, key.bytes, (int)key.length, aesIv)) {
+        return nil;
+    }
     
     return resultData;
 }
@@ -448,13 +537,28 @@ static inline uint64_t mygcd(uint64_t a, uint64_t b)
 
 bool MTFactorize(uint64_t what, uint64_t *resA, uint64_t *resB)
 {
+    if (what < 4 || what >= ((uint64_t)1 << 63))
+    {
+        return false;
+    }
+    
+    if ((what & 1) == 0)
+    {
+        if (resA != NULL)
+            *resA = 2;
+        if (resB != NULL)
+            *resB = what / 2;
+        
+        return true;
+    }
+    
     int it = 0;
     uint64_t g = 0;
     for (int i = 0; i < 3 || it < 1000; i++)
     {
-        int q = ((lrand48() & 15) + 17) % what;
+        uint64_t q = ((uint64_t)(lrand48() & 15) + 17) % what;
         uint64_t x = (uint64_t)lrand48 () % (what - 1) + 1, y = x;
-        int lim = 1 << (i + 18);
+        int lim = 1 << (MIN(i, 5) + 18);
         int j;
         for (j = 1; j < lim; j++)
         {
@@ -711,8 +815,13 @@ bool MTCheckMod(id<EncryptionProvider> provider, NSData *numberBytes, unsigned i
 
 NSData *MTAesCtrDecrypt(NSData *data, NSData *key, NSData *iv) {
     MTAesCtr *ctr = [[MTAesCtr alloc] initWithKey:key.bytes keyLength:32 iv:iv.bytes decrypt:true];
+    if (ctr == nil) {
+        return nil;
+    }
     NSMutableData *outData = [[NSMutableData alloc] initWithLength:data.length];
-    [ctr encryptIn:data.bytes out:outData.mutableBytes len:data.length];
+    if (![ctr encryptIn:data.bytes out:outData.mutableBytes len:data.length]) {
+        return nil;
+    }
     return outData;
 }
 
@@ -734,7 +843,7 @@ uint64_t MTRsaFingerprint(id<EncryptionProvider> provider, NSString *key) {
     [buffer appendTLBytes:eData];
     
     NSData *sha1Data = MTSha1(buffer.data);
-    static uint8_t sha1Buffer[20];
+    uint8_t sha1Buffer[20];
     [sha1Data getBytes:sha1Buffer length:20];
     
     uint64_t fingerprint = (((uint64_t) sha1Buffer[19]) << 56) |
@@ -797,9 +906,7 @@ static NSData *decrypt_TL_data(id<EncryptionProvider> provider, unsigned char bu
         NSData *keyBytes = [[NSData alloc] initWithBytes:bytes length:32];
         
         NSMutableData *decryptedBytes = [[NSMutableData alloc] initWithLength:encryptedBytes.length];
-        MyAesCbcDecrypt(encryptedBytes.bytes, (int)encryptedBytes.length, decryptedBytes.mutableBytes, keyBytes.bytes, (int)keyBytes.length, iv.mutableBytes);
-        
-        if (decryptedBytes == nil) {
+        if (!MyAesCbcDecrypt(encryptedBytes.bytes, (int)encryptedBytes.length, decryptedBytes.mutableBytes, keyBytes.bytes, (int)keyBytes.length, iv.mutableBytes)) {
             return nil;
         }
         

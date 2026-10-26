@@ -2,6 +2,17 @@ import Foundation
 import UIKit
 import Display
 
+/// The device whose rows a passcode layout uses. iPhone Duo is one device with two screens: the 951pt-tall inner
+/// screen keeps the rows it has always used, while the 678pt cover screen takes the 667pt-tall iPhone 6 rows, the
+/// tallest whose keypad and Cancel/Delete fit above its bottom edge (the 932pt rows ended the bottom key row 36pt
+/// below it). The longer side tells the screens apart in either orientation.
+private func passcodeLayoutDeviceMetrics(_ layout: ContainerViewLayout) -> DeviceMetrics {
+    if case .iPhoneDuo = layout.deviceMetrics, max(layout.size.width, layout.size.height) < 800.0 {
+        return .iPhone6
+    }
+    return layout.deviceMetrics
+}
+
 struct PasscodeKeyboardLayout {
     var buttonSize: CGFloat
     var horizontalSecond: CGFloat
@@ -22,7 +33,7 @@ struct PasscodeKeyboardLayout {
             modalBiometricsOffset -= 8.0
         }
         
-        switch layout.deviceMetrics {
+        switch passcodeLayoutDeviceMetrics(layout) {
             case .iPhone4:
                 self.buttonSize = 75.0
                 self.horizontalSecond = 95.0
@@ -67,7 +78,7 @@ struct PasscodeKeyboardLayout {
                 self.topOffset = 226.0
                 self.biometricsOffset = 30.0
                 self.deleteOffset = 20.0
-            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMaxZoomed, .iPhone16Pro, .iPhoneAir:
+            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMaxZoomed, .iPhone16Pro, .iPhoneAir, .iPhone18Pro:
                 self.buttonSize = 75.0
                 self.horizontalSecond = 103.0
                 self.horizontalThird = 206.0
@@ -78,7 +89,7 @@ struct PasscodeKeyboardLayout {
                 self.topOffset = 294.0
                 self.biometricsOffset = 30.0
                 self.deleteOffset = 20.0
-            case .iPhoneXSMax, .iPhoneXr, .iPhone12ProMax, .iPhone13ProMax, .iPhone14ProMax, .iPhone16ProMax:
+            case .iPhoneXSMax, .iPhoneXr, .iPhone12ProMax, .iPhone13ProMax, .iPhone14ProMax, .iPhone16ProMax, .iPhoneDuo, .iPhone18ProMax:
                 self.buttonSize = 85.0
                 self.horizontalSecond = 115.0
                 self.horizontalThird = 230.0
@@ -134,7 +145,7 @@ public struct PasscodeLayout {
         }
         
         self.keyboard = PasscodeKeyboardLayout(layout: layout, modalPresentation: modalPresentation)
-        switch layout.deviceMetrics {
+        switch passcodeLayoutDeviceMetrics(layout) {
             case .iPhone4:
                 self.titleOffset = 30.0
                 self.subtitleOffset = -13.0
@@ -151,11 +162,11 @@ public struct PasscodeLayout {
                 self.titleOffset = 112.0
                 self.subtitleOffset = -6.0
                 self.inputFieldOffset = 156.0
-            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMaxZoomed, .iPhone16Pro, .iPhoneAir:
+            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMaxZoomed, .iPhone16Pro, .iPhoneAir, .iPhoneDuo, .iPhone18Pro:
                 self.titleOffset = 162.0
                 self.subtitleOffset = 0.0
                 self.inputFieldOffset = 206.0
-            case .iPhoneXSMax, .iPhoneXr, .iPhone12ProMax, .iPhone13ProMax, .iPhone14ProMax, .iPhone16ProMax:
+            case .iPhoneXSMax, .iPhoneXr, .iPhone12ProMax, .iPhone13ProMax, .iPhone14ProMax, .iPhone16ProMax, .iPhone18ProMax:
                 self.titleOffset = 180.0
                 self.subtitleOffset = 0.0
                 self.inputFieldOffset = 226.0

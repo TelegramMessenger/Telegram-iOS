@@ -1,5 +1,5 @@
 import Foundation
-import TelegramApi
+internal import TelegramApi
 import Postbox
 import SwiftSignalKit
 
@@ -63,7 +63,8 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
 
 func applyMediaResourceChanges(from: InstantPageBlock, fromMedia: [MediaId: Media], to: InstantPageBlock, toMedia: [MediaId: Media], postbox: Postbox, force: Bool, skipPreviews: Bool) {
     switch from {
-    case .unsupported, .title, .subtitle, .authorDate, .header, .subheader, .heading, .formula, .paragraph, .preformatted, .footer, .divider, .anchor, .pullQuote, .webEmbed, .channelBanner, .kicker, .thinking, .table, .relatedArticles, .map:
+    case .unsupported, .title, .subtitle, .authorDate, .header, .subheader, .heading, .formula, .paragraph, .preformatted, .footer, .divider, .anchor, .pullQuote, .webEmbed, .channelBanner, .kicker, .thinking, .table, .relatedArticles, .map, .buttonRow:
+        // .buttonRow carries no media, so it joins the no-op group.
         break
     case let .list(lhsItems, _):
         guard case let .list(rhsItems, _) = to else {
@@ -110,6 +111,16 @@ func applyMediaResourceChanges(from: InstantPageBlock, fromMedia: [MediaId: Medi
         if let lhsMedia = fromMedia[lhsId], let rhsMedia = toMedia[rhsId] {
             applyMediaResourceChanges(from: lhsMedia, to: rhsMedia, postbox: postbox, force: force, skipPreviews: skipPreviews)
         }
+    case let .document(lhsId, _):
+        // Mirrors .audio: on send confirmation this hands the locally-uploaded file's resource data
+        // to the cloud resource. Without it, a document in a just-sent rich message would be
+        // re-downloaded instead of reusing what is already on disk.
+        guard case let .document(rhsId, _) = to else {
+            return
+        }
+        if let lhsMedia = fromMedia[lhsId], let rhsMedia = toMedia[rhsId] {
+            applyMediaResourceChanges(from: lhsMedia, to: rhsMedia, postbox: postbox, force: force, skipPreviews: skipPreviews)
+        }
     case let .collage(lhsItems, _):
         guard case let .collage(rhsItems, _) = to else {
             return
@@ -150,7 +161,7 @@ func applyMediaResourceChanges(from: [InstantPageBlock], fromMedia: [MediaId: Me
 }
 
 func applyMediaResourceChanges(from: RichTextMessageAttribute, to: RichTextMessageAttribute, postbox: Postbox, force: Bool, skipPreviews: Bool = false) {
-    applyMediaResourceChanges(from: from.instantPage.blocks, fromMedia: from.instantPage.media, to: to.instantPage.blocks, toMedia: to.instantPage.media, postbox: postbox, force: force, skipPreviews: skipPreviews)
+    applyMediaResourceChanges(from: from.instantPage.blocks, fromMedia: from.instantPage.rawMedia, to: to.instantPage.blocks, toMedia: to.instantPage.rawMedia, postbox: postbox, force: force, skipPreviews: skipPreviews)
 }
 
 func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, cacheReferenceKey: CachedSentMediaReferenceKey?, result: Api.Updates, accountPeerId: PeerId, pendingMessageEvent: @escaping (PeerPendingMessageDelivered) -> Void) -> Signal<Void, NoError> {

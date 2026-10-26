@@ -120,8 +120,8 @@ final class EmojiMapperTests: XCTestCase {
         XCTAssertEqual(box.width, glyphSide + boost, accuracy: 0.5, "box side = glyph + boost (\(label))")
         layout.layoutManager.enumerateTextSegments(in: layout.textRange(off, off + 1)!, type: .selection,
                                                     options: []) { _, frame, baselinePosition, _ in
-            // The drawn text baseline is line-centered (raw baseline − centeringDelta); the emoji tracks it.
-            let baseline = frame.minY + baselinePosition - layout.centeringDelta(lineHeight: frame.height)
+            // The drawn text baseline is corrected (raw baseline − baselineDelta); the emoji tracks it.
+            let baseline = frame.minY + baselinePosition - layout.baselineDelta
             // Centered on the glyph box: glyph box is baseline-aligned (top = baseline − ascender, side = glyphSide).
             XCTAssertEqual(box.midX, frame.minX + glyphSide / 2, accuracy: 0.5, "centered on glyph x (\(label))")
             XCTAssertEqual(box.midY, baseline - font.ascender + glyphSide / 2, accuracy: 0.5,

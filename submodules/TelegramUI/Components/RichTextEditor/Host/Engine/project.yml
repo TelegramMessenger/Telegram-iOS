@@ -1,0 +1,133 @@
+name: InputDec
+options:
+  bundleIdPrefix: com.inputdec
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CLANG_ENABLE_MODULES: YES
+    CLANG_ENABLE_OBJC_ARC: YES
+    CODE_SIGNING_ALLOWED: NO
+targets:
+  InputDec:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - TextView
+      - PrivateUIKit
+    resources:
+      - path: PrivateUIKit/Contracts
+    info:
+      path: Config/Info.plist
+      properties:
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleName: InputDec
+        CFBundlePackageType: APPL
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.inputdec.demo.attachment
+            UTTypeDescription: InputDec demo attachment
+            UTTypeConformsTo:
+              - public.data
+          - UTTypeIdentifier: com.inputdec.demo.interaction-attachment
+            UTTypeDescription: InputDec demo interaction attachment
+            UTTypeConformsTo:
+              - public.data
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: IDSceneDelegate
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdec.demo
+  InputDecTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+        excludes:
+          - Fixtures/SelectionCallbackAuthorization-iOS26.5.json
+      - path: UITests/IDAutocorrectionDecisionTestSupport.h
+      - path: UITests/IDAutocorrectionDecisionTestSupport.m
+      - path: UITests/IDInlinePredictionLifecycleTestSupport.h
+      - path: UITests/IDInlinePredictionLifecycleTestSupport.m
+      - path: UITests/IDIMECompositionLifecycleTestSupport.h
+      - path: UITests/IDIMECompositionLifecycleTestSupport.m
+      - path: UITests/IDHIDEventTestSupport.h
+      - path: UITests/IDHIDEventTestSupport.m
+      - path: UITests/IDTextInputBatchTestSupport.h
+      - path: UITests/IDTextInputBatchTestSupport.m
+    resources:
+      - path: TestFixtures/TextInputScenarios
+      - path: Tests/Fixtures/UIKitBehaviorTestOnlyContracts-iOS26.5.json
+    dependencies:
+      - target: InputDec
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdec.demo.tests
+  InputDecStockOracleHost:
+    type: application
+    platform: iOS
+    sources:
+      - StockOracleHost
+      - path: PrivateUIKit/IDPrivateUIKit.h
+      - path: PrivateUIKit/IDPrivateUIKit.m
+      - path: PrivateUIKit/IDPrivateUIKit+Testing.h
+    resources:
+      - path: PrivateUIKit/Contracts
+    info:
+      path: Config/StockOracleHost-Info.plist
+      properties:
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleName: InputDecStockOracleHost
+        CFBundlePackageType: APPL
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdec.stockoracle
+  InputDecUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    resources:
+      - path: UITests/Fixtures
+      - path: TestFixtures/TextInputScenarios
+    dependencies:
+      - target: InputDec
+      - target: InputDecStockOracleHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inputdec.demo.uitests
+schemes:
+  InputDec:
+    build:
+      targets:
+        InputDec: all
+        InputDecStockOracleHost: [test]
+        InputDecTests: [test]
+        InputDecUITests: [test]
+    test:
+      targets:
+        - InputDecTests
+        - InputDecUITests

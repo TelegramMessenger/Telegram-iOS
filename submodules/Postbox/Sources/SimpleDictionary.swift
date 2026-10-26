@@ -37,7 +37,6 @@ public struct SimpleDictionary<K: Hashable, V>: Sequence {
             for (key, value) in self.items {
                 if !keysIn.contains(key) {
                     updatedItems.append((key, value))
-                    break
                 }
             }
             return SimpleDictionary(items: updatedItems)

@@ -1,4 +1,5 @@
 import Foundation
+import TelegramCore
 import AVFoundation
 import Metal
 import MetalKit
@@ -136,8 +137,8 @@ private func verticesData(
     }
     
     let adjustedOffset = simd_float2(
-        offset.x / texCoordScale.x,
-        offset.y / texCoordScale.y
+        offset.x * texCoordScale.x,
+        offset.y * texCoordScale.y
     )
     
     texCoordScale *= 1.0 / scale
@@ -329,7 +330,7 @@ final class VideoFinishPass: RenderPass {
             self.mainPipelineState = try device.makeRenderPipelineState(descriptor: mainDescriptor)
             self.gradientPipelineState = try device.makeRenderPipelineState(descriptor: gradientDescriptor)
         } catch {
-            print(error.localizedDescription)
+            Logger.shared.log("MediaEditor", "VideoFinishPass: failed to create pipeline state: \(error.localizedDescription)")
         }
     }
     

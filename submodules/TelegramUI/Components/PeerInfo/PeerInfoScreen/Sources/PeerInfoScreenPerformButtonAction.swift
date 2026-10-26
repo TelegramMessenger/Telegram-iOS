@@ -12,6 +12,8 @@ import NotificationExceptionsScreen
 import TranslateUI
 import TelegramNotices
 import AlertComponent
+import WalletContext
+import WalletSendScreen
 
 extension PeerInfoScreenNode {
     func performButtonAction(key: PeerInfoHeaderButtonKey, buttonNode: PeerInfoHeaderButtonNode?, gesture: ContextGesture?) {
@@ -571,7 +573,7 @@ extension PeerInfoScreenNode {
                             
                             if let strongSelf = self {
                                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
-                                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .media(.standalone(media: contact), nil), updatedPresentationData: strongSelf.controller?.updatedPresentationData, completed: { [weak self] peerIds in
+                                let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .media(.standalone(media: contact), nil), updatedPresentationData: strongSelf.controller?.updatedPresentationData, completed: { [weak self] peerIds in
                                     if let strongSelf = self {
                                         let _ = (strongSelf.context.engine.data.get(
                                             EngineDataList(
@@ -644,6 +646,28 @@ extension PeerInfoScreenNode {
                                 }
                             })))
                         }
+                    }
+
+                    if WalletConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 }).isAvailable, strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, user.id != strongSelf.context.account.peerId, !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport) {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Wallet_SendMoney, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Ton"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+
+                            guard let self, let controller = self.controller, let peer = self.data?.peer, let walletContext = self.context.walletContext else {
+                                return
+                            }
+                            let sendController = WalletSendScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, useDefaultAccent: false, peer: peer, walletContext: walletContext, allowOpenRecipientChat: false, completed: { [weak self] in
+                                guard let self, let navigationController = self.controller?.navigationController as? NavigationController else {
+                                    return
+                                }
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .default, useExisting: true, completion: { chatController in
+                                    chatController.scrollToEndOfHistory()
+                                }))
+                            })
+                            sendController.navigationPresentation = .modal
+                            controller.push(sendController)
+                        })))
                     }
                     
                     if let cachedData = data.cachedData as? CachedUserData, canTranslateChats(context: strongSelf.context), cachedData.flags.contains(.translationHidden) {
@@ -847,13 +871,13 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
-                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: user, chatPeer: chatPeer, cachedData: strongSelf.data?.cachedData)
+                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(user), chatPeer: chatPeer, cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ClearMessages"), color: theme.contextMenu.primaryColor)
                         }, action: { c, _ in
                             if let c {
-                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, peer: user, chatPeer: EnginePeer(user))
+                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, chatPeer: EnginePeer(user))
                             }
                         })))
                     }
@@ -1063,13 +1087,13 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
-                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: channel, chatPeer: EnginePeer(channel), cachedData: strongSelf.data?.cachedData)
+                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(channel), chatPeer: EnginePeer(channel), cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ClearMessages"), color: theme.contextMenu.primaryColor)
                         }, action: { c, _ in
                             if let c {
-                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, peer: channel, chatPeer: EnginePeer(channel))
+                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, chatPeer: EnginePeer(channel))
                             }
                         })))
                     }
@@ -1230,13 +1254,13 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
-                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: group, chatPeer: EnginePeer(group), cachedData: strongSelf.data?.cachedData)
+                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: EnginePeer(group), chatPeer: EnginePeer(group), cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ClearMessages"), color: theme.contextMenu.primaryColor)
                         }, action: { c, _ in
                             if let c {
-                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, peer: group, chatPeer: EnginePeer(group))
+                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, chatPeer: EnginePeer(group))
                             }
                         })))
                     }

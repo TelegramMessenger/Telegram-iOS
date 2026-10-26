@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import TelegramStringFormatting
 import TelegramPresentationData
 import TelegramUIPreferences
 import ProgressNavigationButtonNode
@@ -18,11 +19,12 @@ import UndoUI
 import ContextUI
 
 private func peerTokenTitle(accountPeerId: EnginePeer.Id, peer: EnginePeer, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
-    if peer.id == accountPeerId {
+    switch EditableTokenListPeerAlias(peer: peer, accountPeerId: accountPeerId) {
+    case .savedMessages:
         return strings.DialogList_SavedMessages
-    } else if peer.id.isReplies {
+    case .replies:
         return strings.DialogList_Replies
-    } else {
+    case nil:
         return peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
     }
 }
@@ -106,7 +108,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         
         self.titleView = CounterControllerTitleView(theme: self.presentationData.theme)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self._hasGlassStyle = true
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -176,10 +178,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             })
         case let .premiumGifting(birthdays, selectToday, _):
             if let birthdays, selectToday {
-                let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                let currentDate = Date()
+                let currentTimeZone = TimeZone.current
                 var todayPeers: [EnginePeer.Id] = []
                 for (peerId, birthday) in birthdays {
-                    if birthday.day == today {
+                    if relativeDateForBirthday(birthday, relativeTo: currentDate, timeZone: currentTimeZone) == .today {
                         todayPeers.append(peerId)
                     }
                 }
@@ -224,7 +227,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData, style: .glass), transition: .immediate)
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData), transition: .immediate)
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.updateTitle()
         self.contactsNode.updatePresentationData(self.presentationData)
@@ -803,7 +806,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.suspendedNavigationBarLayout = layout
             return
         }
-        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: nil, transition: transition)
+        self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -816,7 +819,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.suspendNavigationBarLayout = false
         if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
-            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, additionalCutout: nil, transition: transition)
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
         }
     }
     
@@ -859,6 +862,6 @@ private final class ContactContextReferenceContentSource: ContextReferenceConten
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

@@ -179,7 +179,7 @@
     galleryItem.editingContext = editingContext;
     galleryItem.stickersContext = stickersContext;
     
-    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:context items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:true allowCaptionEntities:true hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName isScheduledMessages:false hasCoverButton:false];
+    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:context items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:true allowCaptionEntities:true hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName isScheduledMessages:false isActionButtonDone:false hasCoverButton:false];
     model.controller = galleryController;
     model.stickersContext = stickersContext;
     

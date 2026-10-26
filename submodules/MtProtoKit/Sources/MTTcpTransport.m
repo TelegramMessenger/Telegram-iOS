@@ -488,7 +488,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         if (transportContext.connection != nil && [transportContext.connection.internalId isEqual:transactionId])
         {
             transportContext.connectionIsValid = true;
-            [transportContext.connectionBehaviour connectionValidDataReceived];
+            if (!self.incomingDataIsUnauthenticated) {
+                [transportContext.connectionBehaviour connectionValidDataReceived];
+            }
         }
         
         [self stopConnectionWatchdogTimer];
@@ -559,7 +561,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             return;
         
         id<MTTransportDelegate> delegate = self.delegate;
-        if ([delegate respondsToSelector:@selector(transportUpdatedDataReceiveProgress:progressToken:packetLength:progress:)])
+        if ([delegate respondsToSelector:@selector(transportActivityUpdated:)])
             [delegate transportActivityUpdated:self];
     }];
 }

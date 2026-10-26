@@ -282,6 +282,49 @@ final class ChatInputContentModelTests: XCTestCase {
         XCTAssertEqual(cell.rowspan, 2)
     }
 
+    func test_codable_compactTable_roundTripsViaAdaptedPostbox() throws {
+        let table = ChatInputTable(
+            columns: [ChatInputColumnSpec(width: 100.0)],
+            rows: [ChatInputTableRow(height: nil, cells: [ChatInputTableCell(runs: [ChatInputRun(text: "X")])])],
+            compact: true
+        )
+        let content = ChatInputContent(schemaVersion: 3, blocks: [.table(table)])
+        let data = try AdaptedPostboxEncoder().encode(content)
+        let decoded = try AdaptedPostboxDecoder().decode(ChatInputContent.self, from: data)
+        XCTAssertEqual(decoded, content)
+        guard case .table(let out)? = decoded.blocks.first else { return XCTFail("expected a table") }
+        XCTAssertTrue(out.compact)
+    }
+
+    func test_codable_unborderedTable_roundTripsViaAdaptedPostbox() throws {
+        let table = ChatInputTable(
+            columns: [ChatInputColumnSpec(width: 100.0)],
+            rows: [ChatInputTableRow(height: nil, cells: [ChatInputTableCell(runs: [ChatInputRun(text: "X")])])],
+            bordered: false
+        )
+        let content = ChatInputContent(schemaVersion: 3, blocks: [.table(table)])
+        let data = try AdaptedPostboxEncoder().encode(content)
+        let decoded = try AdaptedPostboxDecoder().decode(ChatInputContent.self, from: data)
+        XCTAssertEqual(decoded, content)
+        guard case .table(let out)? = decoded.blocks.first else { return XCTFail("expected a table") }
+        XCTAssertFalse(out.bordered)
+    }
+
+    /// A draft written before `bordered` existed must still decode, defaulting to TRUE — such a table was
+    /// always drawn with its grid, and the forward converter hard-coded `bordered: true`.
+    func test_codable_tableWithoutBorderedKey_decodesAsBordered() throws {
+        let json = Data(#"{"rows":[],"columns":[]}"#.utf8)
+        let table = try JSONDecoder().decode(ChatInputTable.self, from: json)
+        XCTAssertTrue(table.bordered)
+    }
+
+    /// A draft written before `compact` existed must still decode, defaulting to false.
+    func test_codable_tableWithoutCompactKey_decodesAsNonCompact() throws {
+        let json = Data(#"{"columns":[{"width":100}],"rows":[{"cells":[]}]}"#.utf8)
+        let table = try JSONDecoder().decode(ChatInputTable.self, from: json)
+        XCTAssertFalse(table.compact)
+    }
+
     // MARK: - Per-cell H+V alignment (ChatInputTableCell)
 
     func testTableCellAlignmentRoundTrips() throws {
@@ -494,6 +537,22 @@ final class ChatInputContentModelTests: XCTestCase {
         XCTAssertEqual(decoded, media)
     }
 
+    /// `displayMode` is a `String`-raw enum: its synthesized `RawRepresentable` Codable uses a
+    /// `singleValueContainer`, which `AdaptedPostboxEncoder` does not support (it crashed on encode). Guards the
+    /// custom keyed Codable by round-tripping a NON-default `.slideshow` value through AdaptedPostbox.
+    func test_chatInputMedia_displayMode_codableViaAdaptedPostbox() throws {
+        let img = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 1), representations: [], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+        for mode in [ChatInputMediaDisplayMode.mosaic, .slideshow] {
+            let media = ChatInputMedia(items: [
+                ChatInputMediaItem(media: img, kind: .image, naturalSize: ChatInputSize(width: 100, height: 50)),
+            ], displayMode: mode)
+            let data = try AdaptedPostboxEncoder().encode(media)
+            let decoded = try AdaptedPostboxDecoder().decode(ChatInputMedia.self, from: data)
+            XCTAssertEqual(decoded.displayMode, mode)
+            XCTAssertEqual(decoded, media)
+        }
+    }
+
     func test_chatInputMedia_convenienceInit_isOneItem() {
         let img = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 1), representations: [], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
         let media = ChatInputMedia(media: img, kind: .image, naturalSize: ChatInputSize(width: 1, height: 1))
@@ -612,5 +671,101 @@ final class ChatInputContentModelTests: XCTestCase {
         let json = #"{"runs":[]}"#.data(using: .utf8)!
         let c = try JSONDecoder().decode(ChatInputTableCell.self, from: json)
         XCTAssertEqual(c.colspan, 1); XCTAssertEqual(c.rowspan, 1)
+    }
+
+    // MARK: - InstantPage buttons
+
+    private func buttonRow(_ alignment: InstantPageButtonRowAlignment = .justify) -> ChatInputButtonRow {
+        ChatInputButtonRow(
+            buttons: [
+                ChatInputButton(label: [ChatInputRun(text: "Open")], action: .url("https://telegram.org"), color: .primary, isLink: false),
+                ChatInputButton(label: [ChatInputRun(text: "Pay")], action: .payment, color: .danger, isLink: true),
+            ],
+            alignment: alignment
+        )
+    }
+
+    /// LOAD-BEARING: a button has no message-entity form, so button-bearing content must route to the
+    /// rich `.instantPage` send path. Returning true here would send the message as plain text +
+    /// entities and destroy the buttons on the way out.
+    func test_buttonRowBlock_isNotEntityExpressible() {
+        XCTAssertFalse(ChatInputContent(blocks: [.buttonRow(buttonRow())]).isEntityExpressible())
+    }
+
+    func test_inlineButtonRun_isNotEntityExpressible() {
+        var attributes = ChatInputInlineAttributes()
+        attributes.entity = .button(ChatInputButton(label: [ChatInputRun(text: "Go")], action: .url("https://telegram.org")))
+        let content = ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [
+            ChatInputRun(text: "before "),
+            ChatInputRun(text: "\u{FFFC}", attributes: attributes),
+        ]))])
+        XCTAssertFalse(content.isEntityExpressible())
+    }
+
+    /// Via the REAL persistence path (`AdaptedPostbox*coder`), not JSON — the action rides as a Postbox
+    /// object blob and the colour/alignment as keyed Int32 rawValues, neither of which JSON would exercise.
+    func test_codable_buttonRow_roundTripsViaAdaptedPostbox() throws {
+        let content = ChatInputContent(blocks: [.buttonRow(buttonRow(.right))])
+        let data = try AdaptedPostboxEncoder().encode(content)
+        XCTAssertEqual(try AdaptedPostboxDecoder().decode(ChatInputContent.self, from: data), content)
+    }
+
+    func test_codable_inlineButtonRun_roundTripsViaAdaptedPostbox() throws {
+        var attributes = ChatInputInlineAttributes(bold: true)
+        attributes.entity = .button(ChatInputButton(
+            label: [ChatInputRun(text: "Go")],
+            action: .callback(requiresPassword: true, data: MemoryBuffer(data: Data([1, 2, 3]))),
+            color: .success,
+            isLink: true
+        ))
+        let content = ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [
+            ChatInputRun(text: "\u{FFFC}", attributes: attributes),
+        ]))])
+        let data = try AdaptedPostboxEncoder().encode(content)
+        XCTAssertEqual(try AdaptedPostboxDecoder().decode(ChatInputContent.self, from: data), content)
+    }
+
+    /// The discriminator is persisted in drafts. 8 is the next free value: `details` is 7, and 2 is a
+    /// deliberate gap left by the retired `collapsedQuote`. Never renumber.
+    func test_buttonRow_discriminatorIsEight() throws {
+        let object = try JSONSerialization.jsonObject(
+            with: try JSONEncoder().encode(ChatInputBlock.buttonRow(ChatInputButtonRow(buttons: [])))
+        ) as? [String: Any]
+        XCTAssertEqual(object?["kind"] as? Int, 8)
+    }
+
+    /// An older build must skip an unknown block rather than failing the whole draft — the lenient
+    /// per-element decode. Simulated by decoding a block whose discriminator this build does not know.
+    func test_unknownBlockDiscriminator_isSkippedNotFatal() throws {
+        let content = ChatInputContent(blocks: [
+            .paragraph(ChatInputParagraph(style: .body, runs: [ChatInputRun(text: "keep me")])),
+            .buttonRow(buttonRow()),
+        ])
+        let data = try AdaptedPostboxEncoder().encode(content)
+        XCTAssertEqual(try AdaptedPostboxDecoder().decode(ChatInputContent.self, from: data).blocks.count, 2)
+    }
+
+    func testAllMediaFindsNestedMedia() {
+        let image = TelegramMediaImage(
+            imageId: EngineMedia.Id(namespace: Namespaces.Media.LocalImage, id: 1),
+            representations: [],
+            immediateThumbnailData: nil,
+            reference: nil,
+            partialReference: nil,
+            flags: []
+        )
+        let mediaBlock = ChatInputBlock.media(ChatInputMedia(
+            media: image,
+            kind: .image,
+            naturalSize: ChatInputSize(width: 10.0, height: 10.0)
+        ))
+        let quoted = ChatInputBlock.blockQuote(ChatInputBlockQuote(
+            content: ChatInputContent(blocks: [mediaBlock]),
+            collapsed: false
+        ))
+        let content = ChatInputContent(blocks: [quoted])
+
+        XCTAssertEqual(content.allMedia.count, 1)
+        XCTAssertEqual(content.allMedia.first?.id, image.imageId)
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -352,7 +353,8 @@ private final class GuideItemComponent: Component {
                         startingPosition: .begin,
                         size: CGSize(width: 60.0, height: 60.0),
                         renderingScale: UIScreen.main.scale,
-                        loop: false
+                        loop: false,
+                        lottieSettings: component.context.lottieRenderingSettings
                     )
                 ),
                 environment: {},
@@ -368,7 +370,7 @@ private final class GuideItemComponent: Component {
                 
                 if component.isPlaying && !self.isPlaying {
                     self.isPlaying = true
-                    Queue.mainQueue().justDispatch {
+                    Queue.mainQueue().justDispatch { [view, weak self] in
                         let completionBlock = { [weak self] in
                             guard let self else {
                                 return

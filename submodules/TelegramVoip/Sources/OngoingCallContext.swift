@@ -836,12 +836,35 @@ public final class OngoingCallContext {
             return AudioDevice(impl: SharedCallAudioDevice(disableRecording: !enableMicrophone, enableSystemMute: enableSystemMute))
         }
         
+        /// Server killswitch `ios_killswitch_disable_call_audio_device_fixes`: devices created after
+        /// this call run the pre-2026-09-05 code paths (one-shot start without result checks or
+        /// retries, unconditional audio-session state forwarding, RTCAudioSession allowed to
+        /// deactivate the session). Process-wide, because one creator (`GroupCallContext`) has no
+        /// access to the app configuration. Off by default.
+        public static func setLegacyBehaviorEnabled(_ enabled: Bool) {
+            SharedCallAudioDevice.setLegacyBehaviorEnabled(enabled)
+        }
+        
         private init(impl: SharedCallAudioDevice) {
             self.impl = impl
+            // The start outcome used to be invisible: RTC logs only reach the app log while a
+            // call instance holds a log sink, and this device starts before one exists.
+            impl.startResultHandler = { started, failure, failedAttempts in
+                if started {
+                    Logger.shared.log("CallAudioDevice", "audio device started" + (failedAttempts > 0 ? " after \(failedAttempts) failed attempt(s)" : ""))
+                } else {
+                    Logger.shared.log("CallAudioDevice", "audio device start attempt \(failedAttempts) failed: \(failure ?? "unknown")")
+                }
+            }
         }
         
         public func setIsAudioSessionActive(_ isActive: Bool) {
             self.impl.setManualAudioSessionIsActive(isActive)
+        }
+        
+        /// Stops the device for good. Later activation changes are ignored.
+        public func stop() {
+            self.impl.stop()
         }
         
         public func setTone(tone: Tone?) {
@@ -853,6 +876,13 @@ public final class OngoingCallContext {
     
     public static func setupAudioSession() {
         OngoingCallThreadLocalContextWebrtc.setupAudioSession()
+    }
+    
+    /// Aligns the shared WebRTC audio session configuration with the one ManagedAudioSession
+    /// installs for a call, without touching the live AVAudioSession. Use this when the audio
+    /// session has not been taken over yet.
+    public static func setupSharedAudioSessionConfiguration() {
+        OngoingCallThreadLocalContextWebrtc.setupSharedAudioSessionConfiguration()
     }
     
     public let callId: CallId
@@ -935,7 +965,7 @@ public final class OngoingCallContext {
         self.audioSessionDisposable.set((audioSessionActive
         |> filter { $0 }
         |> take(1)
-        |> deliverOn(queue)).start(next: { [weak self] _ in
+        |> deliverOn(queue)).start(next: { [weak self, callSessionManager] _ in
             if let strongSelf = self {
                 var allowP2P = allowP2P
                 
@@ -946,27 +976,17 @@ public final class OngoingCallContext {
                         voipProxyServer = VoipProxyServerWebrtc(host: proxyServer.host, port: proxyServer.port, username: username, password: password)
                     case .mtp:
                         break
+                    case .web:
+                        // Calls are SOCKS5-only by design. A web proxy is secret-based (see
+                        // ProxySettings.mtProxySettings) and cannot back a VoipProxyServerWebrtc,
+                        // which needs host/port/user/pass — same as .mtp.
+                        break
                     }
                 }
                 
-                var unfilteredConnections: [CallSessionConnection]
+                let unfilteredConnections: [CallSessionConnection]
                 unfilteredConnections = [connections.primary] + connections.alternatives
-                
-                if version == "12.0.0" {
-                    for connection in unfilteredConnections {
-                        if case let .reflector(reflector) = connection {
-                            unfilteredConnections.append(.reflector(CallSessionConnection.Reflector(
-                                id: 123456,
-                                ip: "91.108.9.38",
-                                ipv6: "",
-                                isTcp: true,
-                                port: 595,
-                                peerTag: reflector.peerTag
-                            )))
-                        }
-                    }
-                }
-                
+
                 var reflectorIdList: [Int64] = []
                 for connection in unfilteredConnections {
                     switch connection {
@@ -997,17 +1017,11 @@ public final class OngoingCallContext {
                     switch connection {
                     case let .reflector(reflector):
                         if reflector.isTcp {
-                            if version == "12.0.0" {
-                                /*if signalingReflector == nil {
-                                    signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
-                                }*/
-                            } else {
-                                if signalingReflector == nil {
-                                    signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
-                                }
-                                
-                                continue connectionsLoop
+                            if signalingReflector == nil {
+                                signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
                             }
+
+                            continue connectionsLoop
                         }
                     case .webRtcReflector:
                         break
@@ -1055,16 +1069,8 @@ public final class OngoingCallContext {
                 }
                 
                 #if DEBUG && true
-                var customParameters = customParameters
                 if let initialCustomParameters = try? JSONSerialization.jsonObject(with: (customParameters ?? "{}").data(using: .utf8)!) as? [String: Any] {
-                    var customParametersValue: [String: Any]
-                    customParametersValue = initialCustomParameters
-                    if version == "12.0.0" {
-                        customParametersValue["network_use_tcponly"] = true as NSNumber
-                        customParameters = String(data: try! JSONSerialization.data(withJSONObject: customParametersValue), encoding: .utf8)!
-                    }
-                    
-                    if let value = customParametersValue["network_use_tcponly"] as? Bool, value {
+                    if let value = initialCustomParameters["network_use_tcponly"] as? Bool, value {
                         filteredConnections = filteredConnections.filter { connection in
                             if connection.hasTcp {
                                 return true

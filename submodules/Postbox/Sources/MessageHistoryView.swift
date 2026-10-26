@@ -313,6 +313,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
     private let clipHoles: Bool
     private let trackHoles: Bool
     private let anchor: HistoryViewInputAnchor
+    private let includeAnchorWhileLoading: Bool
     fileprivate var mapReadStatesFromThreads: Bool = false
     
     fileprivate var combinedReadStates: MessageHistoryViewReadState?
@@ -350,9 +351,11 @@ final class MutableMessageHistoryView: MutablePostboxView {
         namespaces: MessageIdNamespaces,
         count: Int,
         topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?],
-        additionalDatas: [AdditionalMessageHistoryViewDataEntry]
+        additionalDatas: [AdditionalMessageHistoryViewDataEntry],
+        includeAnchorWhileLoading: Bool = false
     ) {
         self.anchor = inputAnchor
+        self.includeAnchorWhileLoading = includeAnchorWhileLoading
         
         self.orderStatistics = orderStatistics
         self.clipHoles = clipHoles
@@ -394,7 +397,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
             }
         }
         
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: count + 1, locations: peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: count + 1, locations: peerIds, includeAnchorWhileLoading: includeAnchorWhileLoading)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
@@ -417,7 +420,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
     }
     
     private func reset(postbox: PostboxImpl) {
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, appendMessagesFromTheSameGroup: self.appendMessagesFromTheSameGroup, namespaces: self.namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: self.fillCount + 1, locations: self.peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, appendMessagesFromTheSameGroup: self.appendMessagesFromTheSameGroup, namespaces: self.namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, ignoreMessageIds: self.ignoreMessageIds, halfLimit: self.fillCount + 1, locations: self.peerIds, includeAnchorWhileLoading: self.includeAnchorWhileLoading)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
@@ -582,6 +585,13 @@ final class MutableMessageHistoryView: MutablePostboxView {
                             }
                         }
                     }
+                }
+            }
+            if self.includeAnchorWhileLoading {
+                // The anchor is shown while the hole is still open: any change to its peer's messages, to
+                // media or to peers re-renders it (a deletion empties the view again).
+                if transaction.currentOperationsByPeerId[loadingState.messageId.peerId] != nil || !transaction.updatedMedia.isEmpty || !transaction.currentUpdatedPeers.isEmpty {
+                    hasChanges = true
                 }
             }
         case let .loaded(loadedState):
@@ -835,7 +845,6 @@ final class MutableMessageHistoryView: MutablePostboxView {
         }
         
         var updatedCachedPeerDataMessages = false
-        var updatedCachedPeerDataPeers = false
         var currentCachedPeerData: CachedPeerData?
         
         let additionalDatas = self.additionalDatas
@@ -849,17 +858,17 @@ final class MutableMessageHistoryView: MutablePostboxView {
                     if currentData?.messageIds != updatedData.messageIds {
                         updatedCachedPeerDataMessages = true
                     }
-                    if currentData?.peerIds != updatedData.peerIds {
-                        updatedCachedPeerDataPeers = true
-                    }
                     currentCachedPeerData = updatedData
                     updated[i] = .cachedPeerData(peerId, updatedData)
                     hasChanges = true
                 }
             case .cachedPeerDataMessages:
                 break
-            case .cachedPeerDataPeers:
-                break
+            case let .cachedPeerDataPeers(peerId, _):
+                if let updatedData = transaction.currentUpdatedCachedPeerData[peerId]?.updated {
+                    updated[i] = .cachedPeerDataPeers(peerId, postbox.cachedPeerDataPeers(peerId: peerId, cachedData: updatedData))
+                    hasChanges = true
+                }
             case let .message(id, currentMessages):
                 let currentGroupingKey = currentMessages.first?.groupingKey
                 var currentIds = [id]
@@ -938,7 +947,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                     }
                     
                     if value != updatedValue {
-                        updated[i] = .peerIsContact(peerId, value)
+                        updated[i] = .peerIsContact(peerId, updatedValue)
                         hasChanges = true
                     }
                 }
@@ -993,25 +1002,6 @@ final class MutableMessageHistoryView: MutablePostboxView {
                         }
                     }
                     updated[i] = .cachedPeerDataMessages(peerId, messages)
-                default:
-                    break
-                }
-            }
-        }
-        if updatedCachedPeerDataPeers {
-            hasChanges = true
-            for i in 0 ..< additionalDatas.count {
-                switch additionalDatas[i] {
-                case let .cachedPeerDataPeers(peerId, _):
-                    var peers: [PeerId: Peer] = [:]
-                    if let cachedData = currentCachedPeerData {
-                        for id in cachedData.peerIds {
-                            if let peer = postbox.peerTable.get(id) {
-                                peers[id] = peer
-                            }
-                        }
-                    }
-                    updated[i] = .cachedPeerDataPeers(peerId, peers)
                 default:
                     break
                 }
@@ -1123,10 +1113,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
         return Message(
             stableId: typingDraft.stableId,
             stableVersion: typingDraft.stableVersion,
-            id: MessageId(
-                peerId: peerId,
-                namespace: 1,
-                id: Int32.max - 50000),
+            id: typingDraftMessageId(peerId: peerId, randomId: typingDraft.id),
             globallyUniqueId: nil,
             groupingKey: nil,
             groupInfo: nil,
@@ -1230,8 +1217,9 @@ final class MutableMessageHistoryView: MutablePostboxView {
         //TODO:optimize refresh
         var peerStoryStats: [PeerId: PeerStoryStats] = [:]
         if case let .loaded(state) = self.sampledState {
+            var fetchedAuthorIds = Set<PeerId>()
             for entry in state.entries {
-                if let author = entry.message.author {
+                if let author = entry.message.author, fetchedAuthorIds.insert(author.id).inserted {
                     if let value = fetchPeerStoryStats(postbox: postbox, peerId: author.id) {
                         peerStoryStats[author.id] = value
                     }
@@ -1299,6 +1287,7 @@ public final class MessageHistoryView: PostboxView {
     public let isLoading: Bool
     public let isLoadingEarlier: Bool
     public let isAddedToChatList: Bool
+    public let isAnchorOnlyWhileLoading: Bool
     public let peerStoryStats: [PeerId: PeerStoryStats]
     
     public init(tag: HistoryViewInputTag?, namespaces: MessageIdNamespaces, entries: [MessageHistoryEntry], holeEarlier: Bool, holeLater: Bool, isLoading: Bool) {
@@ -1318,6 +1307,7 @@ public final class MessageHistoryView: PostboxView {
         self.isLoading = isLoading
         self.isLoadingEarlier = false
         self.isAddedToChatList = false
+        self.isAnchorOnlyWhileLoading = false
         self.peerStoryStats = [:]
     }
     
@@ -1333,14 +1323,28 @@ public final class MessageHistoryView: PostboxView {
         switch mutableView.sampledState {
         case .loading:
             self.isLoading = true
-            self.anchorIndex = .upperBound
-            entries = []
+            var loadingEntries: [MessageHistoryEntry] = []
+            var loadingAnchorIndex: MessageHistoryAnchorIndex = .upperBound
+            if case let .loading(loadingState) = mutableView.state, let index = loadingState.anchorIndex, !loadingState.anchorEntries.isEmpty {
+                for entry in loadingState.anchorEntries {
+                    if mutableView.namespaces.contains(entry.message.id.namespace) {
+                        loadingEntries.append(MessageHistoryEntry(message: entry.message, isRead: false, location: nil, monthLocation: nil, attributes: entry.attributes))
+                    }
+                }
+                if !loadingEntries.isEmpty {
+                    loadingAnchorIndex = .message(index)
+                }
+            }
+            self.isAnchorOnlyWhileLoading = !loadingEntries.isEmpty
+            self.anchorIndex = loadingAnchorIndex
+            entries = loadingEntries
             self.holeEarlier = true
             self.holeLater = true
             self.earlierId = nil
             self.laterId = nil
             self.isLoadingEarlier = true
         case let .loaded(state):
+            self.isAnchorOnlyWhileLoading = false
             var isLoading = false
             var isLoadingEarlier = false
             switch state.anchor {
@@ -1441,9 +1445,11 @@ public final class MessageHistoryView: PostboxView {
         self.fixedReadStates = mutableView.combinedReadStates
         self.transientReadStates = mutableView.transientReadStates
         
+        // A view that carries only its anchor while loading makes no read claim: the read edge computed
+        // over that one entry would draw an unread separator above it before its surroundings exist.
         switch mutableView.peerIds {
         case .single, .associated:
-            if let combinedReadStates = mutableView.combinedReadStates {
+            if let combinedReadStates = mutableView.combinedReadStates, !self.isAnchorOnlyWhileLoading {
                 switch combinedReadStates {
                 case let .peer(states):
                     var hasUnread = false
@@ -1505,7 +1511,7 @@ public final class MessageHistoryView: PostboxView {
                 self.maxReadIndex = nil
             }
         case let .external(input):
-            if let maxReadMessageId = input.maxReadIncomingMessageId {
+            if let maxReadMessageId = input.maxReadIncomingMessageId, !self.isAnchorOnlyWhileLoading {
                 var maxIndex: MessageIndex?
                 
                 let hasUnread = true
@@ -1575,6 +1581,51 @@ public final class MessageHistoryView: PostboxView {
         self.peerStoryStats = mutableView.peerStoryStats
     }
     
+    /// This view as `includeAnchorWhileLoading`'s loading view carries its anchor: only the anchor message and its
+    /// album, loading on both sides, with no read claim. For a view that is loaded around a stored message whose
+    /// surroundings cannot be shown yet because holes reach into them (a joined channel's history, which the update
+    /// stream fills from the top, opened at an older post), so the chat shows the message the same way meanwhile.
+    /// Nil when the anchor is not a message among the entries.
+    public func anchorOnlyWhileLoading() -> MessageHistoryView? {
+        guard case let .message(anchor) = self.anchorIndex, let anchorEntry = self.entries.first(where: { $0.index.id == anchor.id }) else {
+            return nil
+        }
+        let groupingKey = anchorEntry.message.groupingKey
+        let anchorEntries = self.entries.filter { entry in
+            if entry.index.id == anchor.id {
+                return true
+            }
+            if let groupingKey, entry.message.groupingKey == groupingKey, entry.index.id.peerId == anchor.id.peerId {
+                return true
+            }
+            return false
+        }.map { entry in
+            MessageHistoryEntry(message: entry.message, isRead: false, location: nil, monthLocation: nil, attributes: entry.attributes)
+        }
+        return MessageHistoryView(anchorOnlyOf: self, entries: anchorEntries)
+    }
+
+    private init(anchorOnlyOf base: MessageHistoryView, entries: [MessageHistoryEntry]) {
+        self.tag = base.tag
+        self.namespaces = base.namespaces
+        self.anchorIndex = base.anchorIndex
+        self.earlierId = nil
+        self.laterId = nil
+        self.holeEarlier = true
+        self.holeLater = true
+        self.entries = entries
+        self.maxReadIndex = nil
+        self.fixedReadStates = base.fixedReadStates
+        self.transientReadStates = base.transientReadStates
+        self.topTaggedMessages = base.topTaggedMessages
+        self.additionalData = base.additionalData
+        self.isLoading = true
+        self.isLoadingEarlier = true
+        self.isAddedToChatList = base.isAddedToChatList
+        self.isAnchorOnlyWhileLoading = true
+        self.peerStoryStats = base.peerStoryStats
+    }
+
     public init(base: MessageHistoryView, fixed combinedReadStates: MessageHistoryViewReadState?, transient transientReadStates: MessageHistoryViewReadState?) {
         self.tag = base.tag
         self.namespaces = base.namespaces
@@ -1591,9 +1642,11 @@ public final class MessageHistoryView: PostboxView {
         self.isLoading = base.isLoading
         self.isLoadingEarlier = base.isLoadingEarlier
         self.isAddedToChatList = base.isAddedToChatList
+        self.isAnchorOnlyWhileLoading = base.isAnchorOnlyWhileLoading
         self.peerStoryStats = base.peerStoryStats
         
-        if let combinedReadStates = combinedReadStates {
+        // As in `init(_:)`: a view that carries only its anchor while loading makes no read claim.
+        if let combinedReadStates = combinedReadStates, !base.isAnchorOnlyWhileLoading {
             switch combinedReadStates {
             case let .peer(states):
                 var hasUnread = false

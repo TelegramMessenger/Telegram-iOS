@@ -54,6 +54,7 @@ swift_library(
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/Display",
         "//submodules/TelegramCore",
         "//submodules/MetalEngine",
@@ -68,6 +69,7 @@ swift_library(
         "//submodules/PresentationDataUtils",
         "//submodules/LocalMediaResources",
         "//submodules/Camera",
+        "//submodules/Camera/CameraLegacy",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",

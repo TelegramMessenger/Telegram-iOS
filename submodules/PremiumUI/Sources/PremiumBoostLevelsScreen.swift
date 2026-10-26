@@ -1100,7 +1100,7 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
                             controller.present(alertController, in: .window(.root))
                         } else {
                             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                            |> deliverOnMainQueue).start(next: { [weak controller] peer in
+                            |> deliverOnMainQueue).start(next: { [weak controller, weak self] peer in
                                 guard let peer, let controller else {
                                     return
                                 }
@@ -1451,7 +1451,7 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

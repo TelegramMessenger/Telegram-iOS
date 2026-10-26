@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/Display",
         "//submodules/TelegramCore",
         "//submodules/SSignalKit/SwiftSignalKit",
@@ -26,6 +27,8 @@ swift_library(
         "//submodules/LocalMediaResources",
         "//submodules/ImageCompression",
         "//submodules/Camera",
+        "//submodules/Camera/CameraLegacy",
+        "//submodules/Camera/CameraNeo",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",

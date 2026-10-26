@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 
 private struct SearchStickersConfiguration {
@@ -1640,6 +1640,8 @@ func _internal_searchEmoji(account: Account, query: String?, emoticon: [String],
                     return (intermediateResult, true)
                 }
             }
+        } else if emoticon.joined(separator: "").isEmpty {
+            return .single((intermediateResult, true))
         } else {
             remote = account.network.request(Api.functions.messages.searchCustomEmoji(emoticon: emoticon.joined(separator: ""), hash: cached?.hash ?? 0))
             |> `catch` { _ -> Signal<Api.EmojiList, NoError> in

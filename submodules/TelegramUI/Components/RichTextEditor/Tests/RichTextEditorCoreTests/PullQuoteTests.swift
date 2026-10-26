@@ -25,7 +25,7 @@ final class PullQuoteTests: XCTestCase {
     }
 
     func test_fragment_pullQuoteNotInlineMergeable() {
-        XCTAssertFalse(isInlineMergeable(.pullQuote(PullQuote(id: BlockID("p"), runs: []))))
+        XCTAssertFalse(isInlineMergeable(.pullQuote(PullQuote(id: BlockID("p"), runs: [])), intoHostStyle: .body))
     }
 
     func test_fragment_blockPlainText_pullQuote() {

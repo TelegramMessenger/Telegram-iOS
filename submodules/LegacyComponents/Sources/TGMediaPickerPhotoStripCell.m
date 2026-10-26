@@ -390,7 +390,10 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
         
         [self setImage:image forState:UIControlStateNormal];
         
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         self.adjustsImageWhenHighlighted = false;
+        #pragma clang diagnostic pop
     }
     return self;
 }

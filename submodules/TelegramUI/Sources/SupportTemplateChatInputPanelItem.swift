@@ -12,6 +12,12 @@ import ItemListUI
 /// way bot-command rows have an arrow button, so this is deliberately simpler than
 /// `CommandChatInputPanelItem`.
 final class SupportTemplateChatInputPanelItem: ListViewItem {
+    // Neighbors only matter here as "is there one" (top/bottom merging), so nothing about
+    // this item influences its neighbors - same as `CommandChatInputPanelItem`.
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     fileprivate let presentationData: ItemListPresentationData
     fileprivate let template: SupportTemplate
     fileprivate let templateSelected: (SupportTemplate) -> Void
@@ -24,12 +30,12 @@ final class SupportTemplateChatInputPanelItem: ListViewItem {
         self.templateSelected = templateSelected
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = { () -> Void in
             let node = SupportTemplateChatInputPanelItemNode()
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom) = (previousItem != nil, nextItem != nil)
+            let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
             let (layout, apply) = nodeLayout(self, params, top, bottom)
             
             node.contentSize = layout.contentSize
@@ -50,13 +56,13 @@ final class SupportTemplateChatInputPanelItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? SupportTemplateChatInputPanelItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (top, bottom) = (previousItem != nil, nextItem != nil)
+                    let (top, bottom) = (neighbors.previous != nil, neighbors.next != nil)
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom)
                     Queue.mainQueue().async {
@@ -105,10 +111,10 @@ final class SupportTemplateChatInputPanelItemNode: ListViewItemNode {
         self.addSubnode(self.activateAreaNode)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = item as? SupportTemplateChatInputPanelItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: previousItem != nil, bottom: nextItem != nil)
+            let merged = (top: neighbors.previous != nil, bottom: neighbors.next != nil)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets

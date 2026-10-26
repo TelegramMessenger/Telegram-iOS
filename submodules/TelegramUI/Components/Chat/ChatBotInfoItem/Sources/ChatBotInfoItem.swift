@@ -35,7 +35,13 @@ public final class ChatBotInfoItem: ListViewItem {
     fileprivate let controllerInteraction: ChatControllerInteraction
     fileprivate let presentationData: ChatPresentationData
     fileprivate let context: AccountContext
-    
+
+    // Decodes to nil on the chat side, which is the same branch a missing neighbor takes — and
+    // being one shared constant, swapping one info item for another triggers no neighbor relayout.
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     public init(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, peer: EnginePeer?, managedByBot: EnginePeer?, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData, context: AccountContext) {
         self.title = title
         self.text = text
@@ -48,7 +54,7 @@ public final class ChatBotInfoItem: ListViewItem {
         self.context = context
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = {
             let node = ChatBotInfoItemNode()
             
@@ -73,7 +79,7 @@ public final class ChatBotInfoItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatBotInfoItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
@@ -95,6 +101,19 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
     public var controllerInteraction: ChatControllerInteraction?
     
     public let offsetContainer: ASDisplayNode
+
+    /// The vertical offset the LIST last asked this node to hold, via `updateTrailingItemSpace`.
+    ///
+    /// Remembered because the layout apply below rewrites `offsetContainer.frame` — it is the only
+    /// place the container's SIZE is set — and would otherwise discard the offset on every re-layout.
+    /// The list does re-issue the value at the end of the same pass, so the discard is invisible while
+    /// that re-issue is immediate; on a pass whose transition is animated it is not, and the block
+    /// springs from the discarded zero back to the position it never actually left. Holding the value
+    /// here means nothing needs restoring: an unchanged offset re-applies as a no-op
+    /// (`CALayer.animateFrame` returns early on `from == to`), while a genuine change still travels on
+    /// the pass transition.
+    private var trailingItemSpaceOffset: CGFloat = 0.0
+
     public let backgroundNode: ASImageNode
     public let imageNode: TransformImageNode
     public var videoNode: UniversalVideoNode?
@@ -184,7 +203,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                     break
                 case .ignore:
                     return .fail
-                case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .conferenceCall, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .date, .custom, .externalInstantPage:
+                case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .conferenceCall, .openMessage, .timecode, .bankCard, .tonAddress, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .date, .custom, .externalInstantPage:
                     return .waitForSingleTap
                 }
             }
@@ -203,12 +222,6 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
         super.updateAbsoluteRect(rect, within: containerSize)
         
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += containerSize.height - rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     public func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -399,7 +412,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                     let _ = titleApply()
                     let _ = textApply()
                     
-                    strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
+                    strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(x: 0.0, y: strongSelf.trailingItemSpaceOffset), size: itemLayout.contentSize)
                     strongSelf.backgroundNode.frame = backgroundFrame
                     strongSelf.titleNode.frame = titleFrame
                     strongSelf.textNode.frame = textFrame
@@ -420,12 +433,6 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.isHidden = true
                         backgroundContent.cornerRadius = item.presentationData.chatBubbleCorners.mainRadius
                         backgroundContent.frame = backgroundFrame
-                        if let (rect, containerSize) = strongSelf.absolutePosition {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += containerSize.height - rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                        }
                     } else {
                         strongSelf.backgroundNode.isHidden = false
                     }
@@ -441,11 +448,8 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
     }
     
     override public func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
-        if height.isLessThanOrEqualTo(0.0) {
-            transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(), size: self.offsetContainer.bounds.size))
-        } else {
-            transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: -floorToScreenPixels(height / 2.0)), size: self.offsetContainer.bounds.size))
-        }
+        self.trailingItemSpaceOffset = height.isLessThanOrEqualTo(0.0) ? 0.0 : -floorToScreenPixels(height / 2.0)
+        transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: self.trailingItemSpaceOffset), size: self.offsetContainer.bounds.size))
     }
     
     override public func animateAdded(_ currentTimestamp: Double, duration: Double) {

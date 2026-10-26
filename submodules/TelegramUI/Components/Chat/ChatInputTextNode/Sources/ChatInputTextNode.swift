@@ -1026,7 +1026,39 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
                 let selectedRange = self.selectedRange
                 let preserveSelectedRange = selectedRange.location != self.textStorage.length
                 
-                super.attributedText = value ?? NSAttributedString()
+                // UTF-16 code units, which is what the in-place write below walks. Swift's `==`
+                // compares canonical equivalence, so precomposed "é" equalled "e" + U+0301 and the
+                // attribute walk ran past (or short of) the storage (`HarnessLegacyNormalizationSetTests`).
+                let sameCharacters = (self.textStorage.string as NSString).isEqual(to: value?.string ?? "")
+                if self.appliesTextInPlace || sameCharacters {
+                    // A programmatic `attributedText` set clears UITextView's undo stack
+                    // (`-[UITextInputController _textStorageDidProcessEditing:]` calls
+                    // `removeAllActions` for it), so write through the text storage instead: always
+                    // inside `performUndoableTextChange`, and for ANY write that leaves the characters
+                    // alone. The second half is what keeps the history across the host's echoes: the
+                    // chat pushes its input state back on every selection change, the node decorates
+                    // the storage after each set (`refreshDecorationFromStoredConfig`), so the next
+                    // echo's freshly built string differs in attributes alone — and it used to be a full
+                    // set that wiped every step, a Quote/Code command's included, on the first caret
+                    // move after it (composer harness, 2026-09-23,
+                    // `HarnessLegacyBlockFormatUndoAfterTypingTests`).
+                    let value = value ?? NSAttributedString()
+                    self.textStorage.beginEditing()
+                    if sameCharacters {
+                        // Attributes only, so the edit is reported as one (a character edit from
+                        // outside the input controller drops UIKit's typing steps).
+                        value.enumerateAttributes(in: NSRange(location: 0, length: value.length), options: [], using: { attributes, range, _ in
+                            self.textStorage.setAttributes(attributes, range: range)
+                        })
+                    } else {
+                        // A character change still drops UIKit's earlier typing steps (measured:
+                        // replacing only the differing span does too); the step itself is kept.
+                        self.textStorage.setAttributedString(value)
+                    }
+                    self.textStorage.endEditing()
+                } else {
+                    super.attributedText = value ?? NSAttributedString()
+                }
                 
                 if preserveSelectedRange {
                     self.isPreservingSelection = true
@@ -1041,6 +1073,67 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
     
     fileprivate var isPreservingSelection: Bool = false
     fileprivate var isPreservingText: Bool = false
+    
+    /// While set, `attributedText` writes go through the text storage in place (see the setter).
+    private var appliesTextInPlace: Bool = false
+    
+    /// Runs `body` — a programmatic change of this view's text, typically a host command whose new
+    /// state comes back through `attributedText` (a Format command, pushed back by the chat's
+    /// `updateInputTextState`) — as ONE step on the view's own undo manager, keeping the steps
+    /// already on it. Undo restores the text and selection from before `body`, redo the ones after;
+    /// each restore is reported as a user edit (`textViewDidChange`) so the host re-reads the state,
+    /// and the host's echo of it is applied in place too. A `body` that changes nothing registers
+    /// nothing.
+    ///
+    /// Why not simply `attributedText =`: a programmatic set clears UITextView's undo stack, which
+    /// made every legacy Format command both un-undoable and a wipe of the typing history before it.
+    /// Writing through the text storage leaves the stack alone, and restoring the exact pre-command
+    /// text on undo keeps every older step consistent with the text it expects.
+    ///
+    /// Re-entrant: a call inside another one runs `body` and leaves the registering to the outer
+    /// call, so a command wrapped at two levels (the Format menu around the chat's own
+    /// `performUndoableInputChange`) is still ONE step.
+    public func performUndoableTextChange(_ body: () -> Void) {
+        if self.appliesTextInPlace {
+            body()
+            return
+        }
+        let before = NSAttributedString(attributedString: self.attributedText ?? NSAttributedString())
+        let beforeSelection = self.selectedRange
+        let previous = self.appliesTextInPlace
+        self.appliesTextInPlace = true
+        body()
+        self.appliesTextInPlace = previous
+        let after = self.attributedText ?? NSAttributedString()
+        if before.isEqual(to: after) {
+            return
+        }
+        self.registerTextRestore(text: before, selection: beforeSelection)
+    }
+    
+    private func registerTextRestore(text: NSAttributedString, selection: NSRange) {
+        guard let undoManager = self.undoManager else {
+            return
+        }
+        undoManager.registerUndo(withTarget: self, handler: { target in
+            target.restoreText(text, selection: selection)
+        })
+    }
+    
+    private func restoreText(_ text: NSAttributedString, selection: NSRange) {
+        let current = NSAttributedString(attributedString: self.attributedText ?? NSAttributedString())
+        let currentSelection = self.selectedRange
+        let previous = self.appliesTextInPlace
+        self.appliesTextInPlace = true
+        self.attributedText = text
+        let length = self.textStorage.length
+        let location = min(selection.location, length)
+        self.selectedRange = NSRange(location: location, length: min(selection.length, length - location))
+        self.textViewDidChange(self)
+        self.appliesTextInPlace = previous
+        // Registered while the undo manager is undoing (redoing), this lands on the redo (undo) stack.
+        self.registerTextRestore(text: current, selection: currentSelection)
+    }
     
     public weak var customDelegate: ChatInputTextNodeDelegate?
     

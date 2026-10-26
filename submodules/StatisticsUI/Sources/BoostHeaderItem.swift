@@ -129,7 +129,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         
         if let layout = self.validLayout, let component = self.component {
             let navigationBarHeight: CGFloat = 44.0
-            let statusBarHeight = layout.statusBarHeight ?? 0.0
+            let statusBarHeight = layout.navigationBarStatusBarHeight ?? 0.0
             let containerSize = CGSize(width: layout.size.width, height: navigationBarHeight + statusBarHeight + 266.0)
             
             let size = hostView.update(
@@ -183,7 +183,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         let leftInset: CGFloat = 24.0
         
         let navigationBarHeight: CGFloat = 44.0
-        let statusBarHeight = layout.statusBarHeight ?? 0.0
+        let statusBarHeight = layout.navigationBarStatusBarHeight ?? 0.0
         
         let constrainedSize = CGSize(width: layout.size.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude)
         let titleSize = self.titleNode.updateLayout(constrainedSize)
@@ -216,7 +216,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         }
 
         self.titleNode.bounds = CGRect(origin: .zero, size: titleSize)
-        self.titleNode.position = CGPoint(x: layout.size.width / 2.0, y: statusBarHeight + navigationBarHeight / 2.0)
+        self.titleNode.position = CGPoint(x: layout.safeInsets.left + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right) / 2.0, y: statusBarHeight + navigationBarHeight / 2.0)
        
         self.whiteTitleNode.bounds = self.titleNode.bounds
         self.whiteTitleNode.position = self.titleNode.position
@@ -301,6 +301,9 @@ private final class BoostHeaderComponent: CombinedComponent {
             
             let component = context.component
             let sideInset: CGFloat = 16.0 + component.insets.left
+            let rightSideInset: CGFloat = 16.0 + component.insets.right
+            let bandWidth = size.width - sideInset - rightSideInset
+            let bandCenterX = sideInset + bandWidth / 2.0
             
             let background = background.update(
                 component: PremiumGradientBackgroundComponent(
@@ -367,12 +370,12 @@ private final class BoostHeaderComponent: CombinedComponent {
                     invertProgress: true,
                     isPremiumDisabled: false
                 ),
-                availableSize: CGSize(width: size.width - sideInset * 2.0, height: size.height),
+                availableSize: CGSize(width: bandWidth, height: size.height),
                 transition: context.transition
             )
 
             context.add(progress
-                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0 - 36.0))
+                .position(CGPoint(x: bandCenterX, y: size.height / 2.0 - 36.0))
             )
 
             let font = Font.regular(15.0)
@@ -386,11 +389,11 @@ private final class BoostHeaderComponent: CombinedComponent {
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
                 ),
-                availableSize: CGSize(width: size.width - sideInset * 3.0, height: size.height),
+                availableSize: CGSize(width: bandWidth - (16.0 + min(component.insets.left, component.insets.right)), height: size.height),
                 transition: context.transition
             )
             context.add(text
-                .position(CGPoint(x: size.width / 2.0, y: size.height - 114.0))
+                .position(CGPoint(x: bandCenterX, y: size.height - 114.0))
             )
             
             let minButtonWidth: CGFloat = 112.0
@@ -426,7 +429,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(giveawayButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: size.height - 45.0))
+                .position(CGPoint(x: bandCenterX, y: size.height - 45.0))
             )
             
             let featuresButton = featuresButton.update(
@@ -442,7 +445,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(featuresButton
-                .position(CGPoint(x: context.availableSize.width - sideInset - minButtonWidth / 2.0, y: size.height - 45.0))
+                .position(CGPoint(x: context.availableSize.width - rightSideInset - minButtonWidth / 2.0, y: size.height - 45.0))
             )
             
             return background.size

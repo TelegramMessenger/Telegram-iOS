@@ -1,7 +1,8 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import RLottieBinding
+import LottieBinding
+import LottieSettings
 import SwiftSignalKit
 import GZip
 import Display
@@ -82,7 +83,11 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
     private var loadFrameTasks: [Int: LoadFrameTask] = [:]
     private var nextFrameTimer: SwiftSignalKit.Timer?
     
-    override public init() {
+    private let lottieSettings: LottieRenderingSettings
+
+    public init(lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
+
         super.init()
     }
     
@@ -122,7 +127,7 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
                 
                 let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
                 
-                guard let lottieInstance = LottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
+                guard let lottieInstance = makeLottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: strongSelf.lottieSettings) else {
                     print("Could not load sticker data")
                     return
                 }

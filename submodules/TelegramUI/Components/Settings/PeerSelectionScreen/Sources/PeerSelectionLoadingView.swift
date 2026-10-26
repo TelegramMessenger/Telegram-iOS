@@ -199,11 +199,11 @@ final class PeerSelectionLoadingView: UIView {
             
             var itemNodes: [ContactsPeerItemNode] = []
             for i in 0 ..< items.count {
-                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: (i == items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: (i == items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     if let itemNode = node as? ContactsPeerItemNode {
                         itemNodes.append(itemNode)
                     }
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
             }
             

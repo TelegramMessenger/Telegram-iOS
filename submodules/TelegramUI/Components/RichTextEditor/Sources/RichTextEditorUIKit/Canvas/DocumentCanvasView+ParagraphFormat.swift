@@ -16,10 +16,7 @@ extension DocumentCanvasView {
     func setParagraphStyle(_ name: ParagraphStyleName) {
         guard !boxes.isEmpty else { return }
         editing {
-            for box in boxes {
-                guard let p = box as? BlockBox else { continue }
-                let lo = p.textStart, hi = p.textStart + p.textLength
-                guard selFrom <= hi && selTo >= lo else { continue }
+            for p in selectedBlockBoxes() {   // top level AND inside a detail block's body
                 p.style = name
                 var para = p.currentParagraph()
                 para.runs = para.runs.map { run in
@@ -31,6 +28,7 @@ extension DocumentCanvasView {
                 p.layout.attributedString = mapper.attributedString(for: para)
             }
             recomputeSpans()
+            return .unchanged
         }
     }
 
@@ -39,10 +37,15 @@ extension DocumentCanvasView {
     /// `editing { }`.
     func makeCodeBlock() {
         guard !boxes.isEmpty else { return }
-        let touched = boxes.indices.filter { i in
-            let b = boxes[i]
+        // Operate on the caret's OWN stack (top level OR a detail block's body), so Code toggles work inside a
+        // details body too. A cross-stack selection is not toggled.
+        let selLo = min(selFrom, selTo), selHi = max(selFrom, selTo)
+        guard sameOwningStack(selLo, selHi), let owning = activeStack(at: selLo)?.stack else { return }
+        let stackBoxes = owning.boxes
+        let touched = stackBoxes.indices.filter { i in
+            let b = stackBoxes[i]
             let lo = b.textStart, hi = b.textStart + b.textLength
-            return selFrom <= hi && selTo >= lo
+            return selLo <= hi && selHi >= lo
         }
         guard let first = touched.first, let last = touched.last else { return }
         // Gathers flat text from a paragraph or code block; nil for non-text blocks (image/table).
@@ -51,12 +54,12 @@ extension DocumentCanvasView {
             if let c = box as? CodeBlockBox { return c.currentCode().text }
             return nil   // media/table: no flat-text representation
         }
-        let isToggleOff = touched.count == 1 && boxes[first] is CodeBlockBox
+        let isToggleOff = touched.count == 1 && stackBoxes[first] is CodeBlockBox
         // Refuse a toggle-ON that spans a non-text block (image/table) — replaceSubrange would
         // otherwise silently delete it. Must run BEFORE `editing { }` to avoid a no-op undo entry.
-        if !isToggleOff, (first...last).contains(where: { boxText(boxes[$0]) == nil }) { return }
+        if !isToggleOff, (first...last).contains(where: { boxText(stackBoxes[$0]) == nil }) { return }
         editing {
-            if isToggleOff, let codeBox = boxes[first] as? CodeBlockBox {
+            if isToggleOff, let codeBox = stackBoxes[first] as? CodeBlockBox {
                 // Toggle OFF: split the code text on "\n" into body paragraphs.
                 let lines = codeBox.currentCode().text.components(separatedBy: "\n")
                 let paras: [CanvasBlock] = lines.map { line in
@@ -64,26 +67,24 @@ extension DocumentCanvasView {
                                                        runs: line.isEmpty ? [] : [TextRun(text: line)]),
                              mapper: mapper, width: effectiveWidth)
                 }
-                var newBoxes = boxes
+                var newBoxes = owning.boxes
                 newBoxes.replaceSubrange(first...first, with: paras)
-                boxes = newBoxes
+                owning.boxes = newBoxes
                 recomputeSpans()
-                anchor = paras[0].textStart; head = paras[0].textStart
-                return
+                return .caret(at: paras[0].textStart)
             }
             // Toggle ON: join the touched blocks' text with "\n" into one code block. Existing code
             // block text is preserved (not dropped); the guard above already ensured every block
             // in range has a flat-text representation.
-            let text = (first...last).compactMap { boxText(boxes[$0]) }.joined(separator: "\n")
+            let text = (first...last).compactMap { boxText(stackBoxes[$0]) }.joined(separator: "\n")
             let codeBox = CodeBlockBox(code: CodeBlock(id: BlockID.generate(), language: nil,
                                                        runs: [TextRun(text: text)]),
                                        mapper: mapper, width: effectiveWidth)
-            var newBoxes = boxes
+            var newBoxes = owning.boxes
             newBoxes.replaceSubrange(first...last, with: [codeBox])
-            boxes = newBoxes
+            owning.boxes = newBoxes
             recomputeSpans()
-            anchor = codeBox.textStart + codeBox.textLength    // caret at END of new code block
-            head = anchor
+            return .caret(at: codeBox.textStart + codeBox.textLength)   // caret at END of new code block
         }
     }
 
@@ -93,10 +94,15 @@ extension DocumentCanvasView {
     /// formatting (bold/italic/link/…): runs are gathered/emitted, not flattened to plain text.
     func makePullQuote() {
         guard !boxes.isEmpty else { return }
-        let touched = boxes.indices.filter { i in
-            let b = boxes[i]
+        // Operate on the caret's OWN stack (top level OR a detail block's body). A cross-stack selection is
+        // not toggled.
+        let selLo = min(selFrom, selTo), selHi = max(selFrom, selTo)
+        guard sameOwningStack(selLo, selHi), let owning = activeStack(at: selLo)?.stack else { return }
+        let stackBoxes = owning.boxes
+        let touched = stackBoxes.indices.filter { i in
+            let b = stackBoxes[i]
             let lo = b.textStart, hi = b.textStart + b.textLength
-            return selFrom <= hi && selTo >= lo
+            return selLo <= hi && selHi >= lo
         }
         guard let first = touched.first, let last = touched.last else { return }
         // Gathers runs from a paragraph or pull-quote block; nil for non-text blocks (image/table/code).
@@ -105,40 +111,38 @@ extension DocumentCanvasView {
             if let pq = box as? PullQuoteBox, case .pullQuote(let q) = pq.currentBlock() { return q.runs }
             return nil   // media/table/code/collapsedQuote: refuse
         }
-        let isToggleOff = touched.count == 1 && boxes[first] is PullQuoteBox
+        let isToggleOff = touched.count == 1 && stackBoxes[first] is PullQuoteBox
         // Refuse a toggle-ON that spans a non-text block (image/table/code) — replaceSubrange would
         // otherwise silently delete it. Must run BEFORE `editing { }` to avoid a no-op undo entry.
-        if !isToggleOff, (first...last).contains(where: { boxRuns(boxes[$0]) == nil }) { return }
+        if !isToggleOff, (first...last).contains(where: { boxRuns(stackBoxes[$0]) == nil }) { return }
         editing {
-            if isToggleOff, let pqBox = boxes[first] as? PullQuoteBox,
+            if isToggleOff, let pqBox = stackBoxes[first] as? PullQuoteBox,
                case .pullQuote(let q) = pqBox.currentBlock() {
                 // Toggle OFF: split the pull-quote runs on "\n" into body paragraphs, preserving attributes.
                 let paras: [CanvasBlock] = paragraphRunsSplitByNewline(q.runs).map { runs in
                     BlockBox(paragraph: ParagraphBlock(id: BlockID.generate(), style: .body, runs: runs),
                              mapper: mapper, width: effectiveWidth)
                 }
-                var newBoxes = boxes
+                var newBoxes = owning.boxes
                 newBoxes.replaceSubrange(first...first, with: paras)
-                boxes = newBoxes
+                owning.boxes = newBoxes
                 recomputeSpans()
-                anchor = paras[0].textStart; head = paras[0].textStart
-                return
+                return .caret(at: paras[0].textStart)
             }
             // Toggle ON: join the touched blocks' runs with a "\n" separator between blocks into one
             // pull-quote. The guard above already ensured every block in range has a run representation.
             var joined: [TextRun] = []
             for (n, i) in (first...last).enumerated() {
                 if n > 0 { joined.append(TextRun(text: "\n")) }
-                joined.append(contentsOf: boxRuns(boxes[i]) ?? [])
+                joined.append(contentsOf: boxRuns(stackBoxes[i]) ?? [])
             }
             let pqBox = PullQuoteBox(pullQuote: PullQuote(id: BlockID.generate(), runs: joined),
                                      mapper: mapper, pullQuoteStyle: pullQuoteStyle, width: effectiveWidth)
-            var newBoxes = boxes
+            var newBoxes = owning.boxes
             newBoxes.replaceSubrange(first...last, with: [pqBox])
-            boxes = newBoxes
+            owning.boxes = newBoxes
             recomputeSpans()
-            anchor = pqBox.textStart + pqBox.textLength    // caret at END of new pull-quote block
-            head = anchor
+            return .caret(at: pqBox.textStart + pqBox.textLength)   // caret at END of new pull-quote block
         }
     }
 
@@ -188,7 +192,7 @@ extension DocumentCanvasView {
             recomputeSpans()
             // Land the caret at the start of the first child in the new block quote.
             let caret = bqBox.children.boxes.first?.leafRegions().first?.globalStart ?? (bqBox.nodeStart + 1)
-            anchor = caret; head = caret
+            return .caret(at: caret)
         }
     }
 
@@ -211,7 +215,7 @@ extension DocumentCanvasView {
             boxes = newBoxes
             recomputeSpans()
             let caret = bqBox.children.boxes.first?.leafRegions().first?.globalStart ?? (bqBox.nodeStart + 1)
-            anchor = caret; head = caret
+            return .caret(at: caret)
         }
     }
 
@@ -268,7 +272,7 @@ extension DocumentCanvasView {
             parentStack.boxes.replaceSubrange(index...index, with: childBoxes)
             recomputeSpans()
             let caret = childBoxes.first?.leafRegions().first?.globalStart ?? bqBox.nodeStart
-            anchor = caret; head = caret
+            return .caret(at: caret)
         }
     }
 
@@ -296,7 +300,7 @@ extension DocumentCanvasView {
             }
             recomputeSpans()
             let caret = body.leafRegions().first?.globalStart ?? body.nodeStart
-            anchor = caret; head = caret
+            return .caret(at: caret)
         }
         return true
     }
@@ -321,7 +325,7 @@ extension DocumentCanvasView {
             parentStack.boxes.insert(body, at: index)      // body paragraph BEFORE the quote
             recomputeSpans()
             let caret = body.leafRegions().first?.globalStart ?? body.nodeStart
-            anchor = caret; head = caret
+            return .caret(at: caret)
         }
         return true
     }
@@ -339,6 +343,7 @@ extension DocumentCanvasView {
                 restyle(p)
             }
             recomputeSpans()
+            return .unchanged
         }
     }
 

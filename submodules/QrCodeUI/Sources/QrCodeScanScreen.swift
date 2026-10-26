@@ -6,6 +6,7 @@ import Display
 import ComponentFlow
 import SwiftSignalKit
 import Camera
+import CameraLegacy
 import CoreImage
 import AlertUI
 import TelegramPresentationData
@@ -45,12 +46,44 @@ private func parseAuthTransferUrl(_ url: URL) -> Data? {
     return nil
 }
 
+private func normalizedTonQrValue(_ value: String) -> String? {
+    let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty else {
+        return nil
+    }
+    if let components = URLComponents(string: value),
+       components.scheme?.lowercased() == "ton",
+       components.host?.lowercased() == "transfer" {
+        return value
+    }
+
+    let friendlyCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+    if value.count == 48, value.unicodeScalars.allSatisfy({ friendlyCharacters.contains($0) }) {
+        return value
+    }
+
+    let rawParts = value.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+    let hexadecimalCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
+    if rawParts.count == 2,
+       (rawParts[0] == "0" || rawParts[0] == "-1"),
+       rawParts[1].count == 64,
+       rawParts[1].unicodeScalars.allSatisfy({ hexadecimalCharacters.contains($0) }) {
+        return value
+    }
+    return nil
+}
+
 public final class QrCodeScanScreen: ViewController {
     public enum Subject {
         case authTransfer(activeSessionsContext: ActiveSessionsContext)
         case peer
         case cryptoAddress
         case custom(info: String)
+        case customValidated(info: String, validate: (String) -> Bool)
+    }
+
+    public static func normalizedCryptoAddress(_ value: String) -> String? {
+        return normalizedTonQrValue(value)
     }
     
     private let context: AccountContext
@@ -114,8 +147,15 @@ public final class QrCodeScanScreen: ViewController {
     private var animatedIn = false
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
-        if case .custom = self.subject, !self.animatedIn, let layout = self.validLayout {
+
+        let isCustom: Bool
+        switch self.subject {
+        case .custom:
+            isCustom = true
+        default:
+            isCustom = false
+        }
+        if isCustom, !self.animatedIn, let layout = self.validLayout {
             self.animatedIn = true
             self.controllerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
@@ -161,11 +201,30 @@ public final class QrCodeScanScreen: ViewController {
         })
     }
     
-    private func completeWithCode(_ code: String) {
-        guard case .custom = self.subject else {
-            return
+    @discardableResult
+    fileprivate func completeWithCode(_ code: String) -> Bool {
+        switch self.subject {
+        case .cryptoAddress:
+            guard let value = normalizedTonQrValue(code) else {
+                return false
+            }
+            self.codeResolved = true
+            self.completion(value)
+            self.dismissAnimated()
+            return true
+        case .custom:
+            self.completion(code)
+            return true
+        case let .customValidated(_, validate):
+            guard validate(code) else {
+                return false
+            }
+            self.codeResolved = true
+            self.completion(code)
+            return true
+        default:
+            return false
         }
-        self.completion(code)
     }
     
     override public func loadDisplayNode() {
@@ -212,7 +271,7 @@ public final class QrCodeScanScreen: ViewController {
                         }))
                     }
                 case .cryptoAddress:
-                    break
+                    strongSelf.completeWithCode(code)
                 case .peer:
                     if let _ = URL(string: code) {
                         strongSelf.controllerNode.resolveCode(code: code, completion: { [weak self] result in
@@ -221,7 +280,7 @@ public final class QrCodeScanScreen: ViewController {
                             }
                         })
                     }
-                case .custom:
+                case .custom, .customValidated:
                     strongSelf.completeWithCode(code)
             }
         })
@@ -341,11 +400,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
     
     private let previewView: CameraSimplePreviewView
     private let fadeNode: ASDisplayNode
-    private let topDimNode: ASDisplayNode
-    private let bottomDimNode: ASDisplayNode
-    private let leftDimNode: ASDisplayNode
-    private let rightDimNode: ASDisplayNode
-    private let centerDimNode: ASDisplayNode
+    private let dimLayer: SimpleShapeLayer
     private let frameNode: FrameNode
     private let galleryButtonNode: GlassButtonNode
     private let torchButtonNode: GlassButtonNode
@@ -354,7 +409,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
     private let errorTextNode: ImmediateTextNode
     private let topNavigationButton = ComponentView<Empty>()
     
-    private let camera: Camera
+    private let camera: CameraProtocol
     private let codeDisposable = MetaDisposable()
     private var torchDisposable: Disposable?
     private let resolveDisposable = MetaDisposable()
@@ -386,34 +441,18 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         self.controller = controller
         self.subject = subject
         
-        self.previewView = CameraSimplePreviewView(frame: .zero, main: true)
+        let cameraImpl = LegacyCameraImpl.shared
+        self.previewView = cameraImpl.makeCameraSimplePreviewView(frame: .zero, main: true, roundVideo: false)
         self.previewView.backgroundColor = .black
         
         self.fadeNode = ASDisplayNode()
         self.fadeNode.alpha = 0.0
         self.fadeNode.backgroundColor = .black
         
-        let dimColor = UIColor(rgb: 0x000000, alpha: 0.8)
-        
-        self.topDimNode = ASDisplayNode()
-        self.topDimNode.alpha = 0.625
-        self.topDimNode.backgroundColor = dimColor
-        
-        self.bottomDimNode = ASDisplayNode()
-        self.bottomDimNode.alpha = 0.625
-        self.bottomDimNode.backgroundColor = dimColor
-        
-        self.leftDimNode = ASDisplayNode()
-        self.leftDimNode.alpha = 0.625
-        self.leftDimNode.backgroundColor = dimColor
-        
-        self.rightDimNode = ASDisplayNode()
-        self.rightDimNode.alpha = 0.625
-        self.rightDimNode.backgroundColor = dimColor
-        
-        self.centerDimNode = ASDisplayNode()
-        self.centerDimNode.alpha = 0.0
-        self.centerDimNode.backgroundColor = dimColor
+        self.dimLayer = SimpleShapeLayer()
+        self.dimLayer.fillRule = .evenOdd
+        self.dimLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.8).cgColor
+        self.dimLayer.opacity = 0.625
         
         self.frameNode = FrameNode()
         
@@ -433,6 +472,9 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
                 title = ""
                 text = ""
             case let .custom(info):
+                title = presentationData.strings.AuthSessions_AddDevice_ScanTitle
+                text = info
+            case let .customValidated(info, _):
                 title = presentationData.strings.AuthSessions_AddDevice_ScanTitle
                 text = info
         }
@@ -466,11 +508,15 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         self.errorTextNode.textAlignment = .center
         self.errorTextNode.isHidden = true
         
-        self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false, photo: true, metadata: true), previewView: self.previewView)
+        self.camera = cameraImpl.makeCamera(
+            configuration: .init(preset: .hd1920x1080, position: .back, audio: false, photo: true, metadata: true),
+            previewView: self.previewView,
+            secondaryPreviewView: nil
+        )
         
         super.init()
         
-        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        self.backgroundColor = .black
         
         self.torchDisposable = (self.camera.hasTorch
         |> deliverOnMainQueue).start(next: { [weak self] hasTorch in
@@ -480,11 +526,6 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         })
         
         self.addSubnode(self.fadeNode)
-        self.addSubnode(self.topDimNode)
-        self.addSubnode(self.bottomDimNode)
-        self.addSubnode(self.leftDimNode)
-        self.addSubnode(self.rightDimNode)
-        self.addSubnode(self.centerDimNode)
         self.addSubnode(self.frameNode)
         if case .peer = subject {
             self.addSubnode(self.galleryButtonNode)
@@ -536,9 +577,22 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         super.didLoad()
         
         self.view.insertSubview(self.previewView, at: 0)
+        self.layer.insertSublayer(self.dimLayer, above: self.fadeNode.layer)
         self.camera.startCapture()
         
-        let throttledSignal = self.camera.detectedCodes
+        var detectedCodes = self.camera.detectedCodes
+        #if DEBUG && targetEnvironment(simulator)
+        if let code = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty {
+            detectedCodes = .single([CameraCode(type: .qr, message: code, corners: [
+                CGPoint(x: 0.3, y: 0.3),
+                CGPoint(x: 0.7, y: 0.3),
+                CGPoint(x: 0.7, y: 0.7),
+                CGPoint(x: 0.3, y: 0.7)
+            ])])
+        }
+        #endif
+
+        let throttledSignal = detectedCodes
         |> mapToThrottled { next -> Signal<[CameraCode], NoError> in
             return .single(next) |> then(.complete() |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
         }
@@ -555,9 +609,11 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
                 case .peer:
                     filteredCodes = codes.filter { $0.message.hasPrefix("https://t.me/") || $0.message.hasPrefix("t.me/") }
                 case .cryptoAddress:
-                    filteredCodes = codes.filter { $0.message.hasPrefix("ton://") }
+                    filteredCodes = codes.filter { normalizedTonQrValue($0.message) != nil }
                 case .custom:
                     filteredCodes = codes
+                case let .customValidated(_, validate):
+                    filteredCodes = codes.filter { validate($0.message) }
             }
             if let code = filteredCodes.first, CGRect(x: 0.3, y: 0.3, width: 0.4, height: 0.4).contains(code.boundingBox.center) {
                 if strongSelf.codeWithError != code.message {
@@ -627,6 +683,34 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
         }
     }
+
+    private func updateDimPath(bounds: CGRect, cutoutRect: CGRect, transition: ContainedViewLayoutTransition, delay: Double, completion: @escaping () -> Void) {
+        let path = CGMutablePath()
+        path.addRect(bounds)
+        path.addRect(cutoutRect)
+
+        guard self.dimLayer.path != path else {
+            completion()
+            return
+        }
+
+        let previousPath: CGPath?
+        if self.dimLayer.animation(forKey: "path") != nil {
+            previousPath = self.dimLayer.presentation()?.path ?? self.dimLayer.path
+        } else {
+            previousPath = self.dimLayer.path
+        }
+        self.dimLayer.path = path
+
+        if case let .animated(duration, curve) = transition, let previousPath {
+            self.dimLayer.animate(from: previousPath, to: path, keyPath: "path", timingFunction: curve.timingFunction, duration: duration, delay: delay, mediaTimingFunction: curve.mediaTimingFunction, completion: { _ in
+                completion()
+            })
+        } else {
+            self.dimLayer.removeAnimation(forKey: "path")
+            completion()
+        }
+    }
     
     private var animatingIn = false
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, animateIn: Bool = false, transition: ContainedViewLayoutTransition) {
@@ -642,7 +726,15 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         let titleSpacing: CGFloat = 48.0
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
 
+        // The camera preview follows the device into landscape where this screen can be landscape: an iPad, and iPhone
+        // Duo's unfolded screen (regular width, so this portrait-only-on-phones screen rotates there too).
+        var previewFollowsDeviceOrientation = false
         if case .tablet = layout.deviceMetrics.type {
+            previewFollowsDeviceOrientation = true
+        } else if case .iPhoneDuo = layout.deviceMetrics, case .regular = layout.metrics.widthClass {
+            previewFollowsDeviceOrientation = true
+        }
+        if previewFollowsDeviceOrientation {
             if UIDevice.current.orientation == .landscapeLeft {
                 self.previewView.layer.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
             } else if UIDevice.current.orientation == .landscapeRight {
@@ -655,7 +747,14 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         transition.updateFrame(node: self.fadeNode, frame: bounds)
         
         let topNavigationIconName: String
-        if case .custom = self.subject {
+        let isCustom: Bool
+        switch self.subject {
+        case .custom:
+            isCustom = true
+        default:
+            isCustom = false
+        }
+        if isCustom {
             topNavigationIconName = "Navigation/Close"
         } else {
             topNavigationIconName = "Navigation/Back"
@@ -678,7 +777,14 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
                     guard let self else {
                         return
                     }
-                    if case .custom = self.subject {
+                    let isCustom: Bool
+                    switch self.subject {
+                    case .custom:
+                        isCustom = true
+                    default:
+                        isCustom = false
+                    }
+                    if isCustom {
                         self.controller?.cancelPressed()
                     } else {
                         self.controller?.dismiss()
@@ -688,23 +794,49 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
             environment: {},
             containerSize: topNavigationButtonSide
         )
+        let topNavigationButtonTopInset: CGFloat = (layout.statusBarHeight ?? 0.0) == 0.0 ? 16.0 : 10.0
         if let topNavigationButtonView = self.topNavigationButton.view {
             if topNavigationButtonView.superview == nil {
                 self.view.addSubview(topNavigationButtonView)
             }
-            transition.updateFrame(
-                view: topNavigationButtonView,
-                frame: CGRect(
+            let topNavigationButtonFrame: CGRect
+            if let sideColumnFrame = layout.sideColumnNavigationButtonFrame {
+                // iPhone Duo: the back / close button goes in the side strip, as every screen's does.
+                topNavigationButtonFrame = CGRect(origin: CGPoint(x: sideColumnFrame.midX - topNavigationButtonSize.width / 2.0, y: sideColumnFrame.midY - topNavigationButtonSize.height / 2.0), size: topNavigationButtonSize)
+            } else if layout.topBarStatusIsland != nil {
+                // iPhone Duo, unfolded portrait: on the status island's clock line, as the camera's and editors' top rows
+                // (the island is at the other end of the row).
+                topNavigationButtonFrame = CGRect(
                     origin: CGPoint(
                         x: 16.0 + layout.safeInsets.left,
-                        y: max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top) + 5.0
+                        y: (layout.navigationBarStatusBarHeight ?? 0.0) + 31.0 - topNavigationButtonSize.height / 2.0
                     ),
                     size: topNavigationButtonSize
                 )
-            )
+            } else {
+                topNavigationButtonFrame = CGRect(
+                    origin: CGPoint(
+                        x: 16.0 + layout.safeInsets.left,
+                        y: max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top) + topNavigationButtonTopInset
+                    ),
+                    size: topNavigationButtonSize
+                )
+            }
+            transition.updateFrame(view: topNavigationButtonView, frame: topNavigationButtonFrame)
         }
 
-        let frameSide = max(240.0, layout.size.width - sideInset * 2.0)
+        // The viewfinder, its buttons and texts center on the screen, or in the band between the side insets when
+        // they differ (iPhone Duo's side strip). Equal insets keep every frame unchanged.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+
+        // On a landscape-shaped screen (iPhone Duo's unfolded screen, 951x669) it also fits the height, with room for the
+        // texts above it and the torch below.
+        var frameSide = max(240.0, bandWidth - sideInset * 2.0)
+        if layout.size.width > layout.size.height {
+            frameSide = max(240.0, min(frameSide, layout.size.height - 240.0))
+        }
         let animateInScale: CGFloat = 0.4
         var effectiveFrameSide = frameSide
         if prepareForAnimateIn {
@@ -713,14 +845,13 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         
         let dimHeight = ceil((layout.size.height - frameSide) / 2.0)
         let effectiveDimHeight = ceil((layout.size.height - effectiveFrameSide) / 2.0)
-        let dimInset = (layout.size.width - frameSide) / 2.0
-        let effectiveDimInset = (layout.size.width - effectiveFrameSide) / 2.0
+        let dimInset = bandMinX + (bandWidth - frameSide) / 2.0
+        let effectiveDimInset = bandMinX + (bandWidth - effectiveFrameSide) / 2.0
         
         let dimAlpha: CGFloat
         let dimRect: CGRect
         let frameRect: CGRect
         let controlsAlpha: CGFloat
-        let centerDimAlpha: CGFloat = 0.0
         let frameAlpha: CGFloat = 1.0
         if let focusedRect = self.focusedRect {
             controlsAlpha = 0.0
@@ -732,15 +863,11 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         } else {
             controlsAlpha = 1.0
             dimAlpha = 0.625
-            dimRect = CGRect(x: effectiveDimInset, y: effectiveDimHeight, width: layout.size.width - effectiveDimInset * 2.0, height: layout.size.height - effectiveDimHeight * 2.0)
-            frameRect = CGRect(x: dimInset, y: dimHeight, width: layout.size.width - dimInset * 2.0, height: layout.size.height - dimHeight * 2.0)
+            dimRect = CGRect(x: effectiveDimInset, y: effectiveDimHeight, width: effectiveFrameSide, height: layout.size.height - effectiveDimHeight * 2.0)
+            frameRect = CGRect(x: dimInset, y: dimHeight, width: frameSide, height: layout.size.height - dimHeight * 2.0)
         }
     
-        transition.updateAlpha(node: self.topDimNode, alpha: dimAlpha)
-        transition.updateAlpha(node: self.bottomDimNode, alpha: dimAlpha)
-        transition.updateAlpha(node: self.leftDimNode, alpha: dimAlpha)
-        transition.updateAlpha(node: self.rightDimNode, alpha: dimAlpha)
-        transition.updateAlpha(node: self.centerDimNode, alpha: centerDimAlpha)
+        transition.updateAlpha(layer: self.dimLayer, alpha: dimAlpha)
         transition.updateAlpha(node: self.frameNode, alpha: frameAlpha)
         
         if !self.animatingIn {
@@ -749,22 +876,20 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
                 self.animatingIn = true
                 delay = 0.1
             }
-            transition.updateFrame(node: self.topDimNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: dimRect.minY), delay: delay, completion: { _ in
-                self.animatingIn = false
+            let dimTransition: ContainedViewLayoutTransition = self.dimLayer.path == nil ? .immediate : transition
+            dimTransition.updateFrame(layer: self.dimLayer, frame: bounds, delay: delay)
+            self.updateDimPath(bounds: bounds, cutoutRect: dimRect, transition: dimTransition, delay: delay, completion: { [weak self] in
+                self?.animatingIn = false
             })
-            transition.updateFrame(node: self.bottomDimNode, frame: CGRect(x: 0.0, y: dimRect.maxY, width: layout.size.width, height: max(0.0, layout.size.height - dimRect.maxY)), delay: delay)
-            transition.updateFrame(node: self.leftDimNode, frame: CGRect(x: 0.0, y: dimRect.minY, width: max(0.0, dimRect.minX), height: dimRect.height), delay: delay)
-            transition.updateFrame(node: self.rightDimNode, frame: CGRect(x: dimRect.maxX, y: dimRect.minY, width: max(0.0, layout.size.width - dimRect.maxX), height: dimRect.height), delay: delay)
-            transition.updateFrame(node: self.frameNode, frame: frameRect)
+            transition.updateFrame(node: self.frameNode, frame: frameRect, beginWithCurrentState: true)
             self.frameNode.updateLayout(size: frameRect.size)
-            transition.updateFrame(node: self.centerDimNode, frame: frameRect)
             if animateIn {
                 transition.animateTransformScale(node: self.frameNode, from: CGPoint(x: animateInScale, y: animateInScale), delay: delay)
             }
         }
         
         let buttonSize = CGSize(width: 72.0, height: 72.0)
-        var torchFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0), y: dimHeight + frameSide + 98.0), size: buttonSize)
+        var torchFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - buttonSize.width) / 2.0), y: dimHeight + frameSide + 98.0), size: buttonSize)
         let updatedTorchY = min(torchFrame.minY, layout.size.height - torchFrame.height - 10.0)
         let additionalTorchOffset: CGFloat = updatedTorchY - torchFrame.minY
         torchFrame.origin.y = updatedTorchY
@@ -785,18 +910,18 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
             transition.updateAlpha(layer: view.layer, alpha: controlsAlpha)
         }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
-        let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
-        var textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: max(dimHeight - textSize.height - titleSpacing, navigationHeight + floorToScreenPixels((dimHeight - navigationHeight - textSize.height) / 2.0) + 5.0)), size: textSize)
-        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
+        let titleSize = self.titleNode.updateLayout(CGSize(width: bandWidth - 16.0, height: layout.size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: bandWidth - 16.0, height: layout.size.height))
+        let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: bandWidth - 16.0, height: layout.size.height))
+        var textFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - textSize.width) / 2.0), y: max(dimHeight - textSize.height - titleSpacing, navigationHeight + floorToScreenPixels((dimHeight - navigationHeight - textSize.height) / 2.0) + 5.0)), size: textSize)
+        let titleFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
         if titleFrame.minY < navigationHeight {
             transition.updateAlpha(node: self.titleNode, alpha: 0.0)
             textFrame = textFrame.offsetBy(dx: 0.0, dy: -5.0)
         } else {
             transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
         }
-        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
+        var errorTextFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
         errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
 
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
@@ -882,6 +1007,13 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
     }
     
     fileprivate func resolveCode(code: String, completion: @escaping (Bool) -> Void) {
+        switch self.subject {
+        case .cryptoAddress, .customValidated:
+            completion(self.controller?.completeWithCode(code) == true)
+            return
+        default:
+            break
+        }
         self.resolveDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: code, skipUrlAuth: false)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
@@ -892,7 +1024,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
     
     private func openResolved(_ result: ResolvedUrl) -> Bool {
         switch result {
-            case .peer, .stickerPack, .join, .wallpaper, .theme:
+            case .peer, .stickerPack, .join, .wallpaper, .theme, .noPaidMessagesToken:
                 break
             default:
                 return false
@@ -901,7 +1033,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return false
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { [weak self] peer, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { [weak self, navigationController] peer, navigation in
             guard let strongSelf = self else {
                 return
             }

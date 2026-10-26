@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -116,7 +117,8 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
                 component: LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "HandRestrict"),
                     loop: false,
-                    playOnce: state.playAnimation
+                    playOnce: state.playAnimation,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ),
                 availableSize: CGSize(width: 120.0, height: 120.0),
                 transition: context.transition
@@ -242,7 +244,8 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
                                     content: LottieComponent.AppBundleContent(name: "premium_unlock"),
                                     color: theme.list.itemCheckColors.foregroundColor,
                                     size: CGSize(width: 30.0, height: 30.0),
-                                    playOnce: state.playButtonAnimation
+                                    playOnce: state.playButtonAnimation,
+                                    lottieSettings: component.context.lottieRenderingSettings
                                 )
                             )
                         ),
@@ -363,7 +366,7 @@ final class PeerCopyProtectionInfoSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -382,7 +385,9 @@ final class PeerCopyProtectionInfoSheetComponent: CombinedComponent {
             if let controller = controller(), !controller.automaticallyControlPresentationContextLayout {
                 var sideInset: CGFloat = 0.0
                 var bottomInset: CGFloat = max(environment.safeInsets.bottom, sheetExternalState.contentHeight)
-                if case .regular = environment.metrics.widthClass {
+                // Only where the sheet is the centred one (`isCentered` above): iPhone Duo's unfolded landscape is regular
+                // width but shows the phone's bottom sheet, which toasts sit above as on a phone.
+                if environment.presentsFloatingPanels {
                     sideInset = floor((context.availableSize.width - 430.0) / 2.0) - 12.0
                     bottomInset = (context.availableSize.height - sheetExternalState.contentHeight) / 2.0 + sheetExternalState.contentHeight
                 }
@@ -393,11 +398,14 @@ final class PeerCopyProtectionInfoSheetComponent: CombinedComponent {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: max(sideInset, environment.safeInsets.left), bottom: 0.0, right: max(sideInset, environment.safeInsets.right)),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
             }
@@ -449,7 +457,11 @@ public final class PeerCopyProtectionInfoScreen: ViewControllerComponentContaine
         super.viewDidAppear(animated)
         
         if !self.context.isPremium {
-            Queue.mainQueue().after(0.3, {
+            Queue.mainQueue().after(0.3, { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 let controller = UndoOverlayController(
                     presentationData: presentationData,

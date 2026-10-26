@@ -12,6 +12,12 @@ func _internal_addAppLogEvent(postbox: Postbox, time: Double = Date().timeInterv
     }).start()
 }
 
+func _internal_addAppLogEvent(transaction: Transaction, time: Double, type: String, data: JSON) {
+    let tag: PeerOperationLogTag = OperationLogTags.SynchronizeAppLogEvents
+    let peerId = PeerId(0)
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeAppLogEventsOperation(content: .add(time: time, type: type, peerId: peerId, data: data)))
+}
+
 public func invokeAppLogEventsSynchronization(postbox: Postbox) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeAppLogEvents
     let peerId = PeerId(0)

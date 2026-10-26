@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -24,8 +25,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: State = .pause
     
-    init() {
-        super.init(size: CGSize(width: 28.0, height: 28.0))
+    init(lottieSettings: LottieRenderingSettings) {
+        super.init(size: CGSize(width: 28.0, height: 28.0), lottieSettings: lottieSettings)
         
         self.enqueueState(.play, animated: false)
     }
@@ -144,7 +145,7 @@ public final class MediaPreviewPanelComponent: Component {
             self.vibrancyContainer = UIView()
             
             self.playPauseIconButton = HighlightableButton()
-            self.playPauseIconNode = PlayPauseIconNode()
+            self.playPauseIconNode = PlayPauseIconNode(lottieSettings: .noAccountFallback)
             self.playPauseIconNode.isUserInteractionEnabled = false
             
             super.init(frame: frame)

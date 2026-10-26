@@ -256,6 +256,7 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
 //        }
                 
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 16.0 + safeInsets.right
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
            
@@ -285,15 +286,15 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
         }
         
 
-        let usernameSize = self.usernameNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
-        let phoneSize = self.phoneNumberNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let usernameSize = self.usernameNode.updateLayout(CGSize(width: width - sideInset - sideInsetRight, height: .greatestFiniteMagnitude))
+        let phoneSize = self.phoneNumberNode.updateLayout(CGSize(width: width - sideInset - sideInsetRight, height: .greatestFiniteMagnitude))
         
-        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: width - sideInset - sideInsetRight, height: .greatestFiniteMagnitude))
         
         let topOffset = 12.0
         var height = topOffset * 2.0
         let usernameFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: usernameSize)
-        let phoneFrame = CGRect(origin: CGPoint(x: usernameSize.width > 0.0 ? width - sideInset - phoneSize.width : sideInset, y: topOffset), size: phoneSize)
+        let phoneFrame = CGRect(origin: CGPoint(x: usernameSize.width > 0.0 ? width - sideInsetRight - phoneSize.width : sideInset, y: topOffset), size: phoneSize)
         let textHeight = max(usernameSize.height, phoneSize.height)
         height += textHeight
                 

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -9,7 +10,6 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import TelegramCore
-import Postbox
 import MultilineTextComponent
 import PresentationDataUtils
 import ButtonComponent
@@ -341,6 +341,15 @@ final class ShareWithPeersScreenComponent: Component {
         
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
+        private var isCompleting = false
+
+        func setIsCompleting(_ isCompleting: Bool) {
+            guard self.isCompleting != isCompleting else {
+                return
+            }
+            self.isCompleting = isCompleting
+            self.state?.updated(transition: .immediate)
+        }
         
         private var sendAsPeerId: EnginePeer.Id?
         private var isCustomTarget = false
@@ -497,6 +506,13 @@ final class ShareWithPeersScreenComponent: Component {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if !self.bounds.contains(point) {
                 return nil
+            }
+            if self.isCompleting {
+                return self
+            }
+            // iPhone Duo: the close button in the side strip sits over the header's background.
+            if let navigationLeftButtonView = self.navigationLeftButton.view, navigationLeftButtonView.superview === self.containerView, let result = navigationLeftButtonView.hitTest(self.convert(point, to: navigationLeftButtonView), with: event) {
+                return result
             }
             if !self.backgroundView.frame.contains(point) {
                 return self.dimView
@@ -916,16 +932,16 @@ final class ShareWithPeersScreenComponent: Component {
                     if let story = folderPreview.item {
                         var imageSignal: Signal<UIImage?, NoError>?
                         
-                        var selectedMedia: Media?
+                        var selectedMedia: EngineMedia?
                         if let image = story.media._asMedia() as? TelegramMediaImage {
-                            selectedMedia = image
+                            selectedMedia = .image(image)
                         } else if let file = story.media._asMedia() as? TelegramMediaFile {
-                            selectedMedia = file
+                            selectedMedia = .file(file)
                         }
-                        
+
                         if let selectedMedia {
                             let directMediaImageCache = DirectMediaImageCache(account: component.context.account)
-                            if let result = directMediaImageCache.getImage(peer: peerReference, story: story, media: selectedMedia, width: 48, aspectRatio: 1.0, possibleWidths: [48], includeBlurred: false, synchronous: true) {
+                            if let result = directMediaImageCache.getImage(peer: peerReference, story: story, media: selectedMedia._asMedia(), width: 48, aspectRatio: 1.0, possibleWidths: [48], includeBlurred: false, synchronous: true) {
                                 if let loadSignal = result.loadSignal {
                                     imageSignal = .single(result.image) |> then(loadSignal)
                                 } else {
@@ -2122,7 +2138,8 @@ final class ShareWithPeersScreenComponent: Component {
                 let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     environment: {},
                     containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
@@ -2320,7 +2337,11 @@ final class ShareWithPeersScreenComponent: Component {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             
-            let resetScrolling = self.scrollView.bounds.width != availableSize.width
+            // iPhone Duo: the list and the header keep to the band beside the side strip (and clear of the status corner
+            // at its end); the backgrounds still span the screen. Equal insets keep the full width.
+            let bandInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+            
+            let resetScrolling = self.scrollView.bounds.width != availableSize.width - bandInsets.left - bandInsets.right
             
             var sideInset: CGFloat = 0.0
             if case .stories = component.stateContext.subject {
@@ -2347,6 +2368,8 @@ final class ShareWithPeersScreenComponent: Component {
                 containerWidth = availableSize.width
             }
             let containerSideInset = floorToScreenPixels((availableSize.width - containerWidth) / 2.0)
+            let contentSideInset = containerSideInset + bandInsets.left
+            let contentWidth = containerWidth - bandInsets.left - bandInsets.right
             
             if self.component == nil {
                 if let sendAsPeerId = component.initialSendAsPeerId {
@@ -2435,11 +2458,11 @@ final class ShareWithPeersScreenComponent: Component {
             let navigationTextFieldSize: CGSize
             if self.hasBlocksStyle {
                 itemLayoutStyle = .blocks
-                itemsContainerWidth = containerWidth - sideInset * 2.0
+                itemsContainerWidth = contentWidth - sideInset * 2.0
                 navigationTextFieldSize = .zero
             } else {
                 itemLayoutStyle = .plain
-                itemsContainerWidth = containerWidth
+                itemsContainerWidth = contentWidth
                 
                 var tokens: [TokenListTextField.Token] = []
                 for peerId in self.selectedPeers {
@@ -2511,7 +2534,7 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: containerWidth, height: 1000.0)
+                    containerSize: CGSize(width: contentWidth, height: 1000.0)
                 )
                 
                 let searchQuery = self.navigationTextFieldState.text
@@ -2782,14 +2805,36 @@ final class ShareWithPeersScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: navigationHeight)
             )
-            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: containerSideInset + navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
-            if let navigationLeftButtonView = self.navigationLeftButton.view {
-                if navigationLeftButtonView.superview == nil {
-                    self.navigationContainerView.addSubview(navigationLeftButtonView)
-                }
-                transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
+            // iPhone Duo: with a side strip the close button goes in the strip, as every screen's back / close does, for the
+            // member and channel pickers, whose header stays at the top of the screen. The story and peer sheets rise and
+            // fall with their content, so their close stays in the header (in the band).
+            let sideColumnCloseFrame: CGRect?
+            switch component.stateContext.subject {
+            case .members, .channels:
+                sideColumnCloseFrame = environment.sideColumnNavigationButtonFrame
+            default:
+                sideColumnCloseFrame = nil
             }
-            navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
+            let navigationLeftButtonFrame: CGRect
+            let navigationLeftButtonSuperview: UIView
+            if let sideColumnCloseFrame {
+                navigationLeftButtonFrame = CGRect(origin: CGPoint(x: sideColumnCloseFrame.midX - navigationLeftButtonSize.width / 2.0, y: sideColumnCloseFrame.midY - navigationLeftButtonSize.height / 2.0), size: navigationLeftButtonSize)
+                navigationLeftButtonSuperview = self.containerView
+            } else {
+                navigationLeftButtonFrame = CGRect(origin: CGPoint(x: contentSideInset + navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
+                navigationLeftButtonSuperview = self.navigationContainerView
+                navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
+            }
+            if let navigationLeftButtonView = self.navigationLeftButton.view {
+                var navigationLeftButtonTransition = transition
+                if navigationLeftButtonView.superview !== navigationLeftButtonSuperview {
+                    if navigationLeftButtonView.superview != nil {
+                        navigationLeftButtonTransition = .immediate
+                    }
+                    navigationLeftButtonSuperview.addSubview(navigationLeftButtonView)
+                }
+                navigationLeftButtonTransition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
+            }
             
             var actionButtonTitle = environment.strings.Story_Privacy_SaveList
             let title: String
@@ -2865,9 +2910,9 @@ final class ShareWithPeersScreenComponent: Component {
                 transition: .immediate,
                 component: titleComponent,
                 environment: {},
-                containerSize: CGSize(width: containerWidth - navigationButtonsWidth, height: navigationHeight)
+                containerSize: CGSize(width: contentWidth - navigationButtonsWidth, height: navigationHeight)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: containerSideInset + floor((containerWidth - navigationTitleSize.width) * 0.5), y: floor((navigationHeight - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: contentSideInset + floor((contentWidth - navigationTitleSize.width) * 0.5), y: floor((navigationHeight - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTitleView)
@@ -2876,14 +2921,14 @@ final class ShareWithPeersScreenComponent: Component {
                 navigationTitleView.bounds = CGRect(origin: CGPoint(), size: navigationTitleFrame.size)
             }
             
-            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: navigationTextFieldSize)
+            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: contentSideInset, y: navigationHeight), size: navigationTextFieldSize)
             if let navigationTextFieldView = self.navigationTextField.view {
                 if navigationTextFieldView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTextFieldView)
                     self.navigationContainerView.layer.addSublayer(self.textFieldSeparatorLayer)
                 }
                 transition.setFrame(view: navigationTextFieldView, frame: navigationTextFieldFrame)
-                transition.setFrame(layer: self.textFieldSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset, y: navigationTextFieldFrame.maxY), size: CGSize(width: navigationTextFieldFrame.width, height: UIScreenPixel)))
+                transition.setFrame(layer: self.textFieldSeparatorLayer, frame: CGRect(origin: CGPoint(x: navigationTextFieldFrame.minX, y: navigationTextFieldFrame.maxY), size: CGSize(width: navigationTextFieldFrame.width, height: UIScreenPixel)))
             }
             navigationHeight += navigationTextFieldFrame.height
             
@@ -2954,6 +2999,11 @@ final class ShareWithPeersScreenComponent: Component {
                     badge = self.selectedPeers.count
                 }
                 
+                // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                let actionButtonBandInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? environment.bottomEdgeSideInsets() : (0.0, 0.0)
+                let actionButtonContentSideInset = containerSideInset + actionButtonBandInsets.left
+                let actionButtonContentWidth = containerWidth - actionButtonBandInsets.left - actionButtonBandInsets.right
+                
                 let actionButtonSize = self.actionButton.update(
                     transition: transition,
                     component: AnyComponent(ButtonComponent(
@@ -2975,9 +3025,9 @@ final class ShareWithPeersScreenComponent: Component {
                             ))
                         ),
                         isEnabled: true,
-                        displaysProgress: false,
+                        displaysProgress: self.isCompleting,
                         action: { [weak self] in
-                            guard let self, let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
+                            guard let self, !self.isCompleting, let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
                                 return
                             }
                             
@@ -2995,6 +3045,12 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                             
                             let proceed = {
+                                guard !controller.isCompleting else {
+                                    return
+                                }
+                                if !controller.automaticallyDismissOnCompletion {
+                                    controller.isCompleting = true
+                                }
                                 var savePeers = true
                                 if component.stateContext.editing {
                                     savePeers = false
@@ -3017,7 +3073,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     }
                                 }
                                 
-                                let complete = {
+                                let complete = { [controller, component] in
                                     let peers = component.context.engine.data.get(EngineDataMap(selectedPeers.map { id in
                                         return TelegramEngine.EngineData.Item.Peer.Peer(id: id)
                                     }))
@@ -3041,7 +3097,9 @@ final class ShareWithPeersScreenComponent: Component {
                                         )
                                         
                                         controller.dismissAllTooltips()
-                                        controller.dismiss()
+                                        if controller.automaticallyDismissOnCompletion {
+                                            controller.dismiss()
+                                        }
                                     })
                                     
                                 }
@@ -3176,7 +3234,7 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: containerWidth - buttonSideInset * 2.0, height: 52.0)
+                    containerSize: CGSize(width: actionButtonContentWidth - buttonSideInset * 2.0, height: 52.0)
                 )
                 
                 if environment.inputHeight != 0.0 {
@@ -3184,7 +3242,7 @@ final class ShareWithPeersScreenComponent: Component {
                 } else {
                     bottomPanelHeight += 10.0 + environment.safeInsets.bottom + actionButtonSize.height
                 }
-                let actionButtonFrame = CGRect(origin: CGPoint(x: containerSideInset + buttonSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
+                let actionButtonFrame = CGRect(origin: CGPoint(x: actionButtonContentSideInset + buttonSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
                 if let actionButtonView = self.actionButton.view {
                     if actionButtonView.superview == nil {
                         self.containerView.addSubview(actionButtonView)
@@ -3203,11 +3261,11 @@ final class ShareWithPeersScreenComponent: Component {
             let previousItemLayout = self.itemLayout
             self.itemLayout = itemLayout
             
-            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight + footersTotalHeight)))
+            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentWidth, height: itemLayout.contentHeight + footersTotalHeight)))
             
             let scrollContentHeight = max(topInset + itemLayout.contentHeight + containerInset + bottomPanelHeight, availableSize.height - containerInset)
             
-            transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
+            transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: contentWidth, height: itemLayout.contentHeight)))
             
             transition.setPosition(view: self.backgroundView, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
             transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
@@ -3230,8 +3288,8 @@ final class ShareWithPeersScreenComponent: Component {
             transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: dismissOffset), size: availableSize))
             
             self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
-            let contentSize = CGSize(width: containerWidth, height: scrollContentHeight)
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: contentSideInset, y: 0.0), size: CGSize(width: contentWidth, height: availableSize.height)))
+            let contentSize = CGSize(width: contentWidth, height: scrollContentHeight)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
             }
@@ -3244,7 +3302,7 @@ final class ShareWithPeersScreenComponent: Component {
                 self.scrollView.contentInset = contentInset
             }
             if resetScrolling {
-                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height))
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentWidth, height: availableSize.height))
             } else if let previousItemLayout, previousItemLayout.topInset != topInset {
                 let topInsetDifference = previousItemLayout.topInset - topInset
                 var scrollBounds = self.scrollView.bounds
@@ -3277,6 +3335,15 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     private var isDismissed: Bool = false
     
     public var dismissed: () -> Void = {}
+    // An asynchronous completion keeps the screen open until its owner dismisses it.
+    public var automaticallyDismissOnCompletion = true
+    public var isCompleting = false {
+        didSet {
+            if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
+                componentView.setIsCompleting(self.isCompleting)
+            }
+        }
+    }
     
     public init(
         context: AccountContext,
@@ -3526,6 +3593,9 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     }
     
     func requestDismiss() {
+        guard !self.isCompleting else {
+            return
+        }
         self.dismissAllTooltips()
         self.dismissed()
         self.dismiss()
@@ -3565,7 +3635,7 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.actionsOnTop ? .top : .bottom)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: self.actionsOnTop ? .top : .bottom)
     }
 }
 

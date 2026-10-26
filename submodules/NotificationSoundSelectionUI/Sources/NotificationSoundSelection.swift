@@ -303,7 +303,7 @@ public func fileNameForNotificationSound(account: Account, notificationSoundList
         }
         for sound in notificationSoundList.sounds {
             if sound.file.fileId.id == fileId {
-                if let path = account.postbox.mediaBox.completedResourcePath(sound.file.resource, pathExtension: nil) {
+                if let path = TelegramEngine(account: account).resources.completedResourcePath(id: EngineMediaResource.Id(sound.file.resource.id), pathExtension: nil) {
                     return path
                 }
             }

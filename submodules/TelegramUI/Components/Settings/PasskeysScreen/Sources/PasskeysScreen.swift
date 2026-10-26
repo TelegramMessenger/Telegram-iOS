@@ -266,6 +266,15 @@ final class PasskeysScreenComponent: Component {
 
             self.backgroundColor = environment.theme.list.plainBackgroundColor
 
+            // iPhone Duo: the content keeps clear of the side strip. The intro lays its content out in the band beside it
+            // (`listSideInsets`), but its bottom buttons span the strip, keeping clear only of a corner block at the
+            // bottom; the list, which draws its own background across the screen, insets each side by that side's safe
+            // inset. Equal insets keep the full-width layout, as before.
+            let insetsDiffer = environment.safeInsets.left != environment.safeInsets.right
+            let introFrame = CGRect(origin: CGPoint(), size: availableSize)
+            let listSideInsets: (left: CGFloat, right: CGFloat) = insetsDiffer ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+            let introButtonSideInsets: (left: CGFloat, right: CGFloat) = insetsDiffer ? environment.bottomEdgeSideInsets() : (0.0, 0.0)
+
             if let passkeysData = self.passkeysData, passkeysData.isEmpty {
                 let intro: ComponentView<Empty>
                 var introTransition = transition
@@ -282,7 +291,8 @@ final class PasskeysScreenComponent: Component {
                         context: component.context,
                         theme: environment.theme,
                         strings: environment.strings,
-                        insets: UIEdgeInsets(top: environment.statusBarHeight + environment.navigationHeight, left: 0.0, bottom: environment.safeInsets.bottom, right: 0.0),
+                        insets: UIEdgeInsets(top: environment.statusBarHeight + environment.navigationHeight, left: listSideInsets.left, bottom: environment.safeInsets.bottom, right: listSideInsets.right),
+                        buttonSideInsets: UIEdgeInsets(top: 0.0, left: introButtonSideInsets.left, bottom: 0.0, right: introButtonSideInsets.right),
                         displaySkip: component.displaySkip,
                         createPasskeyAction: { [weak self] in
                             guard let self else {
@@ -299,14 +309,14 @@ final class PasskeysScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: availableSize
+                    containerSize: introFrame.size
                 )
                 if let introView = intro.view {
                     if introView.superview == nil {
                         self.addSubview(introView)
                         introView.alpha = 0.0
                     }
-                    transition.setFrame(view: introView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                    transition.setFrame(view: introView, frame: introFrame)
                     alphaTransition.setAlpha(view: introView, alpha: 1.0)
                 }
             } else {
@@ -336,7 +346,7 @@ final class PasskeysScreenComponent: Component {
                         context: component.context,
                         theme: environment.theme,
                         strings: environment.strings,
-                        insets: UIEdgeInsets(top: environment.statusBarHeight, left: 0.0, bottom: environment.safeInsets.bottom, right: 0.0),
+                        insets: UIEdgeInsets(top: environment.statusBarHeight, left: listSideInsets.left, bottom: environment.safeInsets.bottom, right: listSideInsets.right),
                         passkeys: passkeysData,
                         addPasskeyAction: { [weak self] in
                             guard let self else {

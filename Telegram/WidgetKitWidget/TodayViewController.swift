@@ -1,6 +1,7 @@
 #if arch(arm64) || arch(x86_64)
 
 import UIKit
+import PasscodeCore
 import NotificationCenter
 import BuildConfig
 import WidgetItems
@@ -11,7 +12,6 @@ import Intents
 
 import OpenSSLEncryptionProvider
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import OpenSSLEncryptionProvider
 import WidgetItemsUtils
@@ -82,6 +82,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
     
     let appGroupName = "group.\(baseAppBundleId)"
+    try! PasscodeEnvironment.shared.configure(PasscodeConfiguration(appGroupIdentifier: appGroupName, processRole: .appExtension))
     let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
     
     guard let appGroupUrl = maybeAppGroupUrl else {
@@ -91,7 +92,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     let rootPath = rootPathForBasePath(appGroupUrl.path)
     
-    TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
+    EngineTempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
     
     let logsPath = rootPath + "/logs/widget-logs"
     let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -101,7 +102,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     initializeAccountManagement()
     
     let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
-    let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+    let encryptionParameters = EngineValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: EngineValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: EngineValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
     
     var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
     var itemOrder: [(Int64, Int64)] = []
@@ -137,7 +138,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
             var result: [ParsedPeer] = []
             
             for (peerId, _) in items {
-                guard let peer = transaction.getPeer(PeerId(peerId)) else {
+                guard let peer = transaction.getPeer(EnginePeer.Id(peerId)) else {
                     continue
                 }
                 

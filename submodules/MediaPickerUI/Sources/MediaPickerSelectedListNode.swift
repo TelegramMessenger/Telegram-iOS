@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -594,7 +593,6 @@ private class MessageBackgroundNode: ASDisplayNode {
         var backgroundWallpaperFrame = self.backgroundWallpaperNode.frame
         backgroundWallpaperFrame.origin.x += rect.minX
         backgroundWallpaperFrame.origin.y += rect.minY
-        self.backgroundWallpaperNode.update(rect: backgroundWallpaperFrame, within: containerSize)
     }
 }
 
@@ -1046,17 +1044,16 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         }
         
         if !self.isExternalPreview {
-            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
-            var peers = SimpleDictionary<PeerId, Peer>()
-            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
+            let peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(1))
+            let peer = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
             
             let previewText = groupLayouts.count > 1 ? presentationData.strings.Attachment_MessagesPreview : presentationData.strings.Attachment_MessagePreview
             
-            let previewMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: previewText, entities: [], additionalAttributes: nil))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            let previewItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [previewMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: true, isPreview: true, isStandalone: false, rank: nil, rankRole: nil)
+            let previewMessage = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: .user(peer), text: "", attributes: [], media: [.action(TelegramMediaAction(action: .customText(text: previewText, entities: [], additionalAttributes: nil)))], peers: [peerId: .user(peer)], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            let previewItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [previewMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: true, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil)
             
-            let dragMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_DragToReorder, entities: [], additionalAttributes: nil))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            let dragItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [dragMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: true, isPreview: true, isStandalone: false, rank: nil, rankRole: nil)
+            let dragMessage = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: .user(peer), text: "", attributes: [], media: [.action(TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_DragToReorder, entities: [], additionalAttributes: nil)))], peers: [peerId: .user(peer)], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            let dragItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [dragMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: true, isPreview: true, isStandalone: false, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil)
             
             let headerItems: [ListViewItem] = [previewItem, dragItem]
             
@@ -1066,7 +1063,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                     let itemNode = messageNodes[i]
                     headerItems[i].updateNode(async: { $0() }, node: {
                         return itemNode
-                    }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                    }, params: params, neighbors: .none, animation: .None, completion: { (layout, apply) in
                         let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: size.width, height: layout.size.height))
                         
                         itemNode.contentSize = layout.contentSize
@@ -1074,16 +1071,16 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                         itemNode.frame = nodeFrame
                         itemNode.isUserInteractionEnabled = false
                         
-                        apply(ListViewItemApply(isOnScreen: true))
+                        apply(ListViewItemApply())
                     })
                 }
             } else {
                 var messageNodes: [ListViewItemNode] = []
                 for i in 0 ..< headerItems.count {
                     var itemNode: ListViewItemNode?
-                    headerItems[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                    headerItems[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: .none, completion: { node, apply in
                         itemNode = node
-                        apply().1(ListViewItemApply(isOnScreen: true))
+                        apply().1(ListViewItemApply())
                     })
                     itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                     itemNode!.isUserInteractionEnabled = false

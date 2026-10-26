@@ -12,7 +12,7 @@ typedef enum
 
 @class TGMenuSheetPallete;
 
-@interface TGMenuSheetItemView : UIView <UIViewControllerPreviewingDelegate>
+@interface TGMenuSheetItemView : UIView
 {
     CGFloat _screenHeight;
     UIUserInterfaceSizeClass _sizeClass;
@@ -36,8 +36,6 @@ typedef enum
 @property (nonatomic, assign) bool handlesPan;
 - (bool)passPanOffset:(CGFloat)offset;
 @property (nonatomic, readonly) bool inhibitPan;
-
-@property (nonatomic, readonly) UIView *previewSourceView;
 
 @property (nonatomic, assign) bool condensable;
 @property (nonatomic, assign) bool distractable;

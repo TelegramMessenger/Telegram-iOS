@@ -37,7 +37,7 @@ private final class LegacyActionSheetContextReferenceContentSource: ContextRefer
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .top)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top)
     }
 }
 
@@ -155,7 +155,7 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     }
     
     public func statusBarFrame() -> CGRect {
-        return legacyComponentsApplication!.delegate!.window!?.windowScene!.statusBarManager?.statusBarFrame ?? CGRect()
+        return legacyComponentsApplication!.delegate!.window!?.windowScene?.statusBarManager?.statusBarFrame ?? CGRect()
     }
     
     public func isStatusBarHidden() -> Bool {
@@ -442,6 +442,14 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
             return safeInsets
         }
         return UIEdgeInsets()
+    }
+    
+    public func statusIslandTrailingInset() -> CGFloat {
+        // A modal card sits below the island, like its zeroed top inset in `safeAreaInset()` assumes.
+        if let controller = self.controller as? LegacyController, let validLayout = controller.validLayout, controller.navigationPresentation != .modal {
+            return validLayout.navigationBarTrailingButtonsInset
+        }
+        return 0.0
     }
     
     public func prefersLightStatusBar() -> Bool {

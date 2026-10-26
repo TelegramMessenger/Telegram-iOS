@@ -4,6 +4,18 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import AppBundle
 
+private func accumulateTimecode(_ base: Int, _ value: Int, times multiplier: Int) -> Int {
+    let (product, productOverflow) = value.multipliedReportingOverflow(by: multiplier)
+    if productOverflow {
+        return Int.max
+    }
+    let (sum, sumOverflow) = base.addingReportingOverflow(product)
+    if sumOverflow {
+        return Int.max
+    }
+    return sum
+}
+
 func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
     guard let url = URL(string: url), let host = url.host?.lowercased() else {
         return nil
@@ -30,7 +42,7 @@ func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             if let hoursRange = value.range(of: "h", options: .caseInsensitive, range: range, locale: nil) {
                                 let subvalue = String(value[range.lowerBound ..< hoursRange.lowerBound])
                                 if let hours = Int(subvalue) {
-                                    timestamp = timestamp + hours * 3600
+                                    timestamp = accumulateTimecode(timestamp, hours, times: 3600)
                                 }
                                 range = hoursRange.upperBound..<value.endIndex
                             }
@@ -38,7 +50,7 @@ func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             if let minutesRange = value.range(of: "m", options: .caseInsensitive, range: range, locale: nil) {
                                 let subvalue = String(value[range.lowerBound ..< minutesRange.lowerBound])
                                 if let minutes = Int(subvalue) {
-                                    timestamp = timestamp + minutes * 60
+                                    timestamp = accumulateTimecode(timestamp, minutes, times: 60)
                                 }
                                 range = minutesRange.upperBound..<value.endIndex
                             }
@@ -46,7 +58,7 @@ func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
                             if let secondsRange = value.range(of: "s", options: .caseInsensitive, range: range, locale: nil) {
                                 let subvalue = String(value[range.lowerBound ..< secondsRange.lowerBound])
                                 if let seconds = Int(subvalue) {
-                                    timestamp = timestamp + seconds
+                                    timestamp = accumulateTimecode(timestamp, seconds, times: 1)
                                 }
                             }
                         } else {

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import AccountContext
 import TelegramCore
 import SwiftSignalKit
@@ -25,6 +24,7 @@ import AlertUI
 import UndoUI
 import ChatListUI
 import ChatListHeaderComponent
+import NavigationBarComponent
 import ChatListTitleView
 import ContextUI
 import SearchUI
@@ -32,6 +32,7 @@ import ItemListUI
 import PeerSelectionScreen
 import CommunityPrivateChatScreen
 import AvatarComponent
+import SideColumnLayout
 
 private extension CommunityViewScreenMode {
     var usesGroupedStyle: Bool {
@@ -628,7 +629,7 @@ private func communityChatCanRemovePeer(community: TelegramCommunity?, peer: Eng
     return communityChatPeerIsCreatedByAccount(peer)
 }
 
-private func communityCachedMemberCounts(_ data: [EnginePeer.Id: CachedPeerData]) -> [EnginePeer.Id: Int32] {
+private func communityCachedMemberCounts(_ data: [EnginePeer.Id: EngineCachedPeerData]) -> [EnginePeer.Id: Int32] {
     var result: [EnginePeer.Id: Int32] = [:]
     for (peerId, cachedData) in data {
         if let cachedData = cachedData as? CachedChannelData, let count = cachedData.participantsSummary.memberCount {
@@ -905,10 +906,10 @@ private final class CommunityViewContentComponent: Component {
     let community: TelegramCommunity?
     let cachedData: CachedCommunityData?
     let peers: [EnginePeer.Id: EnginePeer]
-    let cachedPeerData: [EnginePeer.Id: CachedPeerData]
+    let cachedPeerData: [EnginePeer.Id: EngineCachedPeerData]
     let previews: [EnginePeer.Id: CommunityChatPreviewData]
     let pendingRequests: CommunityPeerLinkRequests?
-    let pendingRequestCachedPeerData: [EnginePeer.Id: CachedPeerData]
+    let pendingRequestCachedPeerData: [EnginePeer.Id: EngineCachedPeerData]
     let pendingRequestInFlightPeerId: EnginePeer.Id?
     let pendingRequestInFlightApprove: Bool?
     let joinedPeerIds: Set<EnginePeer.Id>
@@ -927,10 +928,10 @@ private final class CommunityViewContentComponent: Component {
         community: TelegramCommunity?,
         cachedData: CachedCommunityData?,
         peers: [EnginePeer.Id: EnginePeer],
-        cachedPeerData: [EnginePeer.Id: CachedPeerData],
+        cachedPeerData: [EnginePeer.Id: EngineCachedPeerData],
         previews: [EnginePeer.Id: CommunityChatPreviewData],
         pendingRequests: CommunityPeerLinkRequests?,
-        pendingRequestCachedPeerData: [EnginePeer.Id: CachedPeerData],
+        pendingRequestCachedPeerData: [EnginePeer.Id: EngineCachedPeerData],
         pendingRequestInFlightPeerId: EnginePeer.Id?,
         pendingRequestInFlightApprove: Bool?,
         joinedPeerIds: Set<EnginePeer.Id>,
@@ -1289,7 +1290,7 @@ private final class CommunityViewContentComponent: Component {
             return nil
         }
 
-        private func memberCount(peerId: EnginePeer.Id, cachedPeerData: [EnginePeer.Id: CachedPeerData]) -> Int32? {
+        private func memberCount(peerId: EnginePeer.Id, cachedPeerData: [EnginePeer.Id: EngineCachedPeerData]) -> Int32? {
             guard let cachedData = cachedPeerData[peerId] else {
                 return nil
             }
@@ -1649,18 +1650,22 @@ private final class CommunityViewContentComponent: Component {
             self.environment = environment
 
             let theme: PresentationTheme
+            // Each side keeps its own safe inset: beside iPhone Duo's side strip only one side has one.
             let sideInset: CGFloat
+            let rightSideInset: CGFloat
             switch component.mode {
             case .sheet:
                 theme = environment.theme.withModalBlocksBackground()
-                sideInset = 16.0 + max(environment.safeInsets.left, environment.safeInsets.right)
+                sideInset = 16.0 + environment.safeInsets.left
+                rightSideInset = 16.0 + environment.safeInsets.right
             case .fullscreen, .preview:
                 theme = environment.theme
-                sideInset = max(environment.safeInsets.left, environment.safeInsets.right)
+                sideInset = environment.safeInsets.left
+                rightSideInset = environment.safeInsets.right
             }
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let sectionSpacing: CGFloat = component.mode.usesGroupedStyle ? 28.0 : 12.0
-            let contentWidth = availableSize.width - sideInset * 2.0
+            let contentWidth = availableSize.width - sideInset - rightSideInset
 
             self.backgroundColor = .clear
 
@@ -1823,12 +1828,16 @@ private final class CommunityViewScreenComponent: Component {
     let communityId: EnginePeer.Id
     let mode: CommunityViewScreenMode
     let selectionOptions: CommunityPeerSelectionOptions?
+    /// Set once the community's first data is laid out: the screen's header (title, settings button) is lifted as it
+    /// is when a navigation transition starts, so a push must not start before it.
+    let ready: Promise<Bool>
 
-    init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions?) {
+    init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions?, ready: Promise<Bool>) {
         self.context = context
         self.communityId = communityId
         self.mode = mode
         self.selectionOptions = selectionOptions
+        self.ready = ready
     }
 
     static func ==(lhs: CommunityViewScreenComponent, rhs: CommunityViewScreenComponent) -> Bool {
@@ -1842,6 +1851,9 @@ private final class CommunityViewScreenComponent: Component {
             return false
         }
         if lhs.selectionOptions !== rhs.selectionOptions {
+            return false
+        }
+        if lhs.ready !== rhs.ready {
             return false
         }
         return true
@@ -1862,8 +1874,22 @@ private final class CommunityViewScreenComponent: Component {
         private let fullscreenBottomItem = ComponentView<Empty>()
         private let bottomEdgeEffectView = EdgeEffectView()
         private let navigationBarView = ComponentView<Empty>()
+
+        /// The chat-list-style header, for navigation transitions. None for the sheet: its header lies on the sheet, below
+        /// the top of the screen, and a transition would fly its buttons to the other screen's bar; it slides with the
+        /// sheet instead.
+        var navigationTransitionHeader: ChatListNavigationBar.View? {
+            guard let component = self.component, component.mode.usesFullscreenPresentation else {
+                return nil
+            }
+            return self.navigationBarView.view as? ChatListNavigationBar.View
+        }
         private let searchOverlayNode = ASDisplayNode()
         private let sheetBoundsUpdated = ActionSlot<ResizableSheetComponentEnvironment.BoundsUpdate>()
+        /// iPhone Duo: how far the sheet's navigation bar moves its trailing buttons to clear a top-right corner block it
+        /// has risen beside (the unfolded portrait screen's status island, the folded portrait screen's 84x170 status
+        /// corner); 0 below it. `updateSheetNavigationBarFrame` follows the sheet as it moves.
+        private var sheetNavigationCornerTrailingInset: CGFloat = 0.0
         private let sheetNavigationTopInset: CGFloat = 16.0
         private let sheetSearchOverlayTopOffset: CGFloat = 20.0
 
@@ -1885,11 +1911,11 @@ private final class CommunityViewScreenComponent: Component {
         private var community: TelegramCommunity?
         private var cachedData: CachedCommunityData?
         private var peers: [EnginePeer.Id: EnginePeer] = [:]
-        private var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+        private var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
         private var previews: [EnginePeer.Id: CommunityChatPreviewData] = [:]
         private var pendingRequests: CommunityPeerLinkRequests?
         private var pendingRequestsContext: CommunityPeerLinkRequestsContext?
-        private var pendingRequestCachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+        private var pendingRequestCachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
         private var pendingRequestActions: [EnginePeer.Id: PendingCommunityViewRequestAction] = [:]
         private weak var currentRequestUndoOverlayController: UndoOverlayController?
         private var joinedPeerIds = Set<EnginePeer.Id>()
@@ -1897,6 +1923,8 @@ private final class CommunityViewScreenComponent: Component {
         private var isAddActionInProgress = false
         private var removingPeerId: EnginePeer.Id?
         private var didRequestInitialData = false
+        private var didReceiveInitialData = false
+        private var didSetReady = false
         private var didRequestJoinedChats = false
 
         private var dataDisposable: Disposable?
@@ -2119,7 +2147,7 @@ private final class CommunityViewScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+                var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
                 for id in ids {
                     if let maybeCachedData = cachedDataById[id], let cachedData = maybeCachedData {
                         cachedPeerData[id] = cachedData
@@ -2171,7 +2199,7 @@ private final class CommunityViewScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                var cachedPeerData: [EnginePeer.Id: CachedPeerData] = [:]
+                var cachedPeerData: [EnginePeer.Id: EngineCachedPeerData] = [:]
                 for id in ids {
                     if let maybeCachedData = cachedDataById[id], let cachedData = maybeCachedData {
                         cachedPeerData[id] = cachedData
@@ -2277,6 +2305,7 @@ private final class CommunityViewScreenComponent: Component {
                     if component.selectionOptions == nil {
                         self.updatePendingRequestsSignal(component: component)
                     }
+                    self.didReceiveInitialData = true
                     self.state?.updated(transition: transition)
                 })
             }
@@ -2788,26 +2817,31 @@ private final class CommunityViewScreenComponent: Component {
                 deviceMetrics: environment.deviceMetrics,
                 intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: effectiveSafeInsets.bottom, right: 0.0),
                 safeInsets: effectiveSafeInsets,
+                // Full screen, the search bar takes the screen's top row: with the screen's corners and full status height
+                // the layout resolves the compact bar height and the trailing inset beside iPhone Duo's status island.
+                reservedCorners: mode.usesFullscreenPresentation ? environment.reservedCorners : .none,
+                division: nil,
                 additionalInsets: environment.additionalInsets,
-                statusBarHeight: mode.usesFullscreenPresentation ? environment.statusBarHeight : 0.0,
+                statusBarHeight: mode.usesFullscreenPresentation ? environment.fullStatusBarHeight : 0.0,
                 inputHeight: environment.inputHeight > 0.0 ? environment.inputHeight : nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false
+                inVoiceOver: false,
+                presentedInFormSheet: false
             )
         }
 
         private func sheetMetrics(availableSize: CGSize, environment: EnvironmentType) -> (fillingSize: CGFloat, rawSideInset: CGFloat) {
-            let fillingSize: CGFloat
+            var maxWidth: CGFloat?
             if case .regular = environment.metrics.widthClass {
-                fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
-            } else {
-                fillingSize = min(availableSize.width, environment.deviceMetrics.screenSize.width) - environment.safeInsets.left * 2.0
+                maxWidth = 414.0
             }
-
-            return (fillingSize, floor((availableSize.width - fillingSize) * 0.5))
+            // Where `ResizableSheetComponent` puts the sheet, so the bar spans it: centred, or in the band beside a side
+            // strip (iPhone Duo).
+            let placement = resizableSheetHorizontalPlacement(containerSize: availableSize, safeInsets: environment.safeInsets, maxWidth: maxWidth)
+            return (placement.width, placement.minX)
         }
 
-        private func updateNavigationBar(component: CommunityViewScreenComponent, availableSize: CGSize, statusBarHeight: CGFloat, sideInset: CGFloat, environment: EnvironmentType, transition: ComponentTransition) -> CGSize {
+        private func updateNavigationBar(component: CommunityViewScreenComponent, availableSize: CGSize, statusBarHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, environment: EnvironmentType, transition: ComponentTransition) -> CGSize {
             let theme: PresentationTheme
             switch component.mode {
             case .sheet:
@@ -2818,34 +2852,29 @@ private final class CommunityViewScreenComponent: Component {
 
             let title = self.community?.title ?? environment.strings.Community_View_Title
                         
-            let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
+            let leftButton: NavigationBarComponent.Button?
             let backPressed: (() -> Void)?
-            let navigationBackTitle: String?
             if component.mode.isPreview {
                 leftButton = nil
                 backPressed = nil
-                navigationBackTitle = nil
             } else {
                 switch component.mode {
                 case .sheet:
-                    leftButton = AnyComponentWithIdentity(id: "close", component: AnyComponent(NavigationButtonComponent(
+                    leftButton = NavigationBarComponent.Button(id: "close",
                         content: .icon(imageName: "Navigation/Close"),
-                        pressed: { [weak self] _ in
+                        action: { [weak self] _ in
                             self?.dismiss(animated: true)
                         }
-                    )))
+                    )
                     backPressed = nil
-                    navigationBackTitle = nil
                 case .fullscreen:
                     leftButton = nil
                     backPressed = { [weak self] in
                         self?.dismiss(animated: true)
                     }
-                    navigationBackTitle = environment.strings.Common_Back
                 case .preview:
                     leftButton = nil
                     backPressed = nil
-                    navigationBackTitle = nil
                 }
             }
 
@@ -2860,27 +2889,26 @@ private final class CommunityViewScreenComponent: Component {
                 )), at: 0)
             }
             
-            var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+            var rightButtons: [NavigationBarComponent.Button] = []
             if component.mode.usesSheetPresentation && !component.mode.isPreview && component.selectionOptions == nil {
-                rightButtons.append(AnyComponentWithIdentity(id: "search", component: AnyComponent(NavigationButtonComponent(
+                rightButtons.append(NavigationBarComponent.Button(id: "search",
                     content: .icon(imageName: "Navigation/Search"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.activateSearch(searchContentNode: nil)
                     }
-                ))))
+                ))
             }
             if self.isAdmin && !component.mode.isPreview && component.selectionOptions == nil {
-                rightButtons.append(AnyComponentWithIdentity(id: "settings", component: AnyComponent(NavigationButtonComponent(
+                rightButtons.append(NavigationBarComponent.Button(id: "settings",
                     content: .icon(imageName: "Media Editor/Adjustments"),
-                    pressed: { [weak self] _ in
+                    action: { [weak self] _ in
                         self?.openEdit()
                     }
-                ))))
+                ))
             }
 
             let primaryContent = ChatListHeaderComponent.Content(
                 title: title,
-                navigationBackTitle: navigationBackTitle,
                 titleComponent: AnyComponent(
                     HStack(titleItems, spacing: 7.0)
                 ),
@@ -2904,7 +2932,9 @@ private final class CommunityViewScreenComponent: Component {
                     theme: theme,
                     strings: environment.strings,
                     statusBarHeight: statusBarHeight,
-                    sideInset: sideInset,
+                    leftInset: leftInset,
+                    rightInset: rightInset,
+                    trailingButtonsInset: component.mode.usesSheetPresentation ? self.sheetNavigationCornerTrailingInset : environment.navigationBarTrailingButtonsInset,
                     search: component.mode.usesFullscreenPresentation && !component.mode.isPreview && component.selectionOptions == nil ? ChatListNavigationBar.Search(isEnabled: true) : nil,
                     activeSearch: self.isSearchDisplayControllerActive,
                     primaryContent: primaryContent,
@@ -2927,7 +2957,9 @@ private final class CommunityViewScreenComponent: Component {
                     openStatusSetup: { _ in
                     },
                     allowAutomaticOrder: {
-                    }
+                    },
+                    // iPhone Duo: the back and icon buttons go into the side strip, as the chat list's do.
+                    sideColumn: (component.mode.usesFullscreenPresentation && !component.mode.isPreview) ? pushedScreenSideColumnRegion(layout: environment.controller()?.currentlyAppliedLayout) : nil
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -2975,6 +3007,18 @@ private final class CommunityViewScreenComponent: Component {
 
             transition.setFrame(view: navigationBarComponentView, frame: frame)
             self.updateNavigationScrolling(transition: transition)
+
+            // The sheet's bar moves its trailing buttons clear of a top-right corner block only while it is beside it.
+            if let environment = self.environment {
+                var cornerTrailingInset: CGFloat = 0.0
+                if let topRight = environment.reservedCorners.topRight, frame.minY < topRight.height {
+                    cornerTrailingInset = max(0.0, topRight.width - (self.currentAvailableSize.width - frame.maxX))
+                }
+                if cornerTrailingInset != self.sheetNavigationCornerTrailingInset {
+                    self.sheetNavigationCornerTrailingInset = cornerTrailingInset
+                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                }
+            }
 
             if self.searchOverlayNode.view.superview === navigationBarComponentView.superview, let component = self.component, let environment = self.environment, component.mode.usesSheetPresentation {
                 let overlayFrame = self.sheetSearchOverlayFrame(navigationBarFrame: frame, availableSize: self.currentAvailableSize, statusBarHeight: environment.statusBarHeight)
@@ -3144,23 +3188,24 @@ private final class CommunityViewScreenComponent: Component {
             let currentSheetMetrics = self.sheetMetrics(availableSize: availableSize, environment: environment)
             let navigationAvailableSize: CGSize
             let navigationStatusBarHeight: CGFloat
-            let navigationSideInset: CGFloat
+            let navigationSideInsets: (left: CGFloat, right: CGFloat)
             switch component.mode {
             case .sheet:
                 navigationAvailableSize = CGSize(width: currentSheetMetrics.fillingSize, height: availableSize.height)
                 navigationStatusBarHeight = 0.0
-                navigationSideInset = 0.0
+                navigationSideInsets = (0.0, 0.0)
             case .fullscreen, .preview:
                 navigationAvailableSize = availableSize
                 navigationStatusBarHeight = environment.statusBarHeight
-                navigationSideInset = environment.safeInsets.left
+                navigationSideInsets = (environment.safeInsets.left, environment.safeInsets.right)
             }
 
             let navigationBarSize = self.updateNavigationBar(
                 component: component,
                 availableSize: navigationAvailableSize,
                 statusBarHeight: navigationStatusBarHeight,
-                sideInset: navigationSideInset,
+                leftInset: navigationSideInsets.left,
+                rightInset: navigationSideInsets.right,
                 environment: environment,
                 transition: transition
             )
@@ -3207,7 +3252,7 @@ private final class CommunityViewScreenComponent: Component {
                             metrics: environment.metrics,
                             deviceMetrics: environment.deviceMetrics,
                             isDisplaying: environment.isVisible,
-                            isCentered: environment.metrics.widthClass == .regular,
+                            isCentered: environment.presentsFloatingPanels,
                             screenSize: availableSize,
                             regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                             dismiss: { [weak self] animated in
@@ -3267,7 +3312,9 @@ private final class CommunityViewScreenComponent: Component {
                 let bottomFrame: CGRect
                 let bottomSize: CGSize
                 if displaysBottomItem {
-                    let bottomPanelWidth = max(1.0, availableSize.width - environment.safeInsets.left * 2.0 - buttonInsets.left - buttonInsets.right)
+                    // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                    let bottomEdgeInsets = environment.bottomEdgeSideInsets()
+                    let bottomPanelWidth = max(1.0, availableSize.width - bottomEdgeInsets.left - bottomEdgeInsets.right - buttonInsets.left - buttonInsets.right)
                     bottomSize = self.fullscreenBottomItem.update(
                         transition: transition,
                         component: AnyComponent(self.makeBottomButtonComponent(theme: theme, strings: environment.strings, safeInsets: UIEdgeInsets())),
@@ -3276,7 +3323,7 @@ private final class CommunityViewScreenComponent: Component {
                     )
                     bottomFrame = CGRect(
                         origin: CGPoint(
-                            x: environment.safeInsets.left + buttonInsets.left,
+                            x: bottomEdgeInsets.left + buttonInsets.left,
                             y: availableSize.height - bottomPanelHeight
                         ),
                         size: bottomSize
@@ -3379,6 +3426,16 @@ private final class CommunityViewScreenComponent: Component {
                 controller.presentationContext.containerLayoutUpdated(presentationContextLayout, transition: transition.containedViewLayoutTransition)
             }
 
+            if self.didReceiveInitialData && !self.didSetReady {
+                self.didSetReady = true
+                // After this update returns: ready can start the transition right away, and that lays the screen out
+                // again.
+                let ready = component.ready
+                DispatchQueue.main.async {
+                    ready.set(.single(true))
+                }
+            }
+
             return availableSize
         }
     }
@@ -3393,14 +3450,32 @@ private final class CommunityViewScreenComponent: Component {
 }
 
 public final class CommunityViewScreenImpl: ViewControllerComponentContainer, CommunityViewScreen {
+
+    /// Draws its own header (no Display bar); it takes part in navigation transitions itself.
+    override public var navigationBarTransitionSource: NavigationBarTransitionSource? {
+        guard self.isNodeLoaded else {
+            return nil
+        }
+        return (self.node.hostView.componentView as? CommunityViewScreenComponent.View)?.navigationTransitionHeader
+    }
+    private let readyValue = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self.readyValue
+    }
+
     public init(context: AccountContext, communityId: EnginePeer.Id, mode: CommunityViewScreenMode, selectionOptions: CommunityPeerSelectionOptions? = nil) {
+        let componentReady = Promise<Bool>()
         super.init(
             context: context,
-            component: CommunityViewScreenComponent(context: context, communityId: communityId, mode: mode, selectionOptions: selectionOptions),
+            component: CommunityViewScreenComponent(context: context, communityId: communityId, mode: mode, selectionOptions: selectionOptions, ready: componentReady),
             navigationBarAppearance: .none,
             theme: .default,
             updatedPresentationData: nil
         )
+
+        // Pushed once its header shows the community's first data (a push lifts the header as it is); a screen that
+        // is never laid out or never gets data does not hold the push up for long.
+        self.readyValue.set(componentReady.get() |> timeout(1.0, queue: .mainQueue(), alternate: .single(true)))
 
         self.automaticallyControlPresentationContextLayout = false
 

@@ -36,10 +36,16 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let highlight: ContactListActionItemHighlight
     let clearHighlightAutomatically: Bool
     let accessible: Bool
+    let hideBackground: Bool
     let action: () -> Void
     public let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: self.header?.id, headerFamily: .contactList))
+    }
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, systemStyle: ItemListSystemStyle = .legacy, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, actionStyle: Style = .accent, height: Height = .generic, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, systemStyle: ItemListSystemStyle = .legacy, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, actionStyle: Style = .accent, height: Height = .generic, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, hideBackground: Bool = false, header: ListViewItemHeader?, action: @escaping () -> Void) {
+        self.hideBackground = hideBackground
         self.presentationData = presentationData
         self.style = style
         self.systemStyle = systemStyle
@@ -55,10 +61,10 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactListActionItemNode()
-            let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, neighbors: neighbors)
             let (layout, apply) = node.asyncLayout()(self, params, firstWithHeader, last)
             
             node.contentSize = layout.contentSize
@@ -72,13 +78,13 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactListActionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, neighbors: neighbors)
                     let (layout, apply) = makeLayout(self, params, firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
@@ -99,16 +105,14 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         }
     }
     
-    static func mergeType(item: ContactListActionItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ContactListActionItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ContactsPeerItem {
-                    firstWithHeader = header.id != previousItem.header?.id
-                } else if let previousItem = previousItem as? ContactListActionItem {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self), previousItem.headerFamily == .contactList {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -117,11 +121,9 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
-            if let nextItem = nextItem as? ContactsPeerItem {
-                last = item.header?.id != nextItem.header?.id
-            } else if let nextItem = nextItem as? ContactListActionItem {
-                last = item.header?.id != nextItem.header?.id
+        if neighbors.next != nil {
+            if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self), nextItem.headerFamily == .contactList {
+                last = item.header?.id != nextItem.headerId
             } else {
                 last = true
             }
@@ -199,7 +201,7 @@ class ContactListActionItemNode: ListViewItemNode {
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let currentItem = self.item
         
-        return { item, params, firstWithHeader, last in
+        return { [weak self] item, params, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -265,7 +267,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                        strongSelf.backgroundNode.backgroundColor = item.hideBackground ? .clear : item.presentationData.theme.list.plainBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
                         if case .generic = item.actionStyle {
@@ -327,13 +329,19 @@ class ContactListActionItemNode: ListViewItemNode {
                             strongSelf.addSubnode(strongSelf.maskNode)
                         }
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: false, bottom: true, glass: item.systemStyle == .glass) : nil
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     }
                     
                     strongSelf.topStripeNode.isHidden = true
                     strongSelf.bottomStripeNode.isHidden = hideBottomStripe
                     
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
+                    // iPhone Duo: the part of one side's inset beyond the other's is the side strip; the separator
+                    // and the highlight stop at it instead of running under it. Equal insets give today's frames.
+                    let stripExcessLeft = max(0.0, params.leftInset - params.rightInset)
+                    let stripExcessRight = max(0.0, params.rightInset - params.leftInset)
+                    // Glass rows end their separator 16pt short of the edge, as the contact rows below do.
+                    let separatorRightInset: CGFloat = (item.systemStyle == .glass ? 16.0 : 0.0) + stripExcessRight
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - separatorRightInset, height: separatorHeight))
                     
                     let titleFrame: CGRect
                     if subtitleAttributedString != nil {
@@ -346,7 +354,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     let subtitleFrame = CGRect(origin: CGPoint(x: titleOffset, y: titleFrame.maxY - 1.0), size: subtitleLayout.size)
                     strongSelf.subtitleNode.frame = subtitleFrame
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: stripExcessLeft, y: -UIScreenPixel), size: CGSize(width: params.width - stripExcessLeft - stripExcessRight, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })
         }

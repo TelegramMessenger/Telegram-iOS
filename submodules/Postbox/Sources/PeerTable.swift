@@ -56,7 +56,17 @@ final class PeerTable: Table {
         var result: [((Peer, Bool)?, (Peer, Bool))] = []
         for (peerId, initialPeer) in self.updatedInitialPeers {
             if let peer = self.get(peerId) {
-                let isContact = contactsTable.isContact(peerId: peerId)
+                // A peer whose identity is overridden by an associated one (a secret chat) has no
+                // contact status of its own. ChatListIndexTable files it into a summary counter
+                // bucket using the associated peer's status, so the tag transitions derived from
+                // this must resolve it the same way or the chat lands in two buckets at once.
+                let contactPeerId: PeerId
+                if let associatedPeerId = peer.associatedPeerId, peer.associatedPeerOverridesIdentity {
+                    contactPeerId = associatedPeerId
+                } else {
+                    contactPeerId = peerId
+                }
+                let isContact = contactsTable.isContact(peerId: contactPeerId)
                 result.append((initialPeer.flatMap { ($0, isContact) }, (peer, isContact)))
             } else {
                 assertionFailure()

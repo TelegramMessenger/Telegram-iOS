@@ -13,8 +13,9 @@ final class CodeBlockEditingTests: XCTestCase {
 
     func test_codeBlock_enterInsertsNewlineDoesNotSplit() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: [TextRun(text: "ab")]))])
-        // textStart = 1 (one open token before), so global 2 = after "a".
-        canvas.setCaret(global: 2)
+        // A code block is a container [languagePara, codePara]; derive the code text start rather than
+        // hard-coding it, since it moves with the language line's length.
+        canvas.setCaret(global: canvas.boxes[0].textStart + 1)   // after "a"
         canvas.insertText("\n")
         XCTAssertEqual(canvas.boxes.count, 1)            // still ONE code block
         guard case let .code(cb) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .code") }
@@ -23,8 +24,7 @@ final class CodeBlockEditingTests: XCTestCase {
 
     func test_codeBlock_enterAtEnd_insertsNewlineDoesNotSplit() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: [TextRun(text: "line1")]))])
-        // textStart = 1, textLength = 5, so global 6 = after "line1".
-        canvas.setCaret(global: 6)
+        canvas.setCaret(global: canvas.boxes[0].textStart + 5)   // after "line1"
         canvas.insertText("\n")
         XCTAssertEqual(canvas.boxes.count, 1)
         guard case let .code(cb) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .code") }
@@ -33,8 +33,7 @@ final class CodeBlockEditingTests: XCTestCase {
 
     func test_codeBlock_enterAtStart_insertsNewlineAtFront() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: [TextRun(text: "ab")]))])
-        // textStart = 1, global 1 = start of text.
-        canvas.setCaret(global: 1)
+        canvas.setCaret(global: canvas.boxes[0].textStart)       // start of the code text
         canvas.insertText("\n")
         XCTAssertEqual(canvas.boxes.count, 1)
         guard case let .code(cb) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .code") }
@@ -43,19 +42,20 @@ final class CodeBlockEditingTests: XCTestCase {
 
     func test_codeBlock_caretAdvancesAfterNewline() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: [TextRun(text: "ab")]))])
-        canvas.setCaret(global: 2)   // after "a"
+        let codeStart = canvas.boxes[0].textStart
+        canvas.setCaret(global: codeStart + 1)   // after "a"
         canvas.insertText("\n")
-        // caret should land after the inserted "\n", i.e. global 3 = before "b"
-        XCTAssertEqual(canvas.head, 3)
+        // caret should land after the inserted "\n", i.e. before "b"
+        XCTAssertEqual(canvas.head, codeStart + 2)
         guard case let .code(cb) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .code") }
         XCTAssertEqual(cb.text, "a\nb")
     }
 
     func test_codeBlock_enterReplacesSelectionWithNewline() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: [TextRun(text: "abcd")]))])
-        // textStart = 1, so "bc" occupies globals [2, 4).
-        canvas.setSelectionAnchor(global: 2)
-        canvas.setSelectionHead(global: 4)
+        // "bc" occupies the two globals after the code text start.
+        canvas.setSelectionAnchor(global: canvas.boxes[0].textStart + 1)
+        canvas.setSelectionHead(global: canvas.boxes[0].textStart + 3)
         canvas.insertText("\n")
         XCTAssertEqual(canvas.boxes.count, 1)
         guard case let .code(cb) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .code") }
@@ -67,7 +67,7 @@ final class CodeBlockEditingTests: XCTestCase {
     // (A) Backspace in a fully-EMPTY code block converts it to a body paragraph.
     func test_codeBlock_backspaceInEmptyConvertsToBody() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: []))])
-        canvas.setCaret(global: 1)            // the single position inside the empty code block (textStart=1)
+        canvas.setCaret(global: canvas.boxes[0].textStart)   // the single position inside the empty code block
         canvas.deleteBackward()
         XCTAssertEqual(canvas.boxes.count, 1)
         guard case let .paragraph(p) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .paragraph") }
@@ -120,8 +120,9 @@ final class CodeBlockEditingTests: XCTestCase {
     // BlockBox, so without a code-specific case the first typed character lands non-monospace at body size.
     func test_codeBlock_emptyTypingAttributesAreMonospace() {
         let canvas = makeCanvas([.code(CodeBlock(id: BlockID("c1"), runs: []))])
-        canvas.setCaret(global: 1)   // inside the empty code block (textStart = 1)
-        let font = canvas.typingAttributesAtGlobal(1)[.font] as? UIFont
+        let codeStart = canvas.boxes[0].textStart   // inside the empty code block
+        canvas.setCaret(global: codeStart)
+        let font = canvas.typingAttributesAtGlobal(codeStart)[.font] as? UIFont
         XCTAssertEqual(font?.pointSize ?? 0, CodeBlockBox.fontSize, accuracy: 0.5,
                        "typing into an empty code block uses the 15pt code font, not the 17pt body default")
         XCTAssertTrue(font?.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) ?? false,

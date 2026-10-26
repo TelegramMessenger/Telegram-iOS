@@ -18,7 +18,9 @@ private final class BundleHelper: NSObject {
 /// faithfully. Non-interactive; the canvas owns hit-test + reveal (`point(inside:)` just reports the run's
 /// rects so a tap "lands" on dust).
 @available(iOS 13.0, *)
-final class SpoilerDustView: UIView {
+/// PUBLIC so the engine editor can host the same dust as the legacy canvas. Sharing the emitter
+/// is the point: two implementations of a particle cloud would drift apart visibly.
+public final class SpoilerDustView: UIView {
     /// Hosts the emitter layer; gets the radial reveal mask (mirrors Telegram's `emitterNode`).
     private let emitterContainer = UIView()
     private let emitterLayer = CAEmitterLayer()
@@ -31,7 +33,7 @@ final class SpoilerDustView: UIView {
     private var lineRects: [CGRect] = []
     private(set) var isRevealed = false
 
-    override init(frame: CGRect) {
+    public override init(frame: CGRect) {
         super.init(frame: frame)
         isUserInteractionEnabled = false
         backgroundColor = .clear
@@ -46,7 +48,7 @@ final class SpoilerDustView: UIView {
         emitterMask.addSubview(emitterMaskFill)    // opaque white on top → mask fully open until reveal
         configureEmitter()
     }
-    required init?(coder: NSCoder) { fatalError("init(coder:) not used") }
+    public required init?(coder: NSCoder) { fatalError("init(coder:) not used") }
 
     private func configureEmitter() {
         let cell = CAEmitterCell()
@@ -86,7 +88,7 @@ final class SpoilerDustView: UIView {
     /// Reconfigures the cloud for a hidden run: `size` = the view's bounds, `wordRects` confine the particles
     /// to where ink is (Telegram's `spoilerWords`), `lineRects` are the hit-test area. All in the view's own
     /// coordinates.
-    func update(size: CGSize, color: UIColor, lineRects: [CGRect], wordRects: [CGRect]) {
+    public func update(size: CGSize, color: UIColor, lineRects: [CGRect], wordRects: [CGRect]) {
         guard !isRevealed else { return }   // a dissolving view is fading out + about to remove itself
         self.lineRects = lineRects
         frame.size = size
@@ -108,7 +110,7 @@ final class SpoilerDustView: UIView {
     /// dissolves the dust outward from that point (Telegram's `revealAtLocation`). With `nil` (a caret-driven
     /// reveal): a plain cross-fade. Either way the view removes itself and calls `completion` when done.
     /// Idempotent. The underlying text is restored separately (by the canvas's rendering attribute).
-    func dissolve(explodingAt point: CGPoint?, completion: @escaping () -> Void) {
+    public func dissolve(explodingAt point: CGPoint?, completion: @escaping () -> Void) {
         guard !isRevealed else { completion(); return }
         isRevealed = true
 
@@ -125,7 +127,7 @@ final class SpoilerDustView: UIView {
 
         // Build the inverse radial mask off the main thread (matches Telegram), then install + animate it.
         let maskSize = emitterContainer.frame.size
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { [weak self] in
             let image = Self.emitterMaskImage(size: maskSize, position: location)
             DispatchQueue.main.async { [weak self] in self?.emitterSpot.image = image }
         }
@@ -175,7 +177,7 @@ final class SpoilerDustView: UIView {
         }
     }
 
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         guard !isRevealed else { return false }
         return lineRects.contains { $0.contains(point) }
     }

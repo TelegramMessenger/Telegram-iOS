@@ -36,7 +36,7 @@ final class CanvasEditMenuPositionTests: XCTestCase {
     /// horizontally. This is the reported bug: the menu was covering the word and the handles.
     func test_targetRect_rangeSelection_coversUnion_andPadsForHandles() {
         let v = paragraphCanvas()
-        let r = region(v, "h"); v.anchor = r.globalStart; v.head = r.globalStart + 5   // "Hello"
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart + 5)   // "Hello"
         let union = v.selectionRects(globalFrom: v.selFrom, globalTo: v.selTo)
             .reduce(CGRect.null) { $0.union($1) }
         XCTAssertFalse(union.isNull, "precondition: the selection produces rects")
@@ -55,7 +55,7 @@ final class CanvasEditMenuPositionTests: XCTestCase {
         let v = tableCanvas()
         let rA = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let rB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = rA.globalStart + 2; v.head = rB.globalStart + 2
+        v.setSelectionForTesting(anchor: rA.globalStart + 2, head: rB.globalStart + 2)
         let target = v.editMenuTargetRect()
         XCTAssertLessThan(target.minX, rB.canvasOrigin.x - 1, "target reaches into cell A")
         XCTAssertGreaterThan(target.maxX, rB.canvasOrigin.x - 1, "target continues into cell B")
@@ -65,7 +65,7 @@ final class CanvasEditMenuPositionTests: XCTestCase {
     /// no drag handles).
     func test_targetRect_collapsedCaret_isCaretRect_unpadded() {
         let v = paragraphCanvas()
-        let r = region(v, "h"); v.anchor = r.globalStart + 2; v.head = r.globalStart + 2
+        let r = region(v, "h"); v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 2)
         let caret = v.caretRect(for: DocumentTextPosition(v.head))
         XCTAssertFalse(caret.isEmpty, "precondition: caret has a rect")
         XCTAssertEqual(v.editMenuTargetRect(), caret)
@@ -76,7 +76,7 @@ final class CanvasEditMenuPositionTests: XCTestCase {
     func test_targetRect_columnSelection_isOutline() {
         let v = tableCanvas()
         let t = v.boxes[0] as! TableBlockBox
-        v.head = t.cellTextStart(row: 0, column: 1)!; v.anchor = v.head   // caret in the table → activeTable resolves
+        v.setSelectionForTesting(anchor: t.cellTextStart(row: 0, column: 1)!, head: t.cellTextStart(row: 0, column: 1)!)   // caret in the table → activeTable resolves
         v.selectTableColumn(1)
         let outline = v.tableSelectionOutlineRect()
         XCTAssertNotNil(outline, "precondition: a column is structurally selected")

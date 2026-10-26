@@ -67,6 +67,12 @@ final class MediaEditorRenderer {
     private var commandQueue: MTLCommandQueue?
     private var textureCache: CVMetalTextureCache?
     private var semaphore = DispatchSemaphore(value: 3)
+    /// Permits actually taken from `semaphore`.
+    ///
+    /// A timed-out wait does NOT take one, so signalling unconditionally in `didRenderFrame`
+    /// handed back a permit that was never held: the count crept up, the triple buffer stopped
+    /// throttling, and queued GPU work ran further and further ahead of the display.
+    private let acquiredRenderPermits = Atomic<Int>(value: 0)
     
     private var renderPasses: [RenderPass] = []
     
@@ -105,7 +111,10 @@ final class MediaEditorRenderer {
     }
     
     deinit {
-        for _ in 0 ..< 3 {
+        // A DispatchSemaphore traps if it is deallocated while permits are still held, so hand
+        // back exactly the ones outstanding rather than a fixed three.
+        let outstanding = self.acquiredRenderPermits.swap(0)
+        for _ in 0 ..< outstanding {
             self.semaphore.signal()
         }
     }
@@ -320,12 +329,28 @@ final class MediaEditorRenderer {
     }
     
     func willRenderFrame() {
-        let timeout = self.renderTarget != nil ? DispatchTime.now() + 0.1 : .distantFuture
-        let _ = self.semaphore.wait(timeout: timeout)
+        // Bounded on both paths. `consume` waits here before the export's own frame timeout can
+        // apply, so an unbounded wait would deadlock ahead of it if a permit were ever lost — for
+        // instance when a command buffer's completion handler does not run after a GPU error.
+        // Proceeding without a permit only costs throttling for that one frame.
+        let timeout = DispatchTime.now() + (self.renderTarget != nil ? 0.1 : 10.0)
+        if self.semaphore.wait(timeout: timeout) == .success {
+            let _ = self.acquiredRenderPermits.modify { $0 + 1 }
+        }
     }
     
     func didRenderFrame() {
-        self.semaphore.signal()
+        var heldPermit = false
+        let _ = self.acquiredRenderPermits.modify { current in
+            guard current > 0 else {
+                return current
+            }
+            heldPermit = true
+            return current - 1
+        }
+        if heldPermit {
+            self.semaphore.signal()
+        }
     }
     
     func consume(
@@ -357,6 +382,26 @@ final class MediaEditorRenderer {
         self.renderTarget?.redraw()
     }
     
+    func finalRenderedCIImage() -> CIImage? {
+        guard let texture = self.resultTexture, let device = self.effectiveDevice, let commandBuffer = self.commandQueue?.makeCommandBuffer() else {
+            return nil
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: texture.pixelFormat, width: texture.width, height: texture.height, mipmapped: false)
+        descriptor.usage = [.shaderRead]
+        guard let snapshot = device.makeTexture(descriptor: descriptor), let encoder = commandBuffer.makeBlitCommandEncoder() else {
+            return nil
+        }
+        // The live texture can be reused by the next frame while the draft preview is composed off the main thread.
+        encoder.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0), sourceSize: MTLSize(width: texture.width, height: texture.height, depth: 1), to: snapshot, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+        encoder.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        guard commandBuffer.status == .completed else {
+            return nil
+        }
+        return getTextureCIImage(texture: snapshot)
+    }
+
     func finalRenderedImage(mirror: Bool = false) -> UIImage? {
         if let finalTexture = self.resultTexture, let device = self.effectiveDevice {
             return getTextureImage(device: device, texture: finalTexture, mirror: mirror)

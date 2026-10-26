@@ -314,7 +314,10 @@
         _doneButton.exclusiveTouch = true;
         _doneButton.hidden = true;
         _doneButton.titleLabel.font = TGMediumSystemFontOfSize(18);
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations" // legacy non-configuration UIButton: property is still honored
         _doneButton.contentEdgeInsets = UIEdgeInsetsMake(0, 0, 0, 20);
+        #pragma clang diagnostic pop
         [_doneButton setTitle:TGLocalized(@"Common.Done") forState:UIControlStateNormal];
         [_doneButton setTintColor:[TGCameraInterfaceAssets normalColor]];
         [_doneButton sizeToFit];

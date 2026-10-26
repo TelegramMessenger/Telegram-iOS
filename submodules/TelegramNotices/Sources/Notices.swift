@@ -209,6 +209,9 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case aiTextProcessingStyleSelectionTips = 87
     case savedMessagesChatListView = 88
     case guestChatMessageTooltip = 89
+    case walletGramTooltip = 90
+    case walletCardStickersTutorial = 91
+    case shareCreateGroupTooltip = 92
     
     var key: EngineDataBuffer {
         let v = EngineDataBuffer(length: 4)
@@ -597,6 +600,18 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func savedMessagesChatListView() -> EngineNoticeEntryKey {
         return EngineNoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.savedMessagesChatListView.key)
+    }
+    
+    static func walletGramTooltip() -> EngineNoticeEntryKey {
+        return EngineNoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.walletGramTooltip.key)
+    }
+    
+    static func walletCardStickersTutorial() -> EngineNoticeEntryKey {
+        return EngineNoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.walletCardStickersTutorial.key)
+    }
+
+    static func shareCreateGroupTooltip() -> EngineNoticeEntryKey {
+        return EngineNoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.shareCreateGroupTooltip.key)
     }
 }
 
@@ -2671,6 +2686,68 @@ public struct ApplicationSpecificNotice {
             }
             
             return Int(previousValue)
+        }
+    }
+    
+    public static func getWalletGramTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.walletGramTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementWalletGramTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.walletGramTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            if let entry = EngineCodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.walletGramTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func resetWalletGramTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.walletGramTooltip(), nil)
+        }
+    }
+    
+    public static func getWalletCardStickersTutorial(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            return transaction.getNotice(ApplicationSpecificNoticeKeys.walletCardStickersTutorial())?.get(ApplicationSpecificBoolNotice.self) != nil
+        }
+    }
+    
+    public static func setWalletCardStickersTutorial(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = EngineCodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.walletCardStickersTutorial(), entry)
+            }
+        }
+    }
+
+    public static func getShareCreateGroupTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            return transaction.getNotice(ApplicationSpecificNoticeKeys.shareCreateGroupTooltip())?.get(ApplicationSpecificCounterNotice.self)?.value ?? 0
+        }
+    }
+
+    public static func incrementShareCreateGroupTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            let currentValue = transaction.getNotice(ApplicationSpecificNoticeKeys.shareCreateGroupTooltip())?.get(ApplicationSpecificCounterNotice.self)?.value ?? 0
+            if let entry = EngineCodableEntry(ApplicationSpecificCounterNotice(value: currentValue + count)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.shareCreateGroupTooltip(), entry)
+            }
         }
     }
 }

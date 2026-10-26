@@ -579,7 +579,7 @@ final class VideoChatParticipantVideoComponent: Component {
                         videoAlphaTransition.setAlpha(layer: videoLayer.blurredLayer, alpha: 0.25)
                     }
                     
-                    let rotationAngle = resolveCallVideoRotationAngle(angle: videoSpec.rotationAngle, followsDeviceOrientation: videoSpec.followsDeviceOrientation, interfaceOrientation: component.interfaceOrientation)
+                    let rotationAngle = resolveCallVideoRotationAngle(angle: videoSpec.rotationAngle, followsDeviceOrientation: videoSpec.followsDeviceOrientation, interfaceOrientation: component.interfaceOrientation, deviceOrientation: deviceOrientationMatching(component.interfaceOrientation))
                     
                     var rotatedResolution = videoSpec.resolution
                     var videoIsRotated = false

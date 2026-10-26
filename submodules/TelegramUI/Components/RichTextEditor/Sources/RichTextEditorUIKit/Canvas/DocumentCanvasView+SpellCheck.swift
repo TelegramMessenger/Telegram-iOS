@@ -5,11 +5,12 @@ import RichTextEditorCore
 @available(iOS 13.0, *)
 extension DocumentCanvasView {
     /// The block key for a CHECKABLE region, else nil. Prose is checked (`paragraph`/`caption`/`pullQuote`);
-    /// code and quote-author regions are skipped (author is metadata, not prose).
+    /// code, code-LANGUAGE and quote-author regions are skipped (a language name is an identifier, not
+    /// prose — iOS would underline `kotlin`; author is metadata).
     func spellCheckableRef(_ ref: TextNodeRef) -> BlockID? {
         switch ref {
-        case .paragraph(let id), .caption(let id), .pullQuote(let id): return id
-        case .code, .quoteAuthor: return nil
+        case .paragraph(let id), .caption(let id), .pullQuote(let id), .detailsTitle(let id): return id
+        case .code, .quoteAuthor, .codeLanguage: return nil
         }
     }
 
@@ -178,7 +179,7 @@ extension DocumentCanvasView {
     func applySpellingReplacement(_ guess: String) {
         guard let pending = pendingSpellingMenu else { return }
         pendingSpellingMenu = nil
-        editing { applySelectionReplace(globalFrom: pending.range.location,
+        editing { applySelectionReplaceOutcome(globalFrom: pending.range.location,
                                         globalTo: pending.range.location + pending.range.length, text: guess) }
         clearNativeAnnotations(global: pending.range, onlyStyle: .spelling)   // the corrected word's spelling flag only — don't wipe an overlapping grammar flag
         let newRange = NSRange(location: pending.range.location, length: (guess as NSString).length)

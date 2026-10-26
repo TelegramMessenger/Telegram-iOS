@@ -62,7 +62,7 @@ extension SettingsSearchableItemIcon {
             case .stars:
                 return PresentationResourcesSettings.stars
             case .ton:
-                return PresentationResourcesSettings.ton
+                return PresentationResourcesSettings.gramEarnings
             case .stories:
                 return PresentationResourcesSettings.stories
             case .myProfile:

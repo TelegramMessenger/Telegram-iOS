@@ -15,6 +15,9 @@ public final class ActionPanelComponent: Component {
     public let theme: PresentationTheme
     public let title: String
     public let color: Color
+    /// Insets the title and the dismiss button keep from the panel's sides (iPhone Duo's side strip); the background
+    /// spans the whole width.
+    public let sideInsets: UIEdgeInsets
     public let action: () -> Void
     public let dismissAction: () -> Void
     
@@ -22,12 +25,14 @@ public final class ActionPanelComponent: Component {
         theme: PresentationTheme,
         title: String,
         color: Color,
+        sideInsets: UIEdgeInsets = UIEdgeInsets(),
         action: @escaping () -> Void,
         dismissAction: @escaping () -> Void
     ) {
         self.theme = theme
         self.title = title
         self.color = color
+        self.sideInsets = sideInsets
         self.action = action
         self.dismissAction = dismissAction
     }
@@ -40,6 +45,9 @@ public final class ActionPanelComponent: Component {
             return false
         }
         if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.sideInsets != rhs.sideInsets {
             return false
         }
         return true
@@ -159,19 +167,19 @@ public final class ActionPanelComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(Text(text: component.title, font: Font.regular(17.0), color: resolvedColor)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - rightInset, height: availableSize.height)
+                containerSize: CGSize(width: availableSize.width - component.sideInsets.left - component.sideInsets.right - rightInset, height: availableSize.height)
             )
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
                     self.contentView.addSubview(titleView)
                 }
-                let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((availableSize.height - titleSize.height) * 0.5)), size: titleSize)
+                let titleFrame = CGRect(origin: CGPoint(x: component.sideInsets.left + floor((availableSize.width - component.sideInsets.left - component.sideInsets.right - titleSize.width) * 0.5), y: floor((availableSize.height - titleSize.height) * 0.5)), size: titleSize)
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             
-            let dismissButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset, y: 0.0), size: CGSize(width: rightInset, height: availableSize.height))
+            let dismissButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInsets.right - rightInset, y: 0.0), size: CGSize(width: rightInset, height: availableSize.height))
             transition.setFrame(view: self.dismissButton, frame: dismissButtonFrame)
             if let iconImage = self.dismissIconView.image {
                 transition.setFrame(view: self.dismissIconView, frame: CGRect(origin: CGPoint(x: floor((dismissButtonFrame.width - iconImage.size.width) * 0.5), y: floor((dismissButtonFrame.height - iconImage.size.height) * 0.5)), size: iconImage.size))

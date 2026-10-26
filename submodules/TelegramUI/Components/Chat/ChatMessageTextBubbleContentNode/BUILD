@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
+        "//submodules/LottieSettings:LottieSettings",
         "//submodules/Display",
         "//submodules/TelegramCore",
         "//submodules/TextFormat",
@@ -23,6 +24,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AccountContext",
+        "//submodules/WalletContext",
         "//submodules/YuvConversion",
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/TelegramUI/Components/LottieAnimationCache",

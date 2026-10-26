@@ -61,7 +61,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             pipelineDescriptor.vertexFunction = vertexFunction
             pipelineDescriptor.fragmentFunction = fragmentFunction
             pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+            guard let pipelineState = MetalEngine.shared.pipelineCache.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
                 return nil
             }
             self.pipelineState = pipelineState

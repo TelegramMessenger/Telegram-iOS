@@ -22,6 +22,7 @@ swift_library(
         "//submodules/StickerResources",
         "//submodules/PhotoResources",
         "//submodules/TelegramStringFormatting",
+        "//submodules/PlatformRestrictionMatching",
         "//submodules/TextFormat",
         "//submodules/InvisibleInkDustNode",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",

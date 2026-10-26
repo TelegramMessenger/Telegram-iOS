@@ -13,6 +13,7 @@
 #import <MtProtoKit/MTDatacenterAuthMessageService.h>
 #import <MtProtoKit/MTDatacenterSaltInfo.h>
 #import <MtProtoKit/MTDatacenterTransferAuthAction.h>
+#import <MtProtoKit/MTExternalActions.h>
 #import <MtProtoKit/MTDatacenterVerificationData.h>
 #import <MtProtoKit/MTDisposable.h>
 #import <MtProtoKit/MTDropResponseContext.h>
@@ -59,5 +60,6 @@
 #import <MtProtoKit/MTProtoPersistenceInterface.h>
 #import <MtProtoKit/MTProtoEngine.h>
 #import <MtProtoKit/MTBindKeyMessageService.h>
+#import <MtProtoKit/MTQuickAck.h>
 #import <MtProtoKit/MTFileBasedKeychain.h>
 

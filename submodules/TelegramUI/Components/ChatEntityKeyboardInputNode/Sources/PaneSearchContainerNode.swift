@@ -237,7 +237,7 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
             guard let self else {
                 return
             }
-            let shareController = self.context.sharedContext.makeShareController(
+            let shareController = self.context.sharedContext.makeShareScreen(
                 context: self.context,
                 params: ShareControllerParams(
                     subject: .url(link),
@@ -531,6 +531,6 @@ private final class StickerPaneSearchHeaderContextReferenceContentSource: Contex
         guard let sourceView = self.sourceView else {
             return nil
         }
-        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

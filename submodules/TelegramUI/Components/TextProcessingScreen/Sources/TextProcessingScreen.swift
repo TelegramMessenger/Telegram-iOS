@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import SwiftSignalKit
 import Display
@@ -266,7 +267,7 @@ final class TextProcessingContentComponent: Component {
             guard let slug = style.slug else {
                 return
             }
-            let shareController = component.context.sharedContext.makeShareController(context: component.context, params: ShareControllerParams(
+            let shareController = component.context.sharedContext.makeShareScreen(context: component.context, params: ShareControllerParams(
                 subject: .url("https://t.me/addstyle/\(slug)"),
                 completed: { [weak self] peerIds in
                     Task { @MainActor in
@@ -434,11 +435,11 @@ final class TextProcessingContentComponent: Component {
                 }
                 
                 func takeView() -> ContextControllerTakeViewInfo? {
-                    return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+                    return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: mainWindowScreenBounds)
                 }
                 
                 func putBack() -> ContextControllerPutBackViewInfo? {
-                    return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+                    return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
                 }
             }
             
@@ -790,7 +791,9 @@ final class TextProcessingContentComponent: Component {
                         items: tabs,
                         search: nil,
                         selectedId: currentModeId,
-                        outerInsets: UIEdgeInsets()
+                        outerInsets: UIEdgeInsets(),
+                        axis: .horizontal,
+                        isCompact: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 62.0)
@@ -1852,7 +1855,8 @@ private final class TextProcessingSheetComponent: Component {
                     titleItem: titleString.isEmpty ? nil : AnyComponent(TitleComponent(
                         theme: theme,
                         title: titleString,
-                        isProcessing: self.contentExternalState.isProcessing
+                        isProcessing: self.contentExternalState.isProcessing,
+                        lottieSettings: component.context.lottieRenderingSettings
                     )),
                     leftItem: AnyComponent(
                         GlassBarButtonComponent(
@@ -1933,7 +1937,7 @@ private final class TextProcessingSheetComponent: Component {
                         metrics: environmentValue.metrics,
                         deviceMetrics: environmentValue.deviceMetrics,
                         isDisplaying: environmentValue.isVisible,
-                        isCentered: environmentValue.metrics.widthClass == .regular,
+                        isCentered: environmentValue.presentsFloatingPanels,
                         screenSize: availableSize,
                         regularMetricsSize: nil,
                         dismiss: { animated in
@@ -1973,7 +1977,8 @@ private final class TextProcessingSheetComponent: Component {
                             content: LottieComponent.AppBundleContent(name: "PremiumStar"),
                             startingPosition: .begin,
                             size: CGSize(width: 32.0, height: 32.0),
-                            playOnce: playOnce
+                            playOnce: playOnce,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )),
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
@@ -2103,7 +2108,8 @@ private final class TextProcessingSheetComponent: Component {
                             content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                             startingPosition: .begin,
                             size: CGSize(width: 32.0, height: 32.0),
-                            playOnce: playOnce
+                            playOnce: playOnce,
+                            lottieSettings: component.context.lottieRenderingSettings
                         )),
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
@@ -2403,15 +2409,18 @@ private final class TitleComponent: Component {
     let theme: PresentationTheme
     let title: String
     let isProcessing: Bool
+    let lottieSettings: LottieRenderingSettings
     
     init(
         theme: PresentationTheme,
         title: String,
-        isProcessing: Bool
+        isProcessing: Bool,
+        lottieSettings: LottieRenderingSettings
     ) {
         self.theme = theme
         self.title = title
         self.isProcessing = isProcessing
+        self.lottieSettings = lottieSettings
     }
     
     static func ==(lhs: TitleComponent, rhs: TitleComponent) -> Bool {
@@ -2483,7 +2492,8 @@ private final class TitleComponent: Component {
                         placeholderColor: nil,
                         startingPosition: .begin,
                         size: CGSize(width: 30.0, height: 30.0),
-                        loop: true
+                        loop: true,
+                        lottieSettings: component.lottieSettings
                     )),
                     environment: {},
                     containerSize: CGSize(width: 30.0, height: 30.0)

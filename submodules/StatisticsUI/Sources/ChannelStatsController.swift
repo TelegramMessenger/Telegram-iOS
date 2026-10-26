@@ -1940,7 +1940,7 @@ public func channelStatsController(
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
     }, shareBoostLink: { link in        
-        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(link), updatedPresentationData: updatedPresentationData, actionCompleted: {
+        let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url(link), updatedPresentationData: updatedPresentationData, actionCompleted: {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
         }, completed: { peerIds in
@@ -2679,11 +2679,11 @@ final class ChannelStatsContextExtractedContentSource: ContextExtractedContentSo
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

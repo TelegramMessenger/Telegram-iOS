@@ -31,12 +31,23 @@ extension _AdaptedPostboxDecoder {
         let codingPath: [CodingKey]
         let userInfo: [CodingUserInfoKey: Any]
         let content: Content
+        /// Set when the array bytes could not be split into elements. `Decoder.unkeyedContainer()`
+        /// cannot throw, so the container is created anyway and every `decode` throws
+        /// `DecodingError.dataCorrupted`; `isAtEnd` stays false so `Array(from:)` reaches that throw
+        /// instead of returning an empty array.
+        let isCorrupted: Bool
 
         var count: Int? {
+            if self.isCorrupted {
+                return nil
+            }
             return self.content.count
         }
 
         var isAtEnd: Bool {
+            if self.isCorrupted {
+                return false
+            }
             return self.currentIndex >= self.content.count
         }
 
@@ -46,10 +57,17 @@ extension _AdaptedPostboxDecoder {
             return self._currentIndex
         }
        
-        init(data: Data, codingPath: [CodingKey], userInfo: [CodingUserInfoKey: Any], content: Content) {
+        init(data: Data, codingPath: [CodingKey], userInfo: [CodingUserInfoKey: Any], content: Content, isCorrupted: Bool = false) {
             self.codingPath = codingPath
             self.userInfo = userInfo
             self.content = content
+            self.isCorrupted = isCorrupted
+        }
+
+        fileprivate func throwIfCorrupted() throws {
+            if self.isCorrupted {
+                throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: self.codingPath, debugDescription: "Malformed object array"))
+            }
         }
     }
 }
@@ -60,6 +78,7 @@ extension _AdaptedPostboxDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
+        try self.throwIfCorrupted()
         if type == Data.self {
             switch self.content {
             case let .dataArray(array):
@@ -113,6 +132,7 @@ extension _AdaptedPostboxDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     func decode(_ type: Int32.Type) throws -> Int32 {
+        try self.throwIfCorrupted()
         switch self.content {
         case let .int32Array(array):
             let index = self._currentIndex
@@ -124,6 +144,7 @@ extension _AdaptedPostboxDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     func decode(_ type: Int64.Type) throws -> Int64 {
+        try self.throwIfCorrupted()
         switch self.content {
         case let .int64Array(array):
             let index = self._currentIndex
@@ -135,6 +156,7 @@ extension _AdaptedPostboxDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
     }
 
     func decode(_ type: String.Type) throws -> String {
+        try self.throwIfCorrupted()
         switch self.content {
         case let .stringArray(array):
             let index = self._currentIndex

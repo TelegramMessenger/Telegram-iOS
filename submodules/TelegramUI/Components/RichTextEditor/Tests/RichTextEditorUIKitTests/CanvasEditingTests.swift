@@ -34,8 +34,7 @@ final class CanvasEditingTests: XCTestCase {
 
     func test_crossBlockSelectionDelete_mergesEndpoints() {
         let v = canvas(["Alpha", "Beta", "Gamma"])
-        v.anchor = v.boxes[0].textStart + 2
-        v.head = v.boxes[1].textStart + 2
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 2, head: v.boxes[1].textStart + 2)
         v.deleteBackward()
         XCTAssertEqual(v.boxes.count, 2)
         XCTAssertEqual((v.boxes[0] as! BlockBox).currentParagraph().text, "Alta")
@@ -46,8 +45,7 @@ final class CanvasEditingTests: XCTestCase {
 
     func test_crossBlockDelete_removesFullyCoveredMiddleBlock() {
         let v = canvas(["Alpha", "Beta", "Gamma"])
-        v.anchor = v.boxes[0].textStart + 2
-        v.head = v.boxes[2].textStart + 2
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 2, head: v.boxes[2].textStart + 2)
         v.deleteBackward()
         XCTAssertEqual(v.boxes.count, 1)
         XCTAssertEqual((v.boxes[0] as! BlockBox).currentParagraph().text, "Almma")
@@ -55,8 +53,7 @@ final class CanvasEditingTests: XCTestCase {
 
     func test_typeOverCrossBlockSelection_insertsInMergedBlock() {
         let v = canvas(["Alpha", "Beta"])
-        v.anchor = v.boxes[0].textStart + 2
-        v.head = v.boxes[1].textStart + 2
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 2, head: v.boxes[1].textStart + 2)
         v.insertText("X")
         XCTAssertEqual(v.boxes.count, 1)
         XCTAssertEqual((v.boxes[0] as! BlockBox).currentParagraph().text, "AlXta")
@@ -67,7 +64,7 @@ final class CanvasEditingTests: XCTestCase {
         let v = canvas(["Alpha", "Beta"])
         let um = UndoManager(); um.groupsByEvent = false
         v.undoManagerOverride = um
-        v.anchor = v.boxes[0].textStart + 2; v.head = v.boxes[1].textStart + 2
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 2, head: v.boxes[1].textStart + 2)
         um.beginUndoGrouping(); v.deleteBackward(); um.endUndoGrouping()
         XCTAssertEqual(v.boxes.count, 1)
         um.undo()
@@ -82,8 +79,7 @@ final class CanvasEditingTests: XCTestCase {
 
     func test_deleteSelectionToEndOfDocument_viaSnapping() {
         let v = canvas(["Alpha", "Beta"])
-        v.anchor = v.boxes[0].textStart + 2          // inside "Alpha"
-        v.head = v.documentSize                        // end-of-document (past last text → resolveBox snaps)
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 2, head: v.documentSize)   // inside "Alpha" end-of-document (past last text → resolveBox snaps)
         v.deleteBackward()
         XCTAssertEqual(v.boxes.count, 1)
         XCTAssertEqual((v.boxes[0] as! BlockBox).currentParagraph().text, "Al")   // "Al" + everything-after deleted

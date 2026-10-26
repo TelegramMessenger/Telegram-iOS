@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import ContextUI
@@ -50,6 +51,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     private var theme: PresentationTheme?
     private var icon: PeerInfoHeaderButtonIcon?
     private var isActive: Bool?
+    private var contextMenuActivated = false
+    weak var contextMenuSourceContainer: UIView?
+    private weak var contextMenuBackgroundNode: NavigationBackgroundNode?
+    private var contextMenuBackgroundColor: UIColor = .clear
     
     let backgroundContainerView: UIView
     let backgroundView: UIView
@@ -66,6 +71,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.backgroundView = UIView()
         self.backgroundView.backgroundColor = .white
         self.backgroundContainerView.addSubview(self.backgroundView)
+        self.referenceNode.additionalContextMenuSourceViews = [self.backgroundView]
         
         /*self.backgroundNode = NavigationBackgroundNode(color: UIColor(white: 1.0, alpha: 0.2), enableBlur: true, enableSaturation: false)
         self.backgroundNode.isUserInteractionEnabled = false*/
@@ -96,17 +102,34 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
+                    strongSelf.contextMenuActivated = false
                     strongSelf.layer.removeAnimation(forKey: "opacity")
                     strongSelf.alpha = 0.4
                 } else {
                     strongSelf.alpha = 1.0
-                    strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    if !strongSelf.contextMenuActivated {
+                        strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
                 }
             }
         }
         
+        self.referenceNode.makeContextMenuSourceContent = { [weak self] in
+            guard let self, let container = self.contextMenuSourceContainer else { return nil }
+            self.prepareForContextMenu()
+            let background = NavigationBackgroundNode(color: self.contextMenuBackgroundColor, enableBlur: true, enableSaturation: false)
+            background.isUserInteractionEnabled = false
+            self.contextMenuBackgroundNode = background
+            self.updateContextMenuBackground()
+            return ContextMenuSourceContent(source: self.referenceNode.view, foreground: self.contentNode.view, background: background.view, container: container, onRestore: { [background] in
+                // Retain the ASDisplayNode while its view is used by the transition.
+                withExtendedLifetime(background) {}
+            })
+        }
+
         self.containerNode.activated = { [weak self] gesture, _ in
             if let strongSelf = self {
+                strongSelf.prepareForContextMenu()
                 strongSelf.action(strongSelf, gesture)
             }
         }
@@ -114,7 +137,26 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
+    private func prepareForContextMenu() {
+        // Only a source that morphs into its menu needs full opacity when the menu opens.
+        // Profile action buttons do not opt in to the morph for now, so they keep the
+        // normal release fade.
+        guard #available(iOS 26.0, *), self.key == .more || self.key == .mute, self.referenceNode.view.morphsIntoContextMenu else { return }
+        self.contextMenuActivated = true
+        self.alpha = 1.0
+        self.layer.removeAnimation(forKey: "opacity")
+    }
+
+    private func updateContextMenuBackground() {
+        guard let background = self.contextMenuBackgroundNode else { return }
+        background.frame = self.backgroundView.frame
+        background.update(size: self.backgroundView.bounds.size, cornerRadius: self.backgroundView.layer.cornerRadius, transition: .immediate)
+        background.updateColor(color: self.contextMenuBackgroundColor, transition: .immediate)
+        background.alpha = isReduceTransparencyEnabled() ? 0.1 : 1.0
+    }
+
     @objc private func buttonPressed() {
+        self.prepareForContextMenu()
         switch self.icon {
         case .voiceChat, .more, .leave:
             if let animatedIconView = self.animatedIcon?.view as? LottieComponent.View {
@@ -127,6 +169,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     }
     
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, presentationData: PresentationData, backgroundColor: UIColor, foregroundColor: UIColor, fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.contextMenuBackgroundColor = backgroundColor
         let previousIcon = self.icon
         let themeUpdated = self.theme != presentationData.theme
         let iconUpdated = self.icon != icon
@@ -224,7 +267,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: animationName),
                     color: foregroundColor,
-                    startingPosition: seekToEnd ? .end : .begin
+                    startingPosition: seekToEnd ? .end : .begin,
+                    lottieSettings: .noAccountFallback
                 )),
                 environment: {},
                 containerSize: iconSize
@@ -272,6 +316,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateSublayerTransformScale(node: self.contentNode, scale: 1.0 * fraction + 0.001 * (1.0 - fraction))
         
         transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(16.0, backgroundFrame.height * 0.5))
+        // The context source contains only the foreground; its backdrop is a
+        // separate shared-blur mask. Match both its rounded shape and its visible
+        // bounds, including a partially collapsed header.
+        self.referenceNode.contextMenuSourcePath = UIBezierPath(roundedRect: backgroundFrame, cornerRadius: min(16.0, backgroundFrame.height * 0.5))
         //self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: min(11.0, backgroundFrame.height * 0.5), transition: transition)
         //self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
@@ -281,5 +329,6 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 9.0), size: titleSize))
         
         self.referenceNode.frame = self.containerNode.bounds
+        self.updateContextMenuBackground()
     }
 }

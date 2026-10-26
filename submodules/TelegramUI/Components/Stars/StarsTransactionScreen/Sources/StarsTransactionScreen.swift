@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -39,7 +38,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer, Bool) -> Void
     let openMessage: (EngineMessage.Id) -> Void
-    let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
+    let openMedia: ([EngineRawMedia], @escaping (EngineRawMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
     let openPaidMessageFee: () -> Void
     let copyTransactionId: (String) -> Void
@@ -52,7 +51,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         cancel: @escaping  (Bool) -> Void,
         openPeer: @escaping (EnginePeer, Bool) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
-        openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
+        openMedia: @escaping ([EngineRawMedia], @escaping (EngineRawMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
         openPaidMessageFee: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
@@ -224,7 +223,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isBusinessSubscription = false
             var isCancelled = false
             var isReaction = false
-            var giveawayMessageId: MessageId?
+            var giveawayMessageId: EngineMessage.Id?
             var isBoost = false
             var giftAnimationSubject: GiftCompositionComponent.Subject?
             var isGiftUpgrade = false
@@ -1724,7 +1723,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let subject: StarsTransactionScreen.Subject
     let openPeer: (EnginePeer, Bool) -> Void
     let openMessage: (EngineMessage.Id) -> Void
-    let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
+    let openMedia: ([EngineRawMedia], @escaping (EngineRawMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
     let openPaidMessageFee: () -> Void
     let copyTransactionId: (String) -> Void
@@ -1736,7 +1735,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         subject: StarsTransactionScreen.Subject,
         openPeer: @escaping (EnginePeer, Bool) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
-        openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
+        openMedia: @escaping ([EngineRawMedia], @escaping (EngineRawMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
         openPaidMessageFee: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
@@ -1819,7 +1818,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -1854,11 +1853,14 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: max(environment.safeInsets.bottom, sheetExternalState.contentHeight), right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
             }
@@ -1898,7 +1900,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         
         var openPeerImpl: ((EnginePeer, Bool) -> Void)?
         var openMessageImpl: ((EngineMessage.Id) -> Void)?
-        var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
+        var openMediaImpl: (([EngineRawMedia], @escaping (EngineRawMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
         var openAppExamplesImpl: (() -> Void)?
         var openPaidMessageFeeImpl: (() -> Void)?
         var copyTransactionIdImpl: ((String) -> Void)?
@@ -1988,10 +1990,10 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 return
             }
         
-            let message = Message(
+            let message = EngineMessage(
                 stableId: 0,
                 stableVersion: 0,
-                id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0),
+                id: EngineMessage.Id(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0),
                 globallyUniqueId: 0,
                 groupingKey: nil,
                 groupInfo: nil,
@@ -2006,15 +2008,15 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 author: nil,
                 text: "",
                 attributes: [],
-                media: [TelegramMediaPaidContent(amount: 0, extendedMedia: media.map { .full(media: $0) })],
-                peers: SimpleDictionary(),
-                associatedMessages: SimpleDictionary(),
+                media: [.paidContent(TelegramMediaPaidContent(amount: 0, extendedMedia: media.map { .full(media: $0) }))],
+                peers: [:],
+                associatedMessages: [:],
                 associatedMessageIds: [],
                 associatedMedia: [:],
                 associatedThreadInfo: nil,
                 associatedStories: [:]
             )
-            let gallery = GalleryController(context: self.context, source: .standaloneMessage(message, .paidMediaIndex(0)), replaceRootController: { _, _ in
+            let gallery = GalleryController(context: self.context, source: .standaloneMessage(message._asMessage(), .paidMediaIndex(0)), replaceRootController: { _, _ in
             }, baseNavigationController: nil)
             self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
                 if let transitionNode = transitionNode(media) {

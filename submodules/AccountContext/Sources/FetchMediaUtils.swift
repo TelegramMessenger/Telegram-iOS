@@ -7,7 +7,7 @@ import TelegramUIPreferences
 import RangeSet
 
 public func freeMediaFileInteractiveFetched(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(fileReference.media.resource))
+    return TelegramEngine(account: account).resources.fetch(reference: fileReference.resourceReference(fileReference.media.resource), userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media))
 }
 
 public func freeMediaFileInteractiveFetched(fetchManager: FetchManager, fileReference: FileMediaReference, priority: FetchManagerPriority) -> Signal<Void, NoError> {
@@ -17,7 +17,7 @@ public func freeMediaFileInteractiveFetched(fetchManager: FetchManager, fileRefe
 }
 
 public func freeMediaFileResourceInteractiveFetched(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, resource: MediaResource) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(resource))
+    return TelegramEngine(account: account).resources.fetch(reference: fileReference.resourceReference(resource), userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media))
 }
 
 public func freeMediaFileResourceInteractiveFetched(postbox: Postbox, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, resource: MediaResource, range: (Range<Int64>, MediaBoxFetchPriority)? = nil) -> Signal<FetchResourceSourceType, FetchResourceError> {

@@ -29,6 +29,7 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyMediaPickerUI",
         "//submodules/TelegramUI/Components/MediaEditor",
+        "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/DrawingUI:DrawingUI",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",

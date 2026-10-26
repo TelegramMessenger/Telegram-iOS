@@ -324,18 +324,28 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
                 if titleView.superview == nil {
                     self.view.addSubview(titleView)
                 }
+                ComponentTransition(transition).animateView {
+                    titleView.alpha = self.areControlsHidden ? 0.0 : 1.0
+                }
+            }
+            // A title view the navigation bar has taken (the avatar gallery's, its item title view) is the bar's to place:
+            // placed here as well, it went back to the screen's centre on every layout and the bar slid it to its own
+            // place again.
+            if let titleView = self.titleView, titleView.superview === self.view {
                 
-                let titleHeight: CGFloat = navigationBarHeight - (layout.statusBarHeight ?? 0.0) - 3.0
-                let titleSize = CGSize(width: layout.size.width - (layout.safeInsets.left + 44.0 + 16.0 + 8.0) * 2.0, height: titleHeight)
-                var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - titleSize.width) * 0.5), y: (layout.statusBarHeight ?? 0.0) + 4.0), size: titleSize)
+                // The navigation bar's own status height (compact beside iPhone Duo's status island, where the
+                // centered title also narrows on both sides so it stays clear of the island).
+                let titleStatusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
+                let titleHeight: CGFloat = navigationBarHeight - titleStatusBarHeight - 3.0
+                // Centered in the band between the side insets (iPhone Duo's side strip); with equal insets this
+                // is the full width's center.
+                let titleSize = CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - (44.0 + 16.0 + 8.0) * 2.0 - layout.navigationBarTrailingButtonsInset * 2.0, height: titleHeight)
+                var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(layout.safeInsets.left + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right - titleSize.width) * 0.5), y: titleStatusBarHeight + 4.0), size: titleSize)
                 if self.areControlsHidden {
                     titleFrame.origin.y -= navigationBarHeight
                 }
                 let _ = titleView.updateLayout(availableSize: titleFrame.size, transition: .immediate)
                 transition.updateFrame(view: titleView, frame: titleFrame)
-                ComponentTransition(transition).animateView {
-                    titleView.alpha = self.areControlsHidden ? 0.0 : 1.0
-                }
             }
         }
             
@@ -353,7 +363,13 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
                 buttonPanelInsets.right += 18.0
             }
             
-            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 60.0 - panelHeight - buttonPanelInsets.bottom + (self.areControlsHidden ? 106.0 : 0.0)), size: CGSize(width: layout.size.width, height: panelHeight))
+            // Beside a side strip (iPhone Duo) the ribbon keeps to the footer buttons' band, so its selected thumbnail
+            // centers above them: near the bottom it spans the strip, keeping clear only of a corner block at the bottom.
+            // Equal insets keep the screen-wide ribbon.
+            let bottomInsets = layout.bottomEdgeSideInsets()
+            let thumbnailsBandMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? bottomInsets.left : 0.0
+            let thumbnailsBandWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.size.width - bottomInsets.left - bottomInsets.right : layout.size.width
+            let thumbnailsFrame = CGRect(origin: CGPoint(x: thumbnailsBandMinX, y: layout.size.height - 60.0 - panelHeight - buttonPanelInsets.bottom + (self.areControlsHidden ? 106.0 : 0.0)), size: CGSize(width: thumbnailsBandWidth, height: panelHeight))
             transition.updateFrame(node: currentThumbnailContainerNode, frame: thumbnailsFrame)
             currentThumbnailContainerNode.updateLayout(size: thumbnailsFrame.size, transition: transition)
             

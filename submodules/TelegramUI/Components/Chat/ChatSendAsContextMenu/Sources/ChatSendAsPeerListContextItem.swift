@@ -84,22 +84,45 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
             if isSelected {
                 selectedItemIndex = i
             }
+            let isForum: Bool
+            if case let .channel(channel) = peer.peer {
+                isForum = channel.isForumOrMonoForum
+            } else {
+                isForum = false
+            }
             let extendedAvatarSize = CGSize(width: 35.0, height: 35.0)
-            let avatarSignal = peerAvatarCompleteImage(account: item.context.account, peer: peer.peer, size: avatarSize)
+            let avatarSignal = peerAvatarCompleteImage(account: item.context.account, peer: peer.peer, size: avatarSize, round: !isForum)
             |> map { image -> UIImage? in
-                if isSelected, let image = image {
-                    return generateImage(extendedAvatarSize, rotatedContext: { size, context in
+                if isSelected || isForum, let image = image {
+                    return generateImage(isSelected ? extendedAvatarSize : avatarSize, rotatedContext: { size, context in
                         let bounds = CGRect(origin: CGPoint(), size: size)
                         context.clear(bounds)
                         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                         context.scaleBy(x: 1.0, y: -1.0)
                         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-                        context.draw(image.cgImage!, in: CGRect(x: (extendedAvatarSize.width - avatarSize.width) / 2.0, y: (extendedAvatarSize.height - avatarSize.height) / 2.0, width: avatarSize.width, height: avatarSize.height))
+                        let avatarFrame = CGRect(x: (size.width - avatarSize.width) / 2.0, y: (size.height - avatarSize.height) / 2.0, width: avatarSize.width, height: avatarSize.height)
+                        let avatarCornerRadius = floor(avatarSize.width * 0.25)
+                        context.saveGState()
+                        if isForum {
+                            context.addPath(UIBezierPath(roundedRect: avatarFrame, cornerRadius: avatarCornerRadius).cgPath)
+                            context.clip()
+                        }
+                        context.draw(image.cgImage!, in: avatarFrame)
+                        context.restoreGState()
 
-                        let lineWidth = 1.0 + UIScreenPixel
-                        context.setLineWidth(lineWidth)
-                        context.setStrokeColor(presentationData.theme.actionSheet.controlAccentColor.cgColor)
-                        context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
+                        if isSelected {
+                            let lineWidth = 1.0 + UIScreenPixel
+                            context.setLineWidth(lineWidth)
+                            context.setStrokeColor(presentationData.theme.actionSheet.controlAccentColor.cgColor)
+                            let borderFrame = bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0)
+                            if isForum {
+                                let borderCornerRadius = avatarCornerRadius + avatarFrame.minX - lineWidth / 2.0
+                                context.addPath(UIBezierPath(roundedRect: borderFrame, cornerRadius: borderCornerRadius).cgPath)
+                                context.strokePath()
+                            } else {
+                                context.strokeEllipse(in: borderFrame)
+                            }
+                        }
                     })
                 } else {
                     return image

@@ -204,7 +204,7 @@ public final class TextLoadingEffectView: UIView {
         }
     }
     
-    public func update(color: UIColor, rect: CGRect, path: CGPath) {
+    public func update(color: UIColor, alpha: CGFloat = 0.5, rect: CGRect, path: CGPath) {
         let maskShapeLayer: SimpleShapeLayer
         if let current = self.maskShapeLayer {
             maskShapeLayer = current
@@ -242,10 +242,10 @@ public final class TextLoadingEffectView: UIView {
         
         self.maskContentsView.backgroundColor = .clear
         
-        self.backgroundView.alpha = 0.25
+        self.backgroundView.alpha = alpha * 0.5
         self.backgroundView.tintColor = color
         
-        self.borderBackgroundView.alpha = 0.5
+        self.borderBackgroundView.alpha = alpha
         self.borderBackgroundView.tintColor = color
     
         self.maskContentsView.frame = maskFrame

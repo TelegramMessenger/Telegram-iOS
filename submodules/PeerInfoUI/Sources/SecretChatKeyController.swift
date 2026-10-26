@@ -24,7 +24,7 @@ public final class SecretChatKeyController: ViewController {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, style: .glass))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.navigationPresentation = .modal
         self._hasGlassStyle = true

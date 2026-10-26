@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1735,7 +1736,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private var emptyRecentAnimationNode: AnimatedStickerNode?
     private var emptyRecentAnimationSize = CGSize()
 
-    private var currentParams: (size: CGSize, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInsets: UIEdgeInsets, topInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
 
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -1878,7 +1879,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsTextNode.lineSpacing = 0.2
         self.emptyResultsTextNode.isHidden = true
 
-        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         self.emptyResultsAnimationNode.isHidden = true
 
         if key == .channels || key == .apps {
@@ -1901,7 +1902,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             self.emptyRecentTextNode = emptyRecentTextNode
 
-            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl()
+            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
             emptyRecentAnimationNode.isHidden = true
             self.emptyRecentAnimationNode = emptyRecentAnimationNode
 
@@ -3658,6 +3659,16 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let sourceNode = sourceNode as? ChatListItemNode {
                 self.interaction.openStories?(id, sourceNode.avatarNode)
             }
+        }, openCommunity: { [weak self] communityId in
+            guard let self, let navigationController = self.navigationController else {
+                return
+            }
+            let controller = self.context.sharedContext.makeCommunityViewScreen(
+                context: self.context,
+                communityId: communityId,
+                mode: .sheet
+            )
+            navigationController.pushViewController(controller)
         }, openStarsTopup: { _ in
         }, editPeer: { _ in
         }, openWebApp: { _ in
@@ -3749,7 +3760,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             interaction.openUrl(url)
         }, openInstantPage: { [weak self] message, data in
             if let self, let navigationController = self.navigationController {
-                if let controller = self.context.sharedContext.makeInstantPageController(context: self.context, message: message, sourcePeerType: .channel) {
+                if let controller = self.context.sharedContext.makeInstantPageController(context: self.context, message: EngineMessage(message), sourcePeerType: .channel) {
                     navigationController.pushViewController(controller)
                 }
             }
@@ -4803,8 +4814,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         self.playlistStateAndType = nil
                     }
 
-                    if let (size, sideInset, topInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
-                        self.update(size: size, sideInset: sideInset, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
+                    if let (size, sideInsets, topInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
+                        self.update(size: size, sideInsets: sideInsets, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
                 self.playlistLocation = playlistStateAndType?.1.playlistLocation
@@ -4921,10 +4932,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
     }
 
-    func update(size: CGSize, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInsets: UIEdgeInsets, topInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.currentParams != nil
-        let layoutChanged = self.currentParams?.size != size || self.currentParams?.sideInset != sideInset ||  self.currentParams?.topInset != topInset || self.currentParams?.bottomInset != bottomInset || self.currentParams?.visibleHeight != visibleHeight
-        self.currentParams = (size, sideInset, topInset, bottomInset, visibleHeight, presentationData)
+        let layoutChanged = self.currentParams?.size != size || self.currentParams?.sideInsets != sideInsets ||  self.currentParams?.topInset != topInset || self.currentParams?.bottomInset != bottomInset || self.currentParams?.visibleHeight != visibleHeight
+        self.currentParams = (size, sideInsets, topInset, bottomInset, visibleHeight, presentationData)
 
         var topPanelHeight: CGFloat = 0.0
         if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType {
@@ -4933,7 +4944,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - panelHeight), size: CGSize(width: size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInset, rightInset: sideInset, isHidden: false, transition: transition)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInsets.left, rightInset: sideInsets.right, isHidden: false, transition: transition)
                 switch order {
                 case .regular:
                     mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
@@ -5166,7 +5177,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     self.mediaAccessoryPanelContainer.addSubnode(mediaAccessoryPanel)
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInset, rightInset: sideInset, isHidden: false, transition: .immediate)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInsets.left, rightInset: sideInsets.right, isHidden: false, transition: .immediate)
                 switch order {
                     case .regular:
                         mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
@@ -5200,7 +5211,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
         let topInset: CGFloat = topInset + topPanelHeight
         let overflowInset: CGFloat = 0.0
-        let insets = UIEdgeInsets(top: topInset + topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset)
+        let insets = UIEdgeInsets(top: topInset + topPanelHeight, left: sideInsets.left, bottom: bottomInset, right: sideInsets.right)
 
         self.shimmerNode.frame = CGRect(origin: CGPoint(x: overflowInset, y: topInset), size: CGSize(width: size.width - overflowInset * 2.0, height: size.height))
         self.shimmerNode.update(context: self.context, size: CGSize(width: size.width - overflowInset * 2.0, height: size.height), presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, key: !(self.searchQueryValue?.isEmpty ?? true) && self.key == .media ? .chats : self.key, hasSelection: self.selectedMessages != nil, transition: transition)
@@ -5211,8 +5222,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
         if let emptyRecentTitleNode = self.emptyRecentTitleNode, let emptyRecentTextNode = self.emptyRecentTextNode, let emptyRecentAnimationNode = self.emptyRecentAnimationNode {
             let padding: CGFloat = 16.0
-            let emptyTitleSize = emptyRecentTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            let emptyTextSize = emptyRecentTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let emptyTitleSize = emptyRecentTitleNode.updateLayout(CGSize(width: size.width - sideInsets.left - sideInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let emptyTextSize = emptyRecentTextNode.updateLayout(CGSize(width: size.width - sideInsets.left - sideInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
 
             let emptyAnimationHeight = emptyRecentAnimationSize.height
             let emptyAnimationSpacing: CGFloat = 8.0
@@ -5221,9 +5232,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
 
             let textTransition = ContainedViewLayoutTransition.immediate
-            textTransition.updateFrame(node: emptyRecentAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyRecentAnimationSize.width) / 2.0, y: emptyAnimationY), size: emptyRecentAnimationSize))
-            textTransition.updateFrame(node: emptyRecentTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
-            textTransition.updateFrame(node: emptyRecentTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+            textTransition.updateFrame(node: emptyRecentAnimationNode, frame: CGRect(origin: CGPoint(x: sideInsets.left + padding + (size.width - sideInsets.left - sideInsets.right - padding * 2.0 - emptyRecentAnimationSize.width) / 2.0, y: emptyAnimationY), size: emptyRecentAnimationSize))
+            textTransition.updateFrame(node: emptyRecentTitleNode, frame: CGRect(origin: CGPoint(x: sideInsets.left + padding + (size.width - sideInsets.left - sideInsets.right - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
+            textTransition.updateFrame(node: emptyRecentTextNode, frame: CGRect(origin: CGPoint(x: sideInsets.left + padding + (size.width - sideInsets.left - sideInsets.right - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
             emptyRecentAnimationNode.updateLayout(size: emptyRecentAnimationSize)
         }
 
@@ -5231,12 +5242,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.listNode?.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
 
         self.mediaNode?.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height))
-        self.mediaNode?.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: false, expandProgress: 1.0, presentationData: self.presentationData, synchronous: true, transition: transition)
+        self.mediaNode?.update(size: size, sideInsets: sideInsets, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: false, expandProgress: 1.0, presentationData: self.presentationData, synchronous: true, transition: transition)
 
         do {
             let padding: CGFloat = 16.0
-            let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInsets.left - sideInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInsets.left - sideInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
 
             let emptyAnimationHeight = self.emptyResultsAnimationSize.height
             let emptyAnimationSpacing: CGFloat = 8.0
@@ -5316,7 +5327,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: min(282.0, size.width - sideInset - 24.0 * 2.0), height: 50.0)
+                    containerSize: CGSize(width: min(282.0, size.width - max(sideInsets.left, sideInsets.right) - 24.0 * 2.0), height: 50.0)
                 )
                 emptyButtonSize = emptyResultsButtonSizeValue
             } else {
@@ -5346,7 +5357,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         horizontalAlignment: .center
                     )),
                     environment: {},
-                    containerSize: CGSize(width: size.width - sideInset - 24.0 * 2.0, height: 100.0)
+                    containerSize: CGSize(width: size.width - max(sideInsets.left, sideInsets.right) - 24.0 * 2.0, height: 100.0)
                 )
                 emptyButtonSubtitleSize = emptyResultsButtonSubtitleSizeValue
             } else {
@@ -5376,9 +5387,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
 
             let textTransition: ContainedViewLayoutTransition = layoutChanged ? transition : .immediate
-            textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
-            textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyTitleY), size: emptyTitleSize))
-            textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyTitleY + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+            textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInsets.left + padding + (size.width - sideInsets.left - sideInsets.right - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
+            textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInsets.left + padding + (size.width - sideInsets.left - sideInsets.right - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyTitleY), size: emptyTitleSize))
+            textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInsets.left + padding + (size.width - sideInsets.left - sideInsets.right - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyTitleY + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
             self.emptyResultsAnimationNode.updateLayout(size: self.emptyResultsAnimationSize)
 
             var nextY: CGFloat = emptyTitleY + emptyTitleSize.height + emptyTextSpacing + emptyTextSize.height
@@ -5390,7 +5401,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     emptyButtonTransition = .immediate
                     self.view.insertSubview(emptyButtonView, aboveSubview: self.emptyResultsTextNode.view)
                 }
-                emptyButtonTransition.updateFrame(view: emptyButtonView, frame: CGRect(origin: CGPoint(x: floor((size.width - emptyButtonSize.width) * 0.5), y: nextY), size: emptyButtonSize))
+                emptyButtonTransition.updateFrame(view: emptyButtonView, frame: CGRect(origin: CGPoint(x: sideInsets.left + floor((size.width - sideInsets.left - sideInsets.right - emptyButtonSize.width) * 0.5), y: nextY), size: emptyButtonSize))
 
                 nextY += emptyButtonSize.height
             }
@@ -5402,7 +5413,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     emptyButtonSubtitleTransition = .immediate
                     self.view.insertSubview(emptyButtonSubtitleView, aboveSubview: self.emptyResultsTextNode.view)
                 }
-                emptyButtonSubtitleTransition.updateFrame(view: emptyButtonSubtitleView, frame: CGRect(origin: CGPoint(x: floor((size.width - emptyButtonSubtitleSize.width) * 0.5), y: nextY), size: emptyButtonSubtitleSize))
+                emptyButtonSubtitleTransition.updateFrame(view: emptyButtonSubtitleView, frame: CGRect(origin: CGPoint(x: sideInsets.left + floor((size.width - sideInsets.left - sideInsets.right - emptyButtonSubtitleSize.width) * 0.5), y: nextY), size: emptyButtonSubtitleSize))
 
                 nextY += emptyButtonSubtitleSize.height
             }
@@ -5643,8 +5654,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         strongSelf.emptyResultsButtonSubtitleText = nil
                     }
 
-                    if let (size, sideInset, topInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
-                        strongSelf.update(size: size, sideInset: sideInset, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
+                    if let (size, sideInsets, topInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
+                        strongSelf.update(size: size, sideInsets: sideInsets, topInset: topInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
 
                     if strongSelf.key == .downloads {
@@ -6147,9 +6158,9 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
 
             var itemNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
-                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: (i == items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                items[i].nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 100.0), synchronousLoads: false, neighbors: ListViewItemNeighbors(previous: i == 0 ? nil : items[i - 1].neighborDescriptor, next: (i == items.count - 1) ? nil : items[i + 1].neighborDescriptor), completion: { node, apply in
                     itemNodes.append(node)
-                    apply().1(ListViewItemApply(isOnScreen: true))
+                    apply().1(ListViewItemApply())
                 })
             }
 
@@ -6306,7 +6317,7 @@ private final class ChatListSearchReferenceContentSource: ContextReferenceConten
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .bottom)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .bottom)
     }
 }
 

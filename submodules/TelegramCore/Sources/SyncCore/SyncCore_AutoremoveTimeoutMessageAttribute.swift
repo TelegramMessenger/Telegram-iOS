@@ -3,6 +3,11 @@ import Postbox
 
 public let viewOnceTimeout: Int32 = 0x7fffffff
 
+public func autoremoveExpiryTimestamp(countdownBeginTime: Int32, timeout: Int32) -> Int32 {
+    let (sum, overflow) = countdownBeginTime.addingReportingOverflow(timeout)
+    return overflow ? Int32.max : sum
+}
+
 public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
     public let timeout: Int32
     public let countdownBeginTime: Int32?
@@ -16,7 +21,7 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         self.countdownBeginTime = countdownBeginTime
         
         if let countdownBeginTime = countdownBeginTime {
-            self.automaticTimestampBasedAttribute = (0, countdownBeginTime + timeout)
+            self.automaticTimestampBasedAttribute = (0, autoremoveExpiryTimestamp(countdownBeginTime: countdownBeginTime, timeout: timeout))
         } else {
             self.automaticTimestampBasedAttribute = nil
         }
@@ -27,7 +32,7 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         self.countdownBeginTime = decoder.decodeOptionalInt32ForKey("c")
         
         if let countdownBeginTime = self.countdownBeginTime {
-            self.automaticTimestampBasedAttribute = (0, countdownBeginTime + self.timeout)
+            self.automaticTimestampBasedAttribute = (0, autoremoveExpiryTimestamp(countdownBeginTime: countdownBeginTime, timeout: self.timeout))
         } else {
             self.automaticTimestampBasedAttribute = nil
         }
@@ -59,7 +64,7 @@ public class AutoclearTimeoutMessageAttribute: MessageAttribute {
             if self.timeout == viewOnceTimeout {
                 self.automaticTimestampBasedAttribute = (1, countdownBeginTime)
             } else {
-                self.automaticTimestampBasedAttribute = (1, countdownBeginTime + timeout)
+                self.automaticTimestampBasedAttribute = (1, autoremoveExpiryTimestamp(countdownBeginTime: countdownBeginTime, timeout: timeout))
             }
         } else {
             self.automaticTimestampBasedAttribute = nil
@@ -74,7 +79,7 @@ public class AutoclearTimeoutMessageAttribute: MessageAttribute {
             if self.timeout == viewOnceTimeout {
                 self.automaticTimestampBasedAttribute = (1, countdownBeginTime)
             } else {
-                self.automaticTimestampBasedAttribute = (1, countdownBeginTime + self.timeout)
+                self.automaticTimestampBasedAttribute = (1, autoremoveExpiryTimestamp(countdownBeginTime: countdownBeginTime, timeout: self.timeout))
             }
         } else {
             self.automaticTimestampBasedAttribute = nil

@@ -93,10 +93,10 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPermanentInviteLinkItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -109,13 +109,13 @@ public class ItemListPermanentInviteLinkItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListPermanentInviteLinkItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -307,7 +307,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
         let currentItem = self.item
         let avatarsContext = self.avatarsContext
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var updatedTheme: PresentationTheme?
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
@@ -346,7 +346,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                 subtitleColor = item.presentationData.theme.list.itemSecondaryTextColor
             }
             
-            let (invitedPeersLayout, invitedPeersApply) = makeInvitedPeersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: titleFont, textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (invitedPeersLayout, invitedPeersApply) = makeInvitedPeersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: titleFont, textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - min(params.leftInset, params.rightInset) - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var justCreatedCallTextNodeLayout: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities?)?
             if item.isCall {
@@ -374,7 +374,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     backgroundColor: nil,
                     maximumNumberOfLines: 0,
                     truncationType: .end,
-                    constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude),
+                    constrainedSize: CGSize(width: params.width - min(params.leftInset, params.rightInset) - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude),
                     alignment: .center,
                     lineSpacing: 0.28,
                     cutout: nil,
@@ -501,7 +501,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight))
                     }
@@ -637,7 +637,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                             }
                             
                             let buttonMaxY = verticalInset + fieldHeight + fieldSpacing + buttonHeight
-                            let justCreatedCallTextNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - justCreatedCallTextNodeLayout.0.size.width) / 2.0), y: buttonMaxY + justCreatedCallTextSpacing), size: CGSize(width: justCreatedCallTextNodeLayout.0.size.width, height: justCreatedCallTextNodeLayout.0.size.height))
+                            let justCreatedCallTextNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - justCreatedCallTextNodeLayout.0.size.width) / 2.0), y: buttonMaxY + justCreatedCallTextSpacing), size: CGSize(width: justCreatedCallTextNodeLayout.0.size.width, height: justCreatedCallTextNodeLayout.0.size.height))
                             justCreatedCallTextNode.textNode.frame = justCreatedCallTextNodeFrame
 
                             let justCreatedCallSeparatorText: ComponentView<Empty>
@@ -677,7 +677,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                                 environment: {},
                                 containerSize: CGSize(width: params.width - leftInset - rightInset, height: 100.0)
                             )
-                            let justCreatedCallSeparatorTextFrame = CGRect(origin: CGPoint(x: floor((params.width - justCreatedCallSeparatorTextSize.width) * 0.5), y: buttonMaxY + justCreatedCallSeparatorSpacing), size: justCreatedCallSeparatorTextSize)
+                            let justCreatedCallSeparatorTextFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((params.width - params.leftInset - params.rightInset - justCreatedCallSeparatorTextSize.width) * 0.5), y: buttonMaxY + justCreatedCallSeparatorSpacing), size: justCreatedCallSeparatorTextSize)
                             if let justCreatedCallSeparatorTextView = justCreatedCallSeparatorText.view {
                                 if justCreatedCallSeparatorTextView.superview == nil {
                                     strongSelf.view.addSubview(justCreatedCallSeparatorTextView)
@@ -706,7 +706,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     }
                     
                     var totalWidth = invitedPeersLayout.size.width
-                    var leftOrigin: CGFloat = floorToScreenPixels((params.width - invitedPeersLayout.size.width) / 2.0)
+                    var leftOrigin: CGFloat = params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - invitedPeersLayout.size.width) / 2.0)
                     let avatarSpacing: CGFloat = 21.0
                     if let avatarsContent = strongSelf.avatarsContent {
                         let avatarsSize = strongSelf.avatarsNode.update(context: item.context, content: avatarsContent, itemSize: CGSize(width: 32.0, height: 32.0), animated: true, synchronousLoad: true)
@@ -715,7 +715,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                             totalWidth += avatarsSize.width + avatarSpacing
                         }
                         
-                        let avatarsNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0), size: avatarsSize)
+                        let avatarsNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0), size: avatarsSize)
                         strongSelf.avatarsNode.frame = avatarsNodeFrame
                         if !avatarsSize.width.isZero {
                             leftOrigin = avatarsNodeFrame.maxX + avatarSpacing
@@ -724,7 +724,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     
                     strongSelf.invitedPeersNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: fieldFrame.maxY + 92.0), size: invitedPeersLayout.size)
                     
-                    strongSelf.avatarsButtonNode.frame = CGRect(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
+                    strongSelf.avatarsButtonNode.frame = CGRect(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
                     strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty && item.invite != nil
                     
                     strongSelf.addressButtonNode.isUserInteractionEnabled = item.invite != nil

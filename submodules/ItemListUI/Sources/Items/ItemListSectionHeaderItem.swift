@@ -77,10 +77,10 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListSectionHeaderItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -93,7 +93,7 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? ItemListSectionHeaderItemNode else {
                 assertionFailure()
@@ -102,7 +102,7 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
         
             let makeLayout = nodeValue.asyncLayout()
             async {
-                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                 Queue.mainQueue().async {
                     completion(layout, { _ in
                         apply()
@@ -176,8 +176,9 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode, ItemListItemNode {
         
         let previousItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
+            let rightInset: CGFloat = 15.0 + params.rightInset
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
@@ -270,7 +271,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode, ItemListItemNode {
                             actionButtonNode.addSubnode(actionNode)
                         }
                         
-                        actionButtonNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - actionLayout.size.width, y: 7.0), size: actionLayout.size)
+                        actionButtonNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - actionLayout.size.width, y: 7.0), size: actionLayout.size)
                         
                         actionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actionLayout.size)
                     } else {
@@ -330,7 +331,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode, ItemListItemNode {
                     if let accessoryIcon = accessoryIcon {
                         accessoryTextOffset += accessoryIcon.size.width + 3.0
                     }
-                    strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryLayout.size.width - accessoryTextOffset, y: 7.0), size: accessoryLayout.size)
+                    strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - accessoryLayout.size.width - accessoryTextOffset, y: 7.0), size: accessoryLayout.size)
                     
                     if let accessoryIcon = accessoryIcon {
                         let accessoryImageNode: ASImageNode
@@ -344,7 +345,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.accessoryImageNode = accessoryImageNode
                         }
                         accessoryImageNode.image = accessoryIcon
-                        accessoryImageNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryIcon.size.width, y: 7.0), size: accessoryIcon.size)
+                        accessoryImageNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - accessoryIcon.size.width, y: 7.0), size: accessoryIcon.size)
                     } else if let accessoryImageNode = strongSelf.accessoryImageNode {
                         accessoryImageNode.removeFromSupernode()
                         strongSelf.accessoryImageNode = nil
@@ -378,7 +379,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode, ItemListItemNode {
                     case .left:
                         activityIndicatorOrigin = CGPoint(x: strongSelf.titleNode.frame.maxX + 6.0, y: 7.0 - UIScreenPixel)
                     case .right:
-                        activityIndicatorOrigin = CGPoint(x: params.width - leftInset - 18.0, y: 7.0 - UIScreenPixel)
+                        activityIndicatorOrigin = CGPoint(x: params.width - rightInset - 18.0, y: 7.0 - UIScreenPixel)
                     default:
                         break
                     }

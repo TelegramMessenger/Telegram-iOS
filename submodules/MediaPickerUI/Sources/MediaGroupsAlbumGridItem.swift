@@ -50,6 +50,10 @@ private struct MediaGroupsGridAlbumEntry: Comparable, Identifiable {
 
 
 private class MediaGroupsGridAlbumItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let theme: PresentationTheme
     let collection: PHAssetCollection
     let firstItem: PHAsset?
@@ -64,7 +68,7 @@ private class MediaGroupsGridAlbumItem: ListViewItem {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = MediaGroupsGridAlbumItemNode()
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
@@ -81,7 +85,7 @@ private class MediaGroupsGridAlbumItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is MediaGroupsGridAlbumItemNode)
             if let nodeValue = node() as? MediaGroupsGridAlbumItemNode {
@@ -222,6 +226,10 @@ private func preparedTransition(action: @escaping (PHAssetCollection) -> Void, f
 }
 
 final class MediaGroupsAlbumGridItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     let presentationData: PresentationData
     let collections: [PHAssetCollection]
     let action: (PHAssetCollection) -> Void
@@ -232,7 +240,7 @@ final class MediaGroupsAlbumGridItem: ListViewItem {
         self.action = action
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         Queue.mainQueue().async {
             let node = MediaGroupsAlbumGridItemNode()
             let makeLayout = node.asyncLayout()
@@ -248,7 +256,7 @@ final class MediaGroupsAlbumGridItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? MediaGroupsAlbumGridItemNode {
                 let layout = nodeValue.asyncLayout()
@@ -311,7 +319,7 @@ private class MediaGroupsAlbumGridItemNode: ListViewItemNode {
         })
     }
 
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let item = self.item {
             let makeLayout = self.asyncLayout()
             let (nodeLayout, nodeApply) = makeLayout(item, params)
@@ -327,7 +335,7 @@ private class MediaGroupsAlbumGridItemNode: ListViewItemNode {
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (nodeLayout, { [weak self] in
-                return (nil, { _ in
+                return (nil, { [item] _ in
                     if let strongSelf = self {
                         strongSelf.item = item
                         strongSelf.layoutParams = params

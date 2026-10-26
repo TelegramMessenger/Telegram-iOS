@@ -738,6 +738,12 @@ final class CubeAnimationView: UIView {
         self.angularVelocity *= damp
 
         self.applyCubeRotation()
+
+        if self.hasFiredFinishApproach && !self.isFinishingX && !self.isFinishingY {
+            self.displayLink?.invalidate()
+            self.displayLink = nil
+            self.lastTimestamp = 0.0
+        }
     }
 
     private func startFinishingAnimation() {

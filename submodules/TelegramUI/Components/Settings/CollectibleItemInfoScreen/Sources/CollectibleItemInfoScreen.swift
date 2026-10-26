@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -217,7 +218,8 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                 transition: transition,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: iconAnimationName),
-                    loop: false
+                    loop: false,
+                    lottieSettings: component.context.lottieRenderingSettings
                 )),
                 environment: {},
                 containerSize: CGSize(width: floor(iconBackgroundFrame.size.width * 0.8), height: floor(iconBackgroundFrame.size.height * 0.8))
@@ -584,7 +586,7 @@ private final class CollectibleItemInfoScreenComponent: Component {
                 metrics: environment.metrics,
                 deviceMetrics: environment.deviceMetrics,
                 isDisplaying: environment.isVisible,
-                isCentered: environment.metrics.widthClass == .regular,
+                isCentered: environment.presentsFloatingPanels,
                 hasInputHeight: !environment.inputHeight.isZero,
                 regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                 dismiss: { [weak self] _ in

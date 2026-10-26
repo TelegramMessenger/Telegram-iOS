@@ -16,7 +16,11 @@ extension ChatControllerImpl {
             return
         }
         
-        let _ = self.presentVoiceMessageDiscardAlert(action: {
+        let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+            guard let self else {
+                return
+            }
+
             let progressSignal: Signal<Never, NoError> = Signal { [weak self] _ in
                 guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                     return EmptyDisposable
@@ -57,22 +61,30 @@ extension ChatControllerImpl {
         })
     }
     
-    static func openMessageReplies(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, navigationController: NavigationController, present: @escaping (ViewController, Any?) -> Void, messageId: EngineMessage.Id, isChannelPost: Bool, atMessage atMessageId: EngineMessage.Id?, displayModalProgress: Bool) -> Signal<Never, NoError> {
+    // `progress` is the tapped link's inline progress (the shimmer on the link text). When it is given it replaces
+    // the modal `OverlayStatusController` while the thread is fetched, so a topic link in a message never puts a
+    // spinner over the whole chat; `displayModalProgress` is then ignored. Callers without a link to shimmer
+    // (peer info, instant view) keep passing nil and get the modal as before.
+    static func openMessageReplies(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, navigationController: NavigationController, present: @escaping (ViewController, Any?) -> Void, messageId: EngineMessage.Id, isChannelPost: Bool, atMessage atMessageId: EngineMessage.Id?, displayModalProgress: Bool, progress: Promise<Bool>? = nil) -> Signal<Never, NoError> {
         return Signal { subscriber in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
+
             var cancelImpl: (() -> Void)?
             let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
-            
-            if displayModalProgress {
+
+            let inlineProgressDisposable = MetaDisposable()
+            if let progress {
+                inlineProgressDisposable.set(startInlineLinkProgress(progress))
+            } else if displayModalProgress {
                 present(statusController, nil)
             }
-            
+
             let disposable = (fetchAndPreloadReplyThreadInfo(context: context, subject: isChannelPost ? .channelPost(messageId) : .groupMessage(messageId), atMessageId: atMessageId, preload: true)
             |> deliverOnMainQueue).startStrict(next: { [weak statusController] result in
-                if displayModalProgress {
+                inlineProgressDisposable.dispose()
+                if progress == nil && displayModalProgress {
                     statusController?.dismiss()
                 }
                 
@@ -89,21 +101,45 @@ extension ChatControllerImpl {
                 
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty ? .text : nil, keepStack: .always))
                 subscriber.putCompletion()
-            }, error: { _ in
+            }, error: { [weak statusController] _ in
+                inlineProgressDisposable.dispose()
+                if progress == nil && displayModalProgress {
+                    statusController?.dismiss()
+                }
                 let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_DiscussionMessageUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             })
-            
+
             cancelImpl = { [weak statusController] in
                 disposable.dispose()
+                inlineProgressDisposable.dispose()
                 statusController?.dismiss()
                 subscriber.putCompletion()
             }
-            
+
             return ActionDisposable {
                 cancelImpl?()
             }
         }
         |> runOn(.mainQueue())
     }
+}
+
+// Arms a tapped link's inline progress and returns the disposable that clears it. The URL resolver
+// (`openUserGeneratedUrl`) clears the same promise with a `Queue.mainQueue().async` right before it hands over the
+// resolved URL, so re-arming synchronously would be undone by that pending hop; the delay puts this after it and
+// also avoids a blink when the thread is local and resolves immediately. Same shape as the `.join` case in
+// `openResolvedUrlImpl`.
+func startInlineLinkProgress(_ progress: Promise<Bool>) -> Disposable {
+    let progressSignal = Signal<Never, NoError> { _ in
+        progress.set(.single(true))
+        return ActionDisposable {
+            Queue.mainQueue().async {
+                progress.set(.single(false))
+            }
+        }
+    }
+    |> runOn(Queue.mainQueue())
+    |> delay(0.1, queue: Queue.mainQueue())
+    return progressSignal.startStrict()
 }

@@ -188,7 +188,7 @@ public final class PresentationContext {
                     }
                     completion()
                 }
-            }).start(next: { [weak self] _ in
+            }).start(next: { [weak self, controller] _ in
                 if let strongSelf = self {
                     if let blockInteractionToken = blockInteractionToken {
                         strongSelf.removeBlockInteraction(blockInteractionToken)

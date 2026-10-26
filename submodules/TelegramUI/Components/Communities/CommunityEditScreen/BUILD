@@ -18,7 +18,6 @@ swift_library(
         "//submodules/Display",
         "//submodules/MapResourceToAvatarSizes",
         "//submodules/PeerInfoUI",
-        "//submodules/Postbox",
         "//submodules/RadialStatusNode",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramCore",

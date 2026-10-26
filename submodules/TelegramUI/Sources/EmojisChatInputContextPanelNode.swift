@@ -486,8 +486,6 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                 }
                 
                 if let range = hashtagQueryRange {
-                    let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
-                    
                     var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                     if let file = file {
                         loop: for attribute in file.attributes {
@@ -507,11 +505,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                         replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
                     }
                     
-                    inputText.replaceCharacters(in: range, with: replacementText)
-                    
-                    let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
-                    
-                    return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
+                    return (textInputState.replacingFlatRange(range, with: replacementText), inputMode)
                 }
                 return (textInputState, inputMode)
             }

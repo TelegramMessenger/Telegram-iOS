@@ -173,7 +173,8 @@ private final class PaymentCardEntryScreenContentComponent: CombinedComponent {
                         source: .bundle(name: "CreateStream"),
                         loop: true
                     ),
-                    size: CGSize(width: 84.0, height: 84.0)
+                    size: CGSize(width: 84.0, height: 84.0),
+                    lottieSettings: context.component.context.lottieRenderingSettings
                 ),
                 availableSize: CGSize(width: 84.0, height: 84.0),
                 transition: context.transition

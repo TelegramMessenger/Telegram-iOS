@@ -122,6 +122,15 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         let activitySize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - activitySize.width) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - activitySize.height) / 2.0)), size: activitySize))
         
+        // The header and the form lay out in the band between the side insets when they differ (iPhone Duo's side
+        // strip: the form rows and their disclosure arrows ran under it); across the screen otherwise. The accept
+        // panel at the bottom keeps the whole width; its button spans the strip and keeps clear only of a corner block
+        // at the bottom (folded landscape-left).
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let acceptInsets: (left: CGFloat, right: CGFloat) = insetsDiffer ? layout.bottomEdgeSideInsets() : (0.0, 0.0)
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        
         var headerNodeTransition: ContainedViewLayoutTransition = self.headerNode.bounds.height.isZero ? .immediate : transition
         if self.previousHeaderNodeAlpha.isZero && !self.headerNode.alpha.isZero {
             headerNodeTransition = .immediate
@@ -131,10 +140,10 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         if self.headerNode.alpha.isZero {
             headerLayout = (0.0, 0.0, { _ in })
         } else {
-            headerLayout = self.headerNode.updateLayout(width: layout.size.width, transition: headerNodeTransition)
+            headerLayout = self.headerNode.updateLayout(width: bandWidth, transition: headerNodeTransition)
         }
         
-        let acceptHeight = self.acceptNode.updateLayout(width: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+        let acceptHeight = self.acceptNode.updateLayout(width: layout.size.width, leftInset: acceptInsets.left, rightInset: acceptInsets.right, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
         
         var footerHeight: CGFloat = 0.0
         var contentSpacing: CGFloat
@@ -169,7 +178,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         if let contentNode = self.contentNode {
             let contentFirstTime = contentNode.bounds.isEmpty
             let contentNodeTransition: ContainedViewLayoutTransition = contentFirstTime ? .immediate : transition
-            let contentLayout = contentNode.updateLayout(width: layout.size.width, transition: contentNodeTransition)
+            let contentLayout = contentNode.updateLayout(width: bandWidth, transition: contentNodeTransition)
             
             let headerHeight: CGFloat
             if self.contentNode is SecureIdAuthPasswordOptionContentNode && headerLayout.expanded + contentLayout.height + minContentSpacing + 14.0 + 16.0 > contentRect.height {
@@ -193,12 +202,12 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             boundingRect.origin.y = max(boundingRect.origin.y, 14.0)
             
             if self.headerNode.alpha.isZero {
-                headerNodeTransition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: -boundingRect.width, y: self.headerNode.frame.minY), size: CGSize(width: boundingRect.width, height: headerHeight)))
+                headerNodeTransition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: -bandWidth, y: self.headerNode.frame.minY), size: CGSize(width: bandWidth, height: headerHeight)))
             } else {
-                headerNodeTransition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: boundingRect.minY), size: CGSize(width: boundingRect.width, height: headerHeight)))
+                headerNodeTransition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: bandMinX, y: boundingRect.minY), size: CGSize(width: bandWidth, height: headerHeight)))
             }
             
-            contentNodeTransition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: boundingRect.minY + headerHeight + contentSpacing), size: CGSize(width: boundingRect.width, height: contentLayout.height)))
+            contentNodeTransition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: bandMinX, y: boundingRect.minY + headerHeight + contentSpacing), size: CGSize(width: bandWidth, height: contentLayout.height)))
             
             if contentFirstTime {
                 contentNode.didAppear()
@@ -784,7 +793,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             return
         }
         
-        let updatedValues: (SecureIdValueKey) -> ([SecureIdValueWithContext]) -> Void = { valueKey in
+        let updatedValues: (SecureIdValueKey) -> ([SecureIdValueWithContext]) -> Void = { [weak self] valueKey in
             return { [weak self] updatedValues in
                 guard let strongSelf = self else {
                     return

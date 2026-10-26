@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 @preconcurrency import WebKit
 import Display
@@ -17,7 +18,7 @@ import PhotoResources
 import MediaResources
 import LegacyComponents
 import UrlHandling
-import MoreButtonNode
+import MoreHeaderButton
 import BotPaymentsUI
 import PromptUI
 import PhoneNumberFormat
@@ -81,6 +82,7 @@ public struct WebAppParameters {
     let isFullscreen: Bool
     let sameOrigin: Bool
     let appSettings: BotAppSettings?
+    let isOnramp: Bool
     
     public init(
         source: Source,
@@ -99,7 +101,8 @@ public struct WebAppParameters {
         fullSize: Bool,
         isFullscreen: Bool = false,
         sameOrigin: Bool = false,
-        appSettings: BotAppSettings? = nil
+        appSettings: BotAppSettings? = nil,
+        isOnramp: Bool = false
     ) {
         self.source = source
         self.peerId = peerId
@@ -118,6 +121,7 @@ public struct WebAppParameters {
         self.isFullscreen = isFullscreen
         self.sameOrigin = sameOrigin
         self.appSettings = appSettings
+        self.isOnramp = isOnramp
     }
 }
 
@@ -188,6 +192,12 @@ private let registeredProtocols: Void = {
 }()
 #endif
 
+// A single shared probe used only to read authorization state. The iOS 14 replacements for
+// `CLLocationManager.authorizationStatus()` are instance properties, and allocating a manager
+// per subscription (on whichever queue happened to subscribe) is both wasteful and at odds
+// with CLLocationManager's threading guidance, so keep exactly one.
+private let sharedLocationAuthorizationManager = CLLocationManager()
+
 public final class WebAppController: ViewController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
@@ -213,6 +223,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var placeholderIcon: (UIImage, Bool)?
         private var placeholderNode: ShimmerEffectNode?
         private var fullscreenControls: ComponentView<Empty>?
+        private var sideColumnBackButton: ComponentView<Empty>?
             
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
         
@@ -876,7 +887,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private func updateNavigationBarAlpha(transition: ContainedViewLayoutTransition) {
             let contentOffset = self.webView?.scrollView.contentOffset.y ?? 0.0
             let backgroundAlpha = min(30.0, contentOffset) / 30.0
-            self.controller?.navigationBar?.updateBackgroundAlpha(backgroundAlpha, transition: transition)
+            self.controller?.navigationBar?.setBackdropAlpha(backgroundAlpha, transition: transition)
         }
         
         private var targetContentOffset: CGPoint?
@@ -925,6 +936,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 let controlsMargin: CGFloat = 8.0
                 let componentTransition: ComponentTransition = added ? .immediate : ComponentTransition(transition)
+                // iPhone Duo: the back/close button goes in the side strip, where a screen's own back button belongs;
+                // the row keeps minimize and more. Nil without a strip.
+                let sideColumnFrame = layout.sideColumnNavigationButtonFrame
                 let controlsSize = fullscreenControls.update(
                     transition: componentTransition,
                     component: AnyComponent(
@@ -933,9 +947,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strings: self.presentationData.strings,
                             title: controller.botName,
                             isVerified: controller.botVerified,
-                            insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right),
+                            insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right + layout.navigationBarTrailingButtonsInset),
                             statusBarStyle: self.fullScreenStatusBarStyle,
                             hasBack: self.hasBackButton,
+                            showsBackButton: sideColumnFrame == nil,
                             backPressed: { [weak self] in
                                 guard let self else {
                                     return
@@ -963,13 +978,61 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if view.superview == nil {
                         self.view.addSubview(view)
                     }
-                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) + controlsMargin), size: controlsSize))
+                    // iPhone Duo unfolded portrait: the controls sit beside the status island, the right ones clear of it.
+                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: (layout.navigationBarStatusBarHeight ?? 0.0) + controlsMargin), size: controlsSize))
                     if added {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                     }
                 }
+                if let sideColumnFrame {
+                    let sideColumnBackButton: ComponentView<Empty>
+                    var sideColumnTransition = componentTransition
+                    if let current = self.sideColumnBackButton {
+                        sideColumnBackButton = current
+                    } else {
+                        sideColumnBackButton = ComponentView<Empty>()
+                        self.sideColumnBackButton = sideColumnBackButton
+                        sideColumnTransition = .immediate
+                    }
+                    let buttonSize = sideColumnBackButton.update(
+                        transition: sideColumnTransition,
+                        component: AnyComponent(GlassBarButtonComponent(
+                            size: CGSize(width: 44.0, height: 44.0),
+                            backgroundColor: nil,
+                            isDark: self.presentationData.theme.overallDarkAppearance,
+                            state: .glass,
+                            component: AnyComponentWithIdentity(id: self.hasBackButton ? "back" : "close", component: AnyComponent(
+                                BundleIconComponent(name: self.hasBackButton ? "Navigation/Back" : "Navigation/Close", tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor)
+                            )),
+                            action: { [weak self] _ in
+                                self?.controller?.cancelPressed()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 44.0, height: 44.0)
+                    )
+                    if let view = sideColumnBackButton.view {
+                        if view.superview == nil {
+                            self.view.addSubview(view)
+                            view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
+                        sideColumnTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: sideColumnFrame.midX - buttonSize.width / 2.0, y: sideColumnFrame.midY - buttonSize.height / 2.0), size: buttonSize))
+                    }
+                } else if let sideColumnBackButton = self.sideColumnBackButton {
+                    self.sideColumnBackButton = nil
+                    sideColumnBackButton.view?.removeFromSuperview()
+                }
+                
                 contentTopInset = controlsSize.height + controlsMargin * 2.0
+                if let island = layout.topBarStatusIsland {
+                    // The page's content starts below both the controls and the island beside them.
+                    contentTopInset = max(contentTopInset, island.height - (layout.navigationBarStatusBarHeight ?? 0.0))
+                }
             } else if let fullscreenControls = self.fullscreenControls {
+                if let sideColumnBackButton = self.sideColumnBackButton {
+                    self.sideColumnBackButton = nil
+                    sideColumnBackButton.view?.removeFromSuperview()
+                }
                 self.fullscreenControls = nil
                 fullscreenControls.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                     fullscreenControls.view?.removeFromSuperview()
@@ -1008,7 +1071,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
-                    Queue.mainQueue().after(0.4, {
+                    Queue.mainQueue().after(0.4, { [weak self] in
+                        guard let self else {
+                            return
+                        }
+
                         if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
                             webView.scrollToActiveElement(layout: layout, completion: { [weak self] contentOffset in
                                 let _ = self
@@ -1037,7 +1104,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 var customInsets: UIEdgeInsets = .zero
                 if controller.isFullscreen {
-                    customInsets.top = layout.statusBarHeight ?? 0.0
+                    // The status height the controls sit under (compact beside iPhone Duo's status island).
+                    customInsets.top = layout.navigationBarStatusBarHeight ?? 0.0
                 }
                 if layout.intrinsicInsets.bottom > 44.0 || (layout.inputHeight ?? 0.0) > 0.0 {
                     customInsets.bottom = 0.0
@@ -1045,7 +1113,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     customInsets.bottom = layout.intrinsicInsets.bottom
                 }
                 customInsets.left = layout.safeInsets.left
-                customInsets.right = layout.safeInsets.left
+                customInsets.right = layout.safeInsets.right
                 webView.customInsets = customInsets
                 
                 if let controller = self.controller {
@@ -2037,8 +2105,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             controller.titleView?.updateTextColors(primary: primaryTextColor, secondary: secondaryTextColor, transition: transition)
-            controller.cancelButtonNode.updateColor(primaryTextColor, transition: transition)
-            controller.moreButtonNode.updateColor(primaryTextColor, transition: transition)
             transition.updateBackgroundColor(node: self.headerBackgroundNode, color: color ?? .clear)
             transition.updateBackgroundColor(node: self.topOverscrollNode, color: color ?? .clear)
         }
@@ -2790,7 +2856,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 var effectiveIsAbsolute = false
                 let referenceFrame: CMAttitudeReferenceFrame
                 
-                if absolute && [.authorizedWhenInUse, .authorizedAlways].contains(CLLocationManager.authorizationStatus()) && CMMotionManager.availableAttitudeReferenceFrames().contains(.xTrueNorthZVertical) {
+                if absolute && [.authorizedWhenInUse, .authorizedAlways].contains(sharedLocationAuthorizationManager.authorizationStatus) && CMMotionManager.availableAttitudeReferenceFrames().contains(.xTrueNorthZVertical) {
                     referenceFrame = .xTrueNorthZVertical
                     effectiveIsAbsolute = true
                 } else if absolute && CMMotionManager.availableAttitudeReferenceFrames().contains(.xMagneticNorthZVertical) {
@@ -2944,10 +3010,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 title = self.presentationData.strings.WebApp_Download_Document
             }
             
-            let _ = combineLatest(queue: Queue.mainQueue(),
-                FileDownload.getFileSize(url: url),
-                self.context.engine.messages.checkBotDownload(botId: controller.botId, fileName: fileName, url: url)
-            ).start(next: { [weak self] fileSize, canDownload in
+            let _ = (self.context.engine.messages.checkBotDownload(botId: controller.botId, fileName: fileName, url: url)
+            |> mapToSignal { canDownload -> Signal<(Int64?, Bool), NoError> in
+                guard canDownload else {
+                    return .single((nil, false))
+                }
+                return FileDownload.getFileSize(url: url)
+                |> map { fileSize in
+                    return (fileSize, true)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] fileSize, canDownload in
                 guard let self else {
                     return
                 }
@@ -3026,7 +3099,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         undoText: self.presentationData.strings.WebApp_Download_Cancel
                     )
                 },
-                completion: { [weak self] resultUrl, _ in
+                completion: { [weak self, controller] resultUrl, _ in
                     if let resultUrl, let self {
                         removeImpl?()
                         
@@ -3513,7 +3586,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                             elevatedLayout: true,
                                             action: { action in
                                                 if case .undo = action {
-                                                    
+                                                    let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: botId) { current in
+                                                        return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: false), emojiStatus: current?.emojiStatus)
+                                                    }.startStandalone()
                                                 }
                                                 return true
                                             }
@@ -3546,11 +3621,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     private var titleView: WebAppTitleView?
-    fileprivate let cancelButtonNode: WebAppCancelButtonNode
-    fileprivate let moreButtonNode: MoreButtonNode
-    private var cancelBarButtonNode: BarComponentHostNode?
-    private var moreBarButtonNode: BarComponentHostNode?
-    private let moreButtonPlayOnce = ActionSlot<Void>()
+    /// The "…" in the bar's own platter, as the chat's; drawn in the bar's button colour (`updateNavigationBarTheme`).
+    private let moreBarButton: MoreHeaderButton
+    /// Whether the bar's left item is its back button (the app shows one) rather than its close button.
+    private var leftItemIsBack: Bool?
     
     private let context: AccountContext
     public let source: WebAppParameters.Source
@@ -3566,6 +3640,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let payload: String?
     private let buttonText: String?
     private let forceHasSettings: Bool
+    private let isOnramp: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: EngineMessage.Id?
     private let threadId: Int64?
@@ -3601,6 +3676,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.payload = params.payload
         self.buttonText = params.buttonText
         self.forceHasSettings = params.forceHasSettings
+        self.isOnramp = params.isOnramp
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
         self.threadId = threadId
@@ -3614,31 +3690,29 @@ public final class WebAppController: ViewController, AttachmentContainable {
         presentationData = presentationData.withUpdated(theme: updatedTheme)
         self.presentationData = presentationData
         
-        self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: "", more: ""))
+        self.moreBarButton = MoreHeaderButton(color: navigationBarPresentationData.theme.buttonColor)
+        self.moreBarButton.isUserInteractionEnabled = true
         
-        self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
-        self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
-        
-        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.automaticallyControlPresentationContextLayout = false
+        // A mini app sheet opens to the whole screen beside iPhone Duo's status island (unfolded portrait).
+        self.fillsScreenBesideStatusIsland = true
         
-        if case .attachMenu = self.source {
-            
-        } else if self.isVerifyAgeBot {
-            
-        } else {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.cancelButtonNode)
-            self.navigationItem.leftBarButtonItem?.action = #selector(self.cancelPressed)
-            self.navigationItem.leftBarButtonItem?.target = self
-            
-            if !self.isVerifyAgeBot {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
-                self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
-                self.navigationItem.rightBarButtonItem?.target = self
+        // The bar's own buttons, as on every screen on it: close or back on the left (`updateNavigationButtons`), and the
+        // "…" on the right (none for the age verification bot).
+        self.moreBarButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: navigationBarPresentationData.theme.buttonColor)))
+        self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
+            guard let self else {
+                return
             }
+            self.morePressed(view: self.navigationBar?.navigationButtonContextContainer(sourceView: sourceNode.view) ?? sourceNode.view, gesture: gesture)
+        }
+        self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
+        if !self.isVerifyAgeBot {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)
         }
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -3650,12 +3724,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.titleView = titleView
         }
         
-        self.moreButtonNode.action = { [weak self] _, gesture in
-            if let strongSelf = self {
-                strongSelf.morePressed(view: strongSelf.moreButtonNode.contextSourceNode.view, gesture: gesture)
-            }
-        }
-        
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
@@ -3665,9 +3733,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 strongSelf.updateNavigationBarTheme(transition: .immediate)
                 strongSelf.titleView?.theme = presentationData.theme
-
-                strongSelf.cancelButtonNode.theme = presentationData.theme
-                strongSelf.moreButtonNode.theme = presentationData.theme
                 
                 if strongSelf.isNodeLoaded {
                     strongSelf.controllerNode.updatePresentationData(presentationData)
@@ -3705,82 +3770,20 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.presentationDataDisposable?.dispose()
     }
     
+    /// The bar's left item: its close button, or its back button while the app shows one (`web_app_setup_back_button`).
+    /// Set only when that changes, since a new item lays the bar out again.
     private func updateNavigationButtons() {
-        var showGlassButtons = false
-        if case .attachMenu = self.source {
-            showGlassButtons = true
-        } else if self.isVerifyAgeBot {
-            showGlassButtons = true
+        let isBack = self.controllerNode.hasBackButton
+        guard self.leftItemIsBack != isBack else {
+            return
         }
-        if showGlassButtons {
-            let barButtonSize = CGSize(width: 44.0, height: 44.0)
-            let closeComponent: AnyComponentWithIdentity<Empty> = AnyComponentWithIdentity(
-                id: "close",
-                component: AnyComponent(GlassBarButtonComponent(
-                    size: barButtonSize,
-                    backgroundColor: nil,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
-                    state: .glass,
-                    component: AnyComponentWithIdentity(id: self.controllerNode.hasBackButton ? "back" : "close", component: AnyComponent(
-                        BundleIconComponent(
-                            name: self.controllerNode.hasBackButton ? "Navigation/Back" : "Navigation/Close",
-                            tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
-                        )
-                    )),
-                    action: { [weak self] _ in
-                        self?.cancelPressed()
-                    }
-                ))
-            )
-            
-            let moreComponent: AnyComponentWithIdentity<Empty> = AnyComponentWithIdentity(
-                id: "more",
-                component: AnyComponent(GlassBarButtonComponent(
-                    size: barButtonSize,
-                    backgroundColor: nil,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
-                    state: .glass,
-                    component: AnyComponentWithIdentity(id: "more", component: AnyComponent(
-                        LottieComponent(
-                            content: LottieComponent.AppBundleContent(
-                                name: "anim_morewide"
-                            ),
-                            color: self.presentationData.theme.chat.inputPanel.panelControlColor,
-                            size: CGSize(width: 34.0, height: 34.0),
-                            playOnce: self.moreButtonPlayOnce
-                        )
-                    )),
-                    action: { [weak self] view in
-                        self?.morePressed(view: view, gesture: nil)
-                        self?.moreButtonPlayOnce.invoke(Void())
-                    }
-                ))
-            )
-            
-            let cancelButtonNode: BarComponentHostNode
-            if let current = self.cancelBarButtonNode {
-                cancelButtonNode = current
-                cancelButtonNode.component = closeComponent
-            } else {
-                cancelButtonNode = BarComponentHostNode(component: closeComponent, size: barButtonSize)
-                self.cancelBarButtonNode = cancelButtonNode
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: cancelButtonNode)
-            }
-            
-            if !self.isVerifyAgeBot {
-                let moreButtonNode: BarComponentHostNode
-                if let current = self.moreBarButtonNode {
-                    moreButtonNode = current
-                    moreButtonNode.component = moreComponent
-                } else {
-                    moreButtonNode = BarComponentHostNode(component: moreComponent, size: barButtonSize)
-                    self.moreBarButtonNode = moreButtonNode
-                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: moreButtonNode)
-                }
-            }
+        let animated = self.leftItemIsBack != nil
+        self.leftItemIsBack = isBack
+        if isBack {
+            self.navigationItem.setLeftBarButton(UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.cancelPressed)), animated: animated)
+        } else {
+            self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(self.cancelPressed)), animated: animated)
         }
-            
-        self.cancelButtonNode.setState(self.controllerNode.hasBackButton ? .back : .cancel, animated: true)
     }
     
     private var isVerifyAgeBot: Bool {
@@ -3832,29 +3835,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     buttonColor: textColor,
                     disabledButtonColor: textColor,
                     primaryTextColor: textColor,
-                    backgroundColor: backgroundColor,
-                    enableBackgroundBlur: true,
-                    separatorColor: UIColor(rgb: 0x000000, alpha: 0.25),
                     badgeBackgroundColor: .clear,
-                    badgeStrokeColor: .clear,
                     badgeTextColor: .clear,
+                    edgeEffectColor: backgroundColor,
                     accentButtonColor: self.presentationData.theme.list.itemCheckColors.fillColor,
                     accentDisabledButtonColor: self.presentationData.theme.chat.inputPanel.panelControlDisabledColor,
                     accentForegroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor
                 ),
-                strings: NavigationBarStrings(back: "", close: "")
+                strings: NavigationBarStrings(back: "", close: "", more: "")
             )
         } else {
             navigationBarPresentationData = NavigationBarPresentationData(
                 theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme),
-                strings: NavigationBarStrings(back: "", close: "")
+                strings: NavigationBarStrings(back: "", close: "", more: "")
             )
         }
         self.navigationBar?.updatePresentationData(navigationBarPresentationData, transition: .immediate)
+        self.moreBarButton.updateColor(color: navigationBarPresentationData.theme.buttonColor)
     }
     
     @objc fileprivate func cancelPressed() {
-        if case .back = self.cancelButtonNode.state {
+        if self.controllerNode.hasBackButton {
             self.controllerNode.sendBackButtonEvent()
         } else {
             self.requestDismiss {
@@ -3864,7 +3865,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     @objc fileprivate func moreButtonPressed() {
-        self.moreButtonNode.buttonPressed()
+        self.moreBarButton.play()
+        self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
     }
     
     @objc fileprivate func morePressed(view: UIView, gesture: ContextGesture?) {
@@ -3904,8 +3906,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
         )
         |> map { [weak self] attachMenuBots, botPeer, botCommands, privacyPolicyUrl, activeDownloadProgress -> ContextController.Items in
             var items: [ContextMenuItem] = []
+            let displayFullMenu = self?.isOnramp == false
             
-            if let activeDownload, let progress = activeDownloadProgress {
+            if displayFullMenu, let activeDownload, let progress = activeDownloadProgress {
                 let isActive = progress < 1.0 - .ulpOfOne
                 let progressString: String
                 if isActive {
@@ -3932,7 +3935,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
-            if hasSettings {
+            if displayFullMenu && hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
@@ -3944,7 +3947,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })))
             }
             
-            if peerId != botId {
+            if displayFullMenu && peerId != botId {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_OpenBot, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
@@ -3969,7 +3972,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })))
             }
             
-            if let addressName = botPeer?.addressName {
+            if displayFullMenu, let addressName = botPeer?.addressName {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Share, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
@@ -3978,7 +3981,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     guard let self else {
                         return
                     }
-                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url("https://t.me/\(addressName)?profile"), actionCompleted: { [weak self] in
+                    let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url("https://t.me/\(addressName)?profile"), actionCompleted: { [weak self] in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }))
@@ -3986,15 +3989,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_ReloadPage, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] c, _ in
-                c?.dismiss(completion: nil)
-                
-                self?.controllerNode.webView?.reload()
-            })))
+            if displayFullMenu {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_ReloadPage, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    
+                    self?.controllerNode.webView?.reload()
+                })))
+            }
             
-            if let _ = self?.appName {
+            if displayFullMenu, let _ = self?.appName {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_AddToHomeScreen, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSquare"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
@@ -4015,7 +4020,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let context = self.context
                 let _ = (cachedWebAppTermsPage(context: context)
-                |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] resolvedUrl in
                     context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, forceUpdate: false, openPeer: { peer, navigation in
                     }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
                         self?.push(c)
@@ -4035,7 +4040,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 (self.parentController() as? AttachmentController)?.minimizeIfNeeded()
                 if let privacyPolicyUrl {
                     self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: privacyPolicyUrl, forceExternal: false, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: {})
-                } else if let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
+                } else if displayFullMenu, let botCommands, botCommands.contains(where: { $0.text == "privacy" }) {
                     let _ = enqueueMessages(account: self.context.account, peerId: self.botId, messages: [.message(text: "/privacy", attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
                     
                     if let botPeer, let navigationController = self.getNavigationController() {
@@ -4046,7 +4051,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
             })))
                         
-            if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
+            if displayFullMenu, let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                 }, action: { [weak self] c, _ in
@@ -4088,7 +4093,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     override public func loadDisplayNode() {
         self.displayNode = Node(context: self.context, controller: self)
         
-        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
         self.updateTabBarAlpha(1.0, .immediate)
     }
     
@@ -4272,7 +4277,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -4301,9 +4306,11 @@ public func standaloneWebAppController(
         fromMenu: params.source == .menu,
         hasTextInput: false,
         isFullSize: params.fullSize,
+        roundsTopCornersInRegularLayout: params.isOnramp,
         makeEntityInputView: {
         return nil
     })
+    controller.animateAppearance = params.isOnramp
     controller.requestController = { _, present in
         let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: threadId)
         webAppController.openUrl = openUrl

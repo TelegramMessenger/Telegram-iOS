@@ -47,7 +47,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
     
     public var appliedParams: ListViewItemLayoutParams?
     public var appliedItem: ChatMessageItem?
-    public var appliedForwardInfo: (EngineRawPeer?, String?)?
+    public var appliedForwardInfo: ChatMessageAppliedForwardInfo?
     public var appliedHasAvatar = false
     public var appliedCurrentlyPlaying: Bool?
     public var appliedAutomaticDownload = false
@@ -420,7 +420,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             var automaticDownload = true
             for media in item.message.media {
                 if let file = media as? TelegramMediaFile {
-                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: file)
+                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: .file(file))
                 }
             }
             
@@ -465,9 +465,9 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
             var replyInnerSubject: EngineMessageReplyInnerSubject?
             var replyStory: EngineStoryId?
+            var inlineBotNameString: String?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
-                    var inlineBotNameString: String?
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
                         inlineBotNameString = bot.addressName
                     } else {
@@ -483,7 +483,9 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                         
                         viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                         
-                        ignoreForward = true
+                        if item.message.forwardInfo?.psaType != nil {
+                            ignoreForward = true
+                        }
                     }
                 }
                 
@@ -518,6 +520,11 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                 }
             }
             
+            // A suspicious sender's buttons are not shown, as their links are not.
+            if item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId) {
+                replyMarkup = nil
+            }
+            
             if replyMessage != nil || replyForward != nil || replyStory != nil {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
@@ -550,7 +557,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             
             let availableContentWidth = params.width - params.leftInset - params.rightInset - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left
             
-            var forwardSource: EngineRawPeer?
+            var forwardSource: EnginePeer?
             var forwardAuthorSignature: String?
             
             var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
@@ -558,26 +565,13 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
                 let forwardPsaType = forwardInfo.psaType
                 
-                if let source = forwardInfo.source {
-                    forwardSource = source
-                    if let authorSignature = forwardInfo.authorSignature {
-                        forwardAuthorSignature = authorSignature
-                    } else if let forwardInfoAuthor = forwardInfo.author, forwardInfoAuthor.id != source.id {
-                        forwardAuthorSignature = EnginePeer(forwardInfoAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                    } else {
-                        forwardAuthorSignature = nil
-                    }
-                } else {
-                    if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
-                        forwardSource = nil
-                        forwardAuthorSignature = currentForwardInfo.0.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                    } else {
-                        forwardSource = forwardInfo.author
-                        forwardAuthorSignature = forwardInfo.authorSignature
-                    }
-                }
+                let resolvedForwardInfo = chatMessageForwardInfoDisplay(forwardInfo: forwardInfo, messageId: item.message.id, previouslyApplied: currentForwardInfo, peerDisplayTitle: { peer in
+                    return peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                })
+                forwardSource = resolvedForwardInfo.source
+                forwardAuthorSignature = resolvedForwardInfo.authorSignature
                 let availableWidth = max(60.0, availableContentWidth - normalDisplaySize.width + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .standalone, forwardSource.flatMap(EnginePeer.init), forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType == nil ? inlineBotNameString : nil, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
@@ -656,7 +650,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                     strongSelf.appliedParams = params
                     strongSelf.appliedItem = item
                     strongSelf.appliedHasAvatar = hasAvatar
-                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    strongSelf.appliedForwardInfo = ChatMessageAppliedForwardInfo(messageId: item.message.id, source: forwardSource, authorSignature: forwardAuthorSignature)
                     strongSelf.appliedCurrentlyPlaying = isPlaying
                     strongSelf.appliedAutomaticDownload = automaticDownload
                     
@@ -1496,12 +1490,6 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
         }
     }
     
-    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        if let reactionButtonsNode = self.reactionButtonsNode {
-            reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
-        }
-    }
-        
     override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result

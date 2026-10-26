@@ -1,7 +1,9 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
+import EdgeEffect
 import PagerComponent
 import TelegramPresentationData
 import TelegramCore
@@ -644,6 +646,7 @@ public final class EmojiPagerContentComponent: Component {
     public let enableLongPress: Bool
     public let selectedItems: Set<AnyHashable>
     public let customTintColor: UIColor?
+    public let selectedItemOrder: [AnyHashable: Int]?
     
     public init(
         id: AnyHashable,
@@ -670,7 +673,8 @@ public final class EmojiPagerContentComponent: Component {
         emptySearchResults: EmptySearchResults?,
         enableLongPress: Bool,
         selectedItems: Set<AnyHashable>,
-        customTintColor: UIColor?
+        customTintColor: UIColor?,
+        selectedItemOrder: [AnyHashable: Int]? = nil
     ) {
         self.id = id
         self.context = context
@@ -697,6 +701,7 @@ public final class EmojiPagerContentComponent: Component {
         self.enableLongPress = enableLongPress
         self.selectedItems = selectedItems
         self.customTintColor = customTintColor
+        self.selectedItemOrder = selectedItemOrder
     }
     
     public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: ContentId?, emptySearchResults: EmptySearchResults?, searchState: SearchState, canLoadMore: Bool? = nil) -> EmojiPagerContentComponent {
@@ -725,7 +730,8 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems,
-            customTintColor: self.customTintColor
+            customTintColor: self.customTintColor,
+            selectedItemOrder: self.selectedItemOrder
         )
     }
     
@@ -755,7 +761,8 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: selectedItems,
-            customTintColor: self.customTintColor
+            customTintColor: self.customTintColor,
+            selectedItemOrder: self.selectedItemOrder
         )
     }
     
@@ -785,7 +792,39 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems,
-            customTintColor: customTintColor
+            customTintColor: customTintColor,
+            selectedItemOrder: self.selectedItemOrder
+        )
+    }
+    
+    public func withSelection(items selectedItems: Set<AnyHashable>, order selectedItemOrder: [AnyHashable: Int]?) -> EmojiPagerContentComponent {
+        return EmojiPagerContentComponent(
+            id: self.id,
+            context: self.context,
+            avatarPeer: self.avatarPeer,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            inputInteractionHolder: self.inputInteractionHolder,
+            panelItemGroups: panelItemGroups,
+            contentItemGroups: contentItemGroups,
+            itemLayoutType: self.itemLayoutType,
+            itemContentUniqueId: itemContentUniqueId,
+            canLoadMore: self.canLoadMore,
+            searchState: searchState,
+            warpContentsOnEdges: self.warpContentsOnEdges,
+            hideBackground: self.hideBackground,
+            maskEdge: self.maskEdge,
+            displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
+            searchCategories: self.searchCategories,
+            searchInitiallyHidden: self.searchInitiallyHidden,
+            searchAlwaysActive: self.searchAlwaysActive,
+            searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            searchUnicodeEmojiOnly: self.searchUnicodeEmojiOnly,
+            emptySearchResults: emptySearchResults,
+            enableLongPress: self.enableLongPress,
+            selectedItems: selectedItems,
+            customTintColor: self.customTintColor,
+            selectedItemOrder: selectedItemOrder
         )
     }
     
@@ -863,6 +902,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.customTintColor != rhs.customTintColor {
+            return false
+        }
+        if lhs.selectedItemOrder != rhs.selectedItemOrder {
             return false
         }
         
@@ -1275,6 +1317,8 @@ public final class EmojiPagerContentComponent: Component {
         
         private final class ItemSelectionLayer: PassthroughLayer {
             let tintContainerLayer: SimpleLayer
+            private var orderBadgeLayer: SimpleLayer?
+            private var orderBadgeValue: (Int, UIColor)?
             
             override init() {
                 self.tintContainerLayer = SimpleLayer()
@@ -1282,6 +1326,97 @@ public final class EmojiPagerContentComponent: Component {
                 super.init()
                 
                 self.mirrorLayer = self.tintContainerLayer
+            }
+            
+            override func removeFromSuperlayer() {
+                self.orderBadgeLayer?.removeFromSuperlayer()
+                
+                super.removeFromSuperlayer()
+            }
+            
+            func animateIn() {
+                for layer in [self, self.tintContainerLayer] {
+                    layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                }
+                if let orderBadgeLayer = self.orderBadgeLayer {
+                    ItemSelectionLayer.animateBadgeIn(orderBadgeLayer)
+                }
+            }
+
+            func animateOutAndRemove() {
+                let tintContainerLayer = self.tintContainerLayer
+                for layer in [self, tintContainerLayer] {
+                    layer.animateAlpha(from: CGFloat(layer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    layer.animateScale(from: 1.0, to: 0.5, duration: 0.2, removeOnCompletion: false)
+                }
+                if let orderBadgeLayer = self.orderBadgeLayer {
+                    self.orderBadgeLayer = nil
+                    self.orderBadgeValue = nil
+                    ItemSelectionLayer.animateBadgeOutAndRemove(orderBadgeLayer)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: { [weak self, weak tintContainerLayer] in
+                    self?.removeFromSuperlayer()
+                    tintContainerLayer?.removeFromSuperlayer()
+                })
+            }
+
+            private static func animateBadgeIn(_ layer: CALayer) {
+                layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+            }
+
+            private static func animateBadgeOutAndRemove(_ layer: CALayer) {
+                layer.animateAlpha(from: CGFloat(layer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak layer] _ in
+                    layer?.removeFromSuperlayer()
+                })
+                layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            }
+
+            func updateOrderBadge(order: Int?, color: UIColor, itemFrame: CGRect, container: CALayer, animated: Bool) {
+                guard let order else {
+                    if let orderBadgeLayer = self.orderBadgeLayer {
+                        self.orderBadgeLayer = nil
+                        self.orderBadgeValue = nil
+                        if animated {
+                            ItemSelectionLayer.animateBadgeOutAndRemove(orderBadgeLayer)
+                        } else {
+                            orderBadgeLayer.removeFromSuperlayer()
+                        }
+                    }
+                    return
+                }
+                let badgeSide: CGFloat = 15.0
+                let orderBadgeLayer: SimpleLayer
+                var isNewBadge = false
+                if let current = self.orderBadgeLayer {
+                    orderBadgeLayer = current
+                } else {
+                    orderBadgeLayer = SimpleLayer()
+                    orderBadgeLayer.zPosition = 10.0
+                    self.orderBadgeLayer = orderBadgeLayer
+                    isNewBadge = true
+                }
+                if orderBadgeLayer.superlayer !== container {
+                    container.addSublayer(orderBadgeLayer)
+                }
+                if self.orderBadgeValue?.0 != order || self.orderBadgeValue?.1 != color {
+                    self.orderBadgeValue = (order, color)
+                    orderBadgeLayer.contents = generateImage(CGSize(width: badgeSide, height: badgeSide), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(color.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                        let string = NSAttributedString(string: "\(order)", font: Font.with(size: 10.0, design: .round, weight: .bold), textColor: .white)
+                        let stringSize = string.boundingRect(with: size, options: .usesLineFragmentOrigin, context: nil).size
+                        UIGraphicsPushContext(context)
+                        string.draw(at: CGPoint(x: floorToScreenPixels((size.width - stringSize.width) / 2.0), y: floorToScreenPixels((size.height - stringSize.height) / 2.0)))
+                        UIGraphicsPopContext()
+                    })?.cgImage
+                }
+                orderBadgeLayer.frame = CGRect(x: itemFrame.maxX - badgeSide + 4.0, y: itemFrame.minY - 4.0, width: badgeSide, height: badgeSide)
+                if isNewBadge && animated {
+                    ItemSelectionLayer.animateBadgeIn(orderBadgeLayer)
+                }
             }
             
             override func action(forKey event: String) -> CAAction? {
@@ -3369,7 +3504,8 @@ public final class EmojiPagerContentComponent: Component {
                                 color: foregroundColor,
                                 startingPosition: .begin,
                                 size: CGSize(width: 30.0, height: 30.0),
-                                loop: true
+                                loop: true,
+                                lottieSettings: component.context.lottieRenderingSettings
                             ))))
                         }
 
@@ -3480,12 +3616,14 @@ public final class EmojiPagerContentComponent: Component {
                         let itemPlaybackSize = itemDimensions.aspectFitted(CGSize(width: itemGroupLayout.playbackItemSize, height: itemGroupLayout.playbackItemSize))
                         
                         var animateItemIn = false
+                        var isNewItemLayer = false
                         var updateItemLayerPlaceholder = false
                         var itemTransition = transition
                         let itemLayer: EmojiKeyboardItemLayer
                         if let current = self.visibleItemLayers[itemId] {
                             itemLayer = current
                         } else {
+                            isNewItemLayer = true
                             updateItemLayerPlaceholder = true
                             itemTransition = .immediate
                             animateItemIn = !transition.animation.isImmediate
@@ -3667,9 +3805,11 @@ public final class EmojiPagerContentComponent: Component {
                         
                         if isSelected {
                             let itemSelectionLayer: ItemSelectionLayer
+                            var isNewSelection = false
                             if let current = self.visibleItemSelectionLayers[itemId] {
                                 itemSelectionLayer = current
                             } else {
+                                isNewSelection = true
                                 let cornerRadius = isEmoji ? baseItemFrame.width / 2.0 : 8.0
                                 itemSelectionLayer = ItemSelectionLayer()
                                 itemSelectionLayer.cornerRadius = cornerRadius
@@ -3697,12 +3837,34 @@ public final class EmojiPagerContentComponent: Component {
                             
                             itemTransition.setFrame(layer: itemSelectionLayer, frame: baseItemFrame)
                             
+                            if let selectedItemOrder = component.selectedItemOrder {
+                                var order: Int?
+                                if case let .staticEmoji(emoji) = item.content {
+                                    order = selectedItemOrder[emoji]
+                                } else if let itemFile = item.itemFile {
+                                    order = selectedItemOrder[itemFile.fileId]
+                                }
+                                itemSelectionLayer.updateOrderBadge(order: order, color: component.customTintColor ?? keyboardChildEnvironment.theme.list.itemAccentColor, itemFrame: baseItemFrame, container: self.scrollView.layer, animated: !isNewItemLayer && !isNewSelection)
+                            } else {
+                                itemSelectionLayer.updateOrderBadge(order: nil, color: .clear, itemFrame: baseItemFrame, container: self.scrollView.layer, animated: !isNewItemLayer)
+                            }
+                            if isNewSelection && !isNewItemLayer {
+                                itemSelectionLayer.animateIn()
+                            }
+                            
                             if isEmoji {
+                                let wasScaled = !CATransform3DIsIdentity(itemLayer.transform)
                                 itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                                if !wasScaled && !isNewItemLayer {
+                                    itemLayer.animateScale(from: 1.0, to: 0.8, duration: 0.2)
+                                }
                             }
                         } else {
-                            if isEmoji {
+                            if case .staticEmoji = item.content, !CATransform3DIsIdentity(itemLayer.transform) {
                                 itemLayer.transform = CATransform3DIdentity
+                                if !isNewItemLayer {
+                                    itemLayer.animateScale(from: 0.8, to: 1.0, duration: 0.2)
+                                }
                             }
                         }
                         
@@ -3892,7 +4054,12 @@ public final class EmojiPagerContentComponent: Component {
                 } else if let fileId = fileId, component.selectedItems.contains(fileId) {
                 } else if case let .staticEmoji(emoji) = id.itemId, component.selectedItems.contains(emoji) {
                 } else {
-                    itemSelectionLayer.removeFromSuperlayer()
+                    if self.visibleItemLayers[id] != nil {
+                        itemSelectionLayer.animateOutAndRemove()
+                    } else {
+                        itemSelectionLayer.removeFromSuperlayer()
+                        itemSelectionLayer.tintContainerLayer.removeFromSuperlayer()
+                    }
                     removedItemSelectionLayerIds.append(id)
                 }
             }
@@ -4599,11 +4766,11 @@ public final class EmojiPagerContentComponent: Component {
             }
             if let warpView = self.warpView {
                 transition.setFrame(view: warpView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize))
-                warpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: topWarpInset, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
+                warpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: topWarpInset, warpHeight: warpHeight, transition: transition)
             }
             if let mirrorContentWarpView = self.mirrorContentWarpView {
                 transition.setFrame(view: mirrorContentWarpView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize))
-                mirrorContentWarpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: topWarpInset, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
+                mirrorContentWarpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: topWarpInset, warpHeight: warpHeight, transition: transition)
             }
             
             if scrollSize.height > previousSize.height || transition.animation.isImmediate {

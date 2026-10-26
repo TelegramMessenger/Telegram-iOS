@@ -139,7 +139,8 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
     private func layoutTimeoutNode(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         if let timeoutNode = self.timeoutNode {
             let diameter: CGFloat = 28.0
-            transition.updateFrame(node: timeoutNode, frame: CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - diameter - 9.0, y: navigationBarHeight - 9.0 - diameter), size: CGSize(width: diameter, height: diameter)))
+            // In the bar's trailing place, clear of a status island beside the bar (iPhone Duo).
+            transition.updateFrame(node: timeoutNode, frame: CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - layout.navigationBarTrailingButtonsInset - diameter - 9.0, y: navigationBarHeight - 9.0 - diameter), size: CGSize(width: diameter, height: diameter)))
         }
     }
 }

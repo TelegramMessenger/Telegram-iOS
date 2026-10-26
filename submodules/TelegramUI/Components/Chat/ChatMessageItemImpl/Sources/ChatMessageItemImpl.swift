@@ -12,228 +12,11 @@ import PersistentStringHash
 import ChatControllerInteraction
 import ChatHistoryEntry
 import ChatMessageItem
+import ChatMessageItemCommon
 import ChatMessageItemView
 import ChatMessageStickerItemNode
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
-
-private func mediaMergeableStyle(_ media: EngineRawMedia) -> ChatMessageMerge {
-    if let story = media as? TelegramMediaStory, story.isMention {
-        return .none
-    }
-    if let file = media as? TelegramMediaFile {
-        for attribute in file.attributes {
-            switch attribute {
-                case .Sticker:
-                    return .semanticallyMerged
-                case let .Video(_, _, flags, _, _, _):
-                    if flags.contains(.instantRoundVideo) {
-                        return .none
-                    }
-                default:
-                    break
-            }
-        }
-        return .fullyMerged
-    }
-    if let _ = media as? TelegramMediaAction {
-        return .none
-    }
-    if let _ = media as? TelegramMediaExpiredContent {
-        return .none
-    }
-    
-    return .fullyMerged
-}
-
-private func anonymousGroupAdminSignature(message: EngineRawMessage, effectiveAuthor: EngineRawPeer?) -> String? {
-    guard let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info else {
-        return nil
-    }
-    guard effectiveAuthor?.id == channel.id else {
-        return nil
-    }
-    guard let signature = message.authorSignatureAttribute?.signature, !signature.isEmpty else {
-        return nil
-    }
-    return signature
-}
-
-private func messagesShouldBeMerged(accountPeerId: EnginePeer.Id, _ lhs: EngineRawMessage, _ rhs: EngineRawMessage) -> ChatMessageMerge {
-    var lhsEffectiveAuthor: EngineRawPeer? = lhs.author
-    var rhsEffectiveAuthor: EngineRawPeer? = rhs.author
-    for attribute in lhs.attributes {
-        if let attribute = attribute as? SourceReferenceMessageAttribute {
-            lhsEffectiveAuthor = lhs.peers[attribute.messageId.peerId]
-            break
-        }
-    }
-    let lhsSourceAuthorInfo = lhs.sourceAuthorInfo
-    if let sourceAuthorInfo = lhsSourceAuthorInfo {
-        if let originalAuthor = sourceAuthorInfo.originalAuthor {
-            lhsEffectiveAuthor = lhs.peers[originalAuthor]
-        }
-    }
-    for attribute in rhs.attributes {
-        if let attribute = attribute as? SourceReferenceMessageAttribute {
-            rhsEffectiveAuthor = rhs.peers[attribute.messageId.peerId]
-            break
-        }
-    }
-    let rhsSourceAuthorInfo = rhs.sourceAuthorInfo
-    if let sourceAuthorInfo = rhsSourceAuthorInfo {
-        if let originalAuthor = sourceAuthorInfo.originalAuthor {
-            rhsEffectiveAuthor = rhs.peers[originalAuthor]
-        }
-    }
-    
-    if let channel = lhs.peers[lhs.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info {
-        if info.flags.contains(.messagesShouldHaveProfiles) {
-            lhsEffectiveAuthor = lhs.author
-            rhsEffectiveAuthor = rhs.author
-        }
-    }
-    
-    var sameChat = true
-    if lhs.id.peerId != rhs.id.peerId {
-        sameChat = false
-    }
-    
-    var isPaid = false
-    if let _ = lhs.paidStarsAttribute, let _ = rhs.paidStarsAttribute {
-        isPaid = true
-    }
-    
-    let sameThread = true
-    /*if let lhsPeer = lhs.peers[lhs.id.peerId], let rhsPeer = rhs.peers[rhs.id.peerId], arePeersEqual(lhsPeer, rhsPeer), let channel = lhsPeer as? TelegramChannel, channel.isForumOrMonoForum, lhs.threadId != rhs.threadId {
-        sameThread = false
-    }*/
-        
-    var sameAuthor = false
-    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
-        sameAuthor = true
-    }
-    
-    if let lhsSourceAuthorInfo, let rhsSourceAuthorInfo {
-        if lhsSourceAuthorInfo.originalAuthor != rhsSourceAuthorInfo.originalAuthor {
-            sameAuthor = false
-        } else if lhsSourceAuthorInfo.originalAuthorName != rhsSourceAuthorInfo.originalAuthorName {
-            sameAuthor = false
-        }
-    } else if (lhsSourceAuthorInfo == nil) != (rhsSourceAuthorInfo == nil) {
-        sameAuthor = false
-    }
-    
-    if sameAuthor {
-        let lhsAnonymousAdminSignature = anonymousGroupAdminSignature(message: lhs, effectiveAuthor: lhsEffectiveAuthor)
-        let rhsAnonymousAdminSignature = anonymousGroupAdminSignature(message: rhs, effectiveAuthor: rhsEffectiveAuthor)
-        if lhsAnonymousAdminSignature != rhsAnonymousAdminSignature && (lhsAnonymousAdminSignature != nil || rhsAnonymousAdminSignature != nil) {
-            sameAuthor = false
-        }
-    }
-
-    var lhsEffectiveTimestamp = lhs.timestamp
-    var rhsEffectiveTimestamp = rhs.timestamp
-    
-    if let lhsForwardInfo = lhs.forwardInfo, lhsForwardInfo.flags.contains(.isImported), let rhsForwardInfo = rhs.forwardInfo, rhsForwardInfo.flags.contains(.isImported) {
-        lhsEffectiveTimestamp = lhsForwardInfo.date
-        rhsEffectiveTimestamp = rhsForwardInfo.date
-        
-        if (lhsForwardInfo.author?.id != nil) == (rhsForwardInfo.author?.id != nil) && (lhsForwardInfo.authorSignature != nil) == (rhsForwardInfo.authorSignature != nil) {
-            if let lhsAuthorId = lhsForwardInfo.author?.id, let rhsAuthorId = rhsForwardInfo.author?.id {
-                sameAuthor = lhsAuthorId == rhsAuthorId
-            } else if let lhsAuthorSignature = lhsForwardInfo.authorSignature, let rhsAuthorSignature = rhsForwardInfo.authorSignature {
-                sameAuthor = lhsAuthorSignature == rhsAuthorSignature
-            }
-        } else {
-            sameAuthor = false
-        }
-    }
-    
-    if lhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
-        if let forwardInfo = lhs.forwardInfo {
-            lhsEffectiveAuthor = forwardInfo.author
-        }
-    }
-    if rhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
-        if let forwardInfo = rhs.forwardInfo {
-            rhsEffectiveAuthor = forwardInfo.author
-        }
-    }
-    
-    var isNonMergeablePaid = isPaid
-    if isNonMergeablePaid {
-        if let channel = lhs.peers[lhs.id.peerId] as? TelegramChannel, channel.flags.contains(.isMonoforum) {
-            isNonMergeablePaid = false
-        }
-    }
-    
-    if abs(lhsEffectiveTimestamp - rhsEffectiveTimestamp) < Int32(10 * 60) && sameChat && sameAuthor && sameThread && !isNonMergeablePaid {
-        if let channel = lhs.peers[lhs.id.peerId] as? TelegramChannel, case .group = channel.info, lhsEffectiveAuthor?.id == channel.id, !lhs.effectivelyIncoming(accountPeerId) {
-            return .none
-        }
-        
-        var upperStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
-        var lowerStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
-        for media in lhs.media {
-            let style = mediaMergeableStyle(media).rawValue
-            if style < upperStyle {
-                upperStyle = style
-            }
-        }
-        for media in rhs.media {
-            let style = mediaMergeableStyle(media).rawValue
-            if style < lowerStyle {
-                lowerStyle = style
-            }
-        }
-        for attribute in lhs.attributes {
-            if let attribute = attribute as? ReplyMarkupMessageAttribute {
-                if attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
-                    upperStyle = ChatMessageMerge.none.rawValue
-                }
-                break
-            }
-        }
-        
-        let style = min(upperStyle, lowerStyle)
-        return ChatMessageMerge(rawValue: style)!
-    }
-    
-    return .none
-}
-
-public func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -> Bool{
-    let lhsHeader: ChatMessageDateHeader?
-    let rhsHeader: ChatMessageDateHeader?
-    if let lhs = lhs as? ChatMessageItemImpl {
-        lhsHeader = lhs.dateHeader
-    } else if let lhs = lhs as? ChatUnreadItem {
-        lhsHeader = lhs.header
-    } else if let lhs = lhs as? ChatReplyCountItem {
-        lhsHeader = lhs.header
-    } else {
-        lhsHeader = nil
-    }
-    if let rhs = rhs {
-        if let rhs = rhs as? ChatMessageItemImpl {
-            rhsHeader = rhs.dateHeader
-        } else if let rhs = rhs as? ChatUnreadItem {
-            rhsHeader = rhs.header
-        } else if let rhs = rhs as? ChatReplyCountItem {
-            rhsHeader = rhs.header
-        } else {
-            rhsHeader = nil
-        }
-    } else {
-        rhsHeader = nil
-    }
-    if let lhsHeader = lhsHeader, let rhsHeader = rhsHeader {
-        return lhsHeader.id == rhsHeader.id
-    } else {
-        return false
-    }
-}
 
 public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible {
     public let presentationData: ChatPresentationData
@@ -251,7 +34,20 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
     let avatarHeader: ChatMessageAvatarHeader?
 
     public let headers: [ListViewItemHeader]
-    
+
+    /// Computed, not stored: evaluated only when an adjacent item is laid out or diffed, and it
+    /// costs the same media/attribute walk the merge computation already did per layout. Items are
+    /// created for every entry in the filtered view, most of which never reach layout, so storing
+    /// it would pay that cost for all of them.
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ChatHistoryItemNeighbor.message(
+            dateHeaderId: self.dateHeader.id,
+            topicHeaderId: self.topicHeader?.id,
+            merge: ChatMessageMergeFingerprint(message: self.message,
+                                               accountPeerId: self.context.account.peerId)
+        ))
+    }
+
     public var message: EngineRawMessage {
         switch self.content {
             case let .message(message, _, _, _, _):
@@ -318,6 +114,13 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         
         var avatarHeader: ChatMessageAvatarHeader?
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
+        let isEphemeralMessage = Namespaces.Message.allEphemeral.contains(content.firstMessage.id.namespace) || Namespaces.Message.allWelcomeMessages.contains(content.firstMessage.id.namespace)
+        let isEphemeralBroadcastMessage: Bool
+        if isEphemeralMessage, let channel = content.firstMessage.peers[content.firstMessage.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+            isEphemeralBroadcastMessage = true
+        } else {
+            isEphemeralBroadcastMessage = false
+        }
         
         var effectiveAuthor: EngineRawPeer?
         var displayAuthorInfo: Bool
@@ -438,7 +241,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             }
             
             var hasAvatar = false
-            if !hasActionMedia {
+            if !hasActionMedia && !isEphemeralBroadcastMessage {
                 if !isBroadcastChannel {
                     if let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.isMonoForum, chatLocation.threadId != nil {
                     } else {
@@ -465,7 +268,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                         }
                     }
                     
-                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction, storyStats: storyStats)
+                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: EnginePeer(effectiveAuthor), messageReference: MessageReference(message), message: EngineMessage(message), presentationData: presentationData, context: context, controllerInteraction: controllerInteraction, storyStats: storyStats)
                 }
             }
         }
@@ -490,7 +293,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         self.headers = headers
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
         loop: for media in self.message.media {
@@ -569,7 +372,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             node.setupItem(self, synchronousLoad: synchronousLoads)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem, isRotated:  self.controllerInteraction.chatIsRotated)
+            let (top, bottom, dateAtBottom) = self.merged(with: ChatHistoryItemNeighbors(neighbors), isRotated: self.controllerInteraction.chatIsRotated)
             
             var disableDate = self.disableDate
             if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {
@@ -593,7 +396,6 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { info in
-                        info.setIsOffscreen()
                         apply(.None, info, synchronousLoads)
                     })
                 })
@@ -608,63 +410,63 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
     }
     
-    public func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: ChatMessageHeaderSpec) {
-        var top = top
-        var bottom = bottom
+    public func merged(with neighbors: ChatHistoryItemNeighbors, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: ChatMessageHeaderSpec) {
+        var top = neighbors.previous
+        var bottom = neighbors.next
         if !isRotated {
             let previousTop = top
             top = bottom
             bottom = previousTop
         }
-        
+
+        let selfFingerprint = ChatMessageMergeFingerprint(message: self.message,
+                                                          accountPeerId: self.context.account.peerId)
+        let isWelcomeMessage = Namespaces.Message.allWelcomeMessages.contains(self.message.id.namespace)
+
         var mergedTop: ChatMessageMerge = .none
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = ChatMessageHeaderSpec(hasDate: false, hasTopic: false)
-        if let top = top as? ChatMessageItemImpl {
-            if top.dateHeader.id != self.dateHeader.id {
+
+        if case let .message(topDateHeaderId, _, topMerge) = top {
+            if topDateHeaderId != self.dateHeader.id && !isWelcomeMessage {
                 mergedBottom = .none
             } else {
-                mergedBottom = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, message, top.message)
+                mergedBottom = chatMessageMerge(upper: selfFingerprint, lower: topMerge)
             }
         }
-        if let bottom = bottom as? ChatMessageItemImpl {
-            if bottom.dateHeader.id != self.dateHeader.id {
+
+        switch bottom {
+        case let .message(bottomDateHeaderId, bottomTopicHeaderId, bottomMerge):
+            if bottomDateHeaderId != self.dateHeader.id && !isWelcomeMessage {
                 mergedTop = .none
                 dateAtBottom.hasDate = true
             }
-            if let topicHeader = self.topicHeader, bottom.topicHeader?.id != topicHeader.id {
+            if let topicHeader = self.topicHeader, bottomTopicHeaderId != topicHeader.id {
                 mergedTop = .none
                 dateAtBottom.hasTopic = true
             }
-            
+
             if !(dateAtBottom.hasDate || dateAtBottom.hasTopic) {
-                mergedTop = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, bottom.message, message)
+                mergedTop = chatMessageMerge(upper: bottomMerge, lower: selfFingerprint)
             }
-        } else if let bottom = bottom as? ChatUnreadItem {
-            if bottom.header.id != self.dateHeader.id {
+        case let .unread(bottomDateHeaderId), let .replyCount(bottomDateHeaderId):
+            if bottomDateHeaderId != self.dateHeader.id {
                 dateAtBottom.hasDate = true
             }
             if self.topicHeader != nil {
                 dateAtBottom.hasTopic = true
             }
-        } else if let bottom = bottom as? ChatReplyCountItem {
-            if bottom.header.id != self.dateHeader.id {
-                dateAtBottom.hasDate = true
-            }
-            if self.topicHeader != nil {
-                dateAtBottom.hasTopic = true
-            }
-        } else {
+        case nil:
             dateAtBottom.hasDate = true
             if self.topicHeader != nil {
                 dateAtBottom.hasTopic = true
             }
         }
-        
+
         return (mergedTop, mergedBottom, dateAtBottom)
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatMessageItemView {
                 nodeValue.setupItem(self, synchronousLoad: false)
@@ -674,7 +476,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 let isRotated = self.controllerInteraction.chatIsRotated
                 
                 async {
-                    let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem, isRotated: isRotated)
+                    let (top, bottom, dateAtBottom) = self.merged(with: ChatHistoryItemNeighbors(neighbors), isRotated: isRotated)
                     
                     var disableDate = self.disableDate
                     if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {

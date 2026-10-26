@@ -242,7 +242,6 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     override func didLoad() {
         super.didLoad()
         
-        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     func updateCountry(_ iso2: String) {
@@ -455,7 +454,8 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.input])
-        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+        // Below the bar, or the status bar the bar lays out under (compact beside iPhone Duo's status island).
+        insets.top += max(navigationBarHeight, max(layout.navigationBarStatusBarHeight ?? 0.0, layout.intrinsicInsets.top))
         
         var contentHeight: CGFloat = 0.0
         
@@ -468,8 +468,13 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         
         let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
         var sideInset: CGFloat = 0.0
+        var rightSideInset: CGFloat = 0.0
         if layout.size.width >= 320.0 {
-            sideInset = inset
+            // iPhone Duo: a side with a side strip keeps the form 16pt clear of it; without a strip both margins
+            // are `inset`.
+            let margins = layout.listSideMargins(base: inset)
+            sideInset = margins.left
+            rightSideInset = margins.right
         }
         
         for items in self.itemNodes {
@@ -481,7 +486,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             
             for i in 0 ..< items.count {
                 let item = items[i]
-                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, sideInset: sideInset, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
+                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, sideInset: sideInset, rightSideInset: rightSideInset, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
                 transition.updateFrame(node: item, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: itemHeight)))
                 contentHeight += itemHeight
             }
@@ -515,7 +520,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         }
         
         self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: sideInset, height: layout.size.height)
-        self.rightOverlayNode.frame = CGRect(x: layout.size.width - sideInset, y: 0.0, width: sideInset, height: layout.size.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - rightSideInset, y: 0.0, width: rightSideInset, height: layout.size.height)
         
         if let previousLayout = previousLayout {
             var previousInsets = previousLayout.0.insets(options: [.input])
@@ -554,8 +559,6 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         guard !self.scrollNode.view.ignoreUpdateBounds else {
             return
         }
-        let value = scrollView.contentOffset.y + scrollView.contentInset.top
-        self.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: .immediate)
     }
     
 }

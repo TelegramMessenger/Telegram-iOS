@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import TelegramCore
@@ -38,7 +39,7 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         
         let textFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Cop"), width: 192, height: 192, playbackMode: .count(2), mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

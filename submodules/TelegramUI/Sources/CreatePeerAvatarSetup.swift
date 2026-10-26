@@ -159,7 +159,7 @@ enum CreatePeerAvatarSetup {
                     case .completed:
                         if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: .mappedIfSafe) {
                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                            account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                            TelegramEngine(account: account).resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data, synchronous: true)
                             subscriber.putNext(resource)
                             subscriber.putCompletion()
                         }

@@ -38,7 +38,7 @@ final class ClipboardChecklistTests: XCTestCase {
         v.setBlocks([.paragraph(ParagraphBlock(id: .generate(), runs: []))], width: 300)
         // Caret at global position 1 (end of the sole empty paragraph's content slot).
         // allLeafRegions().first gives us the one region; globalStart+length is the end.
-        if let r = v.allLeafRegions().first { v.anchor = r.globalStart + r.length; v.head = v.anchor }
+        if let r = v.allLeafRegions().first { v.setSelectionForTesting(anchor: r.globalStart + r.length, head: r.globalStart + r.length) }
         return v
     }
 

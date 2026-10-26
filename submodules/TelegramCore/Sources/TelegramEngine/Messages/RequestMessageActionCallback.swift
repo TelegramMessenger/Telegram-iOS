@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 public enum MessageActionCallbackResult {
@@ -24,7 +24,7 @@ public enum MessageActionCallbackError {
 }
 
 func _internal_requestMessageActionCallbackPasswordCheck(account: Account, messageId: MessageId, isGame: Bool, data: MemoryBuffer?) -> Signal<Never, MessageActionCallbackError> {
-    if messageId.namespace == Namespaces.Message.EphemeralLocal {
+    if Namespaces.Message.allEphemeral.contains(messageId.namespace) {
         return .fail(.generic)
     }
 
@@ -76,7 +76,7 @@ func _internal_requestMessageActionCallbackPasswordCheck(account: Account, messa
 }
 
 func _internal_requestMessageActionCallback(account: Account, messageId: MessageId, isGame :Bool, password: String?, data: MemoryBuffer?) -> Signal<MessageActionCallbackResult, MessageActionCallbackError> {
-    if messageId.namespace == Namespaces.Message.EphemeralLocal {
+    if Namespaces.Message.allEphemeral.contains(messageId.namespace) {
         if isGame || password != nil {
             return .fail(.generic)
         }
@@ -153,7 +153,7 @@ func _internal_requestMessageActionCallback(account: Account, messageId: Message
                 }
                 |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP?, MessageActionCallbackError> in
                     if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
-                        guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+                        guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, keychain: account.network.context.keychain, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
                             return .fail(.generic)
                         }
                         return .single(.inputCheckPasswordSRP(.init(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))))
@@ -367,7 +367,7 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
                     if matchCode != nil {
                         msgFlags |= Int32(1 << 4)
                     }
-                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: msgFlags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, matchCode: matchCode))
+                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: msgFlags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, matchCode: matchCode, tonconnectSession: nil))
                     |> map(Optional.init)
                 } else {
                     return .single(nil)
@@ -375,7 +375,7 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
             }
         case let .url(url, _):
             flags |= (1 << 2)
-            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: matchCode))
+            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: matchCode, tonconnectSession: nil))
             |> map(Optional.init)
     }
     

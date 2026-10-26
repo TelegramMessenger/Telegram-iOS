@@ -1,21 +1,19 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 
 protocol TelegramCloudMediaResource: TelegramMediaResource {
     func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation?
 }
 
+/// Identifies a downloadable cloud resource in a log report: its id, as the FetchV2 log lines
+/// name it. (An Api value prints only its constructor name.)
 public func extractMediaResourceDebugInfo(resource: MediaResource) -> String? {
-    if let resource = resource as? TelegramCloudMediaResource {
-        guard let inputLocation = resource.apiInputLocation(fileReference: nil) else {
-            return nil
-        }
-        return String(describing: inputLocation)
-    } else {
+    guard let cloudResource = resource as? TelegramCloudMediaResource, cloudResource.apiInputLocation(fileReference: nil) != nil else {
         return nil
     }
+    return resource.id.stringRepresentation
 }
 
 public protocol TelegramMultipartFetchableResource: TelegramMediaResource {

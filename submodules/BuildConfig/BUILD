@@ -1,3 +1,5 @@
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
 load(
     "@build_configuration//:variables.bzl",
     "telegram_api_id",

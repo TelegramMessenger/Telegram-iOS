@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 extension TelegramExtendedMedia {
     init?(apiExtendedMedia: Api.MessageExtendedMedia, peerId: PeerId) {

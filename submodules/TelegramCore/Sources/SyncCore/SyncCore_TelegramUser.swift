@@ -142,15 +142,18 @@ public struct PeerVerification: Codable, Equatable {
     public let botId: PeerId
     public let iconFileId: Int64
     public let description: String
+    public let descriptionEntities: [MessageTextEntity]
     
     public init(
         botId: PeerId,
         iconFileId: Int64,
-        description: String
+        description: String,
+        descriptionEntities: [MessageTextEntity]
     ) {
         self.botId = botId
         self.iconFileId = iconFileId
         self.description = description
+        self.descriptionEntities = descriptionEntities
     }
 }
 

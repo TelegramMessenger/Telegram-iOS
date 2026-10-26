@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -150,10 +151,6 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             let navigationAlphaDistance: CGFloat = 16.0
             let navigationAlpha: CGFloat = max(0.0, min(1.0, (self.scrollView.contentOffset.y - navigationRevealOffsetY) / navigationAlphaDistance))
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
-                transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
-            }
             
             var scrolledUp = false
             if navigationAlpha < 0.5 {
@@ -311,7 +308,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
@@ -322,7 +319,11 @@ final class BusinessLocationSetupScreenComponent: Component {
             }
             
             let bottomContentInset: CGFloat = 24.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let sectionSpacing: CGFloat = 24.0
             
             var contentHeight: CGFloat = 0.0
@@ -333,12 +334,13 @@ final class BusinessLocationSetupScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "MapEmoji"),
-                    loop: false
+                    loop: false,
+                    lottieSettings: component.context.lottieRenderingSettings
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 11.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - iconSize.width * 0.5), y: contentHeight + 11.0), size: iconSize)
             if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -382,9 +384,9 @@ final class BusinessLocationSetupScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: contentHeight), size: subtitleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - subtitleSize.width * 0.5), y: contentHeight), size: subtitleSize)
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     self.scrollView.addSubview(subtitleView)
@@ -428,7 +430,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                     items: addressSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let addressSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: addressSectionSize)
             if let addressSectionView = self.addressSection.view {
@@ -504,7 +506,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                     displaySeparators: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let mapSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: mapSectionSize)
             if let mapSectionView = self.mapSection.view {
@@ -554,7 +556,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                     displaySeparators: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let deleteSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + deleteSectionHeight), size: deleteSectionSize)
             if let deleteSectionView = self.deleteSection.view {
@@ -684,6 +686,16 @@ public final class BusinessLocationSetupScreen: ViewControllerComponentContainer
         self.dismiss()
     }
     
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard layout.metrics.widthClass == .regular else {
+            return nil
+        }
+        return CGSize(
+            width: min(480.0, layout.size.width - 20.0),
+            height: min(layout.size.width, layout.size.height) - 88.0
+        )
+    }
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     }

@@ -41,7 +41,7 @@ final class InstantPageSettingsBacklightItemNode: InstantPageSettingsItemNode {
         
         self.updateTheme(theme)
         
-        self.sliderView.value = UIScreen.main.brightness * 100.0
+        self.sliderView.value = mainWindowScreen.brightness * 100.0
         self.sliderView.addTarget(self, action: #selector(self.sliderChanged), for: .valueChanged)
         self.view.addSubview(self.sliderView)
         
@@ -73,6 +73,6 @@ final class InstantPageSettingsBacklightItemNode: InstantPageSettingsItemNode {
     }
     
     @objc func sliderChanged() {
-        UIScreen.main.brightness = self.sliderView.value / 100.0
+        mainWindowScreen.brightness = self.sliderView.value / 100.0
     }
 }

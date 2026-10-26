@@ -44,7 +44,7 @@ public final class NavigationModalFrame: ASDisplayNode {
     private let bottomLeftCorner: ASImageNode
     private let bottomRightCorner: ASImageNode
     
-    private var currentMaxCornerRadius: CGFloat?
+    private var currentCornerImageRadii: CornerRadii?
     
     private var progress: CGFloat = 1.0
     private var additionalProgress: CGFloat = 0.0
@@ -98,6 +98,30 @@ public final class NavigationModalFrame: ASDisplayNode {
         }
     }
     
+    /// Dismisses the frame and removes it. Dismissed, its corners stand on the screen's own, as large as the screen
+    /// rounds them; removed then, they would be cut off at once wherever the screen is not rounded quite like them (a
+    /// recording is not rounded at all). So they shrink into the screen's corners first, which on the screen stays
+    /// inside the corners it rounds.
+    public func dismissAndRemove(transition: ContainedViewLayoutTransition) {
+        self.updateDismissal(transition: transition, progress: 1.0, additionalProgress: 0.0, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            guard transition.isAnimated, let layout = self.validLayout else {
+                self.removeFromSupernode()
+                return
+            }
+            let shrink = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            let size = layout.size
+            shrink.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(), size: CGSize()), beginWithCurrentState: true)
+            shrink.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: size.width, y: 0.0), size: CGSize()), beginWithCurrentState: true)
+            shrink.updateFrame(node: self.bottomLeftCorner, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height), size: CGSize()), beginWithCurrentState: true)
+            shrink.updateFrame(node: self.bottomRightCorner, frame: CGRect(origin: CGPoint(x: size.width, y: size.height), size: CGSize()), beginWithCurrentState: true, completion: { [weak self] _ in
+                self?.removeFromSupernode()
+            })
+        })
+    }
+    
     private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let sideInset: CGFloat = 16.0
         var topInset: CGFloat = 0.0
@@ -110,27 +134,34 @@ public final class NavigationModalFrame: ASDisplayNode {
         let bottomInset: CGFloat = layout.size.height - contentScale * layout.size.height - topInset
         
         let cornerRadius: CGFloat = 38.0
-        let initialCornerRadius: CGFloat
-        if !layout.safeInsets.top.isZero {
-            initialCornerRadius = layout.deviceMetrics.screenCornerRadius
+        let initialCornerRadii: CornerRadii
+        if case .iPhoneDuo = layout.deviceMetrics {
+            // iPhone Duo: the screen is rounded in every posture although the top safe inset can be 0 (folded, the
+            // status area is at the side), and the folded screen's corners differ: 8pt on the hinge side, 59pt
+            // outside. Each corner starts from its own screen corner.
+            initialCornerRadii = layout.screenCornerRadii
+        } else if !layout.safeInsets.top.isZero {
+            initialCornerRadii = CornerRadii(uniform: layout.deviceMetrics.screenCornerRadius)
         } else {
-            initialCornerRadius = 0.0
+            initialCornerRadii = CornerRadii(uniform: 0.0)
         }
-        if self.currentMaxCornerRadius != cornerRadius {
-            self.topLeftCorner.image = generateCornerImage(radius: max(initialCornerRadius, cornerRadius), type: .topLeft)
-            self.topRightCorner.image = generateCornerImage(radius: max(initialCornerRadius, cornerRadius), type: .topRight)
-            self.bottomLeftCorner.image = generateCornerImage(radius: max(initialCornerRadius, cornerRadius), type: .bottomLeft)
-            self.bottomRightCorner.image = generateCornerImage(radius: max(initialCornerRadius, cornerRadius), type: .bottomRight)
+        let cornerImageRadii = initialCornerRadii.mapRadii { max($0, cornerRadius) }
+        if self.currentCornerImageRadii != cornerImageRadii {
+            self.currentCornerImageRadii = cornerImageRadii
+            self.topLeftCorner.image = generateCornerImage(radius: cornerImageRadii.topLeft, type: .topLeft)
+            self.topRightCorner.image = generateCornerImage(radius: cornerImageRadii.topRight, type: .topRight)
+            self.bottomLeftCorner.image = generateCornerImage(radius: cornerImageRadii.bottomLeft, type: .bottomLeft)
+            self.bottomRightCorner.image = generateCornerImage(radius: cornerImageRadii.bottomRight, type: .bottomRight)
         }
         
-        let cornerSize = progress * cornerRadius + (1.0 - progress) * initialCornerRadius
+        let cornerSizes = initialCornerRadii.mapRadii { progress * cornerRadius + (1.0 - progress) * $0 }
         let cornerSideOffset: CGFloat = progress * sideInset + additionalProgress * sideInset
         let cornerTopOffset: CGFloat = progress * topInset + additionalProgress * additionalTopInset
         let cornerBottomOffset: CGFloat = progress * bottomInset
-        transition.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
-        transition.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
-        transition.updateFrame(node: self.bottomLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: layout.size.height - cornerBottomOffset - cornerSize), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
-        transition.updateFrame(node: self.bottomRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: layout.size.height - cornerBottomOffset - cornerSize), size: CGSize(width: cornerSize, height: cornerSize)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: cornerTopOffset), size: CGSize(width: cornerSizes.topLeft, height: cornerSizes.topLeft)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSizes.topRight, y: cornerTopOffset), size: CGSize(width: cornerSizes.topRight, height: cornerSizes.topRight)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.bottomLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: layout.size.height - cornerBottomOffset - cornerSizes.bottomLeft), size: CGSize(width: cornerSizes.bottomLeft, height: cornerSizes.bottomLeft)), beginWithCurrentState: true)
+        transition.updateFrame(node: self.bottomRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSizes.bottomRight, y: layout.size.height - cornerBottomOffset - cornerSizes.bottomRight), size: CGSize(width: cornerSizes.bottomRight, height: cornerSizes.bottomRight)), beginWithCurrentState: true)
         
         let topShadeOffset: CGFloat = progress * topInset + additionalProgress * additionalTopInset
         let bottomShadeOffset: CGFloat = progress * bottomInset

@@ -254,16 +254,15 @@ public final class DirectMediaImageCache {
                 representationId = "shm\(width)-\(aspectRatio)"
             }
         }
-        return self.account.postbox.mediaBox.cachedRepresentationPathForId(resourceId.stringRepresentation, representationId: representationId, keepDuration: .general)
+        return TelegramEngine(account: self.account).resources.cachedRepresentationPath(id: resourceId.stringRepresentation, representationId: representationId, keepDuration: .general)
     }
 
     private func getLoadSignal(width: Int, aspectRatio: CGFloat, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resource: MediaResourceReference, resourceSizeLimit: Int64) -> Signal<UIImage?, NoError>? {
         return Signal { subscriber in
-            let fetch = fetchedMediaResource(
-                mediaBox: self.account.postbox.mediaBox,
+            let fetch = TelegramEngine(account: self.account).resources.fetch(
+                reference: resource,
                 userLocation: userLocation,
                 userContentType: userContentType,
-                reference: resource,
                 ranges: [(0 ..< resourceSizeLimit, .default)],
                 statsCategory: .image,
                 reportResultStatus: false,
@@ -273,14 +272,14 @@ public final class DirectMediaImageCache {
 
             let dataSignal: Signal<Data?, NoError>
             if resourceSizeLimit < Int64.max {
-                dataSignal = self.account.postbox.mediaBox.resourceData(resource.resource, size: resourceSizeLimit, in: 0 ..< resourceSizeLimit)
+                dataSignal = TelegramEngine(account: self.account).resources.rangeData(resource: EngineMediaResource(resource.resource), size: resourceSizeLimit, range: 0 ..< resourceSizeLimit)
                 |> map { data, _ -> Data? in
                     return data
                 }
             } else {
-                dataSignal = self.account.postbox.mediaBox.resourceData(resource.resource)
+                dataSignal = TelegramEngine(account: self.account).resources.data(resource: EngineMediaResource(resource.resource))
                 |> filter { data in
-                    return data.complete
+                    return data.isComplete
                 }
                 |> take(1)
                 |> map { data -> Data? in

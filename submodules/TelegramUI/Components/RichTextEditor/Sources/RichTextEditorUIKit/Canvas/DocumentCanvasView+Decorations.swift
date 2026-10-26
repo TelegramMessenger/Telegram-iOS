@@ -4,26 +4,11 @@ import RichTextEditorCore
 
 @available(iOS 13.0, *)
 extension DocumentCanvasView {
-    struct BlockquoteDecoration { let fill: CGRect; let bar: CGRect }
-
-    /// One bar+fill rect pair per CodeBlockBox, in canvas coordinates. Each code block is its own
-    /// run (rounded at both ends). The block frames are already inset by the page margin (root layout),
-    /// so the bar sits at `frame.minX` and the fill spans the content width. Drawn behind the text.
-    func blockquoteDecorations() -> [BlockquoteDecoration] {
-        var result: [BlockquoteDecoration] = []
-        for box in boxes {
-            if let code = box as? CodeBlockBox {
-                result.append(BlockquoteDecoration(fill: code.frame,
-                                                   bar: CGRect(x: code.frame.minX, y: code.frame.minY,
-                                                               width: self.quoteStyle.barWidth, height: code.frame.height)))
-            }
-        }
-        return result
-    }
-
     /// Every BlockQuoteBox frame in the document (root + nested inside quote children / table cells),
-    /// in canvas coordinates, for the fill underlay. Replaces the old root-only BlockQuoteBox case that
-    /// was in `blockquoteDecorations()` — the recursive walk ensures nested quotes each get a fill.
+    /// in canvas coordinates, for the fill underlay. This recursive walk is now the underlay's ONLY
+    /// feed: code blocks left it when they stopped being a quote variant and started painting their
+    /// own plain band, which is also what made a NESTED code block filled at all — the walk this
+    /// replaced only ever saw top-level boxes.
     func blockQuoteFillRects() -> [CGRect] {
         var out: [CGRect] = []
         func walk(_ boxes: [CanvasBlock]) {
@@ -41,8 +26,8 @@ extension DocumentCanvasView {
     }
 
     /// Blockquote fill corner radius (measured from the reference design). Consumed by the
-    /// `BlockquoteUnderlay` image factory (the fills are now drawn by a stretchable-image underlay,
-    /// not into the canvas context); `blockquoteDecorations()` above still supplies the run rects.
+    /// `BlockquoteUnderlay` image factory (the fills are drawn by a stretchable-image underlay, not
+    /// into the canvas context); `blockQuoteFillRects()` above supplies the run rects.
     static let blockquoteCornerRadius: CGFloat = 2.5
 
     /// One centered, content-hugging pill rect per PullQuoteBox (canvas coords). Width = the box's widest laid-out

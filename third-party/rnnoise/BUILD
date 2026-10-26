@@ -1,4 +1,6 @@
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 replace_symbol_list = [
     "_celt_autocorr",
     "celt_fir",

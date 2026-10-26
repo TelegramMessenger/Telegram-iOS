@@ -468,7 +468,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                  |> deliverOnMainQueue).start(next: { [weak self] status in
                      if let self {
                          switch status {
-                         case .none, .completed:
+                         case .none, .completed, .failed:
                              self.updateProgress(nil, animated: true)
                          case let .progress(progress):
                              self.updateProgress(progress, animated: true)
@@ -554,7 +554,9 @@ final class MediaPickerGridItemNode: GridItemNode {
             
             var typeIcon: UIImage?
             var duration: String?
-            if asset.mediaType == .video {
+            if asset.value(forKey: "uniformTypeIdentifier") as? String == "com.compuserve.gif" {
+                duration = "GIF"
+            } else if asset.mediaType == .video {
                 if asset.mediaSubtypes.contains(.videoHighFrameRate) {
                     typeIcon = UIImage(bundleImageName: "Media Editor/MediaSlomo")
                 } else if asset.mediaSubtypes.contains(.videoTimelapse) {

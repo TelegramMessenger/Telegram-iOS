@@ -32,7 +32,7 @@ final class CanvasLinkTests: XCTestCase {
     }
     func selectParagraph(_ v: DocumentCanvasView, _ id: String, _ lo: Int, _ hi: Int) {
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID(id)) }!
-        v.anchor = r.globalStart + lo; v.head = r.globalStart + hi
+        v.setSelectionForTesting(anchor: r.globalStart + lo, head: r.globalStart + hi)
     }
 
     func test_setLink_appliesToSelectionOnly() {
@@ -80,7 +80,7 @@ final class CanvasLinkTests: XCTestCase {
         let v = canvas()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let b = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = a.globalStart + 1; v.head = b.globalStart + 3   // "lpha" + "Bet"
+        v.setSelectionForTesting(anchor: a.globalStart + 1, head: b.globalStart + 3)   // "lpha" + "Bet"
         v.setLink("https://x.com")
         XCTAssertEqual(cellRuns(v, 0, 0).filter { $0.attributes.link != nil }.map { $0.text }.joined(), "lpha")
         XCTAssertEqual(cellRuns(v, 0, 1).filter { $0.attributes.link != nil }.map { $0.text }.joined(), "Bet")
@@ -124,9 +124,9 @@ final class CanvasLinkTests: XCTestCase {
         let v = canvas()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
         let b = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("bp")) }!
-        v.anchor = a.globalStart; v.head = b.globalStart + b.length   // whole "Alpha" + "Beta" across cells
+        v.setSelectionForTesting(anchor: a.globalStart, head: b.globalStart + b.length)   // whole "Alpha" + "Beta" across cells
         v.setLink("https://x.com")
-        v.anchor = a.globalStart; v.head = b.globalStart + b.length   // re-select the same cross-cell range
+        v.setSelectionForTesting(anchor: a.globalStart, head: b.globalStart + b.length)   // re-select the same cross-cell range
         XCTAssertEqual(v.currentLink(), "https://x.com")
     }
 }

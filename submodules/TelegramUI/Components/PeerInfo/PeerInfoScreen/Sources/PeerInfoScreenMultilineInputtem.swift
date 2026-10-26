@@ -80,20 +80,20 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
             itemNode = current
             inputItem.updateNode(async: { $0() }, node: {
                 return itemNode
-            }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+            }, params: params, neighbors: .none, animation: .None, completion: { (layout, apply) in
                 let nodeFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.size.height))
                 
                 itemNode.contentSize = layout.contentSize
                 itemNode.insets = layout.insets
                 itemNode.frame = nodeFrame
                 
-                apply(ListViewItemApply(isOnScreen: true))
+                apply(ListViewItemApply())
             })
         } else {
             var itemNodeValue: ListViewItemNode?
-            inputItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            inputItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, neighbors: .none, completion: { node, apply in
                 itemNodeValue = node
-                apply().1(ListViewItemApply(isOnScreen: true))
+                apply().1(ListViewItemApply())
             })
             itemNode = itemNodeValue as! ItemListMultilineInputItemNode
             self.itemNode = itemNode

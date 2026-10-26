@@ -18,7 +18,17 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     
     let requestsNoInset: Bool = true
-    
+
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(BotCheckoutNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isCheckoutHeaderItem: false,
+            priceItemIsFinal: self.isFinal
+        ))
+    }
+
     init(theme: PresentationTheme, title: String, label: String, isFinal: Bool, hasSeparator: Bool, shimmeringIndex: Int?, sectionId: ItemListSectionId) {
         self.theme = theme
         self.title = title
@@ -29,10 +39,10 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = BotCheckoutPriceItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), previousItem, nextItem)
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), neighbors)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -45,13 +55,13 @@ class BotCheckoutPriceItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? BotCheckoutPriceItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), previousItem, nextItem)
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)), neighbors)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -131,11 +141,11 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: BotCheckoutPriceItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors, _ previousItem: ListViewItem?, _ nextItem: ListViewItem?) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: BotCheckoutPriceItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors, _ listNeighbors: ListViewItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
-        return { item, params, neighbors, previousItem, nextItem in
+        return { [weak self] item, params, neighbors, listNeighbors in
             let rightInset: CGFloat = 16.0 + params.rightInset
 
             let naturalContentHeight: CGFloat
@@ -150,13 +160,13 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                     naturalContentHeight = 42.0
                 }
             }
-            if let _ = previousItem as? BotCheckoutHeaderItem {
+            if listNeighbors.previous?.base(BotCheckoutNeighborFacet.self)?.isCheckoutHeaderItem == true {
                 verticalOffset += 8.0
             }
             
             var contentSize = CGSize(width: params.width, height: naturalContentHeight + verticalOffset)
-            if let nextItem = nextItem as? BotCheckoutPriceItem {
-                if nextItem.isFinal {
+            if let nextIsFinal = listNeighbors.next?.base(BotCheckoutNeighborFacet.self)?.priceItemIsFinal {
+                if nextIsFinal {
                     contentSize.height += 8.0
                 }
             }
@@ -216,7 +226,7 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
 
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset + floor((naturalContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: verticalOffset + floor((naturalContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
 

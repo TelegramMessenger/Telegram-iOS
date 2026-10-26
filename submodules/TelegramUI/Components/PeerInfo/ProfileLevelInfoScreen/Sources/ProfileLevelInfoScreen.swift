@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import SwiftSignalKit
 import Display
@@ -95,7 +96,11 @@ private final class SheetContent: Component {
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
                         
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             
             self.component = component
             self.state = state
@@ -189,9 +194,9 @@ private final class SheetContent: Component {
                     blur: true
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) * 0.5), y: floorToScreenPixels((72.0 - titleSize.height) * 0.5)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - titleSize.width * 0.5), y: floorToScreenPixels((72.0 - titleSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
@@ -250,13 +255,13 @@ private final class SheetContent: Component {
                     icon: .rating
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 110.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 110.0)
             )
             if let levelInfoView = self.levelInfo.view {
                 if levelInfoView.superview == nil {
                     self.addSubview(levelInfoView)
                 }
-                levelInfoView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - levelInfoSize.width) * 0.5), y: contentHeight - 6.0), size: levelInfoSize)
+                levelInfoView.frame = CGRect(origin: CGPoint(x: floor(bandCenterX - levelInfoSize.width * 0.5), y: contentHeight - 6.0), size: levelInfoSize)
             }
 
             contentHeight += 129.0
@@ -344,9 +349,9 @@ private final class SheetContent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
-                let secondaryDescriptionTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - secondaryDescriptionTextSize.width) * 0.5), y: contentHeight), size: secondaryDescriptionTextSize)
+                let secondaryDescriptionTextFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - secondaryDescriptionTextSize.width * 0.5), y: contentHeight), size: secondaryDescriptionTextSize)
                 if let secondaryDescriptionTextView = secondaryDescriptionText.view {
                     if secondaryDescriptionTextView.superview == nil {
                         self.addSubview(secondaryDescriptionTextView)
@@ -392,9 +397,9 @@ private final class SheetContent: Component {
                     lineSpacing: 0.2
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
-            let descriptionTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - descriptionTextSize.width) * 0.5), y: contentHeight), size: descriptionTextSize)
+            let descriptionTextFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - descriptionTextSize.width * 0.5), y: contentHeight), size: descriptionTextSize)
             if let descriptionTextView = self.descriptionText.view {
                 if descriptionTextView.superview == nil {
                     self.addSubview(descriptionTextView)
@@ -464,7 +469,7 @@ private final class SheetContent: Component {
                         icon: item.icon
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let itemFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: itemSize)
                 if let itemComponentView = itemView.view {
@@ -554,7 +559,8 @@ private final class ProfileLevelInfoSheetComponent: CombinedComponent {
                 color: environment.theme.list.itemCheckColors.foregroundColor,
                 startingPosition: .begin,
                 size: CGSize(width: 28.0, height: 28.0),
-                playOnce: playButtonAnimation
+                playOnce: playButtonAnimation,
+                lottieSettings: context.component.context.lottieRenderingSettings
             ))))
             buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
                 text: actionButtonTitle,
@@ -621,7 +627,7 @@ private final class ProfileLevelInfoSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

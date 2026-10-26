@@ -457,7 +457,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         var toolbarItem: ItemListToolbarItem?
         if let packs = packs, packs.count != 0 {
             if state.editing {
-                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                     updateState {
                         $0.withUpdatedEditing(false)
                     }
@@ -561,7 +561,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                         }
                     }
                     let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
-                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .text(text), externalShare: true))
+                    let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .text(text), externalShare: true))
                     presentControllerImpl?(shareController, nil)
                 })])
             } else {

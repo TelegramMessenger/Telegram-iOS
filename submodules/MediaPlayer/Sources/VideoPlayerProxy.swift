@@ -68,7 +68,7 @@ final class VideoPlayerProxy {
     init(queue: Queue) {
         self.queue = queue
         
-        self.contextQueue.async {
+        self.contextQueue.async { [self] in
             let context = VideoPlayerProxyContext(queue: self.contextQueue)
             context.updateVideoInHierarchy = { [weak self] value in
                 queue.async {

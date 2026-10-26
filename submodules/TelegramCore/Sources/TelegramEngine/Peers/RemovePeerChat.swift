@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 func _internal_removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
@@ -77,6 +77,9 @@ func _internal_removePeerChat(account: Account, transaction: Transaction, mediaB
     transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
     
     if peerId.namespace == Namespaces.Peer.CloudChannel {
+        // Leaving takes the channel out of News (Remove from News leaves a light join). Stored now: the leave is only
+        // queued here, and its updates may not carry the channel at all.
+        _internal_storeLocalInNews(transaction: transaction, accountPeerId: account.peerId, channelId: peerId, isInNews: false)
         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers)
     }
 }

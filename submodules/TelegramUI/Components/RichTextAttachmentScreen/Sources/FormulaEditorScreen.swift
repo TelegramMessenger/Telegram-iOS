@@ -145,6 +145,9 @@ private final class FormulaPreviewItemComponent: Component {
                 cachedMessageSyntaxHighlight: nil,
                 expandedDetails: [:],
                 fitToWidth: true
+                // Deliberately NOT scaled with Text Size: this theme is authored at a 22pt paragraph as a
+                // stylised preview, not a replica of the bubble's 17pt table, so the bubble's
+                // `baseDisplaySize / 17` would compound onto a base that is not 17 (33pt at the top step).
             )
             self.pageView.update(layout: layout, theme: pageTheme, animation: .None)
 
@@ -235,6 +238,7 @@ private final class FormulaEditorSheetContent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
     let context: AccountContext
+    let screenSize: CGSize
     let isEditing: Bool
     let initialLatex: String
     let placeholderLatex: String
@@ -245,6 +249,7 @@ private final class FormulaEditorSheetContent: Component {
 
     init(
         context: AccountContext,
+        screenSize: CGSize,
         isEditing: Bool,
         initialLatex: String,
         placeholderLatex: String,
@@ -254,6 +259,7 @@ private final class FormulaEditorSheetContent: Component {
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.screenSize = screenSize
         self.isEditing = isEditing
         self.initialLatex = initialLatex
         self.placeholderLatex = placeholderLatex
@@ -265,6 +271,9 @@ private final class FormulaEditorSheetContent: Component {
 
     static func ==(lhs: FormulaEditorSheetContent, rhs: FormulaEditorSheetContent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.screenSize != rhs.screenSize {
             return false
         }
         if lhs.isEditing != rhs.isEditing {
@@ -394,7 +403,6 @@ private final class FormulaEditorSheetContent: Component {
                 if doneButtonView.superview == nil {
                     self.addSubview(doneButtonView)
                 }
-                transition.setFrame(view: doneButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - sideInset - doneButtonSize.width, y: 16.0), size: doneButtonSize))
             }
 
             let constrainedTitleWidth = availableSize.width - (sideInset + barButtonSize.width + 8.0) * 2.0
@@ -412,11 +420,8 @@ private final class FormulaEditorSheetContent: Component {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: CGRect(
-                    origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) * 0.5), y: contentSize.height - titleSize.height * 0.5),
-                    size: titleSize
-                ))
             }
+            let titleY = contentSize.height - titleSize.height * 0.5
             contentSize.height += titleSize.height
             contentSize.height += 40.0
 
@@ -534,6 +539,29 @@ private final class FormulaEditorSheetContent: Component {
 
             contentSize.height += max(environment.inputHeight, environment.safeInsets.bottom)
 
+            // The keyboard raises the sheet beside the status corner (iPhone Duo, folded portrait: 84x170 at the top
+            // right): Done keeps clear of it, and the title of Done. The sheet is bottom-anchored and centred, its top
+            // `contentSize.height` (and the glass inset) up. In landscape the sheet keeps to the band beside the strip,
+            // where its environment has no side insets, and needs nothing.
+            var doneCornerInset: CGFloat = 0.0
+            if environment.safeInsets.left > 0.0 || environment.safeInsets.right > 0.0 || environment.navigationBarTrailingButtonsInset > 0.0 {
+                doneCornerInset = sheetHeaderCornerInsets(containerWidth: component.screenSize.width, sheetMinX: floorToScreenPixels((component.screenSize.width - availableSize.width) / 2.0), sheetWidth: availableSize.width, sheetMinY: component.screenSize.height - contentSize.height - 6.0, reservedCorners: environment.reservedCorners).right
+            }
+            let doneButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - doneCornerInset - doneButtonSize.width, y: 16.0), size: doneButtonSize)
+            if let doneButtonView = self.doneButton.view {
+                transition.setFrame(view: doneButtonView, frame: doneButtonFrame)
+            }
+            var titleX = floorToScreenPixels((availableSize.width - titleSize.width) * 0.5)
+            if doneCornerInset > 0.0 {
+                titleX = horizontallyCenteredOrigin(width: titleSize.width, containerWidth: availableSize.width, minX: sideInset + barButtonSize.width + 8.0, maxX: doneButtonFrame.minX - 8.0)
+            }
+            if let titleView = self.title.view {
+                transition.setFrame(view: titleView, frame: CGRect(
+                    origin: CGPoint(x: titleX, y: titleY),
+                    size: titleSize
+                ))
+            }
+
             return contentSize
         }
     }
@@ -648,7 +676,7 @@ private final class FormulaEditorSheetComponent: Component {
                 metrics: environment.metrics,
                 deviceMetrics: environment.deviceMetrics,
                 isDisplaying: environment.isVisible,
-                isCentered: environment.metrics.widthClass == .regular,
+                isCentered: environment.presentsFloatingPanels,
                 hasInputHeight: !environment.inputHeight.isZero,
                 regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                 dismiss: { [weak self] animated in
@@ -661,6 +689,7 @@ private final class FormulaEditorSheetComponent: Component {
                 component: AnyComponent(SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(FormulaEditorSheetContent(
                         context: component.context,
+                        screenSize: availableSize,
                         isEditing: component.initialValue != nil,
                         initialLatex: initialLatex,
                         placeholderLatex: placeholderLatex,

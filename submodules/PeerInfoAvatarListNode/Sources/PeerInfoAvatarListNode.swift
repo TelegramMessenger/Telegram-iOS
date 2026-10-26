@@ -323,9 +323,16 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if value {
                 self.setupVideoPlayback()
             } else {
-                self.videoNode?.removeFromSupernode()
-                self.videoNode = nil
-                self.videoContent = nil
+                // A move to another superview (the chat ↔ profile expansion lends the photo, then returns it) leaves the
+                // hierarchy and re-enters it in one turn: the video goes only if the photo stays out.
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, !self.hierarchyTrackingLayer.isInHierarchy else {
+                        return
+                    }
+                    self.videoNode?.removeFromSupernode()
+                    self.videoNode = nil
+                    self.videoContent = nil
+                }
             }
         }
         self.layer.addSublayer(self.hierarchyTrackingLayer)
@@ -846,6 +853,9 @@ public final class AvatarListContentNode: ASDisplayNode {
 }
 
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
+    /// iPhone Duo: keeps the page strip out of the side strip (0 elsewhere, which is today's layout).
+    public var stripSideInsets: UIEdgeInsets = .zero
+    
     private let context: AccountContext
     private let isSettings: Bool
     public var peer: EnginePeer?
@@ -1606,15 +1616,17 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if hadOneStripNode && self.stripNodes.count > 1 {
             self.stripContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         }
-        let stripInset: CGFloat = 8.0
+        let stripLeftInset: CGFloat = 8.0 + self.stripSideInsets.left
+        let stripRightInset: CGFloat = 8.0 + self.stripSideInsets.right
         let stripSpacing: CGFloat = 4.0
-        let stripWidth: CGFloat = max(5.0, floorToScreenPixels((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
-        let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
+        let stripAreaWidth: CGFloat = size.width - stripLeftInset - stripRightInset
+        let stripWidth: CGFloat = max(5.0, floorToScreenPixels((stripAreaWidth - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
+        let currentStripMinX = stripLeftInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
         let currentStripMidX = floorToScreenPixels(currentStripMinX + stripWidth / 2.0)
-        let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
-        let stripOffset: CGFloat = min(0.0, max(size.width - stripInset - lastStripMaxX, size.width / 2.0 - currentStripMidX))
+        let lastStripMaxX = stripLeftInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
+        let stripOffset: CGFloat = min(0.0, max(size.width - stripRightInset - lastStripMaxX, stripLeftInset + stripAreaWidth / 2.0 - currentStripMidX))
         for i in 0 ..< self.stripNodes.count {
-            let stripX: CGFloat = stripInset + CGFloat(i) * (stripWidth + stripSpacing)
+            let stripX: CGFloat = stripLeftInset + CGFloat(i) * (stripWidth + stripSpacing)
             if i == 0 && self.stripNodes.count == 1 {
                 self.stripNodes[i].isHidden = true
             } else {

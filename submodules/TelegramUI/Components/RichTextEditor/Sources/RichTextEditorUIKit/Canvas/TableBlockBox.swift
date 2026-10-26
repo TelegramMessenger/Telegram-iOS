@@ -23,6 +23,18 @@ final class TableBlockBox: CanvasBlock {
     var cellRowspan: [[Int]]
     var cells: [[BlockStack]]
     let mapper: AttributedStringMapper
+    /// Whether the grid is drawn AND occupies space. See `TableBlock.bordered`. `let` for the same reason
+    /// `isCompact` is: a toggle rebuilds the box, so this never changes in place — and a post-`recompute`
+    /// write would silently invalidate the cached `columnWidths`/`rowHeights` with no relayout.
+    let isBordered: Bool
+    /// The effective border width: zero when unbordered, so cells butt together as V2 lays them out
+    /// (`bordered ? v2TableBorderWidth : 0.0`). EVERY geometry site reads THIS, never the
+    /// `TableBlockBox.border` constant.
+    var borderWidth: CGFloat { isBordered ? TableBlockBox.border : 0.0 }
+
+    /// Halve every cell's interior padding (the `pageBlockTable` compact flag). Set at build time from
+    /// the model; a toggle rebuilds the box, so it never needs to change in place.
+    let isCompact: Bool
 
     var frame: CGRect = .zero
     var nodeStart: Int = 0
@@ -46,6 +58,13 @@ final class TableBlockBox: CanvasBlock {
     /// explicit cell metric and the cell `BlockStack` carries NO block inset (`verticalInsetBase = 0`), so
     /// this is the cell's sole vertical padding.
     static let cellVerticalPadding: CGFloat = 14
+    /// The padding this table actually lays out with. The `static let`s above stay at the full values —
+    /// they are the non-compact constants, read directly by tests — and these instance properties are
+    /// what every geometry site consumes.
+    var cellPadding: CGFloat { isCompact ? TableBlockBox.cellPadding / 2 : TableBlockBox.cellPadding }
+    var cellVerticalPadding: CGFloat { isCompact ? TableBlockBox.cellVerticalPadding / 2 : TableBlockBox.cellVerticalPadding }
+    /// The grid line width when the table IS bordered. Read through `borderWidth`, never directly —
+    /// an unbordered table lays out with zero-width borders (V2: `bordered ? v2TableBorderWidth : 0.0`).
     static let border: CGFloat = 1
     /// Outer-border corner radius (≈8pt, measured from the reference design).
     static let outerCornerRadius: CGFloat = 8
@@ -70,6 +89,8 @@ final class TableBlockBox: CanvasBlock {
         cellVAlign = table.rows.map { $0.cells.map { $0.verticalAlignment } }
         cellColspan = table.rows.map { $0.cells.map { $0.colspan } }
         cellRowspan = table.rows.map { $0.cells.map { $0.rowspan } }
+        isCompact = table.compact
+        isBordered = table.bordered
         // Cells render at a smaller base font than the document body (15 vs 17). Derive a cell-scoped
         // mapper once and store it as this table's `mapper`; every cell box built here, in `appendRow`,
         // and in split/merge replacements (which inherit their source box's `mapper`) shares it.
@@ -89,7 +110,8 @@ final class TableBlockBox: CanvasBlock {
                 })
                 // The cell owns its vertical padding (`cellVerticalPadding`), so its stack adds no
                 // inter-block inset — otherwise the document's 8pt inset would stack on top.
-                stack.verticalInsetBase = 0
+                stack.spacingModel = .containerInterior
+            stack.verticalInsetBase = 0
                 return stack
             }
         }
@@ -176,10 +198,12 @@ final class TableBlockBox: CanvasBlock {
     /// `minColumnWidth` and the table overflows → horizontal scroll.
     var gridWidth: CGFloat {
         if columnWidths.isEmpty { computeColumnWidths() }
-        return columnWidths.reduce(0) { $0 + $1 + TableBlockBox.border } + TableBlockBox.border
+        return columnWidths.reduce(0) { $0 + $1 + borderWidth } + borderWidth
     }
 
     // Token size: cell = stack tokens + 2; row = Σcells + 2; table = Σrows + 2.
+    var spacingKind: RichTextBlockSpacingKind { .table }
+
     var nodeSize: Int {
         var total = 0
         for row in cells {
@@ -197,7 +221,7 @@ final class TableBlockBox: CanvasBlock {
     // internal (not private): shared by the live height path (computeColumnWidths / rowHeightsComputed)
     // and the stateless measuredHeight, plus TableMeasureTests — keep it non-private.
     func solveColumnWidths(forWidth width: CGFloat) -> [CGFloat] {
-        let borders = CGFloat(columnCount + 1) * TableBlockBox.border
+        let borders = CGFloat(columnCount + 1) * borderWidth
         let avail = max(width - borders, CGFloat(columnCount))
         let sum = columns.reduce(0) { $0 + CGFloat($1.width) }
         let fit: [CGFloat]
@@ -217,15 +241,15 @@ final class TableBlockBox: CanvasBlock {
         let upper = min(c0 + max(colspan, 1), cols.count)
         guard c0 >= 0, c0 < upper else { return 1 }
         let spanWidth = cols[c0..<upper].reduce(0, +)
-        let width = spanWidth + CGFloat(upper - c0 - 1) * TableBlockBox.border - TableBlockBox.border - TableBlockBox.cellPadding * 2
+        let width = spanWidth + CGFloat(upper - c0 - 1) * borderWidth - borderWidth - cellPadding * 2
         return max(width, 1)
     }
 
     func measuredHeight(forWidth width: CGFloat) -> CGFloat {
         let cols = solveColumnWidths(forWidth: max(width, 1))
         let heights = solveRowHeights(columnWidths: cols)
-        let rows = heights.reduce(CGFloat(0)) { $0 + $1 + TableBlockBox.border }
-        return TableBlockBox.border + rows + TableBlockBox.bottomSpacing
+        let rows = heights.reduce(CGFloat(0)) { $0 + $1 + borderWidth }
+        return borderWidth + rows + TableBlockBox.bottomSpacing
     }
 
     private func computeColumnWidths() { columnWidths = solveColumnWidths(forWidth: layoutWidth) }
@@ -234,7 +258,7 @@ final class TableBlockBox: CanvasBlock {
     /// column only; kept for the two dense-only call sites in this file's height/width plumbing (the
     /// SPAN-AWARE cell layout in `recompute()` and the union rect in `cellRect` go through
     /// `cellContentWidth(anchorColumn:colspan:in:)` / `spannedSlotExtent` instead).
-    private func cellContentWidth(_ col: Int) -> CGFloat { max(columnWidths[col] - TableBlockBox.border - TableBlockBox.cellPadding * 2, 1) }
+    private func cellContentWidth(_ col: Int) -> CGFloat { max(columnWidths[col] - borderWidth - cellPadding * 2, 1) }
 
     /// Σ of `values[start..<start+count]` plus the `(count-1)` interior borders they subsume — the raw
     /// spanned SLOT extent (a frame width/height), as opposed to `cellContentWidth(anchorColumn:colspan:in:)`
@@ -245,14 +269,14 @@ final class TableBlockBox: CanvasBlock {
     private func spannedSlotExtent(_ values: [CGFloat], from start: Int, count: Int) -> CGFloat {
         let upper = min(start + max(count, 1), values.count)
         guard start >= 0, start < upper else { return 0 }
-        return values[start..<upper].reduce(0, +) + CGFloat(upper - start - 1) * TableBlockBox.border
+        return values[start..<upper].reduce(0, +) + CGFloat(upper - start - 1) * borderWidth
     }
 
     var height: CGFloat {
         if columnWidths.isEmpty { computeColumnWidths() }
         // Grid + a reserved strip below it (bottomSpacing) so the column handle stays on-screen for a
         // trailing table; the gap to the block ABOVE comes from that block's facing inset.
-        return TableBlockBox.border + rowHeightsComputed().reduce(0) { $0 + $1 + TableBlockBox.border } + TableBlockBox.bottomSpacing
+        return borderWidth + rowHeightsComputed().reduce(0) { $0 + $1 + borderWidth } + TableBlockBox.bottomSpacing
     }
 
     /// Row heights, span-aware — the SOLE row-height solver, shared by `measuredHeight(forWidth:)`
@@ -293,7 +317,7 @@ final class TableBlockBox: CanvasBlock {
                 let rowspan = anchor?.rowspan ?? 1
                 let originRow = anchor?.row ?? r
                 let contentWidth = cellContentWidth(anchorColumn: column, colspan: colspan, in: cols)
-                let cellHeight = cells[r][c].measuredHeight(forWidth: contentWidth) + TableBlockBox.cellVerticalPadding * 2
+                let cellHeight = cells[r][c].measuredHeight(forWidth: contentWidth) + cellVerticalPadding * 2
                 if rowspan <= 1 {
                     if heights.indices.contains(r) { heights[r] = max(heights[r], cellHeight) }
                 } else {
@@ -306,7 +330,7 @@ final class TableBlockBox: CanvasBlock {
             let lastRow = min(pending.row + pending.rowspan - 1, heights.count - 1)
             guard pending.row >= 0, pending.row <= lastRow else { continue }
             let spannedHeight = (pending.row...lastRow).reduce(CGFloat(0)) { $0 + heights[$1] }
-                + CGFloat(lastRow - pending.row) * TableBlockBox.border
+                + CGFloat(lastRow - pending.row) * borderWidth
             if pending.height > spannedHeight {
                 heights[lastRow] += pending.height - spannedHeight
             }
@@ -336,7 +360,7 @@ final class TableBlockBox: CanvasBlock {
             rows.append(Row(id: rowIDs[r], height: rowMinHeights[r] > 0 ? Double(rowMinHeights[r]) : nil,
                             cells: outCells))
         }
-        return .table(TableBlock(id: id, columns: columns, rows: rows))
+        return .table(TableBlock(id: id, columns: columns, rows: rows, compact: isCompact, bordered: isBordered))
     }
 
     /// Re-applies the render-only overrides to every cell's display layout: per-cell alignment and,
@@ -393,10 +417,10 @@ final class TableBlockBox: CanvasBlock {
 
         // Token base: this table's content starts at nodeStart + 1 (the table open token).
         var pos = nodeStart + 1
-        var y = frame.minY + TableBlockBox.border
+        var y = frame.minY + borderWidth
         for (r, row) in cells.enumerated() {
             pos += 1                                   // row open token
-            var x = frame.minX + TableBlockBox.border
+            var x = frame.minX + borderWidth
             var k = 0                                  // physical column cursor over the covering grid
             for (c, stack) in row.enumerated() {
                 pos += 1                               // cell open token — independent of `k`, see above
@@ -404,7 +428,7 @@ final class TableBlockBox: CanvasBlock {
                 // Skip physical columns already occupied by a rowspan anchor DESCENDING from an earlier
                 // row (the V2-mirrored `awaitingSpanCells` skip) before placing this row's next anchor.
                 while k < columnCount, let occupant = gridMap.anchor(atRow: r, column: k), occupant.row < r {
-                    x += columnWidths[k] + TableBlockBox.border
+                    x += columnWidths[k] + borderWidth
                     k += 1
                 }
 
@@ -425,20 +449,20 @@ final class TableBlockBox: CanvasBlock {
                 // identical to before for a dense (colspan==rowspan==1) cell, where `spannedHeight ==
                 // rowHeights[r]` exactly.
                 let contentH = stack.measuredHeight(forWidth: contentWidth)
-                let free = max(0, (spannedHeight - TableBlockBox.cellVerticalPadding * 2) - contentH)
+                let free = max(0, (spannedHeight - cellVerticalPadding * 2) - contentH)
                 let vFactor: CGFloat = { switch cellVAlign[r][c] { case .top: return 0; case .middle: return 0.5; case .bottom: return 1 } }()
-                let contentOrigin = CGPoint(x: x + TableBlockBox.cellPadding,
-                                            y: y + TableBlockBox.cellVerticalPadding + free * vFactor)
+                let contentOrigin = CGPoint(x: x + cellPadding,
+                                            y: y + cellVerticalPadding + free * vFactor)
                 _ = stack.recompute(baseOffset: pos - 1)   // cell content begins at (cell open) → baseOffset
                 _ = stack.layout(origin: contentOrigin, width: contentWidth)
                 pos += stackTokens(stack)
                 pos += 1                               // cell close token
 
-                x += spannedWidth + TableBlockBox.border
+                x += spannedWidth + borderWidth
                 k += colspan
             }
             pos += 1                                   // row close token
-            y += rowHeights[r] + TableBlockBox.border
+            y += rowHeights[r] + borderWidth
         }
     }
 
@@ -517,10 +541,10 @@ final class TableBlockBox: CanvasBlock {
         // that early).
         let map = gridMap ?? TableMap(modelTableForMap())
         guard let anchor = map.anchor(atRow: row, column: column) else { return nil }
-        var y = frame.minY + TableBlockBox.border
-        for r in 0..<anchor.row { y += rowHeights[r] + TableBlockBox.border }
-        var x = frame.minX + TableBlockBox.border
-        for c in 0..<anchor.column { x += columnWidths[c] + TableBlockBox.border }
+        var y = frame.minY + borderWidth
+        for r in 0..<anchor.row { y += rowHeights[r] + borderWidth }
+        var x = frame.minX + borderWidth
+        for c in 0..<anchor.column { x += columnWidths[c] + borderWidth }
         let width = spannedSlotExtent(columnWidths, from: anchor.column, count: anchor.colspan)
         let height = spannedSlotExtent(rowHeights, from: anchor.row, count: anchor.rowspan)
         return CGRect(x: x, y: y, width: width, height: height)
@@ -531,11 +555,11 @@ final class TableBlockBox: CanvasBlock {
     /// border slot resolves to the row above it (half-border slack).
     func rowIndex(atY y: CGFloat) -> Int {
         guard !rowHeights.isEmpty else { return 0 }
-        var top = frame.minY + TableBlockBox.border
+        var top = frame.minY + borderWidth
         for r in 0..<rowHeights.count {
             let bottom = top + rowHeights[r]
-            if y < bottom + TableBlockBox.border / 2 { return r }
-            top = bottom + TableBlockBox.border
+            if y < bottom + borderWidth / 2 { return r }
+            top = bottom + borderWidth
         }
         return rowHeights.count - 1
     }
@@ -543,11 +567,11 @@ final class TableBlockBox: CanvasBlock {
     /// The column index whose horizontal band contains canvas-x `x`, clamped to `0..<columnCount`.
     func columnIndex(atX x: CGFloat) -> Int {
         guard !columnWidths.isEmpty else { return 0 }
-        var left = frame.minX + TableBlockBox.border
+        var left = frame.minX + borderWidth
         for c in 0..<columnWidths.count {
             let right = left + columnWidths[c]
-            if x < right + TableBlockBox.border / 2 { return c }
-            left = right + TableBlockBox.border
+            if x < right + borderWidth / 2 { return c }
+            left = right + borderWidth
         }
         return columnWidths.count - 1
     }
@@ -561,6 +585,7 @@ final class TableBlockBox: CanvasBlock {
         for _ in 0..<n {
             let para = ParagraphBlock(id: BlockID.generate())
             let stack = BlockStack(boxes: [BlockBox(paragraph: para, mapper: mapper, width: 100)])
+            stack.spacingModel = .containerInterior
             stack.verticalInsetBase = 0   // cell owns its vertical padding (see cellVerticalPadding)
             rowStacks.append(stack)
             ids.append(BlockID.generate()); bgs.append(nil)
@@ -585,14 +610,14 @@ final class TableBlockBox: CanvasBlock {
     }
 
     func draw(in ctx: CGContext, imageProvider: (String) -> UIImage?) {
-        let totalW = columnWidths.reduce(0) { $0 + $1 + TableBlockBox.border } + TableBlockBox.border
-        let totalH = TableBlockBox.border + rowHeights.reduce(0) { $0 + $1 + TableBlockBox.border }
+        let totalW = columnWidths.reduce(0) { $0 + $1 + borderWidth } + borderWidth
+        let totalH = borderWidth + rowHeights.reduce(0) { $0 + $1 + borderWidth }
         // Rounded outer border path (also the clip for fills so corners stay rounded). CG centers
         // strokes, so inset by half the border so the 1pt stroke fills its slot flush with the frame edge.
-        let half = TableBlockBox.border / 2
+        let half = borderWidth / 2
         let outer = UIBezierPath(roundedRect: CGRect(x: frame.minX + half, y: frame.minY + half,
-                                                     width: totalW - TableBlockBox.border,
-                                                     height: totalH - TableBlockBox.border),
+                                                     width: totalW - borderWidth,
+                                                     height: totalH - borderWidth),
                                  cornerRadius: TableBlockBox.outerCornerRadius - half)
         // `gridMap` if `recompute()` has run, else a freshly-built one (matches every other span-aware
         // reader in this file — `cellRect`/`closestPosition`/etc). Shared by both the fill pass and the
@@ -606,14 +631,14 @@ final class TableBlockBox: CanvasBlock {
         var colLeft: [CGFloat] = []
         colLeft.reserveCapacity(columnWidths.count)
         do {
-            var acc = frame.minX + TableBlockBox.border
-            for w in columnWidths { colLeft.append(acc); acc += w + TableBlockBox.border }
+            var acc = frame.minX + borderWidth
+            for w in columnWidths { colLeft.append(acc); acc += w + borderWidth }
         }
         var rowTop: [CGFloat] = []
         rowTop.reserveCapacity(rowHeights.count)
         do {
-            var acc = frame.minY + TableBlockBox.border
-            for h in rowHeights { rowTop.append(acc); acc += h + TableBlockBox.border }
+            var acc = frame.minY + borderWidth
+            for h in rowHeights { rowTop.append(acc); acc += h + borderWidth }
         }
 
         // Per-cell fills (explicit background wins over the header highlight), clipped to the rounded outer
@@ -641,18 +666,18 @@ final class TableBlockBox: CanvasBlock {
             }
         }
         ctx.restoreGState()
-        var y = frame.minY + TableBlockBox.border
+        var y = frame.minY + borderWidth
         for (r, row) in cells.enumerated() {
-            var x = frame.minX + TableBlockBox.border
+            var x = frame.minX + borderWidth
             for (c, stack) in row.enumerated() {
                 // Cell PARAGRAPHS render via their own backing views (hosted in the table's content view so
                 // they ride horizontal scroll); only non-paragraph boxes (cell images — rare) draw in place.
                 for box in stack.boxes where !(box is BlockBox) {
                     box.draw(in: ctx, imageProvider: imageProvider)
                 }
-                x += columnWidths[c] + TableBlockBox.border
+                x += columnWidths[c] + borderWidth
             }
-            y += rowHeights[r] + TableBlockBox.border
+            y += rowHeights[r] + borderWidth
         }
         // Interior grid lines — PER-SEGMENT (Phase 2b Task 5), mirroring `InstantPageV2Layout.layoutTable`'s
         // "each cell emits its own top/left border sized to itself" rule: a divider segment at a given
@@ -669,9 +694,15 @@ final class TableBlockBox: CanvasBlock {
         // different anchors on both sides at every row/column, so the per-row/per-column segments are
         // contiguous AND their crossings are filled, reproducing two continuous full-length lines. Extending
         // at the table's OUTER edge is harmless — the rounded outer border stroke paints over it.
+        // An unbordered table paints no grid at all — and, because `borderWidth` is 0, the cells have
+        // already been laid out flush, so there is nothing to stroke between them anyway. Cell fills
+        // (header tint, per-cell background) are NOT borders and stay.
+        guard isBordered else {
+            return
+        }
         mapper.theme.tableBorder.setStroke()
-        ctx.setLineWidth(TableBlockBox.border)
-        let ext = TableBlockBox.border / 2
+        ctx.setLineWidth(borderWidth)
+        let ext = borderWidth / 2
         if columnWidths.count > 1 {
             for c in 1..<columnWidths.count {
                 let bx = colLeft[c] - ext
@@ -694,7 +725,7 @@ final class TableBlockBox: CanvasBlock {
         }
         ctx.strokePath()
         // Rounded outer border (path built up front, also used to clip the header tint).
-        outer.lineWidth = TableBlockBox.border
+        outer.lineWidth = borderWidth
         outer.stroke()
     }
 

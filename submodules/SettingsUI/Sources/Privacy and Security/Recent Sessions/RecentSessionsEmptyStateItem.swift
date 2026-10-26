@@ -108,8 +108,8 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         transition.updateAlpha(node: self.imageNode, alpha: visible ? 1.0 : 0.0)
         transition.updateAlpha(node: self.titleNode, alpha: visible ? 1.0 : 0.0)
         transition.updateAlpha(node: self.textNode, alpha: visible && textVisible ? 1.0 : 0.0)
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: topOffset), size: imageSize))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: topOffset + imageHeight), size: titleSize))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: self.titleNode.frame.maxY + textSpacing), size: textSize))
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - imageSize.width) / 2.0), y: topOffset), size: imageSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - titleSize.width) / 2.0), y: topOffset + imageHeight), size: titleSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - textSize.width) / 2.0), y: self.titleNode.frame.maxY + textSpacing), size: textSize))
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AccountContext
@@ -40,8 +41,11 @@ private final class CommunityRequestsEmptyPlaceholderView: UIView {
     private let title = ComponentView<Empty>()
     private let text = ComponentView<Empty>()
 
-    override init(frame: CGRect) {
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+    private let lottieSettings: LottieRenderingSettings
+
+    init(frame: CGRect, lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
         self.animationNode.setup(
             source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"),
             width: 192,
@@ -247,12 +251,12 @@ private final class CommunityRequestsScreenComponent: Component {
         }
 
         private func updateScrolling(transition: ComponentTransition) {
-            guard let environment = self.environment, let controller = environment.controller(), let navigationBar = controller.navigationBar, let edgeEffectView = navigationBar.edgeEffectView else {
+            guard let environment = self.environment, let controller = environment.controller(), let navigationBar = controller.navigationBar else {
                 return
             }
             let alphaDistance: CGFloat = 16.0
             let edgeEffectAlpha = max(0.0, min(1.0, self.scrollView.contentOffset.y / alphaDistance))
-            transition.setAlpha(view: edgeEffectView, alpha: edgeEffectAlpha)
+            navigationBar.setBackdropAlpha(edgeEffectAlpha, transition: transition.containedViewLayoutTransition)
         }
 
         private var rows: [CommunityRequestRow] {
@@ -653,8 +657,11 @@ private final class CommunityRequestsScreenComponent: Component {
 
             let theme = environment.theme
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            let sideInset: CGFloat = 16.0 + max(environment.safeInsets.left, environment.safeInsets.right)
-            let contentWidth = availableSize.width - sideInset * 2.0
+            // Each side keeps its own safe inset: beside iPhone Duo's side strip only one side has one, and the content keeps
+            // to the band rather than leaving the strip's width empty on the free side too.
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let contentWidth = availableSize.width - sideInset - rightSideInset
 
             self.backgroundColor = theme.list.blocksBackgroundColor
             self.scrollView.backgroundColor = theme.list.blocksBackgroundColor
@@ -736,7 +743,10 @@ private final class CommunityRequestsScreenComponent: Component {
             let displaysBulkActions = rows.count > 1
             let bottomButtonHeight: CGFloat = 50.0
             let bottomButtonSpacing: CGFloat = 10.0
-            let bottomButtonSideInset: CGFloat = 30.0 + max(environment.safeInsets.left, environment.safeInsets.right)
+            // The bottom buttons span iPhone Duo's side strip; they keep clear only of a corner block at the bottom.
+            let bottomButtonInsets = environment.bottomEdgeSideInsets()
+            let bottomButtonSideInset: CGFloat = 30.0 + bottomButtonInsets.left
+            let bottomButtonRightSideInset: CGFloat = 30.0 + bottomButtonInsets.right
             let bottomPanelHeight: CGFloat = displaysBulkActions ? (16.0 + bottomButtonHeight + 12.0 + environment.safeInsets.bottom) : 0.0
 
             if !rows.isEmpty {
@@ -807,7 +817,7 @@ private final class CommunityRequestsScreenComponent: Component {
                     } else {
                         emptyPlaceholderTransition = .immediate
                         
-                        emptyPlaceholderView = CommunityRequestsEmptyPlaceholderView(frame: CGRect())
+                        emptyPlaceholderView = CommunityRequestsEmptyPlaceholderView(frame: CGRect(), lottieSettings: component.context.lottieRenderingSettings)
                         emptyPlaceholderView.alpha = 0.0
                         self.emptyPlaceholderView = emptyPlaceholderView
                         self.scrollView.addSubview(emptyPlaceholderView)
@@ -858,7 +868,7 @@ private final class CommunityRequestsScreenComponent: Component {
                 }
 
                 let buttonY = availableSize.height - environment.safeInsets.bottom - 12.0 - bottomButtonHeight
-                let buttonsWidth = availableSize.width - bottomButtonSideInset * 2.0
+                let buttonsWidth = availableSize.width - bottomButtonSideInset - bottomButtonRightSideInset
                 let buttonWidth = floorToScreenPixels((buttonsWidth - bottomButtonSpacing) / 2.0)
                 let declineButtonSize = self.declineAllButton.update(
                     transition: buttonsTransition,

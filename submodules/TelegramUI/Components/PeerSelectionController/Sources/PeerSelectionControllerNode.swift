@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -189,7 +190,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.emptyTextNode.isHidden = true
         self.emptyTextNode.lineSpacing = 0.25
 
-        self.emptyAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.emptyAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         self.emptyAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.emptyAnimationNode.isHidden = true
         self.emptyAnimationSize = CGSize(width: 120.0, height: 120.0)
@@ -469,7 +470,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
             let accountPeerId = strongSelf.context.account.peerId
             let items = combineLatest(forwardOptions, strongSelf.context.account.postbox.messagesAtIds(messageIds), messagesCount)
-            |> map { forwardOptions, messages, messagesCount -> [ContextMenuItem] in
+            |> map { [chatController] forwardOptions, messages, messagesCount -> [ContextMenuItem] in
                 var items: [ContextMenuItem] = []
 
                 var hasCaptions = false
@@ -673,6 +674,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, beginMediaRecording: { _ in
         }, finishMediaRecording: { _ in
         }, stopMediaRecording: {
+        }, stopIncomingStreamingMessage: {
         }, lockMediaRecording: {
         }, resumeMediaRecording: {
         }, deleteRecordedMedia: {
@@ -761,7 +763,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
 
             let _ = (ChatSendMessageContextScreen.initialData(context: strongSelf.context, currentMessageEffectId: nil)
-            |> deliverOnMainQueue).start(next: { initialData in
+            |> deliverOnMainQueue).start(next: { [controller] initialData in
                 guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
                     return
                 }
@@ -1092,13 +1094,19 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
         let cleanInsets = layout.insets(options: [])
         var insets = layout.insets(options: [.input])
+        // The bottom panels span iPhone Duo's side strip where no corner block reaches their rows: the count panel is
+        // pinned to the bottom edge; the text input and forward panels sit above the keyboard and grow with their text,
+        // so they take the band down from their current top (the chat's input panel does the same).
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let inputPanelsMinY = layout.size.height - max(44.0, self.textInputPanelNode?.frame.height ?? 0.0) - (self.forwardAccessoryPanelNode?.frame.height ?? 0.0)
+        let inputPanelSideInsets = layout.sideInsets(forBandFrom: inputPanelsMinY, to: layout.size.height)
 
         var toolbarHeight: CGFloat = cleanInsets.bottom
         var textPanelHeight: CGFloat?
         var accessoryHeight: CGFloat = 0.0
 
         if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
-            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
+            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - inputPanelSideInsets.left - inputPanelSideInsets.right, height: layout.size.height))
             accessoryHeight = size.height
         }
 
@@ -1107,7 +1115,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
-            var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
+            var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
             let effectiveBottomInset = textInputPanelNode.additionalInputHeight > 0.0 ? 0.0 : (self.searchDisplayController == nil ? insets.bottom : cleanInsets.bottom)
             panelHeight += effectiveBottomInset
             textPanelHeight = panelHeight
@@ -1122,10 +1130,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
 
         if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
-            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
-            forwardAccessoryPanelNode.updateState(size: size, inset: layout.safeInsets.left, interfaceState: self.presentationInterfaceState)
+            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - inputPanelSideInsets.left - inputPanelSideInsets.right, height: layout.size.height))
+            // Beside iPhone Duo's side strip (the side insets differ) the panel sits in the input panels' band, so it
+            // starts at that band's left inset and needs no inset of its own; elsewhere it keeps its layout.
+            let forwardPanelInBand = layout.safeInsets.left != layout.safeInsets.right
+            forwardAccessoryPanelNode.updateState(size: size, inset: forwardPanelInBand ? 0.0 : layout.safeInsets.left, interfaceState: self.presentationInterfaceState)
             forwardAccessoryPanelNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState)
-            let panelFrame = CGRect(x: 0.0, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width, height: size.height)
+            let panelFrame = CGRect(x: forwardPanelInBand ? inputPanelSideInsets.left : 0.0, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width, height: size.height)
 
             accessoryHeight = size.height
             if forwardAccessoryPanelNode.frame.width.isZero {
@@ -1137,7 +1148,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
 
         if let countPanelNode = self.countPanelNode {
-            let countPanelHeight = countPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+            let countPanelHeight = countPanelNode.updateLayout(width: layout.size.width, leftInset: bottomInsets.left, rightInset: bottomInsets.right, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
             if countPanelNode.count == 0 {
                 transition.updateFrame(node: countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: countPanelHeight)))
             } else {
@@ -1182,7 +1193,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 containerSize: CGSize(width: 200.0, height: 32.0)
             )
             let controlOrigin = layout.size.height - (textPanelHeight == nil ? toolbarHeight : 0.0) + floor((44.0 - controlSize.height) / 2.0)
-            let segmentedControlFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: controlOrigin), size: controlSize)
+            // Centered in the band between the side safe insets (iPhone Duo's side strip); equal insets give the
+            // full width's center.
+            let segmentedControlFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - controlSize.width) / 2.0), y: controlOrigin), size: controlSize)
             if let segmentedControlView = segmentedControl.view {
                 if segmentedControlView.superview == nil {
                     self.view.addSubview(segmentedControlView)
@@ -1218,7 +1231,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 self.requirementsBackgroundNode?.isHidden = true
                 self.requirementsTextNode?.isHidden = true
                 self.requirementsSeparatorNode?.isHidden = true
-                self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
 
                 var emptyTitle: String
                 var emptyText: String
@@ -1266,8 +1278,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 self.emptyTextNode.attributedText = NSAttributedString(string: emptyText, font: Font.regular(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
 
                 let padding: CGFloat = 44.0
-                let emptyTitleSize = self.emptyTitleNode.updateLayout(CGSize(width: layout.size.width - insets.left * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-                let emptyTextSize = self.emptyTextNode.updateLayout(CGSize(width: layout.size.width - insets.left * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+                // Centred in the band between the side insets (they differ beside iPhone Duo's side strip).
+                let emptyBandMinX = insets.left
+                let emptyBandWidth = layout.size.width - insets.left - insets.right
+                let emptyTitleSize = self.emptyTitleNode.updateLayout(CGSize(width: emptyBandWidth - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+                let emptyTextSize = self.emptyTextNode.updateLayout(CGSize(width: emptyBandWidth - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
 
                 let emptyAnimationHeight = self.emptyAnimationSize.height
                 let emptyAnimationSpacing: CGFloat = 12.0
@@ -1287,15 +1302,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     self.emptyButtonNode.isHidden = false
                     let emptyButtonWidth = layout.size.width - insets.left - insets.right - buttonPadding * 2.0
                     let _ = self.emptyButtonNode.updateLayout(width: emptyButtonWidth, transition: transition)
-                    transition.updateFrame(node: self.emptyButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - emptyButtonWidth) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing + emptyTextSize.height + emptyButtonSpacing), size: CGSize(width: emptyButtonWidth, height: emptyButtonHeight)))
+                    transition.updateFrame(node: self.emptyButtonNode, frame: CGRect(origin: CGPoint(x: emptyBandMinX + floorToScreenPixels((emptyBandWidth - emptyButtonWidth) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing + emptyTextSize.height + emptyButtonSpacing), size: CGSize(width: emptyButtonWidth, height: emptyButtonHeight)))
                 } else {
                     self.emptyButtonNode.isHidden = true
                 }
 
                 let textTransition = ContainedViewLayoutTransition.immediate
-                textTransition.updateFrame(node: self.emptyAnimationNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - self.emptyAnimationSize.width) / 2.0), y: emptyAnimationY), size: self.emptyAnimationSize))
-                textTransition.updateFrame(node: self.emptyTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - emptyTitleSize.width) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
-                textTransition.updateFrame(node: self.emptyTextNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - emptyTextSize.width) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+                textTransition.updateFrame(node: self.emptyAnimationNode, frame: CGRect(origin: CGPoint(x: emptyBandMinX + floorToScreenPixels((emptyBandWidth - self.emptyAnimationSize.width) / 2.0), y: emptyAnimationY), size: self.emptyAnimationSize))
+                textTransition.updateFrame(node: self.emptyTitleNode, frame: CGRect(origin: CGPoint(x: emptyBandMinX + floorToScreenPixels((emptyBandWidth - emptyTitleSize.width) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
+                textTransition.updateFrame(node: self.emptyTextNode, frame: CGRect(origin: CGPoint(x: emptyBandMinX + floorToScreenPixels((emptyBandWidth - emptyTextSize.width) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
                 self.emptyAnimationNode.updateLayout(size: self.emptyAnimationSize)
 
                 self.emptyAnimationNode.isHidden = false
@@ -1334,7 +1349,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             contactListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             contactListNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
 
-            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
+            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
         }
 
         if let searchDisplayController = self.searchDisplayController {
@@ -1984,7 +1999,7 @@ private final class PeersCountPanelNode: ASDisplayNode {
     private let separatorNode: ASDisplayNode
     private let button: SolidRoundedButtonNode
 
-    private var validLayout: (CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat)?
 
     var buttonTitle: String = ""
     var count: Int = 0 {
@@ -1993,8 +2008,8 @@ private final class PeersCountPanelNode: ASDisplayNode {
                 self.button.title = self.buttonTitle
                 self.button.badge = "\(self.count)"
 
-                if let (width, sideInset, bottomInset) = self.validLayout {
-                    let _ = self.updateLayout(width: width, sideInset: sideInset, bottomInset: bottomInset, transition: .immediate)
+                if let (width, leftInset, rightInset, bottomInset) = self.validLayout {
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, transition: .immediate)
                 }
             }
         }
@@ -2021,14 +2036,14 @@ private final class PeersCountPanelNode: ASDisplayNode {
         }
     }
 
-    func updateLayout(width: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.validLayout = (width, sideInset, bottomInset)
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset)
         let topInset: CGFloat = 9.0
         var bottomInset = bottomInset
         bottomInset += topInset - (bottomInset.isZero ? 0.0 : 4.0)
 
-        let buttonInset: CGFloat = 16.0 + sideInset
-        let buttonWidth = width - buttonInset * 2.0
+        let buttonInset: CGFloat = 16.0 + leftInset
+        let buttonWidth = width - buttonInset - 16.0 - rightInset
         let buttonHeight = self.button.updateLayout(width: buttonWidth, transition: transition)
         transition.updateFrame(node: self.button, frame: CGRect(x: buttonInset, y: topInset, width: buttonWidth, height: buttonHeight))
 

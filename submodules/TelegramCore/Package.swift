@@ -20,6 +20,7 @@ let package = Package(
         .package(name: "Postbox", path: "../Postbox"),
         .package(name: "SSignalKit", path: "../SSignalKit"),
         .package(name: "MtProtoKit", path: "../MtProtoKit"),
+        .package(name: "WebProxyTransport", path: "../WebProxyTransport"),
         .package(name: "TelegramApi", path: "../TelegramApi"),
         .package(name: "CryptoUtils", path: "../CryptoUtils"),
         .package(name: "NetworkLogging", path: "../NetworkLogging"),
@@ -27,6 +28,7 @@ let package = Package(
         .package(name: "DarwinDirStat", path: "../Utils/DarwinDirStat"),
         .package(name: "EncryptionProvider", path: "../EncryptionProvider"),
         .package(name: "Emoji", path: "../Emoji"),
+        .package(name: "MediaPreuploadRegistry", path: "../MediaPreuploadRegistry"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -36,6 +38,7 @@ let package = Package(
             dependencies: [.product(name: "Postbox", package: "Postbox", condition: nil),
                             .product(name: "SwiftSignalKit", package: "SSignalKit", condition: nil),
                             .product(name: "MtProtoKit", package: "MtProtoKit", condition: nil),
+                           .product(name: "WebProxyTransport", package: "WebProxyTransport", condition: nil),
                            .product(name: "TelegramApi", package: "TelegramApi", condition: nil),
                            .product(name: "CryptoUtils", package: "CryptoUtils", condition: nil),
                            .product(name: "NetworkLogging", package: "NetworkLogging", condition: nil),
@@ -44,8 +47,14 @@ let package = Package(
                            .product(name: "Emoji", package: "Emoji", condition: nil),
                            .product(name: "FlatBuffers", package: "FlatBuffers", condition: nil),
                            .product(name: "FlatSerialization", package: "FlatSerialization", condition: nil),
-                           .product(name: "EncryptionProvider", package: "EncryptionProvider", condition: nil)],
+                           .product(name: "EncryptionProvider", package: "EncryptionProvider", condition: nil),
+                           .product(name: "MediaPreuploadRegistry", package: "MediaPreuploadRegistry", condition: nil)],
             path: "Sources",
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]),
+        .testTarget(
+            name: "TelegramCoreTests",
+            dependencies: ["TelegramCore"],
+            path: "Tests"
+        ),
     ]
 )

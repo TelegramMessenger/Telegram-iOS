@@ -443,10 +443,6 @@ final class DataUsageScreenComponent: Component {
                 
                 headerOffset = min(headerOffset, minOffset)
                 
-                let animatedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
-                
-                let navigationButtonAlpha: CGFloat = scrollBounds.minY >= navigationMetrics.navigationHeight ? 0.0 : 1.0
-                
                 transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
                 
                 let headerContentsAlpha: CGFloat
@@ -454,10 +450,6 @@ final class DataUsageScreenComponent: Component {
                 headerContentsAlpha = min(1.0, max(0.0, offsetFraction))
                 
                 transition.setAlpha(view: self.headerContentContainer, alpha: headerContentsAlpha)
-                
-                if let controller = self.controller?(), let backButtonNode = controller.navigationBar?.backButtonNode {
-                    backButtonNode.updateManualAlpha(alpha: navigationButtonAlpha, transition: animatedTransition.containedViewLayoutTransition)
-                }
             }
         }
         
@@ -542,6 +534,10 @@ final class DataUsageScreenComponent: Component {
             
             let topInset: CGFloat = 19.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            // iPhone Duo: one side's safe inset is the side strip, so the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets both are the old values.
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             
             let bottomInset: CGFloat = environment.safeInsets.bottom
             
@@ -691,7 +687,7 @@ final class DataUsageScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 60.0)
             )
-            let pieChartFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: pieChartSize)
+            let pieChartFrame = CGRect(origin: CGPoint(x: bandCenterX - availableSize.width / 2.0, y: contentHeight), size: pieChartSize)
             if let pieChartComponentView = self.pieChartView.view {
                 if pieChartComponentView.superview == nil {
                     self.headerContentContainer.addSubview(pieChartComponentView)
@@ -778,7 +774,7 @@ final class DataUsageScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: floor((availableSize.width) / 0.8), height: 100.0)
             )
-            let headerViewFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - headerViewSize.width) / 2.0), y: contentHeight), size: headerViewSize)
+            let headerViewFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - headerViewSize.width / 2.0), y: contentHeight), size: headerViewSize)
             if let headerComponentView = self.headerView.view {
                 if headerComponentView.superview == nil {
                     self.headerOffsetContainer.addSubview(headerComponentView)
@@ -818,9 +814,9 @@ final class DataUsageScreenComponent: Component {
                     linkAttribute: { _ in nil }
                 )), horizontalAlignment: .center, maximumNumberOfLines: 0)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - 15.0 * 2.0, height: 10000.0)
             )
-            let headerDescriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - headerDescriptionSize.width) / 2.0), y: contentHeight), size: headerDescriptionSize)
+            let headerDescriptionFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - headerDescriptionSize.width / 2.0), y: contentHeight), size: headerDescriptionSize)
             if let headerDescriptionComponentView = self.headerDescriptionView.view {
                 if headerDescriptionComponentView.superview == nil {
                     self.headerContentContainer.addSubview(headerDescriptionComponentView)
@@ -839,7 +835,7 @@ final class DataUsageScreenComponent: Component {
                     
                     let chartTotalLabelSize = chartTotalLabelView.bounds.size
                     let chartAreaHeight: CGFloat = 100.0
-                    let totalLabelFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((chartAreaHeight - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
+                    let totalLabelFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - chartTotalLabelSize.width / 2.0), y: pieChartFrame.minY + floor((chartAreaHeight - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
                     transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
                 }
             } else {
@@ -911,9 +907,9 @@ final class DataUsageScreenComponent: Component {
                         self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .modeChanged)))
                     })),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - (environment.safeInsets.left + 36.0) * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - 36.0 * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 100.0)
             )
-            let segmentedControlFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - segmentedSize.width) * 0.5), y: contentHeight), size: segmentedSize)
+            let segmentedControlFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - segmentedSize.width * 0.5), y: contentHeight), size: segmentedSize)
             if let segmentedControlComponentView = self.segmentedControlView.view {
                 if segmentedControlComponentView.superview == nil {
                     self.headerOffsetContainer.addSubview(segmentedControlComponentView)
@@ -943,7 +939,7 @@ final class DataUsageScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
             )
             if let categoriesComponentView = self.categoriesView.view {
                 if categoriesComponentView.superview == nil {
@@ -964,7 +960,7 @@ final class DataUsageScreenComponent: Component {
                     linkAttribute: { _ in nil }
                 )), maximumNumberOfLines: 0)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - 15.0 * 2.0, height: 10000.0)
             )
             let categoriesDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: categoriesDescriptionSize)
             if let categoriesDescriptionComponentView = self.categoriesDescriptionView.view {
@@ -996,7 +992,7 @@ final class DataUsageScreenComponent: Component {
                     linkAttribute: { _ in nil }
                 )), maximumNumberOfLines: 0)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - 15.0 * 2.0, height: 10000.0)
             )
             let totalCategoriesTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: totalCategoriesTitleSize)
             if let totalCategoriesTitleComponentView = self.totalCategoriesTitleView.view {
@@ -1021,7 +1017,7 @@ final class DataUsageScreenComponent: Component {
                     toggleCategoryExpanded: nil
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
             )
             if let totalCategoriesComponentView = self.totalCategoriesView.view {
                 if totalCategoriesComponentView.superview == nil {
@@ -1055,7 +1051,7 @@ final class DataUsageScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
             }
             let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: autoDownloadSettingsContentHeight), size: autoDownloadSettingsSize)
@@ -1067,7 +1063,7 @@ final class DataUsageScreenComponent: Component {
             }
             autoDownloadSettingsContentHeight += autoDownloadSettingsSize.height
             self.autoDownloadSettingsContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
-            transition.setFrame(view: self.autoDownloadSettingsContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: autoDownloadSettingsContentHeight)))
+            transition.setFrame(view: self.autoDownloadSettingsContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset - rightSideInset, height: autoDownloadSettingsContentHeight)))
             
             let autoDownloadSettingsDescriptionSize: CGSize
             if case .all = self.selectedStats, let autoDownloadSettingsDescriptionComponentView = self.autoDownloadSettingsDescriptionView.view {
@@ -1087,7 +1083,7 @@ final class DataUsageScreenComponent: Component {
                         maximumNumberOfLines: 0
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0 * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - 15.0 * 2.0, height: 10000.0)
                 )
             }
             let autoDownloadSettingsDescriptionFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight + autoDownloadSettingsContentHeight + 8.0), size: autoDownloadSettingsDescriptionSize)
@@ -1117,7 +1113,7 @@ final class DataUsageScreenComponent: Component {
                     tag: resetTag
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
             let clearButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: clearButtonSize)
             if let clearButtonComponentView = self.clearButtonView.view {

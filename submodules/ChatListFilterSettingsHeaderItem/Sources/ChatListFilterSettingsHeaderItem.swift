@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -33,10 +34,10 @@ public class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ChatListFilterSettingsHeaderItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let node = ChatListFilterSettingsHeaderItemNode(lottieSettings: self.context.lottieRenderingSettings)
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -49,7 +50,7 @@ public class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? ChatListFilterSettingsHeaderItemNode else {
                 assertionFailure()
@@ -59,7 +60,7 @@ public class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
             let makeLayout = nodeValue.asyncLayout()
             
             async {
-                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                 Queue.mainQueue().async {
                     completion(layout, { _ in
                         apply()
@@ -78,13 +79,16 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
     
     private var item: ChatListFilterSettingsHeaderItem?
     
-    init() {
+    private let lottieSettings: LottieRenderingSettings
+
+    init(lottieSettings: LottieRenderingSettings) {
+        self.lottieSettings = lottieSettings
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
         
         super.init(layerBacked: false)
         
@@ -109,10 +113,9 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ChatListFilterSettingsHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let isHidden = params.width > params.availableHeight && params.availableHeight < 400.0
             
-            let leftInset: CGFloat = 32.0 + params.leftInset
             
             let animationName: String
             var size = 192
@@ -137,7 +140,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             let topInset: CGFloat = CGFloat(size - insetDifference)
             
             let attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.freeTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - min(params.leftInset, params.rightInset) - 64.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
             var insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -160,11 +163,11 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                     strongSelf.accessibilityLabel = attributedText.string
                                         
                     let iconSize = CGSize(width: CGFloat(size) / 2.0, height: CGFloat(size) / 2.0)
-                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
+                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     
                     let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
                     
                     strongSelf.animationNode.alpha = isHidden ? 0.0 : 1.0
                     strongSelf.titleNode.alpha = isHidden ? 0.0 : 1.0

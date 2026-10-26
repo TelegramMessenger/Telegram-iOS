@@ -92,6 +92,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, beginMediaRecording: { _ in
         }, finishMediaRecording: { _ in
         }, stopMediaRecording: {
+        }, stopIncomingStreamingMessage: {
         }, lockMediaRecording: {
         }, resumeMediaRecording: {
         }, deleteRecordedMedia: {
@@ -199,7 +200,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
         let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, preferredGlassType: .default, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(.default), chatLocation: .peer(id: self.peerId), subject: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil)
-        let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height, maxOverlayHeight: layout.size.height, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: false)
+        // The bottom panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: bottomInsets.left, rightInset: bottomInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height, maxOverlayHeight: layout.size.height, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: false)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
         

@@ -624,7 +624,7 @@ private final class RecentSessionsContextReferenceContentSource: ContextReferenc
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
     }
 }
 
@@ -717,8 +717,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         
         removeSessionDisposable.set(((webSessionsContext.remove(hash: sessionId)
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-        })
+        |> ignoreValues)
         |> deliverOnMainQueue).start(error: { _ in
         }, completed: {
             updateState {
@@ -994,9 +993,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         
         if sessionsState.sessions.count > 1 {
             if state.terminatingOtherSessions {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, staysInRow: true, action: {})
             } else if state.editing {
-                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, action: {
+                rightNavigationButton = ItemListNavigationButton(content: .icon(.done), style: .bold, enabled: true, staysInRow: true, action: {
                     updateState { state in
                         return state.withUpdatedEditing(false)
                     }

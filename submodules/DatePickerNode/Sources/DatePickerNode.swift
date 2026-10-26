@@ -82,12 +82,38 @@ private var calendar: Calendar = {
     return calendar
 }()
 
-private func monthForDate(_ date: Date) -> Date {
+func monthForDate(_ date: Date, calendar: Calendar = calendar) -> Date {
     var components = calendar.dateComponents([.year, .month], from: date)
     components.hour = 0
     components.minute = 0
     components.second = 0
     return calendar.date(from: components)!
+}
+
+// Every month the picker holds must be exactly `monthForDate` of that month, because pages are
+// found by comparing dates. Month arithmetic keeps the wall-clock time, so stepping over a 1st
+// with no local midnight (Soviet zones moved clocks from 00:00 to 01:00 on 1 April 1981) would
+// leave every later month at 01:00, matching no page.
+func monthByAdding(_ value: Int, to month: Date, calendar: Calendar = calendar) -> Date? {
+    return calendar.date(byAdding: .month, value: value, to: month).flatMap { monthForDate($0, calendar: calendar) }
+}
+
+// The pages, from `minDate`'s month through `maxDate`'s. Never empty.
+func datePickerMonths(minDate: Date, maxDate: Date, calendar: Calendar = calendar) -> [Date] {
+    let endMonth = monthForDate(maxDate, calendar: calendar)
+    var months: [Date] = [monthForDate(minDate, calendar: calendar)]
+    // `month > lastMonth` guarantees progress: a calendar that resolved a skipped midnight
+    // backwards would otherwise repeat a month forever.
+    while let lastMonth = months.last, let month = monthByAdding(1, to: lastMonth, calendar: calendar), month > lastMonth, month <= endMonth {
+        months.append(month)
+    }
+    return months
+}
+
+// The page showing `date`'s month, or the nearest page when that month is outside the pages.
+func datePickerMonthIndex(of date: Date, in months: [Date], calendar: Calendar = calendar) -> Int {
+    let month = monthForDate(date, calendar: calendar)
+    return months.firstIndex(where: { $0 >= month }) ?? months.count - 1
 }
 
 private func generateSmallArrowImage(color: UIColor) -> UIImage? {
@@ -503,6 +529,7 @@ public final class DatePickerNode: ASDisplayNode {
         self.nextButtonNode.setImage(generateNavigationArrowImage(color: theme.disabledColor, mirror: false), for: .disabled)
         
         self.setupItems()
+        self.updateCurrentIndex()
         
         self.monthButtonNode.addTarget(self, action: #selector(self.monthButtonPressed), forControlEvents: .touchUpInside)
         
@@ -547,17 +574,11 @@ public final class DatePickerNode: ASDisplayNode {
         let previousState = self.state
         self.state = state
         
-        if previousState.minDate != state.minDate || previousState.maxDate != state.maxDate || previousState.date == nil && state.date != nil {
+        if previousState.minDate != state.minDate || previousState.maxDate != state.maxDate {
             self.monthPickerNode.yearRange = yearRange(for: state)
             self.setupItems()
-        } else if previousState.selectedMonth != state.selectedMonth {
-            for i in 0 ..< self.months.count {
-                if self.months[i].timeIntervalSince1970 >= state.selectedMonth.timeIntervalSince1970 {
-                    self.currentIndex = max(0, min(self.months.count - 1, i))
-                    break
-                }
-            }
         }
+        self.updateCurrentIndex()
         
         let initialDate: Date
         if let date = calendar.date(byAdding: .hour, value: 11, to: self.state.selectedMonth) {
@@ -574,35 +595,20 @@ public final class DatePickerNode: ASDisplayNode {
     }
     
     private func setupItems() {
-        let startMonth = monthForDate(self.state.minDate)
-        let endMonth = monthForDate(self.state.maxDate)
-        let selectedMonth = monthForDate(self.state.date ?? self.state.selectedMonth)
+        self.months = datePickerMonths(minDate: self.state.minDate, maxDate: self.state.maxDate)
+    }
+    
+    private func updateCurrentIndex() {
+        // The page follows `selectedMonth`, the month on screen, not `date`: rebuilding the pages
+        // after the user paged away from the date's month must stay where they paged to.
+        self.currentIndex = datePickerMonthIndex(of: self.state.selectedMonth, in: self.months)
         
-        var currentIndex = 0
-        
-        var months: [Date] = [startMonth]
-        var index = 1
-        
-        var nextMonth = startMonth
-        while true {
-            if let month = calendar.date(byAdding: .month, value: 1, to: nextMonth) {
-                nextMonth = month
-                if nextMonth == selectedMonth {
-                    currentIndex = index
-                }
-                if nextMonth > endMonth {
-                    break
-                } else {
-                    months.append(nextMonth)
-                }
-                index += 1
-            } else {
-                break
-            }
+        // The header and the previous/next buttons read `selectedMonth`, so a month without a page
+        // becomes the page shown for it.
+        let month = self.months[self.currentIndex]
+        if month != self.state.selectedMonth {
+            self.state = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: month)
         }
-        
-        self.months = months
-        self.currentIndex = currentIndex
     }
     
     public func updateTheme(_ theme: DatePickerTheme) {
@@ -726,6 +732,15 @@ public final class DatePickerNode: ASDisplayNode {
     }
     
     public var heightUpdated: ((CGFloat) -> Void)?
+    /// How much further from the right edge the header row's controls (month arrows, time and date buttons) stay, to
+    /// clear a corner block the header rises beside (iPhone Duo's status corner). The grid keeps the full width.
+    public var headerTrailingInset: CGFloat = 0.0 {
+        didSet {
+            if self.headerTrailingInset != oldValue, let size = self.validLayout {
+                self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition) {
         var validIds: [Date] = []
         
@@ -789,7 +804,7 @@ public final class DatePickerNode: ASDisplayNode {
         let topInset: CGFloat = self.hasValueRow ? 78.0 + timeHeight : 65.0
         let sideInset: CGFloat = 16.0
         
-        let month = monthForDate(self.state.selectedMonth)
+        let month = self.state.selectedMonth
         let components = calendar.dateComponents([.month, .year], from: month)
         
         let timeTitleSize = self.timeTitleNode.updateLayout(size)
@@ -813,9 +828,9 @@ public final class DatePickerNode: ASDisplayNode {
         self.monthButtonNode.frame = monthTextFrame.inset(by: UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -30.0))
         
         self.previousButtonNode.isEnabled = self.currentIndex > 0
-        self.previousButtonNode.frame = CGRect(x: size.width - sideInset - 54.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
+        self.previousButtonNode.frame = CGRect(x: size.width - sideInset - self.headerTrailingInset - 54.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
         self.nextButtonNode.isEnabled = self.currentIndex < self.months.count - 1
-        self.nextButtonNode.frame = CGRect(x: size.width - sideInset - 13.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
+        self.nextButtonNode.frame = CGRect(x: size.width - sideInset - self.headerTrailingInset - 13.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
         
         let date = self.date ?? Date()
         var t: time_t = Int(date.timeIntervalSince1970)
@@ -828,7 +843,7 @@ public final class DatePickerNode: ASDisplayNode {
         var timeSize = self.timeButtonNode.measure(size)
         timeSize.width += 24.0
         timeSize.height = 36.0
-        self.timeButtonNode.frame = CGRect(x: size.width - timeSize.width - 10.0, y: 4.0, width: timeSize.width, height: timeSize.height)
+        self.timeButtonNode.frame = CGRect(x: size.width - self.headerTrailingInset - timeSize.width - 10.0, y: 4.0, width: timeSize.width, height: timeSize.height)
         
         let dateString = stringForMediumDate(timestamp: Int32(date.timeIntervalSince1970), strings: self.strings, dateTimeFormat: self.dateTimeFormat, withTime: false)
         self.dateButtonNode.setTitle(dateString, with: Font.with(size: 17.0, traits: .monospacedNumbers), with: self.state.displayingDateSelection ? self.theme.accentColor : self.theme.textColor, for: .normal)
@@ -836,7 +851,7 @@ public final class DatePickerNode: ASDisplayNode {
         var dateSize = self.dateButtonNode.measure(size)
         dateSize.width += 24.0
         dateSize.height = 36.0
-        self.dateButtonNode.frame = CGRect(x: size.width - timeSize.width - 10.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
+        self.dateButtonNode.frame = CGRect(x: size.width - self.headerTrailingInset - timeSize.width - 10.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
         
         let daysSideInset: CGFloat = 12.0
         let cellSize: CGFloat = floor((constrainedSize.width - daysSideInset * 2.0) / 7.0)
@@ -913,7 +928,7 @@ public final class DatePickerNode: ASDisplayNode {
     }
 
     @objc private func previousButtonPressed() {
-        guard let month = calendar.date(byAdding: .month, value: -1, to: self.state.selectedMonth), let size = self.validLayout else {
+        guard let month = monthByAdding(-1, to: self.state.selectedMonth), let size = self.validLayout else {
             return
         }
             
@@ -924,7 +939,7 @@ public final class DatePickerNode: ASDisplayNode {
     }
     
     @objc private func nextButtonPressed() {
-        guard let month = calendar.date(byAdding: .month, value: 1, to: self.state.selectedMonth), let size = self.validLayout else {
+        guard let month = monthByAdding(1, to: self.state.selectedMonth), let size = self.validLayout else {
             return
         }
             

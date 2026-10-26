@@ -18,6 +18,7 @@ static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 static const void *badgeKey = &badgeKey;
 static const void *animationNameKey = &animationNameKey;
 static const void *animationOffsetKey = &animationOffsetKey;
+static const void *animationScaleKey = &animationScaleKey;
 static const void *ringSelectionKey = &ringSelectionKey;
 
 @implementation UINavigationItem (Proxy)
@@ -418,6 +419,14 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
 
 - (CGPoint)animationOffset {
     return ((NSValue *)[self associatedObjectForKey:animationOffsetKey]).CGPointValue;
+}
+
+- (void)setAnimationScale:(CGFloat)animationScale {
+    [self setAssociatedObject:@(animationScale) forKey:animationScaleKey];
+}
+
+- (CGFloat)animationScale {
+    return ((NSNumber *)[self associatedObjectForKey:animationScaleKey]).doubleValue;
 }
 
 - (void)setRingSelection:(bool)ringSelection {

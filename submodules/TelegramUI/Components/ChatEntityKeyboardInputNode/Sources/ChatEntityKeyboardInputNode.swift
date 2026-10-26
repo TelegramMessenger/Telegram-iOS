@@ -1881,7 +1881,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         if case let .customChatContents(customChatContents) = interfaceState.subject {
             switch customChatContents.kind {
-            case .quickReplyMessageInput:
+            case .quickReplyMessageInput, .welcomeMessages:
                 break
             case .hashTagSearch:
                 break
@@ -2672,7 +2672,7 @@ public final class EntityInputView: UIInputView, LegacyMessageInputPanelInputVie
 
         let bottomInset: CGFloat
         if #available(iOS 11.0, *) {
-            bottomInset = max(0.0, UIScreen.main.bounds.height - (self.window?.safeAreaLayoutGuide.layoutFrame.maxY ?? 10000.0))
+            bottomInset = max(0.0, mainWindowScreenBounds.height - (self.window?.safeAreaLayoutGuide.layoutFrame.maxY ?? 10000.0))
         } else {
             bottomInset = 0.0
         }

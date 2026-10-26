@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import RLottieBinding
+import LottieBinding
 import GZip
 import AppBundle
 import HierarchyTrackingLayer

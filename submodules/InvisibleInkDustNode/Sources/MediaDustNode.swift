@@ -240,7 +240,11 @@ public class MediaDustNode: ASDisplayNode {
                 }
             }
             
-            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
+            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 let xFactor = (location.x / self.emitterNode.frame.width - 0.5) * 2.0
                 let yFactor = (location.y / self.emitterNode.frame.height - 0.5) * 2.0
                 let maxFactor = max(abs(xFactor), abs(yFactor))

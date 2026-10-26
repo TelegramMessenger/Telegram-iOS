@@ -182,7 +182,6 @@ public class PremiumLimitsListScreen: ViewController {
             
             self.pagerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.pagerTapGesture(_:))))
             
-            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -275,7 +274,7 @@ public class PremiumLimitsListScreen: ViewController {
             }
             transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: nil)
             
-            let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
+            let modalProgress = isLandscape ? 0.0 : (self.defaultTopInset != 0.0 ? (1.0 - topInset / self.defaultTopInset) : 1.0)
             self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
             
             let clipFrame: CGRect
@@ -1252,7 +1251,13 @@ public class PremiumLimitsListScreen: ViewController {
                     additionalInset = 20.0
                 }
                 
-                return layout.size.height - layout.size.width - 181.0 - panelHeight + additionalInset
+                let value = layout.size.height - layout.size.width - 181.0 - panelHeight + additionalInset
+                if layout.reservedCorners != .none {
+                    // Never above the expanded position on iPhone Duo's screens, which are wide for their height (466x678
+                    // folded): the demo square, its texts and the panel leave no room for a lower collapsed position.
+                    return max(0.0, value)
+                }
+                return value
             } else {
                 return 210.0
             }
@@ -1640,7 +1645,9 @@ private class FooterNode: ASDisplayNode {
         self.validLayout = layout
         
         let buttonInset: CGFloat = 30.0
-        let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
+        // A bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let buttonWidth = layout.size.width - bottomInsets.left - bottomInsets.right - buttonInset * 2.0
         let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
         let bottomPanelPadding: CGFloat = 12.0
         let bottomInset: CGFloat = layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : bottomPanelPadding
@@ -1653,7 +1660,7 @@ private class FooterNode: ASDisplayNode {
         }
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: buttonOffset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: bottomInsets.left + buttonInset, y: buttonOffset), size: CGSize(width: buttonWidth, height: buttonHeight)))
         
         transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
         self.backgroundNode.update(size: panelFrame.size, transition: transition)
@@ -1674,7 +1681,8 @@ private class FooterNode: ASDisplayNode {
                 environment: {},
                 containerSize: layout.size
             )
-            self.pageIndicatorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - indicatorSize.width) / 2.0), y: 10.0), size: indicatorSize)
+            // Centred over the button below it, in the button's band (iPhone Duo's side strip).
+            self.pageIndicatorView.frame = CGRect(origin: CGPoint(x: bottomInsets.left + floorToScreenPixels((layout.size.width - bottomInsets.left - bottomInsets.right - indicatorSize.width) / 2.0), y: 10.0), size: indicatorSize)
             transition.updateAlpha(layer: self.pageIndicatorView.layer, alpha: count <= 1 ? 0.0 : 1.0)
         }
         

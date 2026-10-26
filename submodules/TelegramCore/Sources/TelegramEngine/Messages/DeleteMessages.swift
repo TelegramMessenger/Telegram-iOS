@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [MediaResourceId]) {
     if let image = media as? TelegramMediaImage {
@@ -19,6 +19,23 @@ func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [MediaR
 func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [MediaResourceId]) {
     for media in message.effectiveMedia {
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
+    }
+}
+
+func _internal_ephemeralReplacementMessageIds(transaction: Transaction, anchorIds: [MessageId]) -> [MessageId] {
+    var result = Set<MessageId>()
+    for anchorId in anchorIds {
+        if let message = transaction.getMessage(anchorId), let attribute = message.attributes.first(where: { $0 is EphemeralReplacementMessageAttribute }) as? EphemeralReplacementMessageAttribute {
+            result.insert(attribute.replacementMessageId)
+        }
+    }
+    return Array(result)
+}
+
+func _internal_deleteEphemeralReplacements(transaction: Transaction, anchorIds: [MessageId]) {
+    let replacementMessageIds = _internal_ephemeralReplacementMessageIds(transaction: transaction, anchorIds: anchorIds)
+    if !replacementMessageIds.isEmpty {
+        transaction.deleteMessages(replacementMessageIds, forEachMedia: nil)
     }
 }
 
@@ -52,7 +69,8 @@ public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBo
             }
         }
     }
-    transaction.deleteMessages(ids, forEachMedia: { _ in
+    let replacementMessageIds = _internal_ephemeralReplacementMessageIds(transaction: transaction, anchorIds: ids)
+    transaction.deleteMessages(ids + replacementMessageIds, forEachMedia: { _ in
     })
 }
 

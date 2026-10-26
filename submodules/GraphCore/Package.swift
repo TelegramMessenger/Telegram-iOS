@@ -22,6 +22,6 @@ let package = Package(
         .target(
             name: "GraphCore",
             dependencies: [],
-            path: "Sources"),
+            path: "GraphCore2/Sources"),
     ]
 )

@@ -458,10 +458,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 textLeftInset += 16.0
                 
                 todoItemCompleted = todo.completions.contains(where: { $0.id == todoItemId })
-            } else if isText, let message = arguments.message {
+            } else if let message = arguments.message, isText || arguments.quote.flatMap({ $0.quote.richText != nil && !$0.quote.text.isEmpty }) == true {
+                // A rich target reports `isText == false` (`descriptionStringForMessage` previews its
+                // page), but a rich quote has a flat form to show like any other quote.
                 var text: String
                 var messageEntities: [MessageTextEntity]
-                
+
                 if let quote = arguments.quote?.quote, !quote.text.isEmpty {
                     text = quote.text
                     messageEntities = quote.entities
@@ -469,8 +471,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     text = foldLineBreaks(message.text)
                     messageEntities = message.textEntitiesAttribute?.entities ?? []
                 }
-                
-                if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty {
+
+                // A rich message's translation is a page, not text to show in place of the quote.
+                if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty, arguments.quote?.quote.richText == nil {
                     for attribute in message.attributes {
                         if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
                             text = attribute.text
@@ -514,11 +517,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     messageText = NSAttributedString(string: quote.text, font: textFont, textColor: textColor)
                 }
             } else {
-                let mutableTextString = NSMutableAttributedString(attributedString: foldLineBreaks(textString))
-                mutableTextString.addAttributes([
-                    .font: textFont,
-                    .foregroundColor: textColor
-                ], range: NSRange(location: 0, length: mutableTextString.length))
+                let mutableTextString = styleInstantPagePreview(foldLineBreaks(textString), font: textFont, italicFont: Font.italic(textFont.pointSize), textColor: textColor)
                 messageText = renderInstantPagePreviewIcons(mutableTextString, font: textFont, textColor: textColor)
                 
                 if let _ = arguments.message?.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {

@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -39,12 +40,12 @@ public class ChatMessageBirthdateSuggestionContentNode: ChatMessageBubbleContent
     
     private var absoluteRect: (CGRect, CGSize)?
     
-    required public init() {
+    required public init(lottieSettings: LottieRenderingSettings) {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 27.0
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
         
         self.subtitleNode = TextNode()
         self.subtitleNode.isUserInteractionEnabled = false
@@ -82,7 +83,7 @@ public class ChatMessageBirthdateSuggestionContentNode: ChatMessageBubbleContent
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
-        super.init()
+        super.init(lottieSettings: lottieSettings)
 
         self.addSubnode(self.mediaBackgroundNode)
         
@@ -144,10 +145,10 @@ public class ChatMessageBirthdateSuggestionContentNode: ChatMessageBubbleContent
         
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
         
-        return { item, layoutConstants, _, _, _, _ in
+        return { [weak self] item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
                         
-            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+            return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { [weak self] constrainedSize, position in
                 let width: CGFloat = 186.0
                 
                 var day: Int32 = 1
@@ -203,7 +204,7 @@ public class ChatMessageBirthdateSuggestionContentNode: ChatMessageBubbleContent
                     backgroundSize.height += 44.0
                 }
                 
-                return (backgroundSize.width, { boundingWidth in
+                return (backgroundSize.width, { [weak self] boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             let isFirstTime = strongSelf.item == nil
@@ -371,12 +372,6 @@ public class ChatMessageBirthdateSuggestionContentNode: ChatMessageBubbleContent
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
         
-        if let mediaBackgroundContent = self.mediaBackgroundContent {
-            var backgroundFrame = mediaBackgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
-            mediaBackgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {

@@ -122,15 +122,22 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
             buttonPanelInsets.left += 18.0
             buttonPanelInsets.right += 18.0
         }
+        // Beside a side strip (iPhone Duo) the controls keep to the band between the side insets: in folded
+        // landscape-left the strip's status block sits at the bottom, level with them. Equal side insets keep the
+        // screen-wide panel.
+        let stripInsets: (left: CGFloat, right: CGFloat) = leftInset != rightInset ? (leftInset, rightInset) : (0.0, 0.0)
+        buttonPanelInsets.left += stripInsets.left
+        buttonPanelInsets.right += stripInsets.right
+        let controlsCenterX = stripInsets.left + (width - stripInsets.left - stripInsets.right) / 2.0
         
         let constrainedSize = CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude)
         let controlsY = panelHeight - buttonPanelInsets.bottom - 44.0
 
         let mainSize = self.mainNode.measure(constrainedSize)
-        self.mainNode.frame = CGRect(origin: CGPoint(x: floor((width - mainSize.width) / 2.0), y: controlsY + floor((44.0 - mainSize.height) / 2.0)), size: mainSize)
+        self.mainNode.frame = CGRect(origin: CGPoint(x: floor(controlsCenterX - mainSize.width / 2.0), y: controlsY + floor((44.0 - mainSize.height) / 2.0)), size: mainSize)
 
         let mainButtonSize = self.setMainButton.measure(constrainedSize)
-        self.setMainButton.frame = CGRect(origin: CGPoint(x: floor((width - mainButtonSize.width) / 2.0), y: controlsY + floor((44.0 - mainButtonSize.height) / 2.0)), size: mainButtonSize)
+        self.setMainButton.frame = CGRect(origin: CGPoint(x: floor(controlsCenterX - mainButtonSize.width / 2.0), y: controlsY + floor((44.0 - mainButtonSize.height) / 2.0)), size: mainButtonSize)
 
         var leftControlItems: [GlassControlGroupComponent.Item] = []
         var rightControlItems: [GlassControlGroupComponent.Item] = []

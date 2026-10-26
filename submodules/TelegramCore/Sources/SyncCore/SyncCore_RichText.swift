@@ -32,6 +32,8 @@ private enum RichTextTypes: Int32 {
     case textMentionName = 26
     case textSpoiler = 27
     case textDate = 28
+    case textButton = 29
+    case textTonAddress = 30
 }
 
 public indirect enum RichText: PostboxCoding, Equatable {
@@ -57,6 +59,7 @@ public indirect enum RichText: PostboxCoding, Equatable {
     case textAutoPhone(text: RichText)
     case textAutoUrl(text: RichText)
     case textBankCard(text: RichText)
+    case textTonAddress(text: RichText)
     case textBotCommand(text: RichText)
     case textCashtag(text: RichText)
     case textHashtag(text: RichText)
@@ -64,6 +67,9 @@ public indirect enum RichText: PostboxCoding, Equatable {
     case textMentionName(text: RichText, peerId: Int64)
     case textSpoiler(text: RichText)
     case textDate(text: RichText, date: Int32, format: MessageTextEntityType.DateTimeFormat?)
+    /// An inline tappable button inside a text run. Its label is itself RichText, so it can sit
+    /// mid-sentence. Not yet rendered as a pill — see Stage 2.
+    case textButton(InstantPageButton)
 
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -117,6 +123,8 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 self = .textAutoUrl(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case RichTextTypes.textBankCard.rawValue:
                 self = .textBankCard(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
+            case RichTextTypes.textTonAddress.rawValue:
+                self = .textTonAddress(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case RichTextTypes.textBotCommand.rawValue:
                 self = .textBotCommand(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case RichTextTypes.textCashtag.rawValue:
@@ -131,6 +139,8 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 self = .textSpoiler(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
             case RichTextTypes.textDate.rawValue:
                 self = .textDate(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, date: decoder.decodeInt32ForKey("dt", orElse: 0), format: decoder.decodeOptionalInt32ForKey("df").flatMap { MessageTextEntityType.DateTimeFormat(rawValue: $0) })
+            case RichTextTypes.textButton.rawValue:
+                self = .textButton(decoder.decodeObjectForKey("btn", decoder: { InstantPageButton(decoder: $0) }) as! InstantPageButton)
             default:
                 self = .empty
         }
@@ -218,6 +228,9 @@ public indirect enum RichText: PostboxCoding, Equatable {
             case let .textBankCard(text):
                 encoder.encodeInt32(RichTextTypes.textBankCard.rawValue, forKey: "r")
                 encoder.encodeObject(text, forKey: "t")
+            case let .textTonAddress(text):
+                encoder.encodeInt32(RichTextTypes.textTonAddress.rawValue, forKey: "r")
+                encoder.encodeObject(text, forKey: "t")
             case let .textBotCommand(text):
                 encoder.encodeInt32(RichTextTypes.textBotCommand.rawValue, forKey: "r")
                 encoder.encodeObject(text, forKey: "t")
@@ -246,6 +259,9 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "df")
                 }
+            case let .textButton(button):
+                encoder.encodeInt32(RichTextTypes.textButton.rawValue, forKey: "r")
+                encoder.encodeObject(button, forKey: "btn")
         }
     }
 
@@ -367,6 +383,8 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 if case .textAutoUrl(text) = rhs { return true } else { return false }
             case let .textBankCard(text):
                 if case .textBankCard(text) = rhs { return true } else { return false }
+            case let .textTonAddress(text):
+                if case .textTonAddress(text) = rhs { return true } else { return false }
             case let .textBotCommand(text):
                 if case .textBotCommand(text) = rhs { return true } else { return false }
             case let .textCashtag(text):
@@ -381,6 +399,8 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 if case .textSpoiler(text) = rhs { return true } else { return false }
             case let .textDate(lhsText, lhsDate, lhsFormat):
                 if case let .textDate(rhsText, rhsDate, rhsFormat) = rhs, lhsText == rhsText, lhsDate == rhsDate, lhsFormat == rhsFormat { return true } else { return false }
+            case let .textButton(lhsButton):
+                if case let .textButton(rhsButton) = rhs, lhsButton == rhsButton { return true } else { return false }
         }
     }
 }
@@ -436,6 +456,8 @@ public extension RichText {
                 return text.plainText
             case let .textBankCard(text):
                 return text.plainText
+            case let .textTonAddress(text):
+                return text.plainText
             case let .textBotCommand(text):
                 return text.plainText
             case let .textCashtag(text):
@@ -450,6 +472,10 @@ public extension RichText {
                 return text.plainText
             case let .textDate(text, _, _):
                 return text.plainText
+            case let .textButton(button):
+                // The label is the button's only textual content, so previews and accessibility
+                // read it rather than seeing an empty run.
+                return button.text.plainText
         }
     }
 }
@@ -567,6 +593,11 @@ extension RichText {
                 throw FlatBuffersError.missingRequiredField()
             }
             self = .textBankCard(text: try RichText(flatBuffersObject: value.text))
+        case .richtextTonaddress:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_TonAddress.self) else {
+                throw FlatBuffersError.missingRequiredField()
+            }
+            self = .textTonAddress(text: try RichText(flatBuffersObject: value.text))
         case .richtextBotcommand:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_BotCommand.self) else {
                 throw FlatBuffersError.missingRequiredField()
@@ -603,6 +634,11 @@ extension RichText {
             }
             let formatValue = value.format
             self = .textDate(text: try RichText(flatBuffersObject: value.text), date: value.date, format: formatValue == -1 ? nil : MessageTextEntityType.DateTimeFormat(rawValue: formatValue))
+        case .richtextTextbutton:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_TextButton.self) else {
+                throw FlatBuffersError.missingRequiredField()
+            }
+            self = .textButton(try InstantPageButton(flatBuffersObject: value.button))
         case .none_:
             self = .empty
         }
@@ -756,6 +792,12 @@ extension RichText {
             let start = TelegramCore_RichText_BankCard.startRichText_BankCard(&builder)
             TelegramCore_RichText_BankCard.add(text: textOffset, &builder)
             offset = TelegramCore_RichText_BankCard.endRichText_BankCard(&builder, start: start)
+        case let .textTonAddress(text):
+            valueType = .richtextTonaddress
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_TonAddress.startRichText_TonAddress(&builder)
+            TelegramCore_RichText_TonAddress.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_TonAddress.endRichText_TonAddress(&builder, start: start)
         case let .textBotCommand(text):
             valueType = .richtextBotcommand
             let textOffset = text.encodeToFlatBuffers(builder: &builder)
@@ -801,6 +843,12 @@ extension RichText {
             TelegramCore_RichText_Date.add(date: date, &builder)
             TelegramCore_RichText_Date.add(format: format?.rawValue ?? -1, &builder)
             offset = TelegramCore_RichText_Date.endRichText_Date(&builder, start: start)
+        case let .textButton(button):
+            valueType = .richtextTextbutton
+            let buttonOffset = button.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_TextButton.startRichText_TextButton(&builder)
+            TelegramCore_RichText_TextButton.add(button: buttonOffset, &builder)
+            offset = TelegramCore_RichText_TextButton.endRichText_TextButton(&builder, start: start)
         }
 
         return TelegramCore_RichText.createRichText(&builder, valueType: valueType, valueOffset: offset)

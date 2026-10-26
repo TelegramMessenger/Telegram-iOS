@@ -8,7 +8,9 @@ import RichTextEditorCore
 ///   1. Backspace at the start of a trailing EMPTY body paragraph removes that paragraph, even when the
 ///      preceding block is a non-text atom (image / table / code block) that can't absorb a text merge —
 ///      so "deleting the last paragraph" is always possible. A non-empty paragraph is kept (the caret
-///      just steps back into the preceding block).
+///      just steps back into the preceding block). EXCEPTION — a preceding TABLE: the first Backspace
+///      structurally selects the whole table (a second deletes it), so the caret parks inside the table
+///      instead of at its last-cell end. See CanvasTableBackspaceSelectTests.
 ///   2. Tapping anywhere below the last block starts a new empty body paragraph there — for any trailing
 ///      block type (image / table / paragraph / quote / code), except an already-empty body paragraph. This
 ///      affordance is gated on `tapBelowAddsTrailingParagraph` (default `true`, the article editor); the chat
@@ -38,26 +40,28 @@ final class CanvasTrailingParagraphTests: XCTestCase {
 
     // MARK: 1 — Backspace removes a trailing empty paragraph after a non-text block
 
-    func test_backspaceAtStartOfEmptyParagraphAfterTable_removesParagraph_keepsTable() {
+    func test_backspaceAtStartOfEmptyParagraphAfterTable_removesParagraph_andSelectsTable() {
+        // The empty trailing paragraph is removed AND the whole table is structurally selected (the caret
+        // moves in); a SECOND Backspace deletes the table — see CanvasTableBackspaceSelectTests.
         let v = canvas([table("t"), .paragraph(ParagraphBlock(id: BlockID("bot"), runs: []))])
-        let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("tbp")) }!   // last cell "Beta"
         caret(v, v.boxes[1].textStart)
         v.deleteBackward()
         XCTAssertEqual(v.boxes.count, 1, "the empty paragraph is removed; the table is kept")
         XCTAssertTrue(v.boxes[0] is TableBlockBox)
-        XCTAssertEqual(v.head, cellB.globalStart + cellB.length, "caret parks at the table's last cell end")
-        XCTAssertNotNil(v.leafRegion(containingGlobal: v.head), "caret is in a real region, not hidden at the table boundary")
+        XCTAssertNotNil(v.tableSelection, "the whole table is structurally selected")
+        XCTAssertNotNil(v.activeTable(), "the caret is parked inside the table")
     }
 
-    func test_backspaceAtStartOfNonEmptyParagraphAfterTable_keepsBoth_movesIntoLastCell() {
-        // Unchanged from before: a NON-empty paragraph after a table is kept; the caret moves into the cell.
+    func test_backspaceAtStartOfNonEmptyParagraphAfterTable_keepsBoth_selectsTable() {
+        // A NON-empty paragraph after a table is kept; the first Backspace selects the whole table (the
+        // caret moves in), a second deletes it — see CanvasTableBackspaceSelectTests.
         let v = canvas([table("t"), .paragraph(ParagraphBlock(id: BlockID("bot"), runs: [TextRun(text: "Bot")]))])
-        let cellB = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("tbp")) }!
         caret(v, v.boxes[1].textStart)
         v.deleteBackward()
         XCTAssertEqual(v.boxes.count, 2, "nothing deleted")
         XCTAssertEqual((v.boxes[1] as! BlockBox).currentParagraph().text, "Bot")
-        XCTAssertEqual(v.head, cellB.globalStart + cellB.length, "caret moved into the last cell")
+        XCTAssertNotNil(v.tableSelection, "the whole table is structurally selected")
+        XCTAssertNotNil(v.activeTable(), "the caret is parked inside the table")
     }
 
     func test_backspaceAtStartOfEmptyParagraphAfterCode_removesParagraph_keepsCode() {

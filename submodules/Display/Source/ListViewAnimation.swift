@@ -221,8 +221,10 @@ public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTra
                 return (animationDuration, .Default(duration: animationDuration))
             case .easeIn:
                 return (animationDuration, .Default(duration: animationDuration))
-            case .spring, .customSpring:
+            case .spring:
                 return (animationDuration, .Spring(duration: animationDuration))
+            case let .customSpring(mass, stiffness, damping, initialVelocity):
+                return (animationDuration, .CustomSpring(duration: animationDuration, mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity))
             case let .custom(c1x, c1y, c2x, c2y):
                 return (animationDuration, .Custom(duration: animationDuration, c1x, c1y, c2x, c2y))
             }

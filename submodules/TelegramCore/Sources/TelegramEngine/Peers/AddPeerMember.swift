@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 public enum AddGroupMemberError {
@@ -389,6 +389,9 @@ public enum CreateBotError {
     case generic
     case occupied
     case limitExceeded
+    case suffixNotAllowed
+    case premiumRequired
+    case suffixLimitExceeded(limit: Int32?)
 }
 
 func _internal_createBot(account: Account, name: String, username: String, managerPeerId: PeerId, viaDeeplink: Bool) -> Signal<EnginePeer, CreateBotError> {
@@ -409,11 +412,20 @@ func _internal_createBot(account: Account, name: String, username: String, manag
         }
         return account.network.request(Api.functions.bots.createBot(flags: flags, name: name, username: username, managerId: inputUser))
         |> mapError { error -> CreateBotError in
-            if error.errorDescription == "USERNAME_OCCUPIED" {
-                return .occupied
-            } else if error.errorDescription == "BOT_CREATE_LIMIT_EXCEEDED" {
+            Logger.shared.log("BotUsername", "bots.createBot(\(username)) failed: \(error.errorDescription ?? "")")
+            if error.errorDescription == "BOT_CREATE_LIMIT_EXCEEDED" {
                 return .limitExceeded
-            } else {
+            }
+            switch BotUsernameServerError(errorDescription: error.errorDescription ?? "") {
+            case .occupied:
+                return .occupied
+            case .suffixNotAllowed:
+                return .suffixNotAllowed
+            case .premiumRequired:
+                return .premiumRequired
+            case let .suffixLimitExceeded(limit):
+                return .suffixLimitExceeded(limit: limit)
+            case .purchaseAvailable, nil:
                 return .generic
             }
         }

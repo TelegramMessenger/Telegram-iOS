@@ -231,12 +231,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
         }
         
         private func updateScrolling(transition: ComponentTransition) {
-            let navigationAlphaDistance: CGFloat = 16.0
-            let navigationAlpha: CGFloat = max(0.0, min(1.0, self.scrollView.contentOffset.y / navigationAlphaDistance))
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
-                transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
-            }
         }
         
         private func applySettings(standalone: Bool) {
@@ -392,7 +386,10 @@ final class PeerAllowedReactionsScreenComponent: Component {
             
             let topInset: CGFloat = 24.0
             let bottomInset: CGFloat = 8.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
             let textSideInset: CGFloat = 16.0
             
             let enabledReactions: [EmojiComponentReactionItem]
@@ -1038,7 +1035,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
             )
             let switchFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: switchSize)
             if let switchView = self.switchItem.view {
@@ -1061,7 +1058,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     maximumNumberOfLines: 0
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - textSideInset * 2.0, height: .greatestFiniteMagnitude)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - textSideInset * 2.0, height: .greatestFiniteMagnitude)
             )
             let switchInfoTextFrame = CGRect(origin: CGPoint(x: sideInset + textSideInset, y: contentHeight), size: switchInfoTextSize)
             if let switchInfoTextView = self.switchInfoText.view {
@@ -1098,7 +1095,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         maximumNumberOfLines: 0
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - textSideInset * 2.0, height: .greatestFiniteMagnitude)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - textSideInset * 2.0, height: .greatestFiniteMagnitude)
                 )
                 let reactionsTitleTextFrame = CGRect(origin: CGPoint(x: sideInset + textSideInset, y: contentHeight), size: reactionsTitleTextSize)
                 if let reactionsTitleTextView = reactionsTitleText.view {
@@ -1158,7 +1155,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
                 )
                 let reactionInputFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: reactionInputSize)
                 if let reactionInputView = reactionInput.view {
@@ -1231,7 +1228,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - textSideInset * 2.0, height: .greatestFiniteMagnitude)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset - textSideInset * 2.0, height: .greatestFiniteMagnitude)
                 )
                 let reactionsInfoTextFrame = CGRect(origin: CGPoint(x: sideInset + textSideInset, y: contentHeight), size: reactionsInfoTextSize)
                 if let reactionsInfoTextView = reactionsInfoText.view {
@@ -1312,7 +1309,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         displaySeparators: false
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let reactionCountSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: reactionCountSectionSize)
                 if let reactionCountSectionView = reactionCountSection.view {
@@ -1422,7 +1419,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             ]
                         )),
                         environment: {},
-                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                        containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                     )
                     let paidReactionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: paidReactionsSectionSize)
                     if let paidReactionsSectionView = paidReactionsSection.view {
@@ -1547,7 +1544,14 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 ))))
             }
             
-            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            var buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            // iPhone Duo: when the side insets differ (one is the side strip) the bottom button spans the strip and
+            // keeps clear only of a corner block at the bottom; equal insets keep the old inset.
+            if environment.safeInsets.left != environment.safeInsets.right {
+                let bottomInsets = environment.bottomEdgeSideInsets()
+                buttonInsets.left += bottomInsets.left
+                buttonInsets.right += bottomInsets.right
+            }
             let buttonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -1593,6 +1597,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         theme: environment.theme,
                         strings: environment.strings,
                         sideInset: environment.safeInsets.left,
+                        rightSideInset: environment.safeInsets.right,
                         bottomInset: environment.safeInsets.bottom,
                         deviceMetrics: environment.deviceMetrics,
                         emojiContent: emojiContent.withSelectedItems(Set(enabledReactions.map(\.file.fileId))),

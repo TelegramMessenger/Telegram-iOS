@@ -24,14 +24,14 @@ class SettingsSearchResultItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = SettingsSearchResultItemNode()
-            var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-            if previousItem == nil || self.isAlwaysPlain {
-                neighbors.top = .sameSection(alwaysPlain: false)
+            var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
+            if neighbors.previous == nil || self.isAlwaysPlain {
+                itemNeighbors.top = .sameSection(alwaysPlain: false)
             }
-            let (layout, apply) = node.asyncLayout()(self, params, neighbors)
+            let (layout, apply) = node.asyncLayout()(self, params, itemNeighbors)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -44,17 +44,17 @@ class SettingsSearchResultItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? SettingsSearchResultItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-                    if previousItem == nil || self.isAlwaysPlain {
-                        neighbors.top = .sameSection(alwaysPlain: false)
+                    var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
+                    if neighbors.previous == nil || self.isAlwaysPlain {
+                        itemNeighbors.top = .sameSection(alwaysPlain: false)
                     }
-                    let (layout, apply) = makeLayout(self, params, neighbors)
+                    let (layout, apply) = makeLayout(self, params, itemNeighbors)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animation.isAnimated)
@@ -187,7 +187,7 @@ class SettingsSearchResultItemNode: ListViewItemNode {
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var leftInset: CGFloat = params.leftInset
             let contentInset: CGFloat = 60.0
             
@@ -195,11 +195,11 @@ class SettingsSearchResultItemNode: ListViewItemNode {
             
             leftInset += contentInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - max(0.0, params.rightInset - params.leftInset), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let subtitle = item.item.breadcrumbs.joined(separator: " → ")
             
-            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: subtitleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: subtitleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - max(0.0, params.rightInset - params.leftInset), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
@@ -282,7 +282,7 @@ class SettingsSearchResultItemNode: ListViewItemNode {
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
                     let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width - 16.0, height: layout.contentSize.height))
-                    let extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
+                    let extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).inset(by: UIEdgeInsets(top: 0.0, left: 16.0 + params.leftInset, bottom: 0.0, right: 16.0 + params.rightInset))
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     

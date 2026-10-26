@@ -51,6 +51,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let effectView: UIVisualEffectView
     
     private var invalidAttempts: AccessChallengeAttempts?
+    private var hasCredentialError = false
     private var timer: SwiftSignalKit.Timer?
     
     private let hapticFeedback = HapticFeedback()
@@ -59,6 +60,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
+    var cancelRequested: (() -> Void)?
     
     var energyUsageSettings: EnergyUsageSettings = .default
     var energyUsageSettingsDisposable: Disposable?
@@ -154,7 +156,11 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.coverNode)
         self.addSubnode(self.backgroundImageNode)
         self.addSubnode(self.backgroundDimNode)
-        self.addSubnode(self.iconNode)
+        if self.arguments.displayAppLock {
+            self.addSubnode(self.iconNode)
+        } else {
+            self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .none)
+        }
         self.addSubnode(self.titleNode)
         self.addSubnode(self.inputFieldNode)
         self.addSubnode(self.subtitleNode)
@@ -183,6 +189,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     deinit {
         self.energyUsageSettingsDisposable?.dispose()
+        self.timer?.invalidate()
     }
     
     override func didLoad() {
@@ -200,8 +207,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     @objc private func cancelPressed() {
-        self.animateOut(down: true)
-        self.arguments.cancel?()
+        self.cancelRequested?()
     }
     
     @objc private func deletePressed() {
@@ -229,6 +235,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.wallpaper = presentationData.chatWallpaper
         
         self.deleteButtonNode.setTitle(self.strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
+        if !self.arguments.displayAppLock {
+            self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .none)
+        }
+        self.updateSubtitle()
         if let validLayout = self.validLayout {
             self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .immediate)
         }
@@ -341,28 +351,34 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     func updateInvalidAttempts(_ attempts: AccessChallengeAttempts?, animated: Bool = false) {
         self.invalidAttempts = attempts
-        if let attempts = attempts {
-            var text = NSAttributedString(string: "")
-            if attempts.count >= 6 && self.shouldWaitBeforeNextAttempt() {
-                text = NSAttributedString(string: self.strings.PasscodeSettings_TryAgainIn1Minute, font: subtitleFont, textColor: .white)
-                
-                self.timer?.invalidate()
-                let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
-                    if let strongSelf = self {
-                        if !strongSelf.shouldWaitBeforeNextAttempt() {
-                            strongSelf.updateInvalidAttempts(strongSelf.invalidAttempts, animated: true)
-                            strongSelf.timer?.invalidate()
-                            strongSelf.timer = nil
-                        }
-                    }
-                }, queue: Queue.mainQueue())
-                self.timer = timer
-                timer.start()
-            }
-            self.subtitleNode.setAttributedText(text, animation: animated ? .crossFade : .none, completion: {})
-        } else {
-            self.subtitleNode.setAttributedText(NSAttributedString(string: ""), animation: animated ? .crossFade : .none, completion: {})
+        self.timer?.invalidate()
+        self.timer = nil
+        if self.shouldWaitBeforeNextAttempt() {
+            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                guard let self, !self.shouldWaitBeforeNextAttempt() else { return }
+                self.updateInvalidAttempts(self.invalidAttempts, animated: true)
+            }, queue: Queue.mainQueue())
+            self.timer = timer
+            timer.start()
         }
+        self.updateSubtitle(animated: animated)
+    }
+
+    func updateCredentialError(_ hasError: Bool) {
+        self.hasCredentialError = hasError
+        self.updateSubtitle()
+    }
+
+    private func updateSubtitle(animated: Bool = false) {
+        let text: String
+        if self.shouldWaitBeforeNextAttempt() {
+            text = self.strings.PasscodeSettings_TryAgainIn1Minute
+        } else if self.hasCredentialError {
+            text = self.strings.PasscodeSettings_VerificationError
+        } else {
+            text = ""
+        }
+        self.subtitleNode.setAttributedText(NSAttributedString(string: text, font: subtitleFont, textColor: .white), animation: animated ? .crossFade : .none)
     }
     
     func hideBiometrics() {
@@ -406,15 +422,21 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 self.effectView.alpha = 1.0
             }
         })
-        self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode, self.energyUsageSettings.fullTranslucency {
+        // Keep the opaque cover hidden until the background finishes fading,
+        // even when authentication has no animated app-lock title.
+        self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { [weak self] finished in
+            if finished {
+                self?.coverNode.isHidden = false
+            }
+        })
+        if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
             gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             if self.energyUsageSettings.fullTranslucency {
                 gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring), extendAnimation: false, backwards: false, completion: {})
             }
             self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
-        if !iconFrame.isEmpty {
+        if self.arguments.displayAppLock, !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)
             self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
             
@@ -430,9 +452,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.deleteButtonNode.isHidden = true
         self.biometricButtonNode.isHidden = true
         
-        self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .slideIn, completion: {
-            self.coverNode.isHidden = false
-            
+        let title = self.arguments.displayAppLock
+            ? self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " ")
+            : self.strings.EnterPasscode_EnterPasscode
+        self.titleNode.setAttributedText(NSAttributedString(string: title, font: titleFont, textColor: .white), animation: self.arguments.displayAppLock ? .slideIn : .none, completion: {
             self.subtitleNode.isHidden = false
             self.inputFieldNode.isHidden = false
             self.keyboardNode.isHidden = false
@@ -458,12 +481,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
             self.biometricButtonNode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: biometricDelay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             
-            Queue.mainQueue().after(1.5, {
-                self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)
-                if let validLayout = self.validLayout {
-                    self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .animated(duration: 0.5, curve: .easeInOut))
-                }
-            })
+            if self.arguments.displayAppLock {
+                Queue.mainQueue().after(1.5, {
+                    self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)
+                    if let validLayout = self.validLayout {
+                        self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .animated(duration: 0.5, curve: .easeInOut))
+                    }
+                })
+            }
             
             completion()
         })
@@ -476,14 +501,22 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     }
     
     func animateSuccess() {
-        self.iconNode.animateUnlock()
+        if self.arguments.displayAppLock {
+            self.iconNode.animateUnlock()
+        }
         self.inputFieldNode.animateSuccess()
     }
     
+    func resetInput() {
+        self.inputFieldNode.reset()
+    }
+
     func animateError() {
         self.inputFieldNode.reset()
         self.inputFieldNode.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)
-        self.iconNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)
+        if self.arguments.displayAppLock {
+            self.iconNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)
+        }
         
         self.hapticFeedback.error()
         
@@ -527,14 +560,24 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         let keyboardHidden = self.keyboardNode.alpha == 0.0
         
         let layoutSize: CGSize
+        // Where the portrait title and icon start: the band's leading edge when the portrait layout uses the band.
+        let portraitBandMinX: CGFloat
         if isLandscape {
             if keyboardHidden {
                 layoutSize = CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height)
             } else {
                 layoutSize = CGSize(width: layout.size.width / 2.0, height: layout.size.height)
             }
+            portraitBandMinX = 0.0
+        } else if keyboardHidden && layout.safeInsets.left != layout.safeInsets.right {
+            // iPhone Duo, folded portrait: the alphanumeric field and its texts stay in the band beside the side strip,
+            // as the landscape layout without the keypad does (the field ran 34pt into the strip). The digit keypad
+            // fits beside the strip centred on the screen, so it keeps the whole width.
+            layoutSize = CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height)
+            portraitBandMinX = layout.safeInsets.left
         } else {
             layoutSize = layout.size
+            portraitBandMinX = 0.0
         }
         
         if layout.size.width == 320.0 || (isLandscape && keyboardHidden) {
@@ -564,8 +607,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             let titleSize = self.titleNode.updateLayout(size: CGSize(width: layoutSize.width, height: layout.size.height), transition: transition)
             titleFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: inputFieldFrame.minY - titleSize.height - 16.0), size: titleSize)
         } else {
-            let titleSize = self.titleNode.updateLayout(size: layout.size, transition: transition)
-            titleFrame = CGRect(origin: CGPoint(x: 0.0, y: passcodeLayout.titleOffset), size: titleSize)
+            let titleSize = self.titleNode.updateLayout(size: CGSize(width: layoutSize.width, height: layout.size.height), transition: transition)
+            titleFrame = CGRect(origin: CGPoint(x: portraitBandMinX, y: passcodeLayout.titleOffset), size: titleSize)
         }
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
@@ -574,7 +617,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if isLandscape {
             iconFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layoutSize.width - iconSize.width) / 2.0) + 6.0, y: titleFrame.minY - iconSize.height - 14.0), size: iconSize)
         } else {
-            iconFrame = CGRect(origin: CGPoint(x: floor((layoutSize.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize)
+            iconFrame = CGRect(origin: CGPoint(x: portraitBandMinX + floor((layoutSize.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize)
         }
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
         
@@ -595,7 +638,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         var cancelX = floor(keyboardFrame.minX + keyboardButtonSize.width / 2.0 - cancelSize.width / 2.0)
         var cancelY = bottomButtonY
         if bottomInset > 0 && keyboardHidden {
-            cancelX = floor((layout.size.width - cancelSize.width) / 2.0)
+            // Centred with the field, in the band beside iPhone Duo's side strip in portrait.
+            cancelX = portraitBandMinX > 0.0 ? portraitBandMinX + floor((layoutSize.width - cancelSize.width) / 2.0) : floor((layout.size.width - cancelSize.width) / 2.0)
             cancelY = layout.size.height - bottomInset - cancelSize.height - 15.0 - layout.intrinsicInsets.bottom
         } else if isLandscape {
             bottomButtonY = keyboardFrame.maxY - keyboardButtonSize.height + floor((keyboardButtonSize.height - cancelSize.height) / 2.0)

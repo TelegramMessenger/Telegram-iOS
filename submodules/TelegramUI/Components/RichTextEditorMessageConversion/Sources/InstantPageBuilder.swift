@@ -1,18 +1,17 @@
 import Foundation
-import Postbox
 import TelegramCore
 import RichTextEditorCore
 
 /// Build a chat rich-message `InstantPage` from already-normalized blocks (media blocks resolved via the supplied map).
-func buildInstantPage(from blocks: [Block], media: [String: Media]) -> InstantPage {
+func buildInstantPage(from blocks: [Block], media: [String: EngineMedia]) -> InstantPage {
     var pageBlocks: [InstantPageBlock] = []
-    var pageMedia: [MediaId: Media] = [:]
+    var pageMedia: [EngineMedia.Id: EngineMedia] = [:]
     var index = 0
     while index < blocks.count {
         let block = blocks[index]
         switch block {
         case let .paragraph(paragraph):
-            if let latex = standaloneFormulaLatex(from: paragraph) {
+            if let latex = paragraph.standaloneFormulaLatex {
                 pageBlocks.append(.formula(latex: latex))
                 index += 1
             } else if paragraph.list != nil {
@@ -53,8 +52,8 @@ func buildInstantPage(from blocks: [Block], media: [String: Media]) -> InstantPa
                         innerBlocks.append(.image(id: mediaId, caption: InstantPageCaption(text: .empty, credit: .empty), url: nil, webpageId: nil, spoiler: item.isSpoiler))
                     case .video:
                         innerBlocks.append(.video(id: mediaId, caption: InstantPageCaption(text: .empty, credit: .empty), autoplay: false, loop: false, spoiler: item.isSpoiler))
-                    case .audio, .location:
-                        // Audio/location are documented as permanently single-item; never grouped into a collage.
+                    case .audio, .location, .document:
+                        // Audio/location/document are permanently single-item; never grouped into a collage.
                         continue
                     }
                 }
@@ -64,8 +63,9 @@ func buildInstantPage(from blocks: [Block], media: [String: Media]) -> InstantPa
                 }
             } else if let resolved = media[mediaBlock.mediaID] {
                 switch mediaBlock.kind {
-                case .image, .video, .audio:
-                    // Media.id is optional on the protocol; real TelegramMedia* image/video/audio always return non-nil.
+                case .image, .video, .audio, .document:
+                    // Media.id is optional on the protocol; real TelegramMedia* image/video/audio/document
+                    // always return non-nil.
                     if let mediaId = resolved.id {
                         pageMedia[mediaId] = resolved // idempotent if the same mediaID appears in multiple blocks
                         // The single-item convenience accessors (`mediaBlock.mediaID`/`.kind`) resolve to `items.first`;
@@ -77,6 +77,10 @@ func buildInstantPage(from blocks: [Block], media: [String: Media]) -> InstantPa
                         case .audio:
                             // music & voice both → `.audio`; the file's `.Audio(isVoice:)` attribute drives the render.
                             pageBlocks.append(.audio(id: mediaId, caption: caption))
+                        case .document:
+                            // A caption-less block, so `caption` is always .empty here — the field is
+                            // carried anyway because the wire block has one.
+                            pageBlocks.append(.document(id: mediaId, caption: caption))
                         default:
                             pageBlocks.append(.video(id: mediaId, caption: caption, autoplay: false, loop: false, spoiler: spoiler))
                         }
@@ -84,7 +88,7 @@ func buildInstantPage(from blocks: [Block], media: [String: Media]) -> InstantPa
                 case .location:
                     // A location resolves to a `TelegramMediaMap` (id-less); emit a `.map` block with the coordinates
                     // inline. No `pageMedia` entry (the block carries no MediaId). See ChatInputContentInstantPage.
-                    if let map = resolved as? TelegramMediaMap {
+                    if case let .geo(map) = resolved {
                         let dimensions: PixelDimensions
                         if mediaBlock.naturalSize.width > 0, mediaBlock.naturalSize.height > 0 {
                             dimensions = PixelDimensions(width: Int32(mediaBlock.naturalSize.width), height: Int32(mediaBlock.naturalSize.height))
@@ -103,6 +107,27 @@ func buildInstantPage(from blocks: [Block], media: [String: Media]) -> InstantPa
             for (id, m) in innerPage.media { pageMedia[id] = m }
             pageBlocks.append(.blockQuote(blocks: innerPage.blocks, caption: authorCaption(bq.author), collapsed: bq.collapsed))
             index += 1
+        case let .details(d):
+            // A detail (folding) block → an InstantPage `.details`. Recurse children through the same builder;
+            // merge child media into the page dict. The title becomes the details title RichText; `expanded`
+            // maps straight across (it is the inverse of a block-quote's `collapsed`).
+            let innerPage = buildInstantPage(from: d.children, media: media)
+            for (id, m) in innerPage.media { pageMedia[id] = m }
+            pageBlocks.append(.details(title: richText(from: d.title), blocks: innerPage.blocks, expanded: d.expanded))
+            index += 1
+        case let .buttonRow(row):
+            pageBlocks.append(.buttonRow(
+                alignment: instantPageRowAlignment(from: row.alignment),
+                buttons: row.buttons.map {
+                    InstantPageButton(
+                        text: richText(from: $0.label),
+                        action: replyMarkupButtonAction(from: $0.action),
+                        color: replyMarkupColor(from: $0.color),
+                        isLink: $0.isLink
+                    )
+                }
+            ))
+            index += 1
         }
     }
     return InstantPage(blocks: pageBlocks, media: pageMedia, isComplete: true, rtl: false, url: "", views: nil)
@@ -119,7 +144,7 @@ private func authorCaption(_ author: [TextRun], italic: Bool = false) -> RichTex
 
 /// A non-list, non-quote paragraph → a heading or a paragraph block.
 private func headingOrParagraphBlock(_ paragraph: ParagraphBlock) -> InstantPageBlock {
-    if let latex = standaloneFormulaLatex(from: paragraph) {
+    if let latex = paragraph.standaloneFormulaLatex {
         return .formula(latex: latex)
     }
     let text = richText(from: paragraph.runs)
@@ -211,7 +236,7 @@ private func tableBlock(_ table: TableBlock) -> InstantPageBlock {
         }
         return InstantPageTableRow(cells: cells)
     }
-    return .table(title: .empty, rows: rows, bordered: true, striped: false)
+    return .table(title: .empty, rows: rows, bordered: table.bordered, striped: false, compact: table.compact)
 }
 
 /// Concatenate a cell's paragraph blocks into one `RichText` (newline-joined). Images in cells dropped.
@@ -236,14 +261,4 @@ private func cellRichText(_ cell: Cell) -> RichText {
         joined.append(text)
     }
     return .concat(joined)
-}
-
-private func standaloneFormulaLatex(from paragraph: ParagraphBlock) -> String? {
-    guard paragraph.style == .body, paragraph.list == nil, paragraph.runs.count == 1 else {
-        return nil
-    }
-    guard let latex = paragraph.runs[0].attributes.formula, !latex.isEmpty else {
-        return nil
-    }
-    return latex
 }

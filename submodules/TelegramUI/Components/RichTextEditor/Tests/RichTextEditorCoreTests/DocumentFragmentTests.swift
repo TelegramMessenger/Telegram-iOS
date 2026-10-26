@@ -8,6 +8,21 @@ final class DocumentFragmentTests: XCTestCase {
     }
     func doc(_ blocks: Block...) -> Document { Document(blocks: blocks) }
 
+    func test_nearestTopLevelTextPosition_clampsOutOfRangeCaret_nilInsideRange() {
+        // "ab" paragraph: text occupies globals 1...3 (textStart 1, len 2).
+        let d = doc(para("p", "ab"))
+        XCTAssertEqual(d.nearestTopLevelTextPosition(to: 0), 1, "caret 0 (below first text start) → 1")
+        XCTAssertNil(d.nearestTopLevelTextPosition(to: 1), "caret already at a text locus → nil (no clamp)")
+        XCTAssertNil(d.nearestTopLevelTextPosition(to: 2), "interior caret → nil")
+        XCTAssertEqual(d.nearestTopLevelTextPosition(to: 99), 3, "caret past the last text end → clamps to it")
+
+        // A lone table has no top-level text block: every caret → nil (caller flattens).
+        let tableDoc = doc(.table(TableBlock(id: .generate(), columns: [ColumnSpec(width: 90)],
+            rows: [Row(id: .generate(), cells: [Cell(id: .generate(),
+                blocks: [.paragraph(ParagraphBlock(id: .generate(), runs: [TextRun(text: "x")]))])])])))
+        XCTAssertNil(tableDoc.nearestTopLevelTextPosition(to: 0))
+    }
+
     // Pasting a copied table must NOT reuse the source table's BlockIDs — block views are keyed by BlockID,
     // so a duplicate-ID paste steals the original's view and the original table disappears. `regeneratingIDs`
     // (used by every paste via `insertingFragment`) must therefore recurse into tables: table + rows + cells +
@@ -136,8 +151,8 @@ final class DocumentFragmentTests: XCTestCase {
     }
 
     func test_extract_blockQuote_partiallyCovered_isDropped() {
-        // Place a paragraph before the block quote. Select only the paragraph — the block quote
-        // is NOT fully covered and must be dropped (partial coverage stays dropped).
+        // Place a paragraph before the block quote. Select only the paragraph — the selection never
+        // enters the block quote, so nothing of it is captured.
         let d = Document(blocks: [
             para("a", "AB"),
             .blockQuote(BlockQuote(id: BlockID("q"),
@@ -149,6 +164,34 @@ final class DocumentFragmentTests: XCTestCase {
         let f = d.extractFragment(globalFrom: 1, globalTo: paraSize)
         XCTAssertEqual(f.blocks.count, 1)
         guard case .paragraph = f.blocks[0] else { return XCTFail("expected only the paragraph") }
+    }
+
+    func test_extract_blockQuote_enteredFromOutside_capturesTheCoveredChildrenAsAQuote() {
+        // A selection from a paragraph INTO a quote (Select All in the engine ends in the author
+        // line's text, never past the quote's closing tokens) keeps the covered part as a quote.
+        let d = Document(blocks: [
+            para("a", "AB"),
+            .blockQuote(BlockQuote(id: BlockID("q"),
+                                   children: [.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hi")])),
+                                              .paragraph(ParagraphBlock(id: BlockID("r"), runs: [TextRun(text: "yo")]))],
+                                   collapsed: false, author: [TextRun(text: "Ann")]))
+        ])
+        // "AB" is [0, 4); the quote opens at 4 and "hi" starts at 6, so 7 is after the "h".
+        let partial = d.extractFragment(globalFrom: 1, globalTo: 7)
+        XCTAssertEqual(partial.blocks.count, 2)
+        guard case .blockQuote(let quote) = partial.blocks.last else { return XCTFail("the quote's part was dropped") }
+        XCTAssertEqual(quote.children.count, 1)
+        guard case .paragraph(let child) = quote.children.first else { return XCTFail("expected a paragraph child") }
+        XCTAssertEqual(child.runs.map(\.text).joined(), "h")
+        XCTAssertTrue(quote.author.isEmpty, "a partial copy must not carry an uncovered author")
+
+        // To the end of the author's TEXT (not past the quote's closing tokens): both children and
+        // the author, which is wholly covered.
+        let size = DocumentTree.documentSize(d)
+        let throughAuthor = d.extractFragment(globalFrom: 1, globalTo: size - 2)
+        guard case .blockQuote(let whole) = throughAuthor.blocks.last else { return XCTFail("the quote was dropped") }
+        XCTAssertEqual(whole.children.count, 2)
+        XCTAssertEqual(whole.author.map(\.text).joined(), "Ann")
     }
 
     func test_extract_skipsMediaBlock() {
@@ -304,18 +347,20 @@ final class DocumentFragmentTests: XCTestCase {
     }
 
     func test_insert_intoCodeBlock_flattensFragmentToText() {
-        // A code block "let x" — text axis: open@0, text@1..6, close@6. Caret after "let " (global 5).
+        // A code block is a container of [languagePara, codePara], so its code text starts past the whole
+        // language child — derived here rather than hard-coded, since that offset moves with the language.
         let host = Document(blocks: [code("c", "let x")])
+        let codeStart = host.globalTextStart(ofBlockAt: 0)
         let frag = doc(para("p", "AA"), para("q", "BB"))   // two paragraphs
-        let r = host.insertingFragment(frag, atGlobal: 5)!
+        let r = host.insertingFragment(frag, atGlobal: codeStart + 4)!   // caret after "let "
         guard case .code(let c) = r.document.blocks[0] else { return XCTFail() }
         XCTAssertEqual(c.text, "let AA\nBBx")   // paragraphs joined by "\n", inserted inline
-        XCTAssertEqual(r.caret, 5 + ("AA\nBB" as NSString).length)
+        XCTAssertEqual(r.caret, codeStart + 4 + ("AA\nBB" as NSString).length)
     }
 
     func test_insert_intoCodeBlock_keepsCodeBlockIdentity() {
         let host = Document(blocks: [code("c", "ab")])
-        let r = host.insertingFragment(doc(para("p", "X")), atGlobal: 2)!
+        let r = host.insertingFragment(doc(para("p", "X")), atGlobal: host.globalTextStart(ofBlockAt: 0) + 2)!
         XCTAssertEqual(r.document.blocks.count, 1)
         XCTAssertEqual(r.document.blocks[0].id, BlockID("c"))
     }

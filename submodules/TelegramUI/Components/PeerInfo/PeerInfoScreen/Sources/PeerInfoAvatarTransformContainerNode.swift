@@ -48,6 +48,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     private var isFirstAvatarLoading = true
     var item: PeerInfoAvatarListItem?
+    /// The avatar's corner radius over its side, as last laid out: 0.5 round, 0.25 a forum's rounded square.
+    private(set) var cornerFraction: CGFloat = 0.5
     
     private let playbackStartDisposable = MetaDisposable()
     
@@ -88,9 +90,16 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if value {
                 self.updateFromParams()
             } else {
-                self.videoNode?.removeFromSupernode()
-                self.videoNode = nil
-                self.videoContent = nil
+                // A move to another superview (the chat ↔ profile expansion lends the avatar, then returns it) leaves the
+                // hierarchy and re-enters it in one turn: the video goes only if the avatar stays out.
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, !self.hierarchyTrackingLayer.isInHierarchy else {
+                        return
+                    }
+                    self.videoNode?.removeFromSupernode()
+                    self.videoNode = nil
+                    self.videoContent = nil
+                }
             }
         }
         self.layer.addSublayer(self.hierarchyTrackingLayer)
@@ -332,6 +341,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             } else {
                 avatarCornerRadius = avatarSize / 2.0
             }
+            self.cornerFraction = isForum ? 0.25 : 0.5
             if self.avatarNode.layer.cornerRadius != 0.0 {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.contentNode.layer, cornerRadius: avatarCornerRadius)
             } else {

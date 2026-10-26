@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1295,11 +1296,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         if let searchContainerNode = self.searchContainerNode {
             searchContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-            searchContainerNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationHeight, transition: transition)
+            searchContainerNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), navigationBarHeight: navigationHeight, transition: transition)
         }
         
         if self.locationAccessDenied {
-            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+            self.controller?.navigationBar?.setBackdropAlpha(0.0, transition: .immediate)
             Queue.mainQueue().after(0.25) {
                 self.controller?.updateTabBarAlpha(0.0, .immediate)
             }
@@ -1321,7 +1322,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 }
                 self.placeholderBackgroundNode = backgroundNode
                 
-                placeholderNode = LocationPlaceholderNode(content: .intro)
+                placeholderNode = LocationPlaceholderNode(content: .intro, lottieSettings: self.context.lottieRenderingSettings)
                 placeholderNode.settingsPressed = { [weak self] in
                     self?.context.sharedContext.applicationBindings.openSettings()
                 }
@@ -1346,7 +1347,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 placeholderBackgroundNode.removeFromSupernode()
             }
             
-            self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+            self.controller?.navigationBar?.setBackdropAlpha(1.0, transition: .immediate)
             self.controller?.updateTabBarAlpha(1.0, .immediate)
         }
         
@@ -1462,12 +1463,22 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 environment: {},
                 containerSize: barButtonSize
             )
-            let cancelButtonFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            // iPhone Duo, with a side strip: where the bar shows its own close there (the controller's "___close" item,
+            // which this button otherwise covers), this one would be a second close in the row, so it stays only as the
+            // back arrow used while picking a point; where the bar has none (sharing), this button goes in the strip.
+            let barShowsCloseInSideColumn = self.controller?.navigationBar?.isBackInSideColumn ?? false
+            let cancelButtonFrame: CGRect
+            if !barShowsCloseInSideColumn, let sideColumnFrame = layout.sideColumnNavigationButtonFrame {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sideColumnFrame.midX - cancelButtonSize.width * 0.5), y: floorToScreenPixels(sideColumnFrame.midY - cancelButtonSize.height * 0.5)), size: cancelButtonSize)
+            } else {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            }
             if let cancelButtonView = self.cancelButton.view {
                 if cancelButtonView.superview == nil {
                     self.view.addSubview(cancelButtonView)
                 }
                 transition.updateFrame(view: cancelButtonView, frame: cancelButtonFrame)
+                cancelButtonView.isHidden = barShowsCloseInSideColumn && !isPickingLocation
             }
             
             let searchButtonSize = self.searchButton.update(
@@ -1490,7 +1501,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 environment: {},
                 containerSize: barButtonSize
             )
-            let searchButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - 16.0 - searchButtonSize.width, y: 16.0), size: searchButtonSize)
+            let searchButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - 16.0 - searchButtonSize.width, y: 16.0), size: searchButtonSize)
             if let searchButtonView = self.searchButton.view {
                 if searchButtonView.superview == nil {
                     self.view.addSubview(searchButtonView)

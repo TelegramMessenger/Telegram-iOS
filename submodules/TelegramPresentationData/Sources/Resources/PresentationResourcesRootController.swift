@@ -179,12 +179,14 @@ public struct PresentationResourcesRootController {
     public static func inAppNotificationBackground(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.inAppNotificationBackground.rawValue, { theme in
             let inset: CGFloat = 16.0
-            return generateImage(CGSize(width: 30.0 + inset * 2.0, height: 30.0 + 8.0 * 2.0 + 20.0), rotatedContext: { size, context in
+            let cornerRadius: CGFloat = 26.0
+            let diameter = cornerRadius * 2.0
+            return generateImage(CGSize(width: diameter + inset * 2.0, height: diameter + 8.0 * 2.0 + 20.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setShadow(offset: CGSize(width: 0.0, height: -4.0), blur: 40.0, color: UIColor(white: 0.0, alpha: 0.3).cgColor)
                 context.setFillColor(theme.inAppNotification.fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: inset, y: 8.0 * 2.0), size: CGSize(width: 30.0, height: 30.0)))
-            })?.stretchableImage(withLeftCapWidth: Int(inset) + 15, topCapHeight: 8 * 2 + 15)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: inset, y: 8.0 * 2.0), size: CGSize(width: diameter, height: diameter)))
+            })?.stretchableImage(withLeftCapWidth: Int(inset + cornerRadius), topCapHeight: 8 * 2 + Int(cornerRadius))
         })
     }
     

@@ -22,6 +22,6 @@ let package = Package(
         .target(
             name: "SwiftSignalKit",
             dependencies: [],
-            path: "SwiftSignalKit/Source"),
+            path: "SwiftSignalKit2/Source"),
     ]
 )

@@ -31,17 +31,17 @@ public enum ChatMessageGalleryControllerData {
     case story(Signal<StoryContainerScreen, NoError>)
 }
 
-private func instantPageBlockMedia(pageId: EngineMedia.Id, block: InstantPageBlock, media: [EngineMedia.Id: EngineRawMedia], counter: inout Int) -> [InstantPageGalleryEntry] {
+private func instantPageBlockMedia(pageId: EngineMedia.Id, block: InstantPageBlock, media: [EngineMedia.Id: EngineMedia], counter: inout Int) -> [InstantPageGalleryEntry] {
     switch block {
         case let .image(id, caption, _, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: EngineMedia(m), url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
         case let .video(id, caption, _, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: EngineMedia(m), url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
@@ -68,9 +68,10 @@ public func instantPageGalleryMedia(webpageId: EngineMedia.Id, page: InstantPage
     var counter: Int = 0
     
     let page = page._parse()
-    
+    let media = page.media
+
     for block in page.blocks {
-        result.append(contentsOf: instantPageBlockMedia(pageId: webpageId, block: block, media: page.media, counter: &counter))
+        result.append(contentsOf: instantPageBlockMedia(pageId: webpageId, block: block, media: media, counter: &counter))
     }
     
     var found = false
@@ -111,6 +112,11 @@ public func chatMessageGalleryControllerData(
     if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.namespace != Namespaces.Message.Cloud {
         standalone = true
     }
+    var candidateMedia = message.effectiveMedia
+    if case let .richTextMedia(mediaId) = mediaSubject {
+        standalone = true
+        candidateMedia = candidateMedia.filter { $0.id == mediaId }
+    }
     
     var galleryMedia: EngineRawMedia?
     var otherMedia: EngineRawMedia?
@@ -125,7 +131,7 @@ public func chatMessageGalleryControllerData(
             }
         }
     }
-    for media in message.effectiveMedia {
+    for media in candidateMedia {
         if let poll = media as? TelegramMediaPoll {
             standalone = true
             galleryMedia = poll
@@ -176,7 +182,7 @@ public func chatMessageGalleryControllerData(
             if let instantPage = content.instantPage {
                 if case let .instantPageMedia(tappedMediaId) = mediaSubject {
                     let parsedPage = instantPage._parse()
-                    if let tappedMedia = parsedPage.media[tappedMediaId] {
+                    if let tappedMedia = parsedPage.media[tappedMediaId]?._asMedia() {
                         let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: tappedMedia)
                         if !medias.isEmpty {
                             instantPageMedia = (webpage, medias)
@@ -275,7 +281,7 @@ public func chatMessageGalleryControllerData(
             return nil
         } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice || file.isInstantVideo {
             return .audio(file)
-        } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {
+        } else if let file = galleryMedia as? TelegramMediaFile, file.isPass {
             return .pass(file)
         } else {
             if let file = galleryMedia as? TelegramMediaFile {
@@ -293,7 +299,7 @@ public func chatMessageGalleryControllerData(
                 
                 var source = source
                 if standalone {
-                    source = .standaloneMessage(message, nil)
+                    source = .standaloneMessage(message, mediaSubject)
                 }
                 
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
@@ -328,16 +334,29 @@ public func chatMessageGalleryControllerData(
                     }
                 }
                 
-                var openChatLocation = chatLocation ?? .peer(id: message.id.peerId)
-                var openChatLocationContextHolder = chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)
-                if chatLocation?.peerId != message.id.peerId {
-                    openChatLocation = .peer(id: message.id.peerId)
-                    openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+                // A message from another chat (a channel post atop its comments thread) is browsed
+                // in its own chat. A message of the group a channel was migrated from stays in the
+                // channel: the channel's history views include the group's, and the group is read
+                // from the same cached data they use.
+                let isInChatLocationHistory: Signal<Bool, NoError>
+                if case let .peer(peerId)? = chatLocation, peerId != message.id.peerId {
+                    isInChatLocationHistory = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.MigratedFromGroupId(id: peerId))
+                    |> map { groupId -> Bool in
+                        return groupId == message.id.peerId
+                    }
+                } else {
+                    isInChatLocationHistory = .single(chatLocation?.peerId == message.id.peerId)
                 }
                 
-                return .gallery(startState
+                return .gallery(combineLatest(startState, isInChatLocationHistory)
                 |> deliverOnMainQueue
-                |> map { startState in
+                |> map { [navigationController] startState, isInChatLocationHistory in
+                    var openChatLocation = chatLocation ?? .peer(id: message.id.peerId)
+                    var openChatLocationContextHolder = chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)
+                    if !isInChatLocationHistory {
+                        openChatLocation = .peer(id: message.id.peerId)
+                        openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+                    }
                     let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message, mediaSubject) : .peerMessagesAtId(messageId: message.id, chatLocation: openChatLocation, customTag: chatFilterTag, chatLocationContextHolder: openChatLocationContextHolder)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: startState.timecode, playbackRate: startState.rate, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)

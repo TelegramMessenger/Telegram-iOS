@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
@@ -238,11 +239,14 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         self.theme = theme
         self.strings = strings
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        // ShareControllerEnvironment carries no AccountContext by design: it has
+        // isMainApp because the share sheet also runs inside the Share extension.
+        // Both animations here are bundled local files.
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ShareProgress"), width: 384, height: 384, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
-        self.doneAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.doneAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
         self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ShareDone"), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.doneAnimationNode.visibility = false
         self.doneAnimationNode.isHidden = true

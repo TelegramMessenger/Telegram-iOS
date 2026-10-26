@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -65,7 +66,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.subject = subject
         self.isLoading = isLoading
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -230,18 +231,22 @@ final class ChatListEmptyNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, insets)
+        // Centred in the band between the side insets when they differ (iPhone Duo's side strip); equal insets keep the
+        // full width.
+        let bandMinX: CGFloat = insets.left != insets.right ? insets.left : 0.0
+        let bandWidth: CGFloat = insets.left != insets.right ? size.width - insets.left - insets.right : size.width
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: insets.top + floor((size.height - insets.top - insets.bottom - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - indicatorSize.width) / 2.0), y: insets.top + floor((size.height - insets.top - insets.bottom - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
         
         let animationSpacing: CGFloat = 24.0
         let descriptionSpacing: CGFloat = 8.0
         
-        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height - insets.top - insets.bottom))
-        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height - insets.top - insets.bottom))
+        let textSize = self.textNode.updateLayout(CGSize(width: bandWidth - 40.0, height: size.height - insets.top - insets.bottom))
+        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: bandWidth - 40.0, height: size.height - insets.top - insets.bottom))
                 
         let buttonSideInset: CGFloat = 32.0
-        let buttonWidth = min(270.0, size.width - buttonSideInset * 2.0)
+        let buttonWidth = min(270.0, bandWidth - buttonSideInset * 2.0)
         let buttonHeight: CGFloat = 52.0
         let buttonSize = CGSize(width: buttonWidth, height: buttonHeight)
         if let buttonText = self.buttonText {
@@ -290,9 +295,9 @@ final class ChatListEmptyNode: ASDisplayNode {
             transition.updateAlpha(node: self.animationNode, alpha: 1.0)
         }
         
-        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - self.animationSize.width) / 2.0), y: insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0) + contentOffset), size: self.animationSize)
-        let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: animationFrame.maxY + animationSpacing), size: textSize)
-        let descriptionFrame = CGRect(origin: CGPoint(x: floor((size.width - descriptionSize.width) / 2.0), y: textFrame.maxY + descriptionSpacing), size: descriptionSize)
+        let animationFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - self.animationSize.width) / 2.0), y: insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0) + contentOffset), size: self.animationSize)
+        let textFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - textSize.width) / 2.0), y: animationFrame.maxY + animationSpacing), size: textSize)
+        let descriptionFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - descriptionSize.width) / 2.0), y: textFrame.maxY + descriptionSpacing), size: descriptionSize)
         
         if !self.animationSize.width.isZero {
             self.animationNode.updateLayout(size: self.animationSize)
@@ -304,7 +309,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         var bottomInset: CGFloat = 20.0
         
-        let secondaryButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - secondaryButtonSize.width) / 2.0), y: size.height - insets.bottom - secondaryButtonSize.height - bottomInset), size: secondaryButtonSize)
+        let secondaryButtonFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - secondaryButtonSize.width) / 2.0), y: size.height - insets.bottom - secondaryButtonSize.height - bottomInset), size: secondaryButtonSize)
         transition.updateFrame(node: self.secondaryButtonNode, frame: secondaryButtonFrame)
         
         if secondaryButtonSize.height > 0.0 {
@@ -313,9 +318,9 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         let buttonFrame: CGRect
         if case .forum = self.subject {
-            buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: descriptionFrame.maxY + 20.0), size: buttonSize)
+            buttonFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - buttonSize.width) / 2.0), y: descriptionFrame.maxY + 20.0), size: buttonSize)
         } else {
-            buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - insets.bottom - buttonHeight - bottomInset), size: buttonSize)
+            buttonFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - buttonSize.width) / 2.0), y: size.height - insets.bottom - buttonHeight - bottomInset), size: buttonSize)
         }
         self.buttonFrame = buttonFrame
         if let buttonView = self.button.view {

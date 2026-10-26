@@ -28,6 +28,7 @@ import ImageObjectSeparation
 import GlassBarButtonComponent
 import GlassControls
 import BundleIconComponent
+import UniformTypeIdentifiers
 
 public struct DrawingResultData {
     public let data: Data?
@@ -988,7 +989,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             ]
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: mainWindowScreenBounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.present(contextController)
         }
         
@@ -1164,23 +1165,59 @@ private final class DrawingScreenComponent: CombinedComponent {
                     controlsBottomInset = -50.0
                 }
             }
-            let previewBottomInset = context.availableSize.height - previewSize.height - previewTopInset
+            // Clamped like the story editor's: a 9:16 preview much taller than the screen (iPhone Duo's unfolded
+            // screen in portrait, 238pt over) would otherwise put the bottom bar below the screen. There the bar also
+            // takes the editor's offset, so it does not move when drawing opens over the editor.
+            let unclampedPreviewBottomInset = context.availableSize.height - previewSize.height - previewTopInset
+            var bottomPanelLift: CGFloat = 0.0
+            if unclampedPreviewBottomInset < 0.0 {
+                controlsBottomInset = -62.0
+                if environment.navigationBarTrailingButtonsInset > 0.0 {
+                    // Beside a status island the bottom bar mirrors the top row: its 44pt buttons centred as far above
+                    // the bottom edge as the top row's are below the top one (compact status height + 31). The rows
+                    // above it move up with it.
+                    let mirroredControlsBottomInset = -(environment.statusBarHeight + 31.0 + 30.0)
+                    bottomPanelLift = max(0.0, controlsBottomInset - mirroredControlsBottomInset)
+                    controlsBottomInset -= bottomPanelLift
+                } else {
+                    // Elsewhere (folded) the editor's bar is 62pt above the home indicator; so is this one, and the rows
+                    // above it move up with it.
+                    bottomPanelLift = environment.safeInsets.bottom
+                    controlsBottomInset -= bottomPanelLift
+                }
+            }
+            let previewBottomInset = max(0.0, unclampedPreviewBottomInset)
             
             var topInset = environment.safeInsets.top + 31.0
             if component.sourceHint == .storyEditor {
                 topInset = previewTopInset + 31.0
             }
+            if environment.navigationBarTrailingButtonsInset > 0.0 {
+                // iPhone Duo unfolded portrait: the top row sits on the status island's clock line, as a navigation
+                // bar beside the island does (its right group stops left of the island, see topTrailingInset).
+                topInset = environment.statusBarHeight + 31.0
+            }
 
             let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
             
-            var leftEdge: CGFloat = environment.safeInsets.left
-            var rightEdge: CGFloat = context.availableSize.width - environment.safeInsets.right
+            // The bottom controls span iPhone Duo's side strip; they keep clear only of a corner block at the bottom.
+            let bottomEdgeInsets = environment.bottomEdgeSideInsets()
+            var leftEdge: CGFloat = bottomEdgeInsets.left
+            var rightEdge: CGFloat = context.availableSize.width - bottomEdgeInsets.right
             var availableWidth = context.availableSize.width
             if case .regular = environment.metrics.widthClass {
                 availableWidth = 430.0
                 leftEdge = floorToScreenPixels((context.availableSize.width - availableWidth) / 2.0)
                 rightEdge = floorToScreenPixels((context.availableSize.width - availableWidth) / 2.0) + availableWidth
             }
+            // The bottom control bars center between the edges: the screen's center unless a corner block of iPhone
+            // Duo's strip reaches the bottom (folded landscape-left), where they keep to the band and narrow by the strip.
+            let controlsCenterX = (leftEdge + rightEdge) / 2.0
+            // iPhone Duo unfolded portrait: the top row's right buttons stop left of the status island, which stays on
+            // screen while the editor hides the status bar; 0 elsewhere.
+            let topTrailingInset = environment.navigationBarTrailingButtonsInset
+            let controlsStripInset: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left + environment.safeInsets.right : 0.0
+            let bottomControlsStripInset: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? bottomEdgeInsets.left + bottomEdgeInsets.right : 0.0
             
             if component.sourceHint != .storyEditor {
                 let topGradient = topGradient.update(
@@ -1212,7 +1249,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             var additionalBottomInset: CGFloat = 0.0
             if component.sourceHint == .storyEditor {
-                additionalBottomInset = max(0.0, previewBottomInset - environment.safeInsets.bottom - 49.0)
+                additionalBottomInset = max(0.0, previewBottomInset - environment.safeInsets.bottom - 49.0) + bottomPanelLift
             } else {
                 additionalBottomInset = 8.0
             }
@@ -1292,11 +1329,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                         },
                         toggleKeyboard: nil
                     ),
-                    availableSize: CGSize(width: availableWidth - 84.0, height: 44.0),
+                    availableSize: CGSize(width: availableWidth - 84.0 - bottomControlsStripInset, height: 44.0),
                     transition: context.transition
                 )
                 context.add(textSettings
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0 - additionalBottomInset))
+                    .position(CGPoint(x: controlsCenterX, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0 - additionalBottomInset))
                     .appear(ComponentTransition.Appear({ _, view, transition in
                         if let view = view as? TextSettingsComponent.View, !transition.animation.isImmediate {
                             view.animateIn()
@@ -1581,11 +1618,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                             previewBrushSize.invoke(nil)
                         }
                     ),
-                    availableSize: CGSize(width: availableWidth - environment.safeInsets.left - environment.safeInsets.right, height: 120.0),
+                    availableSize: CGSize(width: availableWidth - bottomEdgeInsets.left - bottomEdgeInsets.right, height: 120.0),
                     transition: context.transition
                 )
                 context.add(tools
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - tools.size.height / 2.0 - 78.0 - additionalBottomInset))
+                    .position(CGPoint(x: controlsCenterX, y: context.availableSize.height - environment.safeInsets.bottom - tools.size.height / 2.0 - 78.0 - additionalBottomInset))
                     .appear(ComponentTransition.Appear({ _, view, transition in
                         if let view = view as? ToolsComponent.View, !transition.animation.isImmediate {
                             view.animateIn(completion: {})
@@ -1916,11 +1953,15 @@ private final class DrawingScreenComponent: CombinedComponent {
                     isDark: true,
                     tag: topButtonsTag
                 ),
-                availableSize: CGSize(width: context.availableSize.width - 32.0, height: 44.0),
+                availableSize: CGSize(width: context.availableSize.width - 32.0 - controlsStripInset - topTrailingInset, height: 44.0),
                 transition: context.transition
             )
+            // The panel spans the band beside the strip, so it centres on the band: in a regular-width layout
+            // (iPhone Duo's unfolded screen in landscape) `controlsCenterX` is the 430pt column's centre, which put the
+            // panel's right end under the strip. Without a strip it stays `controlsCenterX`.
+            let topButtonsCenterX: CGFloat = controlsStripInset > 0.0 ? (environment.safeInsets.left + context.availableSize.width - environment.safeInsets.right) / 2.0 : controlsCenterX
             context.add(topButtons
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset))
+                .position(CGPoint(x: topButtonsCenterX - topTrailingInset * 0.5, y: topInset))
                 //.opacity(isEditingText ? 1.0 : 0.0)
             )
                                     
@@ -2042,7 +2083,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: .immediate
             )
             
-            var doneButtonPosition = CGPoint(x: context.availableSize.width - environment.safeInsets.right - doneButton.size.width / 2.0 - 14.0, y: context.availableSize.height - environment.safeInsets.bottom - doneButton.size.height / 2.0 - 2.0 - UIScreenPixel)
+            var doneButtonPosition = CGPoint(x: context.availableSize.width - bottomEdgeInsets.right - doneButton.size.width / 2.0 - 14.0, y: context.availableSize.height - environment.safeInsets.bottom - doneButton.size.height / 2.0 - 2.0 - UIScreenPixel)
             if component.sourceHint == .storyEditor {
                 doneButtonPosition.x = doneButtonPosition.x - 2.0
                 if case .regular = environment.metrics.widthClass {
@@ -2071,11 +2112,13 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
+            // Between the back and Done buttons, which span iPhone Duo's side strip unless its corner block is at the
+            // bottom: then the strip's width comes off too (`bottomControlsStripInset` is 0 otherwise).
             let modeConstrainedWidth: CGFloat
             if component.sourceHint == .storyEditor {
-                modeConstrainedWidth = context.availableSize.width - 66.0 * 2.0
+                modeConstrainedWidth = context.availableSize.width - 66.0 * 2.0 - bottomControlsStripInset
             } else {
-                modeConstrainedWidth = context.availableSize.width - 76.0 * 2.0
+                modeConstrainedWidth = context.availableSize.width - 76.0 * 2.0 - bottomControlsStripInset
             }
             let mode = mode.update(
                 component: ModeComponent(
@@ -2102,7 +2145,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                 availableSize: CGSize(width: modeConstrainedWidth, height: 44.0),
                 transition: context.transition
             )
-            var modePosition = CGPoint(x: context.availableSize.width / 2.0 - (modeRightInset - 57.0) / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - mode.size.height / 2.0 - 9.0)
+            // Centred between the back and Done buttons: on the band beside iPhone Duo's strip where its corner block
+            // reaches the bottom (folded landscape-left; on the screen's centre the pill would run under Done, which
+            // keeps clear of the block); on the tools column in a regular-width layout. Otherwise the screen's centre.
+            let modeCenterX: CGFloat = controlsCenterX
+            var modePosition = CGPoint(x: modeCenterX - (modeRightInset - 57.0) / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - mode.size.height / 2.0 - 9.0)
             if component.sourceHint == .storyEditor {
                 modePosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 8.0 + mode.size.height / 2.0) + controlsBottomInset
             } else {
@@ -2137,7 +2184,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 availableSize: CGSize(width: 44.0, height: 44.0),
                 transition: .immediate
             )
-            var backButtonPosition = CGPoint(x: environment.safeInsets.left + backButton.size.width / 2.0 + 14.0, y: context.availableSize.height - environment.safeInsets.bottom - backButton.size.height / 2.0 - 2.0 - UIScreenPixel)
+            var backButtonPosition = CGPoint(x: bottomEdgeInsets.left + backButton.size.width / 2.0 + 14.0, y: context.availableSize.height - environment.safeInsets.bottom - backButton.size.height / 2.0 - 2.0 - UIScreenPixel)
             if component.sourceHint == .storyEditor {
                 backButtonPosition.x = backButtonPosition.x + 2.0
                 if case .regular = environment.metrics.widthClass {
@@ -2255,7 +2302,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                                 }))
                             ]
                             let presentationData = self.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
-                            let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(), actionsPosition: .bottom)), items: .single(ContextController.Items(content: .list(items))))
+                            let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: mainWindowScreenBounds, customPosition: CGPoint(), actionsPosition: .bottom)), items: .single(ContextController.Items(content: .list(items))))
                             self.controller?.present(contextController, in: .window(.root))
                         } else {
                             self._drawingView?.performAction(action)
@@ -2430,7 +2477,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                             }))
                         ]
                         let presentationData = strongSelf.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
-                        let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint())), items: .single(ContextController.Items(content: .list(items))))
+                        let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: mainWindowScreenBounds, customPosition: CGPoint())), items: .single(ContextController.Items(content: .list(items))))
                         strongSelf.controller?.present(contextController, in: .window(.root))
                     } else {
                         strongSelf.controller?.requestDismiss()
@@ -2643,7 +2690,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.validLayout = (layout, orientation)
                         
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: layout.intrinsicInsets.top + layout.safeInsets.top,
@@ -2651,6 +2699,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                     bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
@@ -2941,6 +2991,14 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     }
     
     public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {
+        let reservedCorners = reservedCornersForHostedLayout(size: size, orientation: orientation)
+        var statusBarHeight = statusBarHeight
+        if let island = reservedCorners.topRight, safeInsets.left.isZero, safeInsets.right.isZero {
+            // iPhone Duo unfolded portrait: the host reports the system's 2pt status sliver beside the status island,
+            // while the window takes the island's height as the status height. Taking it here too puts the top row on
+            // the island's clock line, as when the screen is presented directly.
+            statusBarHeight = max(statusBarHeight, island.height)
+        }
         var intrinsicInsets = intrinsicInsets
         if intrinsicInsets.top.isZero {
             intrinsicInsets.top = statusBarHeight
@@ -2951,11 +3009,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             deviceMetrics: DeviceMetrics(screenSize: size, scale: UIScreen.main.scale, statusBarHeight: statusBarHeight, onScreenNavigationHeight: nil),
             intrinsicInsets: intrinsicInsets,
             safeInsets: safeInsets,
+            // The host's screen corners (iPhone Duo's status corner or island; `.none` elsewhere), so the screen keeps its
+            // top row beside the island as it does when presented directly.
+            reservedCorners: reservedCorners,
+            division: nil,
             additionalInsets: .zero,
             statusBarHeight: statusBarHeight,
             inputHeight: inputHeight,
             inputHeightIsInteractivellyChanging: false,
-            inVoiceOver: false
+            inVoiceOver: false,
+            presentedInFormSheet: false
         )
         self.orientation = orientation
         self.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
@@ -2963,7 +3026,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
-        return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
+        return session.hasItemsConforming(toTypeIdentifiers: [UTType.image.identifier])
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
@@ -3317,6 +3380,29 @@ public final class DrawingToolsInteraction {
     }
     
     func presentEyedropper(retryLaterForVideo: Bool = true, dismissed: @escaping () -> Void) {
+        guard var contentWrapperView = self.contentWrapperView, let controllerView = self.getControllerNode()?.view else {
+            return
+        }
+
+        if contentWrapperView.frame.width.isZero {
+            guard let fallbackContentWrapperView = self.entitiesView.superview else {
+                return
+            }
+            contentWrapperView = fallbackContentWrapperView
+        }
+
+        var visibleFrame = contentWrapperView.convert(contentWrapperView.bounds, to: controllerView).intersection(controllerView.bounds)
+        var ancestorView = contentWrapperView.superview
+        while let view = ancestorView {
+            if view.clipsToBounds {
+                visibleFrame = visibleFrame.intersection(view.convert(view.bounds, to: controllerView))
+            }
+            ancestorView = view.superview
+        }
+        guard !visibleFrame.isEmpty else {
+            return
+        }
+
         self.entitiesView.pause()
         
         if self.isVideo && retryLaterForVideo {
@@ -3345,15 +3431,11 @@ public final class DrawingToolsInteraction {
             self.entitiesView.layer.render(in: context)
         }, opaque: true, scale: 1.0)
         
-        guard let sourceImage, var contentWrapperView = self.contentWrapperView, let controllerView = self.getControllerNode()?.view else {
+        guard let sourceImage else {
             return
         }
         
-        if contentWrapperView.frame.width.isZero {
-            contentWrapperView = self.entitiesView.superview!
-        }
-        
-        let eyedropperView = EyedropperView(containerSize: contentWrapperView.frame.size, drawingView: self.drawingView, sourceImage: sourceImage)
+        let eyedropperView = EyedropperView(containerSize: visibleFrame.size, drawingView: self.drawingView, sourceImage: sourceImage)
         eyedropperView.completed = { [weak self] color in
             if let self {
                 self.updateColor(color)
@@ -3369,7 +3451,7 @@ public final class DrawingToolsInteraction {
                 self.updateVideoPlayback(true)
             }
         }
-        eyedropperView.frame = contentWrapperView.convert(contentWrapperView.bounds, to: controllerView)
+        eyedropperView.frame = visibleFrame
         self.addSubview(eyedropperView)
         self.currentEyedropperView = eyedropperView
     }

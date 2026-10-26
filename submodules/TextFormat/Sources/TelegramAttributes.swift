@@ -31,6 +31,16 @@ public final class TelegramTimecode {
     }
 }
 
+public final class TelegramTonAddress {
+    public let address: String
+    public let range: NSRange
+
+    public init(address: String, range: NSRange) {
+        self.address = address
+        self.range = range
+    }
+}
+
 public struct TelegramTextAttributes {
     public static let URL = "UrlAttributeT"
     public static let PeerMention = "TelegramPeerMention"
@@ -38,6 +48,7 @@ public struct TelegramTextAttributes {
     public static let BotCommand = "TelegramBotCommand"
     public static let Hashtag = "TelegramHashtag"
     public static let BankCard = "TelegramBankCard"
+    public static let TonAddress = "TelegramTonAddress"
     public static let Timecode = "TelegramTimecode"
     public static let BlockQuote = "TelegramBlockQuote"
     public static let Pre = "TelegramPre"

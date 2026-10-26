@@ -140,6 +140,72 @@ private final class StatusReactionNode: ASDisplayNode {
     }
 }
 
+/// The status node's vertical geometry, which is a function of the width the node is FINALLY laid
+/// out at and so cannot be settled during the measure pass. Produced by the continue closure.
+private struct DateAndStatusVerticalLayout {
+    /// Where the date/status row is drawn, relative to the node's origin. Negative when the date
+    /// rides up onto the caller's last content line.
+    var verticalInset: CGFloat
+    /// The node's own height — what the caller reserves below its content.
+    var resultingHeight: CGFloat
+    /// Frame origin per reaction button, positionally parallel to the layout container's `items`.
+    var reactionPositions: [CGPoint]
+}
+
+/// Reaction buttons bleed 1pt past the node's leading edge, matching the pill artwork.
+let reactionButtonLeadingBleed: CGFloat = -1.0
+let reactionButtonSpacing: CGFloat = 6.0
+
+/// Packs the reaction buttons into rows for a node laid out at `width`.
+///
+/// **LOAD-BEARING — there must be exactly ONE of these.** The measure pass (which reserves the
+/// height) and the apply pass (which positions the buttons) each ran their own copy of this loop,
+/// against two DIFFERENT widths: measure used `arguments.constrainedSize.width`, apply used the
+/// `boundingWidth` handed to the continue closure. Whenever a caller's final width differed from
+/// the width it measured with, the two disagreed on the ROW COUNT and the node reserved space for
+/// rows it never drew.
+///
+/// A rich-text message in a **channel** is exactly that case: `ChatMessageRichDataBubbleContentNode`
+/// measures the status against its own content width, but the bubble is then widened past that by
+/// the author-name header (`ChatMessageBubbleItemNode` seeds `maxContentWidth` from
+/// `headerSize.width`). Two short reactions packed onto two rows at the narrow content width and
+/// onto one row at the wide bubble width, leaving a blank reaction row of dead space above the date.
+///
+/// The two copies also disagreed at the SAME width: measure tested `currentRowWidth + item.width`
+/// while apply tested a running x that already carried the 6pt inter-item gap and the 1pt leading
+/// bleed, so they could break at different points regardless. And an item wider than `width` broke
+/// on the FIRST iteration in measure, which counted its height once for the flush and again for the
+/// trailing row — two rows reserved for one button. The `!positions.isEmpty` guard below is what
+/// retires that: a row break before anything has been placed is not a row.
+///
+/// Internal rather than file-private only so `ChatMessageDateAndStatusNodeTests` can pin the
+/// invariant that the reported `size` really is the extent of the returned `positions`.
+func packReactionRows(_ itemSizes: [CGSize], width: CGFloat, topInset: CGFloat) -> (positions: [CGPoint], size: CGSize, lastRowWidth: CGFloat) {
+    guard !itemSizes.isEmpty else {
+        return ([], CGSize(), 0.0)
+    }
+    var positions: [CGPoint] = []
+    var position = CGPoint(x: reactionButtonLeadingBleed, y: topInset)
+    var widestRow: CGFloat = 0.0
+    var currentRowWidth: CGFloat = 0.0
+    var lastRowHeight: CGFloat = 0.0
+    for size in itemSizes {
+        if !positions.isEmpty, position.x + size.width > width {
+            widestRow = max(widestRow, currentRowWidth)
+            position.x = reactionButtonLeadingBleed
+            position.y += size.height + reactionButtonSpacing
+            currentRowWidth = 0.0
+        }
+        positions.append(position)
+        position.x += size.width + reactionButtonSpacing
+        currentRowWidth += (currentRowWidth.isZero ? 0.0 : reactionButtonSpacing) + size.width
+        lastRowHeight = size.height
+    }
+    widestRow = max(widestRow, currentRowWidth)
+    let totalHeight = (positions[positions.count - 1].y - topInset) + lastRowHeight
+    return (positions, CGSize(width: widestRow, height: totalHeight), currentRowWidth)
+}
+
 public class ChatMessageDateAndStatusNode: ASDisplayNode {
     public struct TrailingReactionSettings {
         public var displayInline: Bool
@@ -771,18 +837,19 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             let layoutSize = CGSize(width: leftInset + impressionWidth + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)
             
-            let verticalReactionsInset: CGFloat
-            let verticalInset: CGFloat
             let resultingWidth: CGFloat
-            let resultingHeight: CGFloat
-            
+            /// Deferred to the continue closure, which is the first point that knows the width the
+            /// node is actually laid out at. See `packReactionRows` for why settling the reaction
+            /// row count during the measure pass is what produced the blank-reaction-row bug.
+            let verticalLayoutForWidth: (CGFloat) -> DateAndStatusVerticalLayout
+
             let reactionButtonsResult: ReactionButtonsAsyncLayoutContainer.Result
             switch arguments.layoutInput {
             case .standalone:
-                verticalReactionsInset = 0.0
-                verticalInset = 0.0
                 resultingWidth = layoutSize.width
-                resultingHeight = layoutSize.height
+                verticalLayoutForWidth = { _ in
+                    DateAndStatusVerticalLayout(verticalInset: 0.0, resultingHeight: layoutSize.height, reactionPositions: [])
+                }
                 reactionButtonsResult = reactionButtonsContainer.update(
                     context: arguments.context,
                     action: { itemNode, value, sourceView in
@@ -917,75 +984,77 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     )
                 }
                 
-                var reactionButtonsSize = CGSize()
-                var currentRowWidth: CGFloat = 0.0
-                for item in reactionButtonsResult.items {
-                    if currentRowWidth + item.size.width > arguments.constrainedSize.width {
-                        reactionButtonsSize.width = max(reactionButtonsSize.width, currentRowWidth)
-                        if !reactionButtonsSize.height.isZero {
-                            reactionButtonsSize.height += 6.0
-                        }
-                        reactionButtonsSize.height += item.size.height
-                        currentRowWidth = 0.0
-                    }
-                    
-                    if !currentRowWidth.isZero {
-                        currentRowWidth += 6.0
-                    }
-                    currentRowWidth += item.size.width
-                }
-                if !currentRowWidth.isZero && !reactionButtonsResult.items.isEmpty {
-                    reactionButtonsSize.width = max(reactionButtonsSize.width, currentRowWidth)
-                    if !reactionButtonsSize.height.isZero {
-                        reactionButtonsSize.height += 6.0
-                    }
-                    reactionButtonsSize.height += reactionButtonsResult.items[0].size.height
-                }
-                
-                if reactionButtonsSize.width.isZero {
+                let itemSizes = reactionButtonsResult.items.map { $0.size }
+                let hasReactionButtons = !itemSizes.isEmpty
+
+                var additionalVerticalInset: CGFloat = 0.0
+                let verticalReactionsInset: CGFloat
+                if !hasReactionButtons {
                     verticalReactionsInset = 0.0
-                    if let contentWidth {
-                        if contentWidth + layoutSize.width > arguments.constrainedSize.width {
-                            resultingWidth = layoutSize.width
-                            verticalInset = 0.0
-                            resultingHeight = layoutSize.height + verticalInset
-                        } else {
-                            resultingWidth = contentWidth + layoutSize.width
-                            verticalInset = -layoutSize.height
-                            resultingHeight = 0.0
-                        }
+                } else if let reactionSettings {
+                    if reactionSettings.preferAdditionalInset {
+                        verticalReactionsInset = 8.0
+                        additionalVerticalInset += 1.0
                     } else {
-                        resultingWidth = layoutSize.width
-                        verticalInset = 0.0
-                        resultingHeight = layoutSize.height + verticalInset
+                        verticalReactionsInset = 3.0
                     }
                 } else {
-                    var additionalVerticalInset: CGFloat = 0.0
-                    if let reactionSettings = reactionSettings {
-                        if reactionSettings.preferAdditionalInset {
-                            verticalReactionsInset = 8.0
-                            additionalVerticalInset += 1.0
-                        } else {
-                            verticalReactionsInset = 3.0
+                    verticalReactionsInset = 0.0
+                }
+
+                // The measure pass packs only to PROPOSE a width. The height and the button
+                // positions are settled by `verticalLayoutForWidth` below, at the real width — the
+                // two must never be derived from different packings.
+                let suggestedPack = packReactionRows(itemSizes, width: arguments.constrainedSize.width, topInset: verticalReactionsInset)
+
+                if !hasReactionButtons {
+                    if let contentWidth, contentWidth + layoutSize.width <= arguments.constrainedSize.width {
+                        resultingWidth = contentWidth + layoutSize.width
+                    } else {
+                        resultingWidth = layoutSize.width
+                    }
+                } else if suggestedPack.lastRowWidth + layoutSize.width > arguments.constrainedSize.width {
+                    resultingWidth = max(layoutSize.width, suggestedPack.size.width)
+                } else {
+                    resultingWidth = max(layoutSize.width + suggestedPack.lastRowWidth, suggestedPack.size.width)
+                }
+
+                verticalLayoutForWidth = { width in
+                    guard hasReactionButtons else {
+                        // No reactions: the date either trails on the caller's last content line
+                        // (riding up by a negative inset, reserving nothing) or drops below it.
+                        // Keyed on the measure-time constraint deliberately — this decision has no
+                        // apply-side counterpart to disagree with, since the date is right-aligned
+                        // at `boundingWidth` either way.
+                        if let contentWidth, contentWidth + layoutSize.width <= arguments.constrainedSize.width {
+                            return DateAndStatusVerticalLayout(verticalInset: -layoutSize.height, resultingHeight: 0.0, reactionPositions: [])
                         }
-                    } else {
-                        verticalReactionsInset = 0.0
+                        return DateAndStatusVerticalLayout(verticalInset: 0.0, resultingHeight: layoutSize.height, reactionPositions: [])
                     }
-                    
-                    if currentRowWidth + layoutSize.width > arguments.constrainedSize.width {
-                        resultingWidth = max(layoutSize.width, reactionButtonsSize.width)
-                        resultingHeight = verticalReactionsInset + reactionButtonsSize.height + 1.0 + layoutSize.height
-                        verticalInset = verticalReactionsInset + reactionButtonsSize.height + 3.0
+
+                    let pack = packReactionRows(itemSizes, width: width, topInset: verticalReactionsInset)
+                    let verticalInset: CGFloat
+                    let resultingHeight: CGFloat
+                    if pack.lastRowWidth + layoutSize.width > width {
+                        // The date does not fit beside the final reaction row, so it takes its own
+                        // line underneath.
+                        resultingHeight = verticalReactionsInset + pack.size.height + 1.0 + layoutSize.height
+                        verticalInset = verticalReactionsInset + pack.size.height + 3.0
                     } else {
-                        resultingWidth = max(layoutSize.width + currentRowWidth, reactionButtonsSize.width)
-                        verticalInset = verticalReactionsInset + reactionButtonsSize.height - layoutSize.height + additionalVerticalInset
-                        resultingHeight = verticalReactionsInset + reactionButtonsSize.height + 1.0
+                        // The date shares the final reaction row, bottom-aligned against it.
+                        verticalInset = verticalReactionsInset + pack.size.height - layoutSize.height + additionalVerticalInset
+                        resultingHeight = verticalReactionsInset + pack.size.height + 1.0
                     }
+                    return DateAndStatusVerticalLayout(verticalInset: verticalInset, resultingHeight: resultingHeight, reactionPositions: pack.positions)
                 }
             }
             
             return (resultingWidth, { boundingWidth in
-                return (CGSize(width: boundingWidth, height: resultingHeight), { animation in
+                // The one evaluation point: the reserved height returned here and the button
+                // positions used in the apply closure come from the SAME packing at the SAME width.
+                let verticalLayout = verticalLayoutForWidth(boundingWidth)
+                let verticalInset = verticalLayout.verticalInset
+                return (CGSize(width: boundingWidth, height: verticalLayout.resultingHeight), { animation in
                     if let strongSelf = self {
                         let leftOffset = boundingWidth - layoutSize.width
                         
@@ -1001,13 +1070,17 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             )
                         )
                         
-                        var reactionButtonPosition = CGPoint(x: -1.0, y: verticalReactionsInset)
-                        for item in reactionButtons.items {
-                            if reactionButtonPosition.x + item.size.width > boundingWidth {
-                                reactionButtonPosition.x = -1.0
-                                reactionButtonPosition.y += item.size.height + 6.0
+                        // Positions come from the packing that also produced the reserved height —
+                        // NOT re-derived here. `reactionButtons.items` is positionally parallel to
+                        // the `reactionButtonsResult.items` that were packed (both are built from
+                        // one `applyItems` list in `ReactionButtonsAsyncLayoutContainer.update`), so
+                        // the index lines up; the guard keeps a future divergence from crashing.
+                        for (index, item) in reactionButtons.items.enumerated() {
+                            guard index < verticalLayout.reactionPositions.count else {
+                                break
                             }
-                                
+                            let reactionButtonPosition = verticalLayout.reactionPositions[index]
+
                             if item.node.view.superview != strongSelf.view {
                                 assert(item.node.view.superview == nil)
                                 strongSelf.view.addSubview(item.node.view)
@@ -1040,10 +1113,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     gesture.cancel()
                                 }
                             }
-                            
-                            reactionButtonPosition.x += item.size.width + 6.0
                         }
-                        
+
                         for node in reactionButtons.removedNodes {
                             if animation.isAnimated {
                                 node.view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)

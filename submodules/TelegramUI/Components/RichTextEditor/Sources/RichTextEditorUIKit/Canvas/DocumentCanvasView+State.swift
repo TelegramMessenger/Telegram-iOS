@@ -31,6 +31,15 @@ extension DocumentCanvasView {
         return (ca.bold, ca.italic, ca.underline, ca.strikethrough, ca.inlineCode, ca.spoiler)
     }
 
+    /// True when the caret is anywhere in a code block — its code text OR its language line. The language
+    /// line resolves to no `activeStack` (by design, see `activeStack`), so the box test alone would report
+    /// false there and the format menu would stop showing the block as code mid-edit.
+    private func isCaretInCodeBlock() -> Bool {
+        if activeStack(at: head)?.box is CodeBlockBox { return true }
+        if let (region, _) = leafRegion(containingGlobal: head), case .codeLanguage = region.ref { return true }
+        return false
+    }
+
     /// Whether the current (non-empty) selection covers only paragraph text — no media or table block.
     /// `isInsideTable` handles a selection whose endpoint sits inside a cell; the box scan also rejects a
     /// top-level selection that spans a media/table block while both endpoints stay in paragraphs (where
@@ -53,7 +62,7 @@ extension DocumentCanvasView {
             bold: fmt.bold, italic: fmt.italic, underline: fmt.underline, strikethrough: fmt.strikethrough, code: fmt.code,
             spoiler: fmt.spoiler,
             paragraphStyle: topBlock?.style,
-            isCodeBlock: activeStack(at: head)?.box is CodeBlockBox,
+            isCodeBlock: isCaretInCodeBlock(),
             isPullQuote: activeStack(at: head)?.box is PullQuoteBox,
             listMarker: topBlock?.listMembership?.marker,
             link: currentLink(),
@@ -61,6 +70,11 @@ extension DocumentCanvasView {
             // "in table" for toolbar purposes (so table-structural commands can enable).
             hasSelection: selFrom < selTo,
             isInTable: isInsideTable(head) || isInsideTable(anchor),
+            // Read the box's STORED flag, not `currentBlock()` — that reconstructs the entire
+            // TableBlock (every row, cell and cell block stack), and `currentState()` runs on every
+            // toolbar refresh, i.e. every keystroke typed inside a table.
+            isTableCompact: activeTable()?.box.isCompact ?? false,
+            isTableBordered: activeTable()?.box.isBordered ?? true,
             selectionIsTextOnly: selectionIsTextOnly(),
             canUndo: effectiveUndoManager?.canUndo ?? false,
             canRedo: effectiveUndoManager?.canRedo ?? false,

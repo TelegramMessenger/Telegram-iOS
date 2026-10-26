@@ -1,0 +1,66 @@
+{
+  "afterBoundaryOffset": 19,
+  "beforeBoundaryOffset": 18,
+  "cancelAction": {
+    "accessibilityIdentity": "delete",
+    "kind": "software-keyboard-key-sequence",
+    "value": "delete,delete"
+  },
+  "cancelResult": "Alpha middle omega\nSecond block remains unchanged.",
+  "candidateAccessibilityIdentity": "かな, ヒラガナノカナ",
+  "candidateAction": {
+    "accessibilityIdentity": "かな, ヒラガナノカナ",
+    "kind": "candidate-cell-tap",
+    "value": "かな"
+  },
+  "candidateLabel": "かな",
+  "canonicalDocument": "Alpha middle omega\nSecond block remains unchanged.",
+  "committedText": "かな",
+  "firstComposition": "k",
+  "geometryTolerance": 1,
+  "inputModeIdentifier": "ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic",
+  "interiorOffset": 6,
+  "language": "japanese-romaji",
+  "markedSelections": [
+    {
+      "length": 0,
+      "location": 1
+    },
+    {
+      "length": 0,
+      "location": 1
+    }
+  ],
+  "ordinaryCommitAction": {
+    "accessibilityIdentity": "Return",
+    "kind": "software-keyboard-button",
+    "value": "Return"
+  },
+  "ordinaryCommitResult": "Alpha かなmiddle omega\nSecond block remains unchanged.",
+  "physicalKeySequence": [
+    "k",
+    "a",
+    "n",
+    "a"
+  ],
+  "primaryLanguage": "ja-JP",
+  "responderLossResult": "Alpha middle omegaかな\nSecond block remains unchanged.",
+  "returnAction": {
+    "accessibilityIdentity": "Return",
+    "kind": "software-keyboard-button",
+    "value": "Return"
+  },
+  "returnCommitResult": "Alpha middle omegaかな\nSecond block remains unchanged.",
+  "runtime": {
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "schema": 1,
+  "undoAction": {
+    "accessibilityIdentity": "ime-undo",
+    "kind": "uikit-undo-manager",
+    "value": "undo"
+  },
+  "undoResult": "Alpha middle omega\nSecond block remains unchanged.",
+  "updatedComposition": "か"
+}

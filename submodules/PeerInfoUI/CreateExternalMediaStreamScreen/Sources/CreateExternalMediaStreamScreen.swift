@@ -199,6 +199,17 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             let component = context.component
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let state = context.state
+            // The content lays out in the band between the side insets when they differ (iPhone Duo's side strip);
+            // across the screen otherwise.
+            let bandMinX: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left : 0.0
+            let bandWidth: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? context.availableSize.width - environment.safeInsets.left - environment.safeInsets.right : context.availableSize.width
+            let bandCenterX: CGFloat = bandMinX + bandWidth / 2.0
+            // The bottom button and the text above it span iPhone Duo's side strip; they keep clear only of a corner
+            // block at the bottom.
+            let bottomEdgeInsets = environment.bottomEdgeSideInsets()
+            let bottomBandMinX: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? bottomEdgeInsets.left : 0.0
+            let bottomBandWidth: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? context.availableSize.width - bottomEdgeInsets.left - bottomEdgeInsets.right : context.availableSize.width
+            let bottomBandCenterX: CGFloat = bottomBandMinX + bottomBandWidth / 2.0
             
             let theme = environment.theme.withModalBlocksBackground()
             
@@ -244,8 +255,16 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                     availableSize: CGSize(width: 40.0, height: 40.0),
                     transition: context.transition
                 )
+                // iPhone Duo: with a side strip the close goes in the strip, where a standard bar's close goes (in folded
+                // landscape-right the top-left corner it sat in is the status block).
+                let closeButtonPosition: CGPoint
+                if let sideColumnFrame = environment.sideColumnNavigationButtonFrame {
+                    closeButtonPosition = CGPoint(x: sideColumnFrame.midX, y: sideColumnFrame.midY)
+                } else {
+                    closeButtonPosition = CGPoint(x: bandMinX + 16.0 + closeButton.size.width * 0.5, y: 16.0 + closeButton.size.height * 0.5)
+                }
                 context.add(closeButton
-                    .position(CGPoint(x: 16.0 + closeButton.size.width * 0.5, y: 16.0 + closeButton.size.height * 0.5))
+                    .position(closeButtonPosition)
                 )
             }
             
@@ -266,7 +285,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 transition: context.transition
             )
             context.add(title
-                .position(CGPoint(x: context.availableSize.width * 0.5, y: 26.0 + title.size.height * 0.5))
+                .position(CGPoint(x: bandCenterX, y: 26.0 + title.size.height * 0.5))
             )
             
             let animation = animation.update(
@@ -276,7 +295,8 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                         source: .bundle(name: "CreateStream"),
                         loop: true
                     ),
-                    size: CGSize(width: 138.0, height: 138.0)
+                    size: CGSize(width: 138.0, height: 138.0),
+                    lottieSettings: state.context.lottieRenderingSettings
                 ),
                 availableSize: CGSize(width: 138.0, height: 138.0),
                 transition: context.transition
@@ -289,7 +309,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                availableSize: CGSize(width: bandWidth - sideInset * 2.0, height: context.availableSize.height),
                 transition: context.transition
             )
             
@@ -301,7 +321,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                    availableSize: CGSize(width: bottomBandWidth - sideInset * 2.0, height: context.availableSize.height),
                     transition: context.transition
                 )
             }
@@ -342,20 +362,20 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                         }
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - buttonSideInset * 2.0, height: 52.0),
+                availableSize: CGSize(width: bottomBandWidth - buttonSideInset * 2.0, height: 52.0),
                 transition: context.transition
             )
             
             let credentialsItemHeight: CGFloat = 64.0
-            let credentialsAreaSize = CGSize(width: context.availableSize.width - sideInset * 2.0, height: credentialsItemHeight * 2.0)
+            let credentialsAreaSize = CGSize(width: bandWidth - sideInset * 2.0, height: credentialsItemHeight * 2.0)
             
-            let animationFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - animation.size.width) / 2.0), y: environment.navigationHeight + topInset), size: animation.size)
+            let animationFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - animation.size.width) / 2.0), y: environment.navigationHeight + topInset), size: animation.size)
             
             context.add(animation
                 .position(CGPoint(x: animationFrame.midX, y: animationFrame.midY))
             )
             
-            let textFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - text.size.width) / 2.0), y: animationFrame.maxY + 18.0), size: text.size)
+            let textFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - text.size.width) / 2.0), y: animationFrame.maxY + 18.0), size: text.size)
             context.add(text
                 .position(CGPoint(x: textFrame.midX, y: textFrame.midY))
             )
@@ -489,13 +509,13 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                         footer: nil,
                         items: credentialsSectionItems
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                    availableSize: CGSize(width: bandWidth - sideInset * 2.0, height: context.availableSize.height),
                     transition: context.transition
                 )
                 context.add(credentialsSection
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: textFrame.maxY + 30.0 + credentialsSection.size.height / 2.0)))
+                    .position(CGPoint(x: bandCenterX, y: textFrame.maxY + 30.0 + credentialsSection.size.height / 2.0)))
             } else if !context.state.isDelayingLoadingIndication {
-                let credentialsFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.maxY + 30.0), size: credentialsAreaSize)
+                let credentialsFrame = CGRect(origin: CGPoint(x: bandMinX + sideInset, y: textFrame.maxY + 30.0), size: credentialsAreaSize)
                 let activityIndicator = activityIndicator.update(
                     component: ActivityIndicatorComponent(color: theme.list.controlSecondaryColor),
                     availableSize: CGSize(width: 100.0, height: 100.0),
@@ -506,11 +526,11 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 )
             }
             
-            let buttonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: context.availableSize.height - bottomInset - button.size.height), size: button.size)
+            let buttonFrame = CGRect(origin: CGPoint(x: bottomBandMinX + buttonSideInset, y: context.availableSize.height - bottomInset - button.size.height), size: button.size)
             
             if let bottomText {
                 context.add(bottomText
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.minY - 12.0 - bottomText.size.height / 2.0))
+                    .position(CGPoint(x: bottomBandCenterX, y: buttonFrame.minY - 12.0 - bottomText.size.height / 2.0))
                 )
             }
             

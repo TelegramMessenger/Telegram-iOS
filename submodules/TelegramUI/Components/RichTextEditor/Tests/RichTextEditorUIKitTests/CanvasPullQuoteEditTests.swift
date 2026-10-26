@@ -204,7 +204,7 @@ final class CanvasPullQuoteEditTests: XCTestCase {
         XCTAssertEqual(out.text, "quote", "pull text preserved")
         XCTAssertEqual(canvas.head, box.textStart + box.textLength, "caret parks at the pull quote's text end")
         // It's a pure caret RELOCATION — no content edit ran, so nothing is undoable (the pre-fix path
-        // routed through a spurious `applyReplace` inside `editing { }`, which would register an undo step).
+        // routed through a spurious `applyReplaceOutcome` inside `editing { }`, which would register an undo step).
         XCTAssertFalse(um.canUndo, "stepping out of the author must not register a content edit")
     }
 
@@ -250,7 +250,7 @@ final class CanvasPullQuoteEditTests: XCTestCase {
     // MARK: - Runtime bug: typing into an empty author leaked into the NEXT paragraph
 
     /// The author is a SECOND leaf region on the box (outside its primary `textStart..textStart+textLength`
-    /// extent and off the block-quote child stack), so the plain `applyReplace`/`activeStack` insert path
+    /// extent and off the block-quote child stack), so the plain `applyReplaceOutcome`/`activeStack` insert path
     /// (keyed on that primary extent) used to mis-route a collapsed-caret author insert into the FOLLOWING
     /// top-level paragraph instead of the author. This is the reported bug.
     func test_insertText_atEmptyPullQuoteAuthor_landsInAuthorNotNextParagraph() {
@@ -330,8 +330,8 @@ final class CanvasPullQuoteEditTests: XCTestCase {
 
     /// `replace(_:withText:)` (the path the OS drives for autocorrect / dictation) with a range that lies
     /// entirely within the author region must land the replacement in the author — not in the following
-    /// top-level paragraph. Before the fix, `applySelectionReplace` fell through to the same-stack
-    /// `applyReplace`, which mis-resolves both endpoints (the author is a second leaf region off
+    /// top-level paragraph. Before the fix, `applySelectionReplaceOutcome` fell through to the same-stack
+    /// `applyReplaceOutcome`, which mis-resolves both endpoints (the author is a second leaf region off
     /// `activeStack`'s radar) to the next box.
     func test_replace_atPullQuoteAuthor_landsInAuthorNotNextParagraph() {
         let canvas = makeCanvas()
@@ -367,8 +367,7 @@ final class CanvasPullQuoteEditTests: XCTestCase {
         guard let authorRegion = box.leafRegions().first(where: { $0.ref == .quoteAuthor(BlockID("pq")) }) else {
             return XCTFail("no author region")
         }
-        canvas.anchor = authorRegion.globalStart
-        canvas.head = authorRegion.globalStart + authorRegion.length
+        canvas.setSelectionForTesting(anchor: authorRegion.globalStart, head: authorRegion.globalStart + authorRegion.length)
         canvas.insertText("Bob")
         guard case .pullQuote(let pq) = canvas.boxes[0].currentBlock() else { return XCTFail("expected .pullQuote") }
         XCTAssertEqual(pq.author.map(\.text).joined(), "Bob", "the replacement must land in the author line")
@@ -470,8 +469,9 @@ final class CanvasPullQuoteEditTests: XCTestCase {
                              "block above the pull quote must reserve the extra framed-neighbor margin")
         XCTAssertGreaterThan(below.topInset, BlockBox.defaultVerticalInset,
                              "block below the pull quote must reserve the extra framed-neighbor margin")
-        XCTAssertEqual(above.topInset, BlockBox.defaultVerticalInset, accuracy: 0.5,
-                       "far side (away from the pull quote) must be unaffected")
+        XCTAssertEqual(above.topInset,
+                       richTextSpacingBetweenBlocks(upper: nil, lower: .paragraph, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01, "far side (away from the pull quote) is the document edge gap")
     }
 
     // MARK: - composerSelectedRange flat-axis coverage

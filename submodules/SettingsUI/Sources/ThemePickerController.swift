@@ -622,7 +622,7 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                 }
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_ShareTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                     c?.dismiss(completion: {
-                        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url("https://t.me/addtheme/\(theme.theme.slug)"), preferredAction: .default, actionCompleted: {
+                        let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url("https://t.me/addtheme/\(theme.theme.slug)"), preferredAction: .default, actionCompleted: {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                         }))
@@ -874,7 +874,7 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                     }
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_ShareTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                         c?.dismiss(completion: {
-                            let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url("https://t.me/addtheme/\(cloudTheme.theme.slug)"), preferredAction: .default, actionCompleted: {
+                            let shareController = context.sharedContext.makeShareScreen(context: context, params: ShareControllerParams(subject: .url("https://t.me/addtheme/\(cloudTheme.theme.slug)"), preferredAction: .default, actionCompleted: {
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                             }))
@@ -1108,8 +1108,10 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
             }
             
             let sectionInset = max(16.0, floor((controller.displayNode.frame.width - 674.0) / 2.0))
+            // iPhone Duo: the list's margins are per side beside the side strip.
+            let sectionMargins = controller.currentlyAppliedLayout?.listSideMargins(base: sectionInset) ?? (left: sectionInset, right: sectionInset)
             
-            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset, sideInset: sectionInset)
+            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset, sideInset: sectionMargins.left, rightSideInset: sectionMargins.right)
             crossfadeController.didAppear = { [weak themeItemNode, weak colorItemNode] in
                 if view != nil {
                     themeItemNode?.animateCrossfadeTransition()

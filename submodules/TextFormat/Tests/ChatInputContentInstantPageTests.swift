@@ -270,6 +270,18 @@ final class ChatInputContentInstantPageTests: XCTestCase {
         assertRoundTrips(ChatInputContent(blocks: [.table(table)]), "2x2 table with header row + per-cell H+V alignment")
     }
 
+    /// The identity invariant for an UNBORDERED table. The default (`bordered: true`) round-trips
+    /// trivially even if the reverse converter discarded the flag, so only this case actually pins the
+    /// reverse binding.
+    func test_table_unbordered_roundTrips() {
+        let table = ChatInputTable(
+            columns: [ChatInputColumnSpec(width: 0.0)],
+            rows: [ChatInputTableRow(height: nil, cells: [ChatInputTableCell(runs: [ChatInputRun(text: "a")])])],
+            bordered: false
+        )
+        assertRoundTrips(ChatInputContent(blocks: [.table(table)]), "unbordered table")
+    }
+
     // 13b. Per-cell header: a table whose header cells do NOT form a whole row still round-trips each cell's
     //      `isHeader` independently (the InstantPage layer carries per-cell `header`).
     func test_table_perCellHeader() {
@@ -743,5 +755,152 @@ final class ChatInputContentInstantPageTests: XCTestCase {
         guard case let .media(m)? = back.blocks.first else { return XCTFail("expected .media") }
         XCTAssertEqual(m.displayMode, .slideshow)
         XCTAssertEqual(back, content)
+    }
+
+    // MARK: Document (generic file) blocks
+
+    private func makeDocumentFile(id: Int64, name: String = "Report.pdf") -> TelegramMediaFile {
+        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil,
+                                 resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [],
+                                 immediateThumbnailData: nil, mimeType: "application/pdf", size: 1024,
+                                 attributes: [.FileName(fileName: name)], alternativeRepresentations: [])
+    }
+
+    func testDocumentForwardEmitsADocumentBlock() {
+        let file = makeDocumentFile(id: 200)
+        let content = ChatInputContent(blocks: [.media(ChatInputMedia(
+            media: file, kind: .document, naturalSize: ChatInputSize(width: 0, height: 0),
+            displayWidth: nil, alignment: .center, caption: []))])
+
+        let page = instantPage(from: content)
+        guard case .document(let id, _)? = page.blocks.first else { return XCTFail("expected a .document block") }
+        XCTAssertEqual(id, file.fileId)
+        XCTAssertNotNil(page.media[id], "the file must be stored in the page media dict so it uploads")
+    }
+
+    func testDocumentIsNeverGroupedIntoACollage() {
+        // Two media in ONE container: the image groups, the document is skipped (permanently single-item).
+        let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: 201),
+                                       representations: [imageRep(100, 80)], immediateThumbnailData: nil,
+                                       reference: nil, partialReference: nil, flags: [])
+        let content = ChatInputContent(blocks: [.media(ChatInputMedia(items: [
+            ChatInputMediaItem(media: image, kind: .image, naturalSize: ChatInputSize(width: 100, height: 80)),
+            ChatInputMediaItem(media: makeDocumentFile(id: 202), kind: .document,
+                               naturalSize: ChatInputSize(width: 0, height: 0)),
+        ], displayWidth: nil, alignment: .center, caption: []))])
+
+        let page = instantPage(from: content)
+        guard case .collage(let items, _)? = page.blocks.first else { return XCTFail("expected a .collage block") }
+        XCTAssertEqual(items.count, 1, "the document must be skipped, leaving only the image")
+        guard case .image = items[0] else { return XCTFail("expected the surviving item to be the image") }
+    }
+
+    func testDocumentRoundTripContentToInstantPageToContent() {
+        let file = makeDocumentFile(id: 300)
+        let media = ChatInputMedia(media: file, kind: .document, naturalSize: ChatInputSize(width: 0, height: 0),
+                                   displayWidth: nil, alignment: .center, caption: [ChatInputRun(text: "cap")])
+        let content = ChatInputContent(blocks: [.media(media)])
+
+        let page = instantPage(from: content)
+        guard case .document(let id, let caption)? = page.blocks.first else { return XCTFail("expected .document") }
+        XCTAssertEqual(id, file.fileId)
+        XCTAssertEqual(caption.text.plainText, "cap")
+
+        // Reverse: back to a .document media block, file + caption preserved. (The EDITOR drops the caption
+        // at the MediaBlockBox boundary — a document is caption-less on screen — but the chat currency
+        // carries it, exactly as .audio does.)
+        let back = chatInputContent(fromInstantPage: page)
+        guard case .media(let m)? = back.blocks.first else { return XCTFail("expected .media") }
+        XCTAssertEqual(m.kind, .document)
+        XCTAssertEqual(m.media.id, file.fileId)
+        XCTAssertEqual(m.caption.map(\.text).joined(), "cap")
+    }
+
+    func testDocumentMediaKindRawValueIsStable() {
+        // Persisted in drafts (local + cross-device). Changing it invalidates stored drafts.
+        XCTAssertEqual(ChatInputMediaKind.document.rawValue, 4)
+    }
+
+    // MARK: - InstantPage buttons
+
+    /// The file's guaranteed invariant: `chatInputContent(fromInstantPage: instantPage(from: c)) == c`.
+    /// Until now `.buttonRow` fell through the reverse `default:` and a button-bearing message lost its
+    /// buttons on the edit round-trip — the data loss this whole feature exists to fix.
+    func test_buttonRow_survivesTheIdentityRoundTrip() {
+        let content = ChatInputContent(blocks: [.buttonRow(ChatInputButtonRow(
+            buttons: [
+                ChatInputButton(label: [ChatInputRun(text: "Open")], action: .url("https://telegram.org"), color: .primary, isLink: false),
+                ChatInputButton(label: [ChatInputRun(text: "Pay")], action: .payment, color: .danger, isLink: true),
+            ],
+            alignment: .right
+        ))])
+        XCTAssertEqual(chatInputContent(fromInstantPage: instantPage(from: content)), content)
+    }
+
+    func test_inlineButton_survivesTheIdentityRoundTrip() {
+        var attributes = ChatInputInlineAttributes()
+        attributes.entity = .button(ChatInputButton(label: [ChatInputRun(text: "Go")], action: .url("https://telegram.org"), color: nil, isLink: true))
+        let content = ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [
+            ChatInputRun(text: "tap "),
+            ChatInputRun(text: "\u{FFFC}", attributes: attributes),
+            ChatInputRun(text: " now"),
+        ]))])
+        XCTAssertEqual(chatInputContent(fromInstantPage: instantPage(from: content)), content)
+    }
+
+    /// A formatted button must round-trip too: the forward applies the wrapper chain to EVERY run
+    /// uniformly, so the reverse has to unwrap through bold/italic to reach the `.textButton` leaf.
+    func test_formattedInlineButton_survivesTheIdentityRoundTrip() {
+        var attributes = ChatInputInlineAttributes(bold: true, italic: true)
+        attributes.entity = .button(ChatInputButton(label: [ChatInputRun(text: "Go")], action: .disabled, color: .success, isLink: false))
+        let content = ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [
+            ChatInputRun(text: "\u{FFFC}", attributes: attributes),
+        ]))])
+        XCTAssertEqual(chatInputContent(fromInstantPage: instantPage(from: content)), content)
+    }
+
+    /// A rich label (bold + a link) must survive inside the button.
+    func test_richButtonLabel_survivesTheIdentityRoundTrip() {
+        var linkAttributes = ChatInputInlineAttributes()
+        linkAttributes.entity = .url("https://telegram.org")
+        let content = ChatInputContent(blocks: [.buttonRow(ChatInputButtonRow(
+            buttons: [ChatInputButton(
+                label: [ChatInputRun(text: "bold", attributes: ChatInputInlineAttributes(bold: true)),
+                        ChatInputRun(text: "link", attributes: linkAttributes)],
+                action: .url("https://telegram.org")
+            )],
+            alignment: .left
+        ))])
+        XCTAssertEqual(chatInputContent(fromInstantPage: instantPage(from: content)), content)
+    }
+
+    /// The block must actually reach the InstantPage, not merely survive an internal round-trip.
+    func test_buttonRow_emitsAPageBlock() {
+        let content = ChatInputContent(blocks: [.buttonRow(ChatInputButtonRow(
+            buttons: [ChatInputButton(label: [ChatInputRun(text: "Open")], action: .url("https://telegram.org"), color: nil, isLink: false)],
+            alignment: .left
+        ))])
+        guard case let .buttonRow(alignment, buttons) = instantPage(from: content).blocks.first else {
+            return XCTFail("expected an InstantPageBlock.buttonRow")
+        }
+        XCTAssertEqual(alignment, .left)
+        XCTAssertEqual(buttons.count, 1)
+        XCTAssertEqual(buttons[0].action, .url("https://telegram.org"))
+    }
+
+    /// And the inline one must reach the page as a `RichText.textButton`, not as its label text.
+    func test_inlineButton_emitsATextButton() {
+        var attributes = ChatInputInlineAttributes()
+        attributes.entity = .button(ChatInputButton(label: [ChatInputRun(text: "Go")], action: .disabled))
+        let content = ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [
+            ChatInputRun(text: "\u{FFFC}", attributes: attributes),
+        ]))])
+        guard case let .paragraph(text) = instantPage(from: content).blocks.first else {
+            return XCTFail("expected a paragraph block")
+        }
+        guard case let .textButton(button) = text else {
+            return XCTFail("expected a RichText.textButton, got \(text)")
+        }
+        XCTAssertEqual(button.text.plainText, "Go")
     }
 }

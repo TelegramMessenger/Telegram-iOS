@@ -19,17 +19,19 @@
 @interface MTBindKeyMessageService () {
     MTDatacenterAuthKey *_persistentKey;
     MTDatacenterAuthKey *_ephemeralKey;
-    void (^_completion)(bool);
+    void (^_completion)(bool, MTRpcError *);
     
     int64_t _currentMessageId;
     id _currentTransactionId;
+    
+    NSUInteger _authKeyRejections;
 }
 
 @end
 
 @implementation MTBindKeyMessageService
 
-- (instancetype)initWithPersistentKey:(MTDatacenterAuthKey *)persistentKey ephemeralKey:(MTDatacenterAuthKey *)ephemeralKey completion:(void (^)(bool))completion {
+- (instancetype)initWithPersistentKey:(MTDatacenterAuthKey *)persistentKey ephemeralKey:(MTDatacenterAuthKey *)ephemeralKey completion:(void (^)(bool, MTRpcError *))completion {
     self = [super init];
     if (self != nil) {
         _persistentKey = persistentKey;
@@ -53,7 +55,7 @@
     int64_t bindingMessageId = [sessionInfo generateClientMessageId:NULL];
     int32_t bindingSeqNo = [sessionInfo takeSeqNo:true];
     
-    int32_t expiresAt = (int32_t)([mtProto.context globalTime] + mtProto.context.tempKeyExpiration);
+    int32_t expiresAt = (int32_t)(_ephemeralKey.validUntilTimestamp + [mtProto.context globalTimeDifference]);
     
     int64_t randomId = 0;
     arc4random_buf(&randomId, 8);
@@ -140,11 +142,22 @@
     }
 }
 
+- (void)finishWithSuccess:(bool)success error:(MTRpcError *)error {
+    void (^completion)(bool, MTRpcError *) = _completion;
+    _completion = nil;
+    if (completion) {
+        completion(success, error);
+    }
+}
+
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector networkType:(int32_t)networkType {
+    _authKeyRejections = 0;
+    
     if ([message.body isKindOfClass:[MTRpcResultMessage class]]) {
         MTRpcResultMessage *rpcResultMessage = message.body;
         if (rpcResultMessage.requestMessageId == _currentMessageId) {
             bool success = false;
+            MTRpcError *error = nil;
             if (rpcResultMessage.data.length >= 4) {
                 uint32_t signature = 0;
                 [rpcResultMessage.data getBytes:&signature range:NSMakeRange(0, 4)];
@@ -152,6 +165,7 @@
                 id parsedMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
                 if ([parsedMessage isKindOfClass:[MTRpcError class]]) {
                     MTRpcError *rpcError = (MTRpcError *)parsedMessage;
+                    error = rpcError;
                     if (MTLogEnabled()) {
                         MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, _currentMessageId, (int)rpcError.errorCode, rpcError.errorDescription);
                     }
@@ -163,13 +177,21 @@
                     success = true;
                 }
             }
-            _completion(success);
+            [self finishWithSuccess:success error:error];
         }
     }
 }
 
--(void)complete {
-    _completion(true);
+- (void)mtProtoAuthKeyRejected:(MTProto *)mtProto {
+    _authKeyRejections += 1;
+    
+    if (MTLogEnabled()) {
+        MTLog(@"[MTBindKeyMessageService#%p temp key %" PRId64 " rejected (%d in a row)]", self, _ephemeralKey.authKeyId, (int)_authKeyRejections);
+    }
+    
+    if (_authKeyRejections >= 2) {
+        [self finishWithSuccess:false error:nil];
+    }
 }
 
 @end

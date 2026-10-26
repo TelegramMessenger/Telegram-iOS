@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -17,9 +16,9 @@ private final class ChatRecentActionsFilterControllerArguments {
     let toggleAllActions: (Bool) -> Void
     let toggleAction: ([AdminLogEventsFlags]) -> Void
     let toggleAllAdmins: (Bool) -> Void
-    let toggleAdmin: (PeerId) -> Void
+    let toggleAdmin: (EnginePeer.Id) -> Void
     
-    init(context: AccountContext, toggleAllActions: @escaping (Bool) -> Void, toggleAction: @escaping ([AdminLogEventsFlags]) -> Void, toggleAllAdmins: @escaping (Bool) -> Void, toggleAdmin: @escaping (PeerId) -> Void) {
+    init(context: AccountContext, toggleAllActions: @escaping (Bool) -> Void, toggleAction: @escaping ([AdminLogEventsFlags]) -> Void, toggleAllAdmins: @escaping (Bool) -> Void, toggleAdmin: @escaping (EnginePeer.Id) -> Void) {
         self.context = context
         self.toggleAllActions = toggleAllActions
         self.toggleAction = toggleAction
@@ -35,7 +34,7 @@ private enum ChatRecentActionsFilterSection: Int32 {
 
 private enum ChatRecentActionsFilterEntryStableId: Hashable {
     case index(Int32)
-    case peer(PeerId)
+    case peer(EnginePeer.Id)
 }
 
 private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
@@ -223,9 +222,9 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
 
 private struct ChatRecentActionsFilterControllerState: Equatable {
     let events: AdminLogEventsFlags
-    let adminPeerIds: [PeerId]?
+    let adminPeerIds: [EnginePeer.Id]?
     
-    init(events: AdminLogEventsFlags, adminPeerIds: [PeerId]?) {
+    init(events: AdminLogEventsFlags, adminPeerIds: [EnginePeer.Id]?) {
         self.events = events
         self.adminPeerIds = adminPeerIds
     }
@@ -249,14 +248,14 @@ private struct ChatRecentActionsFilterControllerState: Equatable {
         return ChatRecentActionsFilterControllerState(events: events, adminPeerIds: self.adminPeerIds)
     }
     
-    func withUpdatedAdminPeerIds(_ adminPeerIds: [PeerId]?) -> ChatRecentActionsFilterControllerState {
+    func withUpdatedAdminPeerIds(_ adminPeerIds: [EnginePeer.Id]?) -> ChatRecentActionsFilterControllerState {
         return ChatRecentActionsFilterControllerState(events: self.events, adminPeerIds: adminPeerIds)
     }
 }
 
-private func channelRecentActionsFilterControllerEntries(presentationData: PresentationData, accountPeerId: PeerId, peer: Peer, antiSpamBotId: PeerId?, state: ChatRecentActionsFilterControllerState, participants: [RenderedChannelParticipant]?) -> [ChatRecentActionsFilterEntry] {
+private func channelRecentActionsFilterControllerEntries(presentationData: PresentationData, accountPeerId: EnginePeer.Id, peer: EnginePeer, antiSpamBotId: EnginePeer.Id?, state: ChatRecentActionsFilterControllerState, participants: [RenderedChannelParticipant]?) -> [ChatRecentActionsFilterEntry] {
     var isGroup = true
-    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+    if case let .channel(peer) = peer, case .broadcast = peer.info {
         isGroup = false
     }
     
@@ -350,7 +349,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
     return entries
 }
 
-public func channelRecentActionsFilterController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, events: AdminLogEventsFlags, adminPeerIds: [PeerId]?, apply: @escaping (_ events: AdminLogEventsFlags, _ adminPeerIds: [PeerId]?) -> Void) -> ViewController {
+public func channelRecentActionsFilterController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, events: AdminLogEventsFlags, adminPeerIds: [EnginePeer.Id]?, apply: @escaping (_ events: AdminLogEventsFlags, _ adminPeerIds: [EnginePeer.Id]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChatRecentActionsFilterControllerState(events: events, adminPeerIds: adminPeerIds), ignoreRepeated: true)
     let stateValue = Atomic(value: ChatRecentActionsFilterControllerState(events: events, adminPeerIds: adminPeerIds))
     let updateState: ((ChatRecentActionsFilterControllerState) -> ChatRecentActionsFilterControllerState) -> Void = { f in

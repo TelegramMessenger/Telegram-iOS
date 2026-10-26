@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -21,7 +20,7 @@ import AccessoryPanelNode
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let dateTimeFormat: PresentationDateTimeFormat
-    let messageId: MessageId
+    let messageId: EngineMessage.Id
     
     let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
@@ -42,7 +41,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     private let editingMessageDisposable = MetaDisposable()
     
     private var isPhoto = false
-    private var currentMessage: Message?
+    private var currentMessage: EngineMessage?
     private var currentEditMediaReference: AnyMediaReference?
     private var previousMediaReference: AnyMediaReference?
     
@@ -76,7 +75,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
+    init(context: AccountContext, messageId: EngineMessage.Id, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.context = context
         self.messageId = messageId
         self.theme = theme
@@ -162,7 +161,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.actionArea)
         self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
         |> deliverOnMainQueue).startStrict(next: { [weak self] message in
-            self?.updateMessage(message)
+            self?.updateMessage(message.flatMap(EngineMessage.init))
         }))
     }
     
@@ -177,8 +176,9 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.tapNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.contentTap(_:))))
     }
     
-    private func updateMessage(_ message: Message?) {
+    private func updateMessage(_ message: EngineMessage?) {
         self.currentMessage = message
+        let message = message?._asMessage()
         
         var text = ""
         if let message = message {

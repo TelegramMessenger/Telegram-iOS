@@ -14,6 +14,7 @@ import ChatMessageTextBubbleContentNode
 import TextFormat
 import ChatMessageItemView
 import ChatMessageBubbleItemNode
+import ChatMessageBubbleContentNode
 import TelegramNotices
 import ChatMessageWebpageBubbleContentNode
 import PremiumUI
@@ -372,26 +373,19 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             }
             return true
         }
-        var targetContentNode: ChatMessageTextBubbleContentNode?
+        var targetContentNode: ChatMessageQuoteSourceContentNode?
         if let messageItemNode = messageItemNode as? ChatMessageBubbleItemNode {
             for contentNode in messageItemNode.contentNodes {
-                if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                if let contentNode = contentNode as? ChatMessageQuoteSourceContentNode {
                     targetContentNode = contentNode
                     break
                 }
             }
         }
-        guard let contentNode = targetContentNode else {
+        guard let contentNode = targetContentNode, contentNode.hasTextSelection else {
             return
         }
-        guard let textSelection = contentNode.getCurrentTextSelection() else {
-            return
-        }
-        var quote: EngineMessageReplyQuote?
-        let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
-        if !trimmedText.string.isEmpty {
-            quote = EngineMessageReplyQuote(text: trimmedText.string, offset: textSelection.offset, entities: trimmedText.entities, media: nil)
-        }
+        let quote = contentNode.currentReplyQuote(maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
         
         selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote, innerSubject: nil)).withoutSelectionState() }) })
     }
@@ -416,7 +410,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 
                 f(.default)
             })))
-        } else if let message = messages.first, !message.text.isEmpty {
+        } else if let message = messages.first, !message.text.isEmpty || message.richText != nil {
             items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteSelect, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Quote"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, _ in
                 guard let selfController, let chatController else {
                     return
@@ -430,8 +424,8 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 }
                 if let messageItemNode = messageItemNode as? ChatMessageBubbleItemNode {
                     for contentNode in messageItemNode.contentNodes {
-                        if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                            contentNode.beginTextSelection(range: nil)
+                        if let contentNode = contentNode as? ChatMessageQuoteSourceContentNode {
+                            contentNode.beginTextSelection(range: nil, displayMenu: true)
                             
                             var subItems: [ContextMenuItem] = []
                             
@@ -445,18 +439,10 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                             subItems.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteSelectedPart, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteSelected"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak selfController, weak contentNode] _, f in
-                                guard let selfController, let contentNode else {
+                                guard let selfController, let contentNode, contentNode.hasTextSelection else {
                                     return
                                 }
-                                guard let textSelection = contentNode.getCurrentTextSelection() else {
-                                    return
-                                }
-                                
-                                var quote: EngineMessageReplyQuote?
-                                let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
-                                if !trimmedText.string.isEmpty {
-                                    quote = EngineMessageReplyQuote(text: trimmedText.string, offset: textSelection.offset, entities: trimmedText.entities, media: nil)
-                                }
+                                let quote = contentNode.currentReplyQuote(maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
                                 
                                 selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote, innerSubject: nil)).withoutSelectionState() }) })
                                 
@@ -566,7 +552,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         }
         
         var tip: ContextController.Tip?
-        if quoteTextSelectionTips <= 3, let message = messages.first, !message.text.isEmpty {
+        if quoteTextSelectionTips <= 3, let message = messages.first, !message.text.isEmpty || message.richText != nil {
             tip = .quoteSelection
         }
         
@@ -593,7 +579,7 @@ private func chatReplyOptions(selfController: ChatControllerImpl, sourceView: UI
     selectionState.set(selfController.context.account.postbox.messagesAtIds([replySubject.messageId])
     |> map { messages -> ChatControllerSubject.MessageOptionsInfo.SelectionState in
         var canQuote = false
-        if let message = messages.first, !message.text.isEmpty {
+        if let message = messages.first, !message.text.isEmpty || message.richText != nil {
             canQuote = true
         }
         return ChatControllerSubject.MessageOptionsInfo.SelectionState(
@@ -891,7 +877,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceView: UIV
     
     let items = linkOptions
     |> deliverOnMainQueue
-    |> map { [weak selfController] linkOptions -> ContextController.Items in
+    |> map { [weak selfController, chatController] linkOptions -> ContextController.Items in
         guard let selfController else {
             return ContextController.Items(id: AnyHashable(linkOptions.url), content: .list([]))
         }

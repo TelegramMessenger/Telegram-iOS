@@ -56,10 +56,10 @@ class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = PeerRemoveTimeoutItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -72,13 +72,13 @@ class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? PeerRemoveTimeoutItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -158,8 +158,9 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             sliderView.knobImage = PresentationResourcesItemList.knobImage(item.presentationData.theme)
             
             let sliderInset: CGFloat = params.leftInset + 16.0
+            let sliderRightInset: CGFloat = params.rightInset + 16.0
             
-            sliderView.frame = CGRect(origin: CGPoint(x: sliderInset, y: 38.0), size: CGSize(width: params.width - sliderInset * 2.0, height: 44.0))
+            sliderView.frame = CGRect(origin: CGPoint(x: sliderInset, y: 38.0), size: CGSize(width: params.width - sliderInset - sliderRightInset, height: 44.0))
         }
         self.view.insertSubview(sliderView, belowSubview: self.disabledOverlayNode.view)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -171,7 +172,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         
         let makeTitleNodeLayouts = self.titleNodes.map(TextNode.asyncLayout)
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var themeUpdated = false
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 themeUpdated = true
@@ -204,6 +205,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.layoutParams = params
                     
                     let leftInset = 16.0 + params.leftInset
+                    let rightInset = 16.0 + params.rightInset
                     
                     strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
@@ -253,11 +255,11 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
 
-                    let usableWidth = params.width - (leftInset + 7.0) * 2.0
+                    let usableWidth = params.width - (leftInset + 7.0) - (rightInset + 7.0)
 
                     for i in 0 ..< titleLayouts.count {
                         let textNode = titleLayouts[i].1()
@@ -268,7 +270,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                         if i == 0 {
                             nextX = leftInset
                         } else if i == titleLayouts.count - 1 {
-                            nextX = params.width - leftInset - size.width
+                            nextX = params.width - rightInset - size.width
                         } else {
                             nextX = floor(leftInset + 7.0 + CGFloat(i) * usableWidth / CGFloat(titleLayouts.count - 1) - size.width / 2.0)
                         }
@@ -299,7 +301,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                             sliderView.value = value
                         }
 
-                        sliderView.frame = CGRect(origin: CGPoint(x: leftInset, y: 38.0), size: CGSize(width: params.width - leftInset * 2.0, height: 44.0))
+                        sliderView.frame = CGRect(origin: CGPoint(x: leftInset, y: 38.0), size: CGSize(width: params.width - leftInset - rightInset, height: 44.0))
                     }
                 }
             })

@@ -66,7 +66,10 @@ public final class EntitySearchContainerController: ViewController {
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-            self.containerNode.updateLayout(size: layout.size, leftInset: 0.0, rightInset: 0.0, bottomInset: layout.intrinsicInsets.bottom, inputHeight: layout.inputHeight ?? 0.0, deviceMetrics: layout.deviceMetrics, transition: transition)
+            // iPhone Duo: the search bar, its Cancel and the results keep clear of the side strip and its status corner.
+            // With equal side insets (none, or a landscape notch on each side) they stay full width, as before.
+            let stripInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
+            self.containerNode.updateLayout(size: layout.size, leftInset: stripInsets.left, rightInset: stripInsets.right, bottomInset: layout.intrinsicInsets.bottom, inputHeight: layout.inputHeight ?? 0.0, deviceMetrics: layout.deviceMetrics, transition: transition)
             transition.updateFrame(node: self.containerNode, frame: CGRect(origin: .zero, size: layout.size))
         }
     }

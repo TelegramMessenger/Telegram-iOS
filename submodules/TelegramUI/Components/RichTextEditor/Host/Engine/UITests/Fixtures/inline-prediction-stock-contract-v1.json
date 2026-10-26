@@ -1,0 +1,19 @@
+{
+  "acceptAction": {
+    "kind": "software-keyboard-key-sequence",
+    "value": "space"
+  },
+  "dismissAction": {
+    "kind": "uikit-remove-inline-text-completion",
+    "value": "removeInlineTextCompletionPrompt"
+  },
+  "offeredText": "to",
+  "postDismissText": "x",
+  "runtime": {
+    "locale": "en_US",
+    "osBuild": "23F73",
+    "osVersion": "26.5"
+  },
+  "schema": 1,
+  "typedPrefix": "i look forward "
+}

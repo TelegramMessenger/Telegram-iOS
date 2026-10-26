@@ -178,6 +178,10 @@ final class VoiceChatTileGridNode: ASDisplayNode {
 }
 
 final class VoiceChatTilesGridItem: ListViewItem {
+    var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(HeaderNeighborDescriptor(headerId: nil, headerFamily: .voiceChatTilesGrid))
+    }
+
     let context: AccountContext
     let tiles: [VoiceChatTileItem]
     let layoutMode: VoiceChatTileLayoutMode
@@ -194,7 +198,7 @@ final class VoiceChatTilesGridItem: ListViewItem {
         self.getIsExpanded = getIsExpanded
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = VoiceChatTilesGridItemNode()
             let (layout, apply) = node.asyncLayout()(self, params)
@@ -210,7 +214,7 @@ final class VoiceChatTilesGridItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? VoiceChatTilesGridItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -286,7 +290,7 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
         let currentItem = self.item
         let makeLabelLayout = TextNode.asyncLayout(self.limitLabel)
         
-        return { item, params in
+        return { [weak self] item, params in
             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
             let (textLayout, textApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: presentationData.strings.VoiceChat_VideoParticipantsLimitExceededExtended(String(item.videoLimit)).string, font: Font.regular(13.0), textColor: UIColor(rgb: 0x8e8e93), paragraphAlignment: .center), maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0, height: CGFloat.greatestFiniteMagnitude), lineSpacing: 0.25))
 
@@ -363,4 +367,8 @@ final class VoiceChatTilesGridItemNode: ListViewItemNode {
             self.tileGridNode?.view.addSubview(snapshotView)
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    static let voiceChatTilesGrid = ListViewItemHeaderFamily("voiceChatTilesGrid")
 }

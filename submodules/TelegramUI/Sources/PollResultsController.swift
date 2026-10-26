@@ -430,7 +430,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
             state.expandedOptions.removeValue(forKey: optionId)
             return state
         }
-    }, expandOption: { optionId in
+    }, expandOption: { [resultsContext] optionId in
         let _ = (resultsContext.state
         |> take(1)
         |> deliverOnMainQueue).startStandalone(next: { [weak resultsContext] state in

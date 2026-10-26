@@ -3,7 +3,7 @@
 
 #import "LegacyComponentsInternal.h"
 
-#import <MobileCoreServices/MobileCoreServices.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface TGMediaAsset ()
 {
@@ -99,7 +99,7 @@
 
 - (bool)_isGif
 {
-    return [self.uniformTypeIdentifier isEqualToString:(NSString *)kUTTypeGIF];
+    return [self.uniformTypeIdentifier isEqualToString:UTTypeGIF.identifier];
 }
 
 - (bool)isFavorite

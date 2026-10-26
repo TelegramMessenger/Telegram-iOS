@@ -76,7 +76,7 @@ private final class PrefetchManagerInnerImpl {
                     for emoji in popularEmoji {
                         if let sticker = animatedEmojiStickers[emoji] {
                             let stickerFile = sticker.file._parse()
-                            if let _ = account.postbox.mediaBox.completedResourcePath(stickerFile.resource) {
+                            if let _ = TelegramEngine(account: account).resources.completedResourcePath(id: EngineMediaResource.Id(stickerFile.resource.id)) {
                             } else {
                                 stickerItems.append(.animatedEmojiSticker(stickerFile))
                             }
@@ -147,14 +147,14 @@ private final class PrefetchManagerInnerImpl {
                     
                     if let telegramImage = mediaItem.media.media as? TelegramMediaImage {
                         mediaResource = (largestRepresentationForPhoto(telegramImage)?.resource).flatMap(EngineMediaResource.init)
-                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: telegramImage) {
+                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: .image(telegramImage)) {
                             automaticDownload = .full
                         }
                     } else if let telegramFile = mediaItem.media.media as? TelegramMediaFile {
                         mediaResource = EngineMediaResource(telegramFile.resource)
-                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: telegramFile) {
+                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: .file(telegramFile)) {
                             automaticDownload = .full
-                        } else if shouldPredownloadMedia(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, media: telegramFile) {
+                        } else if shouldPredownloadMedia(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, media: .file(telegramFile)) {
                             automaticDownload = .prefetch
                         }
                     }
@@ -204,7 +204,7 @@ private final class PrefetchManagerInnerImpl {
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     let peerType = MediaAutoDownloadPeerType.contact
                     
-                    if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: media) {
+                    if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: .file(media)) {
                         automaticDownload = .full
                     }
                 

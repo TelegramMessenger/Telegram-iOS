@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import MediaPreuploadRegistry
 
 
 func localIdForResource(_ resource: MediaResource) -> Int64? {
@@ -161,11 +162,17 @@ private final class MessageMediaPreuploadManagerContext {
 final class MessageMediaPreuploadManager {
     private let impl: QueueLocalObject<MessageMediaPreuploadManagerContext>
 
+    /// Media-level pre-upload: keyed by `MediaId`, parks a CLOUD `EngineMedia`.
+    /// Sits above `impl`'s byte-level contexts — a media context's byte step goes through
+    /// `upload(...)`, so the two share one transfer wherever `localIdForResource` resolves.
+    let mediaRegistry: PreuploadRegistry<MediaId, EngineMedia>
+
     init() {
         let queue = Queue()
         self.impl = QueueLocalObject<MessageMediaPreuploadManagerContext>(queue: queue, generate: {
             return MessageMediaPreuploadManagerContext(queue: queue)
         })
+        self.mediaRegistry = PreuploadRegistry<MediaId, EngineMedia>(scheduler: QueuePreuploadScheduler(queue: queue))
     }
 
     @discardableResult

@@ -28,6 +28,22 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
     private var validLayout: ContainerViewLayout?
     private var horizontalDismissOffset: CGFloat?
     
+    /// The card's frame now, in this container's coordinates: where `update` placed it, moved by an interactive dismiss
+    /// (down with the scroll, aside with the edge pan). Nil before the first layout.
+    var presentedCardFrame: CGRect? {
+        guard let layout = self.validLayout else {
+            return nil
+        }
+        // The card sits one screen down in the scroll content, which rests scrolled one screen down.
+        var frame = self.container.frame.offsetBy(dx: 0.0, dy: -layout.size.height)
+        if let horizontalDismissOffset = self.horizontalDismissOffset {
+            frame.origin.x += horizontalDismissOffset
+        } else {
+            frame.origin.y += self.dismissProgress * layout.size.height
+        }
+        return frame
+    }
+    
     var keyboardViewManager: KeyboardViewManager? {
         didSet {
             if self.keyboardViewManager !== oldValue {
@@ -337,6 +353,8 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         if self.isDismissed {
             return
         }
+        // On a device without floating panels (iPhone Duo) a modal is the phone card, also when wide.
+        let layout = layout.forOptionalFloatingPresentation
         
         self.isUpdatingState = true
         
@@ -374,7 +392,10 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         
         self.scrollNode.view.isScrollEnabled = !isStandaloneModal && !self.isFlat
         
-        let isLandscape = layout.orientation == .landscape
+        // A viewer that fills the screen beside a status island (iPhone Duo, unfolded portrait) is laid out like a
+        // landscape modal: the whole screen, no card.
+        let fillsScreenBesideStatusIsland = layout.topBarStatusIsland != nil && (controllers.first?.fillsScreenBesideStatusIsland ?? false)
+        let isLandscape = layout.orientation == .landscape || fillsScreenBesideStatusIsland
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
         let containerScale: CGFloat
@@ -427,7 +448,10 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                     effectiveStatusBarHeight = nil
                 }
                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), reservedCorners: layout.reservedCorners.offsettingTop(by: topInset), division: nil, additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: false)
+                // Beside a status island (iPhone Duo, unfolded portrait) a modal covered by another one stays where it
+                // is rather than sliding back.
+                let coveredByModalTransition: CGFloat = layout.topBarStatusIsland != nil ? 0.0 : coveredByModalTransition
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
@@ -482,7 +506,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 effectiveStatusBarHeight = nil
             }
             
-            containerLayout = ContainerViewLayout(size: containerSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: effectiveStatusBarHeight, inputHeight: inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+            containerLayout = ContainerViewLayout(size: containerSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), reservedCorners: .none, division: nil, additionalInsets: UIEdgeInsets(), statusBarHeight: effectiveStatusBarHeight, inputHeight: inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: true)
         }
         transition.updateFrameAsPositionAndBounds(node: self.container, frame: containerFrame.offsetBy(dx: 0.0, dy: layout.size.height))
         transition.updateTransformScale(node: self.container, scale: containerScale)
@@ -553,7 +577,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
             return self.dim.view
         }
         if self.isFlat {
-            if result === self.container.view {
+            if result === self.container.view && !self.container.isTransitioning {
                 return nil
             }
             return result

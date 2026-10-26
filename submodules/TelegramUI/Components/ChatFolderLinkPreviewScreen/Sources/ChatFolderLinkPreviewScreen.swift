@@ -1507,7 +1507,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                         metrics: environmentValue.metrics,
                         deviceMetrics: environmentValue.deviceMetrics,
                         isDisplaying: environmentValue.isVisible,
-                        isCentered: environmentValue.metrics.widthClass == .regular,
+                        isCentered: environmentValue.presentsFloatingPanels,
                         screenSize: availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -1610,10 +1610,10 @@ private final class LinkListContextExtractedContentSource: ContextExtractedConte
     }
 
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

@@ -37,4 +37,23 @@ final class CodeBlockTests: XCTestCase {
         let back = try JSONDecoder().decode(Block.self, from: JSONEncoder().encode(block))
         XCTAssertEqual(block, back)
     }
+
+    // The language line's UTF-16 length — the axis the position model counts in. Mirrors
+    // `PullQuote.authorUTF16Count`. A nil AND an empty language are both zero-length: "no language"
+    // and "an empty language line" are the same state, and `currentCode()` normalizes "" back to nil.
+    func test_languageUTF16Count_isZeroForNilAndEmpty() {
+        XCTAssertEqual(CodeBlock(id: BlockID("c"), language: nil).languageUTF16Count, 0)
+        XCTAssertEqual(CodeBlock(id: BlockID("c"), language: "").languageUTF16Count, 0)
+    }
+
+    func test_languageUTF16Count_countsUTF16UnitsNotCharacters() {
+        XCTAssertEqual(CodeBlock(id: BlockID("c"), language: "swift").languageUTF16Count, 5)
+        // A non-BMP scalar is TWO UTF-16 units; the position axis counts units, so this must be 2.
+        XCTAssertEqual(CodeBlock(id: BlockID("c"), language: "\u{1F600}").languageUTF16Count, 2)
+    }
+
+    func test_textNodeRef_codeLanguageIsDistinctFromCode() {
+        XCTAssertNotEqual(TextNodeRef.codeLanguage(BlockID("c")), TextNodeRef.code(BlockID("c")))
+        XCTAssertEqual(TextNodeRef.codeLanguage(BlockID("c")), TextNodeRef.codeLanguage(BlockID("c")))
+    }
 }

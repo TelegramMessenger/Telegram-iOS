@@ -10,45 +10,63 @@ import RichTextEditorCore
 @available(iOS 13.0, *)
 extension DocumentCanvasView {
     /// The table box containing the caret (`head`), its index in `boxes`, and the caret's (row, col).
-    func activeTable() -> (box: TableBlockBox, index: Int, row: Int, col: Int)? {
-        for (i, b) in boxes.enumerated() {
-            if let t = b as? TableBlockBox, let loc = t.cellLocation(containing: head) {
-                return (t, i, loc.row, loc.column)
+    /// The table the caret is in, its OWNING stack, and the caret's cell — recursing into details / expanded
+    /// block-quote bodies (NOT table cells; v1 tables don't nest). `index` is the index WITHIN `stack.boxes`,
+    /// so every structural op (handles, menu, row/column insert-delete, delete/convert/copy) works on a table
+    /// nested in a container, not only at top level.
+    func activeTable() -> (box: TableBlockBox, stack: BlockStack, index: Int, row: Int, col: Int)? {
+        func search(_ stack: BlockStack) -> (box: TableBlockBox, stack: BlockStack, index: Int, row: Int, col: Int)? {
+            for (i, b) in stack.boxes.enumerated() {
+                if let t = b as? TableBlockBox, let loc = t.cellLocation(containing: head) {
+                    return (t, stack, i, loc.row, loc.column)
+                }
+                if let d = b as? DetailsBox, let r = search(d.children) { return r }
+                else if let bq = b as? BlockQuoteBox, !bq.collapsed, let r = search(bq.children) { return r }
             }
+            return nil
         }
-        return nil
+        return search(root)
     }
 
-    /// Swaps a freshly-built box for `newTable` at `index`, recomputes spans, and lands the caret in
-    /// cell (caretRow, caretCol) clamped to the new geometry. Call inside `editing { … }`.
-    func replaceTable(at index: Int, with newTable: TableBlock, caretRow: Int, caretCol: Int) {
+    /// Swaps a freshly-built box for `newTable` at `index` in `stack`, recomputes spans, and lands the caret
+    /// in cell (caretRow, caretCol) clamped to the new geometry. Call inside `editing { … }`. `effectiveWidth`
+    /// is a placeholder — BlockStack.layout re-sets each box's width, so a nested table gets its container width.
+    func replaceTable(at index: Int, in stack: BlockStack, with newTable: TableBlock, caretRow: Int, caretCol: Int) {
         let newBox = TableBlockBox(table: newTable, mapper: mapper, width: effectiveWidth)
-        var nb = boxes
-        nb[index] = newBox
-        boxes = nb
+        stack.boxes[index] = newBox
         recomputeSpans()
         let r = min(max(caretRow, 0), max(newBox.rowCount - 1, 0))
         let c = min(max(caretCol, 0), max(newBox.columnCount - 1, 0))
-        if let pos = newBox.cellTextStart(row: r, column: c) { anchor = pos; head = pos }
+        // TASK 39: `applyCaretOutcome` (`+Editing.swift`) — the raw, non-publishing pair — applied HERE
+        // rather than returned. All twelve callers are `editing { … replaceTable(…); return .unchanged }`,
+        // so a publish would be a SECOND host selection report inside `performEditing`'s own bracket
+        // (class 1 at `applyCaretOutcome`). Returning the claim instead would mean giving this helper a
+        // `RichTextInputCaretOutcome` return type and rewriting all twelve call sites — a signature is
+        // API, which this task's Produces block excludes; and it would buy nothing, since every caller's
+        // body ends immediately after this call. Task 38 settled the same question the same way at
+        // `deleteButtonPill`.
+        if let pos = newBox.cellTextStart(row: r, column: c) { applyCaretOutcome(.caret(at: pos)) }
     }
 
     func insertTableRowAbove() {
         guard let a = activeTable() else { return }
         editing {
-            guard case .table(let table) = a.box.currentBlock() else { return }
+            guard case .table(let table) = a.box.currentBlock() else { return .unchanged }
             let range = structuralRowRange() ?? (a.row...a.row)
             let at = max(range.lowerBound, 1)   // never above the header (row 0)
-            replaceTable(at: a.index, with: table.insertingRow(at: at), caretRow: at, caretCol: a.col)
+            replaceTable(at: a.index, in: a.stack, with: table.insertingRow(at: at), caretRow: at, caretCol: a.col)
+            return .unchanged
         }
     }
 
     func insertTableRowBelow() {
         guard let a = activeTable() else { return }
         editing {
-            guard case .table(let table) = a.box.currentBlock() else { return }
+            guard case .table(let table) = a.box.currentBlock() else { return .unchanged }
             let range = structuralRowRange() ?? (a.row...a.row)
             let at = range.upperBound + 1
-            replaceTable(at: a.index, with: table.insertingRow(at: at), caretRow: at, caretCol: a.col)
+            replaceTable(at: a.index, in: a.stack, with: table.insertingRow(at: at), caretRow: at, caretCol: a.col)
+            return .unchanged
         }
     }
 
@@ -58,8 +76,9 @@ extension DocumentCanvasView {
         let range = structuralRowRange() ?? (a.row...a.row)
         guard range.contains(where: { table.rows.indices.contains($0) && !table.rows[$0].isHeader }) else { return }   // header-only range → nothing to delete
         editing {
-            replaceTable(at: a.index, with: table.removingRows(in: range),
+            replaceTable(at: a.index, in: a.stack, with: table.removingRows(in: range),
                          caretRow: range.lowerBound, caretCol: a.col)
+            return .unchanged
         }
     }
 
@@ -72,21 +91,23 @@ extension DocumentCanvasView {
     func insertTableColumnLeft() {
         guard let a = activeTable() else { return }
         editing {
-            guard case .table(let table) = a.box.currentBlock() else { return }
+            guard case .table(let table) = a.box.currentBlock() else { return .unchanged }
             let range = structuralColumnRange() ?? (a.col...a.col)
             let new = table.insertingColumn(at: range.lowerBound, width: defaultNewColumnWidth(table))
-            replaceTable(at: a.index, with: new, caretRow: a.row, caretCol: range.lowerBound)
+            replaceTable(at: a.index, in: a.stack, with: new, caretRow: a.row, caretCol: range.lowerBound)
+            return .unchanged
         }
     }
 
     func insertTableColumnRight() {
         guard let a = activeTable() else { return }
         editing {
-            guard case .table(let table) = a.box.currentBlock() else { return }
+            guard case .table(let table) = a.box.currentBlock() else { return .unchanged }
             let range = structuralColumnRange() ?? (a.col...a.col)
             let at = range.upperBound + 1
             let new = table.insertingColumn(at: at, width: defaultNewColumnWidth(table))
-            replaceTable(at: a.index, with: new, caretRow: a.row, caretCol: at)
+            replaceTable(at: a.index, in: a.stack, with: new, caretRow: a.row, caretCol: at)
+            return .unchanged
         }
     }
 
@@ -96,16 +117,14 @@ extension DocumentCanvasView {
     func deleteTable() {
         guard let a = activeTable() else { return }
         editing {
-            var nb = boxes
-            nb.remove(at: a.index)
-            if nb.isEmpty {
-                nb.append(BlockBox(paragraph: ParagraphBlock(id: BlockID.generate()), mapper: mapper, width: effectiveWidth))
+            a.stack.boxes.remove(at: a.index)
+            if a.stack.boxes.isEmpty {   // never leave a stack (root or a container body) with zero blocks
+                a.stack.boxes.append(BlockBox(paragraph: ParagraphBlock(id: BlockID.generate()), mapper: mapper, width: effectiveWidth))
             }
-            boxes = nb
             recomputeSpans()
-            let targetIndex = min(a.index, boxes.count - 1)
-            let caret = snapToRenderable(boxes[targetIndex].textStart, forward: true)
-            anchor = caret; head = caret
+            let targetIndex = min(a.index, a.stack.boxes.count - 1)
+            let caret = snapToRenderable(a.stack.boxes[targetIndex].textStart, forward: true)
+            return .caret(at: caret)   // TASK 39: terminal claim → the body's return value (36b/36c shape)
         }
     }
 
@@ -113,9 +132,7 @@ extension DocumentCanvasView {
     /// the app fragment (JSON — pastes back as a real table), an RTF table, and a plain-text flatten (one line
     /// per row, cells space-joined). No-op when the caret isn't in a table.
     func copyCurrentTable() {
-        guard let a = activeTable() else { return }
-        let model = currentBlocks()
-        guard model.indices.contains(a.index), case .table(let table) = model[a.index] else { return }
+        guard let a = activeTable(), case .table(let table) = a.box.currentBlock() else { return }
         let document = Document(blocks: [.table(table)])
         let plain = tableFlattenedText(table).joined(separator: "\n")
         pasteboard.setItems([RichTextEditorClipboard.pasteboardItem(for: document, plain: plain)], options: [:])
@@ -125,9 +142,7 @@ extension DocumentCanvasView {
     /// by " " (see `tableFlattenedText`). One undo step; the caret lands at the start of the first paragraph.
     /// No-op when the caret isn't in a table.
     func convertCurrentTableToText() {
-        guard let a = activeTable() else { return }
-        let model = currentBlocks()
-        guard model.indices.contains(a.index), case .table(let table) = model[a.index] else { return }
+        guard let a = activeTable(), case .table(let table) = a.box.currentBlock() else { return }
         editing {
             var replacement: [CanvasBlock] = tableFlattenedText(table).map { line in
                 BlockBox(paragraph: ParagraphBlock(id: BlockID.generate(), style: .body,
@@ -137,12 +152,10 @@ extension DocumentCanvasView {
             if replacement.isEmpty {
                 replacement = [BlockBox(paragraph: ParagraphBlock(id: BlockID.generate()), mapper: mapper, width: effectiveWidth)]
             }
-            var nb = boxes
-            nb.replaceSubrange(a.index...a.index, with: replacement)
-            boxes = nb
+            a.stack.boxes.replaceSubrange(a.index...a.index, with: replacement)
             recomputeSpans()
-            let caret = snapToRenderable(boxes[a.index].textStart, forward: true)
-            anchor = caret; head = caret
+            let caret = snapToRenderable(a.stack.boxes[a.index].textStart, forward: true)
+            return .caret(at: caret)   // TASK 39: terminal claim → the body's return value
         }
     }
 
@@ -166,11 +179,9 @@ extension DocumentCanvasView {
             editing {
                 let para = BlockBox(paragraph: ParagraphBlock(id: BlockID.generate(), style: .body, runs: []),
                                     mapper: mapper, width: effectiveWidth)
-                var nb = boxes
-                nb[a.index] = para
-                boxes = nb
+                a.stack.boxes[a.index] = para   // stack-aware: replaces the table in its own stack, even nested
                 recomputeSpans()
-                anchor = para.textStart; head = para.textStart
+                return .caret(at: para.textStart)   // TASK 39: terminal claim → the body's return value
             }
         } else {
             switch sel.kind {
@@ -182,6 +193,33 @@ extension DocumentCanvasView {
         clearTableSelection()
     }
 
+    /// Backspace at the START (local 0) of the top-level paragraph at `paragraphIndex` whose IMMEDIATELY
+    /// PRECEDING block is a table: move the caret into the table and structurally select the WHOLE table
+    /// (`.rows(0…last)`), so a SECOND Backspace deletes it via `deleteTableStructuralSelection`. An empty
+    /// trailing paragraph is removed first, so the two-press model matches the non-empty case. Returns
+    /// false (no-op) when the previous block isn't a `TableBlockBox` — the caller then handles the other
+    /// non-paragraph atoms (image / code) unchanged.
+    func selectPrecedingTableOnBackspace(paragraphIndex: Int) -> Bool {
+        let tableIndex = paragraphIndex - 1
+        guard tableIndex >= 0, boxes[tableIndex] is TableBlockBox else { return false }
+        // The table's last-cell end; computed before any removal. Removing a LATER block does not shift it.
+        let prev = prevTextPosition(before: boxes[paragraphIndex].textStart)
+        if boxes[paragraphIndex].textLength == 0 {
+            editing { removeBlockOutcome(at: paragraphIndex, parkingCaretAt: prev) }   // drop the empty trailing paragraph
+        } else {
+            // TASK 39: `applyCaretOutcome`, applied IMMEDIATELY and not returned — this branch is in no
+            // `editing { }` at all, and `selectTableRows` two lines below re-resolves `activeTable()`,
+            // which locates the caret's cell via `cellLocation(containing: head)`. A deferred claim would
+            // hand it the PRE-move caret. (It is also why a publishing `setSelection` is wrong here twice
+            // over: `selectTableRows` opens its own selection bracket right after.)
+            applyCaretOutcome(.caret(at: prev))                                 // move the caret into the table
+        }
+        if let table = boxes[tableIndex] as? TableBlockBox {
+            selectTableRows(0...max(table.rowCount - 1, 0))                     // whole-table structural selection
+        }
+        return true
+    }
+
     func deleteTableColumn() {
         guard let a = activeTable() else { return }
         guard case .table(let table) = a.box.currentBlock() else { return }
@@ -189,8 +227,9 @@ extension DocumentCanvasView {
         let removable = range.filter { table.columns.indices.contains($0) }.count
         guard table.columnCount > removable else { return }   // never delete every column
         editing {
-            replaceTable(at: a.index, with: table.removingColumns(in: range),
+            replaceTable(at: a.index, in: a.stack, with: table.removingColumns(in: range),
                          caretRow: a.row, caretCol: range.lowerBound)
+            return .unchanged
         }
     }
 
@@ -225,12 +264,13 @@ extension DocumentCanvasView {
     func setSelectionAlignment(horizontal: TextAlignment?, vertical: VerticalAlignment?) {
         guard let a = activeTable(), horizontal != nil || vertical != nil else { return }
         editing {
-            guard case .table(var t) = a.box.currentBlock() else { return }
+            guard case .table(var t) = a.box.currentBlock() else { return .unchanged }
             for (r, c) in selectedCellCoords(in: a.box) where t.rows.indices.contains(r) && t.rows[r].cells.indices.contains(c) {
                 if let h = horizontal { t.rows[r].cells[c].horizontalAlignment = h }
                 if let v = vertical { t.rows[r].cells[c].verticalAlignment = v }
             }
-            replaceTable(at: a.index, with: t, caretRow: a.row, caretCol: a.col)
+            replaceTable(at: a.index, in: a.stack, with: t, caretRow: a.row, caretCol: a.col)
+            return .unchanged
         }
     }
 
@@ -240,12 +280,43 @@ extension DocumentCanvasView {
     func toggleSelectionHeader() {
         guard let a = activeTable() else { return }
         editing {
-            guard case .table(var t) = a.box.currentBlock() else { return }
+            guard case .table(var t) = a.box.currentBlock() else { return .unchanged }
             let coords = selectedCellCoords(in: a.box).filter { t.rows.indices.contains($0.row) && t.rows[$0.row].cells.indices.contains($0.column) }
-            guard !coords.isEmpty else { return }
+            guard !coords.isEmpty else { return .unchanged }
             let newValue = !coords.allSatisfy { t.rows[$0.row].cells[$0.column].isHeader }
             for (r, c) in coords { t.rows[r].cells[c].isHeader = newValue }
-            replaceTable(at: a.index, with: t, caretRow: a.row, caretCol: a.col)
+            replaceTable(at: a.index, in: a.stack, with: t, caretRow: a.row, caretCol: a.col)
+            return .unchanged
+        }
+    }
+
+    /// Flips the caret's table between compact and normal cell padding, as ONE undo step. No-op when
+    /// the caret is not in a table.
+    func toggleTableCompact() {
+        guard let a = activeTable() else { return }
+        editing {
+            guard case .table(var t) = a.box.currentBlock() else { return .unchanged }
+            t.compact.toggle()
+            replaceTable(at: a.index, in: a.stack, with: t, caretRow: a.row, caretCol: a.col)
+            return .unchanged
+        }
+    }
+
+    /// Shows / hides the table's grid. Not merely a paint toggle: an unbordered table lays out with
+    /// zero-width borders, so the cells butt together — mirroring V2's
+    /// `bordered ? v2TableBorderWidth : 0.0`.
+    ///
+    /// The mirror is of the RULE, not of absolute pixels: the two surfaces' table constants already
+    /// differ (border 1 vs `UIScreenPixel * 2`, cell insets 6/14 vs 13/7, corner radius 8 vs 10), so
+    /// this removes the largest visual delta — a whole border per boundary — rather than achieving
+    /// exact parity. Unlike the button pills, table geometry has no parity test pinning it.
+    func toggleTableBordered() {
+        guard let a = activeTable() else { return }
+        editing {
+            guard case .table(var t) = a.box.currentBlock() else { return .unchanged }
+            t.bordered.toggle()
+            replaceTable(at: a.index, in: a.stack, with: t, caretRow: a.row, caretCol: a.col)
+            return .unchanged
         }
     }
 
@@ -258,8 +329,9 @@ extension DocumentCanvasView {
         guard let a = activeTable(), let rect = structuralCellRect() else { return }
         guard a.box.tableMap().cellsInRect(rect).count > 1 else { return }   // no-op: already a single cell
         editing {
-            guard case .table(let t) = a.box.currentBlock() else { return }
-            replaceTable(at: a.index, with: t.mergingCells(in: rect), caretRow: rect.top, caretCol: rect.left)
+            guard case .table(let t) = a.box.currentBlock() else { return .unchanged }
+            replaceTable(at: a.index, in: a.stack, with: t.mergingCells(in: rect), caretRow: rect.top, caretCol: rect.left)
+            return .unchanged
         }
     }
 
@@ -274,9 +346,10 @@ extension DocumentCanvasView {
               let anchor = a.box.tableMap().anchor(atRow: a.row, column: a.col),
               anchor.colspan > 1 || anchor.rowspan > 1 else { return }
         editing {
-            guard case .table(let t) = a.box.currentBlock() else { return }
-            replaceTable(at: a.index, with: t.splittingCell(at: (anchor.row, anchor.column)),
+            guard case .table(let t) = a.box.currentBlock() else { return .unchanged }
+            replaceTable(at: a.index, in: a.stack, with: t.splittingCell(at: (anchor.row, anchor.column)),
                          caretRow: anchor.row, caretCol: anchor.column)
+            return .unchanged
         }
     }
 
@@ -286,39 +359,52 @@ extension DocumentCanvasView {
     /// image/gap) — guarded BEFORE `editing { }` so a no-op registers no undo entry. Caret lands in the
     /// first header cell.
     func insertTable(rows: Int, columns: Int) {
-        // `!isInsideBlockQuote(head)` is load-bearing: a caret inside a quote has no degenerate-container-safe
-        // resolveBox, so `resolveBox(at: head)` below mis-resolves to the FOLLOWING top-level block and the table
-        // would be inserted there. Tables aren't supported inside quotes (v1) → no-op, like the in-table guard.
+        // Insert into the caret's OWN stack — top level OR a detail block's body — via the container-aware
+        // `activeStack` (NOT `resolveBox`, which mis-resolves a container-interior position to the following
+        // top-level block). `!isInsideTable` prevents nested tables; `!isInsideBlockQuote` keeps tables out of
+        // quotes (unsupported in v1); a detail body is allowed (its `activeStack` resolves to the body stack,
+        // and nested tables there are laid out by `DetailsBox.recompute`).
         guard !boxes.isEmpty, !isInsideTable(head), !isInsideBlockQuote(head),
-              let resolved = resolveBox(at: head), resolved.box is BlockBox else { return }
-        // Focus the editor BEFORE the edit, so the caret placed in the new table's first cell is immediately
-        // interactive. The only synchronous caret-move layout (`editing` → onSelectionChange → the façade's
-        // `scrollCaretIntoView` → `performLayout`) is FR-gated; without focus, `onContentSizeChange` only
-        // relays layout to the host ASYNChronously, so the new table's cell frames stay stale until a later
-        // interaction — the "can't drag / first cell-tap does nothing until I tap again" bug.
-        if !isFirstResponder { _ = becomeFirstResponder() }
+              let a = activeStack(at: head), a.box is BlockBox else { return }
+        // Deliberately do NOT becomeFirstResponder here (matches `insertMedia`): inserting a table must not
+        // steal focus / pop the keyboard when the editor is unfocused. The caret is still placed live in the
+        // new table's first cell below (model caret). When already focused, that caret is scrolled into view
+        // synchronously (FR-gated `scrollCaretIntoView` → `performLayout`); when unfocused, the new table is
+        // laid out by the host's async `update()` on `onChange` (a later tap focuses + operates on the cells).
         editing {
-            if selFrom != selTo { applySelectionReplace(globalFrom: selFrom, globalTo: selTo, text: "") }
-            guard let pos = resolveBox(at: head), let p = pos.box as? BlockBox else { return }
+            // THE CLAIM IS APPLIED HERE, ON THE NEXT INSTRUCTION — never batched to the end of this
+            // transaction's own `return`: the next statement's `activeStack(at: head)` reads the caret back. A deferred claim re-resolves at the
+            // pre-delete caret and silently produces a DIFFERENT document. Why, and the full list of
+            // fourteen such sites: `applyReplaceOutcome`'s doc in `+Editing.swift`. Pinned by
+            // `CanvasInsertTableTests.test_insertTable_midParagraph_splitsParagraph`.
+            if selFrom != selTo {
+                applyCaretOutcome(applySelectionReplaceOutcome(globalFrom: selFrom, globalTo: selTo, text: ""))
+            }
+            guard let active = activeStack(at: head), let p = active.box as? BlockBox else { return .unchanged }
             let tableBox = TableBlockBox(table: TableBlock.empty(rows: rows, columns: columns),
                                          mapper: mapper, width: effectiveWidth)
-            var newBoxes = boxes
+            var newBoxes = active.stack.boxes
+            let idx = active.index
             if p.textLength == 0 {
-                newBoxes.replaceSubrange(pos.index...pos.index, with: [tableBox])   // empty paragraph → replace it
-            } else if pos.local > 0, pos.local < p.textLength {
-                let (upper, lower) = p.currentParagraph().split(at: pos.local, newID: BlockID.generate())
-                let upperBox = BlockBox(paragraph: upper, mapper: mapper, width: effectiveWidth)
-                let lowerBox = BlockBox(paragraph: lower, mapper: mapper, width: effectiveWidth)
+                newBoxes.replaceSubrange(idx...idx, with: [tableBox])   // empty paragraph → replace it
+            } else if active.local > 0, active.local < p.textLength {
+                let (upper, lower) = p.currentParagraph().split(at: active.local, newID: BlockID.generate())
+                let upperBox = BlockBox(paragraph: upper, mapper: p.mapper, width: effectiveWidth)
+                let lowerBox = BlockBox(paragraph: lower, mapper: p.mapper, width: effectiveWidth)
                 let replacement: [any CanvasBlock] = [upperBox, tableBox, lowerBox]
-                newBoxes.replaceSubrange(pos.index...pos.index, with: replacement)
-            } else if pos.local == 0 {
-                newBoxes.insert(tableBox, at: pos.index)            // before the caret's block
+                newBoxes.replaceSubrange(idx...idx, with: replacement)
+            } else if active.local == 0 {
+                newBoxes.insert(tableBox, at: idx)            // before the caret's block
             } else {
-                newBoxes.insert(tableBox, at: pos.index + 1)        // after the caret's block
+                newBoxes.insert(tableBox, at: idx + 1)        // after the caret's block
             }
-            boxes = newBoxes
+            active.stack.boxes = newBoxes
             recomputeSpans()
-            if let caret = tableBox.cellTextStart(row: 0, column: 0) { anchor = caret; head = caret }
+            // TASK 39: terminal claim → the body's return value. The `activeStack(at: head)` read that
+            // makes this function a read-back site is ABOVE, against the already-converted
+            // `applySelectionReplaceOutcome` claim; nothing below reads the caret back.
+            if let caret = tableBox.cellTextStart(row: 0, column: 0) { return .caret(at: caret) }
+            return .unchanged
         }
     }
 }

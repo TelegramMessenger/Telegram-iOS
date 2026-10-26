@@ -281,8 +281,13 @@ public final class TextNodeWithEntities {
                     validIds.append(id)
                     
                     let itemSize = floorToScreenPixels(stickerItem.fontSize * 24.0 / fontSizeNorm)
+
+                    var baselineOffset: CGFloat = 0.0
+                    if let string = textLayout.attributedString, item.range.location < string.length {
+                        baselineOffset = (string.attribute(.baselineOffset, at: item.range.location, effectiveRange: nil) as? CGFloat) ?? 0.0
+                    }
                     
-                    var itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left + emojiOffset.x, dy: textLayout.insets.top + 1.0 + emojiOffset.y).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
+                    var itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left + emojiOffset.x, dy: textLayout.insets.top + 1.0 + emojiOffset.y - baselineOffset).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
                     itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)
                     itemFrame.origin.y = floorToScreenPixels(itemFrame.origin.y)
                     
@@ -299,6 +304,7 @@ public final class TextNodeWithEntities {
                     itemLayer.enableAnimation = stickerItem.enableAnimation
                     let isVisibleForAnimations = self.effectiveEnableLooping && self.isItemVisible(itemRect: itemFrame) && itemLayer.enableAnimation
                     if itemLayer.isVisibleForAnimations != isVisibleForAnimations {
+                        itemLayer.isVisibleForAnimations = isVisibleForAnimations
                         if !isVisibleForAnimations && self.resetEmojiToFirstFrameAutomatically {
                             itemLayer.reloadAnimation()
                         }

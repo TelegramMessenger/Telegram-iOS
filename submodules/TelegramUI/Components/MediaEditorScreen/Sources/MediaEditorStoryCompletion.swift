@@ -8,6 +8,42 @@ import TextFormat
 import Photos
 import MediaEditor
 import DrawingUI
+import MediaAssetsContext
+
+/// The frame of `avAsset` at `time`, paired with the matching frame of the dual-camera track at
+/// `additionalPath` when there is one.
+///
+/// Always terminates. The generator legitimately produces no image (an unreadable track, a time
+/// past the end), and the callers below feed a `combineLatest` that posts the story — a signal
+/// that simply goes quiet there leaves the Post spinner running forever.
+private func firstFrameImages(avAsset: AVAsset, time: CMTime, additionalPath: String?, additionalTime: CMTime) -> Signal<(UIImage?, UIImage?), NoError> {
+    return Signal { subscriber in
+        let generator = AVAssetImageGenerator(asset: avAsset)
+        generator.appliesPreferredTrackTransform = true
+        let additionalGenerator = Atomic<AVAssetImageGenerator?>(value: nil)
+        
+        generator.generateCGImagesAsynchronously(forTimes: [NSValue(time: time)], completionHandler: { _, cgImage, _, _, _ in
+            let image = cgImage.flatMap { UIImage(cgImage: $0) }
+            guard let additionalPath else {
+                subscriber.putNext((image, nil))
+                subscriber.putCompletion()
+                return
+            }
+            let innerGenerator = AVAssetImageGenerator(asset: AVURLAsset(url: URL(fileURLWithPath: additionalPath)))
+            innerGenerator.appliesPreferredTrackTransform = true
+            let _ = additionalGenerator.swap(innerGenerator)
+            innerGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: additionalTime)], completionHandler: { _, additionalCGImage, _, _, _ in
+                subscriber.putNext((image, additionalCGImage.flatMap { UIImage(cgImage: $0) }))
+                subscriber.putCompletion()
+            })
+        })
+        
+        return ActionDisposable {
+            generator.cancelAllCGImageGeneration()
+            additionalGenerator.with { $0 }?.cancelAllCGImageGeneration()
+        }
+    }
+}
 
 private func additionalVideoMirroring(at timestamp: Double, changes: [VideoMirroringChange]) -> Bool {
     guard let firstChange = changes.first else {
@@ -26,18 +62,18 @@ private func additionalVideoMirroring(at timestamp: Double, changes: [VideoMirro
 
 extension MediaEditorScreenImpl {
     func requestStoryCompletion(animated: Bool) {
-        guard let mediaEditor = self.node.mediaEditor, !self.didComplete else {
+        guard !self.didComplete else {
+            return
+        }
+        guard let mediaEditor = self.node.mediaEditor else {
+            self.failStoryCompletion()
             return
         }
         
         self.didComplete = true
-        
+
         self.updateMediaEditorEntities()
-        
-        mediaEditor.stop()
-        mediaEditor.invalidate()
-        self.node.entitiesView.invalidate()
-        
+
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
@@ -87,17 +123,88 @@ extension MediaEditorScreenImpl {
         self.dismissAllTooltips()
     }
     
-    private func processSingleItem() {
+    private func processSingleItem(preparedRandomId: Int64? = nil, collagePrepared: Bool = false) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, let actualSubject = self.node.actualSubject else {
+            self.failStoryCompletion()
             return
         }
         
+        if let collage = self.collage, preparedRandomId == nil, !collagePrepared {
+            self.collageMediaDisposable.set((collage.prepareVideoSources()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] success in
+                guard let self else {
+                    return
+                }
+                if success {
+                    self.processSingleItem(collagePrepared: true)
+                } else {
+                    self.failStoryCompletion()
+                }
+            }))
+            return
+        }
+        if self.collage != nil, preparedRandomId == nil {
+            let randomId: Int64
+            if case let .draft(_, id) = actualSubject, let id {
+                randomId = id
+            } else {
+                randomId = Int64.random(in: .min ... .max)
+            }
+            self.saveCollageDraft(id: randomId, completion: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                switch result {
+                case let .success(draft):
+                    let engine = self.context.engine
+                    Queue.concurrentDefaultQueue().async { [weak self] in
+                        // Resolve and compose full-size media without blocking the Post Story spinner.
+                        let prepared = Swift.Result { () -> (MediaEditorCollage, Subject) in
+                            guard let resolved = try draft.collage?.resolve(engine: engine), resolved.missingCount == 0, let collage = resolved.collage, let subject = mediaEditorCollageSubject(collage) else {
+                                throw MediaEditorCollageDraftSaveError.mediaUnavailable
+                            }
+                            return (collage, subject)
+                        }
+                        Queue.mainQueue().async {
+                            guard let self else {
+                                return
+                            }
+                            switch prepared {
+                            case let .success((collage, subject)):
+                                if let lease = self.collage?.fileLease {
+                                    self.collageSourceLeases.append(lease)
+                                }
+                                self.collage = collage
+                                self.collagePublicationImagePath = collage.isVideo ? nil : draft.fullPath(engine: engine)
+                                self.node.subject = subject
+                                mediaEditor.updateCollageSources(collage, values: draft.values)
+                                self.processSingleItem(preparedRandomId: randomId)
+                            case .failure:
+                                self.failStoryCompletion()
+                            }
+                        }
+                    }
+                case let .failure(error):
+                    self.didComplete = false
+                    if error == .cancelled {
+                        return
+                    }
+                    let strings = self.context.sharedContext.currentPresentationData.with { $0 }.strings
+                    self.presentCollageAlert(text: strings.Login_UnknownError)
+                }
+            })
+            return
+        }
+
         var caption = self.node.getCaption()
         caption = convertMarkdownToAttributes(caption)
         
         var hasEntityChanges = false
         let randomId: Int64
-        if case let .draft(_, id) = actualSubject, let id {
+        if let preparedRandomId {
+            randomId = preparedRandomId
+        } else if case let .draft(_, id) = actualSubject, let id {
             randomId = id
         } else {
             randomId = Int64.random(in: .min ... .max)
@@ -142,15 +249,12 @@ extension MediaEditorScreenImpl {
         }
         
         if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
-            self.saveDraft(id: randomId, isEdit: true)
+            if self.collage == nil {
+                self.saveDraft(id: randomId, isEdit: true)
+            }
             
             self.completion([MediaEditorScreenImpl.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: mediaEditor.values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
-                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                    self?.dismiss()
-                    Queue.mainQueue().justDispatch {
-                        finished()
-                    }
-                })
+                self?.finishStoryCompletion(finished)
             })
             return
         }
@@ -167,7 +271,9 @@ extension MediaEditorScreenImpl {
         }
         
         if mediaEditor.resultIsVideo {
-            self.saveDraft(id: randomId)
+            if self.collage == nil {
+                self.saveDraft(id: randomId)
+            }
             
             var firstFrame: Signal<(UIImage?, UIImage?), NoError>
             let firstFrameTime: CMTime
@@ -197,8 +303,8 @@ extension MediaEditorScreenImpl {
                 
                 firstFrame = .single((image, nil))
             case let .image(image, _, _, _, _):
-                let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
-                if let data = image.jpegData(compressionQuality: 0.85) {
+                let tempImagePath = self.collagePublicationImagePath ?? NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
+                if self.collagePublicationImagePath == nil, let data = image.jpegData(compressionQuality: 0.85) {
                     try? data.write(to: URL(fileURLWithPath: tempImagePath))
                 }
                 videoResult = .single(.imageFile(path: tempImagePath))
@@ -219,38 +325,19 @@ extension MediaEditorScreenImpl {
                     additionalPath = valuesAdditionalPath
                 }
                                 
-                firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
-                    let avAsset = AVURLAsset(url: URL(fileURLWithPath: path))
-                    let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
-                    avAssetGenerator.appliesPreferredTrackTransform = true
-                    avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
-                        if let cgImage {
-                            if let additionalPath {
-                                let avAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
-                                let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
-                                avAssetGenerator.appliesPreferredTrackTransform = true
-                                avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: additionalFirstFrameTime)], completionHandler: { _, additionalCGImage, _, _, _ in
-                                    if let additionalCGImage {
-                                        subscriber.putNext((UIImage(cgImage: cgImage), UIImage(cgImage: additionalCGImage)))
-                                        subscriber.putCompletion()
-                                    } else {
-                                        subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                                        subscriber.putCompletion()
-                                    }
-                                })
-                            } else {
-                                subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                                subscriber.putCompletion()
-                            }
-                        }
-                    })
-                    return ActionDisposable {
-                        avAssetGenerator.cancelAllCGImageGeneration()
-                    }
-                }
+                firstFrame = firstFrameImages(
+                    avAsset: AVURLAsset(url: URL(fileURLWithPath: path)),
+                    time: firstFrameTime,
+                    additionalPath: additionalPath,
+                    additionalTime: additionalFirstFrameTime
+                )
             case let .videoCollage(items):
                 var maxDurationItem: (Double, Subject.VideoCollageItem)?
                 for item in items {
+                    if item.isMain {
+                        maxDurationItem = (item.content.duration, item)
+                        break
+                    }
                     switch item.content {
                     case .image:
                         break
@@ -309,61 +396,56 @@ extension MediaEditorScreenImpl {
                     additionalPath = valuesAdditionalPath
                 }
                 
-                firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
-                    if asset.mediaType == .video {
-                        PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
-                            if let avAsset {
-                                let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
-                                avAssetGenerator.appliesPreferredTrackTransform = true
-                                avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
-                                    if let cgImage {
-                                        if let additionalPath {
-                                            let avAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
-                                            let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
-                                            avAssetGenerator.appliesPreferredTrackTransform = true
-                                            avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: additionalFirstFrameTime)], completionHandler: { _, additionalCGImage, _, _, _ in
-                                                if let additionalCGImage {
-                                                    subscriber.putNext((UIImage(cgImage: cgImage), UIImage(cgImage: additionalCGImage)))
-                                                    subscriber.putCompletion()
-                                                } else {
-                                                    subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                                                    subscriber.putCompletion()
-                                                }
-                                            })
-                                        } else {
-                                            subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                                            subscriber.putCompletion()
-                                        }
-                                    }
-                                })
-                            }
-                        }
-                    } else {
-                        let options = PHImageRequestOptions()
-                        options.deliveryMode = .highQualityFormat
-                        PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
-                            if let image {
-                                if let additionalPath {
-                                    let avAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
-                                    let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
-                                    avAssetGenerator.appliesPreferredTrackTransform = true
-                                    avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: additionalFirstFrameTime)], completionHandler: { _, additionalCGImage, _, _, _ in
-                                        if let additionalCGImage {
-                                            subscriber.putNext((image, UIImage(cgImage: additionalCGImage)))
-                                            subscriber.putCompletion()
-                                        } else {
-                                            subscriber.putNext((image, nil))
-                                            subscriber.putCompletion()
-                                        }
-                                    })
-                                } else {
-                                    subscriber.putNext((image, nil))
-                                    subscriber.putCompletion()
-                                }
-                            }
+                // The asset may have been evicted by "Optimize iPhone Storage" since it was
+                // picked. If it cannot be brought back, the upload queued below would only fail
+                // later with no way to report it, so refuse the post here and say why.
+                let onUnavailable: () -> Void = { [weak self] in
+                    Queue.mainQueue().async {
+                        self?.failStoryCompletion(mediaUnavailable: true)
+                    }
+                }
+                if asset.mediaType == .video {
+                    firstFrame = assetVideoAsset(asset)
+                    |> mapToSignal { result -> Signal<(UIImage?, UIImage?), NoError> in
+                        switch result {
+                        case let .result(avAsset):
+                            return firstFrameImages(
+                                avAsset: avAsset,
+                                time: firstFrameTime,
+                                additionalPath: additionalPath,
+                                additionalTime: additionalFirstFrameTime
+                            )
+                        case .unavailable:
+                            onUnavailable()
+                            return .complete()
+                        case .progress:
+                            return .complete()
                         }
                     }
-                    return EmptyDisposable
+                } else {
+                    firstFrame = assetFullImage(asset)
+                    |> mapToSignal { result -> Signal<(UIImage?, UIImage?), NoError> in
+                        switch result {
+                        case let .result(image):
+                            guard let additionalPath else {
+                                return .single((image, nil))
+                            }
+                            return firstFrameImages(
+                                avAsset: AVURLAsset(url: URL(fileURLWithPath: additionalPath)),
+                                time: additionalFirstFrameTime,
+                                additionalPath: nil,
+                                additionalTime: .zero
+                            )
+                            |> map { additionalImage, _ in
+                                return (image, additionalImage)
+                            }
+                        case .unavailable:
+                            onUnavailable()
+                            return .complete()
+                        case .progress:
+                            return .complete()
+                        }
+                    }
                 }
             case let .draft(draft, _):
                 let draftPath = draft.fullPath(engine: context.engine)
@@ -374,20 +456,12 @@ extension MediaEditorScreenImpl {
                     } else {
                         duration = min(draft.duration ?? 5.0, storyMaxVideoDuration)
                     }
-                    firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
-                        let avAsset = AVURLAsset(url: URL(fileURLWithPath: draftPath))
-                        let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
-                        avAssetGenerator.appliesPreferredTrackTransform = true
-                        avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
-                            if let cgImage {
-                                subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                                subscriber.putCompletion()
-                            }
-                        })
-                        return ActionDisposable {
-                            avAssetGenerator.cancelAllCGImageGeneration()
-                        }
-                    }
+                    firstFrame = firstFrameImages(
+                        avAsset: AVURLAsset(url: URL(fileURLWithPath: draftPath)),
+                        time: firstFrameTime,
+                        additionalPath: nil,
+                        additionalTime: .zero
+                    )
                 } else {
                     videoResult = .single(.imageFile(path: draftPath))
                     duration = 5.0
@@ -446,7 +520,7 @@ extension MediaEditorScreenImpl {
                 duration = 3.0
                 
                 firstFrame = .single((image, nil))
-            case .multiple:
+            case .multiple, .collage:
                 fatalError()
             }
             
@@ -486,30 +560,36 @@ extension MediaEditorScreenImpl {
 
                     makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: inputImage, dimensions: storyDimensions, values: values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
+                            if self.collage != nil && coverImage == nil {
+                                self.failStoryCompletion()
+                                return
+                            }
                             self.willComplete(coverImage, true, { [weak self] in
                                 guard let self else {
                                     return
                                 }
+                                self.node.mediaEditor?.stop()
+                                self.node.mediaEditor?.invalidate()
+                                self.node.entitiesView.invalidate()
                                 Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                                 self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
-                                    self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                        self?.dismiss()
-                                        Queue.mainQueue().justDispatch {
-                                            finished()
-                                        }
-                                    })
+                                    self?.finishStoryCompletion(finished)
                                 })
+                            }, { [weak self] in
+                                self?.didComplete = false
                             })
                         }
                     })
                 }
             })
         
-            if case let .draft(draft, id) = actualSubject, id == nil {
+            if self.collage == nil, case let .draft(draft, id) = actualSubject, id == nil {
                 removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
             }
         } else if let image = mediaEditor.resultImage {
-            self.saveDraft(id: randomId)
+            if self.collage == nil {
+                self.saveDraft(id: randomId)
+            }
             
             var values = mediaEditor.values
             var outputDimensions: CGSize?
@@ -527,27 +607,60 @@ extension MediaEditorScreenImpl {
                 time: .zero,
                 textScale: 2.0,
                 completion: { [weak self] resultImage in
-                if let self, let resultImage {
+                guard let self else {
+                    return
+                }
+                if let resultImage {
                     self.willComplete(resultImage, false, { [weak self] in
                         guard let self else {
                             return
                         }
+                        self.node.mediaEditor?.stop()
+                        self.node.mediaEditor?.invalidate()
+                        self.node.entitiesView.invalidate()
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, music: values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
-                            self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                self?.dismiss()
-                                Queue.mainQueue().justDispatch {
-                                    finished()
-                                }
-                            })
+                            self?.finishStoryCompletion(finished)
                         })
-                        if case let .draft(draft, id) = actualSubject, id == nil {
+                        if self.collage == nil, case let .draft(draft, id) = actualSubject, id == nil {
                             removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
                         }
+                    }, { [weak self] in
+                        self?.didComplete = false
                     })
+                } else if self.collage != nil {
+                    self.failStoryCompletion()
                 }
             })
+        } else if self.collage != nil {
+            self.failStoryCompletion()
         }
+    }
+
+    private func failStoryCompletion(mediaUnavailable: Bool = false) {
+        self.didComplete = false
+        if mediaUnavailable {
+            self.presentMediaUnavailableAlert()
+        } else {
+            self.presentCollageAlert(text: self.context.sharedContext.currentPresentationData.with { $0 }.strings.Login_UnknownError)
+        }
+    }
+
+    private func finishStoryCompletion(_ finished: @escaping () -> Void) {
+        self.removePublishedCollageDraft()
+        if let privacyScreen = self.storyPrivacyScreen {
+            self.storyPrivacyScreen = nil
+            privacyScreen.dismissed = {}
+            privacyScreen.customModalStyleOverlayTransitionFactorUpdated = nil
+            self.node.updateModalTransitionFactor(0.0, transition: .immediate)
+            privacyScreen.dismiss()
+        }
+        self.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+            self?.dismiss()
+            Queue.mainQueue().justDispatch {
+                finished()
+            }
+        })
     }
     
     private func processMultipleItems(items: [EditingItem], isLongVideo: Bool) {
@@ -564,7 +677,6 @@ extension MediaEditorScreenImpl {
         }
         
         let multipleResults = Atomic<[MediaEditorScreenImpl.Result]>(value: [])
-        let totalItems = items.count
         
         let dispatchGroup = DispatchGroup()
         
@@ -591,37 +703,51 @@ extension MediaEditorScreenImpl {
             let randomId = Int64.random(in: .min ... .max)
             order.append(randomId)
             
+            // An item that cannot be prepared yields nil and is dropped from the batch; it must
+            // still leave the group, or the post never fires at all.
+            let collect: (MediaEditorScreenImpl.Result?) -> Void = { result in
+                if let result {
+                    let _ = multipleResults.modify { results in
+                        var updatedResults = results
+                        updatedResults.append(result)
+                        return updatedResults
+                    }
+                }
+                dispatchGroup.leave()
+            }
+            
             if item.source.isVideo {
-                processVideoItem(item: item, index: index, randomId: randomId, isLongVideo: isLongVideo) { result in
-                    let _ = multipleResults.modify { results in
-                        var updatedResults = results
-                        updatedResults.append(result)
-                        return updatedResults
-                    }
-                                                    
-                    dispatchGroup.leave()
-                }
+                processVideoItem(item: item, index: index, randomId: randomId, isLongVideo: isLongVideo, completion: collect)
             } else {
-                processImageItem(item: item, index: index, randomId: randomId) { result in
-                    let _ = multipleResults.modify { results in
-                        var updatedResults = results
-                        updatedResults.append(result)
-                        return updatedResults
-                    }
-                                        
-                    dispatchGroup.leave()
-                }
+                processImageItem(item: item, index: index, randomId: randomId, completion: collect)
             }
         }
         
-        dispatchGroup.notify(queue: .main) {
+        // Counted after the `isEnabled` filter: counting the whole list would make a disabled item
+        // read as a failure.
+        let expectedCount = order.count
+        
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            guard let self else {
+                return
+            }
+
             let results = multipleResults.with { $0 }
-            if results.count == totalItems {
-                var orderedResults: [MediaEditorScreenImpl.Result] = []
-                for id in order {
-                    if let item = results.first(where: { $0.randomId == id }) {
-                        orderedResults.append(item)
-                    }
+            var orderedResults: [MediaEditorScreenImpl.Result] = []
+            for id in order {
+                if let item = results.first(where: { $0.randomId == id }) {
+                    orderedResults.append(item)
+                }
+            }
+            
+            guard !orderedResults.isEmpty else {
+                self.failStoryCompletion(mediaUnavailable: true)
+                return
+            }
+            
+            let post: () -> Void = { [weak self] in
+                guard let self else {
+                    return
                 }
                 self.completion(orderedResults, { [weak self] finished in
                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
@@ -632,10 +758,17 @@ extension MediaEditorScreenImpl {
                     })
                 })
             }
+            
+            if orderedResults.count < expectedCount {
+                // Post what could be prepared, but not silently — the user selected more than this.
+                self.presentMediaUnavailableAlert(someSkipped: true, completion: post)
+            } else {
+                post()
+            }
         }
     }
     
-    private func processVideoItem(item: EditingItem, index: Int, randomId: Int64, isLongVideo: Bool, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
+    private func processVideoItem(item: EditingItem, index: Int, randomId: Int64, isLongVideo: Bool, completion: @escaping (MediaEditorScreenImpl.Result?) -> Void) {
         let itemMediaEditor = setupMediaEditorForItem(item: item)
             
         var mediaAreas: [MediaArea] = []
@@ -659,11 +792,14 @@ extension MediaEditorScreenImpl {
         
         let process: (AVAsset?, MediaResult.VideoResult) -> Void = { [weak self] avAsset, videoResult in
             guard let self else {
+                Queue.mainQueue().async {
+                    completion(nil)
+                }
                 return
             }
             guard let avAsset else {
                 Queue.mainQueue().async {
-                    completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                    completion(nil)
                 }
                 return
             }
@@ -679,6 +815,9 @@ extension MediaEditorScreenImpl {
             avAssetGenerator.appliesPreferredTrackTransform = true
             avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)]) { [weak self] _, cgImage, _, _, _ in
                 guard let self else {
+                    Queue.mainQueue().async {
+                        completion(nil)
+                    }
                     return
                 }
                 Queue.mainQueue().async {
@@ -715,14 +854,14 @@ extension MediaEditorScreenImpl {
                                     )
                                     completion(result)
                                 } else {
-                                    completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                                    completion(nil)
                                 }
                             }
                         } else {
-                            completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                            completion(nil)
                         }
                     } else {
-                        completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                        completion(nil)
                     }
                 }
             }
@@ -733,15 +872,23 @@ extension MediaEditorScreenImpl {
             let avAsset = AVURLAsset(url: URL(fileURLWithPath: videoPath))
             process(avAsset, .videoFile(path: videoPath))
         case let .asset(asset):
-            PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
-                process(avAsset, .asset(localIdentifier: asset.localIdentifier))
-            }
-        default:
-            fatalError()
+            let _ = assetVideoAsset(asset).start(next: { result in
+                switch result {
+                case let .result(avAsset):
+                    process(avAsset, .asset(localIdentifier: asset.localIdentifier))
+                case .unavailable:
+                    process(nil, .asset(localIdentifier: asset.localIdentifier))
+                case .progress:
+                    break
+                }
+            })
+        case .image:
+            // An image source never reaches here; `isVideo` routes it to `processImageItem`.
+            completion(nil)
         }
     }
 
-    private func processImageItem(item: EditingItem, index: Int, randomId: Int64, completion: @escaping (MediaEditorScreenImpl.Result) -> Void) {
+    private func processImageItem(item: EditingItem, index: Int, randomId: Int64, completion: @escaping (MediaEditorScreenImpl.Result?) -> Void) {
         let itemMediaEditor = setupMediaEditorForItem(item: item)
         
         var caption = item.caption
@@ -761,10 +908,11 @@ extension MediaEditorScreenImpl {
         
         let process: (UIImage?) -> Void = { [weak self] image in
             guard let self else {
+                completion(nil)
                 return
             }
             guard let image else {
-                completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                completion(nil)
                 return
             }
             itemMediaEditor.replaceSource(image, additionalImage: nil, time: .zero, mirror: false)
@@ -798,11 +946,11 @@ extension MediaEditorScreenImpl {
                         )
                         completion(result)
                     } else {
-                        completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                        completion(nil)
                     }
                 }
             } else {
-                completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
+                completion(nil)
             }
         }
         
@@ -810,17 +958,20 @@ extension MediaEditorScreenImpl {
         case let .image(image, _):
             process(image)
         case let .asset(asset):
-            let options = PHImageRequestOptions()
-            options.deliveryMode = .highQualityFormat
-            options.isNetworkAccessAllowed = true
-            
-            PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
-                Queue.mainQueue().async {
+            let _ = (assetFullImage(asset)
+            |> deliverOnMainQueue).start(next: { result in
+                switch result {
+                case let .result(image):
                     process(image)
+                case .unavailable:
+                    process(nil)
+                case .progress:
+                    break
                 }
-            }
-        default:
-            fatalError()
+            })
+        case .video:
+            // A video source never reaches here; `isVideo` routes it to `processVideoItem`.
+            completion(nil)
         }
     }
 
@@ -868,23 +1019,6 @@ extension MediaEditorScreenImpl {
         }
     }
 
-    private func createEmptyResult(randomId: Int64, music: TelegramMediaFile? = nil) -> MediaEditorScreenImpl.Result {
-        let emptyImage = UIImage()
-        return MediaEditorScreenImpl.Result(
-            media: .image(
-                image: emptyImage,
-                dimensions: PixelDimensions(emptyImage.size)
-            ),
-            mediaAreas: [],
-            caption: NSAttributedString(),
-            coverTimestamp: nil,
-            options: self.state.privacy,
-            stickers: [],
-            music: music,
-            randomId: randomId
-        )
-    }
-    
     func updateMediaEditorEntities() {
         guard let mediaEditor = self.node.mediaEditor else {
             return

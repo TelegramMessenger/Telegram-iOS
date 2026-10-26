@@ -763,6 +763,20 @@ public final class Message {
         return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo, associatedStories: self.associatedStories)
     }
     
+    /// Whether one of this message's media ids is in a transaction's updated-media set.
+    /// Every view that carries messages uses this to decide whether to re-read them.
+    func referencesAnyMedia(in updatedMedia: [MediaId: Media?]) -> Bool {
+        if updatedMedia.isEmpty {
+            return false
+        }
+        for media in self.media {
+            if let mediaId = media.id, let _ = updatedMedia[mediaId] {
+                return true
+            }
+        }
+        return false
+    }
+    
     public func withUpdatedMedia(_ media: [Media]) -> Message {
         return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo, associatedStories: self.associatedStories)
     }

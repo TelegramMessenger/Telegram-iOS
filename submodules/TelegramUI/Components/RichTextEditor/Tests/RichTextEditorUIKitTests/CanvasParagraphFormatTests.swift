@@ -20,7 +20,7 @@ final class CanvasParagraphFormatTests: XCTestCase {
     }
     func caret(_ v: DocumentCanvasView, _ id: String) {
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID(id)) }!
-        v.anchor = r.globalStart + 1; v.head = r.globalStart + 1
+        v.setSelectionForTesting(anchor: r.globalStart + 1, head: r.globalStart + 1)
     }
 
     func test_setParagraphStyle_collapsedCaret_setsStyle() {
@@ -53,7 +53,7 @@ final class CanvasParagraphFormatTests: XCTestCase {
         let v = canvas()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("a")) }!
         let b = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("b")) }!
-        v.anchor = a.globalStart + 1; v.head = b.globalStart + 2
+        v.setSelectionForTesting(anchor: a.globalStart + 1, head: b.globalStart + 2)
         v.setParagraphStyle(.heading2)
         XCTAssertEqual(para(v, "a")?.style, .heading2)
         XCTAssertEqual(para(v, "b")?.style, .heading2)

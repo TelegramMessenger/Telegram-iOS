@@ -93,6 +93,69 @@ public func confirmGiftWithdrawalController(
     present: @escaping (ViewController, Any?) -> Void,
     completion: @escaping (String) -> Void
 ) -> ViewController {
+    return giftPasswordConfirmationController(context: context, updatedPresentationData: updatedPresentationData, request: { password in
+        return context.engine.payments.requestStarGiftWithdrawalUrl(reference: reference, password: password)
+    }, present: present, completion: completion)
+}
+
+public func requestGiftWithdrawalUrl(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    reference: StarGiftReference,
+    present: @escaping (ViewController, Any?) -> Void,
+    completion: @escaping (String) -> Void
+) {
+    performGiftWithdrawalRequest(context: context, updatedPresentationData: updatedPresentationData, reference: reference, request: { password in
+        return context.engine.payments.requestStarGiftWithdrawalUrl(reference: reference, password: password)
+    }, present: present, completion: completion)
+}
+
+func performGiftWithdrawalRequest<T>(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    reference: StarGiftReference,
+    request: @escaping (String?) -> Signal<T, RequestStarGiftWithdrawalError>,
+    present: @escaping (ViewController, Any?) -> Void,
+    completion: @escaping (T) -> Void
+) {
+    let passwordController: () -> ViewController = {
+        return giftPasswordConfirmationController(context: context, updatedPresentationData: updatedPresentationData, request: { password in
+            return request(password)
+        }, present: present, completion: completion)
+    }
+    let presentError: (RequestStarGiftWithdrawalError) -> Void = { error in
+        switch error {
+        case .serverProvided:
+            return
+        case .requestPassword:
+            present(passwordController(), nil)
+        default:
+            present(giftWithdrawalErrorController(context: context, updatedPresentationData: updatedPresentationData, initialError: error, present: present, passwordController: passwordController), nil)
+        }
+    }
+    let _ = (request(nil)
+    |> take(1)
+    |> deliverOnMainQueue).start(next: { result in
+        completion(result)
+    }, error: { error in
+        guard case .requestPassword = error else {
+            presentError(error)
+            return
+        }
+        let _ = (context.engine.payments.checkStarGiftWithdrawalAvailability(reference: reference)
+        |> deliverOnMainQueue).start(error: { error in
+            presentError(error)
+        })
+    })
+}
+
+func giftPasswordConfirmationController<T>(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    request: @escaping (String) -> Signal<T, RequestStarGiftWithdrawalError>,
+    present: @escaping (ViewController, Any?) -> Void,
+    completion: @escaping (T) -> Void
+) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let strings = presentationData.strings
 
@@ -143,25 +206,37 @@ public func confirmGiftWithdrawalController(
         effectiveUpdatedPresentationData = (presentationData, context.sharedContext.presentationData)
     }
     
+    let requestDisposable = MetaDisposable()
+    var isInProgress = false
+    
     var dismissImpl: (() -> Void)?
     let alertController = AlertScreen(
         configuration: AlertScreen.Configuration(allowInputInset: true),
         content: content,
         actions: [
-            .init(title: strings.Common_Cancel),
+            .init(title: strings.Common_Cancel, action: {
+                requestDisposable.dispose()
+            }),
             .init(title: strings.Gift_Withdraw_EnterPassword_Done, type: .default, action: {
                 applyImpl?()
             }, autoDismiss: false, isEnabled: doneIsEnabled, progress: doneInProgressPromise.get())
         ],
         updatedPresentationData: effectiveUpdatedPresentationData
     )
+    alertController.dismissed = { _ in
+        requestDisposable.dispose()
+    }
     applyImpl = {
+        guard !isInProgress, !inputState.value.isEmpty else {
+            return
+        }
+        isInProgress = true
         doneInProgressPromise.set(true)
 
-        let _ = (context.engine.payments.requestStarGiftWithdrawalUrl(reference: reference, password: inputState.value)
-        |> deliverOnMainQueue).start(next: { url in
+        requestDisposable.set((request(inputState.value)
+        |> deliverOnMainQueue).start(next: { result in
             dismissImpl?()
-            completion(url)
+            completion(result)
         }, error: { error in
             var errorTextAndActions: (String, [TextAlertAction])?
             switch error {
@@ -172,13 +247,14 @@ public func confirmGiftWithdrawalController(
             default:
                 errorTextAndActions = (strings.Login_UnknownError, [TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})])
             }
+            isInProgress = false
             doneInProgressPromise.set(false)
 
             if let (text, actions) = errorTextAndActions {
                 dismissImpl?()
                 present(textAlertController(context: context, title: nil, text: text, actions: actions), nil)
             }
-        })
+        }))
     }
     dismissImpl = { [weak alertController] in
         alertController?.dismiss(completion: nil)
@@ -194,6 +270,18 @@ public func giftWithdrawalController(
     present: @escaping (ViewController, Any?) -> Void,
     completion: @escaping (String) -> Void
 ) -> ViewController {
+    return giftWithdrawalErrorController(context: context, updatedPresentationData: updatedPresentationData, initialError: initialError, present: present, passwordController: {
+        return confirmGiftWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, reference: reference, present: present, completion: completion)
+    })
+}
+
+func giftWithdrawalErrorController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    initialError: RequestStarGiftWithdrawalError,
+    present: @escaping (ViewController, Any?) -> Void,
+    passwordController: () -> ViewController
+) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let strings = presentationData.strings
     
@@ -205,7 +293,7 @@ public func giftWithdrawalController(
     ]
     switch initialError {
         case .requestPassword:
-        return confirmGiftWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, reference: reference, present: present, completion: completion)
+        return passwordController()
         case .twoStepAuthTooFresh, .authSessionTooFresh:
             text = text + presentationData.strings.Gift_Withdraw_ComeBackLater
         case .twoStepAuthMissing:

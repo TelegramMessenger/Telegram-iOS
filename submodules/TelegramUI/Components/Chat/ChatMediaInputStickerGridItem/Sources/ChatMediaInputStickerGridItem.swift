@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import TelegramCore
@@ -269,7 +270,7 @@ public final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 
                 if item.stickerItem.file.isAnimatedSticker || item.stickerItem.file.isVideoSticker {
                     if self.animationNode == nil {
-                        let animationNode = DefaultAnimatedStickerNodeImpl()
+                        let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
                         animationNode.started = { [weak self] in

@@ -225,7 +225,7 @@ public final class AlertWebpagePreviewComponent: Component {
                     commitEmojiInteraction: { _, _, _, _ in },
                     openLargeEmojiInfo: { _, _, _ in },
                     openJoinLink: { _ in },
-                    openWebView: { _, _, _, _ in },
+                    openWebView: { _, _, _, _, _ in },
                     activateAdAction: { _, _, _, _ in },
                     adContextAction: { _, _, _ in },
                     removeAd: { _ in },
@@ -414,7 +414,7 @@ private func makeAlertWebpagePreviewContent(
     var mainMedia: EngineRawMedia?
     var automaticPlayback = false
     if let file = webpage.file, (file.isAnimated && context.sharedContext.energyUsageSettings.autoplayGif) || (!file.isAnimated && context.sharedContext.energyUsageSettings.autoplayVideo) {
-        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file) {
+        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: .file(file)) {
             automaticPlayback = true
         } else {
             automaticPlayback = context.engine.resources.completedResourcePath(id: EngineMediaResource.Id(file.resource.id)) != nil

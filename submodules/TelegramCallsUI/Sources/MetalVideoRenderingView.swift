@@ -556,15 +556,7 @@ class MetalVideoRenderingContext {
             return nil
         }
 
-        let mainBundle = Bundle(for: MetalVideoRenderingView.self)
-
-        guard let path = mainBundle.path(forResource: "TelegramCallsUIBundle", ofType: "bundle") else {
-            return nil
-        }
-        guard let bundle = Bundle(path: path) else {
-            return nil
-        }
-        guard let defaultLibrary = try? self.device.makeDefaultLibrary(bundle: bundle) else {
+        guard let defaultLibrary = telegramCallsUIMetalLibrary(device: self.device) else {
             return nil
         }
 

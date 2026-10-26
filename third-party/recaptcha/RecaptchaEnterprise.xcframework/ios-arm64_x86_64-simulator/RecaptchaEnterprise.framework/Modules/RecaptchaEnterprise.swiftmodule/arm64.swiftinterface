@@ -1,10 +1,13 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
-// swift-module-flags: -target arm64-apple-ios14.0-simulator -enable-objc-interop -enable-library-evolution -enforce-exclusivity=checked -O -enable-experimental-feature AccessLevelOnImport -enable-bare-slash-regex -module-name RecaptchaEnterprise -package-name googlemac/iPhone/recaptcha/enterprise
+// swift-compiler-version: Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+// swift-module-flags: -target arm64-apple-ios15.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 6 -O -enable-experimental-feature AccessLevelOnImport -module-name RecaptchaEnterprise -package-name googlemac/iPhone/recaptcha/enterprise
+// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.3
+import CommonCrypto
 import CryptoKit
 import DeviceCheck
 import Foundation
 import Network
+import Security
 import Swift
 import UIKit
 import WebKit
@@ -19,17 +22,22 @@ import _SwiftConcurrencyShims
   @objc deinit
 }
 @_inheritsConvenienceInitializers @_hasMissingDesignatedInitializers @objc public class Recaptcha : ObjectiveC.NSObject {
-  @objc public static func fetchClient(withSiteKey siteKey: Swift.String, completion: @escaping (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
-  #if compiler(>=5.3) && $AsyncAwait
-  @available(iOS 13.0, *)
-  public static func fetchClient(withSiteKey siteKey: Swift.String) async throws -> RecaptchaEnterprise.RecaptchaClient
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public static func fetchClient(withSiteKey siteKey: Swift.String, completion: @escaping @Sendable (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
   #endif
+  public static func fetchClient(withSiteKey siteKey: Swift.String) async throws -> RecaptchaEnterprise.RecaptchaClient
+  #if compiler(>=5.3) && $NonescapableTypes
   @available(*, deprecated, message: "Use the new api `fetchClient(withSiteKey:completion:)` instead.")
-  @objc public static func getClient(withSiteKey siteKey: Swift.String, withTimeout timeout: Swift.Double, completion: @escaping (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
+  @objc public static func getClient(withSiteKey siteKey: Swift.String, withTimeout timeout: Swift.Double, completion: @escaping @Sendable (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
   @available(*, deprecated, message: "Use the new api `fetchClient(withSiteKey:completion:)` instead.")
-  @objc public static func getClient(withSiteKey siteKey: Swift.String, completion: @escaping (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
+  @objc public static func getClient(withSiteKey siteKey: Swift.String, completion: @escaping @Sendable (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
   @available(*, deprecated, message: "Use the new api `fetchClient(withSiteKey:completion:)` instead.")
-  @objc public static func getClient(siteKey: Swift.String, completionHandler: @escaping (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
+  @objc public static func getClient(siteKey: Swift.String, completionHandler: @escaping @Sendable (RecaptchaEnterprise.RecaptchaClient?, Foundation.NSError?) -> Swift.Void)
+  #endif
   @objc deinit
 }
 @available(*, deprecated, message: "Use RecaptchaAction enums instead.")
@@ -37,13 +45,16 @@ import _SwiftConcurrencyShims
   case login
   case signup
   case other
+  #if compiler(>=5.3) && $NonescapableTypes
   public init?(rawValue: Swift.Int)
+  #endif
+  @available(*, deprecated, message: "Use RecaptchaAction enums instead.")
   public typealias RawValue = Swift.Int
   public var rawValue: Swift.Int {
     get
   }
 }
-@_hasMissingDesignatedInitializers @objc public class RecaptchaAction : ObjectiveC.NSObject {
+@_hasMissingDesignatedInitializers @objc final public class RecaptchaAction : ObjectiveC.NSObject, Swift.Sendable {
   convenience public init(customAction: Swift.String)
   @available(*, deprecated, message: "Please use customAction with the regular RecaptchaAction.custom() function")
   @objc public init(action: RecaptchaEnterprise.RecaptchaActionType)
@@ -52,16 +63,21 @@ import _SwiftConcurrencyShims
   @objc public static func custom(_ action: Swift.String) -> RecaptchaEnterprise.RecaptchaAction
   @objc deinit
 }
-@_hasMissingDesignatedInitializers @objc public class RecaptchaClient : ObjectiveC.NSObject {
-  @objc public func execute(withAction action: RecaptchaEnterprise.RecaptchaAction, withTimeout timeout: Swift.Double, completion: @escaping (Swift.String?, Foundation.NSError?) -> Swift.Void)
-  #if compiler(>=5.3) && $AsyncAwait
-  @available(iOS 13.0, *)
-  public func execute(withAction action: RecaptchaEnterprise.RecaptchaAction, withTimeout timeout: Swift.Double = RecaptchaConstant.defaultTimeoutExecute) async throws -> Swift.String
+@_hasMissingDesignatedInitializers @objc final public class RecaptchaClient : ObjectiveC.NSObject, Swift.Sendable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc final public func execute(withAction action: RecaptchaEnterprise.RecaptchaAction, withTimeout timeout: Swift.Double, completion: @escaping @Sendable (Swift.String?, Foundation.NSError?) -> Swift.Void)
   #endif
-  @objc public func execute(withAction action: RecaptchaEnterprise.RecaptchaAction, completion: @escaping (Swift.String?, Foundation.NSError?) -> Swift.Void)
-  @objc public func execute(_ action: RecaptchaEnterprise.RecaptchaAction, completion: @escaping (Swift.String?, Foundation.NSError?) -> Swift.Void)
+  final public func execute(withAction action: RecaptchaEnterprise.RecaptchaAction, withTimeout timeout: Swift.Double = RecaptchaConstant.defaultTimeoutExecute) async throws -> Swift.String
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc final public func execute(withAction action: RecaptchaEnterprise.RecaptchaAction, completion: @escaping @Sendable (Swift.String?, Foundation.NSError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc final public func execute(_ action: RecaptchaEnterprise.RecaptchaAction, completion: @escaping @Sendable (Swift.String?, Foundation.NSError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
   @available(*, deprecated, message: "Use `execute(withAction:completion:)` instead.")
-  @objc public func execute(_ action: RecaptchaEnterprise.RecaptchaAction, completionHandler: @escaping (RecaptchaEnterprise.RecaptchaToken?, RecaptchaEnterprise.RecaptchaError?) -> Swift.Void)
+  @objc final public func execute(_ action: RecaptchaEnterprise.RecaptchaAction, completionHandler: @escaping @Sendable (RecaptchaEnterprise.RecaptchaToken?, RecaptchaEnterprise.RecaptchaError?) -> Swift.Void)
+  #endif
   @objc deinit
 }
 @objc public enum RecaptchaErrorCode : Swift.Int {
@@ -74,27 +90,32 @@ import _SwiftConcurrencyShims
   case errorInvalidTimeout = 6
   case errorNoNetwork = 7
   case errorCodeInternalError = 100
+  #if compiler(>=5.3) && $NonescapableTypes
   public init?(rawValue: Swift.Int)
+  #endif
   public typealias RawValue = Swift.Int
   public var rawValue: Swift.Int {
     get
   }
 }
-@_hasMissingDesignatedInitializers @objc public class RecaptchaError : Foundation.NSError {
+@_hasMissingDesignatedInitializers @objc public class RecaptchaError : Foundation.NSError, @unchecked Swift.Sendable {
   @objc public var errorCode: RecaptchaEnterprise.RecaptchaErrorCode {
     @objc get
   }
   @objc public var errorMessage: Swift.String {
     @objc get
   }
+  public init(errorCode: RecaptchaEnterprise.RecaptchaErrorCode, errorMessage: Swift.String)
   @objc deinit
 }
 @available(*, deprecated, message: "Newer implementations return the Token as a string.")
 @objc public class RecaptchaToken : ObjectiveC.NSObject {
   @objc final public let recaptchaToken: Swift.String
   @available(*, deprecated, message: "Newer implementations return the Token as a string.")
-  @objc public init(_ mobilemivdvtyi: Swift.String)
+  @objc public init(_ mobiletoken: Swift.String)
   @objc deinit
+}
+extension Foundation.UserDefaults : @unchecked Swift.Sendable {
 }
 @available(*, deprecated, message: "Use RecaptchaAction enums instead.")
 extension RecaptchaEnterprise.RecaptchaActionType : Swift.Equatable {}

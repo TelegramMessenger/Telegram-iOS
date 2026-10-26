@@ -21,9 +21,9 @@ final class SpoilerTypingTests: XCTestCase {
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 400)
         c.layoutIfNeeded()
         let start = c.boxes[0].textStart
-        c.anchor = start; c.head = start + 3            // select "abc"
+        c.setSelectionForTesting(anchor: start, head: start + 3)   // select "abc"
         c.toggleSpoiler()
-        c.anchor = start + 3; c.head = start + 3        // caret at the end of the spoiler run
+        c.setSelectionForTesting(anchor: start + 3, head: start + 3)   // caret at the end of the spoiler run
         c.insertText("X")
         XCTAssertEqual(spoileredText(c, "p1"), "abcX", "a char typed at the end of a spoiler run inherits the marker")
     }
@@ -36,9 +36,9 @@ final class SpoilerTypingTests: XCTestCase {
         c.frame = CGRect(x: 0, y: 0, width: 320, height: 400)
         c.layoutIfNeeded()
         let start = c.boxes[0].textStart
-        c.anchor = start + 1; c.head = start + 3       // select "bc" only
+        c.setSelectionForTesting(anchor: start + 1, head: start + 3)   // select "bc" only
         c.toggleSpoiler()
-        c.anchor = start; c.head = start               // caret BEFORE "x" (position 0 — not inside the spoiler)
+        c.setSelectionForTesting(anchor: start, head: start)   // caret BEFORE "x" (position 0 — not inside the spoiler)
         c.insertText("Z")                              // typed at the very start — not inside/adjacent to the spoiler
         XCTAssertEqual(spoileredText(c, "p1"), "bc", "a char typed before an unspoilered prefix is NOT spoilered")
     }

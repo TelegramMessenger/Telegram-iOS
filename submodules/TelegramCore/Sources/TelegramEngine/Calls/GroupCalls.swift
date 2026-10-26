@@ -1,6 +1,6 @@
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 import Foundation
 
@@ -3585,6 +3585,8 @@ private func serializeGroupCallMessage(randomId: Int64, text: String, entities: 
                 entityDict["_"] = "messageEntityUnderline"
             case .BankCard:
                 entityDict["_"] = "messageEntityBankCard"
+            case .TonAddress:
+                entityDict["_"] = "messageEntityTonAddress"
             case .Spoiler:
                 entityDict["_"] = "messageEntitySpoiler"
             case let .CustomEmoji(_, fileId):
@@ -3715,6 +3717,8 @@ private func deserializeGroupCallMessage(data: Data) -> (randomId: Int64, text: 
                 messageEntityType = .Underline
             case "messageEntityBankCard":
                 messageEntityType = .BankCard
+            case "messageEntityTonAddress":
+                messageEntityType = .TonAddress
             case "messageEntitySpoiler":
                 messageEntityType = .Spoiler
             case "messageEntityCustomEmoji":
@@ -4122,7 +4126,10 @@ public final class GroupCallMessagesContext {
             self.pollTopStarsDisposable?.dispose()
             self.pollTopStarsDisposable = ((self.account.network.request(Api.functions.phone.getGroupCallStars(call: self.reference.apiInputGroupCall))
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.phone.GroupCallStars?, NoError> in
+            |> `catch` { error -> Signal<Api.phone.GroupCallStars?, NoError> in
+                if error.errorDescription == "GROUPCALL_INVALID" {
+                    return .never()
+                }
                 return .single(nil)
             }
             |> then(Signal<Api.phone.GroupCallStars?, NoError>.complete() |> delay(30.0, queue: self.queue))) |> restart

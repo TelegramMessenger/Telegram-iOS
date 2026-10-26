@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -33,6 +34,9 @@ final class CraftTableComponent: Component {
     let remove: (Int32) -> Void
     let willFinish: (Bool) -> Void
     let finished: (UIView?) -> Void
+    /// How far right of the table's centre its content is centred (left when negative): the centre of the band beside
+    /// a side strip (iPhone Duo), while the table itself spans the sheet. 0 by default.
+    let centerOffsetX: CGFloat
 
     public init(
         context: AccountContext,
@@ -40,6 +44,7 @@ final class CraftTableComponent: Component {
         buttonColor: UIColor,
         isCrafting: Bool,
         result: Result?,
+        centerOffsetX: CGFloat = 0.0,
         select: @escaping (Int32) -> Void,
         remove: @escaping (Int32) -> Void,
         willFinish: @escaping (Bool) -> Void,
@@ -50,6 +55,7 @@ final class CraftTableComponent: Component {
         self.buttonColor = buttonColor
         self.isCrafting = isCrafting
         self.result = result
+        self.centerOffsetX = centerOffsetX
         self.select = select
         self.remove = remove
         self.willFinish = willFinish
@@ -67,6 +73,9 @@ final class CraftTableComponent: Component {
             return false
         }
         if lhs.isCrafting != rhs.isCrafting {
+            return false
+        }
+        if lhs.centerOffsetX != rhs.centerOffsetX {
             return false
         }
         return true
@@ -250,7 +259,7 @@ final class CraftTableComponent: Component {
             self.component = component
             self.state = state
             
-            self.animationView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize)
+            self.animationView.frame = CGRect(origin: CGPoint(x: component.centerOffsetX, y: 0.0), size: availableSize)
             
             let permilleValue = component.gifts.reduce(0, { $0 + Int($1.value.gift.craftChancePermille ?? 0) })
             
@@ -287,7 +296,8 @@ final class CraftTableComponent: Component {
                                             content: LottieComponent.AppBundleContent(name: "CraftFail"),
                                             color: .white,
                                             size: CGSize(width: 52.0, height: 52.0),
-                                            playOnce: self.craftFailPlayOnce
+                                            playOnce: self.craftFailPlayOnce,
+                                            lottieSettings: component.context.lottieRenderingSettings
                                         )
                                     )),
                                     backgroundColor: .white.withAlphaComponent(0.1),
@@ -326,7 +336,8 @@ final class CraftTableComponent: Component {
                                 LottieComponent(
                                     content: LottieComponent.AppBundleContent(name: "Anvil"),
                                     size: CGSize(width: 52.0, height: 52.0),
-                                    playOnce: self.anvilPlayOnce
+                                    playOnce: self.anvilPlayOnce,
+                                    lottieSettings: component.context.lottieRenderingSettings
                                 )
                             ))
                         )

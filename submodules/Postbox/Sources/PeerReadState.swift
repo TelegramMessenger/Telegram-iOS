@@ -40,6 +40,15 @@ public enum PeerReadState: Equatable, CustomStringConvertible {
         }
     }
     
+    func withCount(_ count: Int32) -> PeerReadState {
+        switch self {
+            case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, _, markedUnread):
+                return .idBased(maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
+            case let .indexBased(maxIncomingReadIndex, maxOutgoingReadIndex, _, markedUnread):
+                return .indexBased(maxIncomingReadIndex: maxIncomingReadIndex, maxOutgoingReadIndex: maxOutgoingReadIndex, count: count, markedUnread: markedUnread)
+        }
+    }
+    
     func withAddedCount(_ value: Int32) -> PeerReadState {
         switch self {
             case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):

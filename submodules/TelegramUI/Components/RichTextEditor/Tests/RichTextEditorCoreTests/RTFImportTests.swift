@@ -136,6 +136,34 @@ final class RTFImportTests: XCTestCase {
         XCTAssertEqual(p?.list?.marker, .ordered)
     }
 
+    /// Real TextEdit/Notes declare \ls\ilvl only on the FIRST item of a list run; later items carry only
+    /// {\listtext ...} and rely on paragraph props surviving the backslash-newline \par. Every item must
+    /// still import as a list member. (Representative TextEdit bullet output; substitute real pbpaste bytes.)
+    func test_textEditStyle_listDeclaredOnlyOnFirstItem_allItemsAreListMembers() {
+        let rtf = "{\\rtf1\\ansi\\ansicpg1252\\cocoartf2761{\\fonttbl\\f0\\fswiss\\fcharset0 Helvetica;}\n"
+            + "{\\*\\listtable{\\list\\listtemplateid1\\listhybrid{\\listlevel\\levelnfc23{\\leveltext\\'01\\uc0\\u8226 ;}}{\\listname ;}\\listid1}}\n"
+            + "{\\*\\listoverridetable{\\listoverride\\listid1\\listoverridecount0\\ls1}}\n"
+            + "\\pard\\li720\\fi-360\\pardirnatural\\partightenfactor0\n"
+            + "\\ls1\\ilvl0\\cf0 {\\listtext\t\\uc0\\u8226 \t}First item\\\n"
+            + "{\\listtext\t\\uc0\\u8226 \t}Second item\\\n"
+            + "{\\listtext\t\\uc0\\u8226 \t}Third item}"
+        let list = paras(doc(rtf)).filter { $0.list != nil }
+        XCTAssertEqual(list.count, 3, "all three bullet items should be list members")
+        XCTAssertTrue(list.allSatisfy { $0.list?.marker == .bullet }, "each should be a bullet")
+        XCTAssertFalse(list.contains { $0.runs.map(\.text).joined().contains("\u{2022}") }, "bullet glyph must not leak into item text")
+    }
+
+    /// Same, ordered: the marker glyph "1." starts with a digit → .ordered.
+    func test_textEditStyle_orderedList_declaredOnlyOnFirstItem() {
+        let rtf = "{\\rtf1\\ansi\\ansicpg1252\\cocoartf2761{\\fonttbl\\f0\\fswiss\\fcharset0 Helvetica;}\n"
+            + "\\pard\\li720\\fi-360\\pardirnatural\\partightenfactor0\n"
+            + "\\ls1\\ilvl0\\cf0 {\\listtext\t1.\t}One\\\n"
+            + "{\\listtext\t2.\t}Two}"
+        let list = paras(doc(rtf)).filter { $0.list != nil }
+        XCTAssertEqual(list.count, 2)
+        XCTAssertTrue(list.allSatisfy { $0.list?.marker == .ordered })
+    }
+
     func test_table_multiParagraphCell_preservesAllParagraphs() {
         let d = doc("{\\rtf1 \\trowd\\cellx2000 \\intbl Line one\\par Line two\\cell\\row }")
         let tables = (d?.blocks ?? []).compactMap { if case .table(let t) = $0 { return t } else { return nil } }

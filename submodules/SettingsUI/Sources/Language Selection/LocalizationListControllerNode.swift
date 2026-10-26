@@ -406,7 +406,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             }
         }
         
-        let removeItem: (String) -> Void = { id in
+        let removeItem: (String) -> Void = { [weak self] id in
             let _ = context.engine.localization.removeSavedLocalization(languageCode: id).start()
             
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.LocalizationList())
@@ -678,9 +678,11 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         var listInsets = layout.insets(options: [.input])
         listInsets.top += navigationBarHeight
         if layout.size.width >= 320.0 {
-            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-            listInsets.left += inset
-            listInsets.right += inset
+            // iPhone Duo: a side with a side strip keeps the list 16pt clear of it; without a strip both
+            // margins are today's.
+            let margins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
+            listInsets.left += margins.left
+            listInsets.right += margins.right
         } else {
             listInsets.left += layout.safeInsets.left
             listInsets.right += layout.safeInsets.right
@@ -792,7 +794,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .url("https://t.me/setlanguage/\(info.languageCode)"), actionCompleted: { [weak self] in
+            let shareController = strongSelf.context.sharedContext.makeShareScreen(context: strongSelf.context, params: ShareControllerParams(subject: .url("https://t.me/setlanguage/\(info.languageCode)"), actionCompleted: { [weak self] in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)

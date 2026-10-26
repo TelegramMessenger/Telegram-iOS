@@ -150,4 +150,20 @@
     }];
 }
 
++ (MTSignal *)probeDatacenterWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId timeout:(NSTimeInterval)timeout {
+    MTSocksProxySettings *proxySettings = context.apiEnvironment.socksProxySettings;
+    NSArray<MTDatacenterAddress *> *addresses = [MTDiscoverConnectionSignals probeAddressesForAddressList:[context addressSetForDatacenterWithId:datacenterId].addressList media:false isProxy:proxySettings != nil proxySettings:proxySettings];
+    if (addresses.count == 0) {
+        return [MTSignal single:@false];
+    }
+    NSMutableArray *attempts = [[NSMutableArray alloc] init];
+    for (MTDatacenterAddress *address in addresses) {
+        [attempts addObject:[[[MTDiscoverConnectionSignals tcpConnectionWithContext:context datacenterId:datacenterId address:address] then:[MTSignal single:@true]] catch:^MTSignal *(__unused id error) {
+            return [MTSignal complete];
+        }]];
+    }
+    MTSignal *answered = [[[[MTSignal mergeSignals:attempts] take:1] then:[MTSignal single:@false]] take:1];
+    return [answered timeout:timeout onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal single:@false]];
+}
+
 @end

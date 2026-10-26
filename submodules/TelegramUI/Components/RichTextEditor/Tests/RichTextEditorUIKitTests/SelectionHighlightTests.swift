@@ -111,7 +111,7 @@ final class SelectionHighlightTests: XCTestCase {
         // Smoke: with a range selection set, the overlay's draw path executes without crashing and the
         // overlay is wired to the canvas.
         let c = canvas([.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hello")]))])
-        c.anchor = c.boxes[0].textStart; c.head = c.boxes[0].textStart + 5
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart + 5)
         let renderer = UIGraphicsImageRenderer(size: c.bounds.size)
         _ = renderer.image { ctx in c.drawNonTableSelectionHighlight(in: ctx.cgContext) }
     }
@@ -127,10 +127,10 @@ final class SelectionHighlightTests: XCTestCase {
             c.setBlocks([.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "ab")]))], width: 320)
             c.frame = CGRect(x: 0, y: 0, width: 320, height: 200); c.layoutIfNeeded()
             c.simulateParentLayout()   // parent re-lays-out on the emoji insert's content-size notification, so the emoji view is placed
-            c.anchor = c.boxes[0].textStart + 1; c.head = c.anchor
+            c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 1)
             c.insertEmoji(id: "x", altText: nil)
             c.layoutIfNeeded()
-            if selected { c.anchor = c.boxes[0].textStart + 1; c.head = c.boxes[0].textStart + 2 } // cover the emoji
+            if selected { c.setSelectionForTesting(anchor: c.boxes[0].textStart + 1, head: c.boxes[0].textStart + 2) } // cover the emoji
             c.setNeedsDisplay(); c.layoutIfNeeded()
             let fmt = UIGraphicsImageRendererFormat(); fmt.opaque = false; fmt.scale = 1
             let image = UIGraphicsImageRenderer(bounds: c.bounds, format: fmt).image { ctx in
@@ -163,13 +163,13 @@ final class SelectionHighlightTests: XCTestCase {
         c.setBlocks([.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hello world")]))], width: 320)
         c.layoutIfNeeded()
         guard c.becomeFirstResponder() else { return XCTFail("canvas must become first responder") }
-        c.anchor = c.boxes[0].textStart; c.head = c.boxes[0].textStart + 5   // select "hello"
+        c.setSelectionForTesting(anchor: c.boxes[0].textStart, head: c.boxes[0].textStart + 5)   // select "hello"
         c.refreshSelectionUI()
         XCTAssertFalse(c.startHandleView.isHidden, "start handle shows for a range")
         XCTAssertFalse(c.endHandleView.isHidden, "end handle shows for a range")
         XCTAssertFalse(c.startHandleView.frame.isEmpty)
         XCTAssertNotEqual(c.startHandleView.frame, c.endHandleView.frame, "the two handles sit at different endpoints")
-        c.anchor = c.head; c.refreshSelectionUI()                            // collapse
+        c.setSelectionForTesting(anchor: c.head, head: c.head); c.refreshSelectionUI()   // collapse
         XCTAssertTrue(c.startHandleView.isHidden, "handles hide for a collapsed selection")
         XCTAssertTrue(c.endHandleView.isHidden)
     }

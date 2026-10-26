@@ -24,6 +24,7 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 - (void)internalSetStatusBarStyle:(UIStatusBarStyle)style animated:(BOOL)animated;
 - (void)internalSetStatusBarHidden:(BOOL)hidden animation:(UIStatusBarAnimation)animation;
 - (UIWindow * _Nullable)internalGetKeyboard;
+- (UIWindow * _Nullable)internalGetKeyboardForScene:(UIWindowScene * _Nullable)scene;
 
 @end
 
@@ -103,6 +104,11 @@ void snapshotViewByDrawingInContext(UIView * _Nonnull view);
 
 @property (nonatomic) double lumaMin;
 @property (nonatomic) double lumaMax;
+@property (nonatomic) double glassBlurRadius;
+
++ (void)applyGlassBlurRadius:(double)radius toLayerTree:(CALayer * _Nonnull)layer depth:(int)depth;
+
+@property (class, nonatomic) double morphGlassBlurRadius;
 
 @end
 

@@ -92,10 +92,10 @@ final class DeleteAccountPhoneItem: ListViewItem, ItemListItem {
         self.updated = updated
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = DeleteAccountPhoneItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -108,13 +108,13 @@ final class DeleteAccountPhoneItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? DeleteAccountPhoneItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -132,7 +132,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let countryButton: ASButtonNode
+    private let countryButton: CountryButtonNode
     private let phoneBackground: ASImageNode
     private let phoneInputNode: PhoneInputNode
     
@@ -158,7 +158,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
-        self.countryButton = ASButtonNode()
+        self.countryButton = CountryButtonNode()
         
         self.phoneBackground = ASImageNode()
         self.phoneBackground.displaysAsynchronously = false
@@ -183,9 +183,8 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                 return false
             }
             if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode) {
-                let flagString = emojiFlagForISOCountryCode(country.id)
                 let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: item.strings) ?? country.name
-                strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
+                strongSelf.countryButton.setCountryTitle(countryId: country.id, name: localizedName, font: Font.regular(17.0), color: item.theme.list.itemPrimaryTextColor)
                 
                 let maskFont = Font.with(size: 17.0, design: .regular, traits: [.monospacedNumbers])
                 if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: item.theme.list.itemPlaceholderTextColor) }) {
@@ -283,7 +282,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
     func asyncLayout() -> (_ item: DeleteAccountPhoneItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var updatedCountryButtonBackground: UIImage?
             var updatedCountryButtonHighlightedBackground: UIImage?
             var updatedPhoneBackground: UIImage?
@@ -356,7 +355,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
@@ -380,10 +379,12 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 15.0, bottom: 4.0, right: 0.0)
                     
                     strongSelf.countryButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: 44.0 + 6.0))
-                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: 44.0), size: CGSize(width: params.width, height: 44.0))
+                    let leftShift = max(0.0, params.leftInset - params.rightInset)
+                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: leftShift, y: 44.0), size: CGSize(width: params.width - leftShift, height: 44.0))
                     
-                    let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0, y: 44.0), size: CGSize(width: 67.0, height: 44.0))
-                    let numberFrame = CGRect(origin: CGPoint(x: 92.0, y: 44.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 44.0))
+                    let rightShift = max(0.0, params.rightInset - params.leftInset)
+                    let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0 + leftShift, y: 44.0), size: CGSize(width: 67.0, height: 44.0))
+                    let numberFrame = CGRect(origin: CGPoint(x: 92.0 + leftShift, y: 44.0), size: CGSize(width: layout.size.width - 70.0 - 8.0 - leftShift - rightShift, height: 44.0))
                     let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 8.0)
                     
                     let phoneInputFrame = countryCodeFrame.union(numberFrame)

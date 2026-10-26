@@ -1,13 +1,13 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 
 private final class ManagedSynchronizeChatInputStateOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
-    var peerMediaNeeds: [PeerId: DisposableSet] = [:]
+    var peerMediaNeeds: [PeerId: MediaPreuploadNeeds] = [:]
 
     private let hasRunningOperations: ValuePromise<Bool>
     
@@ -51,32 +51,30 @@ private final class ManagedSynchronizeChatInputStateOperationsHelper {
         return (disposeOperations, beginOperations)
     }
     
-    func updatePeerMediaNeeds(peerId: PeerId, fileResources: [(Int64, TelegramMediaFile)], network: Network, postbox: Postbox, messageMediaPreuploadManager: MessageMediaPreuploadManager) {
-        // Add the current run's needs first, then release the previous run's, so a
-        // surviving resource never drops to zero holders (no needless cancel/restart);
-        // the manager's 1s grace covers ordering/handoff. A resource present last run
-        // but absent now is released here and, not re-added, is grace-cancelled.
-        let newSet = DisposableSet()
-        for (id, file) in fileResources {
-            let source: Signal<EngineMediaResource.ResourceData, NoError> = postbox.mediaBox.resourceData(file.resource)
-            |> map { data in
-                return EngineMediaResource.ResourceData(data)
-            }
-            newSet.add(messageMediaPreuploadManager.add(network: network, postbox: postbox, id: id, encrypt: false, tag: nil, source: source))
-        }
-        let previous = self.peerMediaNeeds[peerId]
-        if fileResources.isEmpty {
+    func updatePeerMediaNeeds(peerId: PeerId, media: [Media], network: Network, postbox: Postbox, messageMediaPreuploadManager: MessageMediaPreuploadManager) {
+        // The DURABLE holder: driven by the PERSISTED draft, so an upload outlives the editor
+        // screen, the chat controller, and leaving the chat entirely.
+        //
+        // Reconciliation itself (add before dispose, so a surviving medium never drops to zero
+        // holders) lives in MediaPreuploadNeeds, shared with the editor screens — one
+        // implementation, so the durable and transient holders cannot drift apart.
+        if media.isEmpty {
+            // Dropping the last reference releases every need it held.
             self.peerMediaNeeds.removeValue(forKey: peerId)
-        } else {
-            self.peerMediaNeeds[peerId] = newSet
+            return
         }
-        previous?.dispose()
+        let needs: MediaPreuploadNeeds
+        if let existing = self.peerMediaNeeds[peerId] {
+            needs = existing
+        } else {
+            needs = MediaPreuploadNeeds(network: network, postbox: postbox, manager: messageMediaPreuploadManager)
+            self.peerMediaNeeds[peerId] = needs
+        }
+        needs.update(peerId: peerId, media: media.map(EngineMedia.init))
     }
 
     func reset() -> [Disposable] {
-        for (_, set) in self.peerMediaNeeds {
-            set.dispose()
-        }
+        // Each MediaPreuploadNeeds releases its needs on deinit.
         self.peerMediaNeeds.removeAll()
         let disposables = Array(self.operationDisposables.values)
         self.operationDisposables.removeAll()
@@ -165,16 +163,14 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
         inputState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
     }
 
-    var localFileResources: [(Int64, TelegramMediaFile)] = []
+    var draftMedia: [Media] = []
     if case let .instantPage(page) = inputState?.content {
-        for (_, media) in page.media {
-            if let file = media as? TelegramMediaFile, let resourceId = localIdForResource(file.resource) {
-                localFileResources.append((resourceId, file))
-            }
+        for (_, media) in page.rawMedia where isPreuploadableMedia(media) {
+            draftMedia.append(media)
         }
     }
     helper.with { helperValue in
-        helperValue.updatePeerMediaNeeds(peerId: peerId, fileResources: localFileResources, network: network, postbox: postbox, messageMediaPreuploadManager: messageMediaPreuploadManager)
+        helperValue.updatePeerMediaNeeds(peerId: peerId, media: draftMedia, network: network, postbox: postbox, messageMediaPreuploadManager: messageMediaPreuploadManager)
     }
 
     if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
@@ -207,34 +203,14 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             
             var replyToPeer: Api.InputPeer?
             var discard = false
-            if replySubject.messageId.peerId != peerId {
+            if outgoingReplyRequiresExplicitPeer(destinationPeer: peer, destinationThreadId: threadId, replyMessageId: replySubject.messageId, replyThreadId: transaction.getMessage(replySubject.messageId)?.threadId) {
                 replyToPeer = transaction.getPeer(replySubject.messageId.peerId).flatMap(apiInputPeer)
                 if replyToPeer == nil {
                     discard = true
                 }
             }
             
-            var quoteText: String?
-            var quoteEntities: [Api.MessageEntity]?
-            var quoteOffset: Int32?
-            if let replyQuote = replySubject.quote {
-                quoteText = replyQuote.text
-                quoteOffset = replyQuote.offset.flatMap { Int32(clamping: $0) }
-                
-                if !replyQuote.entities.isEmpty {
-                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                    for entity in replyQuote.entities {
-                        for associatedPeerId in entity.associatedPeerIds {
-                            if associatedPeers[associatedPeerId] == nil {
-                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                                    associatedPeers[associatedPeerId] = associatedPeer
-                                }
-                            }
-                        }
-                    }
-                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
-                }
-            }
+            let quoteFields = apiReplyQuoteFields(replySubject.quote, peer: { transaction.getPeer($0) })
             
             var replyTodoItemId: Int32?
             var replyPollOption: Buffer?
@@ -250,15 +226,7 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             if replyToPeer != nil {
                 innerFlags |= 1 << 1
             }
-            if quoteText != nil {
-                innerFlags |= 1 << 2
-            }
-            if quoteEntities != nil {
-                innerFlags |= 1 << 3
-            }
-            if quoteOffset != nil {
-                innerFlags |= 1 << 4
-            }
+            innerFlags |= quoteFields.flags
             if let _ = replyTodoItemId {
                 innerFlags |= 1 << 6
             }
@@ -266,14 +234,14 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 innerFlags |= 1 << 7
             }
             if !discard {
-                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
+                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteFields.text, quoteEntities: quoteFields.entities, quoteOffset: quoteFields.offset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption, quoteRich: quoteFields.rich))
             }
         } else if let topMsgId {
             flags |= 1 << 0
             
             var innerFlags: Int32 = 0
             innerFlags |= 1 << 0
-            replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+            replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
         } else if let monoforumPeerId {
             flags |= 1 << 0
             replyTo = .inputReplyToMonoForum(.init(monoforumPeerId: monoforumPeerId))

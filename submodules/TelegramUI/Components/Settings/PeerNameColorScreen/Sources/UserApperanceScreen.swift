@@ -370,10 +370,6 @@ final class UserAppearanceScreenComponent: Component {
         private func updateScrolling(transition: ComponentTransition) {
             let navigationAlphaDistance: CGFloat = 16.0
             let navigationAlpha: CGFloat = max(0.0, min(1.0, self.scrollView.contentOffset.y / navigationAlphaDistance))
-            if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
-                navigationBar.backgroundNode.alpha = 0.0
-                navigationBar.stripeNode.alpha = 0.0
-            }
             
             var scrolledUp = false
             if navigationAlpha < 0.5 {
@@ -532,7 +528,11 @@ final class UserAppearanceScreenComponent: Component {
                     return
                 }
                 
-                let proceed: () -> Void = {
+                let proceed: () -> Void = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+
                     self.isApplyingSettings = true
                     self.state?.updated()
                     
@@ -626,7 +626,7 @@ final class UserAppearanceScreenComponent: Component {
                     let _ = (self.starsTopUpOptionsPromise.get()
                     |> filter { $0 != nil }
                     |> take(1)
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller] options in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller, starsContext] options in
                         guard let self, let controller else {
                             return
                         }
@@ -1194,10 +1194,13 @@ final class UserAppearanceScreenComponent: Component {
             
             let bottomContentInset: CGFloat = 24.0
             let bottomInset: CGFloat = 8.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
             let sectionSpacing: CGFloat = 32.0
             
-            let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
+            let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset - rightSideInset, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             
             var contentHeight: CGFloat = 0.0
                          
@@ -1238,10 +1241,10 @@ final class UserAppearanceScreenComponent: Component {
                             nameDisplayOrder: presentationData.nameDisplayOrder,
                             showBackground: true
                         ),
-                        params: ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
+                        params: ListViewItemLayoutParams(width: availableSize.width - sideInset - rightSideInset, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                     )))),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 let profilePreviewFrame = CGRect(origin: CGPoint(x: sideInset, y: environment.navigationHeight + 12.0), size: profilePreviewSize)
                 if let profilePreviewView = self.profilePreview.view {
@@ -1368,7 +1371,7 @@ final class UserAppearanceScreenComponent: Component {
                         extendsItemHighlightToSection: false
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 let profileColorSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: profileColorSectionSize)
                 if let profileColorSectionView = self.profileColorSection.view {
@@ -1419,7 +1422,7 @@ final class UserAppearanceScreenComponent: Component {
                         extendsItemHighlightToSection: true
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 
                 var displayResetProfileColor = resolvedState.profileColor != nil || resolvedState.backgroundFileId != nil
@@ -1532,7 +1535,7 @@ final class UserAppearanceScreenComponent: Component {
                     )),
                     environment: {},
                     forceUpdate: forceGiftsUpdate,
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
                 )
                 let giftsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: giftsSectionSize)
                 if let giftsSectionView = self.profileGiftsSection.view {
@@ -1618,10 +1621,10 @@ final class UserAppearanceScreenComponent: Component {
                             nameDisplayOrder: presentationData.nameDisplayOrder,
                             messageItems: [messageItem]
                         ),
-                        params: ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
+                        params: ListViewItemLayoutParams(width: availableSize.width - sideInset - rightSideInset, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                     )))),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 let namePreviewFrame = CGRect(origin: CGPoint(x: sideInset, y: environment.navigationHeight + 12.0), size: namePreviewSize)
                 if let namePreviewView = self.namePreview.view {
@@ -1700,7 +1703,7 @@ final class UserAppearanceScreenComponent: Component {
                         extendsItemHighlightToSection: false
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 let nameColorSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: nameColorSectionSize)
                 if let nameColorSectionView = self.nameColorSection.view {
@@ -1783,7 +1786,7 @@ final class UserAppearanceScreenComponent: Component {
                     )),
                     environment: {},
                     forceUpdate: forceGiftsUpdate,
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: .greatestFiniteMagnitude)
                 )
                 let giftsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: giftsSectionSize)
                 if let giftsSectionView = self.nameGiftsSection.view {
@@ -1798,7 +1801,11 @@ final class UserAppearanceScreenComponent: Component {
                     
             contentHeight += bottomContentInset
             
-            let buttonSideInset: CGFloat = environment.safeInsets.left + 36.0
+            // The button sits at the bottom, away from iPhone Duo's camera corner, so it spans a side strip there: a
+            // side's inset applies only where a corner block reaches its row. Elsewhere the safe insets, as before.
+            let buttonBandInsets = environment.sideInsets(forBandFrom: availableSize.height - bottomInset - environment.safeInsets.bottom - 52.0, to: availableSize.height, containerHeight: availableSize.height)
+            let buttonSideInset: CGFloat = buttonBandInsets.left + 36.0
+            let buttonRightSideInset: CGFloat = buttonBandInsets.right + 36.0
             var buttonTitle = environment.strings.ProfileColorSetup_ApplyStyle
             var buttonAttributedSubtitleString: NSMutableAttributedString?
             
@@ -1897,7 +1904,7 @@ final class UserAppearanceScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - buttonSideInset * 2.0, height: 52.0)
+                containerSize: CGSize(width: availableSize.width - buttonSideInset - buttonRightSideInset, height: 52.0)
             )
             contentHeight += buttonSize.height
             
@@ -1941,7 +1948,7 @@ final class UserAppearanceScreenComponent: Component {
             }
             
             self.topOverscrollLayer.backgroundColor = environment.theme.list.itemBlocksBackgroundColor.cgColor
-            self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: sideInset, y: -1000.0), size: CGSize(width: availableSize.width - sideInset * 2.0, height: 1340.0))
+            self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: sideInset, y: -1000.0), size: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1340.0))
             
             self.updateScrolling(transition: transition)
             
@@ -1952,11 +1959,14 @@ final class UserAppearanceScreenComponent: Component {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: availableSize.height - buttonFrame.minY, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false
+                    inVoiceOver: false,
+                    presentedInFormSheet: false
                 )
                 controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             }

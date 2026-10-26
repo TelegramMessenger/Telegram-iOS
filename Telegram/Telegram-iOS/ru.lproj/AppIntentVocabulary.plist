@@ -12,6 +12,38 @@
 				<string>Отправить Алисе сообщение в Telegram: я буду через 10 минут</string>
 			</array>
 		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INStartAudioCallIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Позвони Алисе через Telegram</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSearchForMessagesIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Прочитай мои непрочитанные сообщения в Telegram</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSetMessageAttributeIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Отметь мои сообщения в Telegram как прочитанные</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSearchCallHistoryIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Покажи мои пропущенные звонки в Telegram</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

@@ -252,7 +252,11 @@ final class LiveStreamSettingsScreenComponent: Component {
             self.state = state
             
             let topInset: CGFloat = 24.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let sectionSpacing: CGFloat = 32.0
             
             if themeUpdated {
@@ -335,7 +339,7 @@ final class LiveStreamSettingsScreenComponent: Component {
                         items: streamAsSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let streamAsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: streamAsSectionSize)
                 if let streamAsSectionView = self.streamAsSection.view as? ListSectionComponent.View {
@@ -645,7 +649,7 @@ final class LiveStreamSettingsScreenComponent: Component {
                         items: privacySectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let privacySectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: privacySectionSize)
                 if let privacySectionView = self.privacySection.view as? ListSectionComponent.View {
@@ -695,7 +699,7 @@ final class LiveStreamSettingsScreenComponent: Component {
                         items: externalStreamSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let externalStreamSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: externalStreamSectionSize)
                 if let externalStreamSectionView = self.externalStreamSection.view as? ListSectionComponent.View {
@@ -764,7 +768,7 @@ final class LiveStreamSettingsScreenComponent: Component {
                     items: settingsSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let settingsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: settingsSectionSize)
             if let settingsSectionView = self.settingsSection.view {
@@ -823,7 +827,7 @@ final class LiveStreamSettingsScreenComponent: Component {
                         items: paidMessageSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let paidMessageSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: paidMessageSectionSize)
                 if let paidMessageSectionView = self.paidMessageSection.view as? ListSectionComponent.View {
@@ -869,7 +873,7 @@ final class LiveStreamSettingsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 40.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - titleSize.width / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
@@ -901,7 +905,13 @@ final class LiveStreamSettingsScreenComponent: Component {
                 environment: {},
                 containerSize: barButtonSize
             )
-            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            let cancelButtonFrame: CGRect
+            if let sideColumnFrame = environment.sideColumnNavigationButtonFrame {
+                // iPhone Duo: the close button goes in the side strip, as every screen's back / close does.
+                cancelButtonFrame = CGRect(origin: CGPoint(x: sideColumnFrame.midX - cancelButtonSize.width / 2.0, y: sideColumnFrame.midY - cancelButtonSize.height / 2.0), size: cancelButtonSize)
+            } else {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            }
             if let cancelButtonView = self.cancelButton.view {
                 if cancelButtonView.superview == nil {
                     self.addSubview(cancelButtonView)
@@ -947,6 +957,9 @@ final class LiveStreamSettingsScreenComponent: Component {
                 
                 contentHeight += environment.safeInsets.bottom
             } else {
+                // The bottom button spans iPhone Duo's side strip and keeps clear only of a corner block at the bottom (centred
+                // on the band at the full width less 60pt it ran past the screen edge). Equal insets keep the old geometry.
+                let actionButtonInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? environment.bottomEdgeSideInsets() : (0.0, 0.0)
                 let actionButtonSize = self.actionButton.update(
                     transition: transition,
                     component: AnyComponent(
@@ -980,11 +993,12 @@ final class LiveStreamSettingsScreenComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - 30.0 * 2.0, height: 52.0)
+                    containerSize: CGSize(width: availableSize.width - 30.0 * 2.0 - actionButtonInsets.left - actionButtonInsets.right, height: 52.0)
                 )
                 
                 let bottomPanelHeight = 10.0 + environment.safeInsets.bottom + actionButtonSize.height
-                let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - actionButtonSize.width) / 2.0), y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
+                let actionButtonCenterX: CGFloat = actionButtonInsets.left + (availableSize.width - actionButtonInsets.left - actionButtonInsets.right) / 2.0
+                let actionButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(actionButtonCenterX - actionButtonSize.width / 2.0), y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
                 if let actionButtonView = self.actionButton.view {
                     if actionButtonView.superview == nil {
                         self.addSubview(actionButtonView)

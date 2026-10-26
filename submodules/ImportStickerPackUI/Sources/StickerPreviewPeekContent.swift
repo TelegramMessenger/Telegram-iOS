@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -34,7 +35,7 @@ final class StickerPreviewPeekContent: PeekControllerContent {
     }
     
     func node() -> PeekControllerContentNode & ASDisplayNode {
-        return StickerPreviewPeekContentNode(account: self.context.account, item: self.item)
+        return StickerPreviewPeekContentNode(account: self.context.account, item: self.item, lottieSettings: self.context.lottieRenderingSettings)
     }
     
     func topAccessoryNode() -> ASDisplayNode? {
@@ -66,7 +67,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
     
     private let _ready = Promise<Bool>()
     
-    init(account: Account, item: ImportStickerPack.Sticker) {
+    init(account: Account, item: ImportStickerPack.Sticker, lottieSettings: LottieRenderingSettings) {
         self.account = account
         self.item = item
         
@@ -77,7 +78,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             case let .image(data):
                 self.imageNode.image = UIImage(data: data)
             case .animation, .video:
-                let animationNode = DefaultAnimatedStickerNodeImpl()
+                let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
                 self.animationNode = animationNode
                 let dimensions = PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))

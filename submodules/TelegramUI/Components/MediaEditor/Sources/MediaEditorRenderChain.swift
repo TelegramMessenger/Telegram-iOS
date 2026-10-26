@@ -102,7 +102,7 @@ final class MediaEditorRenderChain {
                 if let value = value as? TintValue {
                     if value.color != .clear {
                         let (red, green, blue, _) = value.color.components
-                        self.adjustmentsPass.adjustments.shadowsTintColor = simd_float3(Float(red), Float(green), Float(blue))
+                        self.adjustmentsPass.adjustments.highlightsTintColor = simd_float3(Float(red), Float(green), Float(blue))
                         self.adjustmentsPass.adjustments.highlightsTintIntensity = value.intensity
                     } else {
                         self.adjustmentsPass.adjustments.highlightsTintIntensity = 0.0

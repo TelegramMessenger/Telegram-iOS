@@ -108,14 +108,17 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         let width = size.width
         var panelHeight: CGFloat = 44.0 + bottomInset + contentInset
         if !self.textNode.isHidden {
-            let sideInset: CGFloat = leftInset + 8.0
+            // Each side keeps its own inset (they differ beside iPhone Duo's side strip). A long caption can rise to the
+            // strip's corner block, so it keeps the screen's insets, which the buttons at the bottom leave out.
+            let captionInsets = self.screenSideInsets ?? (leftInset, rightInset)
+            let sideInset: CGFloat = captionInsets.left + 8.0
             let topInset: CGFloat = 0.0
             let bottomInset: CGFloat = 0.0
-            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset - captionInsets.right - 8.0, height: CGFloat.greatestFiniteMagnitude))
             
             var x = sideInset
             if let hasRTL = self.textNode.cachedLayout?.hasRTL, hasRTL {
-                x = width - rightInset - 8.0 - textSize.width
+                x = width - captionInsets.right - 8.0 - textSize.width
             }
             
             panelHeight += textSize.height + topInset + bottomInset
@@ -145,7 +148,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func actionButtonPressed() {
         if let shareMedia = self.shareMedia {
-            self.controllerInteraction?.presentController(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .media(shareMedia, nil), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false)), nil)
+            self.controllerInteraction?.presentController(self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .media(shareMedia, nil), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false)), nil)
         }
     }
 }

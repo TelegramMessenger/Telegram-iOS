@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -196,13 +197,15 @@ public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
     
     var implicitContentUpdate: Bool { get set }
     
-    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
-    func update(rect: CGRect, within containerSize: CGSize, delay: Double, transition: ContainedViewLayoutTransition)
-    func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
-    func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator)
-    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double)
-    func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat)
-    
+    // No absolute-rect surface. A portal view mirrors its source, so a bubble background follows the
+    // wallpaper without being told where it is or how far it just travelled. The `update(rect:within:)`
+    // overloads and `offset`/`offsetSpring` that used to live here existed only for the pre-portal
+    // `contentsRect` implementation.
+    //
+    // NOTE `BubbleBackgroundNodeImpl` keeps its own `update(rect:within:transition:)` as a concrete
+    // method: `WallpaperBackgroundNodeImpl` renders three of them OFF-SCREEN as the portal sources, and
+    // that call is what sets the `contentsRect` each source draws. It is not part of this protocol
+    // because no bubble consumes it.
     func reloadBindings()
 }
 
@@ -470,7 +473,61 @@ final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOverlayLayer
     }
     
     private static var cachedComposedImage: (size: CGSize, patternContentImage: UIImage, backgroundImageHash: String, image: UIImage)?
-    
+
+    /// Equivalent to stretching `backgroundImage` to `size` and drawing `patternImage` over it with
+    /// `.softLight` at `opacity` — the composition this layer has always produced — but with the blend
+    /// run by `composeSoftLightOverBackground` instead of CoreGraphics.
+    ///
+    /// Returns nil if any step is unavailable, so the caller falls back to the CoreGraphics path.
+    private static func composeSoftLightImage(size: CGSize, scale: CGFloat, backgroundImage: UIImage, patternImage: UIImage, opacity: Float) -> UIImage? {
+        guard let backgroundCgImage = backgroundImage.cgImage, let patternCgImage = patternImage.cgImage else {
+            return nil
+        }
+        guard let output = DrawingContext(size: size, scale: scale, opaque: true, clear: false) else {
+            return nil
+        }
+        // TRANSPARENT and CLEARED, both load-bearing. The pattern is a mask drawn over a `.clear`
+        // background (WallpaperResources.swift builds it with `clear: true` and no `opaque:`), so its
+        // alpha carries which pixels participate in the blend at all. Composing it into an opaque
+        // buffer throws that away and leaves the untouched regions reading whatever `malloc` returned.
+        guard let patternBuffer = DrawingContext(size: size, scale: scale, opaque: false, clear: true) else {
+            return nil
+        }
+
+        let pixelWidth = Int(output.scaledSize.width)
+        let pixelHeight = Int(output.scaledSize.height)
+        guard pixelWidth > 0, pixelHeight > 0 else {
+            return nil
+        }
+
+        // The gradient stretch stays on CoreGraphics deliberately. `vImageScale_ARGB8888` does it 5.5x
+        // faster, but its resampler is not CoreGraphics' — measured against this exact pipeline it moved
+        // the composed result by up to 5/255 (mean 0.46), which is the only term that was visible. The
+        // blend below is within 1/255, so keeping this draw makes the whole compose indistinguishable
+        // from what it replaces.
+        let rect = CGRect(origin: CGPoint(), size: size)
+        output.withFlippedContext { context in
+            context.draw(backgroundCgImage, in: rect)
+        }
+        patternBuffer.withFlippedContext { context in
+            context.draw(patternCgImage, in: rect)
+        }
+
+        // Lives in GradientBackground because that module is built `-O` even in debug. See the comment
+        // on the function: here it would be roughly 300x slower with no build error.
+        composeSoftLightOverBackground(
+            destination: output.bytes,
+            destinationBytesPerRow: output.bytesPerRow,
+            pattern: patternBuffer.bytes,
+            patternBytesPerRow: patternBuffer.bytesPerRow,
+            width: pixelWidth,
+            height: pixelHeight,
+            opacity: opacity
+        )
+
+        return output.generateImage()
+    }
+
     private func updateComposedImage() {
         switch self.softlightMode {
         case .always, .never:
@@ -497,12 +554,19 @@ final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOverlayLayer
         let startTime = CFAbsoluteTimeGetCurrent()
         #endif
         
-        let composedContentImage = generateImage(size, contextGenerator: { size, context in
+        let compositionScale = min(UIScreenScale, patternContentImage.scale)
+        let composedContentImage = EffectImageLayer.composeSoftLightImage(
+            size: size,
+            scale: compositionScale,
+            backgroundImage: backgroundImage,
+            patternImage: patternContentImage,
+            opacity: self.compositionOpacity
+        ) ?? generateImage(size, contextGenerator: { size, context in
             context.draw(backgroundImage.cgImage!, in: CGRect(origin: CGPoint(), size: size))
             context.setBlendMode(.softLight)
             context.setAlpha(CGFloat(self.compositionOpacity))
             context.draw(patternContentImage.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-        }, opaque: true, scale: min(UIScreenScale, patternContentImage.scale))
+        }, opaque: true, scale: compositionScale)
         self.composedContentImage = composedContentImage
         
         #if DEBUG
@@ -995,6 +1059,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
     let patternImageLayer: EffectImageLayer
     private let dimLayer: SimpleLayer
     private var isGeneratingPatternImage: Bool = false
+    private var patternImageGeneration: UInt64 = 0
 
     private var validLayout: (CGSize, WallpaperDisplayMode)?
     private var wallpaper: TelegramWallpaper?
@@ -1031,6 +1096,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
     private struct ValidPatternGeneratedImage: Equatable {
         let wallpaper: TelegramWallpaper
         let size: CGSize
+        let displayMode: WallpaperDisplayMode
         let patternColor: UInt32
         let backgroundColor: UInt32
         let invertPattern: Bool
@@ -1042,6 +1108,9 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                 return false
             }
             if lhs.size != rhs.size {
+                return false
+            }
+            if lhs.displayMode != rhs.displayMode {
                 return false
             }
             if lhs.patternColor != rhs.patternColor {
@@ -1228,6 +1297,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         if self.wallpaper == wallpaper && self.starGift == starGift {
             return
         }
+        self.invalidatePatternImageGeneration()
         let previousWallpaper = self.wallpaper
         let previousStarGift = self.starGift
         
@@ -1420,6 +1490,12 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         self.isSettingUpWallpaper = true
     }
 
+    private func invalidatePatternImageGeneration() {
+        self.patternImageGeneration &+= 1
+        self.validPatternGeneratedImage = nil
+        self.isGeneratingPatternImage = false
+    }
+
     private func updatePatternPresentation() {
         guard let wallpaper = self.wallpaper else {
             return
@@ -1472,6 +1548,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         default:
             self.patternImageDisposable.set(nil)
             self.symbolImageDisposable.set(nil)
+            self.invalidatePatternImageGeneration()
             self.validPatternImage = nil
             self.patternImageLayer.isHidden = true
             self.patternImageLayer.fillWithColorUntilLoaded = nil
@@ -1527,7 +1604,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
             }
 
             if updated {
-                self.validPatternGeneratedImage = nil
+                self.invalidatePatternImageGeneration()
                 self.validPatternImage = nil
 
                 if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper && cachedValidPatternImage.generated.invertPattern == invertPattern && cachedValidPatternImage.starGift == starGift && cachedValidPatternImage.modelRectIndex == modelRectIndex {
@@ -1563,8 +1640,8 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                             return
                         }
                         if let (generator, rects) = generator {
+                            self.invalidatePatternImageGeneration()
                             self.validPatternImage = ValidPatternImage(wallpaper: wallpaper, invertPattern: invertPattern, rects: rects, starGift: starGift, symbolImage: symbolImage, modelRectIndex: modelRectIndex, generate: generator)
-                            self.validPatternGeneratedImage = nil
                             if let (size, displayMode) = self.validLayout {
                                 self.loadPatternForSizeIfNeeded(size: size, displayMode: displayMode, transition: .immediate)
                             } else {
@@ -1596,9 +1673,11 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                 self.patternImageLayer.backgroundColor = nil
             }
 
-            let updatedGeneratedImage = ValidPatternGeneratedImage(wallpaper: validPatternImage.wallpaper, size: size, patternColor: patternColor.rgb, backgroundColor: patternBackgroundColor.rgb, invertPattern: invertPattern, starGift: starGift, modelRectIndex: modelRectIndex)
+            let updatedGeneratedImage = ValidPatternGeneratedImage(wallpaper: validPatternImage.wallpaper, size: size, displayMode: displayMode, patternColor: patternColor.rgb, backgroundColor: patternBackgroundColor.rgb, invertPattern: invertPattern, starGift: starGift, modelRectIndex: modelRectIndex)
             
             if self.validPatternGeneratedImage != updatedGeneratedImage {
+                // Cached and synchronous replacements must also reject pending renders for an older layout.
+                self.invalidatePatternImageGeneration()
                 self.validPatternGeneratedImage = updatedGeneratedImage
                 if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
                     self.patternImageLayer.suspendCompositionUpdates = true
@@ -1627,11 +1706,12 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
                             self.updatePatternPresentation()
                         }
                     } else {
+                        let generation = self.patternImageGeneration
                         self.isGeneratingPatternImage = true
                         DispatchQueue.global(qos: .userInteractive).async { [weak self] in
                             let image = validPatternImage.generate(patternArguments)?.generateImage()
                             Queue.mainQueue().async {
-                                guard let strongSelf = self else {
+                                guard let strongSelf = self, strongSelf.patternImageGeneration == generation else {
                                     return
                                 }
                                 strongSelf.isGeneratingPatternImage = false
@@ -1678,7 +1758,7 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
             if let current = self.modelStickerNode {
                 modelStickerNode = current
             } else {
-                modelStickerNode = DefaultAnimatedStickerNodeImpl()
+                modelStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
                 modelStickerNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: modelFile.resource, isVideo: false), width: 96, height: 96, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 modelStickerNode.visibility = true
                 self.modelStickerNode = modelStickerNode
@@ -1905,18 +1985,12 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         return false
     }
     
-    public func makeLegacyBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
-        let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
-        node.updateContents()
-        return node
-    }
-
     public func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
         if !self.hasBubbleBackground(for: type) {
             return nil
         }
         
-        var sourceView: PortalSourceView?
+        let sourceView: PortalSourceView?
         switch type {
         case .free:
             sourceView = self.freeBackgroundPortalSourceView
@@ -1925,15 +1999,28 @@ public final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgrou
         case .outgoing:
             sourceView = self.outgoingBackgroundPortalSourceView
         }
-        
-        if let sourceView, let portalView = PortalView(matchPosition: true) {
-            sourceView.addPortal(view: portalView)
-            let node = WallpaperBackgroundNodeImpl.BubbleBackgroundPortalNodeImpl(portalView: portalView)
-            return node
-        } else {
-            let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
-            return node
+
+        // Portal only. This used to fall back to `BubbleBackgroundNodeImpl`, the pre-portal
+        // implementation that renders a `contentsRect` window onto the shared wallpaper and therefore
+        // positions itself entirely from `update(rect:within:)` / `offset(...)` — the plumbing every
+        // consumer is being relieved of. Returning it without that plumbing would draw the whole
+        // wallpaper squashed into each bubble, with no counter-motion while the bubble travels.
+        //
+        // A nil return is already a supported answer here: it is what a `hasBubbleBackground` miss
+        // returns, and every caller degrades to the flat themed bubble colour.
+        //
+        // Neither half of this guard can fail on a shipping OS. The three portal source views are
+        // created unconditionally in `init` under `if #available(iOS 12.0, *)`, which is always true at
+        // this deployment target. `PortalView(matchPosition:)` fails only when `makePortalView`
+        // (UIKitUtils.m:211) cannot resolve the PRIVATE `_UIPortalView` class — so the fallback removed
+        // here was the private-API safety net, and its loss is visible only on a future OS where Apple
+        // drops that class. Bubbles would then render flat rather than falling back to the pre-portal
+        // `contentsRect` implementation.
+        guard let sourceView, let portalView = PortalView(matchPosition: true) else {
+            return nil
         }
+        sourceView.addPortal(view: portalView)
+        return WallpaperBackgroundNodeImpl.BubbleBackgroundPortalNodeImpl(portalView: portalView)
     }
     
     public func makeFreeBackground() -> PortalView? {

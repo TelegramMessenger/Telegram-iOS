@@ -71,6 +71,8 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
 @property (nonatomic, weak) PGPhotoEditor *photoEditor;
 @property (nonatomic, weak) TGPhotoEditorPreviewView *previewView;
 
+- (UIImage *)currentResultImageInDrawingCoordinates;
+
 @end
 
 @implementation TGPhotoDrawingController
@@ -110,7 +112,7 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
             if (strongSelf == nil)
                 return nil;
             
-            return [strongSelf.photoEditor currentResultImage];
+            return [strongSelf currentResultImageInDrawingCoordinates];
         };
         _interfaceController.updateVideoPlayback = ^(bool play) {
             __strong TGPhotoDrawingController *strongSelf = weakSelf;
@@ -126,6 +128,65 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
         _keyboardWillChangeFrameProxy = [[TGObserverProxy alloc] initWithTarget:self targetSelector:@selector(keyboardWillChangeFrame:) name:UIKeyboardWillChangeFrameNotification];
     }
     return self;
+}
+
+- (UIImage *)currentResultImageInDrawingCoordinates
+{
+    if (_drawingView == nil || self.previewView == nil)
+        return nil;
+    
+    UIImage *currentImage = [self.photoEditor currentResultImage];
+    if (currentImage == nil || currentImage.size.width < FLT_EPSILON || currentImage.size.height < FLT_EPSILON)
+        return nil;
+    
+    CGSize canvasSize = TGScaleToSize(self.photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
+    UIView *drawingView = _drawingView;
+    TGPhotoEditorPreviewView *previewView = self.previewView;
+    if (canvasSize.width < FLT_EPSILON || canvasSize.height < FLT_EPSILON || CGRectIsEmpty(drawingView.bounds) || CGRectIsEmpty(previewView.bounds))
+        return nil;
+    
+    CGFloat drawingScale = drawingView.bounds.size.width / canvasSize.width;
+    if (drawingScale < FLT_EPSILON)
+        return nil;
+    
+    CGPoint previewOrigin = previewView.bounds.origin;
+    CGPoint previewX = CGPointMake(CGRectGetMaxX(previewView.bounds), CGRectGetMinY(previewView.bounds));
+    CGPoint previewY = CGPointMake(CGRectGetMinX(previewView.bounds), CGRectGetMaxY(previewView.bounds));
+    
+    CGPoint canvasOrigin = [previewView convertPoint:previewOrigin toView:drawingView];
+    CGPoint canvasX = [previewView convertPoint:previewX toView:drawingView];
+    CGPoint canvasY = [previewView convertPoint:previewY toView:drawingView];
+    
+    canvasOrigin = CGPointMake(canvasOrigin.x / drawingScale, canvasOrigin.y / drawingScale);
+    canvasX = CGPointMake(canvasX.x / drawingScale, canvasX.y / drawingScale);
+    canvasY = CGPointMake(canvasY.x / drawingScale, canvasY.y / drawingScale);
+    
+    CGAffineTransform imageToCanvasTransform = CGAffineTransformMake(
+        (canvasX.x - canvasOrigin.x) / currentImage.size.width,
+        (canvasX.y - canvasOrigin.y) / currentImage.size.width,
+        (canvasY.x - canvasOrigin.x) / currentImage.size.height,
+        (canvasY.y - canvasOrigin.y) / currentImage.size.height,
+        canvasOrigin.x,
+        canvasOrigin.y
+    );
+    
+    UIGraphicsBeginImageContextWithOptions(canvasSize, true, 1.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    if (context == nil)
+    {
+        UIGraphicsEndImageContext();
+        return nil;
+    }
+    
+    CGContextSetFillColorWithColor(context, [UIColor blackColor].CGColor);
+    CGContextFillRect(context, CGRectMake(0.0f, 0.0f, canvasSize.width, canvasSize.height));
+    CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
+    CGContextConcatCTM(context, imageToCanvasTransform);
+    [currentImage drawInRect:CGRectMake(0.0f, 0.0f, currentImage.size.width, currentImage.size.height)];
+    
+    UIImage *resultImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return resultImage;
 }
 
 - (void)dealloc {

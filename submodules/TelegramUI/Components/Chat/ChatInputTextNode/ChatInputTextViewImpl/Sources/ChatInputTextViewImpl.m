@@ -129,6 +129,26 @@
     }
 }
 
+// Cut is Copy + delete. When the delegate writes the pasteboard itself (the chat panels store the
+// rich `private.telegramtext` + RTF representation and return false), UIKit's own cut would
+// overwrite that with plain text. So: let the delegate write, keep what it wrote, run UIKit's cut
+// for the deletion (its smart delete and its single "Undo Cut" step), then put the delegate's
+// items back. The items read here are the ones this process just wrote, so no paste prompt.
+- (void)cut:(id)sender {
+    if (_shouldCopy == nil || self.selectedRange.length == 0) {
+        [super cut:sender];
+        return;
+    }
+    if (_shouldCopy()) {
+        [super cut:sender];
+        return;
+    }
+    UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+    NSArray<NSDictionary<NSString *, id> *> *items = pasteboard.items;
+    [super cut:sender];
+    pasteboard.items = items;
+}
+
 - (void)paste:(id)sender {
     if (_shouldPaste == nil || _shouldPaste()) {
         [super paste:sender];
@@ -156,6 +176,9 @@
 }
 
 - (void)deleteBackward {
+    if (_shouldDeleteBackward && !_shouldDeleteBackward()) {
+        return;
+    }
     bool notify = self.text.length == 0;
     [super deleteBackward];
     if (notify) {

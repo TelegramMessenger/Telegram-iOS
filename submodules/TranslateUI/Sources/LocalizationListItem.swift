@@ -58,14 +58,14 @@ public class LocalizationListItem: ListViewItem, ItemListItem {
         self.removeItem = removeItem
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = LocalizationListItemNode()
-            var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-            if previousItem == nil && self.alwaysPlain {
-                neighbors.top = .sameSection(alwaysPlain: false)
+            var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
+            if neighbors.previous == nil && self.alwaysPlain {
+                itemNeighbors.top = .sameSection(alwaysPlain: false)
             }
-            let (layout, apply) = node.asyncLayout()(self, params, neighbors)
+            let (layout, apply) = node.asyncLayout()(self, params, itemNeighbors)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -78,17 +78,17 @@ public class LocalizationListItem: ListViewItem, ItemListItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? LocalizationListItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-                    if previousItem == nil && self.alwaysPlain {
-                        neighbors.top = .sameSection(alwaysPlain: false)
+                    var itemNeighbors = itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self))
+                    if neighbors.previous == nil && self.alwaysPlain {
+                        itemNeighbors.top = .sameSection(alwaysPlain: false)
                     }
-                    let (layout, apply) = makeLayout(self, params, neighbors)
+                    let (layout, apply) = makeLayout(self, params, itemNeighbors)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animation.isAnimated)
@@ -212,15 +212,15 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             var leftInset: CGFloat = params.leftInset
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             let subtitleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - max(0.0, params.rightInset - params.leftInset) - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - max(0.0, params.rightInset - params.leftInset) - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
@@ -261,6 +261,9 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
+                    var revealTopSeparatorIsHidden = false
+                    var revealBottomSeparatorIsHidden = false
+
                     strongSelf.item = item
                     strongSelf.layoutParams = (params, neighbors)
                     
@@ -318,27 +321,27 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     var hasBottomCorners = false
                     switch neighbors.top {
                         case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
+                            revealTopSeparatorIsHidden = true
                         default:
                             hasTopCorners = true
-                            strongSelf.topStripeNode.isHidden = hasCorners
+                            revealTopSeparatorIsHidden = hasCorners
                     }
                     let bottomStripeInset: CGFloat
                     switch neighbors.bottom {
                         case .sameSection(false):
                             bottomStripeInset = leftInset
-                            strongSelf.bottomStripeNode.isHidden = false
+                            revealBottomSeparatorIsHidden = false
                         default:
                             bottomStripeInset = 0.0
                             hasBottomCorners = true
-                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                            revealBottomSeparatorIsHidden = hasCorners
                     }
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight))
                     
@@ -378,12 +381,13 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel)), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
+                    strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: revealTopSeparatorIsHidden, bottomIsHidden: revealBottomSeparatorIsHidden)
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing.editable, item.removeItem != nil {
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
                     }
@@ -429,43 +433,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
-        super.setHighlighted(highlighted, at: point, animated: animated)
-        
-        if highlighted {
-            self.highlightedBackgroundNode.alpha = 1.0
-            if self.highlightedBackgroundNode.supernode == nil {
-                var anchorNode: ASDisplayNode?
-                if self.bottomStripeNode.supernode != nil {
-                    anchorNode = self.bottomStripeNode
-                } else if self.topStripeNode.supernode != nil {
-                    anchorNode = self.topStripeNode
-                } else if self.backgroundNode.supernode != nil {
-                    anchorNode = self.backgroundNode
-                }
-                if let anchorNode = anchorNode {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
-                } else {
-                    self.addSubnode(self.highlightedBackgroundNode)
-                }
-            }
-        } else {
-            if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                            }
-                        }
-                    })
-                    self.highlightedBackgroundNode.alpha = 0.0
-                } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
-                }
-            }
-        }
-    }
+
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)

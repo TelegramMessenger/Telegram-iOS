@@ -64,8 +64,15 @@ static int get_stream_rotation(const AVStream *stream) {
 }
 
 - (bool)openInputWithDirectFilePath:(NSString * _Nullable)directFilePath {
+    return [self openInputWithDirectFilePath:directFilePath ignoreEditList:false];
+}
+
+- (bool)openInputWithDirectFilePath:(NSString * _Nullable)directFilePath ignoreEditList:(bool)ignoreEditList {
     AVDictionary *options = nil;
     av_dict_set(&options, "usetoc", "1", 0);
+    if (ignoreEditList) {
+        av_dict_set(&options, "ignore_editlist", "1", 0);
+    }
     
     const char *url = "file";
     if (directFilePath) {

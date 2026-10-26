@@ -34,6 +34,11 @@ final class PeerInfoPaneWrapper {
         self.key = key
         self.node = node
     }
+
+    func removeFromContainer() {
+        self.node.removeFromSupernode()
+        self.node.parentController = nil
+    }
     
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         if let (currentSize, currentTopInset, currentSideInset, currentBottomInset, _, currentVisibleHeight, currentIsScrollingLockedAtTop, currentExpandProgress, currentNavigationHeight, currentPresentationData) = self.appliedParams {
@@ -397,6 +402,16 @@ private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGF
     return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
 }
 
+/// The chat the shared-media panes list, with the context holder to resolve it through. A user's
+/// profile opened from a channel's direct messages lists that channel's thread with the user, not
+/// the profile's own chat, and that thread gets a holder of its own.
+func peerInfoSharedMediaChatLocation(peerId: EnginePeer.Id, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, sharedMediaFromForumTopic: (EnginePeer.Id, Int64)?) -> (peerId: EnginePeer.Id, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) {
+    guard let sharedMediaFromForumTopic else {
+        return (peerId, chatLocation, chatLocationContextHolder)
+    }
+    return (sharedMediaFromForumTopic.0, .replyThread(message: peerInfoMonoforumThread(peerId: sharedMediaFromForumTopic.0, threadId: sharedMediaFromForumTopic.1)), Atomic(value: nil))
+}
+
 private final class PeerInfoPendingPane {
     let pane: PeerInfoPaneWrapper
     private var disposable: Disposable?
@@ -428,30 +443,9 @@ private final class PeerInfoPendingPane {
         externalDataUpdated: @escaping (ContainedViewLayoutTransition) -> Void,
         openShareLink: @escaping (String) -> Void
     ) {
-        var chatLocationPeerId = peerId
-        var chatLocation = chatLocation
-        var chatLocationContextHolder = chatLocationContextHolder
-        if let sharedMediaFromForumTopic {
-            chatLocationPeerId = sharedMediaFromForumTopic.0
-            chatLocation = .replyThread(message: ChatReplyThreadMessage(
-                peerId: sharedMediaFromForumTopic.0,
-                threadId: sharedMediaFromForumTopic.1,
-                channelMessageId: nil,
-                isChannelPost: false,
-                isForumPost: true,
-                isMonoforumPost: true,
-                maxMessage: nil,
-                maxReadIncomingMessageId: nil,
-                maxReadOutgoingMessageId: nil,
-                unreadCount: 0,
-                initialFilledHoles: IndexSet(),
-                initialAnchor: .automatic,
-                isNotAvailable: false
-            ))
-            chatLocationContextHolder = Atomic(value: nil)
-        }
+        let (chatLocationPeerId, chatLocation, chatLocationContextHolder) = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
         
-        var captureProtected = peerInfoIsCopyProtected(data: data)
+        var captureProtected = peerInfoIsCopyProtected(data: data, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
         let paneNode: PeerInfoPaneNode
         switch key {
         case .gifts:
@@ -467,7 +461,9 @@ private final class PeerInfoPendingPane {
                     }
                 }
             }
-            let giftPaneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, profileGiftsCollections: data.profileGiftsCollectionsContext!, profileGifts: data.profileGiftsContext!, canManage: canManage, canGift: canGift, initialGiftCollectionId: initialGiftCollectionId)
+            // The gifts' owner, the peer `profileGiftsContext` is keyed by: on a secret chat's
+            // profile that is the user, not the secret chat `peerId` names.
+            let giftPaneNode = PeerInfoGiftsPaneNode(context: context, peerId: data.peer?.id ?? peerId, chatControllerInteraction: chatControllerInteraction, profileGiftsCollections: data.profileGiftsCollectionsContext!, profileGifts: data.profileGiftsContext!, canManage: canManage, canGift: canGift, initialGiftCollectionId: initialGiftCollectionId)
             giftPaneNode.openShareLink = openShareLink
             paneNode = giftPaneNode
         case .stories, .storyArchive, .botPreview:
@@ -890,7 +886,11 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             guard let tab = key.tab else {
                 return
             }
-            Queue.mainQueue().after(0.15) {
+            Queue.mainQueue().after(0.15) { [weak self] in
+                guard let self else {
+                    return
+                }
+
                 self.didJustReorderTabs = true
                 let _ = (self.context.engine.peers.setMainProfileTab(peerId: self.peerId, tab: tab)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -913,6 +913,22 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         self.parentController?.presentInGlobalOverlay(contextController)
     }
     
+    /// iPhone Duo: the side strip on each side. The container (and the background it paints) stays full
+    /// width; the tabs and the panes are laid out between the strips.
+    var stripInsets: (left: CGFloat, right: CGFloat) = (0.0, 0.0)
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        // A touch in a strip lands on the container itself; the pane beside it takes it, so a drag there
+        // scrolls the pane rather than the profile.
+        if result === self.view, let currentParams = self.currentParams, let currentPane = self.currentPane, let forwardedPoint = peerInfoStripTouchForwardingPoint(point, containerWidth: currentParams.size.width, stripLeft: self.stripInsets.left, stripRight: self.stripInsets.right, paneFrame: currentPane.node.frame) {
+            if let paneResult = currentPane.node.view.hitTest(self.view.convert(forwardedPoint, to: currentPane.node.view), with: event) {
+                return paneResult
+            }
+        }
+        return result
+    }
+
     func update(size: CGSize, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?, areTabsHidden: Bool, disableTabSwitching: Bool, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let previousAvailablePanes = self.currentAvailablePanes
         let availablePanes = data?.availablePanes ?? []
@@ -977,7 +993,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         let tabsHeight: CGFloat = 40.0
         let effectiveTabsHeight: CGFloat = areTabsHidden ? 0.0 : (10.0 + tabsHeight + 10.0 + 6.0)
         
-        let paneFrame = CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: CGSize(width: size.width, height: topInset + size.height))
+        let paneFrame = CGRect(origin: CGPoint(x: self.stripInsets.left, y: -topInset), size: CGSize(width: size.width - self.stripInsets.left - self.stripInsets.right, height: topInset + size.height))
         
         var visiblePaneIndices: [Int] = []
         var requiredPendingKeys: [PeerInfoPaneKey] = []
@@ -1194,7 +1210,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         if let availablePanes = data?.availablePanes, let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey), let paneIndex = availablePanes.firstIndex(of: key), abs(paneIndex - currentIndex) <= 1 {
                         } else {
                             if let pane = strongSelf.currentPanes.removeValue(forKey: key) {
-                                pane.node.removeFromSupernode()
+                                pane.removeFromContainer()
                             }
                         }
                     }
@@ -1257,7 +1273,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         
         let tabsSideInset: CGFloat = sideInset + 16.0
         
-        let tabsContainerSize = CGSize(width: size.width - tabsSideInset * 2.0, height: tabsHeight)
+        let tabsContainerSize = CGSize(width: size.width - self.stripInsets.left - self.stripInsets.right - tabsSideInset * 2.0, height: tabsHeight)
         let tabsContainerEffectiveSize = self.tabsContainer.update(
             transition: ComponentTransition(transition),
             component: AnyComponent(HorizontalTabsComponent(
@@ -1371,7 +1387,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             containerSize: tabsContainerSize
         )
         
-        let tabContainerFrameOriginX = floorToScreenPixels((size.width - tabsContainerEffectiveSize.width) / 2.0)
+        let tabContainerFrameOriginX = self.stripInsets.left + floorToScreenPixels((size.width - self.stripInsets.left - self.stripInsets.right - tabsContainerEffectiveSize.width) / 2.0)
         let tabContainerFrame = CGRect(origin: CGPoint(x: tabContainerFrameOriginX, y: 10.0), size: tabsContainerEffectiveSize)
         
         transition.updateFrame(view: self.tabsBackgroundContainer, frame: tabContainerFrame)
@@ -1402,7 +1418,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         for (key, paneNode) in self.pendingPanes {
             if !availablePanes.contains(key) && self.pendingSwitchToPaneKey != key {
                 removeKeys.append(key)
-                paneNode.pane.node.removeFromSupernode()
+                paneNode.pane.removeFromContainer()
             }
         }
         for key in removeKeys {
@@ -1413,7 +1429,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         for (key, paneNode) in self.currentPanes {
             if !availablePanes.contains(key) && self.pendingSwitchToPaneKey != key {
                 removeKeys.append(key)
-                paneNode.node.removeFromSupernode()
+                paneNode.removeFromContainer()
             }
         }
         for key in removeKeys {
@@ -1454,11 +1470,11 @@ private final class TabsExtractedContentSource: ContextExtractedContentSource {
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -1475,7 +1491,7 @@ private final class TabsReferenceContentSource: ContextReferenceContentSource {
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .bottom
         )
     }

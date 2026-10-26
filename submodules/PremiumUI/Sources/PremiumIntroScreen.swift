@@ -1837,6 +1837,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             let availableWidth = context.availableSize.width
             let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
+            // iPhone Duo: the content is centered in the band between the side safe insets (one of them is the
+            // side strip). With equal insets this is the full width's center.
+            let bandCenterX = environment.safeInsets.left + (availableWidth - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             var size = CGSize(width: context.availableSize.width, height: 0.0)
             
             var topBackgroundColor = theme.list.plainBackgroundColor
@@ -1963,7 +1966,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 transition: .immediate
             )
             context.add(text
-                .position(CGPoint(x: size.width / 2.0, y: size.height + text.size.height / 2.0))
+                .position(CGPoint(x: bandCenterX, y: size.height + text.size.height / 2.0))
                 .appear(.default(alpha: true))
                 .disappear(.default(alpha: true))
             )
@@ -2072,7 +2075,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 }
                                 subtitle = "\(environment.strings.Gift_Options_Premium_Months(product.months)) • \(product.price)"
                             } else {
-                                //subtitle = product.price
                                 subtitle = "\(environment.strings.Gift_Options_Premium_Months(product.months)) • \(product.price)"
                             }
                         }
@@ -2123,7 +2125,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         transition: context.transition
                     )
                     context.add(optionsSection
-                        .position(CGPoint(x: availableWidth / 2.0, y: size.height + optionsSection.size.height / 2.0))
+                        .position(CGPoint(x: bandCenterX, y: size.height + optionsSection.size.height / 2.0))
                         .clipsToBounds(true)
                         .cornerRadius(26.0)
                     )
@@ -2140,7 +2142,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let textSideInset: CGFloat = 16.0
             
             let forceDark = context.component.forceDark
-            let layoutPerks = {
+            let layoutPerks = { [state] in
                 size.height += 8.0
                                 
                 var i = 0
@@ -2309,7 +2311,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(perksSection
-                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + perksSection.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: size.height + perksSection.size.height / 2.0))
                     .disappear(.default(alpha: true))
                 )
                 size.height += perksSection.size.height
@@ -2325,7 +2327,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 }
             }
             
-            let layoutBusinessPerks = {
+            let layoutBusinessPerks = { [state] in
                 size.height += 8.0
                 
                 let gradientColors: [UIColor] = [
@@ -2537,13 +2539,13 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(businessSection
-                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + businessSection.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: size.height + businessSection.size.height / 2.0))
                 )
                 size.height += businessSection.size.height
                 size.height += 23.0
             }
             
-            let layoutMoreBusinessPerks = {
+            let layoutMoreBusinessPerks = { [state] in
                 size.height += 8.0
     
                 let status = state.peer?.emojiStatus
@@ -2688,7 +2690,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(moreBusinessSection
-                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + moreBusinessSection.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: size.height + moreBusinessSection.size.height / 2.0))
                 )
                 size.height += moreBusinessSection.size.height
                 size.height += 23.0
@@ -2704,7 +2706,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 return (TelegramTextAttributes.URL, contents)
             })
             
-            let layoutAdsSettings = {
+            let layoutAdsSettings = { [state] in
                 size.height += 8.0
                 
                 var adsSettingsItems: [AnyComponentWithIdentity<Empty>] = []
@@ -2781,7 +2783,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(adsSettingsSection
-                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + adsSettingsSection.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: size.height + adsSettingsSection.size.height / 2.0))
                 )
                 size.height += adsSettingsSection.size.height
                 size.height += 23.0
@@ -2803,11 +2805,13 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 copyLink(link)
                             }
                         ),
-                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                        // Centred on the band, so measured within it beside iPhone Duo's side strip (strip-only, so
+                        // equal insets keep the width they had).
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - (environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left + environment.safeInsets.right : 0.0), height: 50.0),
                         transition: .immediate
                     )
                     context.add(linkButton
-                        .position(CGPoint(x: availableWidth / 2.0, y: size.height + linkButton.size.height / 2.0))
+                        .position(CGPoint(x: bandCenterX, y: size.height + linkButton.size.height / 2.0))
                         .disappear(.default(alpha: true))
                     )
                     size.height += linkButton.size.height
@@ -2873,7 +2877,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         transition: context.transition
                     )
                     context.add(infoBackground
-                        .position(CGPoint(x: size.width / 2.0, y: size.height + infoBackground.size.height / 2.0))
+                        .position(CGPoint(x: bandCenterX, y: size.height + infoBackground.size.height / 2.0))
                     )
                     context.add(infoText
                         .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + infoText.size.width / 2.0, y: size.height + textPadding + infoText.size.height / 2.0))
@@ -2920,7 +2924,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 }
                                 if let signal = signal {
                                     let _ = (signal
-                                    |> deliverOnMainQueue).start(next: { resolvedUrl in
+                                    |> deliverOnMainQueue).start(next: { [controller] resolvedUrl in
                                         context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { peer, navigation in
                                         }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
                                             controller?.push(c)
@@ -3032,10 +3036,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         var topContentOffset: CGFloat?
         var bottomContentOffset: CGFloat?
+        let scrollExternalState = ScrollComponent<ViewControllerComponentContainer.Environment>.ExternalState()
         
         var hasIdleAnimations = true
         
         var inProgress = false
+        var purchaseInFlight = false
+        var purchasePending = false
         
         private(set) var promoConfiguration: PremiumPromoConfiguration?
         
@@ -3214,8 +3221,40 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.preloadDisposableSet.dispose()
         }
         
+        private func resetPurchaseProgress() {
+            self.inProgress = false
+            self.purchaseInFlight = false
+            self.purchasePending = false
+            self.updateInProgress(false)
+        }
+
+        private func handlePurchaseError(_ error: InAppPurchaseManager.PurchaseError) {
+            Logger.shared.log("PremiumIntroScreen", "Purchase ended with error: \(error)")
+            self.resetPurchaseProgress()
+            self.updated(transition: .immediate)
+
+            let presentationData = self.screenContext.presentationData
+            let errorText: String?
+            switch error {
+            case .generic, .assignFailed, .tryLater:
+                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+            case .network:
+                errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
+            case .notAllowed:
+                errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
+            case .cantMakePayments:
+                errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
+            case .cancelled:
+                errorText = nil
+            }
+            if let errorText {
+                self.screenContext.context?.engine.accountData.addAppLogEvent(type: "premium.promo_screen_fail")
+                self.present(textAlertController(sharedContext: self.screenContext.sharedContext, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+            }
+        }
+
         func buy() {
-            guard !self.inProgress else {
+            guard !self.inProgress && !self.purchaseInFlight else {
                 return
             }
             
@@ -3287,133 +3326,118 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 context.engine.accountData.addAppLogEvent(type: "premium.promo_screen_accept")
             }
             
-            self.inProgress = true
-            self.updateInProgress(true)
-            self.updated(transition: .immediate)
-            
-            if let storeProduct = premiumProduct.storeProduct {
-                let purpose: AppStoreTransactionPurpose = isUpgrade ? .upgrade : .subscription
-                
-                let canPurchasePremium: Signal<Bool, NoError>
-                switch self.screenContext {
-                case let .accountContext(context):
-                    canPurchasePremium = context.engine.payments.canPurchasePremium(purpose: purpose)
-                case let .sharedContext(_, engine, _):
-                    canPurchasePremium = engine.payments.canPurchasePremium(purpose: purpose)
+            guard let storeProduct = premiumProduct.storeProduct else {
+                guard case let .accountContext(context) = self.screenContext,
+                      let navigationController = self.navigationController?(),
+                      !premiumProduct.option.botUrl.isEmpty else {
+                    self.handlePurchaseError(.generic)
+                    return
                 }
-                let _ = (canPurchasePremium
-                |> deliverOnMainQueue).start(next: { [weak self] available in
+                self.inProgress = true
+                self.updateInProgress(true)
+                self.updated(transition: .immediate)
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: premiumProduct.option.botUrl, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                Queue.mainQueue().after(3.0) { [weak self] in
                     guard let self else {
                         return
                     }
-                    if available {
-                        self.paymentDisposable.set((inAppPurchaseManager.buyProduct(storeProduct, purpose: purpose)
-                        |> deliverOnMainQueue).start(next: { [weak self] status in
-                            if let self, case .purchased = status {
-                                let activation: Signal<Never, AssignAppStoreTransactionError>
-                                if let context = self.screenContext.context {
-                                    activation = context.account.postbox.peerView(id: context.account.peerId)
-                                    |> castError(AssignAppStoreTransactionError.self)
-                                    |> take(until: { view in
-                                        if let peer = view.peers[view.peerId], peer.isPremium {
-                                            return SignalTakeAction(passthrough: false, complete: true)
-                                        } else {
-                                            return SignalTakeAction(passthrough: false, complete: false)
-                                        }
-                                    })
-                                    |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
-                                        return .never()
-                                    }
-                                    |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
-                                } else {
-                                    activation = .complete()
-                                }
-                                
-                                self.activationDisposable.set((activation
-                                |> deliverOnMainQueue).start(error: { [weak self] _ in
-                                    if let self {
-                                        self.inProgress = false
-                                        self.updateInProgress(false)
-                                        
-                                        self.updated(transition: .immediate)
-                                        
-                                        if let context = self.screenContext.context {
-                                            context.engine.accountData.addAppLogEvent(type: "premium.promo_screen_fail")
-                                        }
-                                        
-                                        let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                                        let alertController = textAlertController(sharedContext: self.screenContext.sharedContext, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                                        self.present(alertController)
-                                    }
-                                }, completed: { [weak self] in
-                                    guard let self else {
-                                        return
-                                    }
-                                    if let context = self.screenContext.context {
-                                        let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
-                                    }
-                                    self.inProgress = false
-                                    self.updateInProgress(false)
-                                    
-                                    self.isPremium = true
-                                    self.justBought = true
-                                    
-                                    self.updated(transition: .easeInOut(duration: 0.25))
-                                    self.completion()
-                                }))
-                            }
-                        }, error: { [weak self] error in
-                            guard let self else {
-                                return
-                            }
-                            self.inProgress = false
-                            self.updateInProgress(false)
-                            self.updated(transition: .immediate)
-                            
-                            var errorText: String?
-                            switch error {
-                            case .generic:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            case .network:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
-                            case .notAllowed:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
-                            case .cantMakePayments:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
-                            case .assignFailed:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            case .tryLater:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            case .cancelled:
-                                break
-                            }
-                            
-                            if let errorText = errorText {
-                                if let context = self.screenContext.context {
-                                    context.engine.accountData.addAppLogEvent(type: "premium.promo_screen_fail")
-                                }
-                                
-                                let alertController = textAlertController(sharedContext: self.screenContext.sharedContext, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                                self.present(alertController)
-                            }
-                        }))
-                    } else {
-                        self.inProgress = false
-                        self.updateInProgress(false)
-                        self.updated(transition: .immediate)
-                    }
-                })
-            } else if case let .accountContext(context) = self.screenContext, let navigationController = self.navigationController?() {
-                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: premiumProduct.option.botUrl, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                
-                Queue.mainQueue().after(3.0) {
+                    self.resetPurchaseProgress()
+                    self.updated(transition: .immediate)
+                }
+                return
+            }
+
+            self.purchaseInFlight = true
+            self.purchasePending = false
+            self.inProgress = true
+            self.updateInProgress(true)
+            self.updated(transition: .immediate)
+
+            let purpose: AppStoreTransactionPurpose = isUpgrade ? .upgrade : .subscription
+            let canPurchasePremium: Signal<Bool, NoError>
+            switch self.screenContext {
+            case let .accountContext(context):
+                canPurchasePremium = context.engine.payments.canPurchasePremium(purpose: purpose)
+            case let .sharedContext(_, engine, _):
+                canPurchasePremium = engine.payments.canPurchasePremium(purpose: purpose)
+            }
+            Logger.shared.log("PremiumIntroScreen", "Checking purchase availability")
+            self.paymentDisposable.set((canPurchasePremium
+            |> castError(InAppPurchaseManager.PurchaseError.self)
+            |> take(1)
+            |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.network))
+            |> deliverOnMainQueue
+            |> mapToSignal { available -> Signal<InAppPurchaseManager.PurchaseState, InAppPurchaseManager.PurchaseError> in
+                Logger.shared.log("PremiumIntroScreen", "Purchase availability: \(available)")
+                guard available else {
+                    return .fail(.generic)
+                }
+                return inAppPurchaseManager.buyProduct(storeProduct, purpose: purpose, reportPending: true)
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let self else {
+                    return
+                }
+                switch status {
+                case .waiting:
+                    Logger.shared.log("PremiumIntroScreen", "Still waiting for purchase; allowing dismissal without a notification")
                     self.inProgress = false
                     self.updateInProgress(false)
                     self.updated(transition: .immediate)
+                case .pending:
+                    guard !self.purchasePending else {
+                        return
+                    }
+                    Logger.shared.log("PremiumIntroScreen", "Purchase pending; allowing dismissal")
+                    self.purchasePending = true
+                    self.inProgress = false
+                    self.updateInProgress(false)
+                    self.updated(transition: .immediate)
+                    self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Premium_Purchase_PendingInfo, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, action: { _ in return true }))
+                case .purchased:
+                    Logger.shared.log("PremiumIntroScreen", "Purchase completed; waiting for activation")
+                    let activation: Signal<Never, AssignAppStoreTransactionError>
+                    if let context = self.screenContext.context {
+                        activation = context.account.postbox.peerView(id: context.account.peerId)
+                        |> castError(AssignAppStoreTransactionError.self)
+                        |> take(until: { view in
+                            if let peer = view.peers[view.peerId], peer.isPremium {
+                                return SignalTakeAction(passthrough: false, complete: true)
+                            } else {
+                                return SignalTakeAction(passthrough: false, complete: false)
+                            }
+                        })
+                        |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
+                            return .never()
+                        }
+                        |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
+                    } else {
+                        activation = .complete()
+                    }
+
+                    self.activationDisposable.set((activation
+                    |> deliverOnMainQueue).start(error: { [weak self] _ in
+                        self?.handlePurchaseError(.generic)
+                    }, completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        Logger.shared.log("PremiumIntroScreen", "Premium activated")
+                        if let context = self.screenContext.context {
+                            let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
+                        }
+                        self.resetPurchaseProgress()
+                        self.isPremium = true
+                        self.justBought = true
+                        self.updated(transition: .easeInOut(duration: 0.25))
+                        self.completion()
+                    }))
                 }
-            }
+            }, error: { [weak self] error in
+                self?.handlePurchaseError(error)
+            }))
         }
-        
+
         func updateIsFocused(_ isFocused: Bool) {
             self.hasIdleAnimations = !isFocused
             self.updated(transition: .immediate)
@@ -3437,6 +3461,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let coin = Child(PremiumCoinComponent.self)
         let title = Child(MultilineTextComponent.self)
         let secondaryTitle = Child(MultilineTextWithEntitiesComponent.self)
+        let topEdgeEffect = Child(EdgeEffectComponent.self)
         let bottomEdgeEffect = Child(EdgeEffectComponent.self)
         let button = Child(ButtonComponent.self)
         
@@ -3451,10 +3476,16 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         
             let background = background.update(component: Rectangle(color: environment.theme.list.blocksBackgroundColor), environment: {}, availableSize: context.availableSize, transition: context.transition)
             
-            var starIsVisible = true
-            if let topContentOffset = state.topContentOffset, topContentOffset >= 123.0 {
-                starIsVisible = false
-            }
+            let topInset: CGFloat = environment.navigationHeight - 56.0
+            let headerSize = CGSize(width: min(414.0, context.availableSize.width), height: 220.0)
+            let headerOriginY = topInset - 30.0
+            // iPhone Duo: the header and the titles are centered in the band between the side safe
+            // insets (one of them is the side strip), and the titles narrowed by the difference. With equal
+            // insets this is the full width's center and width.
+            let bandCenterX = environment.safeInsets.left + (context.availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
+            let bandWidthReduction = abs(environment.safeInsets.left - environment.safeInsets.right)
+            let headerVisibleOriginY = headerOriginY - (state.topContentOffset ?? 0.0)
+            let starIsVisible = headerVisibleOriginY + headerSize.height > 0.0 && headerVisibleOriginY < context.availableSize.height
 
             var isIntro = true
             if case .profile = context.component.source {
@@ -3470,7 +3501,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
+                    availableSize: headerSize,
                     transition: context.transition
                 )
             } else if case let .emojiStatus(_, fileId, _, _) = context.component.source, case let .accountContext(accountContext) = context.component.screenContext {
@@ -3485,7 +3516,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
+                    availableSize: headerSize,
                     transition: context.transition
                 )
             } else if case let .premiumGift(file) = context.component.source, case let .accountContext(accountContext) = context.component.screenContext {
@@ -3501,7 +3532,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
+                    availableSize: headerSize,
                     transition: context.transition
                 )
             } else {
@@ -3517,7 +3548,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             UIColor(rgb: 0xe26bd3)
                         ]
                     ),
-                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
+                    availableSize: headerSize,
                     transition: context.transition
                 )
             }
@@ -3550,7 +3581,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     truncationType: .end,
                     maximumNumberOfLines: 1
                 ),
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: context.availableSize.width - bandWidthReduction, height: context.availableSize.height),
                 transition: context.transition
             )
 
@@ -3559,26 +3590,32 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let secondaryTitleText: String
             var isAnonymous = false
             if var otherPeerName = state.otherPeerName {
-                if case let .emojiStatus(peerId, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
-                    loadedEmojiPack = maybeEmojiPack
-                    highlightableLinks = true
-                    
+                if case let .emojiStatus(peerId, _, file, maybeEmojiPack) = context.component.source {
                     if peerId.isGroupOrChannel, otherPeerName.count > 20 {
                         otherPeerName = otherPeerName.prefix(20).trimmingCharacters(in: .whitespacesAndNewlines) + "\u{2026}"
                     }
                     
-                    var packReference: StickerPackReference?
-                    if let file = file {
-                        for attribute in file.attributes {
-                            if case let .CustomEmoji(_, _, _, reference) = attribute {
-                                packReference = reference
+                    if let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
+                        loadedEmojiPack = maybeEmojiPack
+                        highlightableLinks = true
+                        
+                        var packReference: StickerPackReference?
+                        if let file = file {
+                            for attribute in file.attributes {
+                                if case let .CustomEmoji(_, _, _, reference) = attribute {
+                                    packReference = reference
+                                }
                             }
                         }
-                    }
-                    if let packReference = packReference, case let .id(id, _) = packReference, id == 773947703670341676 {
-                        secondaryTitleText = environment.strings.Premium_EmojiStatusShortTitle(otherPeerName).string
+                        if let packReference = packReference, case let .id(id, _) = packReference, id == 773947703670341676 {
+                            secondaryTitleText = environment.strings.Premium_EmojiStatusShortTitle(otherPeerName).string
+                        } else {
+                            secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, info.title).string.replacingOccurrences(of: "#", with: " #  ")
+                        }
                     } else {
-                        secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, info.title).string.replacingOccurrences(of: "#", with: " #  ")
+                        // No pack to name (the emoji names none, or its owner deleted it); still say
+                        // that this is a status, which is what a fake "verified" badge must not hide.
+                        secondaryTitleText = environment.strings.Premium_EmojiStatusShortTitle(otherPeerName).string
                     }
                 } else if case .profile = context.component.source {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
@@ -3685,7 +3722,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         }
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.width),
+                availableSize: CGSize(width: context.availableSize.width - 32.0 - bandWidthReduction, height: context.availableSize.width),
                 transition: context.transition
             )
             
@@ -3722,6 +3759,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         copyLink: context.component.copyLink,
                         shareLink: context.component.shareLink
                     )),
+                    externalState: state.scrollExternalState,
                     contentInsets: UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: bottomPanelHeight, right: 0.0),
                     contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
                         state?.topContentOffset = topContentOffset
@@ -3743,19 +3781,52 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            let topInset: CGFloat = environment.navigationHeight - 56.0
-            
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
             
             context.add(scrollContent
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+                .clipsToBounds(true)
+            )
+
+            if let scrollView = state.scrollExternalState.scrollView {
+                context.addWithExternalContainer(header
+                    .position(CGPoint(x: bandCenterX, y: headerOriginY + header.size.height / 2.0)),
+                    container: scrollView
+                )
+            }
+
+            let topEdgeEffectSize = CGSize(width: context.availableSize.width, height: environment.navigationHeight + 44.0)
+            let topEdgeEffect = topEdgeEffect.update(
+                component: EdgeEffectComponent(
+                    color: environment.theme.list.blocksBackgroundColor,
+                    blur: true,
+                    alpha: 0.75,
+                    size: topEdgeEffectSize,
+                    edge: .top,
+                    edgeSize: 64.0
+                ),
+                availableSize: topEdgeEffectSize,
+                transition: context.transition
+            )
+            context.add(topEdgeEffect
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: topEdgeEffectSize.height / 2.0 - 20.0))
+                .opacity(max(0.0, min(1.0, (state.topContentOffset ?? 0.0) / 20.0)))
+                .appear(ComponentTransition.Appear { _, view, _ in
+                    view.isUserInteractionEnabled = false
+                })
             )
                         
             let titleOffset: CGFloat
             let titleScale: CGFloat
-            let titleOffsetDelta = (topInset + 160.0) - (environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)
+            let navigationTitleCenterY: CGFloat
+            if environment.metrics.widthClass == .regular {
+                navigationTitleCenterY = environment.navigationHeight - 60.0 / 2.0 + 2.0
+            } else {
+                navigationTitleCenterY = environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0
+            }
+            let titleOffsetDelta = (topInset + 160.0) - navigationTitleCenterY
             let titleAlpha: CGFloat
             
             if let topContentOffset = state.topContentOffset {
@@ -3775,21 +3846,15 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 titleAlpha = state.otherPeerName != nil ? 0.0 : 1.0
             }
             
-            context.addWithExternalContainer(header
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + header.size.height / 2.0 - 30.0 - titleOffset * titleScale))
-                .scale(titleScale),
-                container: context.component.overNavigationContainer
-            )
-            
             context.addWithExternalContainer(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
+                .position(CGPoint(x: bandCenterX, y: max(topInset + 160.0 - titleOffset, navigationTitleCenterY)))
                 .scale(titleScale)
                 .opacity(titleAlpha),
                 container: context.component.overNavigationContainer
             )
             
             context.addWithExternalContainer(secondaryTitle
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
+                .position(CGPoint(x: bandCenterX, y: max(topInset + 160.0 - titleOffset, navigationTitleCenterY)))
                 .scale(titleScale)
                 .opacity(max(0.0, 1.0 - titleAlpha * 1.8)),
                 container: context.component.overNavigationContainer
@@ -3816,7 +3881,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if !buttonIsHidden {
                 let buttonTitle: String
                 var buttonSubtitle: String?
-                if case let .auth(price, days) = context.component.source {
+                if state.purchasePending {
+                    buttonTitle = environment.strings.Premium_Purchase_Pending
+                } else if case let .auth(price, days) = context.component.source {
                     buttonTitle = environment.strings.Premium_Week_SignUp(price).string
                     if days == 7 {
                         buttonSubtitle = environment.strings.Premium_Week_SignUpInfo
@@ -3847,6 +3914,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 }
                 
                 let controller = environment.controller
+                // A bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                let buttonBottomInsets = environment.bottomEdgeSideInsets()
+                let buttonCenterX = buttonBottomInsets.left + (context.availableSize.width - buttonBottomInsets.left - buttonBottomInsets.right) / 2.0
                 let buttonGradientColors = [
                     UIColor(rgb: 0x0077ff),
                     UIColor(rgb: 0x6b93ff),
@@ -3891,6 +3961,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             id: AnyHashable("\(buttonTitle)-\(buttonSubtitle ?? "")"),
                             component: buttonContent
                         ),
+                        isEnabled: !state.purchaseInFlight,
                         displaysProgress: state.inProgress,
                         action: {
                             if let controller = controller() as? PremiumIntroScreen, let customProceed = controller.customProceed {
@@ -3901,7 +3972,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             }
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right - environment.safeInsets.left - environment.safeInsets.right, height: 52.0),
+                    availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right - buttonBottomInsets.left - buttonBottomInsets.right, height: 52.0),
                     transition: context.transition)
                                
                 let bottomEdgeEffectHeight = 13.0 + buttonInsets.bottom + button.size.height
@@ -3930,7 +4001,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     })
                 )
                 context.add(button
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - buttonInsets.bottom - button.size.height / 2.0))
+                    .position(CGPoint(x: buttonCenterX, y: context.availableSize.height - buttonInsets.bottom - button.size.height / 2.0))
                     .disappear(ComponentTransition.Disappear { view, transition, completion in
                         if case .none = transition.animation {
                             completion()
@@ -4079,7 +4150,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             shareLink: { link in
                 shareLinkImpl?(link)
             }
-        ), navigationBarAppearance: .default, presentationMode: modal ? .modal : .default, theme: forceDark ? .dark : .default, updatedPresentationData: screenContext.updatedPresentationData, baseNavigationColors: baseNavigationColors)
+        ), navigationBarAppearance: .transparent, presentationMode: modal ? .modal : .default, theme: forceDark ? .dark : .default, updatedPresentationData: screenContext.updatedPresentationData, baseNavigationColors: baseNavigationColors)
         
         self._hasGlassStyle = true
                 
@@ -4213,6 +4284,16 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         self.view.addSubview(ConfettiView(frame: self.view.bounds))
     }
     
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        guard layout.metrics.widthClass == .regular else {
+            return nil
+        }
+        return CGSize(
+            width: min(480.0, layout.size.width - 20.0),
+            height: min(layout.size.width, layout.size.height) - 88.0
+        )
+    }
+
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

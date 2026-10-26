@@ -74,7 +74,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
-    private var appliedForwardInfo: (EngineRawPeer?, String?)?
+    private var appliedForwardInfo: ChatMessageAppliedForwardInfo?
 
     private var enableSynchronousImageApply: Bool = false
     
@@ -324,9 +324,6 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
 
             self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
             
-            if let backgroundNode = self.backgroundNode {
-                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize, transition: .immediate)
-            }
             
             if let threadInfoNode = self.threadInfoNode {
                 var threadInfoNodeFrame = threadInfoNode.frame
@@ -360,31 +357,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
             }
             
-            if let replyBackgroundContent = self.replyBackgroundContent {
-                var replyBackgroundContentFrame = replyBackgroundContent.frame
-                replyBackgroundContentFrame.origin.x += rect.minX
-                replyBackgroundContentFrame.origin.y += rect.minY
-                
-                replyBackgroundContent.update(rect: rect, within: containerSize, transition: .immediate)
-            }
             
-            if let forwardBackgroundContent = self.forwardBackgroundContent {
-                var forwardBackgroundContentFrame = forwardBackgroundContent.frame
-                forwardBackgroundContentFrame.origin.x += rect.minX
-                forwardBackgroundContentFrame.origin.y += rect.minY
-                
-                forwardBackgroundContent.update(rect: rect, within: containerSize, transition: .immediate)
-            }
-        }
-    }
-    
-    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        if let backgroundNode = self.backgroundNode {
-            backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
-        }
-        
-        if let reactionButtonsNode = self.reactionButtonsNode {
-            reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
@@ -573,6 +546,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             if let subject = item.associatedData.subject, case .messageOptions = subject {
                 needsShareButton = false
             }
+            if Namespaces.Message.allEphemeral.contains(item.message.id.namespace) || Namespaces.Message.allWelcomeMessages.contains(item.message.id.namespace) {
+                needsShareButton = false
+            }
             
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom.hasDate && dateHeaderAtBottom.hasTopic {
@@ -707,9 +683,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
             var replyInnerSubject: EngineMessageReplyInnerSubject?
             var replyStory: EngineStoryId?
+            var inlineBotNameString: String?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
-                    var inlineBotNameString: String?
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
                         inlineBotNameString = bot.addressName
                     } else {
@@ -742,6 +718,11 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
+            }
+            
+            // A suspicious sender's buttons are not shown, as their links are not.
+            if item.associatedData.isSuspiciousPeer && item.message.effectivelyIncoming(item.context.account.peerId) {
+                replyMarkup = nil
             }
             
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
@@ -810,7 +791,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
             
-            var forwardSource: EngineRawPeer?
+            var forwardSource: EnginePeer?
             var forwardAuthorSignature: String?
             var forwardPsaType: String?
             
@@ -819,26 +800,13 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             if !ignoreForward, let forwardInfo = item.message.forwardInfo {
                 forwardPsaType = forwardInfo.psaType
                 
-                if let source = forwardInfo.source {
-                    forwardSource = source
-                    if let authorSignature = forwardInfo.authorSignature {
-                        forwardAuthorSignature = authorSignature
-                    } else if let forwardInfoAuthor = forwardInfo.author, forwardInfoAuthor.id != source.id {
-                        forwardAuthorSignature = EnginePeer(forwardInfoAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                    } else {
-                        forwardAuthorSignature = nil
-                    }
-                } else {
-                    if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
-                        forwardSource = nil
-                        forwardAuthorSignature = currentForwardInfo.0.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                    } else {
-                        forwardSource = forwardInfo.author
-                        forwardAuthorSignature = forwardInfo.authorSignature
-                    }
-                }
+                let resolvedForwardInfo = chatMessageForwardInfoDisplay(forwardInfo: forwardInfo, messageId: item.message.id, previouslyApplied: currentForwardInfo, peerDisplayTitle: { peer in
+                    return peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                })
+                forwardSource = resolvedForwardInfo.source
+                forwardAuthorSignature = resolvedForwardInfo.authorSignature
                 let availableForwardWidth = max(60.0, availableWidth + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .standalone, forwardSource.flatMap(EnginePeer.init), forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableForwardWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType == nil ? inlineBotNameString : nil, forwardPsaType, nil, CGSize(width: availableForwardWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             var needsReplyBackground = false
@@ -1047,7 +1015,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         transition = .animated(duration: duration, curve: .spring)
                     }
                     
-                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    strongSelf.appliedForwardInfo = ChatMessageAppliedForwardInfo(messageId: item.message.id, source: forwardSource, authorSignature: forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
                     
                     strongSelf.updateAttachedDateHeader(hasDate: dateHeaderAtBottom.hasDate, hasPeer: dateHeaderAtBottom.hasTopic)
@@ -1268,12 +1236,6 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     if let backgroundContent = strongSelf.replyBackgroundContent, let replyBackgroundFrame {
                         backgroundContent.cornerRadius = 4.0
                         backgroundContent.frame = replyBackgroundFrame
-                        if let (rect, containerSize) = strongSelf.absoluteRect {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                        }
                     }
                     
                     if let backgroundContent = strongSelf.forwardBackgroundContent, let forwardBackgroundFrame {
@@ -1289,12 +1251,6 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         }
                         
                         backgroundContent.frame = forwardBackgroundFrame
-                        if let (rect, containerSize) = strongSelf.absoluteRect {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                        }
                         
                         if let forwardInfoNode = strongSelf.forwardInfoNode {
                             forwardBackgroundMaskNode.frame = backgroundContent.bounds.offsetBy(dx: forwardInfoNode.frame.minX - backgroundContent.frame.minX, dy: forwardInfoNode.frame.minY - backgroundContent.frame.minY)

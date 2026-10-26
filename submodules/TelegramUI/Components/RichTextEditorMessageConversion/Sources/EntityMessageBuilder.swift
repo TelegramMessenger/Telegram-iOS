@@ -24,6 +24,8 @@ func buildEntityMessage(from blocks: [Block]) -> (text: String, entities: [Messa
             }
             continue
         }
+        // A `.buttonRow` (and any other non-paragraph, non-code block) is skipped here. A button always
+        // forces the rich path in `documentNeedsRichLayout`, so this is unreachable for one.
         guard case let .paragraph(paragraph) = block else {
             continue
         }

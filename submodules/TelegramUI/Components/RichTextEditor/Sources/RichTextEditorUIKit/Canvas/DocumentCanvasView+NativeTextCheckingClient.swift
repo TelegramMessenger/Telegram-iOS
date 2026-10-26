@@ -18,16 +18,43 @@ extension DocumentCanvasView {
         nativeChecker?.preheat()
     }
 
+    /// TASK F4 — tears the native checking driver down and drops everything it produced.
+    ///
+    /// Byte-for-byte the `isSpellCheckingEnabled` `didSet`'s DISABLE branch (`DocumentCanvasView.swift`),
+    /// which stays where it is: this is a second CALLER of the same teardown, not a refactor of it —
+    /// the `didSet` is Legacy's live path and this task does not perturb Legacy.
+    ///
+    /// It exists because the private checking controller is an OS-scheduled agent that keeps driving
+    /// its client (this canvas) after the call that started it returns. Once a backend DETACHES, the
+    /// canvas's `UITextInput` witnesses all answer through a detached backend — and the controller's
+    /// next callback then reads e.g. `tokenizer`, which reports a contract violation. Measured
+    /// directly: with the driver newly installed under `.inputDec` and no teardown here,
+    /// `IDBackendFamily8Tests` passed 5/5 and then killed the xctest process on a post-`tearDown()`
+    /// callback (`tokenizer read while no canvas is attached`). The driver must not outlive the
+    /// backend that installed it.
+    func tearDownNativeChecking() {
+        nativeChecker?.invalidate()
+        nativeChecker = nil
+        spellResults = [:]
+        spellingAlternatives = [:]
+        pendingSpellingMenu = nil
+        setNeedsSpellUnderlineDisplay()
+    }
+
     /// Native-parity check targets for a caret move from `fromCaret` to `toCaret` (global positions).
     /// Mirrors `-[UITextCheckingController checkSpellingForSelectionChangeFromRange:]`: the word ENCLOSING
     /// the caret you LEFT is re-checked; the word ENCLOSING the caret you're now IN has its flag cleared (so
     /// it isn't underlined mid-edit). Same word (still typing in it) ⇒ (nil, nil). Ranges are GLOBAL, the
     /// axis `spellResults` uses; nil where the position is at a gap / has no enclosing word.
     func spellCheckTargets(fromCaret: Int, toCaret: Int) -> (check: NSRange?, clear: NSRange?) {
-        let tok = tokenizer as? DocumentTokenizer
+        // TASK F4: `DocumentBoundaryTokenizer`, not the concrete `DocumentTokenizer`. Under
+        // `.inputDec` this cast went nil, so both `wordNS` reads answered nil, `spellCheckTargets`
+        // returned `(nil, nil)` for every caret move, and no word was ever checked or cleared —
+        // a second, independent reason the flag showed no spelling underlines.
+        let tok = tokenizer as? DocumentBoundaryTokenizer
         func wordNS(_ pos: Int) -> NSRange? {
             guard let r = tok?.wordRange(at: pos) else { return nil }
-            return NSRange(location: r.from.offset, length: r.to.offset - r.from.offset)
+            return NSRange(location: r.from, length: r.to - r.from)
         }
         let left = wordNS(fromCaret), entered = wordNS(toCaret)
         if let l = left, l == entered { return (nil, nil) }   // caret stayed within one word
@@ -41,7 +68,10 @@ extension DocumentCanvasView {
     /// selection-handle drag) to mirror the suppressed `inputDelegate` selection bracket; `endCoalescedSelectionDrag`
     /// runs it once at the final caret. A range selection is not a typing boundary — record the head and skip.
     func nativeCheckOnSelectionChange() {
-        guard isSpellCheckingEnabled, let checker = nativeChecker, !coalescingSelectionNotifications else { return }
+        // TASK 43: reads the backend's D33 flag directly — `coalescingSelectionNotifications` was the
+        // canvas forwarder onto exactly this, and is deleted.
+        guard isSpellCheckingEnabled, let checker = nativeChecker,
+              !inputBackend.suppressesSelectionNotifications else { return }
         let now = head
         defer { lastCheckedCaret = now }
         // An active `.correction` (autocorrect underline) clears once the caret moves to a DIFFERENT region than
@@ -85,22 +115,49 @@ extension DocumentCanvasView {
     // MARK: client annotation surface (messaged by the controller via the ObjC runtime)
     /// Build a `UITextRange` from a RAW global position range (the axis `spellResults` uses). The driver
     /// calls this instead of `positionFromPosition:offset:`, which is relative to `beginningOfDocument` (itself
-    /// at global 1 on this 1-based axis) and would double-count the offset. `DocumentTextPosition` wraps a
-    /// global offset directly, so this is exact.
+    /// at global 1 on this 1-based axis) and would double-count the offset. The backend's identity
+    /// position wraps a global offset directly, so this is exact.
+    ///
+    /// TASK 44: was `DocumentTextRange(DocumentTextPosition(loc), DocumentTextPosition(loc + length))`
+    /// inline. Same object, minted on the backend side; this file no longer names the type.
     @objc(nativeTextRangeForGlobalLocation:length:)
     func nativeTextRange(forGlobalLocation loc: Int, length: Int) -> UITextRange? {
-        DocumentTextRange(DocumentTextPosition(loc), DocumentTextPosition(loc + length))
+        LegacyTextIdentity.range(fromGlobal: loc, toGlobal: loc + length)
     }
 
+    /// TASK H2 — the three selectors below resolve their incoming `UITextRange` through the ACTIVE
+    /// BACKEND (`inputBackend.globalRange(ofCheckingRange:)`), not through `LegacyTextIdentity`.
+    ///
+    /// **This was the user's open defect.** All three used to spell `LegacyTextIdentity.globalRange(of:)`
+    /// inline. That downcast succeeds only for a range the LEGACY backend minted — and under
+    /// `.inputDec` the private checking controller builds its ranges through this canvas's own
+    /// `UITextInput` witnesses, which route to `IDTextEditorBackend` and answer
+    /// `TGRichTextInputDecRange`. So the cast always failed, `annotatedSubstringForRange:` answered
+    /// nil, the controller never reached the delivery call below, and no word was ever underlined —
+    /// while the *driving* half looked healthy at every traceable step (Task P2 measured
+    /// `checkSpellingForWordInRange:` firing exactly once on both host arms). Measured directly,
+    /// swizzling the three selectors and typing `"mispelled "`:
+    ///
+    /// ```
+    /// INPUTDEC  annotatedSubstring range<TGRichTextInputDecRange> legacy=nil kernel(1,11) -> nil
+    ///           FLAGGED=false
+    /// LEGACY    annotatedSubstring range<LegacyTextRange> legacy(1,11) -> "mispelled "
+    ///           replaceRange legacy(1,10) attrs=[{0,9} NSTextAlternativesDisplayStyle=2]
+    ///           FLAGGED=true
+    /// ```
+    ///
+    /// On `.legacy` the routed call is the identical expression (`LegacyRichTextInputBackend
+    /// +Checking.swift` implements it as `LegacyTextIdentity.globalRange(of:)`), so this is a pure
+    /// move there and nothing about the shipping backend changes.
     @objc(annotatedSubstringForRange:)
     func annotatedSubstring(for range: UITextRange) -> NSAttributedString? {
-        guard let r = range as? DocumentTextRange else { return nil }
-        return NSAttributedString(string: text(in: r) ?? "")
+        guard inputBackend.globalRange(ofCheckingRange: range) != nil else { return nil }
+        return NSAttributedString(string: text(in: range) ?? "")
     }
     @objc(replaceRange:withAnnotatedString:relativeReplacementRange:)
     func nativeReplace(_ range: UITextRange, withAnnotatedString s: NSAttributedString, relativeReplacementRange rr: NSRange) {
-        guard let r = range as? DocumentTextRange else { return }
-        let base = min(r.from.offset, r.to.offset)
+        guard let r = inputBackend.globalRange(ofCheckingRange: range) else { return }
+        let base = min(r.from, r.to)
         s.enumerateAttributes(in: NSRange(location: 0, length: s.length)) { attrs, sub, _ in
             guard !attrs.isEmpty else { return }
             let global = NSRange(location: base + sub.location, length: sub.length)
@@ -115,8 +172,8 @@ extension DocumentCanvasView {
     }
     @objc(removeAnnotation:forRange:)
     func nativeRemoveAnnotation(_ annotation: Any, forRange range: UITextRange) {
-        guard let r = range as? DocumentTextRange else { return }
-        let global = NSRange(location: min(r.from.offset, r.to.offset), length: abs(r.to.offset - r.from.offset))
+        guard let r = inputBackend.globalRange(ofCheckingRange: range) else { return }
+        let global = NSRange(location: min(r.from, r.to), length: abs(r.to - r.from))
         // Scoped to the in-flight check's style when this fires synchronously from `driveNativeCheck` (the
         // common case — see that method's doc); otherwise style-agnostic (e.g. a controller-driven removal
         // outside our own check calls, if any).
@@ -141,6 +198,38 @@ extension DocumentCanvasView {
     static func style(from attrs: [NSAttributedString.Key: Any]) -> SpellStyle {
         if attrs[alternativesKey] != nil { return .correction }
         return (attrs[displayStyleKey] as? Int) == 2 ? .spelling : .grammar
+    }
+
+    /// TASK H2 — the STRICT sibling of `style(from:)`: the flag style this payload denotes, or `nil`
+    /// when it carries no marker at all.
+    ///
+    /// `style(from:)` above answers for every dictionary, because its caller (`nativeReplace`) is
+    /// already inside a delivery and every attributed sub-run of that delivery IS a marker — so
+    /// "anything else" legitimately means `.grammar` there. `TelegramAnnotationInputClient`'s
+    /// callers are not inside a delivery: they receive an arbitrary key/value or an arbitrary
+    /// rendering-attribute dictionary from the kernel's layout controller and must be able to say
+    /// **"this is not a marker"**, which `style(from:)` cannot express. Hence a second, narrower
+    /// entry point rather than a change to the first — changing `style(from:)` would alter the
+    /// shipping Legacy delivery path, which is not in scope here.
+    ///
+    /// The bare-underline case is not a guess: upstream's own end-to-end test asserts that the
+    /// misspelling marker arrives as `NSUnderlineStyle` / `NSUnderlineColor` **temporary rendering
+    /// attributes** and that neither key is in canonical storage, with the display style travelling
+    /// separately as an ANNOTATION attribute (`Tests/IDBlockSpellingIntegrationTests.m:378-428`,
+    /// `:326-341`; recorded as row F9 of `task-G2-report.md`). So a rendering dictionary carrying
+    /// only an underline is the misspelling marker, and `.spelling` is its style.
+    static func markerStyle(fromAttributes attrs: [NSAttributedString.Key: Any]) -> SpellStyle? {
+        if attrs[alternativesKey] != nil { return .correction }
+        if let displayStyle = attrs[displayStyleKey] as? Int { return displayStyle == 2 ? .spelling : .grammar }
+        if attrs[.underlineStyle] != nil || attrs[.underlineColor] != nil { return .spelling }
+        return nil
+    }
+
+    /// The `NSAttributedString.Key` names `markerStyle(fromAttributes:)` recognises. Used by
+    /// `TelegramAnnotationInputClient.removeRenderingAttributes` so removal is symmetric with
+    /// addition — the asymmetry deviation D-F4 of `task-G2-report.md` records.
+    static var markerAttributeKeys: Set<NSAttributedString.Key> {
+        [displayStyleKey, alternativesKey, .underlineStyle, .underlineColor]
     }
 
     // MARK: translation core (unit-tested) — GLOBAL range in, REGION-LOCAL range stored (mirrors the old pass)

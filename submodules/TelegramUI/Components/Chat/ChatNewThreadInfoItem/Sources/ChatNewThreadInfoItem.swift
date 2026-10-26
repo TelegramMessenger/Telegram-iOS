@@ -19,7 +19,12 @@ public final class ChatNewThreadInfoItem: ListViewItem {
     fileprivate let controllerInteraction: ChatControllerInteraction
     fileprivate let presentationData: ChatPresentationData
     fileprivate let context: AccountContext
-    
+
+    // Decodes to nil on the chat side, which is the same branch a missing neighbor takes.
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable.noNeighborInfluence
+    }
+
     public init(
         controllerInteraction: ChatControllerInteraction,
         presentationData: ChatPresentationData,
@@ -30,7 +35,7 @@ public final class ChatNewThreadInfoItem: ListViewItem {
         self.context = context
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = {
             let node = ChatNewThreadInfoItemNode()
             
@@ -55,7 +60,7 @@ public final class ChatNewThreadInfoItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatNewThreadInfoItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
@@ -149,12 +154,6 @@ public final class ChatNewThreadInfoItemNode: ListViewItemNode, ASGestureRecogni
         super.updateAbsoluteRect(rect, within: containerSize)
         
         self.absolutePosition = (rect, containerSize)
-        if let backgroundContent = self.backgroundContent {
-            var backgroundFrame = backgroundContent.frame
-            backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += containerSize.height - rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-        }
     }
     
     public func asyncLayout() -> (_ item: ChatNewThreadInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -288,12 +287,6 @@ public final class ChatNewThreadInfoItemNode: ListViewItemNode, ASGestureRecogni
                     if let backgroundContent = strongSelf.backgroundContent {
                         backgroundContent.cornerRadius = item.presentationData.chatBubbleCorners.mainRadius
                         backgroundContent.frame = backgroundFrame
-                        if let (rect, containerSize) = strongSelf.absolutePosition {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += containerSize.height - rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
-                        }
                     }
                 }
             })

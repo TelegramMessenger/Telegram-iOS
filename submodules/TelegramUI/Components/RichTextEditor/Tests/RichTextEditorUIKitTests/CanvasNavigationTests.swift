@@ -37,7 +37,7 @@ final class CanvasNavigationTests: XCTestCase {
 
     func test_toggleBold_overSelectionInABlock() {
         let v = canvas()
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart + 5
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart + 5)
         v.toggleBold()
         XCTAssertTrue((v.boxes[0] as! BlockBox).currentParagraph().runs.allSatisfy { $0.attributes.bold })
     }

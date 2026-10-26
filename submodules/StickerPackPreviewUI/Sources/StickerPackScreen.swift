@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1033,7 +1034,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.titleNode.attributedText = stringWithAppliedEntities(title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
         
         if let (layout, _, _, _) = self.validLayout {
-            let _ = self.titleNode.updateLayout(CGSize(width: layout.size.width - 44.0 * 2.0 - 40.0, height: .greatestFiniteMagnitude))
+            let _ = self.titleNode.updateLayout(CGSize(width: layout.size.width - 44.0 * 2.0 - 40.0 - stickerPackHeaderStripInsets(layout: layout), height: .greatestFiniteMagnitude))
             self.updateLayout(layout: layout, transition: .immediate)
         }
     }
@@ -1113,7 +1114,7 @@ private final class StickerPackContainer: ASDisplayNode {
             
             if let strongSelf = self {
                 let parentNavigationController = strongSelf.controller?.parentNavigationController
-                let shareController = strongSelf.context.sharedContext.makeShareController(
+                let shareController = strongSelf.context.sharedContext.makeShareScreen(
                     context: strongSelf.context,
                     params: ShareControllerParams(
                         subject: shareSubject,
@@ -1966,16 +1967,20 @@ private final class StickerPackContainer: ASDisplayNode {
         let buttonSideInset: CGFloat = 30.0
         let actionAreaHeight: CGFloat = buttonHeight + buttonInsets.bottom
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonSideInset, y: layout.size.height - actionAreaHeight), size: CGSize(width: layout.size.width - buttonSideInset * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: buttonHeight)))
+        // A bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let buttonBottomInsets = layout.bottomEdgeSideInsets()
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: buttonBottomInsets.left + buttonSideInset, y: layout.size.height - actionAreaHeight), size: CGSize(width: layout.size.width - buttonSideInset * 2.0 - buttonBottomInsets.left - buttonBottomInsets.right, height: buttonHeight)))
 
         transition.updateFrame(node: self.bottomContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - actionAreaHeight), size: CGSize(width: layout.size.width, height: 90.0)))
         
         let gridFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top))
         
         let itemsPerRow = 5
-        let fillingWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+        // Centered, or in the band beside a side strip (iPhone Duo).
+        let gridPlacement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: false)
+        let fillingWidth = gridPlacement.width
         let itemWidth = floor(fillingWidth / CGFloat(itemsPerRow))
-        let gridLeftInset = floor((layout.size.width - fillingWidth) / 2.0)
+        let gridLeftInset = gridPlacement.left
         let contentHeight: CGFloat
         if !self.currentStickerPacks.isEmpty {
             var packsHeight = 0.0
@@ -2032,7 +2037,7 @@ private final class StickerPackContainer: ASDisplayNode {
             titlePlaceholderNode.updateAbsoluteRect(titlePlaceholderNode.frame.offsetBy(dx: self.titleContainer.frame.minX, dy: self.titleContainer.frame.minY - gridInsets.top - gridFrame.minY), within: gridFrame.size)
         }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 44.0 * 2.0 - 40.0, height: .greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 44.0 * 2.0 - 40.0 - stickerPackHeaderStripInsets(layout: layout), height: .greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((-titleSize.width) / 2.0), y: floor((-titleSize.height) / 2.0)), size: titleSize)
                 
         let cancelButtonSize = self.cancelButton.update(
@@ -2058,7 +2063,10 @@ private final class StickerPackContainer: ASDisplayNode {
             environment: {},
             containerSize: CGSize(width: 44.0, height: 44.0),
         )
-        let cancelButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: cancelButtonSize)
+        // Beside a side strip (iPhone Duo) the header buttons keep the side insets: the sheet rises under the strip's
+        // status corner (folded portrait: top right; landscape-right: top left). Equal insets keep the old positions.
+        let stripSideInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
+        let cancelButtonFrame = CGRect(origin: CGPoint(x: 16.0 + stripSideInsets.left, y: 16.0), size: cancelButtonSize)
         if let cancelButtonView = self.cancelButton.view {
             if cancelButtonView.superview == nil {
                 self.topContainerNode.view.addSubview(cancelButtonView)
@@ -2081,7 +2089,8 @@ private final class StickerPackContainer: ASDisplayNode {
                         ),
                         color: self.presentationData.theme.chat.inputPanel.panelControlColor,
                         size: CGSize(width: 34.0, height: 34.0),
-                        playOnce: self.moreButtonPlayOnce
+                        playOnce: self.moreButtonPlayOnce,
+                        lottieSettings: self.context.lottieRenderingSettings
                     )
                 )),
                 action: { [weak self] view in
@@ -2095,7 +2104,7 @@ private final class StickerPackContainer: ASDisplayNode {
             environment: {},
             containerSize: CGSize(width: 44.0, height: 44.0),
         )
-        let moreButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - moreButtonSize.width, y: 16.0), size: moreButtonSize)
+        let moreButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - stripSideInsets.right - moreButtonSize.width, y: 16.0), size: moreButtonSize)
         if let moreButtonView = self.moreButton.view {
             if moreButtonView.superview == nil {
                 self.topContainerNode.view.addSubview(moreButtonView)
@@ -2117,7 +2126,7 @@ private final class StickerPackContainer: ASDisplayNode {
                             buttonTitle = self.presentationData.strings.Common_Done
                         } else {
                             buttonTitle = self.presentationData.strings.StickerPack_EditStickers
-                            buttonBackgroundColor = self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.0)
+                            buttonBackgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
                             buttonForegroundColor = self.presentationData.theme.list.itemAccentColor
                         }
                     } else {
@@ -2161,6 +2170,9 @@ private final class StickerPackContainer: ASDisplayNode {
             buttonHasProgress = true
         }
         
+        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom (folded
+        // landscape-left, where the strip's status block sits level with it).
+        let buttonStripInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? layout.bottomEdgeSideInsets() : (0.0, 0.0)
         let buttonSize = self.button.update(
             transition: .immediate,
             component: AnyComponent(
@@ -2182,9 +2194,9 @@ private final class StickerPackContainer: ASDisplayNode {
                 )
             ),
             environment: {},
-            containerSize: CGSize(width: layout.size.width - buttonInsets.left - buttonInsets.right, height: 52.0)
+            containerSize: CGSize(width: layout.size.width - buttonInsets.left - buttonInsets.right - buttonStripInsets.left - buttonStripInsets.right, height: 52.0)
         )
-        let buttonFrame = CGRect(origin: CGPoint(x: buttonInsets.left, y: 0.0), size: buttonSize)
+        let buttonFrame = CGRect(origin: CGPoint(x: buttonInsets.left + buttonStripInsets.left, y: 0.0), size: buttonSize)
         if let buttonView = self.button.view {
             if buttonView.superview == nil {
                 self.bottomContainerNode.view.addSubview(buttonView)
@@ -2253,11 +2265,13 @@ private final class StickerPackContainer: ASDisplayNode {
         
         var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: max(minBackgroundY, unclippedBackgroundY)), size: CGSize(width: layout.size.width, height: layout.size.height))
         var titleContainerFrame: CGRect
+        // The title is centered in the band beside a side strip (iPhone Duo), between the header buttons.
+        let titleCenterOffset: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? floor((layout.safeInsets.left - layout.safeInsets.right) / 2.0) : 0.0
         if case .regular = layout.metrics.widthClass {
             backgroundFrame.origin.y = min(0.0, backgroundFrame.origin.y)
-            titleContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: floor((56.0) / 2.0) + 10.0), size: CGSize())
+            titleContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0) + titleCenterOffset, y: floor((56.0) / 2.0) + 10.0), size: CGSize())
         } else {
-            titleContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((56.0) / 2.0) + 10.0), size: CGSize())
+            titleContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0) + titleCenterOffset, y: backgroundFrame.minY + floor((56.0) / 2.0) + 10.0), size: CGSize())
         }
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         
@@ -2383,6 +2397,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private var relativeToSelectedStickerPackTransition: CGFloat = 0.0
     
     private var validLayout: ContainerViewLayout?
+    private var containerUsesCornerRadii = false
     private var isDismissed: Bool = false
     
     private let _ready = Promise<Bool>()
@@ -2496,7 +2511,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                 self.arrowNode.isHidden = false
     
             } else {
-                let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
+                let masterWidth = splitMasterWidth(containerSize: layout.size, division: layout.division)
                 let detailWidth = layout.size.width - masterWidth
                 contentRect = CGRect(origin:  CGPoint(x: masterWidth + floor((detailWidth - size.width) / 2.0), y: floor((layout.size.height - size.height) / 2.0)), size: size)
                 self.arrowNode.isHidden = true
@@ -2543,7 +2558,19 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
             containerTransform = CATransform3DTranslate(containerTransform, 0.0, scaledTranslation, 0.0)
             containerTransform = CATransform3DScale(containerTransform, scale, scale, scale)
             transition.updateTransform(layer: self.containerContainingNode.layer, transform: containerTransform)
-            transition.updateCornerRadius(node: self.containerContainingNode, cornerRadius: scaledCornerRadius)
+            let screenCornerRadii = layout.screenCornerRadii
+            if !screenCornerRadii.isUniform, CALayer.cornerRadiiSupported {
+                // iPhone Duo's cover screen: the container fills the screen, so each corner follows its own screen
+                // corner (8pt on the hinge side, 59pt outside) rather than one radius.
+                self.containerUsesCornerRadii = true
+                self.containerContainingNode.layer.setCornerRadii(screenCornerRadii)
+            } else {
+                if self.containerUsesCornerRadii {
+                    self.containerUsesCornerRadii = false
+                    self.containerContainingNode.layer.setCornerRadii(CornerRadii(uniform: scaledCornerRadius))
+                }
+                transition.updateCornerRadius(node: self.containerContainingNode, cornerRadius: scaledCornerRadius)
+            }
         }
         
         let shadowFrame = containerContainingFrame.insetBy(dx: -60.0, dy: -60.0)
@@ -3101,6 +3128,8 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
     
     private var validLayout: ContainerViewLayout?
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        // On a device without floating panels (iPhone Duo) the pack is the phone sheet, also when wide.
+        let layout = layout.forOptionalFloatingPresentation
         let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -3172,7 +3201,7 @@ private final class StickerPackContextReferenceContentSource: ContextReferenceCo
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -3446,4 +3475,13 @@ private final class ReorderingItemNode: ASDisplayNode {
             completion()
         }
     }
+}
+
+/// How much narrower the sticker pack sheet's title is beside a side strip (iPhone Duo), where both header buttons
+/// keep the side insets; nothing with equal insets.
+private func stickerPackHeaderStripInsets(layout: ContainerViewLayout) -> CGFloat {
+    if layout.safeInsets.left == layout.safeInsets.right {
+        return 0.0
+    }
+    return layout.safeInsets.left + layout.safeInsets.right
 }

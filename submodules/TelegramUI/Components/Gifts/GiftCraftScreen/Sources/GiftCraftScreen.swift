@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -346,7 +347,11 @@ private final class CraftGiftPageContent: Component {
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             
             self.component = component
             self.state = state
@@ -389,7 +394,7 @@ private final class CraftGiftPageContent: Component {
                     subject: .custom(.clear, .clear, UIColor(rgb: 0x000000), anvilFile.fileId.id),
                     files: [anvilFile.fileId.id: anvilFile],
                     isDark: false,
-                    avatarCenter: CGPoint(x: availableSize.width / 2.0, y: 169.0),
+                    avatarCenter: CGPoint(x: bandCenterX, y: 169.0),
                     avatarSize: CGSize(width: 130.0, height: 130.0),
                     avatarScale: 1.0,
                     defaultHeight: 300.0,
@@ -418,9 +423,9 @@ private final class CraftGiftPageContent: Component {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Gift_Craft_Title, font: Font.semibold(17.0), textColor: .white)))
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) * 0.5), y: 16.0 + 22.0 - titleSize.height * 0.5), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - titleSize.width * 0.5), y: 16.0 + 22.0 - titleSize.height * 0.5), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
@@ -465,11 +470,11 @@ private final class CraftGiftPageContent: Component {
                 ),
                 environment: {
                 },
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
             craftContentHeight += 291.0
             
-            let descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - descriptionTextSize.width) * 0.5), y: craftContentHeight), size: descriptionTextSize)
+            let descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - descriptionTextSize.width * 0.5), y: craftContentHeight), size: descriptionTextSize)
             if let descriptionTextView = self.descriptionText.view {
                 if descriptionTextView.superview == nil {
                     self.addSubview(descriptionTextView)
@@ -576,7 +581,7 @@ private final class CraftGiftPageContent: Component {
             
             let attributeFirstRowTotalWidth = CGFloat(firstRowCount) * attributeDialSize.width + CGFloat(firstRowCount - 1) * attributeDialSpacing
             let attributeSecondRowTotalWidth = CGFloat(secondRowCount) * attributeDialSize.width + CGFloat(secondRowCount - 1) * attributeDialSpacing
-            var attributeDialFrame: CGRect = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - attributeFirstRowTotalWidth) / 2.0), y: craftContentHeight), size: attributeDialSize)
+            var attributeDialFrame: CGRect = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - attributeFirstRowTotalWidth / 2.0), y: craftContentHeight), size: attributeDialSize)
             
             craftContentHeight += attributeDialSize.height
             craftContentHeight += 39.0
@@ -641,7 +646,8 @@ private final class CraftGiftPageContent: Component {
                                     providesPlaceholder: true
                                 ),
                                 color: .white,
-                                size: CGSize(width: 32.0, height: 32.0)
+                                size: CGSize(width: 32.0, height: 32.0),
+                                lottieSettings: component.context.lottieRenderingSettings
                             )
                         )
                     )
@@ -710,7 +716,7 @@ private final class CraftGiftPageContent: Component {
                 attributeDialIndex += 1
                 
                 if attributeDialIndex == firstRowCount {
-                    attributeDialFrame.origin.x = floorToScreenPixels((availableSize.width - attributeSecondRowTotalWidth) / 2.0)
+                    attributeDialFrame.origin.x = floorToScreenPixels(bandCenterX - attributeSecondRowTotalWidth / 2.0)
                     attributeDialFrame.origin.y += 66.0
                 }
             }
@@ -838,7 +844,7 @@ private final class CraftGiftPageContent: Component {
                         containerSize: availableSize
                     )
                 }
-                let variantsButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - variantsButtonSize.width) / 2.0), y: craftContentHeight), size: variantsButtonSize)
+                let variantsButtonFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - variantsButtonSize.width / 2.0), y: craftContentHeight), size: variantsButtonSize)
                 var varitantsButtonTransition = transition
                 if let variantsButtonView = variantsButton.view {
                     if variantsButtonView.superview == nil {
@@ -874,9 +880,9 @@ private final class CraftGiftPageContent: Component {
                         MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Gift_Craft_Crafting_Title, font: Font.bold(20.0), textColor: .white)))
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
-                let craftingTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - craftingTitleSize.width) * 0.5), y: craftingOriginY), size: craftingTitleSize)
+                let craftingTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - craftingTitleSize.width * 0.5), y: craftingOriginY), size: craftingTitleSize)
                 if let craftingTitleView = self.craftingTitle.view {
                     if craftingTitleView.superview == nil {
                         transition.animateAlpha(view: craftingTitleView, from: 0.0, to: 1.0)
@@ -896,9 +902,9 @@ private final class CraftGiftPageContent: Component {
                         MultilineTextComponent(text: .plain(NSAttributedString(string: giftTitle, font: Font.semibold(13.0), textColor: .white.withAlphaComponent(0.5))))
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
-                let craftingSubtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - craftingSubtitleSize.width) * 0.5), y: craftingOriginY), size: craftingSubtitleSize)
+                let craftingSubtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - craftingSubtitleSize.width * 0.5), y: craftingOriginY), size: craftingSubtitleSize)
                 if let craftingSubtitleView = self.craftingSubtitle.view {
                     if craftingSubtitleView.superview == nil {
                         transition.animateAlpha(view: craftingSubtitleView, from: 0.0, to: 1.0)
@@ -929,9 +935,9 @@ private final class CraftGiftPageContent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
-                let craftingDescriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - craftingDescriptionSize.width) * 0.5), y: craftingOriginY), size: craftingDescriptionSize)
+                let craftingDescriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - craftingDescriptionSize.width * 0.5), y: craftingOriginY), size: craftingDescriptionSize)
                 if let craftingDescriptionView = self.craftingDescription.view {
                     if craftingDescriptionView.superview == nil {
                         transition.animateAlpha(view: craftingDescriptionView, from: 0.0, to: 1.0)
@@ -969,9 +975,9 @@ private final class CraftGiftPageContent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
-                let craftingProbabilityFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - craftingProbabilitySize.width) * 0.5), y: craftingOriginY), size: craftingProbabilitySize)
+                let craftingProbabilityFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - craftingProbabilitySize.width * 0.5), y: craftingOriginY), size: craftingProbabilitySize)
                 if let craftingProbabilityView = self.craftingProbability.view {
                     if craftingProbabilityView.superview == nil {
                         transition.animateAlpha(view: craftingProbabilityView, from: 0.0, to: 1.0)
@@ -1019,9 +1025,9 @@ private final class CraftGiftPageContent: Component {
                         MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Gift_Craft_CraftingFailed_Title, font: Font.bold(20.0), textColor: UIColor(rgb: 0xff746d))))
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
-                let failureTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - failureTitleSize.width) * 0.5), y: failureOriginY), size: failureTitleSize)
+                let failureTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - failureTitleSize.width * 0.5), y: failureOriginY), size: failureTitleSize)
                 if let failureTitleView = self.failureTitle.view {
                     if failureTitleView.superview == nil {
                         transition.animateAlpha(view: failureTitleView, from: 0.0, to: 1.0)
@@ -1052,9 +1058,9 @@ private final class CraftGiftPageContent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
                 )
-                let failureDescriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - failureDescriptionSize.width) * 0.5), y: failureOriginY), size: failureDescriptionSize)
+                let failureDescriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - failureDescriptionSize.width * 0.5), y: failureOriginY), size: failureDescriptionSize)
                 if let failureDescriptionView = self.failureDescription.view {
                     if failureDescriptionView.superview == nil {
                         transition.animateAlpha(view: failureDescriptionView, from: 0.0, to: 1.0)
@@ -1084,7 +1090,7 @@ private final class CraftGiftPageContent: Component {
                 var itemDelay: Double = 0.2
                 
                 let totalItemsWidth: CGFloat = itemSize.width * CGFloat(lostGifts.count) + itemSpacing * CGFloat(lostGifts.count - 1)
-                var itemOriginX: CGFloat = floor((availableSize.width - totalItemsWidth) / 2.0)
+                var itemOriginX: CGFloat = floor(bandCenterX - totalItemsWidth / 2.0)
                 
                 for gift in lostGifts {
                     let itemId = AnyHashable(gift.gift.id)
@@ -1153,6 +1159,8 @@ private final class CraftGiftPageContent: Component {
                         buttonColor: component.colors.3,
                         isCrafting: isCrafting,
                         result: component.result,
+                        // The slots centre in the band beside a side strip (iPhone Duo), like the texts and the dial.
+                        centerOffsetX: bandCenterX - availableSize.width / 2.0,
                         select: { [weak self] index in
                             guard let self, let component = self.component, let environment = self.environment, let genericGift = self.starGiftsMap[component.gift.giftId], let resaleContext = component.resaleContext() else {
                                 return
@@ -1275,7 +1283,7 @@ private final class CraftGiftPageContent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 260.0)
             )
-            let infoHeaderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - infoHeaderSize.width) * 0.5), y: 0.0), size: infoHeaderSize)
+            let infoHeaderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - infoHeaderSize.width * 0.5), y: 0.0), size: infoHeaderSize)
             if let infoHeaderView = self.infoHeader.view {
                 if infoHeaderView.superview == nil {
                     self.infoContainer.layer.allowsGroupOpacity = true
@@ -1304,9 +1312,9 @@ private final class CraftGiftPageContent: Component {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Gift_Craft_Info_Title, font: Font.bold(20.0), textColor: .white)))
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
-            let infoTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - infoTitleSize.width) * 0.5), y: infoHeaderSize.height - 87.0), size: infoTitleSize)
+            let infoTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - infoTitleSize.width * 0.5), y: infoHeaderSize.height - 87.0), size: infoTitleSize)
             if let infoTitleView = self.infoTitle.view {
                 if infoTitleView.superview == nil {
                     self.infoContainer.addSubview(infoTitleView)
@@ -1331,9 +1339,9 @@ private final class CraftGiftPageContent: Component {
                     lineSpacing: 0.2
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
-            let infoDescriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - infoDescriptionTextSize.width) * 0.5), y: infoHeaderSize.height - 56.0), size: infoDescriptionTextSize)
+            let infoDescriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - infoDescriptionTextSize.width * 0.5), y: infoHeaderSize.height - 56.0), size: infoDescriptionTextSize)
             if let infoDescriptionTextView = self.infoDescription.view {
                 if infoDescriptionTextView.superview == nil {
                     self.infoContainer.addSubview(infoDescriptionTextView)
@@ -1402,7 +1410,7 @@ private final class CraftGiftPageContent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 64.0, height: 10000)
             )
-            let infoListFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - infoListSize.width) / 2.0), y: infoContentHeight), size: infoListSize)
+            let infoListFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - infoListSize.width / 2.0), y: infoContentHeight), size: infoListSize)
             if let infoListView = self.infoList.view {
                 if infoListView.superview == nil {
                     self.infoContainer.addSubview(infoListView)
@@ -1658,7 +1666,8 @@ private final class SheetContainerComponent: CombinedComponent {
                     color: environment.theme.list.itemCheckColors.foregroundColor,
                     startingPosition: .begin,
                     size: CGSize(width: 28.0, height: 28.0),
-                    playOnce: playButtonAnimation
+                    playOnce: playButtonAnimation,
+                    lottieSettings: component.context.lottieRenderingSettings
                 ))))
                 buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
                     text: strings.Gift_Craft_Info_Understood,
@@ -1945,7 +1954,7 @@ private final class SheetContainerComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

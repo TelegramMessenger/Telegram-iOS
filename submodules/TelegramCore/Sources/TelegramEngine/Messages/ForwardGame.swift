@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 
 public enum SendBotGameError {
@@ -19,7 +19,7 @@ func _internal_sendBotGame(account: Account, botPeerId: PeerId, game: String, to
             flags |= 1 << 0
             let threadMessageId = Int32(clamping: threadId)
             let replyFlags: Int32 = 1 << 0
-            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: threadMessageId, topMsgId: threadMessageId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil))
+            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: threadMessageId, topMsgId: threadMessageId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: nil, todoItemId: nil, pollOption: nil, quoteRich: nil))
         }
 
         return account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: .inputMediaGame(.init(id: .inputGameShortName(.init(botId: inputBot, shortName: game)))), message: "", randomId: Int64.random(in: Int64.min ... Int64.max), replyMarkup: nil, entities: nil, scheduleDate: nil, scheduleRepeatPeriod: nil, sendAs: nil, quickReplyShortcut: nil, effect: nil, allowPaidStars: nil, suggestedPost: nil))

@@ -27,7 +27,7 @@ final class CanvasInsertTableTests: XCTestCase {
     }
     func caretAtEndOf(_ v: DocumentCanvasView, _ id: String) {
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID(id)) }!
-        v.anchor = r.globalStart + r.length; v.head = r.globalStart + r.length
+        v.setSelectionForTesting(anchor: r.globalStart + r.length, head: r.globalStart + r.length)
     }
 
     func test_insertTable_afterParagraph_insertsAndLandsCaretInHeaderCell() {
@@ -42,10 +42,10 @@ final class CanvasInsertTableTests: XCTestCase {
         XCTAssertTrue(v.isInsideTable(v.head), "caret lands inside the new table")
     }
 
-    func test_insertTable_focusesEditor_soCellsAreImmediatelyInteractive() {
-        // Regression: the caret-move layout that positions the new table's cells is FR-gated
-        // (scrollCaretIntoView), so an unfocused insert left cell frames stale — cell taps / knob drags
-        // missed until a later interaction focused the field. insertTable must focus the editor itself.
+    func test_insertTable_whenUnfocused_doesNotStealFocus_butCaretIsInTable() {
+        // Inserting a table must NOT grab first responder / pop the keyboard when the editor was unfocused.
+        // The table is still inserted and the MODEL caret lands live in the new table (first cell), so a
+        // later tap/focus operates on it — but the editor stays unfocused.
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 600))
         window.makeKeyAndVisible()
         let v = canvas()
@@ -54,11 +54,9 @@ final class CanvasInsertTableTests: XCTestCase {
         caretAtEndOf(v, "p")
         XCTAssertFalse(v.isFirstResponder, "precondition: not focused before the insert")
         v.insertTable(rows: 2, columns: 2)
-        XCTAssertTrue(v.isFirstResponder,
-                      "inserting a table focuses the editor so the new cells are immediately tappable/draggable")
+        XCTAssertFalse(v.isFirstResponder, "inserting a table must NOT steal focus when the editor was unfocused")
         XCTAssertNotNil(v.activeTable(), "the caret is live inside the new table")
-        // Hygiene: don't leak a key window + first-responder canvas into sibling tests.
-        _ = v.resignFirstResponder()
+        // Hygiene: don't leak a key window into sibling tests.
         v.removeFromSuperview()
         window.isHidden = true
         window.resignKey()
@@ -67,7 +65,7 @@ final class CanvasInsertTableTests: XCTestCase {
     func test_insertTable_midParagraph_splitsParagraph() {
         let v = canvas()
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("p")) }!
-        v.anchor = r.globalStart + 2; v.head = r.globalStart + 2   // mid "He|llo"
+        v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 2)   // mid "He|llo"
         v.insertTable(rows: 2, columns: 2)
         let texts = paraTexts(v)
         XCTAssertTrue(texts.contains("He"))
@@ -78,7 +76,7 @@ final class CanvasInsertTableTests: XCTestCase {
     func test_insertTable_caretInsideCell_isNoOp() {
         let v = canvas()
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
-        v.anchor = a.globalStart + 1; v.head = a.globalStart + 1
+        v.setSelectionForTesting(anchor: a.globalStart + 1, head: a.globalStart + 1)
         let before = v.currentBlocks().count
         v.insertTable(rows: 2, columns: 2)
         XCTAssertEqual(v.currentBlocks().count, before, "no-op when the caret is inside a table cell")
@@ -93,7 +91,7 @@ final class CanvasInsertTableTests: XCTestCase {
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
         let img = v.boxes.first { $0 is MediaBlockBox }!
-        v.anchor = img.nodeStart; v.head = img.nodeStart
+        v.setSelectionForTesting(anchor: img.nodeStart, head: img.nodeStart)
         let before = v.currentBlocks().count
         v.insertTable(rows: 2, columns: 2)
         XCTAssertEqual(v.currentBlocks().count, before, "no-op when the caret is on an image gap")
@@ -123,7 +121,7 @@ final class CanvasInsertTableTests: XCTestCase {
     func test_insertTable_replacesSelection() {
         let v = canvas()
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("p")) }!
-        v.anchor = r.globalStart + 2; v.head = r.globalStart + 5   // select "llo" of "Hello"
+        v.setSelectionForTesting(anchor: r.globalStart + 2, head: r.globalStart + 5)   // select "llo" of "Hello"
         v.insertTable(rows: 2, columns: 2)
         let texts = paraTexts(v)
         XCTAssertTrue(texts.contains("He"), "selected text is replaced")
@@ -135,7 +133,7 @@ final class CanvasInsertTableTests: XCTestCase {
     func test_insertTable_atParagraphStart_insertsBefore() {
         let v = canvas()
         let r = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("p")) }!
-        v.anchor = r.globalStart; v.head = r.globalStart            // caret at local 0
+        v.setSelectionForTesting(anchor: r.globalStart, head: r.globalStart)   // caret at local 0
         v.insertTable(rows: 2, columns: 2)
         guard case .table = v.currentBlocks().first else { return XCTFail("table should be inserted before the first paragraph") }
         XCTAssertEqual(tables(v).count, 2)
@@ -145,7 +143,7 @@ final class CanvasInsertTableTests: XCTestCase {
         let v = DocumentCanvasView()
         v.setBlocks([.paragraph(ParagraphBlock(id: BlockID("e"), runs: []))], width: 320)   // a single empty paragraph
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
-        v.anchor = v.boxes[0].textStart; v.head = v.boxes[0].textStart
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart, head: v.boxes[0].textStart)
         v.insertTable(rows: 2, columns: 2)
         XCTAssertEqual(v.currentBlocks().count, 1, "the empty paragraph is replaced by the table, not left beside it")
         guard case .table = v.currentBlocks().first else { return XCTFail("the only block should be the table") }
@@ -160,7 +158,7 @@ final class CanvasInsertTableTests: XCTestCase {
             .paragraph(ParagraphBlock(id: BlockID("b"), runs: [TextRun(text: "B")])),
         ], width: 320)
         v.frame = CGRect(x: 0, y: 0, width: 320, height: 600); v.layoutIfNeeded()
-        v.anchor = v.boxes[1].textStart; v.head = v.boxes[1].textStart
+        v.setSelectionForTesting(anchor: v.boxes[1].textStart, head: v.boxes[1].textStart)
         v.insertTable(rows: 2, columns: 2)
         XCTAssertEqual(v.currentBlocks().count, 3, "A | table | B — the empty paragraph is replaced, not split into two empties")
         XCTAssertEqual(paraTexts(v), ["A", "B"])
@@ -171,7 +169,7 @@ final class CanvasInsertTableTests: XCTestCase {
         let v = canvas()
         let um = UndoManager(); um.groupsByEvent = false; v.undoManagerOverride = um
         let a = v.allLeafRegions().first { $0.ref == .paragraph(BlockID("ap")) }!
-        v.anchor = a.globalStart + 1; v.head = a.globalStart + 1
+        v.setSelectionForTesting(anchor: a.globalStart + 1, head: a.globalStart + 1)
         v.insertTable(rows: 2, columns: 2)
         XCTAssertFalse(um.canUndo, "a no-op must not register an undo entry")
     }

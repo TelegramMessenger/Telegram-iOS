@@ -159,8 +159,7 @@ final class MarkedTextTests: XCTestCase {
     func test_composition_replacesNonEmptySelection() {
         let v = makeCanvas(["Alpha", "Beta"])
         // Select "lph" inside Alpha, then begin composing.
-        v.anchor = v.boxes[0].textStart + 1
-        v.head   = v.boxes[0].textStart + 4
+        v.setSelectionForTesting(anchor: v.boxes[0].textStart + 1, head: v.boxes[0].textStart + 4)
         v.setMarkedText("X", selectedRange: NSRange(location: 1, length: 0))
         XCTAssertEqual((v.boxes[0] as! BlockBox).currentParagraph().text, "AXa")   // "lph" replaced
         XCTAssertEqual((v.markedTextRange as? DocumentTextRange)?.from.offset, v.boxes[0].textStart + 1)
@@ -227,6 +226,38 @@ final class MarkedTextTests: XCTestCase {
         caret(v, v.boxes[1].textStart)
         v.setMarkedText("ni", selectedRange: NSRange(location: 2, length: 0))
         XCTAssertFalse(v.markedTextIsPrediction)
+    }
+
+    /// TASK 9d / PHASE 0b — the differential oracle found this against stock UIKit, and it is a REAL
+    /// DEFECT, not an oracle artifact: all 9 inline-prediction scenarios produced a wrong document.
+    ///
+    /// **The mechanism.** `legacyReplace(globalFrom:globalTo:text:)` captures its `lo`/`hi` BEFORE
+    /// entering `editing { }`, and `performEditing`'s first statement is `finalizeMarkedText()`. When the
+    /// composition is a PREDICTION (`markedTextIsPrediction`, i.e. `selectedRange == {0,0}`), that
+    /// prologue calls `dismissPrediction()`, which REMOVES the ghost — so the document shrinks by the
+    /// ghost's length and the caller's offsets are stale by exactly that much. The replace then eats
+    /// that many extra characters PAST the intended range.
+    ///
+    /// **Why it is caret-governed and not structural:** a COMPOSITION (caret at the end) takes
+    /// `commitMarkedText()`, which moves nothing, so the same call is correct. That is precisely why the
+    /// IME family passed these fields and the inline-prediction family failed.
+    ///
+    /// RED BEFORE THE FIX: the trailing "Beta" loses its first two characters to the stale range.
+    func test_replaceOverALivePrediction_doesNotEatCharactersPastTheRange() {
+        let v = makeCanvas(["coBeta"])
+        let ts = v.boxes[0].textStart
+        caret(v, ts + 2)
+        // A prediction: ghost "untry" trailing the caret, selected range {0,0}.
+        v.setMarkedText("untry", selectedRange: NSRange(location: 0, length: 0))
+        XCTAssertTrue(v.markedTextIsPrediction, "precondition: this must be the PREDICTION path")
+        guard let m = v.markedTextRange as? DocumentTextRange else {
+            return XCTFail("precondition: a marked range must exist")
+        }
+        // The keyboard replaces exactly the ghost with the accepted word.
+        v.legacyReplace(globalFrom: m.from.offset, globalTo: m.to.offset, text: "untry")
+        XCTAssertEqual((v.boxes[0] as! BlockBox).currentParagraph().text, "countryBeta",
+                       "the replacement must consume ONLY the ghost; the stale-offset bug eats "
+                       + "\(m.to.offset - m.from.offset) characters of the following text")
     }
 
     func test_prediction_dismissedOnGestureCaretMove_notCommitted() {

@@ -5,8 +5,10 @@ import ComponentFlow
 import Camera
 import CameraButtonComponent
 
+private let collageIconSize = CGSize(width: 36.0, height: 36.0)
+
 private func generateCollageIcon(grid: Camera.CollageGrid, crossed: Bool) -> UIImage? {
-    return generateImage(CGSize(width: 36.0, height: 36.0), rotatedContext: { size, context in
+    return generateImage(collageIconSize, rotatedContext: { size, context in
         let bounds = CGRect(origin: .zero, size: size)
         context.clear(bounds)
                       
@@ -121,7 +123,7 @@ final class CollageIconComponent: Component {
                         
             if component.grid != previousComponent?.grid {
                 let image = generateCollageIcon(grid: component.grid, crossed: component.crossed)
-                let selectedImage = generateImage(CGSize(width: 36.0, height: 36.0), contextGenerator: { size, context in
+                let selectedImage = generateImage(collageIconSize, contextGenerator: { size, context in
                     context.clear(CGRect(origin: .zero, size: size))
                     context.setFillColor(UIColor.white.cgColor)
                     context.fillEllipse(in: CGRect(origin: .zero, size: size))
@@ -144,7 +146,7 @@ final class CollageIconComponent: Component {
                 }
             }
             
-            let size = CGSize(width: 36.0, height: 36.0)
+            let size = collageIconSize
             self.iconView.frame = CGRect(origin: .zero, size: size)
             self.iconView.isHighlighted = component.isSelected
             
@@ -213,7 +215,16 @@ final class CollageIconCarouselComponent: Component {
             self.state = state
             
             let inset: CGFloat = 27.0
-            let spacing: CGFloat = availableSize.width > 290.0 ? 7.0 : 8.0
+            let minimumSpacing: CGFloat = availableSize.width > 290.0 ? 7.0 : 8.0
+            let availableContentWidth = availableSize.width - inset - collageIconSize.width / 2.0
+            let fullItemCount = floor(availableContentWidth / (collageIconSize.width + minimumSpacing))
+            let spacing: CGFloat
+            if fullItemCount >= 1.0 && inset + CGFloat(component.grids.count) * (collageIconSize.width + minimumSpacing) > availableSize.width {
+                // Place the right edge through an icon's center to make scrolling discoverable.
+                spacing = availableContentWidth / fullItemCount - collageIconSize.width
+            } else {
+                spacing = minimumSpacing
+            }
             var contentWidth: CGFloat = inset
             let buttonSize = CGSize(width: 40.0, height: 40.0)
             

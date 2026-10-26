@@ -263,7 +263,7 @@ final class SpellCheckTapTests: XCTestCase {
         _ = v.becomeFirstResponder()
         // Put the caret in the table so `activeTable()` resolves, then structurally select a row — the same
         // way a real row-handle tap would (see `CanvasTableBackspaceDeleteTests.putCaretInTable`).
-        v.head = tableBox(v)!.cellTextStart(row: 1, column: 0)!; v.anchor = v.head
+        v.setSelectionForTesting(anchor: tableBox(v)!.cellTextStart(row: 1, column: 0)!, head: tableBox(v)!.cellTextStart(row: 1, column: 0)!)
         v.selectTableRows(1...1)
         XCTAssertNotNil(v.tableSelection, "sanity: the structural selection is active before the tap")
         XCTAssertTrue(v.beginSpellingCorrection(at: pointOnFlaggedTableWord(v)))

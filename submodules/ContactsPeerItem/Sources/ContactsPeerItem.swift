@@ -231,6 +231,18 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     public let headerAccessoryItem: ListViewAccessoryItem?
     
     public let header: ListViewItemHeader?
+
+    public var neighborDescriptor: AnyEquatable {
+        return AnyEquatable(ItemListHeaderNeighborDescriptor(
+            sectionId: self.sectionId,
+            isAlwaysPlain: self.isAlwaysPlain,
+            requestsNoInset: self.requestsNoInset,
+            isTextItem: false,
+            hasActiveRevealOptions: (self as? ItemListRevealOptionsStatefulItem)?.hasActiveRevealOptions ?? false,
+            headerId: self.header?.id,
+            headerFamily: .contactList
+        ))
+    }
     
     public init(
         presentationData: ItemListPresentationData,
@@ -368,12 +380,12 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         }
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactsPeerItemNode()
             let makeLayout = node.asyncLayout()
-            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, neighbors: neighbors)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -388,13 +400,13 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, neighbors: ListViewItemNeighbors, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactsPeerItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, neighbors: neighbors)
+                    let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
                             apply().1(animation.isAnimated, false)
@@ -414,14 +426,14 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         }
     }
     
-    static func mergeType(item: ContactsPeerItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+    static func mergeType(item: ContactsPeerItem, neighbors: ListViewItemNeighbors) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
         var first = false
         var last = false
         var firstWithHeader = false
-        if let previousItem = previousItem {
+        if neighbors.previous != nil {
             if let header = item.header {
-                if let previousItem = previousItem as? ListViewItemWithHeader {
-                    firstWithHeader = header.id != previousItem.header?.id
+                if let previousItem = neighbors.previous?.base(HeaderNeighborFacet.self) {
+                    firstWithHeader = header.id != previousItem.headerId
                 } else {
                     firstWithHeader = true
                 }
@@ -430,10 +442,10 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
             first = true
             firstWithHeader = item.header != nil
         }
-        if let nextItem = nextItem {
+        if neighbors.next != nil {
             if let header = item.header {
-                if let nextItem = nextItem as? ListViewItemWithHeader {
-                    last = header.id != nextItem.header?.id
+                if let nextItem = neighbors.next?.base(HeaderNeighborFacet.self) {
+                    last = header.id != nextItem.headerId
                 } else {
                     last = true
                 }
@@ -707,12 +719,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         contextAction(self.containerNode, nil, point)
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, neighbors: ListViewItemNeighbors) {
         if let (item, _, _, _, _, _) = self.layoutParams {
-            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
-            self.layoutParams = (item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, neighbors: neighbors)
+            self.layoutParams = (item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (nodeLayout, nodeApply) = makeLayout(item, params, first, last, firstWithHeader, itemListNeighbors(item: item, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             let _ = nodeApply()
@@ -754,26 +766,22 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             transition.updateTintColor(layer: avatarBadgeBackground.layer, color: item.presentationData.theme.list.itemHighlightedBackgroundColor.mixedWith(item.presentationData.theme.list.plainBackgroundColor, alpha: reallyHighlighted ? 0.0 : 1.0))
         }
         
-        if reallyHighlighted {
-            if self.highlightedBackgroundNode.supernode == nil {
-                self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
-                self.highlightedBackgroundNode.alpha = 0.0
-            }
-            self.highlightedBackgroundNode.layer.removeAllAnimations()
-            transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
-        } else {
-            if self.highlightedBackgroundNode.supernode != nil {
-                transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0 - highlightProgress, completion: { [weak self] completed in
-                    if let strongSelf = self {
-                        if completed {
-                            strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                        }
-                    }
-                })
-            }
+        let baseAlpha = reallyHighlighted ? highlightProgress : 1.0 - highlightProgress
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: baseAlpha > 0, transition: transition, aboveNodes: [self.separatorNode, self.backgroundNode], highlightAlpha: baseAlpha)
+        if let item = self.item, let avatarBadgeBackground = self.avatarBadgeBackground {
+            transition.updateTintColor(layer: avatarBadgeBackground.layer, color: item.presentationData.theme.list.itemHighlightedBackgroundColor.mixedWith(item.presentationData.theme.list.plainBackgroundColor, alpha: 1.0 - self.highlightedBackgroundNode.alpha))
         }
     }
-    
+
+    override public func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
+        super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
+        self.updateIsHighlighted(transition: transition)
+    }
+
+    override public func revealOptionsSurfaceUpdated(progress: CGFloat) {
+        self.updateIsHighlighted(transition: .immediate)
+    }
+
     public func asyncLayout() -> (_ item: ContactsPeerItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool, Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let titleBadgeLayout = TextNode.asyncLayout(self.titleBadge?.textNode)
@@ -1243,7 +1251,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             color = item.presentationData.theme.list.itemDisclosureActions.accent.fillColor
                             textColor = item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor
                     }
-                    mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, iconColor: textColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                    mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, iconColor: textColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: option.type == .destructive))
                     index += 1
                 }
                 peerRevealOptions = mappedOptions
@@ -1268,6 +1276,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
+                    var revealBottomSeparatorIsHidden = false
+
                     return (.complete(), { [weak strongSelf] animated, synchronousLoads in
                         if let strongSelf = strongSelf {
                             strongSelf.layoutParams = (item, params, first, last, firstWithHeader, neighbors)
@@ -1282,7 +1292,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                             
                             let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: nodeLayout.contentSize.width - 16.0, height: nodeLayout.contentSize.height))
-                            let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
+                            let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).inset(by: UIEdgeInsets(top: 0.0, left: 16.0 + params.leftInset, bottom: 0.0, right: 16.0 + params.rightInset))
                             strongSelf.extractedRect = extractedRect
                             strongSelf.nonExtractedRect = nonExtractedRect
                             
@@ -1417,10 +1427,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                                 switch neighbors.bottom {
                                 case .sameSection(false):
-                                    strongSelf.separatorNode.isHidden = false
+                                    revealBottomSeparatorIsHidden = false
                                 default:
                                     hasBottomCorners = true
-                                    strongSelf.separatorNode.isHidden = hasCorners
+                                    revealBottomSeparatorIsHidden = hasCorners
                                 }
                             }
                             
@@ -2000,29 +2010,35 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             let separatorHeight = UIScreenPixel
-                            let separatorRightInset: CGFloat = item.systemStyle == .glass ? 16.0 : 0.0
-                            
+                            // iPhone Duo: the part of one side's inset beyond the other's is the side strip; the
+                            // separator and the highlight stop at it instead of running under it. Equal insets give
+                            // today's frames.
+                            let stripExcessLeft = max(0.0, params.leftInset - params.rightInset)
+                            let stripExcessRight = max(0.0, params.rightInset - params.leftInset)
+                            let separatorRightInset: CGFloat = (item.systemStyle == .glass ? 16.0 : 0.0) + stripExcessRight
+
                             strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
-                            
+
                             var topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             topHighlightInset -= nodeLayout.insets.top
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
-                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
-                            strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
+                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
+                            strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: stripExcessLeft, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width - stripExcessLeft - stripExcessRight, height: nodeLayout.size.height + topHighlightInset)), aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
                             strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(nodeLayout.insets.top, separatorHeight)), size: CGSize(width: nodeLayout.contentSize.width, height: separatorHeight))
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset - separatorRightInset), height: separatorHeight))
                             if !item.alwaysShowLastSeparator && item.style != .blocks {
-                                strongSelf.separatorNode.isHidden = last
+                                revealBottomSeparatorIsHidden = last
                             }
                             
                             if let userPresence = userPresence {
                                 strongSelf.peerPresenceManager?.reset(presence: userPresence)
                             }
                             
+                            strongSelf.updateRevealOptionsSeparatorNodes(top: nil, bottom: strongSelf.separatorNode, topIsHidden: true, bottomIsHidden: revealBottomSeparatorIsHidden)
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                             
                             if item.editing.editable {
-                                strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                                strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                                 strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                             } else {
                                 strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
@@ -2044,7 +2060,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     adButton.setImage(searchAdIcon, for: .normal)
                                 }
                                 if let icon = adButton.image(for: .normal) {
-                                    adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0, y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)
+                                    adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0 - max(0.0, params.rightInset - params.leftInset), y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)
                                 }
                             } else if let adButton = strongSelf.adButton {
                                 strongSelf.adButton = nil
@@ -2185,4 +2201,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
         }
     }
+}
+
+public extension ListViewItemHeaderFamily {
+    /// Items whose section-letter header runs group together: `ContactsPeerItem` and
+    /// `ContactListActionItem`. Was encoded as a pair of concrete-type casts.
+    static let contactList = ListViewItemHeaderFamily("contactList")
 }

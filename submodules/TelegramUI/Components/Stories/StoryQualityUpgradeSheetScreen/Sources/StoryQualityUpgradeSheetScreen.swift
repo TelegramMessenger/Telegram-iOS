@@ -1,4 +1,5 @@
 import Foundation
+import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -71,13 +72,19 @@ public final class ButtonSubtitleComponent: CombinedComponent {
 private final class StoryQualityUpgradeSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let context: AccountContext
+    
     let action: () -> Void
     let dismiss: () -> Void
     
     init(
+    
+        context: AccountContext,
         action: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
+    
+        self.context = context
         self.action = action
         self.dismiss = dismiss
     }
@@ -160,7 +167,8 @@ private final class StoryQualityUpgradeSheetContentComponent: Component {
                     color: nil,
                     startingPosition: .begin,
                     size: CGSize(width: 100.0, height: 100.0),
-                    loop: true
+                    loop: true,
+                    lottieSettings: component.context.lottieRenderingSettings
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -321,7 +329,7 @@ private final class StoryQualityUpgradeSheetScreenComponent: Component {
                 metrics: environment.metrics,
                 deviceMetrics: environment.deviceMetrics,
                 isDisplaying: environment.isVisible,
-                isCentered: environment.metrics.widthClass == .regular,
+                isCentered: environment.presentsFloatingPanels,
                 hasInputHeight: !environment.inputHeight.isZero,
                 regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                 dismiss: { [weak self] _ in
@@ -339,6 +347,7 @@ private final class StoryQualityUpgradeSheetScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(StoryQualityUpgradeSheetContentComponent(
+                        context: component.context,
                         action: { [weak self] in
                             guard let self else {
                                 return

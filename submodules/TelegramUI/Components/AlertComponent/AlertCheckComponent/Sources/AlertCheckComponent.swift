@@ -14,6 +14,11 @@ import Markdown
 
 public final class AlertCheckComponent: Component {
     public typealias EnvironmentType = AlertComponentEnvironment
+
+    public enum Alignment: Equatable {
+        case `default`
+        case center
+    }
         
     public class ExternalState {
         public fileprivate(set) var value: Bool
@@ -27,23 +32,29 @@ public final class AlertCheckComponent: Component {
     }
     
     let title: String
+    let alignment: Alignment
     let initialValue: Bool
     let externalState: ExternalState
     let linkAction: (() -> Void)?
     
     public init(
         title: String,
+        alignment: Alignment = .center,
         initialValue: Bool,
         externalState: ExternalState,
         linkAction: (() -> Void)? = nil
     ) {
         self.title = title
+        self.alignment = alignment
         self.initialValue = initialValue
         self.externalState = externalState
         self.linkAction = linkAction
     }
     
     public static func ==(lhs: AlertCheckComponent, rhs: AlertCheckComponent) -> Bool {
+        if lhs.alignment != rhs.alignment {
+            return false
+        }
         return true
     }
     
@@ -118,6 +129,7 @@ public final class AlertCheckComponent: Component {
                 }
             )
             
+            let inset: CGFloat = -6.0
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
@@ -162,9 +174,19 @@ public final class AlertCheckComponent: Component {
                 )),
                 environment: {
                 },
-                containerSize: CGSize(width: availableSize.width + 20.0, height: 1000.0)
+                containerSize: CGSize(
+                    width: component.alignment == .default ? availableSize.width - inset * 2.0 : availableSize.width + 20.0,
+                    height: 1000.0
+                )
             )
-            let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: 7.0), size: buttonSize)
+            let buttonOriginX: CGFloat
+            switch component.alignment {
+            case .default:
+                buttonOriginX = inset
+            case .center:
+                buttonOriginX = floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0)
+            }
+            let buttonFrame = CGRect(origin: CGPoint(x: buttonOriginX, y: 7.0), size: buttonSize)
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)

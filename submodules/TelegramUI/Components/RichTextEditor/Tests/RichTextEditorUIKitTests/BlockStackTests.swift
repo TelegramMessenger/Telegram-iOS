@@ -56,25 +56,21 @@ final class BlockStackTests: XCTestCase {
                  mapper: AttributedStringMapper(), width: 300)
     }
 
-    func test_consecutiveListItems_spacedLikeIntraParagraphLines() {
+    /// Two adjacent list items are ITEMS of one InstantPage `.list` block, so they take V2's in-list
+    /// gap — not the paragraph-to-paragraph 1pt rule, and not the old "tight as intra-paragraph lines".
+    func test_consecutiveListItems_takeTheInListGap() {
         let stack = BlockStack(boxes: [listBox("a"), listBox("b")])
         stack.layout(origin: .zero, width: 300)
-        let advance = (stack.boxes[1] as! BlockBox).textOrigin.y - (stack.boxes[0] as! BlockBox).textOrigin.y
-        // Engine-aware: TextKit 2 bakes the full lineHeightMultiple into a single line, so a single-line item
-        // advances by exactly one intra-paragraph line. TextKit 1 applies the multiple BETWEEN lines (not
-        // around a lone line), so a single-line item is its natural (shorter) height — the invariant that
-        // still matters is that items pack TIGHT (no paragraph gap), i.e. no looser than one text line.
-        if stack.boxes[0].textLayout is BlockLayoutTK1 {
-            XCTAssertGreaterThan(advance, 0)
-            XCTAssertLessThanOrEqual(advance, intraParagraphLineAdvance() + 1.0)
-        } else {
-            XCTAssertEqual(advance, intraParagraphLineAdvance(), accuracy: 1.0)
-        }
+        let expected = richTextSpacingBetweenBlocks(upper: .paragraph, lower: .paragraph,
+                                                    kind: .list, metrics: .default)
+        XCTAssertEqual((stack.boxes[1] as! BlockBox).topInset, expected, accuracy: 0.01)
         // Frames stay contiguous (no overlap) on both engines — the core stacking invariant.
         XCTAssertEqual(stack.boxes[1].frame.minY, stack.boxes[0].frame.maxY, accuracy: 0.5)
     }
 
-    func test_consecutiveBodyBlocks_haveNoGap() {
+    /// Two body paragraphs take V2's minimum separation (1pt) — they are held apart by their own line
+    /// boxes, so the rhythm adds only a hairline. (Was 0 under the editor's own pre-parity model.)
+    func test_consecutiveBodyBlocks_takeTheMinimumSeparation() {
         let mapper = AttributedStringMapper()
         let stack = BlockStack(boxes: [
             BlockBox(paragraph: ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "One")]), mapper: mapper, width: 300),
@@ -82,12 +78,18 @@ final class BlockStackTests: XCTestCase {
         ])
         stack.layout(origin: .zero, width: 300)
         let a = stack.boxes[0] as! BlockBox, b = stack.boxes[1] as! BlockBox
-        // The whitespace between the bottom of A's text and the top of B's text.
-        let gap = b.textOrigin.y - (a.textOrigin.y + a.layout.boundingHeight)
-        XCTAssertEqual(gap, 0, accuracy: 0.5)   // two adjacent body paragraphs now stack tight (was 8)
+        // The whitespace between A's last glyph row and B's first: the gap is carried by B's topInset, and
+        // A's own height is the V2-corrected text height, so the two agree.
+        let gap = b.textOrigin.y - (a.textOrigin.y + a.layout.correctedBoundingHeight)
+        XCTAssertEqual(gap, 1.0, accuracy: 0.01)
+        XCTAssertEqual(b.topInset, 1.0, accuracy: 0.01)
     }
 
-    func test_codeBlockNeighbors_reserveExtraExternalMargin() {
+    /// A code block (`.preformatted`) takes V2's fall-through rule against a paragraph:
+    /// padding + base + padding. A framed block cannot own an external inset, so the gap above it is
+    /// carried by the paragraph ABOVE (its `bottomInset`) — which is also what keeps the canvas
+    /// contiguous for hit-testing and arrow-key escape.
+    func test_codeBlockNeighbors_takeTheV2FallThroughGap() {
         let mapper = AttributedStringMapper()
         func body(_ id: String) -> BlockBox {
             BlockBox(paragraph: ParagraphBlock(id: BlockID(id), runs: [TextRun(text: "x")]), mapper: mapper, width: 300)
@@ -95,15 +97,21 @@ final class BlockStackTests: XCTestCase {
         let code = CodeBlockBox(code: CodeBlock(id: BlockID("c"), runs: [TextRun(text: "let x = 1")]), mapper: mapper, width: 300)
         let above = body("above"), below = body("below")
         BlockStack(boxes: [above, code, below]).layout(origin: .zero, width: 300)
-        // A code block draws its own bounded (quote-style) fill, so neighbors reserve the extra external
-        // margin on the code-facing side — exactly like quote / table / collapsed-quote neighbors, so a
-        // code block sits the SAME distance from its neighbors as a quote does.
-        XCTAssertGreaterThan(above.bottomInset, BlockBox.defaultVerticalInset)   // block above the code block
-        XCTAssertGreaterThan(below.topInset, BlockBox.defaultVerticalInset)      // block below the code block
-        XCTAssertEqual(above.topInset, BlockBox.defaultVerticalInset, accuracy: 0.5)  // far side unaffected
+        let expected = richTextSpacingBetweenBlocks(upper: .paragraph, lower: .preformatted,
+                                                    kind: .topLevel, metrics: .default)
+        XCTAssertEqual(above.bottomInset, expected, accuracy: 0.01, "the paragraph above owns the gap")
+        XCTAssertEqual(below.topInset,
+                       richTextSpacingBetweenBlocks(upper: .preformatted, lower: .paragraph,
+                                                    kind: .topLevel, metrics: .default),
+                       accuracy: 0.01)
+        // Far side: the sequence's leading edge.
+        XCTAssertEqual(above.topInset,
+                       richTextSpacingBetweenBlocks(upper: nil, lower: .paragraph, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01, "far side is the document edge gap")
     }
 
-    func test_tableNeighbors_reserveExtraExternalMargin() {
+    /// Same shape for a table, whose bounded grid takes the same fall-through rule.
+    func test_tableNeighbors_takeTheV2FallThroughGap() {
         let mapper = AttributedStringMapper()
         func body(_ id: String) -> BlockBox {
             BlockBox(paragraph: ParagraphBlock(id: BlockID(id), runs: [TextRun(text: "x")]), mapper: mapper, width: 300)
@@ -116,14 +124,19 @@ final class BlockStackTests: XCTestCase {
             mapper: mapper, width: 300)
         let above = body("above"), below = body("below")
         BlockStack(boxes: [above, table, below]).layout(origin: .zero, width: 300)
-        // The blocks bordering the table reserve extra margin on the table-facing side (the table's
-        // bounded grid needs breathing room), like quote neighbors.
-        XCTAssertGreaterThan(above.bottomInset, BlockBox.defaultVerticalInset)   // block above the table
-        XCTAssertGreaterThan(below.topInset, BlockBox.defaultVerticalInset)      // block below the table
-        XCTAssertEqual(above.topInset, BlockBox.defaultVerticalInset, accuracy: 0.5)  // far side unaffected
+        XCTAssertEqual(above.bottomInset,
+                       richTextSpacingBetweenBlocks(upper: .paragraph, lower: .table, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01, "the paragraph above owns the gap")
+        XCTAssertEqual(below.topInset,
+                       richTextSpacingBetweenBlocks(upper: .table, lower: .paragraph, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01)
     }
 
-    func test_blockToMediaBoundary_usesDedicatedMediaInset_decoupledFromBase() {
+    /// Media takes V2's own rules rather than the editor's former dedicated 6pt media inset. A bare
+    /// image next to text gets `max(1, paddings + 1)`; the far sides get the document edge gaps.
+    /// (`verticalInsetBase` is not consulted at all in the V2 model — the old test proved the media
+    /// inset was decoupled from that base, a distinction the rule table no longer has.)
+    func test_blockToMediaBoundary_usesTheV2MediaRules() {
         let mapper = AttributedStringMapper()
         func body(_ id: String) -> BlockBox {
             BlockBox(paragraph: ParagraphBlock(id: BlockID(id), runs: [TextRun(text: "x")]), mapper: mapper, width: 300)
@@ -135,28 +148,35 @@ final class BlockStackTests: XCTestCase {
                                mapper: mapper, width: 300)
         let below = body("below")
         let stack = BlockStack(boxes: [heading, media, below])
-        stack.verticalInsetBase = 30   // deliberately unrelated to the media inset — proves decoupling from base
         stack.layout(origin: .zero, width: 300)
-        // Any block (heading here) facing the image reserves the dedicated media inset (6pt), not `base` (30).
-        XCTAssertEqual(heading.bottomInset, 6, accuracy: 0.5, "block above the image uses the dedicated media inset")
-        XCTAssertEqual(below.topInset, 6, accuracy: 0.5, "block below the image uses the dedicated media inset")
-        // The far sides (facing the stack edge) still use `base`.
-        XCTAssertEqual(heading.topInset, 30, accuracy: 0.5, "far side unaffected — still base")
-        XCTAssertEqual(below.bottomInset, 30, accuracy: 0.5, "far side unaffected — still base")
+        let image = RichTextBlockSpacingKind.media(hasCredit: false, isRawMedia: true)
+        XCTAssertEqual(heading.bottomInset,
+                       richTextSpacingBetweenBlocks(upper: .heading, lower: image, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01, "the heading above owns the gap to the image")
+        XCTAssertEqual(below.topInset,
+                       richTextSpacingBetweenBlocks(upper: image, lower: .paragraph, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01)
+        XCTAssertEqual(heading.topInset,
+                       richTextSpacingBetweenBlocks(upper: nil, lower: .heading, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01, "far side is the document edge gap")
+        XCTAssertEqual(below.bottomInset,
+                       richTextSpacingBetweenBlocks(upper: .paragraph, lower: nil, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01, "far side is the document edge gap")
     }
 
-    func test_listItemToParagraphBoundary_stacksTight() {
+    /// The list-run -> body boundary takes V2's list/paragraph rule (the sum of both paddings), not the
+    /// editor's former "collapses to nothing".
+    func test_listItemToParagraphBoundary_takesTheListToParagraphGap() {
         let mapper = AttributedStringMapper()
         let stack = BlockStack(boxes: [
             listBox("a"),
             BlockBox(paragraph: ParagraphBlock(id: BlockID("b"), runs: [TextRun(text: "Plain")]), mapper: mapper, width: 300),
         ])
         stack.layout(origin: .zero, width: 300)
-        let a = stack.boxes[0] as! BlockBox, b = stack.boxes[1] as! BlockBox
-        // The list-item→body boundary now collapses to NO inter-block gap, exactly like a body↔body or
-        // list↔list boundary — the body paragraph's text starts immediately after the list item's text.
-        let gap = b.textOrigin.y - (a.textOrigin.y + a.layout.boundingHeight)
-        XCTAssertEqual(gap, 0, accuracy: 0.5)
+        let b = stack.boxes[1] as! BlockBox
+        XCTAssertEqual(b.topInset,
+                       richTextSpacingBetweenBlocks(upper: .list, lower: .paragraph, kind: .topLevel, metrics: .default),
+                       accuracy: 0.01)
     }
 }
 #endif

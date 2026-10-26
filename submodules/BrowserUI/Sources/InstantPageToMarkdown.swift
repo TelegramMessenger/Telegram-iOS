@@ -49,7 +49,7 @@ private func markdownString(from block: InstantPageBlock) -> String? {
         return markdownBlockQuote(text)
     case let .list(items, ordered):
         return markdownList(items: items, ordered: ordered, indent: 0)
-    case let .table(_, rows, _, _):
+    case let .table(_, rows, _, _, _):
         return markdownTable(rows: rows)
     case .divider:
         return "---"
@@ -109,6 +109,8 @@ private func markdownInline(from richText: RichText) -> String {
         return "[\(markdownInline(from: text))](mailto:\(email))"
     case let .phone(text, phone):
         return "[\(markdownInline(from: text))](tel:\(phone))"
+    case let .textTonAddress(text):
+        return markdownInline(from: text)
     case let .concat(parts):
         return parts.map { markdownInline(from: $0) }.joined()
     case let .anchor(text, _):
@@ -128,6 +130,14 @@ private func markdownInline(from richText: RichText) -> String {
         return markdownInline(from: text)
     case let .textCustomEmoji(fileId, alt):
         return "[\(escapeCustomEmojiMarkdownAlt(alt))](\(customEmojiMarkdownURL(fileId: fileId)))"
+    case let .textButton(button):
+        // KNOWN LOSSY: markdown has no spelling for a button, so an edit round-trip
+        // (InstantPage -> markdown -> InstantPage) keeps the label and drops the action and style.
+        // Recorded as a deferred hazard in docs/instantpage-richtext.md rather than fixed here; the
+        // fix would be to gate the edit affordance on a positive InstantPage.containsButtons check.
+        // Stated explicitly instead of falling through to `default` so the loss is visible at the
+        // site.
+        return markdownInline(from: button.text)
     default:
         // .image and the entity cases (.textMention, .textHashtag, …):
         // fall back to plain text.
