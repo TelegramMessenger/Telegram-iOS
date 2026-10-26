@@ -58,6 +58,7 @@ final class MediaGridZoomTransition {
         case none
         case outgoing
         case incoming
+        case moving(from: CGRect, to: CGRect)
     }
 
     static let duration: CFTimeInterval = 0.35
@@ -74,7 +75,7 @@ final class MediaGridZoomTransition {
     let cameraAlphaRange: (CGFloat, CGFloat)
     private(set) var progress: CGFloat = 0.0
 
-    init(outgoing: MediaGridLayoutLayer, incoming: MediaGridLayoutLayer, anchorPoint: CGPoint, scale: CGFloat, targetLayout: MediaGridUniformLayout, targetOffset: CGFloat, targetPixelSize: CGSize, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
+    init(outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, targetLayout: MediaGridUniformLayout, targetOffset: CGFloat, targetPixelSize: CGSize, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
         self.outgoing = outgoing
         self.incoming = incoming
         self.anchorPoint = anchorPoint
@@ -85,6 +86,24 @@ final class MediaGridZoomTransition {
         self.camera = camera
         self.cameraRole = cameraRole
         self.cameraAlphaRange = cameraAlphaRange
+        MediaGridZoomTransition.pivot(outgoing, localAnchor: outgoingLocalAnchor, hostAnchor: anchorPoint, viewportSize: viewportSize)
+        MediaGridZoomTransition.pivot(incoming, localAnchor: incomingLocalAnchor, hostAnchor: anchorPoint, viewportSize: viewportSize)
+    }
+
+    private static func pivot(_ layer: CALayer, localAnchor: CGPoint, hostAnchor: CGPoint, viewportSize: CGSize) {
+        layer.transform = CATransform3DIdentity
+        let width = max(1.0, viewportSize.width)
+        let height = max(1.0, viewportSize.height)
+        layer.anchorPoint = CGPoint(x: localAnchor.x / width, y: 0.5)
+        layer.bounds = CGRect(x: 0.0, y: localAnchor.y - height * 0.5, width: width, height: height)
+        layer.position = hostAnchor
+    }
+
+    static func resetPivot(_ layer: CALayer, width: CGFloat, height: CGFloat, originY: CGFloat) {
+        layer.transform = CATransform3DIdentity
+        layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        layer.bounds = CGRect(x: 0.0, y: 0.0, width: width, height: height)
+        layer.position = CGPoint(x: width * 0.5, y: originY + height * 0.5)
     }
 
     private func outgoingScale(_ progress: CGFloat) -> CGFloat {
@@ -96,23 +115,32 @@ final class MediaGridZoomTransition {
         return start + (1.0 - start) * progress
     }
 
-    private func outgoingTransform(_ progress: CGFloat, layer: CALayer) -> CATransform3D {
-        return MediaGridZoomMath.transform(scale: self.outgoingScale(progress), about: self.anchorPoint, layerPosition: layer.position)
+    private func outgoingTransform(_ progress: CGFloat) -> CATransform3D {
+        let scale = self.outgoingScale(progress)
+        return CATransform3DMakeScale(scale, scale, 1.0)
     }
 
-    private func incomingTransform(_ progress: CGFloat, layer: CALayer) -> CATransform3D {
-        return MediaGridZoomMath.transform(scale: self.incomingScale(progress), about: self.anchorPoint, layerPosition: layer.position)
+    private func incomingTransform(_ progress: CGFloat) -> CATransform3D {
+        let scale = self.incomingScale(progress)
+        return CATransform3DMakeScale(scale, scale, 1.0)
     }
 
     private func cameraTransform(_ progress: CGFloat, layer: CALayer) -> CATransform3D {
         switch self.cameraRole {
-        case .none:
+        case .none, .moving:
             return CATransform3DIdentity
         case .outgoing:
-            return self.outgoingTransform(progress, layer: layer)
+            return MediaGridZoomMath.transform(scale: self.outgoingScale(progress), about: self.anchorPoint, layerPosition: layer.position)
         case .incoming:
-            return self.incomingTransform(progress, layer: layer)
+            return MediaGridZoomMath.transform(scale: self.incomingScale(progress), about: self.anchorPoint, layerPosition: layer.position)
         }
+    }
+
+    private func cameraFrame(_ progress: CGFloat) -> CGRect? {
+        guard case let .moving(from, to) = self.cameraRole else {
+            return nil
+        }
+        return CGRect(x: from.minX + (to.minX - from.minX) * progress, y: from.minY + (to.minY - from.minY) * progress, width: from.width + (to.width - from.width) * progress, height: from.height + (to.height - from.height) * progress)
     }
 
     private func cameraAlpha(_ progress: CGFloat) -> CGFloat {
@@ -121,12 +149,18 @@ final class MediaGridZoomTransition {
 
     func apply(progress: CGFloat) {
         self.progress = progress
-        self.outgoing.transform = self.outgoingTransform(progress, layer: self.outgoing)
+        self.outgoing.transform = self.outgoingTransform(progress)
         self.outgoing.opacity = Float(1.0 - progress)
-        self.incoming.transform = self.incomingTransform(progress, layer: self.incoming)
+        self.incoming.transform = self.incomingTransform(progress)
         self.incoming.opacity = Float(progress)
         if let camera = self.camera {
-            camera.layer.transform = self.cameraTransform(progress, layer: camera.layer)
+            if let frame = self.cameraFrame(progress) {
+                camera.layer.transform = CATransform3DIdentity
+                camera.layer.bounds = CGRect(origin: .zero, size: frame.size)
+                camera.layer.position = CGPoint(x: frame.midX, y: frame.midY)
+            } else {
+                camera.layer.transform = self.cameraTransform(progress, layer: camera.layer)
+            }
             camera.alpha = self.cameraAlpha(progress)
         }
     }
@@ -136,12 +170,17 @@ final class MediaGridZoomTransition {
         CATransaction.begin()
         CATransaction.setCompletionBlock(completion)
         self.apply(progress: progress)
-        self.add(keyPath: "transform", layer: self.outgoing, from: NSValue(caTransform3D: self.outgoingTransform(from, layer: self.outgoing)), to: NSValue(caTransform3D: self.outgoing.transform))
+        self.add(keyPath: "transform", layer: self.outgoing, from: NSValue(caTransform3D: self.outgoingTransform(from)), to: NSValue(caTransform3D: self.outgoing.transform))
         self.add(keyPath: "opacity", layer: self.outgoing, from: NSNumber(value: Float(1.0 - from)), to: NSNumber(value: self.outgoing.opacity))
-        self.add(keyPath: "transform", layer: self.incoming, from: NSValue(caTransform3D: self.incomingTransform(from, layer: self.incoming)), to: NSValue(caTransform3D: self.incoming.transform))
+        self.add(keyPath: "transform", layer: self.incoming, from: NSValue(caTransform3D: self.incomingTransform(from)), to: NSValue(caTransform3D: self.incoming.transform))
         self.add(keyPath: "opacity", layer: self.incoming, from: NSNumber(value: Float(from)), to: NSNumber(value: self.incoming.opacity))
         if let camera = self.camera {
-            self.add(keyPath: "transform", layer: camera.layer, from: NSValue(caTransform3D: self.cameraTransform(from, layer: camera.layer)), to: NSValue(caTransform3D: camera.layer.transform))
+            if let fromFrame = self.cameraFrame(from) {
+                self.add(keyPath: "position", layer: camera.layer, from: NSValue(cgPoint: CGPoint(x: fromFrame.midX, y: fromFrame.midY)), to: NSValue(cgPoint: camera.layer.position))
+                self.add(keyPath: "bounds", layer: camera.layer, from: NSValue(cgRect: CGRect(origin: .zero, size: fromFrame.size)), to: NSValue(cgRect: camera.layer.bounds))
+            } else {
+                self.add(keyPath: "transform", layer: camera.layer, from: NSValue(caTransform3D: self.cameraTransform(from, layer: camera.layer)), to: NSValue(caTransform3D: camera.layer.transform))
+            }
             self.add(keyPath: "opacity", layer: camera.layer, from: NSNumber(value: Float(self.cameraAlpha(from))), to: NSNumber(value: camera.layer.opacity))
         }
         CATransaction.commit()
@@ -168,8 +207,9 @@ final class MediaGridZoomTransition {
             layer.removeAnimation(forKey: "mediaGridZoom.opacity")
         }
         if let camera = self.camera {
-            camera.layer.removeAnimation(forKey: "mediaGridZoom.transform")
-            camera.layer.removeAnimation(forKey: "mediaGridZoom.opacity")
+            for key in ["transform", "opacity", "position", "bounds"] {
+                camera.layer.removeAnimation(forKey: "mediaGridZoom.\(key)")
+            }
         }
     }
 }

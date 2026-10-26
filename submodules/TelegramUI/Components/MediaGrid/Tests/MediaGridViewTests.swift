@@ -501,6 +501,91 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertTrue(view.activeLayoutLayer === outgoing)
     }
 
+    func testCameraMovesBetweenSlotsAtThreeToFive() {
+        let (view, _) = self.makeView(count: 1000)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        let slots: Set<MediaGridSlot> = [MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]
+        guard let sourceFrame = view.currentLayout?.reservedFrame(slots) else {
+            XCTFail("no camera frame")
+            return
+        }
+        view.zoomOut()
+        guard let transition = view.transition, let targetFrame = transition.targetLayout.reservedFrame(slots) else {
+            XCTFail("no transition")
+            return
+        }
+        let shift = view.contentOffset - transition.targetOffset
+        transition.apply(progress: 0.0)
+        XCTAssertEqual(camera.frame.minX, sourceFrame.minX, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame.minY, sourceFrame.minY, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame.width, sourceFrame.width, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame.height, sourceFrame.height, accuracy: 1e-6)
+        XCTAssertEqual(camera.alpha, 1.0)
+        transition.apply(progress: 1.0)
+        XCTAssertEqual(camera.frame.minX, targetFrame.minX, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame.minY, targetFrame.minY + shift, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame.width, targetFrame.width, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame.height, targetFrame.height, accuracy: 1e-6)
+        XCTAssertEqual(camera.alpha, 1.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(camera.frame, targetFrame)
+    }
+
+    func testAnchorMapsToItselfAtDeepOffset() {
+        let (view, _) = self.makeView(count: 100_000)
+        for (from, to) in [(MediaGridLevel.three, MediaGridLevel.five), (.five, .three)] {
+            view.setLevel(from, animated: false)
+            guard let source = view.currentLayout else {
+                XCTFail("no layout")
+                return
+            }
+            view.setContentOffset(source.frame(at: 90_000).minY - 300.0)
+            let point = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+            guard let index = view.index(at: point) else {
+                XCTFail("no anchor")
+                return
+            }
+            let hostAnchor = CGPoint(x: point.x, y: point.y + view.contentOffset)
+            let sourceFrame = source.frame(at: index)
+            let relative = MediaGridZoomMath.relativePosition(of: hostAnchor, in: sourceFrame)
+            view.setLevel(to, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: point))
+            guard let transition = view.transition else {
+                XCTFail("no transition")
+                return
+            }
+            let host = view.subviews[0].layer
+            let shift = view.contentOffset - transition.targetOffset
+            let targetFrame = transition.targetLayout.frame(at: index)
+            let incomingLocal = CGPoint(x: targetFrame.minX + relative.x * targetFrame.width, y: targetFrame.minY + relative.y * targetFrame.height)
+            XCTAssertEqual(incomingLocal.y + shift, hostAnchor.y, accuracy: 0.5)
+            for progress in [0.0, 0.37, 1.0] as [CGFloat] {
+                transition.apply(progress: progress)
+                XCTAssertTrue(CATransform3DIsAffine(transition.outgoing.transform))
+                XCTAssertEqual(transition.outgoing.transform.m41, 0.0)
+                XCTAssertEqual(transition.outgoing.transform.m42, 0.0)
+                XCTAssertEqual(transition.incoming.transform.m42, 0.0)
+                let outgoing = transition.outgoing.convert(hostAnchor, to: host)
+                XCTAssertEqual(outgoing.x, hostAnchor.x, accuracy: 0.5, "\(from)->\(to) p=\(progress)")
+                XCTAssertEqual(outgoing.y, hostAnchor.y, accuracy: 0.5, "\(from)->\(to) p=\(progress)")
+                let incoming = transition.incoming.convert(CGPoint(x: hostAnchor.x, y: incomingLocal.y), to: host)
+                XCTAssertEqual(incoming.x, hostAnchor.x, accuracy: 0.5, "\(from)->\(to) p=\(progress)")
+                XCTAssertEqual(incoming.y, hostAnchor.y, accuracy: 0.5, "\(from)->\(to) p=\(progress)")
+                let sourceTop = transition.outgoing.convert(CGPoint(x: sourceFrame.minX, y: sourceFrame.minY), to: host)
+                let scale = 1.0 + (transition.scale - 1.0) * progress
+                XCTAssertEqual(sourceTop.y, hostAnchor.y + (sourceFrame.minY - hostAnchor.y) * scale, accuracy: 0.5)
+            }
+            view._testFinishAnimations()
+            XCTAssertEqual(view.level, to)
+            guard let settled = view.frameForItem(at: index) else {
+                XCTFail("no frame")
+                return
+            }
+            XCTAssertEqual(settled.minY + relative.y * settled.height, point.y, accuracy: 0.5)
+        }
+    }
+
     func testZoomButtonsDisabledAtEnds() {
         let (view, _) = self.makeView(count: 1000)
         XCTAssertTrue(view.canZoomIn)

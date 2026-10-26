@@ -9,7 +9,7 @@ public final class MediaGridView: UIView {
     let pool: MediaGridCellPool
     private(set) var activeLayoutLayer: MediaGridLayoutLayer
     private var spareLayoutLayer: MediaGridLayoutLayer?
-    private var transition: MediaGridZoomTransition?
+    private(set) var transition: MediaGridZoomTransition?
     private var pendingZoom: (anchor: MediaGridZoomAnchor, relativePosition: CGPoint)?
 
     public private(set) var level: MediaGridLevel = .three
@@ -359,10 +359,9 @@ public final class MediaGridView: UIView {
         let incoming = self.spareLayoutLayer ?? MediaGridLayoutLayer(dataSource: self.dataSource, pool: self.pool)
         self.spareLayoutLayer = nil
         incoming.isItemSelected = self.isItemSelected
-        incoming.transform = CATransform3DIdentity
         incoming.opacity = 1.0
         incoming.setLayout(target, pixelSize: pixelSize, detail: level.isInteractive ? .full : .compact)
-        incoming.frame = CGRect(x: 0.0, y: shift, width: width, height: target.contentHeight)
+        MediaGridZoomTransition.resetPivot(incoming, width: width, height: target.contentHeight, originY: shift)
         self.engine.contentHost.layer.insertSublayer(incoming, above: self.activeLayoutLayer)
 
         let viewport = CGRect(x: 0.0, y: sourceOffset, width: width, height: height)
@@ -377,7 +376,10 @@ public final class MediaGridView: UIView {
         if let cameraView = self.cameraView {
             let sourceShows = !self.reservedSlots(for: sourceLevel).isEmpty
             let targetSlots = self.reservedSlots(for: level)
-            if !targetSlots.isEmpty, let frame = target.reservedFrame(targetSlots) {
+            if sourceShows, !targetSlots.isEmpty, let frame = target.reservedFrame(targetSlots) {
+                cameraRole = .moving(from: cameraView.frame, to: frame.offsetBy(dx: 0.0, dy: shift))
+                cameraAlpha = (1.0, 1.0)
+            } else if !targetSlots.isEmpty, let frame = target.reservedFrame(targetSlots) {
                 cameraRole = .incoming
                 cameraAlpha = (sourceShows ? 1.0 : 0.0, 1.0)
                 cameraView.layer.transform = CATransform3DIdentity
@@ -389,7 +391,11 @@ public final class MediaGridView: UIView {
             }
         }
 
-        let transition = MediaGridZoomTransition(outgoing: self.activeLayoutLayer, incoming: incoming, anchorPoint: anchorPoint, scale: scale, targetLayout: target, targetOffset: targetOffset, targetPixelSize: pixelSize, camera: cameraRole == .none ? nil : self.cameraView, cameraRole: cameraRole, cameraAlphaRange: cameraAlpha)
+        var cameraTakesPart = true
+        if case .none = cameraRole {
+            cameraTakesPart = false
+        }
+        let transition = MediaGridZoomTransition(outgoing: self.activeLayoutLayer, outgoingLocalAnchor: anchorPoint, incoming: incoming, incomingLocalAnchor: CGPoint(x: anchorPoint.x, y: anchorPoint.y - shift), anchorPoint: anchorPoint, viewportSize: CGSize(width: width, height: height), scale: scale, targetLayout: target, targetOffset: targetOffset, targetPixelSize: pixelSize, camera: cameraTakesPart ? self.cameraView : nil, cameraRole: cameraRole, cameraAlphaRange: cameraAlpha)
         self.transition = transition
         transition.apply(progress: 0.0)
         transition.animate(to: 1.0, completion: { [weak self, weak transition] in
@@ -416,14 +422,13 @@ public final class MediaGridView: UIView {
         let outgoing = transition.outgoing
         let incoming = transition.incoming
         outgoing.removeAllCells()
-        outgoing.transform = CATransform3DIdentity
+        MediaGridZoomTransition.resetPivot(outgoing, width: self.bounds.width, height: 0.0, originY: 0.0)
         outgoing.opacity = 1.0
         outgoing.removeFromSuperlayer()
         self.spareLayoutLayer = outgoing
 
-        incoming.transform = CATransform3DIdentity
+        MediaGridZoomTransition.resetPivot(incoming, width: self.bounds.width, height: transition.targetLayout.contentHeight, originY: 0.0)
         incoming.opacity = 1.0
-        incoming.frame = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: transition.targetLayout.contentHeight)
         self.activeLayoutLayer = incoming
 
         self.resetPrefetch()
