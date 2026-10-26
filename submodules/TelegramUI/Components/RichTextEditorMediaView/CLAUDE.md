@@ -42,7 +42,8 @@ block to one of these views via a host-registered provider, then positions/sizes
 ## Load-bearing invariants
 
 - **`RichTextMediaContentComponent.==` compares identity only** (`context ===` + `media.id`) plus
-  `isSpoiler` and `moreButtonOrigin`. The editor calls `update(size:)` every layout pass, so equality must hold across resizes.
+  `isSpoiler` and `moreButtonOrigin`. The editor calls `update(size:)` every layout pass, so equality must
+  hold across resizes.
   - **Every `update` re-issues the image fetch** — `fetchDisposable.set(…)` runs unconditionally. The
     `didBind` / `boundMediaId` / `currentSize` fields declared in the `View` are **dead** (assigned
     nowhere before 2026-08-25); an earlier version of this file claimed they guard the fetch, and that
