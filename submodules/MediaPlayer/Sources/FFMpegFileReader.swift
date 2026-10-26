@@ -391,7 +391,7 @@ public final class FFMpegFileReader {
                             if codecContext.open() {
                                 stream = Stream(
                                     info: info,
-                                    decoder: .audio(FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: 1))
+                                    decoder: .audio(FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: FFMpegAudioFrameDecoder.playbackChannelCount(codecContext: codecContext)))
                                 )
                                 break outer
                             }
