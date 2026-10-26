@@ -558,7 +558,7 @@ extension MediaEditorScreenImpl {
                         values = values.withUpdatedVideoTrimRange(0 ..< avatarMaxVideoDuration)
                     }
 
-                    makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: inputImage, dimensions: storyDimensions, values: values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
+                    makeEditorImageComposition(postbox: self.context.account.postbox, input: .image(inputImage), dimensions: storyDimensions, values: values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
                             if self.collage != nil && coverImage == nil {
                                 self.failStoryCompletion()
@@ -586,7 +586,7 @@ extension MediaEditorScreenImpl {
             if self.collage == nil, case let .draft(draft, id) = actualSubject, id == nil {
                 removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
             }
-        } else if let image = mediaEditor.resultImage {
+        } else if let resultTexture = mediaEditor.resultTexture() {
             if self.collage == nil {
                 self.saveDraft(id: randomId)
             }
@@ -598,9 +598,8 @@ extension MediaEditorScreenImpl {
                 values = values.withUpdatedQualityPreset(.profile)
             }
             makeEditorImageComposition(
-                context: self.node.ciContext,
                 postbox: self.context.account.postbox,
-                inputImage: image,
+                input: .editorResult(resultTexture),
                 dimensions: storyDimensions,
                 outputDimensions: outputDimensions,
                 values: values,
@@ -651,8 +650,6 @@ extension MediaEditorScreenImpl {
         if let privacyScreen = self.storyPrivacyScreen {
             self.storyPrivacyScreen = nil
             privacyScreen.dismissed = {}
-            privacyScreen.customModalStyleOverlayTransitionFactorUpdated = nil
-            self.node.updateModalTransitionFactor(0.0, transition: .immediate)
             privacyScreen.dismiss()
         }
         self.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
@@ -825,11 +822,10 @@ extension MediaEditorScreenImpl {
                         let image = UIImage(cgImage: cgImage)
                         itemMediaEditor.replaceSource(image, additionalImage: nil, time: firstFrameTime, mirror: false)
                         
-                        if let resultImage = itemMediaEditor.resultImage {
+                        if let resultTexture = itemMediaEditor.resultTexture() {
                             makeEditorImageComposition(
-                                context: self.node.ciContext,
                                 postbox: self.context.account.postbox,
-                                inputImage: resultImage,
+                                input: .editorResult(resultTexture),
                                 dimensions: storyDimensions,
                                 values: itemMediaEditor.values,
                                 time: firstFrameTime,
@@ -920,11 +916,10 @@ extension MediaEditorScreenImpl {
                 itemMediaEditor.setGradientColors(mediaEditorGetGradientColors(from: image))
             }
             
-            if let resultImage = itemMediaEditor.resultImage {
+            if let resultTexture = itemMediaEditor.resultTexture() {
                 makeEditorImageComposition(
-                    context: self.node.ciContext,
                     postbox: self.context.account.postbox,
-                    inputImage: resultImage,
+                    input: .editorResult(resultTexture),
                     dimensions: storyDimensions,
                     values: itemMediaEditor.values,
                     time: .zero,

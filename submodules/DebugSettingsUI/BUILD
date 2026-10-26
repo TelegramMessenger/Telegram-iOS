@@ -35,6 +35,9 @@ swift_library(
         "//submodules/TelegramUI/Components/AlertComponent/AlertCheckComponent",
         "//submodules/WalletContext",
         "//submodules/CpuProfiler:CpuProfiler",
+        "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
+        "//submodules/TelegramUI/Components/MediaEditor/ImageInpainting",
+        "//submodules/TelegramUI/Components/FaceScanScreen",
     ],
     visibility = [
         "//visibility:public",

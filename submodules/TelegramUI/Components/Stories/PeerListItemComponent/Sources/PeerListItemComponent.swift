@@ -233,6 +233,7 @@ public final class PeerListItemComponent: Component {
     let sideInset: CGFloat
     let title: String
     let titleAccessory: TitleAccessory
+    let titleColor: UIColor?
     let avatar: Avatar?
     let avatarComponent: AnyComponent<Empty>?
     let avatarPeer: EnginePeer?
@@ -267,6 +268,7 @@ public final class PeerListItemComponent: Component {
         sideInset: CGFloat,
         title: String,
         titleAccessory: TitleAccessory = .none,
+        titleColor: UIColor? = nil,
         avatar: Avatar? = nil,
         avatarComponent: AnyComponent<Empty>? = nil,
         peer: EnginePeer?,
@@ -300,6 +302,7 @@ public final class PeerListItemComponent: Component {
         self.sideInset = sideInset
         self.title = title
         self.titleAccessory = titleAccessory
+        self.titleColor = titleColor
         self.avatar = avatar
         self.avatarComponent = avatarComponent
         self.avatarPeer = avatarPeer
@@ -347,6 +350,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.titleAccessory != rhs.titleAccessory {
+            return false
+        }
+        if lhs.titleColor != rhs.titleColor {
             return false
         }
         if lhs.avatar != rhs.avatar {
@@ -1083,7 +1089,7 @@ public final class PeerListItemComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: titleFont, textColor: component.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: component.title, font: titleFont, textColor: component.titleColor ?? component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: titleAvailableWidth, height: 100.0)

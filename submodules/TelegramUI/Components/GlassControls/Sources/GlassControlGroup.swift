@@ -131,6 +131,16 @@ public final class GlassControlGroupComponent: Component {
         
         private var component: GlassControlGroupComponent?
         private weak var state: EmptyComponentState?
+        private var isGlassHidden = false
+        private var lastGlassParams: (size: CGSize, tintColor: GlassBackgroundView.TintColor, isDark: Bool)?
+
+        public func setGlassHidden(_ isHidden: Bool, transition: ComponentTransition) {
+            self.isGlassHidden = isHidden
+            guard let params = self.lastGlassParams else {
+                return
+            }
+            self.backgroundView.update(size: params.size, cornerRadius: params.size.height * 0.5, isDark: params.isDark, tintColor: params.tintColor, isInteractive: true, isVisible: !isHidden, transition: transition)
+        }
 
         override public init(frame: CGRect) {
             self.backgroundView = GlassBackgroundView()
@@ -300,7 +310,8 @@ public final class GlassControlGroupComponent: Component {
             let size = CGSize(width: contentsWidth, height: availableSize.height)
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
             
-            self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: tintColor, isInteractive: true, transition: transition)
+            self.lastGlassParams = (size, tintColor, component.theme.overallDarkAppearance)
+            self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: tintColor, isInteractive: true, isVisible: !self.isGlassHidden, transition: transition)
             self.backgroundView.isUserInteractionEnabled = isInteractive
             
             return size

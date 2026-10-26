@@ -1,4 +1,4 @@
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library", "swift_test")
 
 swift_library(
     name = "MediaPickerUI",
@@ -61,8 +61,21 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/ChatMediaSend",
+        "//submodules/OverlayStatusController",
     ],
     visibility = [
         "//visibility:public",
+    ],
+)
+
+swift_test(
+    name = "MediaGroupsContextMenuLayoutTests",
+    srcs = [
+        "Sources/MediaGroupsContextMenuLayout.swift",
+        "Tests/MediaGroupsContextMenuLayoutTests.swift",
+    ],
+    copts = [
+        "-warnings-as-errors",
     ],
 )

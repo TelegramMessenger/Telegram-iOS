@@ -203,6 +203,24 @@ private final class FetchVideoLibraryMediaResourceContext {
     }
 }
 
+public func videoMediaResourceEditorValues(adjustments: VideoMediaResourceAdjustments, alwaysUseModernPipeline: Bool, defaultPreset: MediaQualityPreset) -> (values: MediaEditorValues?, legacy: TGVideoEditAdjustments?) {
+    let data = adjustments.data.makeData()
+    if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: data) {
+        return (values, nil)
+    }
+    if adjustments.isStory {
+        return (nil, nil)
+    }
+    if let dict = legacy_unarchiveDeprecated(data: data) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+        if alwaysUseModernPipeline {
+            return (MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: defaultPreset), nil)
+        } else {
+            return (nil, legacyAdjustments)
+        }
+    }
+    return (nil, nil)
+}
+
 private let throttlingContext = FetchVideoLibraryMediaResourceContext()
 
 public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource, alwaysUseModernPipeline: Bool = true) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
@@ -325,18 +343,10 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
                         let qualityPreset = MediaQualityPreset(preset: defaultPreset)
                         if let adjustmentsValue = adjustmentsValue {
-                            if adjustmentsValue.isStory {
-                                isStory = true
-                                if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: adjustmentsValue.data.makeData()) {
-                                    mediaEditorValues = values
-                                }
-                            } else if let dict = legacy_unarchiveDeprecated(data: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
-                                if alwaysUseModernPipeline {
-                                    mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
-                                } else {
-                                    adjustments = legacyAdjustments
-                                }
-                            }
+                            isStory = adjustmentsValue.isStory
+                            let decoded = videoMediaResourceEditorValues(adjustments: adjustmentsValue, alwaysUseModernPipeline: alwaysUseModernPipeline, defaultPreset: qualityPreset)
+                            mediaEditorValues = decoded.values
+                            adjustments = decoded.legacy
                         } else {
 //                            if alwaysUseModernPipeline {
 //                                mediaEditorValues = MediaEditorValues(dimensions: dimensions, qualityPreset: qualityPreset)
@@ -519,22 +529,10 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
         var adjustments: TGVideoEditAdjustments?
         var mediaEditorValues: MediaEditorValues?
         if let videoAdjustments = resource.adjustments {
-            if videoAdjustments.isStory {
-                isStory = true
-                if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
-                    mediaEditorValues = values
-                }
-            } else {
-                if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
-                    mediaEditorValues = values
-                } else if let dict = legacy_unarchiveDeprecated(data: videoAdjustments.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
-                    if alwaysUseModernPipeline && !isImage {
-                        mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
-                    } else {
-                        adjustments = legacyAdjustments
-                    }
-                }
-            }
+            isStory = videoAdjustments.isStory
+            let decoded = videoMediaResourceEditorValues(adjustments: videoAdjustments, alwaysUseModernPipeline: alwaysUseModernPipeline && !isImage, defaultPreset: qualityPreset)
+            mediaEditorValues = decoded.values
+            adjustments = decoded.legacy
         }
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
         let updatedSize = Atomic<Int64>(value: 0)
@@ -542,7 +540,7 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             let duration: Double
             let subject: MediaEditorVideoExport.Subject
             if isImage, let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
-                duration = 5.0
+                duration = mediaEditorImageExportDuration(values: mediaEditorValues)
                 subject = .image(image: image)
             } else if let avAsset {
                 duration = avAsset.duration.seconds
@@ -710,6 +708,16 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
     return throttlingContext.wrap(priority: .default, signal: signal)
 }
 
+public func videoLibraryMediaResourceHashSalt(conversion: VideoLibraryMediaResourceConversion) -> Data? {
+    guard case let .compress(adjustments) = conversion, let adjustments, !adjustments.isStory else {
+        return nil
+    }
+    guard (try? JSONDecoder().decode(MediaEditorValues.self, from: adjustments.data.makeData())) != nil else {
+        return nil
+    }
+    return adjustments.digest.makeData()
+}
+
 public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResource) -> Signal<Data?, NoError> {
     return Signal { subscriber in
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
@@ -752,6 +760,9 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
                         var updatedData = data
                         if isPassthrough {
                             updatedData.reverse()
+                        }
+                        if let salt = videoLibraryMediaResourceHashSalt(conversion: resource.conversion) {
+                            updatedData.append(salt)
                         }
                         #if DEBUG
                         if "".isEmpty {
@@ -883,6 +894,7 @@ private extension MediaEditorValues {
             cropRotation: 0.0,
             cropMirroring: false,
             cropOrientation: nil,
+            cropPerspective: .zero,
             gradientColors: nil,
             videoTrimRange: nil,
             videoBounce: false,
@@ -1033,6 +1045,7 @@ private extension MediaEditorValues {
             cropRotation: legacyAdjustments.cropRotation,
             cropMirroring: legacyAdjustments.cropMirrored,
             cropOrientation: legacyAdjustments.cropOrientation.cropOrientation,
+            cropPerspective: .zero,
             gradientColors: nil,
             videoTrimRange: videoTrimRange,
             videoBounce: videoBounce,

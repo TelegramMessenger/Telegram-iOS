@@ -110,6 +110,8 @@ swift_library(
         "//submodules/TelegramUI/Components/DynamicCornerRadiusView",
         "//submodules/TelegramUI/Components/StickerPickerScreen",
         "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
+        "//submodules/TelegramUI/Components/MediaEditor/ImageInpainting",
+        "//submodules/TelegramUI/Components/SaveProgressScreen",
         "//submodules/TelegramUI/Components/SegmentControlComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
         "//submodules/TelegramUI/Components/LiquidLens",

@@ -25,16 +25,17 @@ final class BrowserFontSizeContextMenuItem: ContextMenuCustomItem {
 }
 
 private let textFont = Font.regular(17.0)
+private let highlightAlpha: CGFloat = 0.1
+private let highlightSideInset: CGFloat = 10.0
+private let highlightSpacing: CGFloat = 4.0
 
 private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMenuCustomNode {
     private var presentationData: PresentationData
     
-    private let leftBackgroundNode: ASDisplayNode
     private let leftHighlightedBackgroundNode: ASDisplayNode
     private let leftIconNode: ASImageNode
     private let leftButtonNode: HighlightTrackingButtonNode
     
-    private let rightBackgroundNode: ASDisplayNode
     private let rightHighlightedBackgroundNode: ASDisplayNode
     private let rightIconNode: ASImageNode
     private let rightButtonNode: HighlightTrackingButtonNode
@@ -45,6 +46,10 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
     
     private let leftSeparatorNode: ASDisplayNode
     private let rightSeparatorNode: ASDisplayNode
+    
+    private var isLeftHighlighted = false
+    private var isCenterHighlighted = false
+    private var isRightHighlighted = false
     
     var value: Int32 = 100 {
         didSet {
@@ -63,12 +68,8 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
         self.increase = increase
         self.reset = reset
         
-        self.leftBackgroundNode = ASDisplayNode()
-        self.leftBackgroundNode.isAccessibilityElement = false
-        self.leftBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
         self.leftHighlightedBackgroundNode = ASDisplayNode()
         self.leftHighlightedBackgroundNode.isAccessibilityElement = false
-        self.leftHighlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         self.leftHighlightedBackgroundNode.alpha = 0.0
         
         self.leftIconNode = ASImageNode()
@@ -82,12 +83,8 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
         self.leftButtonNode.isAccessibilityElement = true
         self.leftButtonNode.accessibilityLabel = presentationData.strings.InstantPage_VoiceOver_DecreaseFontSize
         
-        self.rightBackgroundNode = ASDisplayNode()
-        self.rightBackgroundNode.isAccessibilityElement = false
-        self.rightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
         self.rightHighlightedBackgroundNode = ASDisplayNode()
         self.rightHighlightedBackgroundNode.isAccessibilityElement = false
-        self.rightHighlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         self.rightHighlightedBackgroundNode.alpha = 0.0
         
         self.rightIconNode = ASImageNode()
@@ -109,7 +106,6 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
         
         self.centerHighlightedBackgroundNode = ASDisplayNode()
         self.centerHighlightedBackgroundNode.isAccessibilityElement = false
-        self.centerHighlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         self.centerHighlightedBackgroundNode.alpha = 0.0
         
         self.centerButtonNode = HighlightTrackingButtonNode()
@@ -125,11 +121,9 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
         
         self.isUserInteractionEnabled = true
         
-        self.addSubnode(self.leftBackgroundNode)
         self.addSubnode(self.leftHighlightedBackgroundNode)
         self.addSubnode(self.leftIconNode)
         self.addSubnode(self.leftButtonNode)
-        self.addSubnode(self.rightBackgroundNode)
         self.addSubnode(self.rightHighlightedBackgroundNode)
         self.addSubnode(self.rightIconNode)
         self.addSubnode(self.rightButtonNode)
@@ -139,57 +133,66 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
         self.addSubnode(self.leftSeparatorNode)
         self.addSubnode(self.rightSeparatorNode)
         
-        self.leftButtonNode.highligthedChanged = { [weak self] highligted in
-            guard let strongSelf = self else {
+        self.leftButtonNode.highligthedChanged = { [weak self] highlighted in
+            guard let self else {
                 return
             }
-            if highligted {
-                strongSelf.leftHighlightedBackgroundNode.alpha = 1.0
-            } else {
-                strongSelf.leftHighlightedBackgroundNode.alpha = 0.0
-                strongSelf.leftHighlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            }
+            self.isLeftHighlighted = highlighted
+            self.updateHighlight(node: self.leftHighlightedBackgroundNode, isHighlighted: highlighted)
         }
         self.leftButtonNode.addTarget(self, action: #selector(self.leftPressed), forControlEvents: .touchUpInside)
         
-        self.rightButtonNode.highligthedChanged = { [weak self] highligted in
-            guard let strongSelf = self else {
+        self.rightButtonNode.highligthedChanged = { [weak self] highlighted in
+            guard let self else {
                 return
             }
-            if highligted {
-                strongSelf.rightHighlightedBackgroundNode.alpha = 1.0
-            } else {
-                strongSelf.rightHighlightedBackgroundNode.alpha = 0.0
-                strongSelf.rightHighlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            }
+            self.isRightHighlighted = highlighted
+            self.updateHighlight(node: self.rightHighlightedBackgroundNode, isHighlighted: highlighted)
         }
         self.rightButtonNode.addTarget(self, action: #selector(self.rightPressed), forControlEvents: .touchUpInside)
         
-        self.centerButtonNode.highligthedChanged = { [weak self] highligted in
-            guard let strongSelf = self else {
+        self.centerButtonNode.highligthedChanged = { [weak self] highlighted in
+            guard let self else {
                 return
             }
-            if highligted {
-                strongSelf.centerHighlightedBackgroundNode.alpha = 1.0
-            } else {
-                strongSelf.centerHighlightedBackgroundNode.alpha = 0.0
-                strongSelf.centerHighlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            }
+            self.isCenterHighlighted = highlighted
+            self.updateHighlight(node: self.centerHighlightedBackgroundNode, isHighlighted: highlighted)
         }
         self.centerButtonNode.addTarget(self, action: #selector(self.centerPressed), forControlEvents: .touchUpInside)
         
+        self.updateHighlightColors()
         self.updateValue()
+    }
+    
+    private func updateHighlightColors() {
+        let color: UIColor = self.presentationData.theme.overallDarkAppearance ? .white : .black
+        for node in [self.leftHighlightedBackgroundNode, self.centerHighlightedBackgroundNode, self.rightHighlightedBackgroundNode] {
+            node.backgroundColor = color
+            node.view.setMonochromaticEffect(tintColor: color)
+        }
+    }
+    
+    private func updateHighlight(node: ASDisplayNode, isHighlighted: Bool) {
+        if isHighlighted {
+            node.alpha = highlightAlpha
+        } else {
+            node.alpha = 0.0
+            node.layer.animateAlpha(from: highlightAlpha, to: 0.0, duration: 0.3)
+        }
+        
+        let leftSeparatorAlpha: CGFloat = (self.isLeftHighlighted || self.isCenterHighlighted) ? 0.0 : 1.0
+        let rightSeparatorAlpha: CGFloat = (self.isCenterHighlighted || self.isRightHighlighted) ? 0.0 : 1.0
+        let transition: ContainedViewLayoutTransition = isHighlighted ? .immediate : .animated(duration: 0.3, curve: .easeInOut)
+        transition.updateAlpha(node: self.leftSeparatorNode, alpha: leftSeparatorAlpha)
+        transition.updateAlpha(node: self.rightSeparatorNode, alpha: rightSeparatorAlpha)
     }
     
     func updateTheme(presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.leftBackgroundNode.backgroundColor = self.presentationData.theme.contextMenu.itemBackgroundColor
-        self.leftHighlightedBackgroundNode.backgroundColor = self.presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+        self.updateHighlightColors()
         self.leftIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/DecreaseFont"), color: self.presentationData.theme.contextMenu.primaryColor)
         
-        self.rightBackgroundNode.backgroundColor = self.presentationData.theme.contextMenu.itemBackgroundColor
-        self.rightHighlightedBackgroundNode.backgroundColor = self.presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         self.rightIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Instant View/Settings/IncreaseFont"), color: self.presentationData.theme.contextMenu.primaryColor)
         
         self.updateValue()
@@ -221,7 +224,16 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
             let verticalOrigin = floor((size.height - textSize.height) / 2.0)
             transition.updateFrameAdditive(node: self.centerTextNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: verticalOrigin), size: textSize))
             
-            transition.updateFrame(node: self.centerHighlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: buttonWidth, y: 0.0), size: CGSize(width: valueWidth, height: size.height)))
+            let cornerRadius = min(20.0, size.height * 0.5)
+            let halfSpacing = highlightSpacing * 0.5
+            let leftHighlightFrame = CGRect(origin: CGPoint(x: highlightSideInset, y: 0.0), size: CGSize(width: buttonWidth - highlightSideInset - halfSpacing, height: size.height))
+            let centerHighlightFrame = CGRect(origin: CGPoint(x: buttonWidth + halfSpacing, y: 0.0), size: CGSize(width: size.width - buttonWidth * 2.0 - highlightSpacing, height: size.height))
+            let rightHighlightFrame = CGRect(origin: CGPoint(x: size.width - buttonWidth + halfSpacing, y: 0.0), size: CGSize(width: buttonWidth - highlightSideInset - halfSpacing, height: size.height))
+            for (node, frame) in [(self.leftHighlightedBackgroundNode, leftHighlightFrame), (self.centerHighlightedBackgroundNode, centerHighlightFrame), (self.rightHighlightedBackgroundNode, rightHighlightFrame)] {
+                transition.updateFrame(node: node, frame: frame)
+                transition.updateCornerRadius(node: node, cornerRadius: cornerRadius)
+            }
+            
             transition.updateFrame(node: self.centerButtonNode, frame: CGRect(origin: CGPoint(x: buttonWidth, y: 0.0), size: CGSize(width: valueWidth, height: size.height)))
             
             let leftIconSize = self.leftIconNode.image!.size
@@ -230,12 +242,8 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
             let rightIconSize = self.leftIconNode.image!.size
             transition.updateFrameAdditive(node: self.rightIconNode, frame: CGRect(origin: CGPoint(x: size.width - buttonWidth + floor((buttonWidth - rightIconSize.width) / 2.0), y: floor((size.height - rightIconSize.height) / 2.0)), size: rightIconSize))
             
-            transition.updateFrame(node: self.leftBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: buttonWidth, height: size.height)))
-            transition.updateFrame(node: self.leftHighlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: buttonWidth, height: size.height)))
             transition.updateFrame(node: self.leftButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: buttonWidth, height: size.height)))
             
-            transition.updateFrame(node: self.rightBackgroundNode, frame: CGRect(origin: CGPoint(x: size.width - buttonWidth, y: 0.0), size: CGSize(width: buttonWidth, height: size.height)))
-            transition.updateFrame(node: self.rightHighlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: size.width - buttonWidth, y: 0.0), size: CGSize(width: buttonWidth, height: size.height)))
             transition.updateFrame(node: self.rightButtonNode, frame: CGRect(origin: CGPoint(x: size.width - buttonWidth, y: 0.0), size: CGSize(width: buttonWidth, height: size.height)))
             
             transition.updateFrame(node: self.leftSeparatorNode, frame: CGRect(origin: CGPoint(x: buttonWidth, y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height)))

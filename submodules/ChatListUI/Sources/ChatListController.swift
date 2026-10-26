@@ -6356,7 +6356,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 })))
             }
             
-            if !presetList.isEmpty {
+            let hasFilters = presetList.contains(where: { filter in
+                if case .filter = filter {
+                    return true
+                } else {
+                    return false
+                }
+            })
+            if hasFilters {
                 if strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter == nil {
                     items.append(.separator)
                 }

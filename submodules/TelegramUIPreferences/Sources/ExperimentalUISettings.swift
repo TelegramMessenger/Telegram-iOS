@@ -84,6 +84,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var debugRipple: Bool
     public var useInputDecEngine: Bool
     public var coreListChatBackend: Bool
+    public var chatMediaEditorLegacy: Bool
     public var inputDecTextBackend: Bool
     public var forceRLottieBackend: Bool
     public var respectSystemMicrophone: Bool
@@ -146,6 +147,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             debugRipple: false,
             useInputDecEngine: false,
             coreListChatBackend: false,
+            chatMediaEditorLegacy: false,
             inputDecTextBackend: false,
             forceRLottieBackend: false,
             respectSystemMicrophone: false,
@@ -206,6 +208,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         debugRipple: Bool,
         useInputDecEngine: Bool,
         coreListChatBackend: Bool,
+        chatMediaEditorLegacy: Bool,
         inputDecTextBackend: Bool,
         forceRLottieBackend: Bool,
         respectSystemMicrophone: Bool,
@@ -264,6 +267,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.debugRipple = debugRipple
         self.useInputDecEngine = useInputDecEngine
         self.coreListChatBackend = coreListChatBackend
+        self.chatMediaEditorLegacy = chatMediaEditorLegacy
         self.inputDecTextBackend = inputDecTextBackend
         self.forceRLottieBackend = forceRLottieBackend
         self.respectSystemMicrophone = respectSystemMicrophone
@@ -328,6 +332,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         // decode failure here would reset every other experimental flag the user has set.
         self.useInputDecEngine = try container.decodeIfPresent(Bool.self, forKey: "useInputDecEngine") ?? false
         self.coreListChatBackend = try container.decodeIfPresent(Bool.self, forKey: "coreListChatBackend") ?? false
+        self.chatMediaEditorLegacy = try container.decodeIfPresent(Bool.self, forKey: "chatMediaEditorLegacy") ?? false
         self.inputDecTextBackend = try container.decodeIfPresent(Bool.self, forKey: "inputDecTextBackend") ?? false
         self.forceRLottieBackend = try container.decodeIfPresent(Bool.self, forKey: "forceRLottieBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
@@ -390,6 +395,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.debugRipple, forKey: "debugRipple")
         try container.encodeIfPresent(self.useInputDecEngine, forKey: "useInputDecEngine")
         try container.encodeIfPresent(self.coreListChatBackend, forKey: "coreListChatBackend")
+        try container.encodeIfPresent(self.chatMediaEditorLegacy, forKey: "chatMediaEditorLegacy")
         try container.encodeIfPresent(self.inputDecTextBackend, forKey: "inputDecTextBackend")
         try container.encodeIfPresent(self.forceRLottieBackend, forKey: "forceRLottieBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")

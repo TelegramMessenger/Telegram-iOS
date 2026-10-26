@@ -135,8 +135,7 @@ public final class MediaEditorVideoExport {
             if self.values.isStory || self.values.isSticker || self.values.isAvatar {
                 return CGSize(width: 1080.0, height: 1920.0)
             } else {
-                let maxSize = CGSize(width: 1920.0, height: 1920.0)
-                return targetSize(cropSize: self.values.originalDimensions.cgSize.aspectFitted(maxSize))
+                return mediaEditorNonStoryCanvasSize(originalDimensions: self.values.originalDimensions)
             }
         }
         
@@ -246,6 +245,9 @@ public final class MediaEditorVideoExport {
     private var writer: MediaEditorVideoExportWriter?
     private var composer: MediaEditorComposer?
     
+    let debugFrameObserver: ((CVPixelBuffer, CMTime) -> Void)?
+    let debugCompositionTimeObserver: ((Double) -> Void)?
+    
     private let duration = ValuePromise<CMTime>()
     private var durationValue: CMTime? {
         didSet {
@@ -274,7 +276,13 @@ public final class MediaEditorVideoExport {
     private static let frameProductionTimeout: Double = 30.0
     private var frameProductionTimedOut = false
     
-    public init(postbox: Postbox, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
+    public convenience init(postbox: Postbox, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
+        self.init(postbox: postbox, subject: subject, configuration: configuration, outputPath: outputPath, textScale: textScale, debugFrameObserver: nil, debugCompositionTimeObserver: nil)
+    }
+    
+    init(postbox: Postbox, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat, debugFrameObserver: ((CVPixelBuffer, CMTime) -> Void)?, debugCompositionTimeObserver: ((Double) -> Void)?) {
+        self.debugFrameObserver = debugFrameObserver
+        self.debugCompositionTimeObserver = debugCompositionTimeObserver
         self.postbox = postbox
         self.subject = subject
         self.configuration = configuration
@@ -541,7 +549,7 @@ public final class MediaEditorVideoExport {
             if let audioDuration = self.configuration.audioTimeRange?.duration {
                 sourceDuration = audioDuration
             } else {
-                sourceDuration = CMTime(seconds: 5.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                sourceDuration = CMTime(seconds: mediaEditorImageExportDuration(values: self.configuration.values), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
             }
         }
         self.sourceDurationValue = sourceDuration
@@ -584,6 +592,7 @@ public final class MediaEditorVideoExport {
             videoDuration: duration,
             additionalVideoDuration: additionalVideoDuration
         )
+        self.composer?.debugCompositionTimeObserver = self.debugCompositionTimeObserver
     }
     
     private func setupWithInputs(main: Input, additional: [Input], audio: AVAsset?, isStory: Bool) {
@@ -1079,11 +1088,11 @@ public final class MediaEditorVideoExport {
                 }
                 let outputTimestamp = self.outputTimestamp(for: timestamp)
                 
-                if let stickerEntity = self.stickerEntity, let ciContext = composer.ciContext {
+                if let stickerEntity = self.stickerEntity {
                     let imageArguments = self.imageArguments
-                    stickerEntity.image(for: timestamp, frameRate: Float(imageArguments?.frameRate ?? 30.0), context: ciContext, completion: { image in
-                        if let image {
-                            mainInput = .ciImage(image, imageArguments?.position ?? .zero)
+                    stickerEntity.frame(for: timestamp, frameRate: Float(imageArguments?.frameRate ?? 30.0), completion: { frame in
+                        if let frame {
+                            mainInput = .entityFrame(frame, imageArguments?.position ?? .zero)
                         }
                         self.stickerSemaphore.signal()
                     })
@@ -1116,6 +1125,7 @@ public final class MediaEditorVideoExport {
                                 return
                             }
                             if let pixelBuffer {
+                                self.debugFrameObserver?(pixelBuffer, outputTimestamp)
                                 if !writer.appendPixelBuffer(pixelBuffer, at: outputTimestamp) {
                                     writer.markVideoAsFinished()
                                     appendFailed = true

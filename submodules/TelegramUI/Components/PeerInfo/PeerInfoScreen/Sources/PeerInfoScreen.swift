@@ -121,6 +121,7 @@ import UrlWhitelist
 import SideColumnLayout
 import NavigationBarNode
 import NavigationExpansionTransition
+import QrStudioScreen
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -2792,7 +2793,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let previousData = self.data
         if !self.didPreloadShareTheme, let peer = data.peer, peer.id != self.context.account.peerId, let addressName = peer.addressName, !addressName.isEmpty {
             self.didPreloadShareTheme = true
-            self.shareThemePreloadDisposable.set(self.context.engine.peers.preloadShareTheme(peerId: peer.id).startStrict())
+            self.shareThemePreloadDisposable.set(QrStudioScreen.preloadTheme(context: self.context, peerId: peer.id))
         }
         let walletCard = (data.cachedData as? CachedUserData)?.walletCard
         if walletCard != self.preloadedWalletCard {

@@ -1,0 +1,102 @@
+import XCTest
+import UIKit
+import ChatMediaEditorScreen
+
+final class ChatMediaEditorLayoutTests: XCTestCase {
+    let size = CGSize(width: 393.0, height: 852.0)
+    let insets = UIEdgeInsets(top: 59.0, left: 0.0, bottom: 34.0, right: 0.0)
+
+    func testGalleryPhotoIsCenteredOnTheScreenLikeLegacy() {
+        let layout = chatMediaEditorLayout(size: size, safeInsets: insets, mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 48.0, captionPanelHeight: 52.0, keyboardHeight: 0.0)
+        XCTAssertEqual(layout.toolbarFrame.maxY, 852.0 - 34.0)
+        XCTAssertEqual(layout.captionPanelFrame.maxY, layout.toolbarFrame.minY)
+        XCTAssertEqual(layout.previewFrame.width, 393.0)
+        XCTAssertEqual(layout.previewFrame.height / layout.previewFrame.width, 0.75, accuracy: 0.01)
+        XCTAssertEqual(layout.previewFrame.midY, 852.0 / 2.0, accuracy: 0.5)
+    }
+
+    func testMeasuredLegacyGalleryPhotoFrame() {
+        let layout = chatMediaEditorLayout(size: CGSize(width: 402.0, height: 874.0), safeInsets: UIEdgeInsets(top: 62.0, left: 0.0, bottom: 20.0, right: 0.0), mediaSize: CGSize(width: 3024.0, height: 4032.0), toolbarHeight: 49.0, captionPanelHeight: 62.0, keyboardHeight: 0.0)
+        XCTAssertEqual(layout.previewFrame.midY, (167.7 + 705.3) / 2.0, accuracy: 0.6)
+        XCTAssertEqual(layout.previewFrame.width, 402.0)
+    }
+
+    func testTallVideoFitsTheScreen() {
+        let layout = chatMediaEditorLayout(size: size, safeInsets: insets, mediaSize: CGSize(width: 1080.0, height: 2400.0), toolbarHeight: 48.0, captionPanelHeight: 52.0, keyboardHeight: 0.0)
+        XCTAssertEqual(layout.previewFrame.minY, 0.0, accuracy: 0.5)
+        XCTAssertEqual(layout.previewFrame.maxY, 852.0, accuracy: 0.5)
+        XCTAssertEqual(layout.previewFrame.midX, 393.0 / 2.0, accuracy: 0.5)
+    }
+
+    func testKeyboardMovesCaptionNotPreview() {
+        let base = chatMediaEditorLayout(size: size, safeInsets: insets, mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 48.0, captionPanelHeight: 52.0, keyboardHeight: 0.0)
+        let up = chatMediaEditorLayout(size: size, safeInsets: insets, mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 48.0, captionPanelHeight: 52.0, keyboardHeight: 336.0)
+        XCTAssertEqual(up.previewFrame, base.previewFrame)
+        XCTAssertEqual(up.captionPanelFrame.maxY, 852.0 - 336.0)
+    }
+
+    func testToolsPreviewLeavesRoomForPanelAboveToolbar() {
+        let frame = chatMediaEditorToolPreviewFrame(kind: .tools, size: size, safeInsets: insets, mediaSize: CGSize(width: 3024.0, height: 4032.0), toolbarHeight: 49.0)
+        XCTAssertEqual(frame.minY, 59.0, accuracy: 0.5)
+        XCTAssertEqual(frame.maxY, 852.0 - 34.0 - 49.0 - 8.0 - 180.0, accuracy: 0.5)
+        XCTAssertEqual(frame.width / frame.height, 0.75, accuracy: 0.01)
+        XCTAssertEqual(frame.midX, 393.0 / 2.0, accuracy: 0.5)
+    }
+
+    func testPaintPreviewUsesLegacyPaintPanels() {
+        let frame = chatMediaEditorToolPreviewFrame(kind: .paint, size: size, safeInsets: insets, mediaSize: CGSize(width: 1080.0, height: 1920.0), toolbarHeight: 49.0)
+        XCTAssertEqual(frame.minY, 59.0 + 44.0, accuracy: 0.5)
+        XCTAssertEqual(frame.height, 852.0 - 59.0 - 34.0 - 49.0 - 44.0 - 79.0, accuracy: 0.5)
+    }
+
+    func testChatToolsPreviewUsesLegacyPanelSize() {
+        let frame = chatMediaEditorToolPreviewFrame(kind: .chatTools, size: size, safeInsets: insets, mediaSize: CGSize(width: 1080.0, height: 4000.0), toolbarHeight: 49.0)
+        XCTAssertEqual(frame.minY, 59.0, accuracy: 0.5)
+        XCTAssertEqual(frame.maxY, 852.0 - 34.0 - 49.0 - 115.0, accuracy: 0.5)
+        let wide = chatMediaEditorToolPreviewFrame(kind: .chatTools, size: size, safeInsets: insets, mediaSize: CGSize(width: 3024.0, height: 4032.0), toolbarHeight: 49.0)
+        XCTAssertEqual(wide.midY, 59.0 + (852.0 - 34.0 - 49.0 - 115.0 - 59.0) / 2.0, accuracy: 0.5)
+    }
+
+    func testRecipientLabelSitsTopLeftAtTheEdgeInset() {
+        let layout = chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 80.0, height: 16.0))
+        XCTAssertEqual(layout.arrowFrame, CGRect(x: 16.0, y: 59.0 + 16.0, width: 10.0, height: 12.0))
+        XCTAssertEqual(layout.labelFrame, CGRect(x: 32.0, y: 59.0 + 14.0, width: 80.0, height: 16.0))
+    }
+
+    func testRecipientLabelWidthIsCapped() {
+        let layout = chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 1000.0, height: 16.0))
+        XCTAssertEqual(layout.labelFrame.width, 393.0 - 150.0)
+        XCTAssertEqual(layout.arrowFrame.minY, 59.0 + 16.0)
+    }
+
+    func testRecipientLabelIgnoresStatusBarOnlyInset() {
+        let layout = chatMediaEditorRecipientLayout(size: CGSize(width: 375.0, height: 667.0), safeInsets: UIEdgeInsets(top: 20.0, left: 0.0, bottom: 0.0, right: 0.0), arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 80.0, height: 16.0))
+        XCTAssertEqual(layout.arrowFrame.minY, 16.0)
+    }
+
+    func testLandscapeToolsPreviewKeepsFullWidth() {
+        let frame = chatMediaEditorToolPreviewFrame(kind: .tools, size: size, safeInsets: insets, mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
+        XCTAssertEqual(frame.width, 393.0, accuracy: 0.5)
+        XCTAssertLessThanOrEqual(frame.maxY, 852.0 - 34.0 - 49.0 - 8.0 - 180.0 + 0.5)
+    }
+
+    func testVideoScrubberSitsInLegacyHeaderAboveCaption() {
+        let captionBase: CGFloat = 52.0
+        let toolbarMinY = 852.0 - 34.0 - 49.0
+        let layout = chatMediaEditorLayout(size: size, safeInsets: insets, mediaSize: CGSize(width: 1080.0, height: 1920.0), toolbarHeight: 49.0, captionPanelHeight: captionBase + 10.0, keyboardHeight: 0.0)
+        let headerFrame = chatMediaEditorVideoHeaderFrame(size: size, toolbarMinY: toolbarMinY, captionBaseHeight: captionBase)
+        XCTAssertEqual(headerFrame, CGRect(x: 0.0, y: toolbarMinY - 74.0 - captionBase, width: 393.0, height: 72.0))
+        let scrubberFrame = chatMediaEditorScrubberFrame(size: size, safeInsets: insets, headerFrame: headerFrame, scrubberHeight: 40.0)
+        XCTAssertEqual(scrubberFrame.minX, 9.0, accuracy: 0.5)
+        XCTAssertEqual(scrubberFrame.width, 393.0 - 18.0, accuracy: 0.5)
+        XCTAssertEqual(scrubberFrame.midY, headerFrame.midY, accuracy: 0.5)
+        XCTAssertLessThanOrEqual(scrubberFrame.maxY, layout.captionPanelFrame.minY)
+        XCTAssertEqual(layout.previewFrame.midY, 852.0 / 2.0, accuracy: 0.5)
+    }
+
+    func testScrubberFramesCoverTrackWidth() {
+        XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 384.0, mediaSize: CGSize(width: 1920.0, height: 1080.0)), 6)
+        XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 384.0, mediaSize: CGSize(width: 1080.0, height: 1920.0)), 15)
+        XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 0.0, mediaSize: CGSize(width: 1920.0, height: 1080.0)), 1)
+    }
+}

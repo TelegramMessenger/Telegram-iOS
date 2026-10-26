@@ -494,6 +494,7 @@ updateWalletGaslessInfo#a8ae1cac flags:# available:flags.0?true left:int reset_a
 updateWalletTonConnectSession#50a38e0e session:TonConnectSession = Update;
 updateWalletTonConnectPendingDisconnect#d1ee8199 session_ids:Vector<long> = Update;
 updateReadFeed#74585fb1 flags:# filter_id:int max_position:FeedPosition unread_count:flags.0?int unread_muted_count:flags.0?int = Update;
+updateAgentSettings#9434e98d settings:agent.settings = Update;
 
 updates.state#a56c2a3e pts:int qts:int date:int seq:int unread_count:int = updates.State;
 
@@ -2396,6 +2397,15 @@ feed.interestCategory#6c4666e3 flags:# id:int title:string emoji:flags.0?string 
 feed.interestCategoriesNotModified#79cf2195 = feed.InterestCategories;
 feed.interestCategories#ecb62fa0 categories:Vector<feed.InterestCategory> selected:Vector<int> = feed.InterestCategories;
 
+agentProvider#47327c87 flags:# models_searchable:flags.0?true id:string title:string vendor:string key_url:string icon_emoji_id:flags.1?long = agent.Provider;
+
+agent.providersNotModified#43f756ad = agent.Providers;
+agent.providers#872297f2 hash:long providers:Vector<agent.Provider> = agent.Providers;
+
+agent.providerKey#784d7e10 provider:string key_last4:string date_connected:int = agent.ProviderKey;
+
+agent.settings#fcc362b5 flags:# keys:Vector<agent.ProviderKey> active_provider:flags.0?string = agent.Settings;
+
 ---functions---
 
 invokeAfterMsg#cb9f372d {X:Type} msg_id:long query:!X = X;
@@ -3291,3 +3301,11 @@ feed.readFeed#b436c1ff filter_id:int max_position:FeedPosition = Updates;
 feed.getForYou#33b8e5eb flags:# query:flags.0?string limit:int = feed.ForYouFeed;
 feed.getInterestCategories#ba7a1dba hash:long = feed.InterestCategories;
 feed.setInterestCategories#9f2958dc category_ids:Vector<int> = Bool;
+feed.likePost#1b4b627e peer:InputPeer msg_id:int = Bool;
+feed.dislikePost#4d70175c peer:InputPeer msg_id:int = Bool;
+
+agent.getProviders#ce0e7413 hash:long = agent.Providers;
+agent.getSettings#fb0f9757 = agent.Settings;
+agent.connect#ff2471ec provider:string key:string = agent.Settings;
+agent.disconnect#9abcf719 provider:string = agent.Settings;
+agent.setActiveProvider#bcb25188 provider:string = agent.Settings;

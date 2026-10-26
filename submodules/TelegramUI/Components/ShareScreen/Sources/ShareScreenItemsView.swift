@@ -24,6 +24,7 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
     private var pageFilterId: Int32 = 0
     private var pageLoading = false
     private var isUpdating = false
+    var recommendationsWillBeginDragging: (() -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -40,6 +41,10 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !self.isUpdating, let component = self.component, let environment = self.environment else { return }
         self.update(component: component, environment: environment, availableWidth: self.bounds.width, visibleBounds: self.visibleBounds, peers: self.pagePeers, filterId: self.pageFilterId, isLoading: self.pageLoading, transition: .immediate)
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.recommendationsWillBeginDragging?()
     }
 
     func update(component: ShareScreenContentComponent, environment: ViewControllerComponentContainer.Environment, availableWidth: CGFloat, visibleBounds: CGRect, peers: [EnginePeer], filterId: Int32, isLoading: Bool, transition: ComponentTransition) {
@@ -149,9 +154,14 @@ final class ShareScreenItemsView: UIView, UIScrollViewDelegate {
                     subtitle = PeerListItemComponent.Subtitle(text: "@\(username)", color: .neutral)
                     presence = nil
                 }
+                if peer.id == model.context.account.peerId {
+                    subtitle = nil
+                    presence = nil
+                }
                 let _ = item.update(transition: itemTransition, component: AnyComponent(ShareScreenRestrictedRowComponent(content: AnyComponent(PeerListItemComponent(
                     context: model.context, theme: theme, strings: strings, style: .share, sideInset: 12.0,
                     title: peer.id == model.context.account.peerId ? strings.DialogList_SavedMessages : model.displayPeer(peer).displayTitle(strings: strings, displayOrder: model.context.sharedContext.currentPresentationData.with { $0.nameDisplayOrder }),
+                    titleColor: peer.id.namespace == Namespaces.Peer.SecretChat ? theme.chatList.secretTitleColor : nil,
                     peer: peer, avatarPeer: model.displayPeer(peer), avatarOverrideImage: peer.id == model.context.account.peerId ? .savedMessagesIcon : nil, subtitle: subtitle, subtitleAccessory: .none, presence: presence,
                     rightAccessory: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) ? .disclosure : .none,
                     selectionState: (isCommunity || peer._asPeer().isForumOrMonoForum) && !model.selection.contains(peer.id) || !model.query.isEmpty ? .none : .editing(isSelected: model.selection.contains(peer.id), isTinted: false), selectionPosition: .right, isEnabled: !model.messagingRequirement(for: peer).requiresPremium, hasNext: index != peers.count - 1,

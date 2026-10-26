@@ -1455,6 +1455,10 @@ public extension TelegramEngine {
             return _internal_getShareTheme(account: self.account, peerId: peerId)
         }
 
+        public func localShareTheme(peerId: EnginePeer.Id) -> Signal<TelegramShareTheme?, NoError> {
+            return _internal_localShareTheme(postbox: self.account.postbox, peerId: peerId)
+        }
+
         public func preloadShareTheme(peerId: EnginePeer.Id) -> Signal<Never, NoError> {
             return _internal_preloadShareTheme(account: self.account, peerId: peerId)
         }
