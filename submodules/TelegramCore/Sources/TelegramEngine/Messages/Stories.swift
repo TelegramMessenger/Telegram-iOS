@@ -3700,7 +3700,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
             let _ = lifecycle.modify { (true, $0.accepted) }
             subscriber.putCompletion()
         })
-        return ActionDisposable {
+        return ActionDisposable { [account] in
             var wasAccepted: Bool?
             let _ = lifecycle.modify { state in
                 guard !state.ended else { return state }
