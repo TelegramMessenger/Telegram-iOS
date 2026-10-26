@@ -12,6 +12,8 @@ public enum ChatTextInputAccessoryItem: Equatable {
         case scheduledMessages
         case gift
         case suggestPost
+        // TSupport: opens the canned-reply template browser (D29). Support accounts only.
+        case supportTemplates
     }
     
     public enum InputMode: Hashable {
@@ -29,6 +31,7 @@ public enum ChatTextInputAccessoryItem: Equatable {
     case scheduledMessages
     case gift
     case suggestPost
+    case supportTemplates
     
     public var key: Key {
         switch self {
@@ -48,6 +51,8 @@ public enum ChatTextInputAccessoryItem: Equatable {
             return .gift
         case .suggestPost:
             return .suggestPost
+        case .supportTemplates:
+            return .supportTemplates
         }
     }
 }

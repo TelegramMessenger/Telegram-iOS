@@ -94,7 +94,12 @@ private final class PrefetchManagerInnerImpl {
             return prefetchItems
         }
         
-        self.listDisposable = (combineLatest(orderedPreloadMedia, sharedContext.automaticMediaDownloadSettings, networkType)
+        self.listDisposable = (combineLatest(orderedPreloadMedia, sharedContext.automaticMediaDownloadSettings
+        |> map { settings -> MediaAutoDownloadSettings in
+            // Support accounts do not auto-download; prefetching would defeat that by
+            // pulling the same media ahead of time.
+            return account.isSupportUser ? settings.disablingAutomaticDownload : settings
+        }, networkType)
         |> deliverOn(self.queue)).startStrict(next: { [weak self] orderedPreloadMedia, automaticDownloadSettings, networkType in
             self?.updateOrderedPreloadMedia(orderedPreloadMedia, automaticDownloadSettings: automaticDownloadSettings, networkType: networkType)
         })

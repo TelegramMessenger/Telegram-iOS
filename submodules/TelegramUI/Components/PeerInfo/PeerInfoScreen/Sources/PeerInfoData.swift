@@ -457,6 +457,10 @@ final class PeerInfoScreenData {
     /// The chat the shared media lists when it is not the profile's own chat: the channel whose
     /// direct messages the profile was opened from.
     let sharedMediaPeer: EnginePeer?
+    /// TSupport: the shared volunteer note for this user. Set after construction (like
+    /// `forceIsContact` below) so the large per-kind initialisers stay untouched.
+    /// Always nil for regular accounts.
+    var supportInfo: SupportPeerInfo?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -1121,6 +1125,36 @@ private func peerInfoFirstWelcomeMessageText(context: AccountContext, peerId: En
         return view.entries.first?.message.text
     }
     |> distinctUntilChanged
+}
+
+/// TSupport: attach the shared volunteer note to a profile's data signal, and refresh it
+/// from the server on subscribe. For regular accounts this returns the signal untouched, so
+/// their screen data is byte-for-byte what upstream produces.
+///
+/// Restricted to other people's user profiles: `help.getUserInfo` takes an InputUser, and a
+/// note about yourself has no meaning in the support workflow.
+func peerInfoScreenDataWithSupportInfo(
+    context: AccountContext,
+    peerId: EnginePeer.Id,
+    isSettings: Bool,
+    isMyProfile: Bool,
+    signal: Signal<PeerInfoScreenData, NoError>
+) -> Signal<PeerInfoScreenData, NoError> {
+    guard context.isSupportUser, !isSettings, !isMyProfile,
+          peerId.namespace == Namespaces.Peer.CloudUser,
+          peerId != context.account.peerId
+    else {
+        return signal
+    }
+
+    return combineLatest(signal, context.engine.peers.supportPeerInfo(peerId: peerId))
+    |> map { data, supportInfo -> PeerInfoScreenData in
+        data.supportInfo = supportInfo
+        return data
+    }
+    |> beforeStarted {
+        let _ = context.engine.peers.fetchSupportPeerInfo(peerId: peerId).startStandalone()
+    }
 }
 
 func peerInfoScreenData(

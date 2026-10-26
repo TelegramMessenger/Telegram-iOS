@@ -69,13 +69,64 @@ private func loadCountryCodes() -> [Country] {
         }
     }
     
-    countryCodesByPrefix = countriesByPrefix
+    let (tsupportCountries, tsupportCountriesByPrefix) = applyTSupportCountry(countries: result, countriesByPrefix: countriesByPrefix)
+    countryCodesByPrefix = tsupportCountriesByPrefix
     
-    return result
+    return tsupportCountries
 }
 
 private var countryCodes: [Country] = loadCountryCodes()
 private var countryCodesByPrefix: [String: (Country, Country.CountryCode)] = [:]
+
+private let tsupportCountryId = "TS"
+private let tsupportCountryCode = "42"
+/// Every allocated support region code begins `424` — see `SupportAccount.phoneNumberPrefix`.
+private let tsupportRegionPrefix = "424"
+
+/// Installs the TSupport pseudo-country into the active country list.
+///
+/// The list is replaced wholesale in three places — both `loadServerCountryCodes` overloads
+/// and `setupCountryCodes` — so an entry present only in `PhoneCountries.txt` is silently
+/// discarded the moment the server-provided list arrives. Every replacement must route
+/// through here.
+///
+/// The entry is `hidden`, so it never appears in the country picker a regular user browses,
+/// but `+42…` still resolves while typing. Registering the `42` prefix is safe for the real
+/// `+420`/`+421`/`+423` countries because `lookupCountryIdByNumber` matches longest-prefix
+/// first and stops as soon as a shorter code follows a longer one.
+private func applyTSupportCountry(
+    countries: [Country],
+    countriesByPrefix: [String: (Country, Country.CountryCode)]
+) -> ([Country], [String: (Country, Country.CountryCode)]) {
+    // Rebuilt rather than reused: the entry parsed out of PhoneCountries.txt is not hidden.
+    var updatedCountries = countries.filter { $0.id != tsupportCountryId }
+    var updatedByPrefix = countriesByPrefix
+
+    let code = Country.CountryCode(code: tsupportCountryCode, prefixes: [], patterns: [])
+    let country = Country(
+        id: tsupportCountryId,
+        name: "TSupport",
+        localizedName: nil,
+        countryCodes: [code],
+        hidden: true
+    )
+    updatedCountries.append(country)
+    updatedByPrefix[code.code] = (country, code)
+
+    // The server-provided list ships Telegram's test country "Y-land" (ISO `YL`, flag
+    // suppressed at CountryList.swift:19) on dialing code 42, registered under
+    // `code + prefix` keys — so it owns not just "42" but longer keys such as "42490".
+    // `lookupCountryIdByNumber` matches longest-prefix-first, so claiming only "42" loses
+    // the label to Y-land as soon as a region code is typed. Claim every 424* key instead.
+    //
+    // Safe for real countries: 424 is unassigned in E.164, and 420 (Czech Republic),
+    // 421 (Slovakia) and 423 (Liechtenstein) do not start with it.
+    for key in Array(updatedByPrefix.keys) where key.hasPrefix(tsupportRegionPrefix) {
+        updatedByPrefix[key] = (country, code)
+    }
+
+    return (updatedCountries, updatedByPrefix)
+}
 
 public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
@@ -94,7 +145,9 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
                 }
             }
         }
-        countryCodesByPrefix = countriesByPrefix
+        let (tsupportCountries, tsupportCountriesByPrefix) = applyTSupportCountry(countries: countryCodes, countriesByPrefix: countriesByPrefix)
+        countryCodes = tsupportCountries
+        countryCodesByPrefix = tsupportCountriesByPrefix
                 
         Queue.mainQueue().async {
             completion()
@@ -119,7 +172,9 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
                 }
             }
         }
-        countryCodesByPrefix = countriesByPrefix
+        let (tsupportCountries, tsupportCountriesByPrefix) = applyTSupportCountry(countries: countryCodes, countriesByPrefix: countriesByPrefix)
+        countryCodes = tsupportCountries
+        countryCodesByPrefix = tsupportCountriesByPrefix
         Queue.mainQueue().async {
             completion()
         }
@@ -204,8 +259,9 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     }
     
     public static func setupCountryCodes(countries: [Country], codesByPrefix: [String: (Country, Country.CountryCode)]) {
-        countryCodes = countries
-        countryCodesByPrefix = codesByPrefix
+        let (tsupportCountries, tsupportCountriesByPrefix) = applyTSupportCountry(countries: countries, countriesByPrefix: codesByPrefix)
+        countryCodes = tsupportCountries
+        countryCodesByPrefix = tsupportCountriesByPrefix
     }
     
     public static func lookupCountryNameById(_ id: String, strings: PresentationStrings) -> String? {

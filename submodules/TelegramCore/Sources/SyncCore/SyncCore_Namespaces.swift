@@ -171,6 +171,13 @@ public struct Namespaces {
         public static let feed: Int8 = 60
         public static let shareThemeBackdrops: Int8 = 61
         public static let cachedUniqueStarGifts: Int8 = 62
+
+        /// TSupport: volunteer notes about a user (`help.getUserInfo`). Deliberately far above
+        /// upstream's range so new upstream collections never collide on an upstream merge.
+        /// The one exception to the below-64 rule above: 63 is upstream's last free core id,
+        /// so it can't be taken. 120 is application-specific `64 + 56`, and application-specific
+        /// ids stop at `64 + 55` (TSupport's own `supportTemplateCache`), so nothing collides.
+        public static let supportPeerInfo: Int8 = 120
     }
     
     public struct UnorderedItemList {

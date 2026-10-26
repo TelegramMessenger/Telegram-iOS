@@ -27,6 +27,11 @@ enum SettingsSection: Int, CaseIterable {
     case payment
     case extra
     case support
+    // TSupport: volunteer-only settings (currently just Templates). Distinct from `.support`
+    // above, which is the regular Ask a Question/FAQ/Tips section (hidden for support
+    // accounts, D5) and is unrelated to this feature.
+    case tsupport
+    case logout
 }
 
 func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
@@ -39,6 +44,10 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         items[section] = []
     }
     
+    // Support volunteers cannot change their identity, and the commercial/personal-device
+    // rows are irrelevant to the support queue. Regular accounts are unaffected.
+    let isSupportUser = context.isSupportUser
+    
     let setPhotoTitle: String
     if let peer = data.peer, !peer.profileImageRepresentations.isEmpty {
         setPhotoTitle = presentationData.strings.Settings_ChangeProfilePhoto
@@ -49,7 +58,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     var setStatusTitle: String = ""
     let displaySetStatus: Bool
     var hasEmojiStatus = false
-    if case let .user(peer) = data.peer, peer.isPremium {
+    if case let .user(peer) = data.peer, peer.isPremium, !isSupportUser {
         if peer.emojiStatus != nil {
             hasEmojiStatus = true
             setStatusTitle = presentationData.strings.PeerInfo_ChangeEmojiStatus
@@ -71,11 +80,13 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }))
     }
     
-    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
-        interaction.openSettings(.avatar)
-    }))
+    if !isSupportUser {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+            interaction.openSettings(.avatar)
+        }))
+    }
     
-    if let peer = data.peer, (peer.addressName ?? "").isEmpty {
+    if let peer = data.peer, (peer.addressName ?? "").isEmpty, !isSupportUser {
         items[.edit]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
             interaction.openSettings(.username)
         }))
@@ -225,9 +236,11 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
     }))
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
-        interaction.openSettings(.recentCalls)
-    }))
+    if !isSupportUser {
+        items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
+            interaction.openSettings(.recentCalls)
+        }))
+    }
     
     let devicesLabel: String
     if let settings = data.globalSettings, let otherSessionsCount = settings.otherSessionsCount {
@@ -277,13 +290,13 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     
     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
-    if !isPremiumDisabled || context.isPremium {
+    if (!isPremiumDisabled || context.isPremium) && !isSupportUser {
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
         }))
     }
     if let starsState = data.starsState {
-        if !isPremiumDisabled || abs(starsState.balance.value) > 0 {
+        if (!isPremiumDisabled || abs(starsState.balance.value) > 0) && !isSupportUser {
             let balanceText: NSAttributedString
             if abs(starsState.balance.value) > 0 {
                 let formattedLabel = formatStarsAmountText(starsState.balance, dateTimeFormat: presentationData.dateTimeFormat)
@@ -300,7 +313,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }
     }
     if let tonState = data.tonState {
-        if abs(tonState.balance.value) > 0 {
+        if abs(tonState.balance.value) > 0, !isSupportUser {
             let balanceText: NSAttributedString
             if abs(tonState.balance.value) > 0 {
                 let formattedLabel = formatTonAmountText(tonState.balance.value, dateTimeFormat: presentationData.dateTimeFormat)
@@ -316,13 +329,13 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             }))
         }
     }
-    if !isPremiumDisabled || context.isPremium {
+    if (!isPremiumDisabled || context.isPremium) && !isSupportUser {
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), additionalBadgeLabel: nil, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
             interaction.openSettings(.businessSetup)
         }))
     }
     if let starsState = data.starsState {
-        if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
+        if (!isPremiumDisabled || starsState.balance > StarsAmount.zero) && !isSupportUser {
             items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 105, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
                 interaction.openSettings(.premiumGift)
             }))
@@ -330,27 +343,47 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     }
     
     if let settings = data.globalSettings {
-        if settings.hasPassport {
+        if settings.hasPassport, !isSupportUser {
             items[.extra]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Passport, icon: PresentationResourcesSettings.passport, action: {
                 interaction.openSettings(.passport)
             }))
         }
-        if settings.hasWatchApp {
+        if settings.hasWatchApp, !isSupportUser {
             items[.extra]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_AppleWatch, icon: PresentationResourcesSettings.watch, action: {
                 interaction.openSettings(.watch)
             }))
         }
     }
     
-    items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {
-        interaction.openSettings(.support)
-    }))
-    items[.support]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_FAQ, icon: PresentationResourcesSettings.faq, action: {
-        interaction.openSettings(.faq)
-    }))
-    items[.support]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_Tips, icon: PresentationResourcesSettings.tips, action: {
-        interaction.openSettings(.tips)
-    }))
+    // Ask a Question, FAQ and Features are end-user help. A volunteer *is* the support
+    // channel, so "Ask a Question" would route them back to their own queue.
+    if !isSupportUser {
+        items[.support]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_Support, icon: PresentationResourcesSettings.support, action: {
+            interaction.openSettings(.support)
+        }))
+        items[.support]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_FAQ, icon: PresentationResourcesSettings.faq, action: {
+            interaction.openSettings(.faq)
+        }))
+        items[.support]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_Tips, icon: PresentationResourcesSettings.tips, action: {
+            interaction.openSettings(.tips)
+        }))
+    }
+    
+    // TSupport: volunteer-only settings row, straight to Templates (owner reverted the
+    // intermediate "Support" home screen - no other support-only setting exists yet).
+    if isSupportUser {
+        items[.tsupport]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.SupportTemplates_Title, icon: PresentationResourcesSettings.tsupport, action: {
+            interaction.openSettings(.tsupportTemplates)
+        }))
+    }
+    
+    // Log Out normally lives in the editing view, which support accounts cannot open
+    // (profile editing is blocked). Surface it here so a volunteer can still sign out.
+    if isSupportUser {
+        items[.logout]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
+            interaction.openSettings(.logout)
+        }))
+    }
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in SettingsSection.allCases {

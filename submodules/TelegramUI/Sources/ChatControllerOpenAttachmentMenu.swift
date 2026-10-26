@@ -247,6 +247,9 @@ extension ChatControllerImpl {
                 canSendPolls = false
             }
             
+            // Support volunteers send text, screenshots and files — nothing else (D13).
+            let isSupportUser = self.context.isSupportUser
+            
             var availableButtons: [AttachmentButtonType] = []
             if let editingSubject {
                 // Only what can become the edited message's media. Everything that would send a new
@@ -262,20 +265,20 @@ extension ChatControllerImpl {
                 }
             } else {
                 availableButtons = [.gallery, .file]
-                if banSendText == nil {
+                if banSendText == nil, !isSupportUser {
                     availableButtons.append(.location)
                     availableButtons.append(.contact)
                 }
 
-                if canSendPolls {
+                if canSendPolls, !isSupportUser {
                     availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
                 }
 
-                if canSendTodos {
+                if canSendTodos, !isSupportUser {
                     availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
                 }
 
-                if "".isEmpty {
+                if "".isEmpty, !isSupportUser {
                     availableButtons.insert(.audio, at: max(0, availableButtons.count - 1))
                 }
             }
@@ -289,7 +292,8 @@ extension ChatControllerImpl {
 
             switch subject {
             case .default, .gift:
-                if WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable, !isScheduledMessages, banSendText == nil, let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.id != self.context.account.peerId, !user.isDeleted, !isServicePeer(user), user.botInfo == nil, !user.flags.contains(.isSupport), let fileIndex = availableButtons.firstIndex(of: .file) {
+                // TSupport: no money transfers from support accounts (D13).
+                if !isSupportUser, WalletConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 }).isAvailable, !isScheduledMessages, banSendText == nil, let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.id != self.context.account.peerId, !user.isDeleted, !isServicePeer(user), user.botInfo == nil, !user.flags.contains(.isSupport), let fileIndex = availableButtons.firstIndex(of: .file) {
                     availableButtons.insert(.money, at: fileIndex + 1)
                 }
             case .edit, .bot:
@@ -357,6 +361,9 @@ extension ChatControllerImpl {
                     }
 
                     for bot in attachMenuBots {
+                        if isSupportUser {
+                            break
+                        }
                         var peerType = peerType
                         if bot.peer.id == peer.id {
                             peerType.insert(.sameBot)
@@ -390,7 +397,7 @@ extension ChatControllerImpl {
             let premiumGiftOptions: [CachedPremiumGiftOption]
             
             var showPremiumGift = false
-            if !premiumConfiguration.isPremiumDisabled && self.presentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
+            if !isSupportUser, !premiumConfiguration.isPremiumDisabled && self.presentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
                 if self.presentationInterfaceState.alwaysShowGiftButton {
                     showPremiumGift = true
                 } else if self.presentationInterfaceState.hasBirthdayToday {
@@ -1297,6 +1304,14 @@ extension ChatControllerImpl {
         }
         if request.location {
             availableButtons.append(.location)
+        }
+        if self.context.isSupportUser {
+            // Support accounts get no audio or location tabs (D13). If nothing else was
+            // requested, behave as if the picker was cancelled.
+            availableButtons.removeAll(where: { $0 == .audio || $0 == .location })
+            if availableButtons.isEmpty {
+                return
+            }
         }
         presentPollAttachmentScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, subject: .richText(PollAttachmentSubject.RichText(photoVideoSelectionLimit: photoVideoSelectionLimit)), availableButtons: availableButtons, inputMediaNodeData: nil, present: { [weak self] c, push in
             guard let self else {

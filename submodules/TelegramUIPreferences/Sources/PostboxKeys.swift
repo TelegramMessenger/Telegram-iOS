@@ -63,6 +63,12 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case mediaDisplaySettings = 20
     case updateSettings = 21
     case chatSettings = 22
+    // TSupport: data a volunteer authors must outlive logout, which deletes the account's own
+    // database, so it lives in this app-wide one, keyed per account (see `supportAccountKey`).
+    // Far above upstream's sequential range so upstream's own additions don't collide on a
+    // merge. Support accounts only; never read or written for regular accounts.
+    case supportTemplateSettings = 120 // "my template language" (D35)
+    case supportUserTemplates = 121 // User ("Mine") Templates (D33)
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -89,6 +95,25 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let mediaDisplaySettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.mediaDisplaySettings.rawValue)
     public static let updateSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.updateSettings.rawValue)
     public static let chatSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.chatSettings.rawValue)
+
+    public static func supportTemplateSettings(peerId: EnginePeer.Id, testingEnvironment: Bool) -> EngineDataBuffer {
+        return supportAccountKey(ApplicationSpecificSharedDataKeyValues.supportTemplateSettings.rawValue, peerId: peerId, testingEnvironment: testingEnvironment)
+    }
+
+    public static func supportUserTemplates(peerId: EnginePeer.Id, testingEnvironment: Bool) -> EngineDataBuffer {
+        return supportAccountKey(ApplicationSpecificSharedDataKeyValues.supportUserTemplates.rawValue, peerId: peerId, testingEnvironment: testingEnvironment)
+    }
+
+    // Scoped by user ID, so an account sees only its own entry and finds it again after logging
+    // back in. The environment is part of the key because this database is shared by production
+    // and test accounts, whose user IDs can coincide.
+    private static func supportAccountKey(_ value: Int32, peerId: EnginePeer.Id, testingEnvironment: Bool) -> EngineDataBuffer {
+        let key = EngineDataBuffer(length: 4 + 8 + 1)
+        key.setInt32(0, value: value + 1000)
+        key.setInt64(4, value: peerId.toInt64())
+        key.setInt8(12, value: testingEnvironment ? 1 : 0)
+        return key
+    }
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
@@ -106,6 +131,11 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case shareWithPeersState = 13
     case webAppPermissionsState = 14
     case richTextArticleDrafts = 15
+    // TSupport: one entry per language, holding that language's parsed official templates
+    // (D32). Support accounts only. Far above upstream's sequential range (it was 16, upstream's
+    // next free value). Resolves to collection id 64 + 55 = 119, clear of the core
+    // `supportPeerInfo` id 120 (= 64 + 56).
+    case supportTemplateCache = 55
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -122,7 +152,9 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let shareWithPeersState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.shareWithPeersState.rawValue)
     public static let webAppPermissionsState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.webAppPermissionsState.rawValue)
     public static let richTextArticleDrafts = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.richTextArticleDrafts.rawValue)
+    public static let supportTemplateCache = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.supportTemplateCache.rawValue)
 }
+
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case localThemes = 3

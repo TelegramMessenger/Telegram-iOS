@@ -1521,6 +1521,11 @@ public protocol SharedAccountContext: AnyObject {
     func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError>
     func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController
     func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
+    // TSupport: canned-reply templates (D28-D37). Support accounts only.
+    func makeSupportTemplatesBrowserController(context: AccountContext, selectTemplate: @escaping (SupportTemplate) -> Void) -> ViewController
+    // TSupport: Templates Settings entry (owner reverted the intermediate "Support" home
+    // screen - Settings links straight to Templates).
+    func makeSupportTemplatesSettingsController(context: AccountContext) -> ViewController
     func makeBusinessIntroSetupScreen(context: AccountContext, initialData: BusinessIntroSetupScreenInitialData) -> ViewController
     func makeBusinessIntroSetupScreenInitialData(context: AccountContext) -> Signal<BusinessIntroSetupScreenInitialData, NoError>
     func makeBusinessLinksSetupScreen(context: AccountContext, initialData: BusinessLinksSetupScreenInitialData) -> ViewController
@@ -1845,6 +1850,12 @@ public protocol AccountContext: AnyObject {
     
     var isPremium: Bool { get }
     var isFrozen: Bool { get }
+    /// Whether this account authorised with a TSupport volunteer phone number.
+    ///
+    /// Seeded synchronously from the persisted account record, then kept in sync with the
+    /// account peer's phone number. Prefer this over `account.isSupportUser`, which is fixed
+    /// at construction and so is stale for the first session after a QR-code login.
+    var isSupportUser: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
     var peerNameColors: PeerNameColors { get }
     

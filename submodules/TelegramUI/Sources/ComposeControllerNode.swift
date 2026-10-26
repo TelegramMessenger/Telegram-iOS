@@ -41,17 +41,24 @@ final class ComposeControllerNode: ASDisplayNode {
         var openCreateContactImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: [
-            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
+        // Support volunteers cannot create groups or channels (D15). The contact list and
+        // New Contact are kept — volunteers legitimately start one-to-one chats.
+        var additionalOptions: [ContactListAdditionalOption] = []
+        if !context.isSupportUser {
+            additionalOptions.append(ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
                 openCreateNewGroupImpl?()
-            }),
-            ContactListAdditionalOption(title: self.presentationData.strings.NewContact_Title, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
-                openCreateContactImpl?()
-            }),
-            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
+            }))
+        }
+        additionalOptions.append(ContactListAdditionalOption(title: self.presentationData.strings.NewContact_Title, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
+            openCreateContactImpl?()
+        }))
+        if !context.isSupportUser {
+            additionalOptions.append(ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
                 openCreateNewChannelImpl?()
-            })
-        ], includeChatList: false, topPeers: .none)), onlyWriteable: false, isGroupInvitation: false, displayPermissionPlaceholder: false)
+            }))
+        }
+        
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: additionalOptions, includeChatList: false, topPeers: .none)), onlyWriteable: false, isGroupInvitation: false, displayPermissionPlaceholder: false)
         
         super.init()
         

@@ -4620,7 +4620,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         let blurTransitionOut: ComponentTransition = transition.isAnimated ? .easeInOut(duration: 0.18) : .immediate
         let sendButtonBlurOut: CGFloat = 4.0
         
-        var hideMicButton = false
+        // Support volunteers cannot record voice or round-video messages (D12). Reusing
+        // `keepSendButtonEnabled` rather than adding a branch keeps the Send button in the
+        // slot the mic would have occupied, via the existing, already-exercised path.
+        let isSupportUser = self.context?.isSupportUser ?? false
+        
+        var hideMicButton = isSupportUser
         var hideMicButtonBackground = false
         
         if self.customRightAction != nil {
@@ -4629,6 +4634,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         var mediaInputIsActive = false
         var keepSendButtonEnabled = self.keepSendButtonEnabled
+        if isSupportUser {
+            keepSendButtonEnabled = true
+        }
         var hasForward = false
         if let presentationInterfaceState = self.presentationInterfaceState {
             if case .media = presentationInterfaceState.inputMode {
@@ -6013,6 +6021,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     self.interfaceInteraction?.updateTextInputStateAndMode { _, inputMode in
                         return (ChatTextInputState(inputText: NSAttributedString(string: "/")), .text)
                     }
+                case .supportTemplates:
+                    self.interfaceInteraction?.openSupportTemplatesBrowser()
                 case .silentPost:
                     self.interfaceInteraction?.toggleSilentPost()
                 case .messageAutoremoveTimeout:
