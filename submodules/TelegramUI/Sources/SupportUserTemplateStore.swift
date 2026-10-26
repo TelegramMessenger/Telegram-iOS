@@ -6,8 +6,9 @@ import AccountContext
 
 /// TSupport Templates — User Templates local storage (Round B). See
 /// `ai-docs/tsupport/50-templates-design.md` §6 and D33. Local-only, per support account, no
-/// cloud sync. Support accounts only; nothing here is reachable from a regular account's
-/// code paths.
+/// cloud sync. Kept in the app-wide database, keyed by the account's user ID, so it survives
+/// logging out and back in. Support accounts only; nothing here is reachable from a regular
+/// account's code paths.
 
 /// A volunteer-authored template. Wraps the shared `SupportTemplate` content with a stable
 /// `id` that survives edits to the Question/Keys/Value - needed so Edit/Delete and collision
@@ -44,18 +45,28 @@ public struct SupportUserTemplateImportSummary: Equatable {
     }
 }
 
+private func supportUserTemplatesKey(context: AccountContext) -> EngineDataBuffer {
+    return ApplicationSpecificSharedDataKeys.supportUserTemplates(peerId: context.account.peerId, testingEnvironment: context.account.testingEnvironment)
+}
+
 public func supportUserTemplates(context: AccountContext) -> Signal<[SupportUserTemplate], NoError> {
-    return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.supportUserTemplates))
-    |> map { entry -> [SupportUserTemplate] in
-        return entry?.get(SupportUserTemplateListPreference.self)?.templates ?? []
+    let key = supportUserTemplatesKey(context: context)
+    return context.sharedContext.accountManager.sharedData(keys: [key])
+    |> map { sharedData -> [SupportUserTemplate] in
+        return sharedData.entries[key]?.get(SupportUserTemplateListPreference.self)?.templates ?? []
     }
+    |> distinctUntilChanged
 }
 
 private func updateSupportUserTemplates(context: AccountContext, _ f: @escaping ([SupportUserTemplate]) -> [SupportUserTemplate]) -> Signal<Never, NoError> {
-    return context.engine.preferences.update(id: ApplicationSpecificPreferencesKeys.supportUserTemplates, { entry in
-        let current = entry?.get(SupportUserTemplateListPreference.self)?.templates ?? []
-        return SharedPreferencesEntry(SupportUserTemplateListPreference(templates: f(current)))
-    })
+    let key = supportUserTemplatesKey(context: context)
+    return context.sharedContext.accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(key, { entry in
+            let current = entry?.get(SupportUserTemplateListPreference.self)?.templates ?? []
+            return SharedPreferencesEntry(SupportUserTemplateListPreference(templates: f(current)))
+        })
+    }
+    |> ignoreValues
 }
 
 /// Upsert by `id` - an existing entry's content is replaced in place (its position in the

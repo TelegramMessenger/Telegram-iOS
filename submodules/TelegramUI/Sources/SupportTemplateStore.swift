@@ -82,12 +82,18 @@ private func defaultSupportTemplateLanguage(context: AccountContext) -> String {
     return SupportTemplateSettings.defaultLanguage
 }
 
-/// Persisted per-account "my template language" (D35). Defaults to the app's current
-/// language when nothing has been saved yet.
+private func supportTemplateSettingsKey(context: AccountContext) -> EngineDataBuffer {
+    return ApplicationSpecificSharedDataKeys.supportTemplateSettings(peerId: context.account.peerId, testingEnvironment: context.account.testingEnvironment)
+}
+
+/// Persisted per-account "my template language" (D35), in the app-wide database so it
+/// survives logging out and back in. Defaults to the app's current language when nothing has
+/// been saved yet.
 public func supportTemplateLanguageSetting(context: AccountContext) -> Signal<String, NoError> {
-    return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.supportTemplateSettings))
-    |> map { entry -> String in
-        if let settings = entry?.get(SupportTemplateSettings.self) {
+    let key = supportTemplateSettingsKey(context: context)
+    return context.sharedContext.accountManager.sharedData(keys: [key])
+    |> map { sharedData -> String in
+        if let settings = sharedData.entries[key]?.get(SupportTemplateSettings.self) {
             return settings.language
         }
         return defaultSupportTemplateLanguage(context: context)
@@ -96,9 +102,13 @@ public func supportTemplateLanguageSetting(context: AccountContext) -> Signal<St
 }
 
 public func updateSupportTemplateLanguage(context: AccountContext, language: String) -> Signal<Never, NoError> {
-    return context.engine.preferences.update(id: ApplicationSpecificPreferencesKeys.supportTemplateSettings, { _ in
-        return EnginePreferencesEntry(SupportTemplateSettings(language: language))
-    })
+    let key = supportTemplateSettingsKey(context: context)
+    return context.sharedContext.accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(key, { _ in
+            return SharedPreferencesEntry(SupportTemplateSettings(language: language))
+        })
+    }
+    |> ignoreValues
 }
 
 private func cachedSupportTemplates(context: AccountContext, key: String) -> Signal<(templates: [SupportTemplate], updatedAt: Int32?), NoError> {

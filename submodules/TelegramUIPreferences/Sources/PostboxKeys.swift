@@ -12,15 +12,6 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case walletState = 23
     case qrStudioLook = 24
     case qrStudioPeerLook = 25
-    // TSupport keys live far above upstream's sequential range so upstream's own additions
-    // never collide with them on a merge (they first used 23/24, which upstream later
-    // assigned to walletState/qrStudioLook). Same convention as
-    // `Namespaces.CachedItemCollection.supportPeerInfo`.
-    // TSupport: persisted per-account "my template language" preference (D35). Support
-    // accounts only; unused (never read or written) for regular accounts.
-    case supportTemplateSettings = 120
-    // TSupport: local-only User Templates collection (D33, Round B). Support accounts only.
-    case supportUserTemplates = 121
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -32,8 +23,6 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let ageVerificationState: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.ageVerificationState.rawValue)
     public static let walletState: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.walletState.rawValue)
     public static let qrStudioLook: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.qrStudioLook.rawValue)
-    public static let supportTemplateSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.supportTemplateSettings.rawValue)
-    public static let supportUserTemplates: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.supportUserTemplates.rawValue)
     
     public static func qrStudioPeerLook(peerId: EnginePeer.Id) -> EngineDataBuffer {
         let key = EngineDataBuffer(length: 4 + 8)
@@ -74,6 +63,12 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case mediaDisplaySettings = 20
     case updateSettings = 21
     case chatSettings = 22
+    // TSupport: data a volunteer authors must outlive logout, which deletes the account's own
+    // database, so it lives in this app-wide one, keyed per account (see `supportAccountKey`).
+    // Far above upstream's sequential range so upstream's own additions don't collide on a
+    // merge. Support accounts only; never read or written for regular accounts.
+    case supportTemplateSettings = 120 // "my template language" (D35)
+    case supportUserTemplates = 121 // User ("Mine") Templates (D33)
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -100,6 +95,25 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let mediaDisplaySettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.mediaDisplaySettings.rawValue)
     public static let updateSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.updateSettings.rawValue)
     public static let chatSettings: EngineDataBuffer = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.chatSettings.rawValue)
+
+    public static func supportTemplateSettings(peerId: EnginePeer.Id, testingEnvironment: Bool) -> EngineDataBuffer {
+        return supportAccountKey(ApplicationSpecificSharedDataKeyValues.supportTemplateSettings.rawValue, peerId: peerId, testingEnvironment: testingEnvironment)
+    }
+
+    public static func supportUserTemplates(peerId: EnginePeer.Id, testingEnvironment: Bool) -> EngineDataBuffer {
+        return supportAccountKey(ApplicationSpecificSharedDataKeyValues.supportUserTemplates.rawValue, peerId: peerId, testingEnvironment: testingEnvironment)
+    }
+
+    // Scoped by user ID, so an account sees only its own entry and finds it again after logging
+    // back in. The environment is part of the key because this database is shared by production
+    // and test accounts, whose user IDs can coincide.
+    private static func supportAccountKey(_ value: Int32, peerId: EnginePeer.Id, testingEnvironment: Bool) -> EngineDataBuffer {
+        let key = EngineDataBuffer(length: 4 + 8 + 1)
+        key.setInt32(0, value: value + 1000)
+        key.setInt64(4, value: peerId.toInt64())
+        key.setInt8(12, value: testingEnvironment ? 1 : 0)
+        return key
+    }
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
