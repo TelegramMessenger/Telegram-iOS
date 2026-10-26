@@ -100,9 +100,7 @@ final class MediaGridLayoutLayer: CALayer {
 
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
         cell.bind(index: index, detail: self.detail)
-        if self.detail == .full {
-            cell.setSelected(self.isItemSelected?(index) ?? false)
-        }
+        cell.setSelected(self.detail == .full ? (self.isItemSelected?(index) ?? false) : false)
         cell.frame = layout.frame(at: index)
         cell.bindingToken += 1
         cell.hasFinalImage = false

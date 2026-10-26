@@ -48,6 +48,7 @@ public final class MediaGridView: UIView {
     public var isItemSelected: ((Int) -> Bool)? {
         didSet {
             self.activeLayoutLayer.isItemSelected = self.isItemSelected
+            self.updateSelectionForVisibleItems()
         }
     }
     public var onSelectionPan: ((Int, Bool) -> Void)?
@@ -280,12 +281,13 @@ public final class MediaGridView: UIView {
         }
         let insets = self.geometryInsets
         let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: insets.top, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
+        var compensatedOffset: CGFloat?
         if self.needsLayoutRebuild || self.currentLayout?.geometry != geometry {
             self.needsLayoutRebuild = false
             let reservedSlots = self.reservedSlots
             let layout = MediaGridUniformLayout(geometry: geometry, columns: self.level.columns, cellAspect: self.cellAspect, reservedSlots: reservedSlots, count: self.itemCount)
             if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
-                self.engine.setOffset(self.engine.offset + (insets.top - lastTopInset))
+                compensatedOffset = max(0.0, self.engine.offset + (insets.top - lastTopInset))
             }
             self.lastTopInset = insets.top
             self.resetPrefetch()
@@ -307,6 +309,10 @@ public final class MediaGridView: UIView {
         self.tapRecognizer.isEnabled = interactive
         self.selectionGesture.isEnabled = interactive
         self.engine.setEdges(min: 0.0, max: self.maxOffset)
+        if let compensated = compensatedOffset {
+            self.engine.setOffset(min(compensated, self.maxOffset))
+            self.scrolled(to: self.engine.offset)
+        }
         if let pending = self.pendingContentOffset {
             self.pendingContentOffset = nil
             self.engine.setOffset(min(max(0.0, pending), self.maxOffset))

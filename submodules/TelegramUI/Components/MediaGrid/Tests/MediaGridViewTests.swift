@@ -377,6 +377,19 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
     }
 
+    func testTopInsetDecreaseClampsAtTopAndNotifies() {
+        let (view, _) = self.makeView(count: 1000)
+        view.geometryInsets = UIEdgeInsets(top: 100.0, left: 0.0, bottom: 0.0, right: 0.0)
+        view.layoutIfNeeded()
+        view.setContentOffset(20.0)
+        var last: CGFloat?
+        view.onScroll = { last = $0 }
+        view.geometryInsets = UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(last ?? -1.0, 0.0, accuracy: 1e-6)
+    }
+
     func testTopInsetChangeKeepsVisibleContentInPlace() {
         let (view, _) = self.makeView(count: 1000)
         view.geometryInsets = UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
