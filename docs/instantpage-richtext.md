@@ -966,7 +966,8 @@ the usual toast, open the user's profile.
   build (a clipboard fragment, an `.rtdoc`) reaches an older one; drafts and edited messages go through
   `ChatInputContent`, whose button action is the Postbox-coded `ReplyMarkupButtonAction`.
 - **`.userProfile` survives a paste** (`convertingUnsupportedButtonActions` leaves it alone, as it does
-  `.copyText`): its payload is a user id, which works in any message.
+  `.copyText`): its payload is a self-contained user id, valid in any message (subject to the recipient
+  caveat above).
 
 ### Non-obvious invariants
 
