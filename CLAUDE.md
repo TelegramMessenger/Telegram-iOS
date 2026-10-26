@@ -243,9 +243,11 @@ Three measured facts that are invisible from the code
 
 ## iPhone Duo layout (reserved corners)
 
-`ContainerViewLayout.reservedCorners` carries iPhone Duo's corner blocks (the status corner: clock, camera) from a
-per-posture table, because the system's own regions are transitional for up to 0.6s after every rotation and fold;
-`safeInsets` stay exactly the system's. The rules, the layout API and how to check a screen are in
+`ContainerViewLayout.reservedCorners` carries iPhone Duo's corner blocks (the status corner: clock, camera), additional
+to `safeInsets`. Both take the system's sizes (occlusion regions, safe area) whenever the system's report fits the
+window's posture; a per-posture table names the posture and stands in with its settled sizes for the up to 0.65s after
+every rotation and fold that the report is transitional (`iPhoneDuoReservedArea`). Never hardcode the island's size: read
+`reservedCorners`. The rules, the layout API and how to check a screen are in
 [`docs/iphone-duo-layout.md`](docs/iphone-duo-layout.md); the all-screens audit is
 [`docs/superpowers/duo-screen-audit-2026-10.md`](docs/superpowers/duo-screen-audit-2026-10.md). None of this shows up
 as a build error:
