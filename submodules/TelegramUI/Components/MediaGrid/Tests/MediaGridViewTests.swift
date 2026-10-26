@@ -442,7 +442,8 @@ final class MediaGridViewTests: XCTestCase {
         let point = CGPoint(x: frame.midX, y: frame.midY)
         view._testTap(at: point)
         XCTAssertTrue(tapped.isEmpty)
-        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertEqual(view.level, .thirtyOne)
+        XCTAssertEqual(levels, [])
         XCTAssertFalse(view.engine.isScrollEnabled)
         view._testFinishAnimations()
         XCTAssertTrue(view.engine.isScrollEnabled)
@@ -465,7 +466,7 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertEqual(layoutLayersBefore, 1)
         let outgoing = view.activeLayoutLayer
         view.zoomOut()
-        XCTAssertEqual(view.level, .five)
+        XCTAssertEqual(view.level, .three)
         let during = host.sublayers?.compactMap { $0 as? MediaGridLayoutLayer } ?? []
         XCTAssertEqual(during.count, 2)
         guard let incoming = during.first(where: { $0 !== outgoing }) else {
@@ -479,6 +480,7 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertTrue(CATransform3DIsIdentity(incoming.transform))
         XCTAssertFalse(incoming.visibleCells.isEmpty)
         view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
         let after = host.sublayers?.compactMap { $0 as? MediaGridLayoutLayer } ?? []
         XCTAssertEqual(after.count, 1)
         XCTAssertTrue(after.first === incoming)
@@ -663,6 +665,316 @@ final class MediaGridViewTests: XCTestCase {
             XCTAssertEqual(cell.sublayers?.count ?? 0, 0, "index \(index) has a marker")
         }
         XCTAssertGreaterThan(visible, 0)
+    }
+
+    private func makeWindowedView(count: Int) -> (MediaGridView, UIWindow) {
+        let (view, _) = self.makeView(count: count)
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
+        window.frame = view.frame
+        window.windowLevel = .alert
+        window.isHidden = false
+        window.addSubview(view)
+        view.layoutIfNeeded()
+        CATransaction.flush()
+        return (view, window)
+    }
+
+    private func spin(_ seconds: TimeInterval) {
+        RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+    }
+
+    private func layoutLayerCount(_ view: MediaGridView) -> Int {
+        return view.engine.contentHost.layer.sublayers?.filter { $0 is MediaGridLayoutLayer }.count ?? 0
+    }
+
+    func testPinchDuringFlightAnchorsPresentedItem() {
+        let (view, window) = self.makeWindowedView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        view._testFlight(settledOffset: 40_000.0)
+        let host = view.engine.contentHost
+        let presentedOffset: CGFloat = 20_520.0
+        let animation = CABasicAnimation(keyPath: "bounds.origin.y")
+        animation.fromValue = presentedOffset
+        animation.toValue = presentedOffset
+        animation.duration = 100.0
+        host.layer.add(animation, forKey: "testFlight")
+        CATransaction.flush()
+        self.spin(0.05)
+        XCTAssertEqual(host.layer.presentation()?.bounds.origin.y ?? -1.0, presentedOffset, accuracy: 0.5)
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        let expected = layout.index(at: CGPoint(x: centre.x, y: centre.y + presentedOffset))
+        XCTAssertNotNil(expected)
+        XCTAssertNotEqual(expected, layout.index(at: CGPoint(x: centre.x, y: centre.y + 20_000.0)))
+        view._testPinch(.began, center: centre)
+        XCTAssertFalse(view.isUserScrolling)
+        XCTAssertFalse(view.engine.isScrollEnabled)
+        XCTAssertEqual(view.pinchAnchor?.index, expected)
+        XCTAssertEqual(view.contentOffset, presentedOffset, accuracy: 0.5)
+        host.layer.removeAnimation(forKey: "testFlight")
+        view._testPinch(.ended, center: centre)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        XCTAssertNil(view.pinchAnchor)
+        window.isHidden = true
+    }
+
+    func testPinchCancelReturnsToSource() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let source = view.activeLayoutLayer
+        var levels: [MediaGridLevel] = []
+        view.onLevelChanged = { levels.append($0) }
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: pow(3.0 / 5.0, 0.3))
+        guard let transition = view.transition else {
+            XCTFail("no transition")
+            return
+        }
+        XCTAssertEqual(transition.sourceLevel, .three)
+        XCTAssertEqual(transition.targetLevel, .five)
+        XCTAssertEqual(transition.progress, 0.3, accuracy: 1e-6)
+        XCTAssertEqual(view.level, .three)
+        XCTAssertEqual(self.layoutLayerCount(view), 2)
+        view._testPinch(.ended, center: centre, scale: pow(3.0 / 5.0, 0.3), velocity: 0.0)
+        XCTAssertFalse(view.engine.isScrollEnabled)
+        XCTAssertEqual(view.level, .three)
+        view._testFinishAnimations()
+        XCTAssertNil(view.transition)
+        XCTAssertEqual(view.level, .three)
+        XCTAssertEqual(levels, [])
+        XCTAssertEqual(view.currentLayout?.columns, 3)
+        XCTAssertEqual(view.contentOffset, 20_000.0, accuracy: 1e-6)
+        XCTAssertTrue(view.activeLayoutLayer === source)
+        XCTAssertTrue(CATransform3DIsIdentity(source.transform))
+        XCTAssertEqual(source.opacity, 1.0)
+        XCTAssertEqual(source.frame.minY, 0.0)
+        XCTAssertEqual(self.layoutLayerCount(view), 1)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        let window = view.currentLayout!.indexRange(intersecting: self.viewport(view).insetBy(dx: 0.0, dy: -view.bounds.height))
+        XCTAssertEqual(Set(self.visibleCells(view).keys), Set(window))
+    }
+
+    func testPinchChainsThroughLevelsAndCommitsOnce() {
+        let (view, dataSource) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        guard let anchorIndex = view.index(at: centre) else {
+            XCTFail("no anchor")
+            return
+        }
+        var levels: [MediaGridLevel] = []
+        view.onLevelChanged = { levels.append($0) }
+        var scrolls = 0
+        view.onScroll = { _ in scrolls += 1 }
+        let cachedBefore = dataSource.cachedIndices
+        view._testPinch(.began, center: centre)
+        var scale: CGFloat = 1.0
+        while scale > 3.0 / 15.0 * pow(15.0 / 31.0, 0.2) {
+            scale *= 0.97
+            view._testPinch(.changed, center: centre, scale: scale)
+            XCTAssertLessThanOrEqual(self.layoutLayerCount(view), 2)
+        }
+        XCTAssertEqual(view.transition?.sourceLevel, .fifteen)
+        XCTAssertEqual(view.transition?.targetLevel, .thirtyOne)
+        XCTAssertEqual(levels, [])
+        XCTAssertEqual(scrolls, 0)
+        XCTAssertEqual(dataSource.cachedIndices, cachedBefore)
+        view._testPinch(.ended, center: centre, scale: scale, velocity: 0.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertEqual(levels, [.fifteen])
+        XCTAssertGreaterThan(scrolls, 0)
+        XCTAssertNotEqual(dataSource.cachedIndices, cachedBefore)
+        XCTAssertEqual(view.currentLayout?.columns, 15)
+        XCTAssertEqual(self.layoutLayerCount(view), 1)
+        guard let frame = view.frameForItem(at: anchorIndex) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertTrue(frame.minY <= centre.y && centre.y <= frame.maxY, "\(frame) \(centre)")
+    }
+
+    func testPinchRoundTripThroughClampedLevelsRestoresOffset() {
+        let (view, _) = self.makeView(count: 100_000)
+        for start in [0.0, 20_000.0] as [CGFloat] {
+            view.setContentOffset(start)
+            let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+            view._testPinch(.began, center: centre)
+            var scale: CGFloat = 1.0
+            while scale > 3.0 / 15.0 * 0.9 {
+                scale *= 0.95
+                view._testPinch(.changed, center: centre, scale: scale)
+            }
+            while scale < 1.0 {
+                scale = min(1.0, scale / 0.95)
+                view._testPinch(.changed, center: centre, scale: scale)
+            }
+            XCTAssertNil(view.transition)
+            view._testPinch(.ended, center: centre, scale: 1.0, velocity: 0.0)
+            XCTAssertEqual(view.level, .three)
+            XCTAssertEqual(view.contentOffset, start, accuracy: 0.5)
+        }
+    }
+
+    func testPinchBackAcrossLevelReusesShownLayer() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 3.0 / 5.0 * pow(5.0 / 15.0, 0.6))
+        XCTAssertEqual(view.level, .five)
+        guard let fiveLayer = view.transition?.outgoing else {
+            XCTFail("no transition")
+            return
+        }
+        let shownCells = fiveLayer.visibleCells
+        view._testPinch(.changed, center: centre, scale: pow(3.0 / 5.0, 0.9))
+        guard let transition = view.transition else {
+            XCTFail("no transition")
+            return
+        }
+        XCTAssertEqual(view.level, .five)
+        XCTAssertEqual(transition.sourceLevel, .five)
+        XCTAssertEqual(transition.targetLevel, .three)
+        XCTAssertEqual(transition.progress, 0.1, accuracy: 1e-6)
+        XCTAssertTrue(transition.outgoing === fiveLayer)
+        for (index, cell) in shownCells where fiveLayer.visibleCells[index] != nil {
+            XCTAssertTrue(fiveLayer.visibleCells[index] === cell)
+        }
+        view._testPinch(.ended, center: centre, scale: pow(3.0 / 5.0, 0.9), velocity: 0.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: pow(5.0 / 3.0, 0.3))
+        view._testPinch(.ended, center: centre, scale: pow(5.0 / 3.0, 0.3), velocity: 2.0)
+        guard let spring = view.transition?.incoming.animation(forKey: "mediaGridZoom.opacity") as? CASpringAnimation else {
+            XCTFail("no settle animation")
+            return
+        }
+        XCTAssertGreaterThan(spring.initialVelocity, 0.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .three)
+    }
+
+    func testPinchBackAcrossStartFlipsDirection() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 0.8)
+        XCTAssertEqual(view.transition?.targetLevel, .five)
+        view._testPinch(.changed, center: centre, scale: 1.0)
+        XCTAssertNil(view.transition)
+        XCTAssertEqual(self.layoutLayerCount(view), 1)
+        view._testPinch(.changed, center: centre, scale: 1.3)
+        XCTAssertEqual(view.transition?.sourceLevel, .three)
+        XCTAssertEqual(view.transition?.targetLevel, .one)
+        XCTAssertEqual(self.layoutLayerCount(view), 2)
+        view._testPinch(.ended, center: centre, scale: 1.3, velocity: 2.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .one)
+    }
+
+    func testPinchReleaseCarriesVelocity() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: pow(3.0 / 5.0, 0.4))
+        view._testPinch(.ended, center: centre, scale: pow(3.0 / 5.0, 0.4), velocity: -2.0)
+        guard let transition = view.transition, let spring = transition.incoming.animation(forKey: "mediaGridZoom.opacity") as? CASpringAnimation else {
+            XCTFail("no settle animation")
+            return
+        }
+        XCTAssertEqual(transition.incoming.opacity, 1.0)
+        XCTAssertGreaterThan(spring.initialVelocity, 0.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
+    }
+
+    func testPinchInterruptsSpringAtPresentedProgress() {
+        let (view, window) = self.makeWindowedView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        var levels: [MediaGridLevel] = []
+        view.onLevelChanged = { levels.append($0) }
+        view.zoomOut()
+        XCTAssertEqual(view.level, .three)
+        CATransaction.flush()
+        self.spin(0.1)
+        guard let transition = view.transition else {
+            XCTFail("zoom finished before the interruption")
+            return
+        }
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        XCTAssertTrue(view.transition === transition)
+        XCTAssertGreaterThan(transition.progress, 0.02)
+        XCTAssertLessThan(transition.progress, 0.98)
+        XCTAssertNil(transition.incoming.animation(forKey: "mediaGridZoom.opacity"))
+        self.spin(0.1)
+        XCTAssertTrue(view.transition === transition)
+        XCTAssertEqual(levels, [])
+        let presented = transition.progress
+        view._testPinch(.changed, center: centre, scale: 1.0)
+        XCTAssertEqual(transition.progress, presented, accuracy: 1e-6)
+        view._testPinch(.ended, center: centre, scale: 1.0, velocity: -3.0)
+        view._testPinch(.began, center: centre)
+        XCTAssertTrue(view.transition === transition)
+        self.spin(0.1)
+        XCTAssertTrue(view.transition === transition)
+        view._testPinch(.ended, center: centre, scale: 1.0, velocity: -3.0)
+        let deadline = Date().addingTimeInterval(3.0)
+        while view.transition != nil && Date() < deadline {
+            self.spin(0.02)
+        }
+        XCTAssertNil(view.transition)
+        XCTAssertEqual(view.level, .five)
+        XCTAssertEqual(levels, [.five])
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        window.isHidden = true
+    }
+
+    func testPinchOvershootRubberBandsAtEnd() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setLevel(.thirtyOne, animated: false)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 0.3)
+        XCTAssertNil(view.transition)
+        let squeezed = view.layer.sublayerTransform.m11
+        XCTAssertLessThan(squeezed, 1.0)
+        XCTAssertGreaterThan(squeezed, 0.85)
+        let host = view.engine.contentHost.layer
+        let pivot = host.convert(CGPoint(x: centre.x, y: centre.y + view.contentOffset), to: view.layer)
+        XCTAssertEqual(pivot.x, centre.x, accuracy: 0.5)
+        XCTAssertEqual(pivot.y, centre.y, accuracy: 0.5)
+        let corner = host.convert(CGPoint(x: 0.0, y: view.contentOffset), to: view.layer)
+        XCTAssertEqual(corner.x, centre.x * (1.0 - squeezed), accuracy: 0.5)
+        view._testPinch(.changed, center: centre, scale: 0.01)
+        XCTAssertLessThan(view.layer.sublayerTransform.m11, squeezed)
+        XCTAssertGreaterThan(view.layer.sublayerTransform.m11, 0.85)
+        view._testPinch(.ended, center: centre, scale: 0.01, velocity: 0.0)
+        XCTAssertTrue(CATransform3DIsIdentity(view.layer.sublayerTransform))
+        XCTAssertEqual(view.level, .thirtyOne)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+    }
+
+    func testPinchIgnoredWhenZoomDisabled() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.isZoomEnabled = false
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 0.5)
+        XCTAssertNil(view.transition)
+        XCTAssertNil(view.pinchAnchor)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        view._testPinch(.ended, center: centre, scale: 0.5, velocity: -3.0)
+        XCTAssertEqual(view.level, .three)
     }
 
     func testWindowStaysExactAcrossSmallAndLargeScrolls() {

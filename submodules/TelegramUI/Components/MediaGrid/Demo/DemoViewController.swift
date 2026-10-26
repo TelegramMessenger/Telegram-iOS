@@ -26,6 +26,15 @@ final class DemoViewController: UIViewController {
     }()
     private var autoScrubLink: CADisplayLink?
     private var autoScrubStep = 0
+    private var autoPinchLink: CADisplayLink?
+    private var autoPinchStart: CFTimeInterval?
+    private var autoPinchState: MediaGridPinchState?
+    private var autoPinchPair: String?
+    private var autoPinchCentre: CGPoint = .zero
+    private var autoPinchScale: CGFloat = 1.0
+    private var autoPinchVelocity: CGFloat = 0.0
+    private var autoPinchLastTimestamp: CFTimeInterval?
+    private var autoPinchDriveWorst: CFTimeInterval = 0.0
     private let sourceControl = UISegmentedControl(items: ["Synthetic 100k", "Photo Library"])
 
     override func viewDidLoad() {
@@ -73,6 +82,95 @@ final class DemoViewController: UIViewController {
                 self?.startAutoScrub()
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("-autoPinch") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                self?.startAutoPinch()
+            }
+        }
+    }
+
+    private func startAutoPinch() {
+        #if DEBUG
+        guard self.autoPinchLink == nil, let gridView = self.gridView else {
+            return
+        }
+        gridView.layoutIfNeeded()
+        gridView.setContentOffset(gridView.contentHeight * 0.4)
+        self.autoPinchCentre = CGPoint(x: gridView.bounds.midX, y: gridView.bounds.midY)
+        self.autoPinchStart = nil
+        self.autoPinchScale = 1.0
+        self.autoPinchLastTimestamp = nil
+        self.autoPinchPair = nil
+        self.autoPinchState = MediaGridPinchState(startLevel: gridView.level, anchor: MediaGridZoomAnchor(index: 0, pointInView: self.autoPinchCentre))
+        let link = CADisplayLink(target: self, selector: #selector(self.autoPinchTick(_:)))
+        if #available(iOS 15.0, *) {
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+        }
+        link.add(to: .main, forMode: .common)
+        self.autoPinchLink = link
+        #endif
+    }
+
+    private func reportAutoPinchPair() {
+        if let pair = self.autoPinchPair {
+            let summary = self.frameMonitor.summary
+            print(String(format: "AUTOPINCH pair=%@ frames=%d dropped=%d worst=%.2fms avg=%.2fms drive_worst=%.2fms (simulator-only)", pair, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoPinchDriveWorst * 1000.0))
+            fflush(stdout)
+        }
+        self.frameMonitor.reset()
+        self.autoPinchDriveWorst = 0.0
+    }
+
+    @objc private func autoPinchTick(_ link: CADisplayLink) {
+        #if DEBUG
+        guard let gridView = self.gridView, var state = self.autoPinchState else {
+            return
+        }
+        let start = self.autoPinchStart ?? link.timestamp
+        self.autoPinchStart = start
+        let elapsed = link.timestamp - start
+        let outDuration = 1.2
+        let backDuration = 0.8
+        let deepest = log(3.0 / 31.0)
+        if elapsed == 0.0 {
+            self.frameMonitor.reset()
+            gridView.debugDrivePinch(.began, center: self.autoPinchCentre, scale: 1.0, velocity: 0.0)
+            return
+        }
+        let exponent: CGFloat
+        if elapsed < outDuration {
+            exponent = deepest * CGFloat(elapsed / outDuration)
+        } else if elapsed < outDuration + backDuration {
+            exponent = deepest * CGFloat(1.0 - (elapsed - outDuration) / backDuration)
+        } else {
+            self.reportAutoPinchPair()
+            gridView.debugDrivePinch(.ended, center: self.autoPinchCentre, scale: 1.0, velocity: 0.0)
+            self.autoPinchLink?.invalidate()
+            self.autoPinchLink = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                print("AUTOPINCH done level=\(self?.gridView?.level.columns ?? 0)")
+                fflush(stdout)
+            }
+            return
+        }
+        let scale = exp(exponent)
+        if let last = self.autoPinchLastTimestamp, link.timestamp > last {
+            self.autoPinchVelocity = (scale - self.autoPinchScale) / CGFloat(link.timestamp - last)
+        }
+        self.autoPinchLastTimestamp = link.timestamp
+        self.autoPinchScale = scale
+        let result = state.update(scale: scale)
+        self.autoPinchState = state
+        let pair = result.from == result.to ? "\(result.from.columns)" : "\(min(result.from.columns, result.to.columns))<->\(max(result.from.columns, result.to.columns))"
+        if pair != self.autoPinchPair {
+            self.reportAutoPinchPair()
+            self.autoPinchPair = pair
+        }
+        let driveStart = CACurrentMediaTime()
+        gridView.debugDrivePinch(.changed, center: self.autoPinchCentre, scale: scale, velocity: self.autoPinchVelocity)
+        CATransaction.flush()
+        self.autoPinchDriveWorst = max(self.autoPinchDriveWorst, CACurrentMediaTime() - driveStart)
+        #endif
     }
 
     @objc private func resetPressed() {

@@ -53,6 +53,112 @@ public enum MediaGridZoomMath {
     }
 }
 
+public struct MediaGridPinchState {
+    static let maxOvershoot: CGFloat = 0.12
+    static let velocityThreshold: CGFloat = 0.5
+    private static let epsilon: CGFloat = 1e-9
+
+    public let startLevel: MediaGridLevel
+    public let anchor: MediaGridZoomAnchor
+    private let startPosition: CGFloat
+    private var scale: CGFloat = 1.0
+    private var rawPosition: CGFloat
+    private(set) var current: (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat)
+
+    public init(startLevel: MediaGridLevel, anchor: MediaGridZoomAnchor) {
+        self.init(startLevel: startLevel, anchor: anchor, toward: startLevel, startProgress: 0.0)
+    }
+
+    init(startLevel: MediaGridLevel, anchor: MediaGridZoomAnchor, toward target: MediaGridLevel, startProgress: CGFloat) {
+        self.startLevel = startLevel
+        self.anchor = anchor
+        let from = MediaGridPinchState.position(of: startLevel)
+        let to = MediaGridPinchState.position(of: target)
+        self.startPosition = from + (to - from) * min(1.0, max(0.0, startProgress))
+        self.rawPosition = self.startPosition
+        self.current = (startLevel, startLevel, 0.0)
+        self.current = self.resolve(self.startPosition)
+    }
+
+    private static let levels: [MediaGridLevel] = MediaGridLevel.allCases.sorted()
+
+    static func position(of level: MediaGridLevel) -> CGFloat {
+        return log(CGFloat(level.columns))
+    }
+
+    private var bounds: (CGFloat, CGFloat) {
+        return (MediaGridPinchState.position(of: MediaGridPinchState.levels[0]), MediaGridPinchState.position(of: MediaGridPinchState.levels[MediaGridPinchState.levels.count - 1]))
+    }
+
+    private func resolve(_ position: CGFloat) -> (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat) {
+        let levels = MediaGridPinchState.levels
+        let start = MediaGridPinchState.position(of: self.startLevel)
+        if position > start + MediaGridPinchState.epsilon {
+            for index in 1 ..< levels.count {
+                let upper = MediaGridPinchState.position(of: levels[index])
+                if upper >= position - MediaGridPinchState.epsilon && upper > start {
+                    let lower = MediaGridPinchState.position(of: levels[index - 1])
+                    return (levels[index - 1], levels[index], min(1.0, max(0.0, (position - lower) / (upper - lower))))
+                }
+            }
+        } else if position < start - MediaGridPinchState.epsilon {
+            for index in stride(from: levels.count - 2, through: 0, by: -1) {
+                let lower = MediaGridPinchState.position(of: levels[index])
+                if lower <= position + MediaGridPinchState.epsilon && lower < start {
+                    let upper = MediaGridPinchState.position(of: levels[index + 1])
+                    return (levels[index + 1], levels[index], min(1.0, max(0.0, (upper - position) / (upper - lower))))
+                }
+            }
+        }
+        return (self.startLevel, self.startLevel, 0.0)
+    }
+
+    public mutating func update(scale: CGFloat) -> (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat) {
+        let scale = scale.isFinite && scale > 0.0 ? scale : self.scale
+        self.scale = scale
+        self.rawPosition = self.startPosition - log(scale)
+        let (lower, upper) = self.bounds
+        self.current = self.resolve(min(upper, max(lower, self.rawPosition)))
+        return self.current
+    }
+
+    var overshoot: CGFloat {
+        let (lower, upper) = self.bounds
+        let excess: CGFloat
+        if self.rawPosition > upper {
+            excess = self.rawPosition - upper
+        } else if self.rawPosition < lower {
+            excess = self.rawPosition - lower
+        } else {
+            return 0.0
+        }
+        let limit = MediaGridPinchState.maxOvershoot
+        let banded = (1.0 - 1.0 / (abs(excess) * 0.55 / limit + 1.0)) * limit
+        return excess > 0.0 ? banded : -banded
+    }
+
+    func progressVelocity(scaleVelocity: CGFloat) -> CGFloat {
+        let (from, to, _) = self.current
+        guard from != to, scaleVelocity.isFinite else {
+            return 0.0
+        }
+        let span = MediaGridPinchState.position(of: to) - MediaGridPinchState.position(of: from)
+        return -scaleVelocity / self.scale / span
+    }
+
+    public func settle(velocity: CGFloat) -> MediaGridLevel {
+        let (from, to, progress) = self.current
+        guard from != to else {
+            return from
+        }
+        if abs(velocity) > MediaGridPinchState.velocityThreshold {
+            let towardFewerColumns = velocity > 0.0
+            return (to < from) == towardFewerColumns ? to : from
+        }
+        return progress >= 0.5 ? to : from
+    }
+}
+
 final class MediaGridZoomTransition {
     enum CameraRole {
         case none
@@ -63,6 +169,9 @@ final class MediaGridZoomTransition {
 
     static let duration: CFTimeInterval = 0.35
 
+    let sourceLevel: MediaGridLevel
+    let targetLevel: MediaGridLevel
+    let sourceLayout: MediaGridUniformLayout
     let outgoing: MediaGridLayoutLayer
     let incoming: MediaGridLayoutLayer
     let anchorPoint: CGPoint
@@ -74,8 +183,13 @@ final class MediaGridZoomTransition {
     let cameraRole: CameraRole
     let cameraAlphaRange: (CGFloat, CGFloat)
     private(set) var progress: CGFloat = 0.0
+    private(set) var destination: CGFloat?
+    private var animationToken = 0
 
-    init(outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, targetLayout: MediaGridUniformLayout, targetOffset: CGFloat, targetPixelSize: CGSize, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
+    init(sourceLevel: MediaGridLevel, targetLevel: MediaGridLevel, sourceLayout: MediaGridUniformLayout, outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, targetLayout: MediaGridUniformLayout, targetOffset: CGFloat, targetPixelSize: CGSize, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
+        self.sourceLevel = sourceLevel
+        self.targetLevel = targetLevel
+        self.sourceLayout = sourceLayout
         self.outgoing = outgoing
         self.incoming = incoming
         self.anchorPoint = anchorPoint
@@ -165,10 +279,38 @@ final class MediaGridZoomTransition {
         }
     }
 
-    func animate(to progress: CGFloat, completion: @escaping () -> Void) {
+    var isAnimating: Bool {
+        return self.incoming.animation(forKey: "mediaGridZoom.opacity") != nil
+    }
+
+    var presentedProgress: CGFloat {
+        guard self.isAnimating, let presentation = self.incoming.presentation() else {
+            return self.progress
+        }
+        return CGFloat(presentation.opacity)
+    }
+
+    func interrupt() {
+        let presented = self.presentedProgress
+        self.removeAnimations()
+        self.apply(progress: presented)
+    }
+
+    func animate(to progress: CGFloat, velocity: CGFloat = 0.0, completion: @escaping () -> Void) {
         let from = self.progress
+        self.animationToken += 1
+        let token = self.animationToken
+        self.destination = progress
+        let distance = progress - from
+        let relativeVelocity = abs(distance) > 1e-6 ? min(30.0, max(-30.0, velocity / distance)) : 0.0
+        self.springVelocity = relativeVelocity
         CATransaction.begin()
-        CATransaction.setCompletionBlock(completion)
+        CATransaction.setCompletionBlock({ [weak self] in
+            guard let self, self.animationToken == token else {
+                return
+            }
+            completion()
+        })
         self.apply(progress: progress)
         self.add(keyPath: "transform", layer: self.outgoing, from: NSValue(caTransform3D: self.outgoingTransform(from)), to: NSValue(caTransform3D: self.outgoing.transform))
         self.add(keyPath: "opacity", layer: self.outgoing, from: NSNumber(value: Float(1.0 - from)), to: NSNumber(value: self.outgoing.opacity))
@@ -184,7 +326,10 @@ final class MediaGridZoomTransition {
             self.add(keyPath: "opacity", layer: camera.layer, from: NSNumber(value: Float(self.cameraAlpha(from))), to: NSNumber(value: camera.layer.opacity))
         }
         CATransaction.commit()
+        self.springVelocity = 0.0
     }
+
+    private var springVelocity: CGFloat = 0.0
 
     private func add(keyPath: String, layer: CALayer, from: Any, to: Any) {
         let animation = CASpringAnimation(keyPath: keyPath)
@@ -194,14 +339,17 @@ final class MediaGridZoomTransition {
         animation.initialVelocity = 0.0
         animation.fromValue = from
         animation.toValue = to
-        let settling = animation.settlingDuration
-        animation.duration = settling
-        animation.speed = Float(settling / MediaGridZoomTransition.duration)
+        let speed = animation.settlingDuration / MediaGridZoomTransition.duration
+        animation.initialVelocity = self.springVelocity / speed
+        animation.duration = animation.settlingDuration
+        animation.speed = Float(speed)
         animation.isRemovedOnCompletion = true
         layer.add(animation, forKey: "mediaGridZoom.\(keyPath)")
     }
 
     func removeAnimations() {
+        self.animationToken += 1
+        self.destination = nil
         for layer in [self.outgoing, self.incoming] as [CALayer] {
             layer.removeAnimation(forKey: "mediaGridZoom.transform")
             layer.removeAnimation(forKey: "mediaGridZoom.opacity")

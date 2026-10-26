@@ -90,4 +90,97 @@ final class MediaGridZoomTests: XCTestCase {
             XCTAssertEqual(local.y + position.y, anchor.y, accuracy: 1e-3)
         }
     }
+
+    private let pinchAnchor = MediaGridZoomAnchor(index: 0, pointInView: CGPoint(x: 100.0, y: 400.0))
+
+    private func assertPinch(_ result: (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat), _ from: MediaGridLevel, _ to: MediaGridLevel, _ progress: CGFloat, accuracy: CGFloat = 1e-6, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(result.from, from, file: file, line: line)
+        XCTAssertEqual(result.to, to, file: file, line: line)
+        XCTAssertEqual(result.progress, progress, accuracy: accuracy, file: file, line: line)
+    }
+
+    func testScaleOneIsStart() {
+        for level in MediaGridLevel.allCases {
+            var state = MediaGridPinchState(startLevel: level, anchor: self.pinchAnchor)
+            self.assertPinch(state.update(scale: 1.0), level, level, 0.0)
+            XCTAssertEqual(state.settle(velocity: 0.0), level)
+            XCTAssertEqual(state.settle(velocity: 3.0), level)
+        }
+    }
+
+    func testPinchOutThreeReachesFiveThenFifteen() {
+        var state = MediaGridPinchState(startLevel: .three, anchor: self.pinchAnchor)
+        self.assertPinch(state.update(scale: pow(3.0 / 5.0, 0.5)), .three, .five, 0.5)
+        self.assertPinch(state.update(scale: 3.0 / 5.0), .three, .five, 1.0)
+        let pastFive = state.update(scale: 3.0 / 5.0 * 0.99)
+        XCTAssertEqual(pastFive.from, .five)
+        XCTAssertEqual(pastFive.to, .fifteen)
+        XCTAssertGreaterThan(pastFive.progress, 0.0)
+        XCTAssertLessThan(pastFive.progress, 0.05)
+        self.assertPinch(state.update(scale: 3.0 / 5.0 * pow(5.0 / 15.0, 0.25)), .five, .fifteen, 0.25)
+        let pastFifteen = state.update(scale: 3.0 / 15.0 * 0.99)
+        XCTAssertEqual(pastFifteen.from, .fifteen)
+        XCTAssertEqual(pastFifteen.to, .thirtyOne)
+        self.assertPinch(state.update(scale: pow(3.0 / 5.0, 0.25)), .three, .five, 0.25)
+        self.assertPinch(state.update(scale: pow(3.0, 0.5)), .three, .one, 0.5)
+
+        var back = MediaGridPinchState(startLevel: .fifteen, anchor: self.pinchAnchor)
+        self.assertPinch(back.update(scale: pow(15.0 / 5.0, 0.75)), .fifteen, .five, 0.75)
+        self.assertPinch(back.update(scale: 15.0 / 5.0 * pow(5.0 / 3.0, 0.5)), .five, .three, 0.5)
+    }
+
+    func testClampAtEnds() {
+        var state = MediaGridPinchState(startLevel: .three, anchor: self.pinchAnchor)
+        self.assertPinch(state.update(scale: 0.001), .fifteen, .thirtyOne, 1.0)
+        self.assertPinch(state.update(scale: 1000.0), .three, .one, 1.0)
+        var top = MediaGridPinchState(startLevel: .thirtyOne, anchor: self.pinchAnchor)
+        self.assertPinch(top.update(scale: 0.2), .thirtyOne, .thirtyOne, 0.0)
+        var bottom = MediaGridPinchState(startLevel: .one, anchor: self.pinchAnchor)
+        self.assertPinch(bottom.update(scale: 5.0), .one, .one, 0.0)
+    }
+
+    func testSettleNearestAndVelocityBias() {
+        var state = MediaGridPinchState(startLevel: .three, anchor: self.pinchAnchor)
+        _ = state.update(scale: pow(3.0 / 5.0, 0.3))
+        XCTAssertEqual(state.settle(velocity: 0.0), .three)
+        XCTAssertEqual(state.settle(velocity: -0.4), .three)
+        XCTAssertEqual(state.settle(velocity: -1.0), .five)
+        XCTAssertEqual(state.settle(velocity: 1.0), .three)
+        _ = state.update(scale: pow(3.0 / 5.0, 0.7))
+        XCTAssertEqual(state.settle(velocity: 0.0), .five)
+        XCTAssertEqual(state.settle(velocity: 0.4), .five)
+        XCTAssertEqual(state.settle(velocity: 1.0), .three)
+        XCTAssertEqual(state.settle(velocity: -1.0), .five)
+        _ = state.update(scale: 3.0 / 5.0 * pow(5.0 / 15.0, 0.6))
+        XCTAssertEqual(state.settle(velocity: 0.0), .fifteen)
+        XCTAssertEqual(state.settle(velocity: 2.0), .five)
+    }
+
+    func testProgressVelocityFollowsScaleVelocity() {
+        var state = MediaGridPinchState(startLevel: .three, anchor: self.pinchAnchor)
+        let scale = pow(3.0 / 5.0, 0.5)
+        _ = state.update(scale: scale)
+        let delta: CGFloat = 1e-4
+        let ahead = state.update(scale: scale - delta).progress
+        _ = state.update(scale: scale)
+        let expected = (ahead - 0.5) / delta
+        XCTAssertEqual(state.progressVelocity(scaleVelocity: 1.0), -expected, accuracy: 1e-2)
+        XCTAssertGreaterThan(state.progressVelocity(scaleVelocity: -1.0), 0.0)
+    }
+
+    func testOvershootIsRubberBanded() {
+        var state = MediaGridPinchState(startLevel: .fifteen, anchor: self.pinchAnchor)
+        _ = state.update(scale: 0.5)
+        XCTAssertEqual(state.overshoot, 0.0, accuracy: 1e-9)
+        _ = state.update(scale: 15.0 / 31.0 * 0.9)
+        let small = state.overshoot
+        XCTAssertGreaterThan(small, 0.0)
+        _ = state.update(scale: 0.0001)
+        let large = state.overshoot
+        XCTAssertGreaterThan(large, small)
+        XCTAssertLessThan(large, MediaGridPinchState.maxOvershoot)
+        _ = state.update(scale: 1000.0)
+        XCTAssertLessThan(state.overshoot, 0.0)
+        XCTAssertGreaterThan(state.overshoot, -MediaGridPinchState.maxOvershoot)
+    }
 }

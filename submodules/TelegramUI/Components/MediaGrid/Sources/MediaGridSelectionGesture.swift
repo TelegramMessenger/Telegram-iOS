@@ -10,6 +10,10 @@ final class MediaGridSelectionGesture: UIPanGestureRecognizer {
     var sideInset: CGFloat = 0.0
 
     private var processing = false
+
+    var isProcessing: Bool {
+        return self.processing
+    }
     private var selecting = false
     private var initialLocation: CGPoint?
 
@@ -21,6 +25,9 @@ final class MediaGridSelectionGesture: UIPanGestureRecognizer {
         super.touchesBegan(touches, with: event)
 
         guard let touch = touches.first, self.numberOfTouches == 1 else {
+            if !self.processing {
+                self.state = .failed
+            }
             return
         }
 

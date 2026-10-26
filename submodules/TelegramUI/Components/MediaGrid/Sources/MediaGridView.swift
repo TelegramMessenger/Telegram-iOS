@@ -11,6 +11,8 @@ public final class MediaGridView: UIView {
     private var spareLayoutLayer: MediaGridLayoutLayer?
     private(set) var transition: MediaGridZoomTransition?
     private var pendingZoom: (anchor: MediaGridZoomAnchor, relativePosition: CGPoint)?
+    private var transitionAnchor: (anchor: MediaGridZoomAnchor, relativePosition: CGPoint)?
+    private var pinch: PinchSession?
 
     public private(set) var level: MediaGridLevel = .three
     private var itemCount: Int
@@ -50,9 +52,7 @@ public final class MediaGridView: UIView {
     public var onLevelChanged: ((MediaGridLevel) -> Void)?
     public var isZoomEnabled: Bool = true {
         didSet {
-            if self.transition == nil {
-                self.tapRecognizer.isEnabled = self.level.isInteractive || self.isZoomEnabled
-            }
+            self.updateGestureAvailability()
         }
     }
     public var onTapItem: ((Int) -> Void)?
@@ -80,6 +80,8 @@ public final class MediaGridView: UIView {
 
     private let tapRecognizer = UITapGestureRecognizer()
     private let selectionGesture = MediaGridSelectionGesture()
+    private let pinchRecognizer = UIPinchGestureRecognizer()
+    private let pinchDelegate = MediaGridPinchDelegate()
     private var lastTopInset: CGFloat?
 
     private static let cameraSlots: Set<MediaGridSlot> = [MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]
@@ -118,9 +120,24 @@ public final class MediaGridView: UIView {
             self.updateSelectionForVisibleItems()
         }
         self.selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
-            self?.engine.isScrollEnabled = isEnabled
+            guard let self else {
+                return
+            }
+            self.engine.isScrollEnabled = isEnabled && self.transition == nil && self.pinch == nil
         }
         self.addGestureRecognizer(self.selectionGesture)
+        self.pinchRecognizer.addTarget(self, action: #selector(self.pinched(_:)))
+        self.pinchDelegate.shouldBegin = { [weak self] in
+            return self?.canBeginPinch ?? false
+        }
+        self.pinchDelegate.recognizesSimultaneously = { [weak self] other in
+            guard let self else {
+                return false
+            }
+            return other.view === self.engine.contentHost && other is UIPanGestureRecognizer
+        }
+        self.pinchRecognizer.delegate = self.pinchDelegate
+        self.addGestureRecognizer(self.pinchRecognizer)
         self.engine.onScroll = { [weak self] offset in
             self?.scrolled(to: offset)
         }
@@ -243,7 +260,7 @@ public final class MediaGridView: UIView {
     }
 
     private func handleTap(at point: CGPoint) {
-        guard self.transition == nil, let index = self.index(at: point) else {
+        guard self.transition == nil, self.pinch == nil, let index = self.index(at: point) else {
             return
         }
         if self.level.isInteractive {
@@ -279,10 +296,13 @@ public final class MediaGridView: UIView {
     }
 
     private func centreAnchor() -> MediaGridZoomAnchor? {
+        return self.anchor(at: CGPoint(x: self.bounds.midX, y: self.bounds.midY))
+    }
+
+    private func anchor(at centre: CGPoint) -> MediaGridZoomAnchor? {
         guard let layout = self.currentLayout, layout.count > 0, self.bounds.height > 0.0 else {
             return nil
         }
-        let centre = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
         if let index = self.index(at: centre) {
             return MediaGridZoomAnchor(index: index, pointInView: centre)
         }
@@ -326,8 +346,13 @@ public final class MediaGridView: UIView {
             self.onLevelChanged?(level)
             return
         }
-        self.beginTransition(to: level, source: source, anchor: resolvedAnchor, relativePosition: relative)
-        self.onLevelChanged?(level)
+        let transition = self.beginTransition(to: level, source: source, anchor: resolvedAnchor, relativePosition: relative)
+        transition.animate(to: 1.0, completion: { [weak self, weak transition] in
+            guard let self, let transition, self.transition === transition else {
+                return
+            }
+            self.finishTransition()
+        })
     }
 
     private func makeLayout(level: MediaGridLevel, geometry: MediaGridGeometry) -> MediaGridUniformLayout {
@@ -338,12 +363,9 @@ public final class MediaGridView: UIView {
         return CGSize(width: ceil(layout.itemSize.width * layout.geometry.scale), height: ceil(layout.itemSize.height * layout.geometry.scale))
     }
 
-    private func beginTransition(to level: MediaGridLevel, source: MediaGridUniformLayout, anchor: MediaGridZoomAnchor, relativePosition: CGPoint) {
+    @discardableResult
+    private func beginTransition(to level: MediaGridLevel, source: MediaGridUniformLayout, anchor: MediaGridZoomAnchor, relativePosition: CGPoint) -> MediaGridZoomTransition {
         let sourceLevel = self.level
-        self.level = level
-        self.engine.isScrollEnabled = false
-        self.tapRecognizer.isEnabled = false
-        self.selectionGesture.isEnabled = false
 
         let width = self.bounds.width
         let height = self.bounds.height
@@ -395,15 +417,13 @@ public final class MediaGridView: UIView {
         if case .none = cameraRole {
             cameraTakesPart = false
         }
-        let transition = MediaGridZoomTransition(outgoing: self.activeLayoutLayer, outgoingLocalAnchor: anchorPoint, incoming: incoming, incomingLocalAnchor: CGPoint(x: anchorPoint.x, y: anchorPoint.y - shift), anchorPoint: anchorPoint, viewportSize: CGSize(width: width, height: height), scale: scale, targetLayout: target, targetOffset: targetOffset, targetPixelSize: pixelSize, camera: cameraTakesPart ? self.cameraView : nil, cameraRole: cameraRole, cameraAlphaRange: cameraAlpha)
+        let transition = MediaGridZoomTransition(sourceLevel: sourceLevel, targetLevel: level, sourceLayout: source, outgoing: self.activeLayoutLayer, outgoingLocalAnchor: anchorPoint, incoming: incoming, incomingLocalAnchor: CGPoint(x: anchorPoint.x, y: anchorPoint.y - shift), anchorPoint: anchorPoint, viewportSize: CGSize(width: width, height: height), scale: scale, targetLayout: target, targetOffset: targetOffset, targetPixelSize: pixelSize, camera: cameraTakesPart ? self.cameraView : nil, cameraRole: cameraRole, cameraAlphaRange: cameraAlpha)
         self.transition = transition
+        self.transitionAnchor = (anchor, relativePosition)
         transition.apply(progress: 0.0)
-        transition.animate(to: 1.0, completion: { [weak self, weak transition] in
-            guard let self, let transition, self.transition === transition else {
-                return
-            }
-            self.finishTransition()
-        })
+        self.updateGestureAvailability()
+        self.engine.isScrollEnabled = false
+        return transition
     }
 
     private static func scaled(_ rect: CGRect, about point: CGPoint, by scale: CGFloat) -> CGRect {
@@ -413,36 +433,261 @@ public final class MediaGridView: UIView {
         return CGRect(x: point.x + (rect.minX - point.x) * scale, y: point.y + (rect.minY - point.y) * scale, width: rect.width * scale, height: rect.height * scale)
     }
 
-    private func finishTransition() {
+    private func finishTransition(commit: Bool? = nil, quiet: Bool = false) {
         guard let transition = self.transition else {
             return
         }
+        let commits = commit ?? transition.destination.map { $0 >= 0.5 } ?? (transition.progress >= 0.5)
         self.transition = nil
+        self.transitionAnchor = nil
         transition.removeAnimations()
+        let width = self.bounds.width
         let outgoing = transition.outgoing
         let incoming = transition.incoming
-        outgoing.removeAllCells()
-        MediaGridZoomTransition.resetPivot(outgoing, width: self.bounds.width, height: 0.0, originY: 0.0)
-        outgoing.opacity = 1.0
-        outgoing.removeFromSuperlayer()
-        self.spareLayoutLayer = outgoing
+        if commits {
+            outgoing.removeAllCells()
+            MediaGridZoomTransition.resetPivot(outgoing, width: width, height: 0.0, originY: 0.0)
+            outgoing.opacity = 1.0
+            outgoing.removeFromSuperlayer()
+            self.spareLayoutLayer = outgoing
 
-        MediaGridZoomTransition.resetPivot(incoming, width: self.bounds.width, height: transition.targetLayout.contentHeight, originY: 0.0)
-        incoming.opacity = 1.0
-        self.activeLayoutLayer = incoming
+            MediaGridZoomTransition.resetPivot(incoming, width: width, height: transition.targetLayout.contentHeight, originY: 0.0)
+            incoming.opacity = 1.0
+            self.activeLayoutLayer = incoming
 
-        self.resetPrefetch()
-        self.currentLayout = transition.targetLayout
-        self.prefetchPixelSize = transition.targetPixelSize
-        self.engine.setEdges(min: 0.0, max: self.maxOffset)
-        self.engine.setOffset(min(max(0.0, transition.targetOffset), self.maxOffset))
-        self.engine.isScrollEnabled = true
-        self.layoutCamera(layout: transition.targetLayout)
-        let interactive = self.level.isInteractive
-        self.tapRecognizer.isEnabled = interactive || self.isZoomEnabled
-        self.selectionGesture.isEnabled = interactive
-        self.scrolled(to: self.engine.offset)
+            self.level = transition.targetLevel
+            self.currentLayout = transition.targetLayout
+            self.engine.setEdges(min: 0.0, max: self.maxOffset)
+            self.engine.setOffset(min(max(0.0, transition.targetOffset), self.maxOffset))
+        } else {
+            incoming.removeAllCells()
+            MediaGridZoomTransition.resetPivot(incoming, width: width, height: 0.0, originY: 0.0)
+            incoming.opacity = 1.0
+            incoming.removeFromSuperlayer()
+            self.spareLayoutLayer = incoming
+
+            MediaGridZoomTransition.resetPivot(outgoing, width: width, height: transition.sourceLayout.contentHeight, originY: 0.0)
+            outgoing.opacity = 1.0
+        }
+        if let layout = self.currentLayout {
+            self.layoutCamera(layout: layout)
+        }
+        if !quiet {
+            self.completeZoom(notifyFrom: transition.sourceLevel)
+        }
     }
+
+    private func completeZoom(notifyFrom defaultLevel: MediaGridLevel) {
+        var notifyFrom = defaultLevel
+        if let pinch = self.pinch {
+            self.pinch = nil
+            notifyFrom = pinch.notifyFrom
+            if pinch.isTracking {
+                self.layer.removeAnimation(forKey: MediaGridView.overshootKey)
+                self.layer.sublayerTransform = CATransform3DIdentity
+            }
+        }
+        if let layout = self.currentLayout {
+            let pixelSize = self.pixelSize(for: layout)
+            if pixelSize != self.prefetchPixelSize {
+                self.resetPrefetch()
+                self.prefetchPixelSize = pixelSize
+            }
+        }
+        self.engine.isScrollEnabled = true
+        self.updateGestureAvailability()
+        self.scrolled(to: self.engine.offset)
+        if self.level != notifyFrom {
+            self.onLevelChanged?(self.level)
+        }
+    }
+
+    private func updateGestureAvailability() {
+        let idle = self.transition == nil && self.pinch == nil
+        let interactive = self.level.isInteractive
+        self.tapRecognizer.isEnabled = idle && (interactive || self.isZoomEnabled)
+        self.selectionGesture.isEnabled = idle && interactive
+        self.pinchRecognizer.isEnabled = self.isZoomEnabled
+    }
+
+    private struct PinchSession {
+        var state: MediaGridPinchState
+        var relativePosition: CGPoint
+        var notifyFrom: MediaGridLevel
+        var isTracking: Bool
+    }
+
+    private static let overshootKey = "mediaGridZoom.overshoot"
+
+    var pinchAnchor: MediaGridZoomAnchor? {
+        return self.pinch?.state.anchor
+    }
+
+    private var canBeginPinch: Bool {
+        guard self.isZoomEnabled, let layout = self.currentLayout, layout.count > 0, self.bounds.width > 0.0, self.bounds.height > 0.0 else {
+            return false
+        }
+        return !self.selectionGesture.isProcessing
+    }
+
+    @objc private func pinched(_ recognizer: UIPinchGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.beginPinch(center: recognizer.location(in: self))
+        case .changed:
+            self.updatePinch(scale: recognizer.scale)
+        case .ended:
+            self.endPinch(velocity: recognizer.velocity)
+        case .cancelled, .failed:
+            self.endPinch(velocity: 0.0)
+        default:
+            break
+        }
+    }
+
+    private func beginPinch(center: CGPoint) {
+        guard self.canBeginPinch else {
+            return
+        }
+        self.engine.haltMotionInPlace()
+        let notifyFrom = self.pinch?.notifyFrom ?? self.transition?.sourceLevel ?? self.level
+        self.layer.removeAnimation(forKey: MediaGridView.overshootKey)
+        self.layer.sublayerTransform = CATransform3DIdentity
+        let state: MediaGridPinchState
+        let relativePosition: CGPoint
+        if let transition = self.transition, let (anchor, relative) = self.transitionAnchor {
+            transition.interrupt()
+            state = MediaGridPinchState(startLevel: transition.sourceLevel, anchor: anchor, toward: transition.targetLevel, startProgress: transition.progress)
+            relativePosition = relative
+        } else {
+            let hostLayer = self.engine.contentHost.layer
+            if let keys = hostLayer.animationKeys(), !keys.isEmpty, let presentedOffset = hostLayer.presentation()?.bounds.origin.y, presentedOffset.isFinite, abs(presentedOffset - self.engine.offset) > 0.5 {
+                self.engine.setOffset(presentedOffset)
+            }
+            guard let anchor = self.anchor(at: center) else {
+                return
+            }
+            state = MediaGridPinchState(startLevel: self.level, anchor: anchor)
+            relativePosition = self.relativePosition(of: anchor)
+        }
+        self.pinch = PinchSession(state: state, relativePosition: relativePosition, notifyFrom: notifyFrom, isTracking: true)
+        self.updateGestureAvailability()
+        self.engine.isScrollEnabled = false
+    }
+
+    private func updatePinch(scale: CGFloat) {
+        guard var session = self.pinch, session.isTracking else {
+            return
+        }
+        if self.engine.isDecelerating {
+            self.engine.haltMotionInPlace()
+        }
+        let result = session.state.update(scale: scale)
+        self.pinch = session
+        self.drivePinch(from: result.from, to: result.to, progress: result.progress)
+        self.applyOvershoot(session.state.overshoot, about: session.state.anchor.pointInView)
+    }
+
+    private func drivePinch(from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat) {
+        for _ in 0 ..< 8 {
+            if let transition = self.transition {
+                let source = transition.sourceLevel
+                let target = transition.targetLevel
+                if source == from && target == to {
+                    transition.apply(progress: progress)
+                    return
+                }
+                if source == to && target == from {
+                    transition.apply(progress: 1.0 - progress)
+                    return
+                }
+                let commit: Bool
+                if source == from || source == to {
+                    commit = false
+                } else if target == from || target == to {
+                    commit = true
+                } else {
+                    commit = (target > source && from >= target) || (target < source && from <= target)
+                }
+                self.finishTransition(commit: commit, quiet: true)
+                continue
+            }
+            guard let session = self.pinch, let source = self.currentLayout else {
+                return
+            }
+            let next: MediaGridLevel?
+            if self.level == from || self.level == to {
+                next = from == to ? nil : (self.level == from ? to : from)
+            } else {
+                next = from > self.level ? self.level.zoomedOut : self.level.zoomedIn
+            }
+            guard let next else {
+                return
+            }
+            let anchor = session.state.anchor
+            self.beginTransition(to: next, source: source, anchor: anchor, relativePosition: session.relativePosition)
+        }
+    }
+
+    private func applyOvershoot(_ overshoot: CGFloat, about point: CGPoint) {
+        if overshoot == 0.0 {
+            self.layer.sublayerTransform = CATransform3DIdentity
+        } else {
+            self.layer.sublayerTransform = MediaGridZoomMath.transform(scale: exp(-overshoot), about: point, layerPosition: CGPoint(x: self.bounds.midX, y: self.bounds.midY))
+        }
+    }
+
+    private func endPinch(velocity: CGFloat) {
+        guard var session = self.pinch, session.isTracking else {
+            return
+        }
+        session.isTracking = false
+        self.pinch = session
+        if !CATransform3DIsIdentity(self.layer.sublayerTransform) {
+            let animation = CASpringAnimation(keyPath: "sublayerTransform")
+            animation.stiffness = 300.0
+            animation.damping = 2.0 * sqrt(animation.stiffness * animation.mass)
+            animation.fromValue = NSValue(caTransform3D: self.layer.sublayerTransform)
+            animation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+            let settling = animation.settlingDuration
+            animation.duration = settling
+            animation.speed = Float(settling / MediaGridZoomTransition.duration)
+            self.layer.sublayerTransform = CATransform3DIdentity
+            self.layer.add(animation, forKey: MediaGridView.overshootKey)
+        }
+        guard let transition = self.transition else {
+            self.completeZoom(notifyFrom: self.level)
+            return
+        }
+        let target = session.state.settle(velocity: velocity)
+        let destination: CGFloat = target == transition.targetLevel ? 1.0 : 0.0
+        let progressVelocity = session.state.progressVelocity(scaleVelocity: velocity)
+        transition.animate(to: destination, velocity: transition.sourceLevel == session.state.current.from ? progressVelocity : -progressVelocity, completion: { [weak self, weak transition] in
+            guard let self, let transition, self.transition === transition else {
+                return
+            }
+            self.finishTransition()
+        })
+    }
+
+    func _testPinch(_ state: UIGestureRecognizer.State, center: CGPoint, scale: CGFloat = 1.0, velocity: CGFloat = 0.0) {
+        switch state {
+        case .began:
+            self.beginPinch(center: center)
+        case .changed:
+            self.updatePinch(scale: scale)
+        case .ended:
+            self.endPinch(velocity: velocity)
+        default:
+            self.endPinch(velocity: 0.0)
+        }
+    }
+
+    #if DEBUG
+    public func debugDrivePinch(_ state: UIGestureRecognizer.State, center: CGPoint, scale: CGFloat, velocity: CGFloat) {
+        self._testPinch(state, center: center, scale: scale, velocity: velocity)
+    }
+    #endif
 
     private func layoutCamera(layout: MediaGridUniformLayout) {
         guard let cameraView = self.cameraView else {
@@ -540,9 +785,7 @@ public final class MediaGridView: UIView {
             self.layoutCamera(layout: layout)
         }
         self.pendingZoom = nil
-        let interactive = self.level.isInteractive
-        self.tapRecognizer.isEnabled = interactive || self.isZoomEnabled
-        self.selectionGesture.isEnabled = interactive
+        self.updateGestureAvailability()
         self.engine.setEdges(min: 0.0, max: self.maxOffset)
         if let zoomOffset {
             self.engine.setOffset(min(max(0.0, zoomOffset), self.maxOffset))
@@ -638,5 +881,18 @@ public final class MediaGridView: UIView {
 
     private func windowMargin(level: MediaGridLevel) -> CGFloat {
         return level.isInteractive ? self.bounds.height : self.bounds.height * 0.25
+    }
+}
+
+private final class MediaGridPinchDelegate: NSObject, UIGestureRecognizerDelegate {
+    var shouldBegin: () -> Bool = { return false }
+    var recognizesSimultaneously: (UIGestureRecognizer) -> Bool = { _ in return false }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        return self.shouldBegin()
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return self.recognizesSimultaneously(otherGestureRecognizer)
     }
 }
