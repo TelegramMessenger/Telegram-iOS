@@ -21,8 +21,8 @@ import RichTextEditorCore
 ///
 /// The COARSE FALLBACK, used only when no host icon provider is registered — see
 /// `AttributedStringMapper.buttonHasIcon`. Core can name just four actions, so `.unsupported` — every
-/// action Core cannot name — is treated as badge-bearing, which is true for 6 of the 10 it covers but
-/// wrong for `callback`. A configured editor asks the provider instead and gets the exact answer.
+/// action Core cannot name — is treated as badge-bearing, which is true for most of them but wrong
+/// for `callback`. A configured editor asks the provider instead and gets the exact answer.
 @available(iOS 13.0, *)
 func richTextButtonHasBadge(_ action: ButtonAction) -> Bool {
     switch action {

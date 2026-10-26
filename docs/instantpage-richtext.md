@@ -940,6 +940,13 @@ section authors three actions, the ones `RichTextEditorCore` names: **URL**, **C
 `inlineButtonTypeUserProfile`). A sent message's tap goes through `performMessageButtonAction`: copy with
 the usual toast, open the user's profile.
 
+- **Sent as a bare `user_id`, unverified for recipients.** `apiInlineButtonType()` writes
+  `inlineButtonTypeUserProfile(user_id)` (as `textMentionName` does) and `inputRichMessage.users` is left
+  empty; the server accepts it and echoes the button back. A tap resolves the user from the LOCAL database
+  only (`ChatMessageItemView.performMessageButtonAction`) and does nothing if it is missing, so a recipient
+  who has never met the user depends on the server shipping it with the message. Checked from the sender's
+  account only. If that fails, the fix is `inputInlineButtonTypeUserProfile(InputUser)` or the `users`
+  vector, which needs the serializer to reach the database.
 - **Users only.** The schema has no chat or channel profile type; a chat is linked with a URL button and
   its t.me link. The picker is `makePeerSelectionController` filtered to private chats, with global search
   for an @username.
@@ -954,6 +961,10 @@ the usual toast, open the user's profile.
   re-enters it (a `ComponentView` assertion). The sheet ends editing in the tap handlers first.
 - **A preserved `.unsupported` action gets no ACTION section**, since the sheet keeps it verbatim. A
   `.disabled` one does, so an author can give it an action again.
+- **A build older than `.userProfile` cannot decode it**: `ButtonAction.init(from:)` throws on the unknown
+  kind and the lenient `Document` decode drops the block holding it. Only a `Document` written by a newer
+  build (a clipboard fragment, an `.rtdoc`) reaches an older one; drafts and edited messages go through
+  `ChatInputContent`, whose button action is the Postbox-coded `ReplyMarkupButtonAction`.
 - **`.userProfile` survives a paste** (`convertingUnsupportedButtonActions` leaves it alone, as it does
   `.copyText`): its payload is a user id, which works in any message.
 

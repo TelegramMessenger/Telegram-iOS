@@ -743,7 +743,8 @@ private final class ButtonEditorSheetComponent: Component {
             let context = component.context
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(
                 context: context,
-                filter: [.onlyPrivateChats, .excludeSecretChats, .excludeSavedMessages, .doNotSearchMessages],
+                // Saved Messages stays in: picking it links the author's own profile ("contact me").
+                filter: [.onlyPrivateChats, .excludeSecretChats, .doNotSearchMessages],
                 hasChatListSelector: false,
                 title: environment.strings.RichText_ButtonChooseUser
             ))
