@@ -18,6 +18,7 @@ final class TestDataSource: MediaGridDataSource {
     private(set) var requestCount = 0
     private(set) var cancelCount = 0
     private(set) var cachedIndices: Set<Int> = []
+    private(set) var dateCalls: [Int: Int] = [:]
     var deliveries: [(UIImage?, Bool)]?
 
     private static let image: UIImage = {
@@ -34,6 +35,7 @@ final class TestDataSource: MediaGridDataSource {
     }
 
     func date(at index: Int) -> Date? {
+        self.dateCalls[index, default: 0] += 1
         return Date(timeIntervalSince1970: 1_600_000_000 - Double(index) * 3600.0)
     }
 

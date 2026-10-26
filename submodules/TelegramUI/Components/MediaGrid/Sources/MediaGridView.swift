@@ -16,6 +16,10 @@ public final class MediaGridView: UIView {
     private var prefetchPlanner = MediaGridPrefetchPlanner()
     private var prefetchPixelSize: CGSize = .zero
     private var settledFlightOffset: CGFloat?
+    private var isDragging = false
+    private var isNotifyingScroll = false
+    private var pendingContentOffset: CGFloat?
+    private var dateCache: [Int: Date?] = [:]
 
     var scaleOverride: CGFloat? {
         didSet {
@@ -57,6 +61,12 @@ public final class MediaGridView: UIView {
         self.engine.onScroll = { [weak self] offset in
             self?.scrolled(to: offset)
         }
+        self.engine.onWillBeginDragging = { [weak self] in
+            self?.isDragging = true
+        }
+        self.engine.onDidEndDragging = { [weak self] in
+            self?.isDragging = false
+        }
         self.engine.onFlightChanged = { [weak self] flight in
             self?.flightChanged(settledOffset: flight?.settledOffset)
         }
@@ -80,6 +90,36 @@ public final class MediaGridView: UIView {
         return self.currentLayout?.contentHeight ?? 0.0
     }
 
+    public var isUserScrolling: Bool {
+        return self.isDragging || self.engine.isDecelerating
+    }
+
+    public var topVisibleIndex: Int? {
+        guard let layout = self.currentLayout, layout.count > 0 else {
+            return nil
+        }
+        let pitch = layout.itemSize.height + layout.geometry.spacing
+        let strip = CGRect(x: 0.0, y: self.engine.offset + layout.geometry.topInset, width: layout.geometry.width, height: max(1.0, pitch))
+        for index in layout.indexRange(intersecting: strip) {
+            if layout.frame(at: index).intersects(strip) {
+                return index
+            }
+        }
+        return nil
+    }
+
+    public var topVisibleDate: Date? {
+        guard let index = self.topVisibleIndex else {
+            return nil
+        }
+        if let cached = self.dateCache[index] {
+            return cached
+        }
+        let date = self.dataSource.date(at: index)
+        self.dateCache[index] = .some(date)
+        return date
+    }
+
     private var maxOffset: CGFloat {
         return max(0.0, self.contentHeight - self.bounds.height)
     }
@@ -87,6 +127,7 @@ public final class MediaGridView: UIView {
     public func reloadData() {
         self.itemCount = max(0, self.dataSource.count)
         self.needsLayoutRebuild = true
+        self.dateCache = [:]
         self.resetPrefetch()
         self.activeLayoutLayer.reloadCells()
         self.updateGridLayout()
@@ -94,6 +135,10 @@ public final class MediaGridView: UIView {
 
     public func setContentOffset(_ y: CGFloat) {
         guard y.isFinite else {
+            return
+        }
+        guard self.currentLayout != nil else {
+            self.pendingContentOffset = y
             return
         }
         let offset = min(max(0.0, y), self.maxOffset)
@@ -161,6 +206,11 @@ public final class MediaGridView: UIView {
             self.activeLayoutLayer.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: layout.contentHeight)
         }
         self.engine.setEdges(min: 0.0, max: self.maxOffset)
+        if let pending = self.pendingContentOffset {
+            self.pendingContentOffset = nil
+            self.engine.setOffset(min(max(0.0, pending), self.maxOffset))
+            self.scrolled(to: self.engine.offset)
+        }
         if !self.engine.isDecelerating && self.engine.offset > self.maxOffset {
             self.engine.setOffset(self.maxOffset)
         }
@@ -171,7 +221,11 @@ public final class MediaGridView: UIView {
     private func scrolled(to offset: CGFloat) {
         self.updateVisibleCells(offset: offset)
         self.updatePrefetch(offset: offset)
-        self.onScroll?(offset)
+        if !self.isNotifyingScroll {
+            self.isNotifyingScroll = true
+            self.onScroll?(offset)
+            self.isNotifyingScroll = false
+        }
     }
 
     private func flightChanged(settledOffset: CGFloat?) {
