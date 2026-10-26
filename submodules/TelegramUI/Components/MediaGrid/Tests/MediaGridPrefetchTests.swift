@@ -33,6 +33,20 @@ final class MediaGridPrefetchTests: XCTestCase {
         XCTAssertEqual(Set(planner.cachedIndices), Set(expected))
     }
 
+    func testEqualOffsetKeepsDirection() {
+        let layout = self.makeLayout(count: 100_000)
+        var planner = MediaGridPrefetchPlanner()
+        let offset: CGFloat = 20_000.0
+        _ = planner.update(layout: layout, viewportHeight: self.height, offset: offset + 500.0, settledOffset: nil)
+        _ = planner.update(layout: layout, viewportHeight: self.height, offset: offset, settledOffset: nil)
+        let cached = Set(planner.cachedIndices)
+        let plan = planner.update(layout: layout, viewportHeight: self.height, offset: offset, settledOffset: nil)
+        XCTAssertEqual(plan, MediaGridPrefetchPlan(start: [], stop: []))
+        XCTAssertEqual(Set(planner.cachedIndices), cached)
+        let expected = layout.indexRange(intersecting: CGRect(x: 0.0, y: offset - 2.0 * self.height, width: 393.0, height: self.height * 3.0))
+        XCTAssertEqual(cached, Set(expected))
+    }
+
     func testFlightAddsLandingWindow() {
         let layout = self.makeLayout(count: 100_000)
         var planner = MediaGridPrefetchPlanner()

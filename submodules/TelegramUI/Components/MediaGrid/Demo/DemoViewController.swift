@@ -39,7 +39,7 @@ final class DemoViewController: UIViewController {
         case .photoLibrary:
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
                 DispatchQueue.main.async {
-                    guard let self else {
+                    guard let self, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue else {
                         return
                     }
                     if status == .authorized || status == .limited {

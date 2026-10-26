@@ -15,6 +15,7 @@ public struct MediaGridPrefetchPlanner {
     public var screensAhead: CGFloat
     private var cached: [Range<Int>] = []
     private var previousOffset: CGFloat?
+    private var movingUp = false
 
     public init(screensAhead: CGFloat = 2.0) {
         self.screensAhead = screensAhead
@@ -28,6 +29,7 @@ public struct MediaGridPrefetchPlanner {
         let stale = self.cachedIndices
         self.cached = []
         self.previousOffset = nil
+        self.movingUp = false
         return stale
     }
 
@@ -36,8 +38,11 @@ public struct MediaGridPrefetchPlanner {
             let stale = self.reset()
             return MediaGridPrefetchPlan(start: [], stop: stale)
         }
-        let movingUp = self.previousOffset.map { offset < $0 } ?? false
+        if let previous = self.previousOffset, offset != previous {
+            self.movingUp = offset < previous
+        }
         self.previousOffset = offset
+        let movingUp = self.movingUp
 
         let ahead = max(0.0, self.screensAhead) * viewportHeight
         var windows: [Range<Int>] = []
