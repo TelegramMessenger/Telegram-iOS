@@ -31,6 +31,16 @@ final class NotificationRichTextEmojiTests: XCTestCase {
         XCTAssertEqual(ranges("👨‍👩‍👧", [(1, "👨")]), [])
     }
 
+    func testPlainEmojiWithTheSameAltTextLeavesTheMappingAmbiguous() {
+        // "I ❤️ x [custom ❤️]": the body cannot tell which heart is custom, so neither becomes a glyph.
+        XCTAssertEqual(ranges("I ❤️ x ❤️", [(1, "❤️")]), [])
+        XCTAssertEqual(ranges("I ❤️ x ❤️ 🔥", [(1, "❤️"), (2, "🔥")]), ["2:🔥@10"])
+    }
+
+    func testTruncatedBodyMapsTheEmojiItKeeps() {
+        XCTAssertEqual(ranges("a 🙂", [(1, "🙂"), (2, "🙂")]), ["1:🙂@2"])
+    }
+
     func testSearchStartsAfterTheAuthorPrefix() {
         XCTAssertEqual(ranges("Ann 🙂: 🙂", from: 7, [(1, "🙂")]), ["1:🙂@8"])
     }

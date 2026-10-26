@@ -1589,7 +1589,9 @@ A rich message's notification body is the server's plain text of the page. On iO
 18+ the Notification Service extension turns its custom emoji into image glyphs as
 it does an ordinary message's entities: `InstantPage.customEmojiOccurrences` (reading
 order, repeats kept) is matched in the body by alt text, whole characters only
-(`notificationRichTextCustomEmoji`).
+(`notificationRichTextCustomEmoji`). An alt text the body holds more often than the
+page has emoji with it is left plain: an ordinary emoji is among those and nothing
+tells which one is custom.
 
 `styleInstantPagePreview` applies a consumer's fonts/colors without deleting semantic
 attributes. Formula/table runs use U+FFFC plus icon and fallback metadata, never
