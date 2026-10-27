@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body { margin: 0 }
+#copy { display: block; width: 200px; height: 50px; background: #cccccc }
+</style>
+</head>
+<body>
+<div id="copy">copy PROMO</div>
+<script>
+// WidgetHarnessStateTests (v0.2 W1 plan, Task 8): what the bubble passed, as
+// chatData|publicData|chatType|viewer.id|chatDataChanged count|pointer events (pointerdown and pointercancel), in
+// <html data-log>; a tap on #copy copies PROMO.
+const T = TelegramWidget;
+let changes = 0;
+let pointers = 0;
+function log() {
+  document.documentElement.dataset.log = [T.chatData, T.publicData, T.chatType, T.viewer ? T.viewer.id : 'null', changes, pointers].join('|');
+}
+T.onEvent('chatDataChanged', () => { changes++; log(); });
+T.onEvent('publicDataChanged', log);
+document.addEventListener('pointerdown', () => { pointers++; log(); });
+document.addEventListener('pointercancel', () => { pointers++; log(); });
+document.getElementById('copy').onclick = () => T.copyText('PROMO');
+log();
+</script>
+</body>
+</html>

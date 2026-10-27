@@ -4,7 +4,7 @@
   host stylesheet: ../kit.css is prepended to every bubble by the host; images use app:/sf: schemes
   ported: classic widget, see corpus/htmlbubbles-ported/README.md
 -->
-<style>
+<style>[hidden]{display:none!important}
   :root { color-scheme: light dark;
     --fg: light-dark(#000, #fff); --muted: light-dark(#6e6e73, #98989d);
     --card: light-dark(#fff, #1c1c1e); --border: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.14));
@@ -47,14 +47,6 @@
   .poll .ticker { font-size: 11.5px; margin-top: 2px; color: #8e8e93; transition: color 1800ms cubic-bezier(.11,0,.5,0); }
   .poll .ticker.hot { color: var(--blue); transition: none; }
 
-  .fx-fade { animation: tw-fade 220ms ease-out; }
-  .fx-pop { animation: tw-pop 260ms cubic-bezier(.34,1.56,.64,1); }
-  .fx-slide-left { animation: tw-slide-left 260ms cubic-bezier(.33,1,.68,1); }
-  .fx-slide-right { animation: tw-slide-right 260ms cubic-bezier(.33,1,.68,1); }
-  @keyframes tw-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes tw-pop { from { transform: scale(0.94); opacity: 0.4; } to { transform: none; opacity: 1; } }
-  @keyframes tw-slide-left { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-  @keyframes tw-slide-right { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
 </style>
 <div class="card pad poll" id="root">
   <div class="row between"><b>📍 Offsite location</b>
@@ -106,11 +98,13 @@ function frame() {
   paintLive();
   if (tweens.length) requestAnimationFrame(frame); else frameOn = false;
 }
-function transition(kind) {
-  root.classList.remove('fx-fade', 'fx-pop', 'fx-slide-left', 'fx-slide-right');
-  requestAnimationFrame(() => root.classList.add('fx-' + kind));
+let panelAnimation = null;
+function transition(kind, target = list) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('fx-fade', 'fx-pop', 'fx-slide-left', 'fx-slide-right'); });
 
 const count = () => options.reduce((s, o) => s + o.voters.length, 0);
 const byId = id => options.find(o => o.id === id);
@@ -225,13 +219,13 @@ function paintChrome() {
 function handleAction(name, value) {
   if (name === 'tab') {
     if (value === tab) return;
-    transition(value === 'voters' ? 'slide-left' : 'slide-right');
+    transition(value === 'voters' ? 'slide-left' : 'slide-right', value === 'voters' ? votersEl : list);
     tab = value;
     return paintChrome();
   }
   if (name === 'sort') { sortTop = !sortTop; relayout(); return paintChrome(); }
   if (name === 'close') {
-    transition(closed ? 'fade' : 'pop');
+    transition(closed ? 'fade' : 'pop', win);
     closed = !closed;
     if (!closed) startArrivals(1400);
     else if (timer) { clearTimeout(timer); timer = 0; }

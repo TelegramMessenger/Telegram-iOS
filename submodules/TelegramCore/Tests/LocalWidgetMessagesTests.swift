@@ -15,6 +15,19 @@ final class LocalWidgetMessagesTests: XCTestCase {
         ]
     }
 
+    /// widget-sandbox v0.2: a post's message kind and state reach the local widget media, as a sent widget's flags do.
+    func testAPostsStateReachesItsMedia() {
+        let post = EngineLocalWidgetPost(html: "<p>s</p>", width: 0, height: 0, caption: "", photos: [], isCopy: true, canQuery: true, backgroundQuery: false, chatData: Data("c".utf8), publicData: Data("p".utf8))
+        let messages = _internal_localWidgetStoreMessages(posts: [post], photoResources: [[]], peerId: self.account, accountPeerId: self.account, lastTimestamp: 1_000)
+        let widget = messages.first?.media.first as? TelegramMediaWidget
+        XCTAssertEqual(widget?.html(), "<p>s</p>")
+        XCTAssertEqual(widget?.isCopy, true)
+        XCTAssertEqual(widget?.canQuery, true)
+        XCTAssertEqual(widget?.backgroundQuery, false)
+        XCTAssertEqual(widget?.chatData, Data("c".utf8))
+        XCTAssertEqual(widget?.publicData, Data("p".utf8))
+    }
+
     func testEachPostIsAWidgetMessageThenItsPhotos() {
         let resources = [[], [LocalFileMediaResource(fileId: 7)]]
         let messages = _internal_localWidgetStoreMessages(posts: self.posts(), photoResources: resources, peerId: self.account, accountPeerId: self.account, lastTimestamp: 1_000)

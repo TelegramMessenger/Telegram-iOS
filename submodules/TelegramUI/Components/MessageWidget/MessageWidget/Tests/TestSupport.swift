@@ -62,8 +62,8 @@ class MessageWidgetTestCase: XCTestCase {
         return result!
     }
 
-    func make(_ source: String, theme: MessageWidgetInstance.Theme = .light, scale: CGFloat = 1.0, policy: MessageWidgetWaitPolicy = .unbounded, storage: MessageWidgetStorage = .empty) -> MessageWidgetInstance {
-        guard let instance = MessageWidgetInstance(source: source, theme: theme, stoppedLabel: "Widget stopped", maxMessageLength: 4096, storage: storage, pool: self.pool, waitPolicy: policy, turn: self.turn, scale: scale) else {
+    func make(_ source: String, theme: MessageWidgetInstance.Theme = .light, scale: CGFloat = 1.0, policy: MessageWidgetWaitPolicy = .unbounded, storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), state: MessageWidgetState = .empty) -> MessageWidgetInstance {
+        guard let instance = MessageWidgetInstance(source: source, theme: theme, stoppedLabel: "Widget stopped", maxMessageLength: 4096, storage: storage, context: context, state: state, pool: self.pool, waitPolicy: policy, turn: self.turn, scale: scale) else {
             XCTFail("instance not created")
             fatalError()
         }

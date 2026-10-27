@@ -9,11 +9,15 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "Sources/Canvas/CanvasInterpreter.h"
 #include "Sources/Canvas/CanvasStyle.h"
+#include "Sources/Canvas/ImageElement.h"
 #include "Sources/DOM/Document.h"
 #include "Sources/Render/RenderHost.h"
+#include "Sources/Support/Allocator.h"
 
 namespace wr {
 
@@ -83,6 +87,14 @@ public:
     /// copy of the src is kept (C-A). nullopt when refused, undecodable, or without a render tree.
     std::optional<DecodedImage> sharedImage(std::string_view src, bool& decoded);
 
+    /// The images the document's parse left pending (imageSourceChanged): fireParsedImageEvents fires the ones still
+    /// waiting at the window's load that belong to the main document, in its tree or taken out of it (v0.2.3 review,
+    /// I1). Held until then.
+    void addParsedImage(Ref<HTMLImageElement> image) { m_parsedImages.push_back(std::move(image)); }
+    Vector<Ref<HTMLImageElement>> takeParsedImages() {
+        return std::exchange(m_parsedImages, Vector<Ref<HTMLImageElement>>{m_parsedImages.get_allocator()});
+    }
+
 private:
     RenderHost* host() const;
 
@@ -105,6 +117,8 @@ private:
     /// The size at which the next sweep of expired entries runs: twice what the last one left, so sweeps cost O(1) per
     /// entry however many images stay alive (V5d fix-wave 2 review, I-1).
     size_t m_sweepAt = 256;
+    /// In the JS heap, so the widget's memory limit counts it.
+    Vector<Ref<HTMLImageElement>> m_parsedImages{JSAllocator<Ref<HTMLImageElement>>(JS_GetRuntime(m_ctx))};
 };
 
 } // namespace canvas

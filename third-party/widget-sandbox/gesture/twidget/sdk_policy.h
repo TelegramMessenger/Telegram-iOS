@@ -1,4 +1,4 @@
-// SDK v1 checks (docs/sdk-v1.md §2.5, §2.6, §2.8, §2.9, §2.12, §3): the C++ twin of
+// SDK v1 checks (docs/sdk-v1.md §2.5, §2.6, §2.8, §2.9, §2.12–§2.15, §3): the C++ twin of
 // the checked part of packages/core/src/shared/sdk-policy.ts, next to
 // SdkPolicy.swift and SdkPolicy.kt. Pure and side-effect free; checked against
 // tests/fixtures/sdk-policy.json (copied from packages/core/tests/fixtures by
@@ -13,16 +13,21 @@
 // same bytes. `utf8Length` is the byte length, which is what the TS
 // `utf8Length` counts (a lone surrogate is 3 bytes in both); `checkLink`
 // rejects invalid UTF-8 and every surrogate code point, as the TS version
-// rejects lone surrogates.
+// rejects lone surrogates. The strings of the bot's data and requests (the bot's data, a request's
+// data and answer, a text to copy) are refused the same way: `wellFormed`
+// means valid UTF-8 without a surrogate, what the TS `wellFormed` (no lone
+// surrogate) means for a JS string.
 #pragma once
 
 #include "twidget/json.h"
 
 #include <array>
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace twidget {
 
@@ -50,6 +55,78 @@ struct WidgetAction {
     Json toJson() const;
 };
 
+// ── the bot's data, where the widget is, requests (docs/sdk-v1.md §2.13–§2.15, §4.4) ──
+
+/// The bot's two strings as the client has them for this message (none = nullopt), the full state each time: at
+/// creation (`WidgetHostOptions::data`) and in `setData`. `chatData` stays in this chat (a copy never has it),
+/// `publicData` a copy gets too. Each 1–1024 bytes of UTF-8 text without NUL; "" is none (how the bot clears a field);
+/// anything longer or malformed is none and reported (`data-rejected`).
+struct WidgetData {
+    std::optional<std::string> chatData;
+    std::optional<std::string> publicData;
+    bool operator==(const WidgetData& o) const { return chatData == o.chatData && publicData == o.publicData; }
+};
+
+/// Who looks at the widget, as the client passes it (round 6: the fields of Mini Apps' `WebAppUser`): the Telegram user
+/// id the bot gets with a request (1 … 2^53 − 1; anything else is no viewer) and, when the account has them, its first
+/// and last name (1–64 UTF-16 code units each), its username (5–32 of A–Z, a–z, 0–9, _) and Premium. A field that
+/// breaks its rule is left out (`data-rejected`).
+struct WidgetViewer {
+    int64_t id = 0;
+    std::optional<std::string> firstName;
+    std::optional<std::string> lastName;
+    std::optional<std::string> username;
+    bool isPremium = false;
+    bool operator==(const WidgetViewer& o) const {
+        return id == o.id && firstName == o.firstName && lastName == o.lastName && username == o.username && isPremium == o.isPremium;
+    }
+};
+
+/// Where the widget is and what it may do, from the message (`messageMediaWidget`'s flags, which the server computes)
+/// and the chat; fixed for the host's life (docs/sdk-v1.md §2.14, §4.4). The framework derives nothing itself; all
+/// false (the default): no requests.
+struct WidgetContext {
+    /// `is_copy`: the message is a forwarded copy: never any chatData.
+    bool isCopy = false;
+    /// `can_query`: requests are allowed, on a tap.
+    bool canQuery = false;
+    /// `background_query`: requests without a tap too (the original in the private chat with the bot): one when the
+    /// widget appears on screen, then one per 5 s, while visible.
+    bool backgroundQuery = false;
+    /// "private" | "group" | "supergroup" | "channel" (`Chat.type` of the Bot API); "" or anything else is none. A copy
+    /// (with `canQuery` or not) and a preview get none: the bot learns nothing about where its widget was forwarded.
+    std::string chatType;
+    /// The account that looks at the widget. A copy without `canQuery` gets none.
+    std::optional<WidgetViewer> viewer;
+    /// An inline result shown before it is sent (no message yet, docs/sdk-v1.md §2.16): the widget gets its data and runs
+    /// as usual, but no input, no bridge calls but `ready` / `setResizeAnchor` (`PREVIEW_METHODS`), no chat type or
+    /// viewer, and Web Storage that is never preloaded or committed. The request flags are ignored.
+    bool preview = false;
+};
+
+/// What the client sends to the bot, as a callback button's press: `data` (1–64 bytes). Whether it came from a tap is
+/// the framework's business only (the request gate): the server and the bot cannot tell.
+struct WidgetRequest {
+    std::string data;
+    bool operator==(const WidgetRequest& o) const { return data == o.data; }
+};
+
+/// The bot's answer as the client hands it over: the server's `result` (text of at most 1024 bytes, no NUL; none is
+/// none). The bot changes its data with `setData`'s edits, not with an answer. There is nothing for the client to show:
+/// the widget shows the result.
+struct WidgetRequestAnswer {
+    std::optional<std::string> result;
+};
+
+/// A request the client could not complete: the bot did not answer in time, a flood wait, anything else. `None`: answered.
+enum class WidgetRequestFailure { None, Timeout, RateLimited, Failed };
+
+/// What the client reports for a request (`respond`): the answer when `failure` is `None`, else the failure.
+struct WidgetRequestOutcome {
+    WidgetRequestFailure failure = WidgetRequestFailure::None;
+    WidgetRequestAnswer answer;
+};
+
 namespace sdk {
 
 inline constexpr int MAX_LINK_LENGTH = 256;
@@ -61,6 +138,14 @@ inline constexpr int HAPTIC_BURST = 5;
 inline constexpr int HAPTIC_PER_SECOND = 10;
 /// `haptic-limit` is reported at most this often.
 inline constexpr double HAPTIC_REPORT_MS = 1000;
+/// Haptics are free (under the rate limit) while a finger or a mouse button is down on the widget and this long after it is lifted (v0.2.2).
+inline constexpr double HAPTIC_TOUCH_WINDOW_MS = 5000;
+/// Outside a touch, the first haptic opens a series: the calls of its first second pass (under the rate limit), later ones are dropped.
+inline constexpr double HAPTIC_SERIES_MS = 1000;
+/// Without a touch since the last series, the next one may start this long after the last one began.
+inline constexpr double HAPTIC_SERIES_GAP_MS = 10000;
+/// A press whose end the host never saw (the finger left the view) counts as lifted this long after it began.
+inline constexpr double HAPTIC_PRESS_MAX_MS = 30000;
 /// Handlers per `onEvent` type in the shim (here for completeness; the glue never sees them).
 inline constexpr int MAX_HANDLERS_PER_EVENT = 16;
 /// The widget profile this glue enforces (`PROFILE_VERSION` in profile-tables.ts; docs/profile-v1.md).
@@ -80,8 +165,12 @@ inline constexpr std::array<std::string_view, 15> THEME_KEYS = {
 inline constexpr std::array<std::string_view, 5> HAPTIC_IMPACT_STYLES = {"light", "medium", "heavy", "rigid", "soft"};
 inline constexpr std::array<std::string_view, 3> HAPTIC_NOTIFICATION_TYPES = {"error", "success", "warning"};
 inline constexpr std::array<std::string_view, 3> TELEGRAM_HOSTS = {"t.me", "telegram.me", "telegram.dog"};
-/// Methods that need the task's user gesture (docs/protocol.md, "User activation").
-inline constexpr std::array<std::string_view, 2> PRIVILEGED_METHODS = {"openLink", "openTelegramLink"};
+/// Methods that need the task's user gesture (docs/protocol.md, "User activation"); one press unlocks one of them.
+/// `request` has its own gate (`RequestGate`).
+inline constexpr std::array<std::string_view, 3> PRIVILEGED_METHODS = {"openLink", "openTelegramLink", "copyText"};
+/// The bridge methods a preview (`WidgetContext::preview`) may call; everything else is dropped there (`preview-blocked`):
+/// no request, link, copy or haptic.
+inline constexpr std::array<std::string_view, 2> PREVIEW_METHODS = {"ready", "setResizeAnchor"};
 /// The edges of the bubble that can stay put on screen when the widget's height changes (`setResizeAnchor`,
 /// docs/sdk-v1.md §2.12): "top" (the bubble grows and shrinks downward, the content below moves) or "bottom" (it
 /// grows upward, its bottom stays, the content above moves).
@@ -89,10 +178,44 @@ inline constexpr std::array<std::string_view, 2> RESIZE_ANCHORS = {"top", "botto
 /// Until the widget calls `setResizeAnchor`: the bubble grows and shrinks downward.
 inline constexpr std::string_view DEFAULT_RESIZE_ANCHOR = "top";
 
+// ── bot data and requests (docs/sdk-v1.md §2.13–§2.15) ──
+
+/// UTF-8 bytes of `chatData` and of `publicData` each (the server's limit, `chat_data` / `public_data`).
+inline constexpr int MAX_WIDGET_DATA_BYTES = 1024;
+/// UTF-8 bytes of a request's `data` (as `callback_data`).
+inline constexpr int MAX_REQUEST_DATA_BYTES = 64;
+/// UTF-8 bytes of an answer's `result`.
+inline constexpr int MAX_REQUEST_RESULT_BYTES = 1024;
+/// UTF-16 code units of a `copyText` text (as the `copy_text` button's).
+inline constexpr int MAX_COPY_TEXT_LENGTH = 256;
+/// A background request (not from a press) at most this often, per widget.
+inline constexpr double BACKGROUND_REQUEST_INTERVAL_MS = 5000;
+/// The request ids the shim numbers its calls with.
+inline constexpr int64_t MAX_REQUEST_ID = 2147483647;
+/// A Telegram user id fits in 53 bits: a JS number holds it exactly.
+inline constexpr int64_t MAX_VIEWER_ID = 9007199254740991;
+/// UTF-16 code units of the viewer's first and last name (each 1 to this).
+inline constexpr int MAX_VIEWER_NAME_LENGTH = 64;
+/// The viewer's username: 5–32 characters of A–Z, a–z, 0–9 and _ (the TS `VIEWER_USERNAME`).
+inline constexpr int MIN_VIEWER_USERNAME_LENGTH = 5;
+inline constexpr int MAX_VIEWER_USERNAME_LENGTH = 32;
+/// The chat kinds a host may report (`Chat.type` of the Bot API); a value outside them is no chat type.
+inline constexpr std::array<std::string_view, 4> CHAT_TYPES = {"private", "group", "supergroup", "channel"};
+/// What a refused or failed request rejects with in the widget (`error.code`).
+inline constexpr std::array<std::string_view, 6> REQUEST_ERRORS = {"NOT_ALLOWED", "BUSY", "RATE_LIMITED", "TIMEOUT", "FAILED", "INVALID_ANSWER"};
+
 bool isPrivilegedMethod(std::string_view method);
+/// Exactly one of `PREVIEW_METHODS` (case-sensitive).
+bool allowedInPreview(std::string_view method);
 
 /// UTF-8 length of a string: its byte length (a lone surrogate in WTF-8 is 3 bytes, as the TS version counts it).
 inline size_t utf8Length(std::string_view s) { return s.size(); }
+/// UTF-16 length of a UTF-8 string (the JS `length`): 2 for each 4-byte sequence, 1 for every other one (and for each
+/// byte that starts none: only `wellFormed` strings are measured here).
+size_t utf16Length(std::string_view s);
+/// Valid UTF-8 without a surrogate code point (WTF-8 ED A0..BF xx): the string has a UTF-8 form, what the server and
+/// the clipboard take (the TS `wellFormed`: no lone surrogate).
+bool wellFormed(std::string_view s);
 
 /**
  * The URL a link call opens, or nullopt when it breaks the rules: an absolute
@@ -123,17 +246,37 @@ std::optional<std::string> checkResizeAnchor(std::string_view edge);
 std::optional<std::string> checkResizeAnchorValue(const Json& edge);
 
 /**
- * A bridge call that passed its checks (the TS `BridgeCall`): an action for the client (`onAction`), or, for
+ * A bridge call that passed its checks (the TS `BridgeCall`): an action for the client (`onAction`); for
  * `setResizeAnchor`, the edge, which no action carries: the host keeps the latest one next to the height it reports
- * (`WidgetDiagnostics::resizeAnchor`). Exactly one of the two is set. Since v0.1.3; `WidgetAction` is unchanged.
+ * (`WidgetDiagnostics::resizeAnchor`); for `request`, the shim's id and the data: the request gate, then the
+ * client's `onRequest`; for `copyText`, the text: the client's `onCopyText`; for `watchPublicData`, the flag the host
+ * keeps (round 7). Exactly one is set. Since v0.1.3 (the edge) and the bot's requests (the request, the text, the
+ * flag); `WidgetAction` is unchanged.
  */
 struct BridgeCall {
+    struct Request {
+        /// The shim's number for the call, 1 … 2147483647: the answer goes back with it.
+        int64_t id = 0;
+        /// 1–64 bytes of UTF-8, well-formed.
+        std::string data;
+        bool operator==(const Request& o) const { return id == o.id && data == o.data; }
+    };
     std::optional<WidgetAction> action;
     /// `setResizeAnchor`: "top" or "bottom".
     std::optional<std::string> resizeAnchor;
+    /// `request`.
+    std::optional<Request> request;
+    /// `copyText`: 1–256 UTF-16 code units, well-formed.
+    std::optional<std::string> copyText;
+    /// `watchPublicData` (round 7): whether the widget watches its shared `public_data` (`watchPublicData()` /
+    /// `unwatchPublicData()`); not an action: the host keeps the latest, the client polls only for widgets that watch.
+    std::optional<bool> watchPublicData;
 
-    bool operator==(const BridgeCall& o) const { return action == o.action && resizeAnchor == o.resizeAnchor; }
-    /// The TS `BridgeCall` shape: the action's (`WidgetAction::toJson`), or {kind:'setResizeAnchor', edge}.
+    bool operator==(const BridgeCall& o) const {
+        return action == o.action && resizeAnchor == o.resizeAnchor && request == o.request && copyText == o.copyText && watchPublicData == o.watchPublicData;
+    }
+    /// The TS `BridgeCall` shape: the action's (`WidgetAction::toJson`), {kind:'setResizeAnchor', edge},
+    /// {kind:'request', id, data}, {kind:'copyText', text} or {kind:'watchPublicData', on}.
     Json toJson() const;
 };
 
@@ -141,22 +284,138 @@ struct BridgeCall {
 /// Before v0.1.3 this returned `std::optional<WidgetAction>`; the action is now `->action`.
 std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args);
 
+/// A request's `data`, or nullopt: a well-formed string of 1–64 UTF-8 bytes.
+std::optional<std::string> checkRequestData(std::string_view data);
+std::optional<std::string> checkRequestDataValue(const Json& data);
+/// A `copyText` text, or nullopt: a well-formed string of 1–256 UTF-16 code units.
+std::optional<std::string> checkCopyText(std::string_view text);
+std::optional<std::string> checkCopyTextValue(const Json& text);
+/// One of `chatData` / `publicData`: a well-formed string of 1–1024 UTF-8 bytes without NUL (other control characters
+/// are text); nullopt for none (the empty string the bot clears it with) and for anything else.
+std::optional<std::string> checkWidgetDataValue(std::string_view value);
+
+/// The bot's data as the widget sees it, and the fields the client passed that broke the rules (the glue reports
+/// `data-rejected`): "chatData" and/or "publicData", in that order.
+struct CheckedWidgetData {
+    std::optional<std::string> chatData;
+    std::optional<std::string> publicData;
+    std::vector<std::string> rejected;
+    /// The TS `CheckedWidgetData` shape: {chatData, publicData, rejected} with JSON nulls for none.
+    Json toJson() const;
+};
+
+/// The full state of the bot's two strings, as the client passes it at creation and in `setData`. A copy has no
+/// `chatData` (the server never copies it): the glue drops what the client passed, silently; its publicData can change.
+CheckedWidgetData checkWidgetData(const WidgetData& data, bool copy);
+
+/// The viewer as the widget sees it, and the fields the client passed that broke their rules.
+struct CheckedViewer {
+    /// None without an id of 1 … 2^53 − 1 (not reported); else the id and the fields that passed.
+    std::optional<WidgetViewer> viewer;
+    /// "first_name", "last_name", "username" (in this order; `is_premium` is a bool here and cannot break its rule).
+    std::vector<std::string> rejected;
+    /// The TS shape: {viewer: {id, first_name?, last_name?, username?, is_premium?: true} | null, rejected}.
+    Json toJson() const;
+};
+
+/// The viewer's check (the TS `checkViewer`): no viewer without a valid id; a name of 1–64 UTF-16 code units, well-formed
+/// (an empty one is rejected); a username of 5–32 ASCII letters, digits and _; Premium kept only when true.
+CheckedViewer checkViewer(const std::optional<WidgetViewer>& viewer);
+/// The viewer in the widget's field names (`TelegramWidget.viewer`, Mini Apps' `WebAppUser`): `id`, then `first_name`,
+/// `last_name`, `username` when set, `is_premium` only when true. Unchecked: pass a checked viewer.
+Json viewerJson(const WidgetViewer& viewer);
+/// Why a viewer field was left out, for `data-rejected` (`viewer.<field>: <rule>; the widget does not see it`; the TS
+/// `VIEWER_FIELD_RULES`): "first_name", "last_name", "username", "is_premium".
+std::string_view viewerFieldRule(std::string_view field);
+/// Exactly "private", "group", "supergroup" or "channel", else nullopt.
+std::optional<std::string> checkChatType(std::string_view chatType);
+
+/// An answer the glue passes into the widget: the bot's `result` (none for none).
+struct CheckedAnswer {
+    std::optional<std::string> result;
+    /// The TS shape: {result} with JSON null for none.
+    Json toJson() const;
+};
+
+/// The client's answer: `result` none, or text the glue passes on: well-formed, no NUL, at most 1024 UTF-8 bytes (empty
+/// allowed). Nullopt for anything else (the widget gets `INVALID_ANSWER`, `answer-rejected`).
+std::optional<CheckedAnswer> checkRequestAnswer(const WidgetRequestAnswer& answer);
+
+/// What the widget's promise rejects with for a client's failure: "TIMEOUT", "RATE_LIMITED", anything else "FAILED".
+std::string_view requestFailureCode(WidgetRequestFailure failure);
+
 /**
- * Haptics need no gesture but a visible widget and room in the bucket (5 calls,
- * refilled at 10 per second). `Play` delivers; `Drop` drops silently; `Report`
- * drops and reports `haptic-limit` (at most once per second). Same arithmetic,
- * in the same order, as the TS class (the fixture steps through the floats).
+ * The verdict on a request (docs/sdk-v1.md §2.14): `Foreground` (it consumes the task's press) and `Background` go to
+ * the client; the rest are refused: `Disabled` (the message has no `canQuery`), `Busy` (one request in flight per
+ * widget), `NoActivation` (no press and no `backgroundQuery`), `Hidden` (a background request from a widget off
+ * screen), `RateLimited` (a background request sooner than 5 s after the last one, unless the widget appeared on
+ * screen since).
+ */
+enum class RequestVerdict { Foreground, Background, Disabled, Busy, NoActivation, Hidden, RateLimited };
+/// The TS verdict: "foreground", "background", "disabled", "busy", "no-activation", "hidden", "rate-limited".
+std::string_view requestVerdictName(RequestVerdict verdict);
+/// What the widget's promise rejects with for a refused request ("BUSY", "RATE_LIMITED", "NOT_ALLOWED"); nullopt for
+/// the two that go to the client.
+std::optional<std::string_view> requestRefusal(RequestVerdict verdict);
+
+/**
+ * Only where the message allows requests (`canQuery`); one in flight per widget; a press unlocks one; without a press
+ * only with `backgroundQuery` (the original in the private chat with the bot), only while visible: one when the widget
+ * appears on screen (`show`, and at creation), then at most one per 5 s counted from the start of the last background
+ * request. `gesture`: the task has a press no privileged call consumed yet (the glue consumes it on `Foreground`).
+ * `finish` when the answer or the failure has gone into the widget. Same order of checks as the TS class.
+ */
+class RequestGate {
+public:
+    struct Conditions {
+        bool gesture = false;
+        bool visible = false;
+        bool canQuery = false;
+        bool backgroundQuery = false;
+    };
+    RequestVerdict decide(double nowMs, const Conditions& s);
+    void finish() { inFlight_ = false; }
+    /// The widget appeared on screen (it was hidden): its next background request may go out at once.
+    void show() { lastBackground_.reset(); }
+    bool busy() const { return inFlight_; }
+
+private:
+    bool inFlight_ = false;
+    std::optional<double> lastBackground_;
+};
+
+/**
+ * Haptics need a visible widget and room in the bucket (5 calls, refilled at 10 per second), and a touch (v0.2.2):
+ * while a finger is down on the widget and for 5 s after it is lifted they are free (under the rate limit); outside
+ * that, the first call opens a series whose first second passes, then nothing until the next touch, or 10 s after the
+ * series began when there was none (docs/sdk-v1.md §2.6; a widget cannot buzz the phone from a timer). `press` /
+ * `release` are the host's trusted presses (the renderer's claim at a primary pointerdown and its release), never the
+ * widget's events. `Play` delivers; `Drop` drops silently; `Report` drops and reports `haptic-limit` (at most once per
+ * second). Same arithmetic, in the same order, as the TS class (the fixture steps through the floats).
  */
 class HapticGate {
 public:
     enum class Decision { Play, Drop, Report };
     Decision decide(double nowMs, bool visible);
+    /// A finger or a mouse button went down on the widget (trusted input only).
+    void press(double nowMs) { down_ = nowMs; }
+    /// The press ended: the finger was lifted or the press was cancelled.
+    void release(double nowMs) {
+        down_.reset();
+        lifted_ = nowMs;
+    }
     static std::string_view name(Decision d) { return d == Decision::Play ? "play" : d == Decision::Drop ? "drop" : "report"; }
 
 private:
     double tokens_ = HAPTIC_BURST;
     std::optional<double> last_;
     std::optional<double> reported_;
+    /// A press is on since then.
+    std::optional<double> down_;
+    /// The last press ended then.
+    std::optional<double> lifted_;
+    /// The last series (haptics outside a touch) began then.
+    std::optional<double> series_;
 };
 
 /// The theme keys of `params` whose values are `#rrggbb` (lowercased); everything else is dropped.

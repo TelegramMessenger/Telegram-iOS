@@ -3711,13 +3711,14 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 if wasAccepted {
                     let storyReactionContext = account.storyReactionContext
                     let stateManager: AccountStateManager = account.stateManager
+                    weak let weakAccount = account
                     let _ = (replayReady.get()
                     |> filter { $0 }
                     |> take(1)
                     |> mapToSignal { [weak stateManager] _ in stateManager?.pollStateUpdateCompletion() ?? .complete() }
                     |> take(1)
-                    |> mapToSignal { [weak account = account] _ -> Signal<Never, NoError> in
-                        guard let account else {
+                    |> mapToSignal { _ -> Signal<Never, NoError> in
+                        guard let account = weakAccount else {
                             _ = storyReactionContext.finish(request, success: true)
                             return .complete()
                         }

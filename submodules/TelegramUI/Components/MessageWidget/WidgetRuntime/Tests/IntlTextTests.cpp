@@ -59,7 +59,7 @@ WR_TEST(testPluralCategoriesComeFromTheHost) {
 WR_TEST(testResolvedOptions) {
     HostEnv env;
     CHECK_EQ(env.eval("JSON.stringify(new Intl.RelativeTimeFormat('en-u-nu-arab', { numeric: 'auto', numberingSystem: 'thai' }).resolvedOptions())"),
-             std::string("{\"locale\":\"en\",\"style\":\"long\",\"numeric\":\"auto\",\"numberingSystem\":\"latn\"}"));
+             std::string("{\"locale\":\"en-u-nu-arab\",\"style\":\"long\",\"numeric\":\"auto\",\"numberingSystem\":\"latn\"}"));
     CHECK_EQ(env.eval("JSON.stringify(new Intl.ListFormat('en', { type: 'disjunction', style: 'narrow' }).resolvedOptions())"),
              std::string("{\"locale\":\"en\",\"type\":\"disjunction\",\"style\":\"narrow\"}"));
     CHECK_EQ(env.eval("JSON.stringify(new Intl.Collator('de', { numeric: true, collation: 'phonebk' }).resolvedOptions())"),

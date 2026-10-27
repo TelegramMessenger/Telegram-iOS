@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body { margin: 0 }
+#toggle { display: block; width: 200px; height: 50px; background: #cccccc }
+</style>
+</head>
+<body>
+<div id="toggle">toggle</div>
+<script>
+// WidgetHarnessNetworkTests (v0.2 W2 plan, Task 5): watches its shared state from the start; a tap on #toggle stops
+// watching, the next one starts again. <html data-log> is watching|<shared state> or not|<shared state>.
+const T = TelegramWidget;
+let watching = true;
+function log() {
+  document.documentElement.dataset.log = (watching ? 'watching' : 'not') + '|' + T.publicData;
+}
+T.watchPublicData();
+T.onEvent('publicDataChanged', log);
+document.getElementById('toggle').onclick = () => {
+  watching = !watching;
+  if (watching) {
+    T.watchPublicData();
+  } else {
+    T.unwatchPublicData();
+  }
+  log();
+};
+log();
+</script>
+</body>
+</html>

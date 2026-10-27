@@ -15,16 +15,22 @@ import ComponentFlow
 import ComponentDisplayAdapters
 import GlassBackgroundComponent
 import EdgeEffect
+import ChatMessageWidgetBubbleContentNode
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action
     case result(ChatContextResult)
+    /// A result drawn as a widget preview: another identity, so a change of how it draws is a delete and an insert.
+    case widgetResult(ChatContextResult)
     
     func hash(into hasher: inout Hasher) {
         switch self {
             case .action:
                 hasher.combine(0)
             case let .result(result):
+                hasher.combine(result.id.hashValue)
+            case let .widgetResult(result):
+                hasher.combine(1)
                 hasher.combine(result.id.hashValue)
         }
     }
@@ -43,6 +49,12 @@ private enum VerticalChatContextResultsEntryStableId: Hashable {
                 } else {
                     return false
                 }
+            case let .widgetResult(lhsResult):
+                if case let .widgetResult(rhsResult) = rhs, lhsResult == rhsResult {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -50,6 +62,8 @@ private enum VerticalChatContextResultsEntryStableId: Hashable {
 private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, Identifiable {
     case action(PresentationTheme, String)
     case result(Int, PresentationTheme, ChatContextResult)
+    /// widget-sandbox v0.2 (v0.2 W3): a widget result, with how it draws and the height its widget last reported.
+    case widgetResult(Int, PresentationTheme, ChatContextResult, TelegramMediaWidget, ChatContextResultWidgetAppearance, CGFloat?)
     
     func withUpdatedTheme(_ theme: PresentationTheme) -> VerticalListContextResultsChatInputContextPanelEntry {
         switch self {
@@ -57,6 +71,8 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
             return .action(theme, value)
         case let .result(index, _, result):
             return .result(index, theme, result)
+        case let .widgetResult(index, _, result, widget, appearance, reportedHeight):
+            return .widgetResult(index, theme, result, widget, appearance, reportedHeight)
         }
     }
     
@@ -66,6 +82,8 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
                 return .action
             case let .result(_, _, result):
                 return .result(result)
+            case let .widgetResult(_, _, result, _, _, _):
+                return .widgetResult(result)
         }
     }
     
@@ -83,29 +101,46 @@ private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, I
                 } else {
                     return false
                 }
-        }
-    }
-    
-    static func <(lhs: VerticalListContextResultsChatInputContextPanelEntry, rhs: VerticalListContextResultsChatInputContextPanelEntry) -> Bool {
-        switch lhs {
-            case .action:
-                return true
-            case let .result(index, _, _):
-                switch rhs {
-                    case .action:
-                        return false
-                    case let .result(rhsIndex, _, _):
-                        return index < rhsIndex
+            case let .widgetResult(lhsIndex, lhsTheme, lhsResult, _, lhsAppearance, lhsReportedHeight):
+                // The widget is the result's own (`lhsResult == rhsResult` compares it).
+                if case let .widgetResult(rhsIndex, rhsTheme, rhsResult, _, rhsAppearance, rhsReportedHeight) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsResult == rhsResult, lhsAppearance == rhsAppearance, lhsReportedHeight == rhsReportedHeight {
+                    return true
+                } else {
+                    return false
                 }
         }
     }
     
-    func item(engine: TelegramEngine, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
+    /// The position of a result entry; nil for the action row, which comes first.
+    private var resultIndex: Int? {
+        switch self {
+        case .action:
+            return nil
+        case let .result(index, _, _):
+            return index
+        case let .widgetResult(index, _, _, _, _, _):
+            return index
+        }
+    }
+    
+    static func <(lhs: VerticalListContextResultsChatInputContextPanelEntry, rhs: VerticalListContextResultsChatInputContextPanelEntry) -> Bool {
+        guard let index = lhs.resultIndex else {
+            return true
+        }
+        guard let rhsIndex = rhs.resultIndex else {
+            return false
+        }
+        return index < rhsIndex
+    }
+    
+    func item(engine: TelegramEngine, strings: PresentationStrings, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool, widgetHeightReported: @escaping (String, CGFloat) -> Void) -> ListViewItem {
         switch self {
             case let .action(theme, title):
                 return VerticalListContextResultsChatInputPanelButtonItem(theme: theme, title: title, pressed: actionSelected)
             case let .result(_, theme, result):
                 return VerticalListContextResultsChatInputPanelItem(engine: engine, theme: theme, result: result, resultSelected: resultSelected)
+            case let .widgetResult(_, theme, result, widget, appearance, reportedHeight):
+                return VerticalListContextResultsChatInputPanelWidgetItem(theme: theme, strings: strings, result: result, widget: widget, appearance: appearance, reportedHeight: reportedHeight, resultSelected: resultSelected, heightReported: widgetHeightReported)
         }
     }
 }
@@ -116,12 +151,12 @@ private struct VerticalListContextResultsChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [VerticalListContextResultsChatInputContextPanelEntry], to toEntries: [VerticalListContextResultsChatInputContextPanelEntry], engine: TelegramEngine, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> VerticalListContextResultsChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [VerticalListContextResultsChatInputContextPanelEntry], to toEntries: [VerticalListContextResultsChatInputContextPanelEntry], engine: TelegramEngine, strings: PresentationStrings, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool, widgetHeightReported: @escaping (String, CGFloat) -> Void) -> VerticalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
 
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, actionSelected: actionSelected, resultSelected: resultSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, actionSelected: actionSelected, resultSelected: resultSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, strings: strings, actionSelected: actionSelected, resultSelected: resultSelected, widgetHeightReported: widgetHeightReported), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, strings: strings, actionSelected: actionSelected, resultSelected: resultSelected, widgetHeightReported: widgetHeightReported), directionHint: nil) }
     
     return VerticalListContextResultsChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -134,13 +169,20 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var currentProcessedResults: ChatContextResultCollection?
     private var currentEntries: [VerticalListContextResultsChatInputContextPanelEntry]?
     
-    private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool)] = []
+    /// Each with whether it is the first and whether it crossfades the list (a row's new height does not).
+    private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
     private let loadMoreDisposable = MetaDisposable()
     private var isLoadingMore: Bool = false
     
+    /// widget-sandbox v0.2 (v0.2 W3): how widget results draw, from the chat's interface state once laid out, and the
+    /// height each result's widget last reported (by result id), which its row is laid out from.
+    private var widgetAppearance: ChatContextResultWidgetAppearance
+    private var widgetPreviewHeights: [String: CGFloat] = [:]
+    
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
+        self.widgetAppearance = ChatContextResultWidgetAppearance(theme: theme, wallpaper: .builtin(WallpaperSettings()), fontSize: fontSize, cornerRadius: 16.0)
         self.backgroundView = GlassBackgroundView()
         self.backgroundView.layer.anchorPoint = CGPoint()
         
@@ -209,7 +251,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.updateInternalResults(results)
     }
         
-    private func updateInternalResults(_ results: ChatContextResultCollection) {
+    private func updateInternalResults(_ results: ChatContextResultCollection, crossfade: Bool = true) {
         var entries: [VerticalListContextResultsChatInputContextPanelEntry] = []
         var index = 0
         var resultIds = Set<VerticalChatContextResultsEntryStableId>()
@@ -220,8 +262,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             entries.append(entry)
             resultIds.insert(entry.stableId)
         }
+        let widgetsEnabled = chatMessageWidgetRenderingEnabled()
         for result in results.results {
-            let entry: VerticalListContextResultsChatInputContextPanelEntry = .result(index, self.theme, result)
+            let entry: VerticalListContextResultsChatInputContextPanelEntry
+            if let widget = messageWidgetPreviewWidget(result.message, renderingEnabled: widgetsEnabled) {
+                entry = .widgetResult(index, self.theme, result, widget, self.widgetAppearance, self.widgetPreviewHeights[result.id])
+            } else {
+                entry = .result(index, self.theme, result)
+            }
             if resultIds.contains(entry.stableId) {
                 continue
             } else {
@@ -231,12 +279,12 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             index += 1
         }
         
-        prepareTransition(from: self.currentEntries, to: entries, results: results)
+        prepareTransition(from: self.currentEntries, to: entries, results: results, crossfade: crossfade)
     }
     
-    private func prepareTransition(from: [VerticalListContextResultsChatInputContextPanelEntry]?, to: [VerticalListContextResultsChatInputContextPanelEntry], results: ChatContextResultCollection) {
+    private func prepareTransition(from: [VerticalListContextResultsChatInputContextPanelEntry]?, to: [VerticalListContextResultsChatInputContextPanelEntry], results: ChatContextResultCollection, crossfade: Bool = true) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: from ?? [], to: to, engine: self.context.engine, actionSelected: { [weak self] in
+        let transition = preparedTransition(from: from ?? [], to: to, engine: self.context.engine, strings: self.strings, actionSelected: { [weak self] in
             // Resolved at tap time: an `.action` entry compares only its title, so a later answer with the same
             // button text keeps this closure, and the captured `results` would carry the old payload or bot.
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let results = strongSelf.currentProcessedResults {
@@ -249,13 +297,15 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             } else {
                 return false
             }
+        }, widgetHeightReported: { [weak self] resultId, height in
+            self?.widgetPreviewHeightReported(resultId: resultId, height: height)
         })
         self.currentEntries = to
-        self.enqueueTransition(transition, firstTime: firstTime)
+        self.enqueueTransition(transition, firstTime: firstTime, crossfade: crossfade)
     }
     
-    private func enqueueTransition(_ transition: VerticalListContextResultsChatInputContextPanelTransition, firstTime: Bool) {
-        enqueuedTransitions.append((transition, firstTime))
+    private func enqueueTransition(_ transition: VerticalListContextResultsChatInputContextPanelTransition, firstTime: Bool, crossfade: Bool) {
+        enqueuedTransitions.append((transition, firstTime, crossfade))
         
         if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
@@ -265,14 +315,17 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     }
     
     private func dequeueTransition() {
-        if let validLayout = self.validLayout, let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let validLayout = self.validLayout, let (transition, firstTime, crossfade) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
             if firstTime {
-            } else {
+            } else if crossfade {
                 options.insert(.AnimateTopItemPosition)
                 options.insert(.AnimateCrossfade)
+            } else {
+                // One row's new height: a plain re-layout. The top item's position animation would stop the list's
+                // scrolling and spring it, and the crossfade snapshots and fades the whole list.
             }
             
             var insets = UIEdgeInsets()
@@ -301,6 +354,18 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
                     strongSelf.listView.isHidden = false
                 }
             })
+        }
+    }
+    
+    /// A widget result's widget reported a new height: its row lays out again from it.
+    private func widgetPreviewHeightReported(resultId: String, height: CGFloat) {
+        guard self.widgetPreviewHeights[resultId] != height else {
+            return
+        }
+        self.widgetPreviewHeights[resultId] = height
+        if let currentProcessedResults = self.currentProcessedResults {
+            // One row's height: no crossfade, which would snapshot and fade the whole list over it.
+            self.updateInternalResults(currentProcessedResults, crossfade: false)
         }
     }
     
@@ -376,7 +441,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             }
         }
         
-        if self.theme !== interfaceState.theme, let currentProcessedResults = self.currentProcessedResults {
+        let widgetAppearance = ChatContextResultWidgetAppearance(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper, fontSize: interfaceState.fontSize, cornerRadius: interfaceState.bubbleCorners.mainRadius)
+        if self.widgetAppearance != widgetAppearance {
+            self.widgetAppearance = widgetAppearance
+            self.theme = interfaceState.theme
+            if let currentProcessedResults = self.currentProcessedResults {
+                self.updateInternalResults(currentProcessedResults)
+            }
+        } else if self.theme !== interfaceState.theme, let currentProcessedResults = self.currentProcessedResults {
             self.theme = interfaceState.theme
             
             let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []

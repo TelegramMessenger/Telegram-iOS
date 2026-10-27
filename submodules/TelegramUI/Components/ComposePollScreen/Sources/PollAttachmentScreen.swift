@@ -176,6 +176,21 @@ public func presentPollAttachmentScreen(
                     }
                 })
             }
+            controller.preparedCompletion = { _, messages, _, _, _, _, _, sendCompletion in
+                let _ = (messages
+                |> deliverOnMainQueue).start(next: { items in
+                    var references: [AnyMediaReference] = []
+                    for item in items {
+                        if case let .message(_, _, _, mediaReference, _, _, _, _, _, _) = item.message, let mediaReference {
+                            references.append(mediaReference)
+                        }
+                    }
+                    if !references.isEmpty {
+                        completion(references)
+                        sendCompletion()
+                    }
+                })
+            }
             controllerCompletion(controller, controller.mediaPickerContext)
             return true
         case .file, .audio:

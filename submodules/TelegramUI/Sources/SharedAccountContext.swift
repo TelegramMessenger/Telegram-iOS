@@ -20,6 +20,7 @@ import SettingsUI
 import PasscodeUI
 import UrlHandling
 import LegacyMediaPickerUI
+import LegacyComponents
 import LocalMediaResources
 import OverlayStatusController
 import AlertUI
@@ -36,6 +37,7 @@ import ChatPresentationInterfaceState
 import StorageUsageScreen
 import DebugSettingsUI
 import MediaPickerUI
+import ChatMediaEditorScreen
 import Photos
 import TextFormat
 import ChatTextLinkEditUI
@@ -64,6 +66,8 @@ import CollectibleItemInfoScreen
 import StickerPickerScreen
 import MediaEditor
 import MediaEditorScreen
+import SaveToCameraRoll
+import AVFoundation
 import BusinessIntroSetupScreen
 import TelegramNotices
 import BotSettingsScreen
@@ -2714,38 +2718,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatMessageAvatarHeader(timestamp: timestamp, peerId: peer.id, peer: peer, messageReference: nil, message: message, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, controllerInteraction: nil, storyStats: nil)
     }
     
-    public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
-            let legacyController = LegacyController(presentation: .navigation, theme: presentationData.theme)
-            legacyController.navigationPresentation = .modal
-            legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
-            
-            let controller = generator(legacyController.context)
-            legacyController.bind(controller: controller)
-            legacyController.deferScreenEdgeGestures = [.top]
-            controller.selectionBlock = { [weak legacyController] asset, _ in
-                if let asset = asset {
-                    let _ = (fetchPhotoLibraryImage(localIdentifier: asset.backingAsset.localIdentifier, thumbnail: false)
-                    |> deliverOnMainQueue).start(next: { imageAndFlag in
-                        if let (image, _) = imageAndFlag {
-                            completion(image)
-                        }
-                    })
-                    if let legacyController = legacyController {
-                        legacyController.dismiss()
-                    }
-                }
-            }
-            controller.dismissalBlock = { [weak legacyController] in
-                if let legacyController = legacyController {
-                    legacyController.dismiss()
-                }
-            }
-            present(legacyController)
-        })
-    }
-    
     public func displaySetPhoto(
         parentController: ViewController,
         context: AccountContext,
@@ -2773,15 +2745,149 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         completion: @escaping (UIImage?) -> Void,
         completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
     ) {
+        self.displaySetPhoto(
+            parentController: parentController,
+            context: context,
+            peer: peer,
+            canDelete: canDelete,
+            performDelete: performDelete,
+            options: SetPhotoOptions(forceDark: false, allowsEmojiAvatar: true),
+            completion: completion,
+            completedWithUploadingImage: completedWithUploadingImage
+        )
+    }
+    
+    public func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        canDelete: Bool,
+        performDelete: @escaping () -> Void,
+        options: SetPhotoOptions,
+        completion: @escaping (UIImage?) -> Void,
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
+    ) {
         PeerInfoScreenImpl.displaySetPhoto(
             parentController: parentController,
             context: context,
             peer: peer,
             canDelete: canDelete,
             performDelete: performDelete,
+            options: options,
             completion: completion,
             completedWithUploadingImage: completedWithUploadingImage
         )
+    }
+    
+    public func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any, @escaping () -> Void) -> Void) -> ViewController? {
+        guard largestImageRepresentation(image.representations) != nil else {
+            return nil
+        }
+        let mediaReference: AnyMediaReference = .message(message: MessageReference(message._asMessage()), media: image)
+        let videoRepresentation = image.videoRepresentations.last
+        let subjectKind = suggestedAvatarSubject(hasVideoRepresentation: videoRepresentation != nil)
+        
+        let imageSignal: Signal<(UIImage?, Bool), NoError> = fetchMediaData(context: context, userLocation: .other, mediaReference: mediaReference, forceVideo: false)
+        |> map { value, _ -> (UIImage?, Bool) in
+            if case let .data(data) = value, data.isComplete {
+                return (UIImage(contentsOfFile: data.path), true)
+            } else {
+                return (nil, false)
+            }
+        }
+        
+        let videoSignal: Signal<(String?, Bool), NoError>
+        if case .video = subjectKind {
+            videoSignal = fetchMediaData(context: context, userLocation: .other, mediaReference: mediaReference, forceVideo: true)
+            |> map { value, isImage -> (String?, Bool) in
+                if case let .data(data) = value, data.isComplete, !isImage {
+                    return (data.path, true)
+                } else {
+                    return (nil, false)
+                }
+            }
+        } else {
+            videoSignal = .single((nil, true))
+        }
+        
+        let temporaryVideoPath = Atomic<String?>(value: nil)
+        let subjectThumbnail = Atomic<UIImage?>(value: nil)
+        let removeTemporaryVideo: () -> Void = {
+            if let path = temporaryVideoPath.swap(nil) {
+                let _ = try? FileManager.default.removeItem(atPath: path)
+            }
+        }
+        
+        let fetchedSubject: Signal<MediaEditorScreenImpl.Subject?, NoError> = combineLatest(imageSignal, videoSignal)
+        |> filter { image, video in
+            return image.1 && video.1
+        }
+        |> take(1)
+        |> map { image, video -> MediaEditorScreenImpl.Subject? in
+            if let videoPath = video.0, let videoRepresentation {
+                var mp4Path = videoPath
+                if !videoPath.lowercased().hasSuffix(".mp4") {
+                    let tempPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
+                    let _ = try? FileManager.default.removeItem(atPath: tempPath)
+                    let _ = try? FileManager.default.copyItem(atPath: videoPath, toPath: tempPath)
+                    let _ = temporaryVideoPath.swap(tempPath)
+                    mp4Path = tempPath
+                }
+                let _ = subjectThumbnail.swap(image.0)
+                let duration = AVURLAsset(url: URL(fileURLWithPath: mp4Path)).duration.seconds
+                return .video(videoPath: mp4Path, thumbnail: image.0, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: videoRepresentation.dimensions, duration: duration, videoPositionChanges: [], additionalVideoPosition: .topLeft, fromCamera: false)
+            } else if let image = image.0 {
+                return .image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
+            } else {
+                return nil
+            }
+        }
+        |> deliverOnMainQueue
+        
+        let subjectPromise = Promise<MediaEditorScreenImpl.Subject?>()
+        
+        var transitionIn: MediaEditorScreenImpl.TransitionIn?
+        if let sourceView {
+            transitionIn = .gallery(MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(sourceView: sourceView, sourceRect: sourceView.bounds, sourceImage: nil))
+        }
+        let controller = MediaEditorScreenImpl(
+            context: context,
+            mode: .avatarEditor(clipStyle: .round),
+            subject: subjectPromise.get(),
+            transitionIn: transitionIn,
+            transitionOut: { [weak sourceView] finished, _ in
+                if !finished, let sourceView {
+                    return MediaEditorScreenImpl.TransitionOut(destinationView: sourceView, destinationRect: sourceView.bounds, destinationCornerRadius: 0.0)
+                }
+                return nil
+            },
+            completion: { results, commit in
+                guard var media = results.first?.media else {
+                    return
+                }
+                if case let .video(video, coverImage, values, duration, dimensions) = media {
+                    media = .video(video: video, coverImage: suggestedAvatarVideoCover(coverImage: coverImage, thumbnail: subjectThumbnail.with { $0 }), values: values, duration: duration, dimensions: dimensions)
+                }
+                completion(media, removeTemporaryVideo)
+                commit({})
+            } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
+        )
+        controller.avatarSuggestion = (senderName: senderName, isVideo: subjectKind == .video)
+        let fetchDisposable = MetaDisposable()
+        controller.cancelled = { _ in
+            fetchDisposable.dispose()
+            removeTemporaryVideo()
+        }
+        fetchDisposable.set(fetchedSubject.start(next: { [weak controller] subject in
+            if let subject {
+                subjectPromise.set(.single(subject))
+            } else {
+                Queue.mainQueue().justDispatch {
+                    controller?.requestCancel()
+                }
+            }
+        }))
+        return controller
     }
     
     public func makeInstantPageController(context: AccountContext, message: EngineMessage, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController? {
@@ -4063,6 +4169,64 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
     
+    public func makeChatCameraScreen(context: AccountContext, parameters: ChatCameraScreenParameters, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, transitionedOut: (() -> Void)?) -> ViewController {
+        let mappedTransitionIn = transitionIn.flatMap {
+            if let sourceView = $0.sourceView {
+                return CameraScreenImpl.TransitionIn(
+                    sourceView: sourceView,
+                    sourceRect: $0.sourceRect,
+                    sourceCornerRadius: $0.sourceCornerRadius,
+                    useFillAnimation: $0.useFillAnimation
+                )
+            } else {
+                return nil
+            }
+        }
+        let getCaptionPanelView = parameters.getCaptionPanelView
+        let flowParameters = ChatCameraFlowParameters(
+            camera: parameters.camera,
+            peer: parameters.peer,
+            isEditingMessage: parameters.isEditingMessage,
+            mediaGrouping: parameters.mediaGrouping,
+            initialCaption: parameters.initialCaption,
+            hasSchedule: parameters.hasSchedule,
+            sendPaidMessageStars: parameters.sendPaidMessageStars,
+            getCaptionPanelView: {
+                return getCaptionPanelView() as? TGCaptionPanelView
+            },
+            presentSchedulePicker: parameters.presentSchedulePicker,
+            presentTimerPicker: parameters.presentTimerPicker
+        )
+        let completion = parameters.completion
+        let controller = TelegramUI.makeChatCameraScreen(
+            context: context,
+            parameters: flowParameters,
+            holder: cameraHolder as? CameraHolder,
+            transitionIn: mappedTransitionIn,
+            transitionOut: { value in
+                return transitionOut(value).flatMap {
+                    if let destinationView = $0.destinationView {
+                        return CameraScreenImpl.TransitionOut(
+                            destinationView: destinationView,
+                            destinationRect: $0.destinationRect,
+                            destinationCornerRadius: $0.destinationCornerRadius,
+                            completion: $0.completion
+                        )
+                    } else {
+                        return nil
+                    }
+                }
+            },
+            completion: { _, messages, count, silently, scheduleTime, sendParameters, getAnimatedTransitionSource, sendCompletion in
+                completion(messages, count, silently, scheduleTime, sendParameters, getAnimatedTransitionSource, sendCompletion)
+            }
+        )
+        if let transitionedOut {
+            controller.transitionedOut = transitionedOut
+        }
+        return controller
+    }
+
     public func makeCameraScreen(context: AccountContext, mode: CameraScreenMode, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, completion: @escaping (Any, @escaping () -> Void) -> Void, transitionedOut: (() -> Void)?) -> ViewController {
         let mappedTransitionIn = transitionIn.flatMap {
             if let sourceView = $0.sourceView {
@@ -4114,8 +4278,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makeChatMediaGalleryController(context: AccountContext, parameters: ChatMediaGalleryParameters) -> ViewController? {
+        return makeChatMediaEditorGalleryController(context: context, parameters: parameters)
+    }
+    
+    public func makeWallpaperMediaEditor(context: AccountContext, asset: PHAsset, screenImage: UIImage, cropRect: CGRect, previousState: Any?, referenceView: UIView, apply: @escaping (UIImage?, Any?) -> Void, fullSizeApply: @escaping (UIImage?) -> Void, beginTransitionOut: @escaping (Bool) -> Void, finishTransitionOut: @escaping () -> Void) -> ViewController {
+        return WallpaperMediaEditorScreen(context: context, asset: asset, screenImage: screenImage, cropRect: cropRect, previousState: previousState, referenceView: referenceView, apply: apply, fullSizeApply: fullSizeApply, beginTransitionOut: beginTransitionOut, finishTransitionOut: finishTransitionOut)
+    }
+    
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
+    }
+    
+    public func makeQrCodePhotoPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController {
+        return qrCodeMediaPickerController(context: context, completion: completion)
+    }
+    
+    public func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([TelegramMediaResource]) -> Void) {
+        presentPassportAttachmentFlow(context: context, intent: intent, present: present, completion: completion)
     }
     
     public func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, selectionLimit: Int?, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, multipleCompletion: @escaping ([Any], Bool) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
@@ -4881,6 +5061,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
+        viaDeeplink: Bool,
         completion: @escaping (EnginePeer.Id?) -> Void
     ) async -> ViewController? {
         return await CreateBotScreen(
@@ -4889,6 +5070,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             initialUsername: initialUsername,
             initialTitle: initialTitle,
             openAutomatically: openAutomatically,
+            viaDeeplink: viaDeeplink,
             completion: completion
         )
     }

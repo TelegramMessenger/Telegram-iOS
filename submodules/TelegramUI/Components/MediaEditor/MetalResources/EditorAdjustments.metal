@@ -181,8 +181,12 @@ fragment half4 adjustmentsFragmentShader(RasterizerData in [[stage_in]],
         const float midpoint = 0.7;
         const float fuzziness = 0.62;
         float radDist = length(in.texCoord - 0.5) / sqrt(0.5);
-        float mag = easeInOutSigmoid(radDist * midpoint, fuzziness) * adjustments.vignette * 0.645;
-        result.rgb = half3(mix(pow(float3(result.rgb), float3(1.0 / (1.0 - mag))), float3(0.0), mag * mag));
+        float mag = easeInOutSigmoid(radDist * midpoint, fuzziness) * abs(adjustments.vignette) * 0.645;
+        if (adjustments.vignette > 0.0) {
+            result.rgb = half3(mix(pow(float3(result.rgb), float3(1.0 / (1.0 - mag))), float3(0.0), mag * mag));
+        } else {
+            result.rgb = half3(1.0) - half3(mix(pow(float3(half3(1.0) - result.rgb), float3(1.0 / (1.0 - mag))), float3(0.0), mag * mag));
+        }
     }
     
     if (abs(adjustments.grain) > epsilon) {

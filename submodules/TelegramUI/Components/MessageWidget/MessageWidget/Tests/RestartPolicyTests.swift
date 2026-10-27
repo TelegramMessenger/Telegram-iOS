@@ -9,7 +9,7 @@ class RestartPolicyTests: MessageWidgetTestCase {
 
     private func makeRegistry(_ policy: MessageWidgetRestartPolicy) -> MessageWidgetRegistry {
         let pool = self.pool!, turn = self.turn!
-        return MessageWidgetRegistry(factory: { source, theme, label, max, locale, storage, startsStopped in
+        return MessageWidgetRegistry(factory: { source, theme, label, max, locale, storage, _, _, startsStopped in
             MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, startsStopped: startsStopped, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
         }, restartPolicy: policy)
     }

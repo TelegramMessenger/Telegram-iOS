@@ -45,12 +45,6 @@
   .dice .hist span { display: inline-block; width: 26px; line-height: 22px; margin: 2px; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 700; background-color: rgba(127,127,127,0.14); }
   .dice .hist span.hi { background-color: rgba(52,199,89,0.22); }
 
-  .fx-fade { animation: tw-fade 220ms ease-out; }
-  .fx-pop { animation: tw-pop 260ms cubic-bezier(.34,1.56,.64,1); }
-  .fx-slide-up { animation: tw-slide-up 260ms cubic-bezier(.33,1,.68,1); }
-  @keyframes tw-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes tw-pop { from { transform: scale(0.94); opacity: 0.4; } to { transform: none; opacity: 1; } }
-  @keyframes tw-slide-up { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 </style>
 <div class="card pad dice" id="root">
   <div class="row between"><b>🎲 Dice</b>
@@ -92,11 +86,13 @@ function tweenTotal(to, ms) {
 }
 const $ = id => document.getElementById(id);
 const root = $('root'), tray = $('tray'), totalEl = $('total'), totalWrap = $('totalWrap'), rollingEl = $('rolling'), labelEl = $('label'), release = $('release'), relSpace = $('relSpace'), rollBtn = $('roll'), tip = $('tip'), hist = $('hist'), histFoot = $('histFoot'), histInfo = $('histInfo'), countEl = $('count'), sumEl = $('sum');
-function transition(kind) {
-  root.classList.remove('fx-fade', 'fx-pop', 'fx-slide-up');
-  requestAnimationFrame(() => root.classList.add('fx-' + kind));
+let panelAnimation = null;
+function transition(kind, target = tray) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('fx-fade', 'fx-pop', 'fx-slide-up'); });
 function replay(el, cls) { el.classList.remove(cls); requestAnimationFrame(() => el.classList.add(cls)); }
 
 let n = 2, faces = [3, 5, 1, 6, 2], spin = [0, 0, 0, 0, 0], drop = [1, 1, 1, 1, 1], held = [false, false, false, false, false];
@@ -185,7 +181,7 @@ function roll() {
 
 function land(final) {
   faces = final; rolling = false; rolled = true;
-  transition('pop');
+  transition('pop', sumEl);
   const s = sum();
   label = judge(faces.slice(0, n));
   history = [{ s, n, special: !!label }, ...history].slice(0, 12);
@@ -212,7 +208,7 @@ function handleAction(name, value) {
     n = next; label = '';
     tweenTotal(sum(), 400);
   } else if (name === 'clear') {
-    transition('slide-up');
+    transition('slide-up', hist);
     history = [];
   }
   paintTray(); paintRest();

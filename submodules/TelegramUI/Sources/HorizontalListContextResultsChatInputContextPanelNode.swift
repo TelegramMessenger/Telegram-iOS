@@ -21,16 +21,32 @@ import BatchVideoRendering
 import GlassBackgroundComponent
 import ComponentFlow
 import ComponentDisplayAdapters
+import ChatMessageWidgetBubbleContentNode
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
+    /// Drawn as a widget preview: another identity, so a change of how it draws is a delete and an insert.
+    let isWidget: Bool
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(result.id.hashValue)
+        hasher.combine(self.isWidget)
     }
     
     static func ==(lhs: ChatContextResultStableId, rhs: ChatContextResultStableId) -> Bool {
-        return lhs.result == rhs.result
+        return lhs.result == rhs.result && lhs.isWidget == rhs.isWidget
+    }
+}
+
+/// widget-sandbox v0.2 (v0.2 W3): a widget result's preview in the strip: the widget, how it draws, and the chat's width
+/// (its sent bubble's width follows it).
+private struct HorizontalListWidgetPreview: Equatable {
+    let widget: TelegramMediaWidget
+    let appearance: ChatContextResultWidgetAppearance
+    let chatWidth: CGFloat
+    
+    static func ==(lhs: HorizontalListWidgetPreview, rhs: HorizontalListWidgetPreview) -> Bool {
+        return lhs.widget.isEqual(to: rhs.widget) && lhs.appearance == rhs.appearance && lhs.chatWidth == rhs.chatWidth
     }
 }
 
@@ -38,20 +54,24 @@ private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparabl
     let index: Int
     let theme: PresentationTheme
     let result: ChatContextResult
+    let widgetPreview: HorizontalListWidgetPreview?
     
     var stableId: ChatContextResultStableId {
-        return ChatContextResultStableId(result: self.result)
+        return ChatContextResultStableId(result: self.result, isWidget: self.widgetPreview != nil)
     }
     
     static func ==(lhs: HorizontalListContextResultsChatInputContextPanelEntry, rhs: HorizontalListContextResultsChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.theme === rhs.theme && lhs.result == rhs.result
+        return lhs.index == rhs.index && lhs.theme === rhs.theme && lhs.result == rhs.result && lhs.widgetPreview == rhs.widgetPreview
     }
     
     static func <(lhs: HorizontalListContextResultsChatInputContextPanelEntry, rhs: HorizontalListContextResultsChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
+    func item(context: AccountContext, strings: PresentationStrings, batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
+        if let widgetPreview = self.widgetPreview {
+            return HorizontalListContextResultsChatInputPanelWidgetItem(strings: strings, result: self.result, widget: widgetPreview.widget, appearance: widgetPreview.appearance, chatWidth: widgetPreview.chatWidth, resultSelected: resultSelected)
+        }
         return HorizontalListContextResultsChatInputPanelItem(context: context, theme: self.theme, result: self.result, batchVideoContext: batchVideoContext, resultSelected: resultSelected)
     }
 }
@@ -74,12 +94,12 @@ private final class HorizontalListContextResultsOpaqueState {
     }
 }
 
-private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, context: AccountContext, batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> HorizontalListContextResultsChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, context: AccountContext, strings: PresentationStrings, batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> HorizontalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, batchVideoContext: batchVideoContext, resultSelected: resultSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, batchVideoContext: batchVideoContext, resultSelected: resultSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, strings: strings, batchVideoContext: batchVideoContext, resultSelected: resultSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, strings: strings, batchVideoContext: batchVideoContext, resultSelected: resultSelected), directionHint: nil) }
     
     return HorizontalListContextResultsChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates, entryCount: toEntries.count, hasMore: hasMore)
 }
@@ -96,6 +116,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var currentProcessedResults: ChatContextResultCollection?
     private var currentEntries: [HorizontalListContextResultsChatInputContextPanelEntry]?
     private var isLoadingMore = false
+    /// widget-sandbox v0.2 (v0.2 W3): how widget results draw and the chat's width, from the interface state once laid
+    /// out; nil until then (a widget result draws as any other result until the first layout).
+    private var widgetLayout: (appearance: ChatContextResultWidgetAppearance, chatWidth: CGFloat)?
     private let loadMoreDisposable = MetaDisposable()
     
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
@@ -353,8 +376,13 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         var entries: [HorizontalListContextResultsChatInputContextPanelEntry] = []
         var index = 0
         var resultIds = Set<ChatContextResultStableId>()
+        let widgetsEnabled = chatMessageWidgetRenderingEnabled()
         for result in results.results {
-            let entry = HorizontalListContextResultsChatInputContextPanelEntry(index: index, theme: self.theme, result: result)
+            var widgetPreview: HorizontalListWidgetPreview?
+            if let widgetLayout = self.widgetLayout, let widget = messageWidgetPreviewWidget(result.message, renderingEnabled: widgetsEnabled) {
+                widgetPreview = HorizontalListWidgetPreview(widget: widget, appearance: widgetLayout.appearance, chatWidth: widgetLayout.chatWidth)
+            }
+            let entry = HorizontalListContextResultsChatInputContextPanelEntry(index: index, theme: self.theme, result: result, widgetPreview: widgetPreview)
             if resultIds.contains(entry.stableId) {
                 continue
             } else {
@@ -365,7 +393,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, context: self.context, batchVideoContext: self.batchVideoContext, resultSelected: { [weak self] result, node, rect in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, context: self.context, strings: self.strings, batchVideoContext: self.batchVideoContext, resultSelected: { [weak self] result, node, rect in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 return interfaceInteraction.sendContextResult(results, result, node, rect)
             } else {
@@ -516,6 +544,14 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         if self.theme !== interfaceState.theme {
             self.theme = interfaceState.theme
             self.listView.backgroundColor = self.theme.list.plainBackgroundColor
+        }
+        
+        let widgetAppearance = ChatContextResultWidgetAppearance(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper, fontSize: interfaceState.fontSize, cornerRadius: interfaceState.bubbleCorners.mainRadius)
+        if self.widgetLayout?.appearance != widgetAppearance || self.widgetLayout?.chatWidth != size.width {
+            self.widgetLayout = (widgetAppearance, size.width)
+            if let currentProcessedResults = self.currentProcessedResults, currentProcessedResults.results.contains(where: { messageWidgetPreviewWidget($0.message, renderingEnabled: true) != nil }) {
+                self.updateInternalResults(currentProcessedResults)
+            }
         }
     }
     

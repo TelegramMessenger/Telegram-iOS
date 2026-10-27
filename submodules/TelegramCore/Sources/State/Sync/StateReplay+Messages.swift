@@ -492,17 +492,6 @@ extension ReplayContext {
         })
     }
     
-    func applyUpdateMessageWidgetData(_ messageId: MessageId, _ publicData: Data?, _ chatData: Data?) {
-        transaction.updateMessage(messageId, update: { message in
-            let media = message.media.map { media -> Media in
-                guard let widget = media as? TelegramMediaWidget else { return media }
-                return widget.withUpdatedData(publicData: publicData, chatData: chatData)
-            }
-            let forwardInfo = message.forwardInfo.map { StoreMessageForwardInfo(authorId: $0.author?.id, sourceId: $0.source?.id, sourceMessageId: $0.sourceMessageId, date: $0.date, authorSignature: $0.authorSignature, psaType: $0.psaType, flags: $0.flags) }
-            return .update(StoreMessage(id: message.id, customStableId: nil, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: StoreMessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: media))
-        })
-    }
-
     func applyUpdateExtendedMedia(_ messageId: MessageId, _ apiExtendedMedia: [Api.MessageExtendedMedia]) {
         transaction.updateMessage(messageId, update: { currentMessage in
             var media = currentMessage.media
@@ -534,6 +523,28 @@ extension ReplayContext {
         })
     }
     
+    /// widget-sandbox v0.2: the bot's edit of a stored message widget's state, nothing else of the message changed. The
+    /// edit is recorded (`recordMessageEdit`), so a fill already in flight stores it in its older answer's place, as an
+    /// `updateEditMessage` is. A message not stored, without a widget, or left as it was changes nothing.
+    func applyUpdateMessageWidgetData(_ messageId: MessageId, chatData: MessageWidgetDataChange, publicData: MessageWidgetDataChange, publicDataHash: Int64?) {
+        var edited: StoreMessage?
+        transaction.updateMessage(messageId, update: { currentMessage in
+            guard let widget = currentMessage.media.first(where: { $0 is TelegramMediaWidget }) as? TelegramMediaWidget else {
+                return .skip
+            }
+            let updated = widget.withUpdatedState(chatData: chatData, publicData: publicData, publicDataHash: publicDataHash)
+            if updated.isEqual(to: widget) {
+                return .skip
+            }
+            let message = storeMessageReplacingWidget(currentMessage, widget: updated)
+            edited = message
+            return .update(message)
+        })
+        if let edited {
+            transaction.recordMessageEdit(edited)
+        }
+    }
+
     func applyReportMessageDelivery(_ messageIds: [MessageId]) {
         reportMessageDelivery = Set(messageIds)
     }

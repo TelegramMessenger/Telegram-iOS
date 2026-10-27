@@ -27,6 +27,7 @@ import UndoUI
 import LottieComponent
 import ButtonComponent
 import ContextUI
+import DustEffect
 
 final class GiftsListView: UIView {
     private let context: AccountContext
@@ -70,6 +71,9 @@ final class GiftsListView: UIView {
             
     private var starsProducts: [ProfileGiftsContext.State.StarGift]?
     private var starsItems: [AnyHashable: (StarGiftReference?, ComponentView<Empty>)] = [:]
+    
+    private var deletedReferences = Set<StarGiftReference>()
+    private var dustEffectLayer: DustEffectLayer?
 
     private(set) var resultsAreEmpty = false
     private var filteredResultsAreEmpty = false
@@ -200,6 +204,12 @@ final class GiftsListView: UIView {
             }
             
             let _ = self.updateScrolling(transition: isFirstTime ? .immediate : .easeInOut(duration: 0.25))
+            
+            if !self.deletedReferences.isEmpty {
+                self.deletedReferences = self.deletedReferences.filter { reference in
+                    return state.gifts.contains(where: { $0.reference == reference })
+                }
+            }
             
             Queue.mainQueue().justDispatch {
                 self.onContentUpdated()
@@ -401,6 +411,38 @@ final class GiftsListView: UIView {
                     
     func loadMore() {
         self.profileGifts.loadMore()
+    }
+    
+    private func playDustEffect(itemView: UIView) {
+        guard itemView.window != nil, !itemView.bounds.isEmpty else {
+            itemView.removeFromSuperview()
+            return
+        }
+        let renderer = UIGraphicsImageRenderer(bounds: itemView.bounds)
+        let image = renderer.image { _ in
+            itemView.drawHierarchy(in: itemView.bounds, afterScreenUpdates: false)
+        }
+        
+        let dustEffectLayer: DustEffectLayer
+        if let current = self.dustEffectLayer {
+            dustEffectLayer = current
+        } else {
+            dustEffectLayer = DustEffectLayer()
+            dustEffectLayer.frame = self.visibleBounds ?? self.bounds
+            dustEffectLayer.zPosition = 10.0
+            dustEffectLayer.becameEmpty = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.dustEffectLayer?.removeFromSuperlayer()
+                self.dustEffectLayer = nil
+            }
+            self.dustEffectLayer = dustEffectLayer
+            self.layer.addSublayer(dustEffectLayer)
+        }
+        dustEffectLayer.addItem(frame: itemView.frame.offsetBy(dx: -dustEffectLayer.frame.minX, dy: -dustEffectLayer.frame.minY), image: image)
+        
+        itemView.removeFromSuperview()
     }
     
     @discardableResult
@@ -619,6 +661,13 @@ final class GiftsListView: UIView {
                                             }
                                             self.profileGifts.convertStarGift(reference: reference)
                                         },
+                                        deleteGift: { [weak self] reference in
+                                            guard let self else {
+                                                return
+                                            }
+                                            self.deletedReferences.insert(reference)
+                                            self.profileGifts.deleteStarGift(reference: reference)
+                                        },
                                         dropOriginalDetails: { [weak self] reference in
                                             guard let self else {
                                                 return .complete()
@@ -752,7 +801,10 @@ final class GiftsListView: UIView {
             if !validIds.contains(id) {
                 removeIds.append(id)
                 if let itemView = item.1.view {
-                    if !transition.animation.isImmediate {
+                    if let reference = item.0, self.deletedReferences.contains(reference) {
+                        self.deletedReferences.remove(reference)
+                        self.playDustEffect(itemView: itemView)
+                    } else if !transition.animation.isImmediate {
                         itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
                         itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                             itemView.removeFromSuperview()

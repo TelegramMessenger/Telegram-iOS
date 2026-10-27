@@ -50,7 +50,7 @@ private final class MediaPickerPhotoToolbarImageCache {
         if let image = self.images[key] {
             return image
         }
-        let image = generateQualityIcon(isPhoto: isPhoto, highQuality: highQuality, preset: preset, color: color)
+        let image = mediaPickerPhotoToolbarQualityIcon(isPhoto: isPhoto, highQuality: highQuality, preset: preset, color: color)
         self.images[key] = image
         return image
     }
@@ -81,7 +81,7 @@ private final class MediaPickerPhotoToolbarImageCache {
     }
 }
 
-private func generateQualityIcon(isPhoto: Bool, highQuality: Bool, preset: Int, color: UIColor) -> UIImage? {
+public func mediaPickerPhotoToolbarQualityIcon(isPhoto: Bool, highQuality: Bool, preset: Int, color: UIColor) -> UIImage? {
     let label: String
     if isPhoto {
         label = highQuality ? "HD" : "SD"
@@ -195,7 +195,38 @@ private func generateTimerIcon(value: Int, color: UIColor) -> UIImage? {
     return image
 }
 
-private final class MediaPickerPhotoToolbarComponent: Component {
+public func mediaPickerPhotoToolbarTabIconName(_ tab: TGPhotoEditorTab) -> String {
+    switch tab {
+    case .cropTab:
+        return "Media Editor/Crop"
+    case .toolsTab:
+        return "Media Editor/Adjustments"
+    case .rotateTab:
+        return "Editor/Rotate"
+    case .paintTab:
+        return "Media Editor/Pencil"
+    case .stickerTab:
+        return "Media Editor/AddSticker"
+    case .textTab:
+        return "Media Editor/AddText"
+    case .eraserTab:
+        return "Editor/Eraser"
+    case .mirrorTab:
+        return "Media Editor/Mirror"
+    case .aspectRatioTab:
+        return "Editor/AspectRatio"
+    case .tintTab:
+        return "Media Editor/Tint"
+    case .blurTab:
+        return "Media Editor/Blur"
+    case .curvesTab:
+        return "Media Editor/Curves"
+    default:
+        return "Media Editor/Crop"
+    }
+}
+
+public final class MediaPickerPhotoToolbarComponent: Component {
     let context: AccountContext
     let solidBackground: Bool
     let backButtonType: TGPhotoEditorBackButton
@@ -224,7 +255,7 @@ private final class MediaPickerPhotoToolbarComponent: Component {
     let doneLongPressed: ((Any?) -> Void)?
     let tabPressed: ((TGPhotoEditorTab) -> Void)?
 
-    init(
+    public init(
         context: AccountContext,
         solidBackground: Bool,
         backButtonType: TGPhotoEditorBackButton,
@@ -282,7 +313,7 @@ private final class MediaPickerPhotoToolbarComponent: Component {
         self.tabPressed = tabPressed
     }
 
-    static func ==(lhs: MediaPickerPhotoToolbarComponent, rhs: MediaPickerPhotoToolbarComponent) -> Bool {
+    public static func ==(lhs: MediaPickerPhotoToolbarComponent, rhs: MediaPickerPhotoToolbarComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -355,7 +386,7 @@ private final class MediaPickerPhotoToolbarComponent: Component {
         return true
     }
 
-    final class View: UIView {
+    public final class View: UIView {
         fileprivate let cancelButton = ComponentView<Empty>()
         fileprivate let doneButton = ComponentView<Empty>()
         private let doneButtonContextView = ContextControllerSourceView()
@@ -371,6 +402,20 @@ private final class MediaPickerPhotoToolbarComponent: Component {
         private var donePressed: (() -> Void)?
         private var doneLongPressed: ((Any?) -> Void)?
         private var tabPressed: ((TGPhotoEditorTab) -> Void)?
+
+        public func tabButtonFrame(_ tab: TGPhotoEditorTab, in coordinateView: UIView?) -> CGRect? {
+            guard let view = self.centerButtonViews[tab.rawValue]?.view, view.superview != nil else {
+                return nil
+            }
+            return view.convert(view.bounds, to: coordinateView)
+        }
+
+        public func doneButtonFrame(in coordinateView: UIView?) -> CGRect? {
+            guard self.doneButtonContextView.superview != nil else {
+                return nil
+            }
+            return self.doneButtonContextView.convert(self.doneButtonContextView.bounds, to: coordinateView)
+        }
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -421,7 +466,7 @@ private final class MediaPickerPhotoToolbarComponent: Component {
             return self.doneButtonContextView
         }
 
-        fileprivate func viewForTab(_ tab: TGPhotoEditorTab) -> UIView? {
+        public func viewForTab(_ tab: TGPhotoEditorTab) -> UIView? {
             return self.centerButtonViews[tab.rawValue]?.view
         }
 
@@ -773,34 +818,7 @@ private final class MediaPickerPhotoToolbarComponent: Component {
         }
 
         private func iconName(_ tab: TGPhotoEditorTab) -> String {
-            switch tab {
-            case .cropTab:
-                return "Media Editor/Crop"
-            case .toolsTab:
-                return "Media Editor/Adjustments"
-            case .rotateTab:
-                return "Editor/Rotate"
-            case .paintTab:
-                return "Media Editor/Pencil"
-            case .stickerTab:
-                return "Media Editor/AddSticker"
-            case .textTab:
-                return "Media Editor/AddText"
-            case .eraserTab:
-                return "Editor/Eraser"
-            case .mirrorTab:
-                return "Media Editor/Mirror"
-            case .aspectRatioTab:
-                return "Editor/AspectRatio"
-            case .tintTab:
-                return "Media Editor/Tint"
-            case .blurTab:
-                return "Media Editor/Blur"
-            case .curvesTab:
-                return "Media Editor/Curves"
-            default:
-                return "Media Editor/Crop"
-            }
+            return mediaPickerPhotoToolbarTabIconName(tab)
         }
 
         private func centerButtonFrames(tabs: [TGPhotoEditorTab], availableSize: CGSize, doneSize: CGSize, component: MediaPickerPhotoToolbarComponent) -> [UInt: CGRect] {
@@ -878,11 +896,11 @@ private final class MediaPickerPhotoToolbarComponent: Component {
         }
     }
 
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: .zero)
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
