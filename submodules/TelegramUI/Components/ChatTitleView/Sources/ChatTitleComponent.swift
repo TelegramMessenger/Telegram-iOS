@@ -1337,7 +1337,7 @@ public final class ChatTitleComponent: Component {
             self.expansionLayout = ExpansionLayout(titleFrame: titleFrame, statusFrame: subtitleViewFrame, statusTextSize: subtitleSize, containerFrame: component.displayBackground ? CGRect(origin: CGPoint(), size: containerFrame.size) : containerFrame)
             
             let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing)
-
+            
             if let leftIconFrame = leadingIconsLayout.lockIconFrame, let leftIconView = self.leftIcon?.view {
                 if leftIconView.superview == nil {
                     leftIconView.isUserInteractionEnabled = false
