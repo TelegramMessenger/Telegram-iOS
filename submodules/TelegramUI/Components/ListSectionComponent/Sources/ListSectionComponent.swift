@@ -495,6 +495,18 @@ public final class ListSectionComponent: Component {
             return self.contentView.itemViews[id]?.contents.view
         }
         
+        /// A header or footer shows text and VoiceOver reads it as one element, a header with the `.header` trait. A view
+        /// that holds something interactive (a link, a button) is left as it is.
+        fileprivate static func applyTextAccessibility(to view: UIView, traits: UIAccessibilityTraits) {
+            let content = view.accessibilityDisplayedContent()
+            if content.hasInteractiveContent || content.texts.isEmpty {
+                return
+            }
+            view.isAccessibilityElement = true
+            view.accessibilityLabel = content.texts.joined(separator: "\n")
+            view.accessibilityTraits = traits
+        }
+        
         func update(component: ListSectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
@@ -529,6 +541,7 @@ public final class ListSectionComponent: Component {
                         self.addSubview(headerView)
                     }
                     headerTransition.setFrame(view: headerView, frame: CGRect(origin: CGPoint(x: headerSideInset, y: contentHeight), size: headerSize))
+                    View.applyTextAccessibility(to: headerView, traits: .header)
                 }
                 contentHeight += headerSize.height
             } else {
@@ -622,6 +635,7 @@ public final class ListSectionComponent: Component {
                         self.addSubview(footerView)
                     }
                     footerTransition.setFrame(view: footerView, frame: CGRect(origin: CGPoint(x: headerSideInset, y: contentHeight), size: footerSize))
+                    View.applyTextAccessibility(to: footerView, traits: .staticText)
                 }
                 contentHeight += footerSize.height
             } else {

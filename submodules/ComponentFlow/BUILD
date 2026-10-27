@@ -20,7 +20,7 @@ swift_library(
     ],
 )
 
-# Tests for ComponentAccessibility and the accessibility parameter of the four button components. The test lib depends
+# Tests for ComponentAccessibility, the accessibility parameter of the four button components and the list row components. The test lib depends
 # on the component packages (they depend on ComponentFlow, not the other way round, so there is no cycle).
 swift_library(
     name = "ComponentFlowTestsLib",
@@ -36,6 +36,10 @@ swift_library(
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListSwitchItemComponent",
+        "//submodules/TelegramPresentationData",
     ],
 )
 

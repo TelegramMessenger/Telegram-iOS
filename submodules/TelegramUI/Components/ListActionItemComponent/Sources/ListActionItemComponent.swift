@@ -198,6 +198,7 @@ public final class ListActionItemComponent: Component {
     public let highlighting: Highlighting
     public let updateIsHighlighted: ((UIView, Bool) -> Void)?
     public let tag: AnyObject?
+    public let accessibility: ComponentAccessibility?
     
     public init(
         theme: PresentationTheme,
@@ -215,7 +216,8 @@ public final class ListActionItemComponent: Component {
         action: ((UIView) -> Void)?,
         highlighting: Highlighting = .default,
         updateIsHighlighted: ((UIView, Bool) -> Void)? = nil,
-        tag: AnyObject? = nil
+        tag: AnyObject? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.theme = theme
         self.style = style
@@ -233,6 +235,7 @@ public final class ListActionItemComponent: Component {
         self.highlighting = highlighting
         self.updateIsHighlighted = updateIsHighlighted
         self.tag = tag
+        self.accessibility = accessibility
     }
     
     public static func ==(lhs: ListActionItemComponent, rhs: ListActionItemComponent) -> Bool {
@@ -279,6 +282,9 @@ public final class ListActionItemComponent: Component {
             return false
         }
         if lhs.tag !== rhs.tag {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -450,6 +456,113 @@ public final class ListActionItemComponent: Component {
                 return
             }
             action(self)
+        }
+        
+        /// What activating the row does: the same call a tap on it makes. A switch row flips its switch through the
+        /// switch's own callback.
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            if case let .toggle(toggle) = component.accessory {
+                if !toggle.isInteractive || !toggle.isEnabled {
+                    return false
+                }
+                if let action = toggle.action {
+                    action(!toggle.isOn)
+                } else if let action = component.action {
+                    action(self)
+                } else {
+                    return false
+                }
+                return true
+            }
+            if let action = component.action {
+                action(self)
+                return true
+            }
+            if case let .check(check) = component.leftIcon, let toggle = check.toggle, check.isEnabled {
+                toggle()
+                return true
+            }
+            return false
+        }
+        
+        private func updateAccessibility(component: ListActionItemComponent) {
+            var isInteractive = false
+            if let icon = component.icon, icon.allowUserInteraction {
+                isInteractive = true
+            }
+            if case let .custom(customAccessory) = component.accessory, customAccessory.isInteractive {
+                isInteractive = true
+            }
+            if case let .custom(_, allowsInteraction) = component.leftIcon, allowsInteraction {
+                isInteractive = true
+            }
+            
+            let title = self.title.view?.accessibilityDisplayedContent()
+            let iconContent = self.icon?.view?.accessibilityDisplayedContent()
+            if title?.hasInteractiveContent == true || iconContent?.hasInteractiveContent == true {
+                isInteractive = true
+            }
+            
+            var accessibility = component.accessibility ?? ComponentAccessibility()
+            if isInteractive && component.accessibility == nil {
+                // The row holds controls that must stay reachable: leave its tree to VoiceOver as it is.
+                self.isAccessibilityElement = false
+                self.accessibilityElementsHidden = false
+                self.accessibilityCustomActions = nil
+                return
+            }
+            
+            var traits: UIAccessibilityTraits = []
+            if !accessibility.isHidden {
+                if accessibility.label == nil {
+                    let texts = title?.texts ?? []
+                    accessibility.label = texts.isEmpty ? nil : texts.joined(separator: ", ")
+                }
+                if case let .toggle(toggle) = component.accessory, toggle.style != .lock {
+                    let defaults = ComponentAccessibility.toggleDefaults(isOn: toggle.isOn)
+                    if accessibility.value == nil {
+                        accessibility.value = defaults.value
+                    }
+                    traits = defaults.traits
+                    if !toggle.isInteractive || !toggle.isEnabled {
+                        traits.formUnion(.notEnabled)
+                    }
+                } else {
+                    if accessibility.value == nil, let texts = iconContent?.texts, !texts.isEmpty {
+                        accessibility.value = texts.joined(separator: ", ")
+                    }
+                    if component.action != nil {
+                        traits = .button
+                    } else {
+                        traits = .staticText
+                    }
+                }
+                if case let .check(check) = component.leftIcon, check.isSelected {
+                    traits.formUnion(.selected)
+                }
+                if accessibility.label == nil {
+                    // Nothing to announce: the row stays out of the accessibility tree rather than being an empty element.
+                    self.isAccessibilityElement = false
+                    self.accessibilityElementsHidden = false
+                    self.accessibilityCustomActions = nil
+                    return
+                }
+            }
+            self.apply(accessibility: accessibility, defaultTraits: traits)
+            
+            if accessibility.isHidden || component.contextOptions.isEmpty {
+                self.accessibilityCustomActions = nil
+            } else {
+                self.accessibilityCustomActions = component.contextOptions.map { option in
+                    return UIAccessibilityCustomAction(name: option.title, actionHandler: { _ in
+                        option.action()
+                        return true
+                    })
+                }
+            }
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1059,6 +1172,8 @@ public final class ListActionItemComponent: Component {
             self.container.update(size: size, contextOptions: component.contextOptions, transition: transition)
             transition.setFrame(view: self.container, frame: CGRect(origin: CGPoint(), size: size))
             transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
+            
+            self.updateAccessibility(component: component)
             
             return size
         }
