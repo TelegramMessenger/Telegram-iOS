@@ -204,6 +204,8 @@ final class MediaGridZoomTransition {
     let camera: UIView?
     let cameraRole: CameraRole
     let cameraAlphaRange: (CGFloat, CGFloat)
+    var header: UIView?
+    var headerRole: CameraRole = .none
     private(set) var progress: CGFloat = 0.0
     private(set) var destination: CGFloat?
     var viewport: CGRect = .zero
@@ -279,7 +281,27 @@ final class MediaGridZoomTransition {
     }
 
     private func cameraTransform(_ progress: CGFloat, layer: CALayer) -> CATransform3D {
-        switch self.cameraRole {
+        return self.accessoryTransform(progress, role: self.cameraRole, layer: layer)
+    }
+
+    private func headerTransform(_ progress: CGFloat, layer: CALayer) -> CATransform3D {
+        return self.accessoryTransform(progress, role: self.headerRole, layer: layer)
+    }
+
+    private func headerAlpha(_ progress: CGFloat) -> CGFloat {
+        let clamped = min(1.0, max(0.0, progress))
+        switch self.headerRole {
+        case .outgoing:
+            return 1.0 - clamped
+        case .incoming:
+            return clamped
+        case .none, .moving:
+            return 1.0
+        }
+    }
+
+    private func accessoryTransform(_ progress: CGFloat, role: CameraRole, layer: CALayer) -> CATransform3D {
+        switch role {
         case .none, .moving:
             return CATransform3DIdentity
         case .outgoing:
@@ -325,6 +347,10 @@ final class MediaGridZoomTransition {
                 camera.layer.transform = self.cameraTransform(progress, layer: camera.layer)
             }
             camera.alpha = self.cameraAlpha(clamped)
+        }
+        if let header = self.header {
+            header.layer.transform = self.headerTransform(progress, layer: header.layer)
+            header.alpha = self.headerAlpha(progress)
         }
     }
 
@@ -389,6 +415,10 @@ final class MediaGridZoomTransition {
             }
             self.add(keyPath: "opacity", layer: camera.layer, from: NSNumber(value: Float(self.cameraAlpha(clampedFrom))), to: NSNumber(value: camera.layer.opacity))
         }
+        if let header = self.header {
+            self.add(keyPath: "transform", layer: header.layer, from: NSValue(caTransform3D: self.headerTransform(from, layer: header.layer)), to: NSValue(caTransform3D: header.layer.transform))
+            self.add(keyPath: "opacity", layer: header.layer, from: NSNumber(value: Float(self.headerAlpha(from))), to: NSNumber(value: header.layer.opacity))
+        }
         CATransaction.commit()
         self.springVelocity = 0.0
     }
@@ -452,6 +482,11 @@ final class MediaGridZoomTransition {
         if let camera = self.camera {
             for key in ["transform", "opacity", "position", "bounds"] {
                 camera.layer.removeAnimation(forKey: "mediaGridZoom.\(key)")
+            }
+        }
+        if let header = self.header {
+            for key in ["transform", "opacity"] {
+                header.layer.removeAnimation(forKey: "mediaGridZoom.\(key)")
             }
         }
     }

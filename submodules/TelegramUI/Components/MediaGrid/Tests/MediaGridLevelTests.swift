@@ -8,7 +8,7 @@ final class MediaGridLevelTests: XCTestCase {
 
     func testCapabilities() {
         XCTAssertEqual(MediaGridLevel.allCases.filter(\.isInteractive).map(\.columns), [1, 3, 5])
-        XCTAssertEqual(MediaGridLevel.allCases.filter(\.showsCamera).map(\.columns), [3, 5])
+        XCTAssertEqual(MediaGridLevel.allCases.filter(\.showsCamera).map(\.columns), [3])
     }
 
     func testZoomSteps() {

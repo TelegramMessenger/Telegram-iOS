@@ -29,6 +29,8 @@ protocol MediaPickerGridHost: AnyObject {
     var consumesEntries: Bool { get }
     var usesPickerSelectionGesture: Bool { get }
     var headerHeight: CGFloat { get set }
+    var isContentUnderBar: Bool { get }
+    var contentUnderBarChanged: (() -> Void)? { get set }
 
     var isHidden: Bool { get set }
     var isUserInteractionEnabled: Bool { get set }
@@ -47,14 +49,17 @@ protocol MediaPickerGridHost: AnyObject {
     func attach(to container: ASDisplayNode)
     func hostDidLoad()
     func updateFrame(_ frame: CGRect, transition: ContainedViewLayoutTransition)
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, itemSize: CGSize, itemSpacing: CGFloat, cutouts: [CGRect], transition: ContainedViewLayoutTransition, completion: @escaping () -> Void)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, itemSize: CGSize, itemSpacing: CGFloat, cutouts: [CGRect], hasCamera: Bool, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void)
     func apply(_ transaction: MediaPickerGridTransaction)
 
     func visibleContentOffset() -> GridNodeVisibleContentOffset
     func setContentOffset(_ contentOffset: CGPoint, animated: Bool)
     func scrollToTop(animated: Bool)
 
-    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration)
+    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration, extras: [MediaPickerGridExtraItem])
+    func updateMedia(_ items: [MediaPickerGridExtraItem])
+    func setAccessoryView(_ view: UIView, layout: @escaping (CGSize) -> Void)
+    func updateAccessoryFrame(_ view: UIView, frame: CGRect)
     func scrollingTag() -> Int32?
     func isCameraPreviewVisible(_ cameraView: UIView) -> Bool
     func cameraFrame(for rect: CGRect) -> CGRect
@@ -65,6 +70,7 @@ protocol MediaPickerGridHost: AnyObject {
     func forEachVisibleItem(_ f: (MediaPickerGridHostItem) -> Void)
     func visibleItem(identifier: String) -> MediaPickerGridHostItem?
     func item(at point: CGPoint) -> MediaPickerGridHostItem?
+    func defaultTransitionItem() -> MediaPickerGridHostItem?
 }
 
 extension MediaPickerGridItemNode: MediaPickerGridHostItem {
@@ -123,6 +129,11 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
     }
 
     var headerHeight: CGFloat = 0.0
+    var contentUnderBarChanged: (() -> Void)?
+
+    var isContentUnderBar: Bool {
+        return false
+    }
 
     var isHidden: Bool {
         get {
@@ -218,7 +229,7 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
         transition.updateFrame(node: self.gridNode, frame: frame)
     }
 
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, itemSize: CGSize, itemSpacing: CGFloat, cutouts: [CGRect], transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, itemSize: CGSize, itemSpacing: CGFloat, cutouts: [CGRect], hasCamera: Bool, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: insets, scrollIndicatorInsets: nil, preloadSize: preloadSize, type: .fixed(itemSize: itemSize, fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutouts: cutouts), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { _ in
             completion()
         })
@@ -240,7 +251,22 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
         self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.gridNode.scrollView.contentInset.top), animated: animated)
     }
 
-    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration) {
+    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration, extras: [MediaPickerGridExtraItem]) {
+    }
+
+    func updateMedia(_ items: [MediaPickerGridExtraItem]) {
+    }
+
+    private var accessoryLayout: ((CGSize) -> Void)?
+
+    func setAccessoryView(_ view: UIView, layout: @escaping (CGSize) -> Void) {
+        self.accessoryLayout = layout
+        self.gridNode.view.addSubview(view)
+    }
+
+    func updateAccessoryFrame(_ view: UIView, frame: CGRect) {
+        view.frame = frame
+        self.accessoryLayout?(frame.size)
     }
 
     func scrollingTag() -> Int32? {
@@ -295,5 +321,9 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
 
     func item(at point: CGPoint) -> MediaPickerGridHostItem? {
         return self.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode
+    }
+
+    func defaultTransitionItem() -> MediaPickerGridHostItem? {
+        return self.item(at: .zero)
     }
 }
