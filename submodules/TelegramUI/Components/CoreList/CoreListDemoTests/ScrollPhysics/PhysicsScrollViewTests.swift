@@ -20,4 +20,11 @@ final class PhysicsScrollViewTests: XCTestCase {
         let pan = PhysicsPanGestureRecognizer(target: nil, action: nil)
         XCTAssertTrue(pan.allowedScrollTypesMask.contains(.continuous))
     }
+
+    /// The recognizer must also accept discrete (mouse-wheel) indirect scroll: without it a wheel on
+    /// iPad never reaches the pan, and the chat history, which runs on this recognizer, does not scroll.
+    func testRecognizerAllowsDiscreteScrollType() {
+        let pan = PhysicsPanGestureRecognizer(target: nil, action: nil)
+        XCTAssertTrue(pan.allowedScrollTypesMask.contains(.discrete))
+    }
 }

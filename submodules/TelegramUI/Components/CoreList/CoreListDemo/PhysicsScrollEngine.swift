@@ -848,6 +848,10 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// content lets the recognizer transition naturally on the user's first movement. The catch runs
     /// even if UIKit silently no-ops the state write (safety net). Always returns `true`. Touch is
     /// unaffected — UIKit consults this overload only for scroll events.
+    ///
+    /// A mouse wheel (`.discrete`) takes this path too, its first notch standing in for the finger-down.
+    /// The forced `.began` and the translation baseline were measured on the trackpad only; how a wheel
+    /// notch landing on moving content behaves here is unverified on a device.
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
         guard gestureRecognizer.state == .possible, flight != nil || core.isDecelerating else { return true }
         catchMotionForFingerRest()
