@@ -108,7 +108,8 @@ profile) is in scope. *(My call: classification by screen; the builder lists bor
    - skip hidden, alpha ≈ 0, zero-size and fully clipped/off-screen subtrees (with an exception for list rows that
      `ListView` scrolling needs — the builder decides how many rows ListView exposes, following UIKit's table
      behaviour);
-   - keep the node's authored order; do not sort by frame unless the node opts in;
+   - keep the node's authored order: a node's own `accessibilityElements` override is used as-is (it bypasses the
+     frame sort, which only applies to auto-collected elements and stays);
    - no quadratic re-walk (compute child counts once per collection, cache per accessibility query or invalidate on
      layout);
    - plain UIViews and ComponentFlow views inside a node keep working (they are in the tree today through `super`).
