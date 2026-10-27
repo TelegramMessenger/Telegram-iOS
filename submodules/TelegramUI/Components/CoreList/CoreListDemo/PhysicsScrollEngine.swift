@@ -143,8 +143,9 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     public var offset: CGFloat { core.offset }
     public var contentHost: UIView { host }
 
-    /// Whether any driver is running. Exposed for the seam tests; production reads motion state
-    /// through `onFlightChanged` / the drag pair.
+    /// Whether any driver is running. Exposed for the seam tests and for MediaGrid, which reads it to
+    /// tell a fling from rest when it clamps, shifts or re-anchors the offset; the list reads motion
+    /// state through `onFlightChanged` / the drag pair.
     public var isDecelerating: Bool { flight != nil || core.isDecelerating }
     /// Where the current release projects to. Exists for the seam tests and for nothing in
     /// production, which plays the baked trajectory rather than the analytic landing.
@@ -801,7 +802,7 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// marker in the exact spot both bugs were introduced, and because the policy tests need
     /// something to call.
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+                                  shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
         return false
     }
 

@@ -6,7 +6,6 @@ final class MediaGridSelectionGesture: UIPanGestureRecognizer {
     var itemAt: (CGPoint) -> (Int, Bool)? = { _ in return nil }
     var updateSelection: (Int, Bool) -> Void = { _, _ in }
     var updateIsScrollEnabled: (Bool) -> Void = { _ in }
-    var began: () -> Void = {}
     var sideInset: CGFloat = 0.0
 
     private var processing = false
@@ -57,7 +56,6 @@ final class MediaGridSelectionGesture: UIPanGestureRecognizer {
             } else if abs(translation.x) > 8.0 {
                 self.processing = true
                 self.updateIsScrollEnabled(false)
-                self.began()
 
                 if let (_, selected) = self.itemAt(location) {
                     self.selecting = !selected

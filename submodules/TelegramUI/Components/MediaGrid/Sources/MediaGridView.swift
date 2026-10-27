@@ -79,7 +79,8 @@ public final class MediaGridView: UIView {
     private var isDragging = false
     private var isNotifyingScroll = false
     private var pendingContentOffset: CGFloat?
-    private var dateCache: [Int: Date?] = [:]
+    private(set) var dateCache: [Int: Date?] = [:]
+    static let dateCacheLimit = 256
     private var isLandscape: Bool?
     private var anchorsNextRebuild = false
     private var haltsNextRelease = false
@@ -276,6 +277,9 @@ public final class MediaGridView: UIView {
             return cached
         }
         let date = self.dataSource.date(at: index)
+        if self.dateCache.count >= MediaGridView.dateCacheLimit {
+            self.dateCache.removeAll(keepingCapacity: true)
+        }
         self.dateCache[index] = .some(date)
         return date
     }
@@ -303,7 +307,7 @@ public final class MediaGridView: UIView {
         self.dateCache = [:]
         self.motionSample = nil
         self.resetPrefetch()
-        self.activeLayoutLayer.reloadCells()
+        self.activeLayoutLayer.removeAllCells()
         self.updateGridLayout()
     }
 
@@ -541,7 +545,7 @@ public final class MediaGridView: UIView {
         guard self.isZoomEnabled, let target = self.level.zoomedIn else {
             return
         }
-        self.setLevel(target, animated: true, anchor: self.centreAnchor())
+        self.setLevel(target, animated: true, anchor: self.centerAnchor())
     }
 
     public func zoomOut() {
@@ -549,28 +553,28 @@ public final class MediaGridView: UIView {
         guard self.isZoomEnabled, let target = self.level.zoomedOut else {
             return
         }
-        self.setLevel(target, animated: true, anchor: self.centreAnchor())
+        self.setLevel(target, animated: true, anchor: self.centerAnchor())
     }
 
-    private func centreAnchor() -> MediaGridZoomAnchor? {
+    private func centerAnchor() -> MediaGridZoomAnchor? {
         return self.anchor(at: CGPoint(x: self.bounds.midX, y: self.bounds.midY))
     }
 
-    private func anchor(at centre: CGPoint) -> MediaGridZoomAnchor? {
+    private func anchor(at center: CGPoint) -> MediaGridZoomAnchor? {
         guard let layout = self.gridLayout, layout.count > 0, self.bounds.height > 0.0 else {
             return nil
         }
-        if let index = self.index(at: centre) {
-            return MediaGridZoomAnchor(index: index, pointInView: centre)
+        if let index = self.index(at: center) {
+            return MediaGridZoomAnchor(index: index, pointInView: center)
         }
         let host = self.engine.contentHost.frame
-        let strip = CGRect(x: 0.0, y: centre.y - host.minY + self.engine.offset, width: layout.geometry.width, height: max(1.0, self.bounds.height))
+        let strip = CGRect(x: 0.0, y: center.y - host.minY + self.engine.offset, width: layout.geometry.width, height: max(1.0, self.bounds.height))
         let range = layout.indexRange(intersecting: strip)
         let index = range.isEmpty ? (self.topVisibleIndex ?? layout.count - 1) : range.lowerBound
         guard let frame = self.frameForItem(at: index) else {
             return nil
         }
-        return MediaGridZoomAnchor(index: index, pointInView: CGPoint(x: frame.midX, y: centre.y))
+        return MediaGridZoomAnchor(index: index, pointInView: CGPoint(x: frame.midX, y: center.y))
     }
 
     private func relativePosition(of anchor: MediaGridZoomAnchor) -> CGPoint {
@@ -586,7 +590,7 @@ public final class MediaGridView: UIView {
         guard level != self.level else {
             return
         }
-        let resolvedAnchor = anchor ?? self.centreAnchor()
+        let resolvedAnchor = anchor ?? self.centerAnchor()
         guard let source = self.gridLayout, self.bounds.width > 0.0, self.bounds.height > 0.0, let resolvedAnchor, resolvedAnchor.index >= 0, resolvedAnchor.index < source.count else {
             self.level = level
             self.layoutLevel = level
@@ -775,7 +779,7 @@ public final class MediaGridView: UIView {
                 cameraAlpha = (1.0, 1.0)
             } else if !targetSlots.isEmpty, let frame = targetFrame {
                 cameraRole = .incoming
-                cameraAlpha = (sourceShows ? 1.0 : 0.0, 1.0)
+                cameraAlpha = (0.0, 1.0)
                 cameraView.layer.transform = CATransform3DIdentity
                 cameraView.frame = frame.offsetBy(dx: 0.0, dy: shift)
                 cameraView.isHidden = false
@@ -1310,7 +1314,14 @@ public final class MediaGridView: UIView {
             self.scrolled(to: self.engine.offset)
         }
         if let compensated = compensatedOffset {
-            self.engine.setOffset(min(compensated, self.maxOffset))
+            if self.isDragging || self.engine.isDecelerating {
+                self.engine.applyShift(compensated - self.engine.offset)
+                if self.isDragging {
+                    self.engine.reanchorDragToCurrentPosition()
+                }
+            } else {
+                self.engine.setOffset(min(compensated, self.maxOffset))
+            }
             self.scrolled(to: self.engine.offset)
         }
         if let pending = self.pendingContentOffset {
@@ -1318,7 +1329,7 @@ public final class MediaGridView: UIView {
             self.engine.setOffset(min(max(0.0, pending), self.maxOffset))
             self.scrolled(to: self.engine.offset)
         }
-        if !self.engine.isDecelerating && self.engine.offset > self.maxOffset {
+        if !self.isDragging && !self.engine.isDecelerating && self.engine.offset > self.maxOffset {
             self.engine.setOffset(self.maxOffset)
         }
         self.applyAspects()
@@ -1488,8 +1499,8 @@ public final class MediaGridView: UIView {
             }
         }
         if !plan.start.isEmpty {
-            let centre = layout.indexRange(intersecting: CGRect(x: 0.0, y: offset + self.bounds.height * 0.5, width: layout.geometry.width, height: 1.0)).lowerBound
-            MediaGridView.forEachPixelSizeRun(MediaGridView.nearestFirst(plan.start, centre: centre), layout: sizing) { indices, pixelSize in
+            let center = layout.indexRange(intersecting: CGRect(x: 0.0, y: offset + self.bounds.height * 0.5, width: layout.geometry.width, height: 1.0)).lowerBound
+            MediaGridView.forEachPixelSizeRun(MediaGridView.nearestFirst(plan.start, center: center), layout: sizing) { indices, pixelSize in
                 self.dataSource.startCaching(indices: indices, pixelSize: pixelSize, quality: self.prefetchQuality)
             }
         }
@@ -1512,13 +1523,13 @@ public final class MediaGridView: UIView {
         }
     }
 
-    static func nearestFirst(_ ascending: [Int], centre: Int) -> [Int] {
-        var upper = ascending.firstIndex(where: { $0 >= centre }) ?? ascending.count
+    static func nearestFirst(_ ascending: [Int], center: Int) -> [Int] {
+        var upper = ascending.firstIndex(where: { $0 >= center }) ?? ascending.count
         var lower = upper - 1
         var result: [Int] = []
         result.reserveCapacity(ascending.count)
         while lower >= 0 || upper < ascending.count {
-            if upper < ascending.count && (lower < 0 || ascending[upper] - centre <= centre - ascending[lower]) {
+            if upper < ascending.count && (lower < 0 || ascending[upper] - center <= center - ascending[lower]) {
                 result.append(ascending[upper])
                 upper += 1
             } else {

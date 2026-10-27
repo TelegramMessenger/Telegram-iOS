@@ -271,26 +271,26 @@ final class MediaGridMotionTests: XCTestCase {
         dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
         self.startFastScrub(view)
         let viewport = Set(self.viewportIndices(view))
-        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
-        view._testPinch(.began, center: centre)
-        view._testPinch(.changed, center: centre, scale: 0.95)
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: center)
+        view._testPinch(.changed, center: center, scale: 0.95)
         XCTAssertNotNil(view.transition)
         let before = dataSource.requests.count
-        view._testPinch(.ended, center: centre, scale: 1.0)
+        view._testPinch(.ended, center: center, scale: 1.0)
         view._testFinishAnimations()
         XCTAssertEqual(view.level, .three)
         let upgraded = Set(dataSource.requests[before...].filter { $0.quality == .full }.map { $0.index })
         XCTAssertTrue(viewport.isSubset(of: upgraded))
     }
 
-    func testNearestFirstOrdersByDistanceFromCentre() {
-        XCTAssertEqual(MediaGridView.nearestFirst([1, 2, 3, 8, 9, 10], centre: 5), [3, 8, 2, 9, 1, 10])
-        XCTAssertEqual(MediaGridView.nearestFirst([10, 11, 12], centre: 0), [10, 11, 12])
-        XCTAssertEqual(MediaGridView.nearestFirst([1, 2, 3], centre: 50), [3, 2, 1])
-        XCTAssertEqual(MediaGridView.nearestFirst([], centre: 3), [])
+    func testNearestFirstOrdersByDistanceFromCenter() {
+        XCTAssertEqual(MediaGridView.nearestFirst([1, 2, 3, 8, 9, 10], center: 5), [3, 8, 2, 9, 1, 10])
+        XCTAssertEqual(MediaGridView.nearestFirst([10, 11, 12], center: 0), [10, 11, 12])
+        XCTAssertEqual(MediaGridView.nearestFirst([1, 2, 3], center: 50), [3, 2, 1])
+        XCTAssertEqual(MediaGridView.nearestFirst([], center: 3), [])
     }
 
-    func testPrefetchStartsNearestTheViewportCentre() {
+    func testPrefetchStartsNearestTheViewportCenter() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 20_000.0)
         guard let layout = view.currentLayout else {
@@ -298,8 +298,8 @@ final class MediaGridMotionTests: XCTestCase {
             return
         }
         XCTAssertFalse(dataSource.startedCachingOrder.isEmpty)
-        let centre = layout.indexRange(intersecting: CGRect(x: 0.0, y: view.contentOffset + view.bounds.height * 0.5, width: view.bounds.width, height: 1.0)).lowerBound
-        let distances = dataSource.startedCachingOrder.last!.map { abs($0 - centre) }
+        let center = layout.indexRange(intersecting: CGRect(x: 0.0, y: view.contentOffset + view.bounds.height * 0.5, width: view.bounds.width, height: 1.0)).lowerBound
+        let distances = dataSource.startedCachingOrder.last!.map { abs($0 - center) }
         XCTAssertEqual(distances, distances.sorted())
     }
 

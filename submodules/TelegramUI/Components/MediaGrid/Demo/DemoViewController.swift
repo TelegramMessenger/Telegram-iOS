@@ -40,7 +40,7 @@ final class DemoViewController: UIViewController {
     private var autoPinchStart: CFTimeInterval?
     private var autoPinchState: MediaGridPinchState?
     private var autoPinchPair: String?
-    private var autoPinchCentre: CGPoint = .zero
+    private var autoPinchCenter: CGPoint = .zero
     private var autoPinchScale: CGFloat = 1.0
     private var autoPinchVelocity: CGFloat = 0.0
     private var autoPinchLastTimestamp: CFTimeInterval?
@@ -217,12 +217,12 @@ final class DemoViewController: UIViewController {
         }
         gridView.layoutIfNeeded()
         gridView.setContentOffset(gridView.contentHeight * 0.4)
-        self.autoPinchCentre = CGPoint(x: gridView.bounds.midX, y: gridView.bounds.midY)
+        self.autoPinchCenter = CGPoint(x: gridView.bounds.midX, y: gridView.bounds.midY)
         self.autoPinchStart = nil
         self.autoPinchScale = 1.0
         self.autoPinchLastTimestamp = nil
         self.autoPinchPair = nil
-        self.autoPinchState = MediaGridPinchState(startLevel: gridView.level, anchor: MediaGridZoomAnchor(index: 0, pointInView: self.autoPinchCentre))
+        self.autoPinchState = MediaGridPinchState(startLevel: gridView.level, anchor: MediaGridZoomAnchor(index: 0, pointInView: self.autoPinchCenter))
         let delay = DemoViewController.argument("-pinchDelay").flatMap(Double.init) ?? 0.0
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self, self.autoPinchLink == nil else {
@@ -261,7 +261,7 @@ final class DemoViewController: UIViewController {
         let deepest = log(3.0 / 31.0)
         if elapsed == 0.0 {
             self.frameMonitor.reset()
-            gridView.debugDrivePinch(.began, center: self.autoPinchCentre, scale: 1.0, velocity: 0.0)
+            gridView.debugDrivePinch(.began, center: self.autoPinchCenter, scale: 1.0, velocity: 0.0)
             return
         }
         let exponent: CGFloat
@@ -271,7 +271,7 @@ final class DemoViewController: UIViewController {
             exponent = deepest * CGFloat(1.0 - (elapsed - outDuration) / backDuration)
         } else {
             self.reportAutoPinchPair()
-            gridView.debugDrivePinch(.ended, center: self.autoPinchCentre, scale: 1.0, velocity: 0.0)
+            gridView.debugDrivePinch(.ended, center: self.autoPinchCenter, scale: 1.0, velocity: 0.0)
             self.autoPinchLink?.invalidate()
             self.autoPinchLink = nil
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -294,7 +294,7 @@ final class DemoViewController: UIViewController {
             self.autoPinchPair = pair
         }
         let driveStart = CACurrentMediaTime()
-        gridView.debugDrivePinch(.changed, center: self.autoPinchCentre, scale: scale, velocity: self.autoPinchVelocity)
+        gridView.debugDrivePinch(.changed, center: self.autoPinchCenter, scale: scale, velocity: self.autoPinchVelocity)
         CATransaction.flush()
         self.autoPinchDriveWorst = max(self.autoPinchDriveWorst, CACurrentMediaTime() - driveStart)
         #endif

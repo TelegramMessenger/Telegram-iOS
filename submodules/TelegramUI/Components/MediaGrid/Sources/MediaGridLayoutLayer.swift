@@ -105,10 +105,6 @@ final class MediaGridLayoutLayer: CALayer {
         }
     }
 
-    func reloadCells() {
-        self.removeAllCells()
-    }
-
     func removeAllCells() {
         for (_, cell) in self.visibleCells {
             self.pool.enqueue(cell)
