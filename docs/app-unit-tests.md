@@ -46,6 +46,10 @@ title and its avatar, so a Saved Messages token draws the Saved Messages icon ra
 `PresentationStrings` cannot be built in a test process (it asserts without the app bundle's
 `PresentationStrings.data`), so the alias is strings-free and the title stays in `ContactMultiselectionController`.
 
+`//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests` covers `chatTitleLeadingIconsLayout`, the
+placement of the icons before a chat header's title: a secret chat's lock next to the name, and a third-party
+verification icon to the left of the lock, never on top of it.
+
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests` covers `avatarGalleryUserEntries`, the one builder both
 user-gallery paths use. Slot 0 is the peer record's current photo, but `photos.getUserPhotos` keeps its order when an
 older photo is made the main one again (the server swaps a copy under a **new photo id** into that photo's place), so
