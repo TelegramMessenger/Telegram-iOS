@@ -35,9 +35,16 @@ private func visitText(_ text: RichText, _ visit: (String, Int64?) -> Void) {
     }
 }
 
+// A block-level text unit (a paragraph, a title, a caption, a cell, a button label, a list item) starts on its
+// own line: a plain-text rendering of the page never joins its first character to the previous unit's last one.
+private func visitUnit(_ text: RichText, _ visit: (String, Int64?) -> Void) {
+    visit("\n", nil)
+    visitText(text, visit)
+}
+
 private func visitText(_ caption: InstantPageCaption, _ visit: (String, Int64?) -> Void) {
-    visitText(caption.text, visit)
-    visitText(caption.credit, visit)
+    visitUnit(caption.text, visit)
+    visitUnit(caption.credit, visit)
 }
 
 private func visitText(_ blocks: [InstantPageBlock], _ visit: (String, Int64?) -> Void) {
@@ -46,18 +53,18 @@ private func visitText(_ blocks: [InstantPageBlock], _ visit: (String, Int64?) -
         case .unsupported, .formula, .divider, .anchor, .channelBanner:
             break
         case let .title(text), let .subtitle(text), let .header(text), let .subheader(text), let .paragraph(text), let .footer(text), let .kicker(text), let .thinking(text):
-            visitText(text, visit)
+            visitUnit(text, visit)
         case let .authorDate(author, _):
-            visitText(author, visit)
+            visitUnit(author, visit)
         case let .heading(text, _), let .preformatted(text, _):
-            visitText(text, visit)
+            visitUnit(text, visit)
         case let .list(items, _):
             for item in items {
                 switch item {
                 case .unknown:
                     break
                 case let .text(text, _, _):
-                    visitText(text, visit)
+                    visitUnit(text, visit)
                 case let .blocks(blocks, _, _):
                     visitText(blocks, visit)
                 }
@@ -66,13 +73,13 @@ private func visitText(_ blocks: [InstantPageBlock], _ visit: (String, Int64?) -
             visitText(blocks, visit)
             visitText(caption, visit)
         case let .pullQuote(text, caption):
-            visitText(text, visit)
+            visitUnit(text, visit)
             visitText(caption, visit)
         case let .image(_, caption, _, _, _), let .video(_, caption, _, _, _), let .audio(_, caption), let .document(_, caption), let .webEmbed(_, _, _, caption, _, _, _), let .map(_, _, _, _, caption):
             visitText(caption, visit)
         case let .buttonRow(_, buttons):
             for button in buttons {
-                visitText(button.text, visit)
+                visitUnit(button.text, visit)
             }
         case let .cover(block):
             visitText([block], visit)
@@ -80,19 +87,19 @@ private func visitText(_ blocks: [InstantPageBlock], _ visit: (String, Int64?) -
             visitText(blocks, visit)
             visitText(caption, visit)
         case let .table(title, rows, _, _, _):
-            visitText(title, visit)
+            visitUnit(title, visit)
             for row in rows {
                 for cell in row.cells {
                     if let text = cell.text {
-                        visitText(text, visit)
+                        visitUnit(text, visit)
                     }
                 }
             }
         case let .details(title, blocks, _):
-            visitText(title, visit)
+            visitUnit(title, visit)
             visitText(blocks, visit)
         case let .relatedArticles(title, _):
-            visitText(title, visit)
+            visitUnit(title, visit)
         }
     }
 }
@@ -112,8 +119,8 @@ public extension InstantPage {
     }
 
     /// The page's text in reading order: each plain run (`customEmojiFileId` nil), and each custom emoji as
-    /// its alt text with its file id, repeats included. A plain-text rendering of the page, such as a rich
-    /// message's notification body, is made of these runs.
+    /// its alt text with its file id, repeats included, with a "\n" run before each block-level text unit.
+    /// A plain-text rendering of the page, such as a rich message's notification body, is made of these runs.
     var customEmojiTextRuns: [(text: String, customEmojiFileId: Int64?)] {
         var result: [(text: String, customEmojiFileId: Int64?)] = []
         visitText(self.blocks, { text, fileId in

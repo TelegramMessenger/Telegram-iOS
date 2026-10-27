@@ -37,8 +37,9 @@ final class InstantPageCustomEmojiTests: XCTestCase {
             .paragraph(.concat([.textCustomEmoji(fileId: 1, alt: "🙂"), .plain(" a "), .bold(.textCustomEmoji(fileId: 2, alt: "🔥"))])),
             .list(items: [.text(.textCustomEmoji(fileId: 1, alt: "🙂"), nil, nil)], ordered: false)
         ]).customEmojiTextRuns
-        XCTAssertEqual(result.map(\.customEmojiFileId), [1, nil, 2, 1])
-        XCTAssertEqual(result.map(\.text), ["🙂", " a ", "🔥", "🙂"])
+        // Each block-level text unit (the paragraph, the list item) starts with a "\n" run.
+        XCTAssertEqual(result.map(\.customEmojiFileId), [nil, 1, nil, 2, nil, 1])
+        XCTAssertEqual(result.map(\.text), ["\n", "🙂", " a ", "🔥", "\n", "🙂"])
     }
 
     /// A rendered rich message carries its stored emoji files as associated media, which is where the chat list

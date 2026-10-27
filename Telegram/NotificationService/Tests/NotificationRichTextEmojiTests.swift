@@ -77,6 +77,15 @@ final class NotificationRichTextEmojiTests: XCTestCase {
         XCTAssertEqual(ranges("x😀😀😀", [text("x😀"), emoji(1, "😀😀")]), [])
     }
 
+    func testBlocksDoNotRunTogether() {
+        // As the page walk emits them: a "\n" run before each block. "😀" | custom "😀", custom "😀😀", "😀": only the
+        // first custom emoji's place is certain.
+        XCTAssertEqual(ranges("😀\n😀😀😀😀", [text("\n"), text("😀"), text("\n"), emoji(2, "😀"), emoji(1, "😀😀"), text("😀")]), ["2:😀@3"])
+        // A block starting with a combining mark must not hide the previous block's plain 👍 from the count.
+        let runs = [text("\n"), text("x 👍"), text("\n"), text("\u{301}y "), emoji(1, "👍"), text("\n"), emoji(1, "👍")]
+        XCTAssertEqual(ranges("x 👍\n\u{301}y 👍", runs), [])
+    }
+
     func testSearchStartsAfterTheAuthorPrefix() {
         XCTAssertEqual(ranges("Ann 🙂: 🙂", from: 7, [emoji(1, "🙂")]), ["1:🙂@8"])
     }

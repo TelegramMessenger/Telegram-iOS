@@ -15,6 +15,8 @@ import Foundation
 /// - all of them are the same custom emoji: each occurrence in the body is that emoji, provided the body has no more
 ///   of them than the page;
 /// - otherwise the body must have exactly the page's occurrences, taken in order, and the custom ones get their emoji.
+/// The runs put each block-level text unit on its own line, so text never fuses across units in the page; the body may
+/// separate them any way.
 /// Anything else stays plain rather than put a glyph on a plain emoji or on another custom one, and so do two mapped
 /// emoji that overlap in the body. An emoji with an empty alt text is skipped.
 func notificationRichTextCustomEmoji(body: String, from location: Int, runs: [(text: String, customEmojiFileId: Int64?)]) -> [(range: Range<Int>, fileId: Int64)] {
@@ -47,9 +49,10 @@ func notificationRichTextCustomEmoji(body: String, from location: Int, runs: [(t
     var offset = 0
     for run in runs {
         let length = (run.text as NSString).length
-        if let fileId = run.customEmojiFileId, !run.text.isEmpty {
+        // An alt text is an emoji; a long one, or too many distinct ones, would only cost the extension's time.
+        if let fileId = run.customEmojiFileId, !run.text.isEmpty, length <= 64 {
             customSpans[offset ..< offset + length] = (fileId, run.text)
-            if !alts.contains(run.text) {
+            if !alts.contains(run.text) && alts.count < 64 {
                 alts.append(run.text)
             }
         }
@@ -84,9 +87,24 @@ func notificationRichTextCustomEmoji(body: String, from location: Int, runs: [(t
         }
     }
     // Two alt texts can still claim overlapping text in a body that differs from the page; neither is then certain.
-    let candidates = result
-    result = candidates.filter { item in
-        return !candidates.contains(where: { other in other.range != item.range && other.range.overlaps(item.range) })
+    // Sorted by start, every member of a run of chained overlaps overlaps another member, so only lone ones stay.
+    var mapped: [(range: Range<Int>, fileId: Int64)] = []
+    var cluster: [(range: Range<Int>, fileId: Int64)] = []
+    var clusterEnd = 0
+    for item in result.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+        if !cluster.isEmpty && item.range.lowerBound < clusterEnd {
+            cluster.append(item)
+            clusterEnd = max(clusterEnd, item.range.upperBound)
+        } else {
+            if cluster.count == 1 {
+                mapped.append(cluster[0])
+            }
+            cluster = [item]
+            clusterEnd = item.range.upperBound
+        }
     }
-    return result.sorted(by: { $0.range.lowerBound < $1.range.lowerBound })
+    if cluster.count == 1 {
+        mapped.append(cluster[0])
+    }
+    return mapped
 }
