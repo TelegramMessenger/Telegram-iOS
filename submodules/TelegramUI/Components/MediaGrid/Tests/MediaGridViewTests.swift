@@ -1101,6 +1101,153 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertLessThanOrEqual(dataSource.requestCount - requests, transition.outgoing.visibleCells.count + transition.incoming.visibleCells.count)
     }
 
+    private func assertVisibleCellsBound(_ view: MediaGridView, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        guard let transition = view.transition else {
+            XCTFail("no transition \(message)", file: file, line: line)
+            return
+        }
+        let progress = transition.progress
+        let layers: [(MediaGridLayoutLayer, MediaGridLayout, CGRect)] = [
+            (transition.incoming, transition.targetLayout, transition.incomingRect(at: progress)),
+            (transition.outgoing, transition.sourceLayout, transition.outgoingRect(at: progress))
+        ]
+        for (layer, layout, rect) in layers where layer.opacity > 0.0 {
+            let needed = layout.indexRange(intersecting: rect)
+            let bound = layer.visibleRange
+            XCTAssertTrue(needed.isEmpty || (bound.lowerBound <= needed.lowerBound && bound.upperBound >= needed.upperBound), "\(message): needed \(needed) bound \(bound) progress \(progress)", file: file, line: line)
+        }
+    }
+
+    private func pinchGradually(_ view: MediaGridView, centre: CGPoint, to scale: CGFloat) {
+        var current: CGFloat = 1.0
+        let step: CGFloat = scale < 1.0 ? 0.97 : 1.0 / 0.97
+        while (scale < 1.0 && current * step > scale) || (scale > 1.0 && current * step < scale) {
+            current *= step
+            view._testPinch(.changed, center: centre, scale: current)
+        }
+        view._testPinch(.changed, center: centre, scale: scale)
+    }
+
+    func testBandBindsEveryVisibleCellAtEdgeAnchors() {
+        let bands: [(String, [CGFloat])] = [
+            ("L5", [3.0 / 5.0 * pow(5.0 / 15.0, 0.049)]),
+            ("L15", [3.0 / 15.0 * pow(15.0 / 31.0, 0.049)]),
+            ("L5 back", [3.0 / 5.0 * pow(5.0 / 15.0, 0.3), pow(3.0 / 5.0, 0.951)]),
+            ("L15 back", [3.0 / 15.0 * pow(15.0 / 31.0, 0.3), 3.0 / 5.0 * pow(5.0 / 15.0, 0.951)])
+        ]
+        for (name, path) in bands {
+            for fraction in [0.1, 0.5, 0.9] as [CGFloat] {
+                let (view, _) = self.makeView(count: 100_000)
+                view.setContentOffset(20_000.0)
+                let centre = CGPoint(x: view.bounds.midX, y: view.bounds.height * fraction)
+                view._testPinch(.began, center: centre)
+                var scale: CGFloat = 1.0
+                for target in path {
+                    let step: CGFloat = target < scale ? 0.97 : 1.0 / 0.97
+                    while (target < scale && scale * step > target) || (target > scale && scale * step < target) {
+                        scale *= step
+                        view._testPinch(.changed, center: centre, scale: scale)
+                    }
+                    scale = target
+                    view._testPinch(.changed, center: centre, scale: scale)
+                }
+                guard let transition = view.transition else {
+                    XCTFail("no transition \(name)")
+                    continue
+                }
+                XCTAssertTrue(transition.progress > 1.0 || transition.progress < 0.0, "\(name) not in band: \(transition.progress)")
+                self.assertVisibleCellsBound(view, "\(name) f=\(fraction)")
+            }
+        }
+    }
+
+    func testSingleFrameJumpIntoBandBindsVisibleCells() {
+        for fraction in [0.1, 0.9] as [CGFloat] {
+            let (view, _) = self.makeView(count: 100_000)
+            view.setContentOffset(20_000.0)
+            let centre = CGPoint(x: view.bounds.midX, y: view.bounds.height * fraction)
+            view._testPinch(.began, center: centre)
+            view._testPinch(.changed, center: centre, scale: pow(3.0 / 5.0, 0.6))
+            view._testPinch(.changed, center: centre, scale: 3.0 / 5.0 * pow(5.0 / 15.0, 0.045))
+            XCTAssertGreaterThan(view.transition?.progress ?? 0.0, 1.0)
+            self.assertVisibleCellsBound(view, "f=\(fraction)")
+        }
+    }
+
+    func testReleaseInBandFollowsFling() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        var levels: [MediaGridLevel] = []
+        view.onLevelChanged = { levels.append($0) }
+        view._testPinch(.began, center: centre)
+        let band = 3.0 / 5.0 * pow(5.0 / 15.0, 0.03)
+        self.pinchGradually(view, centre: centre, to: band)
+        XCTAssertEqual(view.transition?.targetLevel, .five)
+        XCTAssertGreaterThan(view.transition?.progress ?? 0.0, 1.0)
+        view._testPinch(.ended, center: centre, scale: band, velocity: -2.0)
+        XCTAssertEqual(view.transition?.sourceLevel, .five)
+        XCTAssertEqual(view.transition?.targetLevel, .fifteen)
+        XCTAssertEqual(view.transition?.destination, 1.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertEqual(levels, [.fifteen])
+
+        view.setLevel(.three, animated: false)
+        levels = []
+        view._testPinch(.began, center: centre)
+        self.pinchGradually(view, centre: centre, to: 3.0 / 5.0 * pow(5.0 / 15.0, 0.3))
+        let back = pow(3.0 / 5.0, 0.97)
+        view._testPinch(.changed, center: centre, scale: back)
+        XCTAssertEqual(view.transition?.sourceLevel, .five)
+        XCTAssertEqual(view.transition?.targetLevel, .fifteen)
+        XCTAssertLessThan(view.transition?.progress ?? 1.0, 0.0)
+        view._testPinch(.ended, center: centre, scale: back, velocity: 2.0)
+        XCTAssertEqual(view.transition?.targetLevel, .three)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .three)
+        XCTAssertEqual(levels, [])
+
+        view._testPinch(.began, center: centre)
+        self.pinchGradually(view, centre: centre, to: band)
+        view._testPinch(.ended, center: centre, scale: band, velocity: 0.0)
+        XCTAssertEqual(view.transition?.targetLevel, .five)
+        XCTAssertEqual(view.transition?.destination, 1.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
+    }
+
+    func testBandReleaseInterruptKeepsGeometry() {
+        let (view, window) = self.makeWindowedView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        let band = 3.0 / 5.0 * pow(5.0 / 15.0, 0.04)
+        self.pinchGradually(view, centre: centre, to: band)
+        guard let transition = view.transition else {
+            XCTFail("no transition")
+            return
+        }
+        let extrapolated = transition.progress
+        XCTAssertGreaterThan(extrapolated, 1.0)
+        view._testPinch(.ended, center: centre, scale: band, velocity: 0.0)
+        XCTAssertEqual(transition.destination, 1.0)
+        let spring = transition.incoming.animation(forKey: "mediaGridZoom.opacity") as? CASpringAnimation
+        XCTAssertLessThanOrEqual((spring?.fromValue as? NSNumber)?.floatValue ?? 2.0, 1.0)
+        CATransaction.flush()
+        self.spin(0.01)
+        view._testPinch(.began, center: centre)
+        XCTAssertTrue(view.transition === transition)
+        XCTAssertEqual(transition.progress, extrapolated, accuracy: 0.02)
+        view._testPinch(.changed, center: centre, scale: 1.0)
+        XCTAssertTrue(view.transition === transition)
+        XCTAssertEqual(transition.progress, extrapolated, accuracy: 0.02)
+        view._testPinch(.ended, center: centre, scale: 1.0, velocity: 0.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
+        window.isHidden = true
+    }
+
     func testPinchIgnoredWhenZoomDisabled() {
         let (view, _) = self.makeView(count: 100_000)
         view.isZoomEnabled = false

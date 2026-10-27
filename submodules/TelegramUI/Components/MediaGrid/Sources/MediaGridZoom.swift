@@ -81,7 +81,7 @@ public struct MediaGridPinchState {
         self.anchor = anchor
         let from = MediaGridPinchState.position(of: startLevel)
         let to = MediaGridPinchState.position(of: target)
-        self.startPosition = from + (to - from) * min(1.0, max(0.0, startProgress))
+        self.startPosition = from + (to - from) * min(1.25, max(-0.25, startProgress))
         self.rawPosition = self.startPosition
         self.current = (startLevel, startLevel, 0.0)
         self.current = self.resolve(self.startPosition)
@@ -304,9 +304,20 @@ final class MediaGridZoomTransition {
 
     var presentedProgress: CGFloat {
         guard self.isAnimating, let presentation = self.incoming.presentation() else {
-            return min(1.0, max(0.0, self.progress))
+            return self.clampedExtrapolation(self.progress)
         }
-        return min(1.0, max(0.0, CGFloat(presentation.opacity)))
+        let start = 1.0 / self.scale
+        guard abs(1.0 - start) > 1e-6 else {
+            return min(1.0, max(0.0, CGFloat(presentation.opacity)))
+        }
+        return self.clampedExtrapolation((presentation.transform.m11 - start) / (1.0 - start))
+    }
+
+    private func clampedExtrapolation(_ progress: CGFloat) -> CGFloat {
+        guard progress.isFinite else {
+            return 0.0
+        }
+        return min(1.25, max(-0.25, progress))
     }
 
     func interrupt() {
@@ -332,9 +343,10 @@ final class MediaGridZoomTransition {
         })
         self.apply(progress: progress)
         self.add(keyPath: "transform", layer: self.outgoing, from: NSValue(caTransform3D: self.outgoingTransform(from)), to: NSValue(caTransform3D: self.outgoing.transform))
-        self.add(keyPath: "opacity", layer: self.outgoing, from: NSNumber(value: Float(1.0 - from)), to: NSNumber(value: self.outgoing.opacity))
+        let clampedFrom = min(1.0, max(0.0, from))
+        self.add(keyPath: "opacity", layer: self.outgoing, from: NSNumber(value: Float(1.0 - clampedFrom)), to: NSNumber(value: self.outgoing.opacity))
         self.add(keyPath: "transform", layer: self.incoming, from: NSValue(caTransform3D: self.incomingTransform(from)), to: NSValue(caTransform3D: self.incoming.transform))
-        self.add(keyPath: "opacity", layer: self.incoming, from: NSNumber(value: Float(from)), to: NSNumber(value: self.incoming.opacity))
+        self.add(keyPath: "opacity", layer: self.incoming, from: NSNumber(value: Float(clampedFrom)), to: NSNumber(value: self.incoming.opacity))
         if let camera = self.camera {
             if let fromFrame = self.cameraFrame(from) {
                 self.add(keyPath: "position", layer: camera.layer, from: NSValue(cgPoint: CGPoint(x: fromFrame.midX, y: fromFrame.midY)), to: NSValue(cgPoint: camera.layer.position))
@@ -342,7 +354,7 @@ final class MediaGridZoomTransition {
             } else {
                 self.add(keyPath: "transform", layer: camera.layer, from: NSValue(caTransform3D: self.cameraTransform(from, layer: camera.layer)), to: NSValue(caTransform3D: camera.layer.transform))
             }
-            self.add(keyPath: "opacity", layer: camera.layer, from: NSNumber(value: Float(self.cameraAlpha(from))), to: NSNumber(value: camera.layer.opacity))
+            self.add(keyPath: "opacity", layer: camera.layer, from: NSNumber(value: Float(self.cameraAlpha(clampedFrom))), to: NSNumber(value: camera.layer.opacity))
         }
         CATransaction.commit()
         self.springVelocity = 0.0

@@ -426,16 +426,17 @@ public final class MediaGridView: UIView {
     }
 
     private static let bindStep: CGFloat = 0.125
+    private static let maxExtrapolation: CGFloat = 0.25
 
     private func bindTransition(_ transition: MediaGridZoomTransition, covering range: ClosedRange<CGFloat>) {
-        let lower = min(1.0, max(0.0, range.lowerBound))
-        let upper = min(1.0, max(0.0, range.upperBound))
+        let lower = max(-MediaGridView.maxExtrapolation, range.lowerBound)
+        let upper = min(1.0 + MediaGridView.maxExtrapolation, range.upperBound)
         if let bound = transition.boundRange, bound.lowerBound <= lower, bound.upperBound >= upper {
             return
         }
         let step = MediaGridView.bindStep
-        var newLower = max(0.0, floor(lower / step) * step)
-        var newUpper = min(1.0, ceil(upper / step) * step)
+        var newLower = lower < 0.0 ? lower : max(0.0, floor(lower / step) * step)
+        var newUpper = upper > 1.0 ? upper : min(1.0, ceil(upper / step) * step)
         if let bound = transition.boundRange {
             newLower = min(newLower, bound.lowerBound)
             newUpper = max(newUpper, bound.upperBound)
@@ -658,8 +659,10 @@ public final class MediaGridView: UIView {
                     if distance < MediaGridView.crossingHysteresis {
                         let span = abs(MediaGridPinchState.position(of: from) - MediaGridPinchState.position(of: to))
                         let ownSpan = max(1e-6, abs(MediaGridPinchState.position(of: source) - MediaGridPinchState.position(of: target)))
-                        let beyond = distance * span / ownSpan
-                        transition.apply(progress: shared == target ? 1.0 + beyond : -beyond)
+                        let beyond = min(MediaGridView.maxExtrapolation, distance * span / ownSpan)
+                        let extrapolated = shared == target ? 1.0 + beyond : -beyond
+                        transition.apply(progress: extrapolated)
+                        self.bindTransition(transition, covering: min(extrapolated, shared == target ? 1.0 : 0.0) ... max(extrapolated, shared == target ? 1.0 : 0.0))
                         return
                     }
                 }
@@ -728,10 +731,36 @@ public final class MediaGridView: UIView {
             return
         }
         let target = session.state.settle(velocity: velocity)
+        let pair = session.state.current
+        let stateVelocity = session.state.progressVelocity(scaleVelocity: velocity)
+        if target != transition.sourceLevel, target != transition.targetLevel, let shared = [pair.from, pair.to].first(where: { $0 == transition.sourceLevel || $0 == transition.targetLevel }), let anchor = self.transitionAnchor {
+            self.finishTransition(commit: shared == transition.targetLevel, quiet: true)
+            guard let source = self.currentLayout else {
+                self.completeZoom()
+                return
+            }
+            let start = min(1.0, max(0.0, shared == pair.from ? pair.progress : 1.0 - pair.progress))
+            let next = self.beginTransition(to: target, source: source, anchor: anchor.anchor, relativePosition: anchor.relativePosition, binding: start ... 1.0)
+            next.apply(progress: start)
+            self.settle(next, to: 1.0, velocity: self.transitionVelocity(stateVelocity, pair: pair, transition: next))
+            return
+        }
         let destination: CGFloat = target == transition.targetLevel ? 1.0 : 0.0
         self.bindTransition(transition, covering: min(transition.progress, destination) ... max(transition.progress, destination))
-        let progressVelocity = session.state.progressVelocity(scaleVelocity: velocity)
-        transition.animate(to: destination, velocity: transition.sourceLevel == session.state.current.from ? progressVelocity : -progressVelocity, completion: { [weak self, weak transition] in
+        self.settle(transition, to: destination, velocity: self.transitionVelocity(stateVelocity, pair: pair, transition: transition))
+    }
+
+    private func transitionVelocity(_ velocity: CGFloat, pair: (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat), transition: MediaGridZoomTransition) -> CGFloat {
+        let span = MediaGridPinchState.position(of: pair.to) - MediaGridPinchState.position(of: pair.from)
+        let ownSpan = MediaGridPinchState.position(of: transition.targetLevel) - MediaGridPinchState.position(of: transition.sourceLevel)
+        guard abs(ownSpan) > 1e-6 else {
+            return 0.0
+        }
+        return velocity * span / ownSpan
+    }
+
+    private func settle(_ transition: MediaGridZoomTransition, to destination: CGFloat, velocity: CGFloat) {
+        transition.animate(to: destination, velocity: velocity, completion: { [weak self, weak transition] in
             guard let self, let transition, self.transition === transition else {
                 return
             }
