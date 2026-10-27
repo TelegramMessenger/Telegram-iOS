@@ -15,17 +15,23 @@ import TelegramCore
 /// for every id of 2^32 and above), so a pasted external link means the same user. Only a user can be
 /// mentioned by name: any other peer has no marker, and its text stays plain.
 public func mentionMarkdownURL(peerId: EnginePeer.Id) -> String? {
-    guard peerId.namespace == Namespaces.Peer.CloudUser else {
+    let userId = peerId.id._internalGetInt64Value()
+    guard peerId.namespace == Namespaces.Peer.CloudUser, isMentionableUserId(userId) else {
         return nil
     }
-    return "tg://user?id=\(peerId.id._internalGetInt64Value())"
+    return "tg://user?id=\(userId)"
+}
+
+/// A user id a `PeerId` can hold: positive, and below 2^52 (larger ones trip `PeerId`'s packing).
+private func isMentionableUserId(_ userId: Int64) -> Bool {
+    return userId > 0 && userId < (1 << 52)
 }
 
 /// Parses the user out of a `tg://user?id=<user id>` marker URL. Returns nil for any other URL
 /// (ordinary links flow through unchanged), and for an id no user can have.
 public func parseMentionPeerId(fromURL url: String) -> EnginePeer.Id? {
     let prefix = "tg://user?id="
-    guard url.hasPrefix(prefix), let userId = Int64(url.dropFirst(prefix.count)), userId > 0 else {
+    guard url.hasPrefix(prefix), let userId = Int64(url.dropFirst(prefix.count)), isMentionableUserId(userId) else {
         return nil
     }
     return EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId))

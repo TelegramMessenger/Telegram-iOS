@@ -24,6 +24,8 @@ final class MentionDateMarkersTests: XCTestCase {
         XCTAssertNil(mentionMarkdownURL(peerId: channelId))
         XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=0"))
         XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=-5"))
+        XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=72057594037927936"))
+        XCTAssertNil(mentionMarkdownURL(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0))))
     }
 
     func testMentionParseRejectsNonMatching() {

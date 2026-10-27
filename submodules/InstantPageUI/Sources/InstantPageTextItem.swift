@@ -1203,7 +1203,8 @@ private func attributedStringForRichTextContent(_ text: RichText, styleStack: In
             let result = attributedStringForRichText(text, styleStack: styleStack, url: url, inlineButtonMaxWidth: inlineButtonMaxWidth, formatDate: formatDate, quoteSource: quoteSource)
             styleStack.pop()
             let mutable = result.mutableCopy() as! NSMutableAttributedString
-            if mutable.length != 0 {
+            // A tap looks the user up by id, and packing an impossible one (from a bogus page) traps.
+            if mutable.length != 0 && peerId > 0 {
                 let mention = TelegramPeerMention(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(peerId)), mention: mutable.string)
                 mutable.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: mention, range: NSRange(location: 0, length: mutable.length))
             }
