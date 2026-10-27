@@ -3,6 +3,7 @@ import XCTest
 
 private final class TrackingCellLayer: MediaGridCellLayer {
     var onEmptied: ((Int) -> Void)?
+    var onReuse: (() -> Void)?
     private var hasShownImage = false
     private var isReusing = false
 
@@ -16,7 +17,15 @@ private final class TrackingCellLayer: MediaGridCellLayer {
         }
     }
 
+    override func bind(index: Int, detail: MediaGridCellDetail) {
+        if index != self.index {
+            self.hasShownImage = false
+        }
+        super.bind(index: index, detail: detail)
+    }
+
     override func prepareForReuse() {
+        self.onReuse?()
         self.isReusing = true
         super.prepareForReuse()
         self.isReusing = false
@@ -27,6 +36,7 @@ private final class TrackingCellLayer: MediaGridCellLayer {
 final class MediaGridThumbnailBindingTests: XCTestCase {
     private var time: CFTimeInterval = 100.0
     private var emptied: [Int] = []
+    private var reuses = 0
 
     private func makeView(count: Int = 100_000, thumbnails: Bool = true) -> (MediaGridView, TestDataSource) {
         let dataSource = TestDataSource(count: count)
@@ -35,6 +45,9 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
             let cell = TrackingCellLayer()
             cell.onEmptied = { index in
                 self?.emptied.append(index)
+            }
+            cell.onReuse = {
+                self?.reuses += 1
             }
             return cell
         })
@@ -49,6 +62,7 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
 
     override func tearDown() {
         self.emptied = []
+        self.reuses = 0
         super.tearDown()
     }
 
@@ -297,19 +311,31 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
         XCTAssertTrue(cells.values.allSatisfy { $0.isShowingThumbnail && $0.imageRequest == nil })
     }
 
+    private func covers(_ indices: IndexSet, _ range: Range<Int>) -> Bool {
+        return range.allSatisfy { indices.contains($0) }
+    }
+
+    private func assertDisjoint(_ ranges: [Range<Int>], file: StaticString = #filePath, line: UInt = #line) {
+        var seen = IndexSet()
+        for range in ranges {
+            XCTAssertFalse(range.isEmpty, file: file, line: line)
+            XCTAssertFalse(seen.intersects(integersIn: range), "\(range) overlaps an earlier range in \(ranges)", file: file, line: line)
+            seen.insert(integersIn: range)
+        }
+    }
+
     func testPrepareCalledForScrubTargetAndIncomingLevel() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 10_000.0)
-        XCTAssertEqual(dataSource.preparedRanges.last, self.viewportRange(view))
+        XCTAssertEqual(dataSource.preparedRanges.first, self.viewportRange(view))
         dataSource.resetPreparedRanges()
         self.scroll(view, to: 14_000.0)
         XCTAssertTrue(view.isMovingFast)
         let ahead = self.viewportRange(view, offset: 18_000.0)
-        XCTAssertTrue(dataSource.preparedRanges.contains(ahead), "scrub target \(ahead) not in \(dataSource.preparedRanges)")
-        XCTAssertEqual(dataSource.preparedRanges.last, self.viewportRange(view))
+        XCTAssertTrue(self.covers(dataSource.preparedIndices, ahead), "scrub target \(ahead) not in \(dataSource.preparedRanges)")
+        XCTAssertEqual(dataSource.preparedRanges.first, self.viewportRange(view))
         self.settle(view)
 
-        dataSource.resetPreparedRanges()
         let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
         guard let anchor = view.index(at: center), let anchorFrame = view.frameForItem(at: anchor), let geometry = view.gridLayout?.geometry else {
             XCTFail("no anchor")
@@ -320,7 +346,7 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
         let five = MediaGridUniformLayout(geometry: geometry, columns: 5, cellAspect: 1.0, reservedSlots: [], count: 100_000)
         let fiveOffset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: anchor, pointInView: center), in: five, viewportHeight: view.bounds.height, relativePosition: relative)
         let expected = five.indexRange(intersecting: CGRect(x: 0.0, y: fiveOffset, width: view.bounds.width, height: view.bounds.height))
-        XCTAssertTrue(dataSource.preparedRanges.contains(expected), "incoming \(expected) not in \(dataSource.preparedRanges)")
+        XCTAssertTrue(self.covers(dataSource.preparedIndices, expected), "incoming \(expected) not in \(dataSource.preparedRanges)")
         XCTAssertNil(view.transition)
         view._testPinch(.ended, center: center)
 
@@ -331,8 +357,226 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
             return
         }
         let target = transition.targetLayout.indexRange(intersecting: CGRect(x: 0.0, y: transition.targetOffset, width: view.bounds.width, height: view.bounds.height))
-        XCTAssertTrue(dataSource.preparedRanges.contains(where: { $0.lowerBound <= target.lowerBound && $0.upperBound >= target.upperBound }), "target \(target) not in \(dataSource.preparedRanges)")
+        XCTAssertTrue(self.covers(dataSource.preparedIndices, target), "target \(target) not in \(dataSource.preparedRanges)")
         view._testFinishAnimations()
+    }
+
+    func testPrepareIsOneDisjointPriorityList() {
+        let (view, dataSource) = self.makeView()
+        dataSource.resetPreparedRanges()
+        self.scroll(view, to: 20_000.0)
+        XCTAssertEqual(dataSource.prepareCalls.count, 1)
+        let ranges = dataSource.preparedRanges
+        self.assertDisjoint(ranges)
+        let viewport = self.viewportRange(view)
+        XCTAssertEqual(ranges.first, viewport)
+        let height = view.bounds.height
+        let around = view.gridLayout!.indexRange(intersecting: CGRect(x: 0.0, y: view.contentOffset - height, width: view.bounds.width, height: height * 3.0))
+        XCTAssertTrue(self.covers(dataSource.preparedIndices, around))
+        let calls = dataSource.prepareCalls.count
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        view.thumbnailsDidChange(indices: nil)
+        XCTAssertEqual(dataSource.prepareCalls.count, calls)
+    }
+
+    func testNeighbourLevelsPreparedAboveWindowAtRest() {
+        let (view, dataSource) = self.makeView()
+        self.scroll(view, to: 20_000.0, after: 1.0)
+        guard let geometry = view.gridLayout?.geometry else {
+            XCTFail("no layout")
+            return
+        }
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        let anchor = view.index(at: center)!
+        let relative = MediaGridZoomMath.relativePosition(of: center, in: view.frameForItem(at: anchor)!)
+        let five = MediaGridUniformLayout(geometry: geometry, columns: 5, cellAspect: 1.0, reservedSlots: [], count: 100_000)
+        let offset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: anchor, pointInView: center), in: five, viewportHeight: view.bounds.height, relativePosition: relative)
+        let expected = five.indexRange(intersecting: CGRect(x: 0.0, y: offset, width: view.bounds.width, height: view.bounds.height))
+        let ranges = dataSource.preparedRanges
+        var covered = IndexSet()
+        var neighbourDone: Int?
+        for (position, range) in ranges.enumerated() {
+            covered.insert(integersIn: range)
+            if neighbourDone == nil && self.covers(covered, expected) {
+                neighbourDone = position
+            }
+        }
+        guard let neighbourDone else {
+            XCTFail("neighbour viewport \(expected) not prepared in \(ranges)")
+            return
+        }
+        let height = view.bounds.height
+        var window = IndexSet(integersIn: view.gridLayout!.indexRange(intersecting: CGRect(x: 0.0, y: view.contentOffset - height, width: view.bounds.width, height: height * 3.0)))
+        window.subtract(covered.intersection(IndexSet(ranges.prefix(neighbourDone + 1).flatMap { Array($0) })))
+        XCTAssertFalse(window.isEmpty)
+        for index in window {
+            let position = ranges.firstIndex(where: { $0.contains(index) })
+            XCTAssertNotNil(position)
+            XCTAssertGreaterThan(position ?? -1, neighbourDone)
+        }
+    }
+
+    func testFastCompactScrubDropsPrefetchWindowAndMargin() {
+        let (view, dataSource) = self.makeView()
+        view.setLevel(.thirtyOne, animated: false)
+        self.scroll(view, to: 5_000.0)
+        self.scroll(view, to: 5_600.0)
+        XCTAssertTrue(view.isMovingFast)
+        let viewport = self.viewportRange(view)
+        XCTAssertEqual(view.activeLayoutLayer.visibleRange, viewport)
+        let ahead = self.viewportRange(view, offset: 6_200.0)
+        var expected = IndexSet(integersIn: viewport)
+        expected.insert(integersIn: ahead)
+        XCTAssertEqual(dataSource.preparedIndices, expected)
+        XCTAssertEqual(dataSource.preparedRanges.first, viewport)
+    }
+
+    func testNeighbourPagesDecodedBeforePinch() {
+        let (view, dataSource) = self.makeView()
+        dataSource.deliveries = []
+        dataSource.decodesThumbnailPages = true
+        self.scroll(view, to: 20_000.0, after: 1.0)
+        for _ in 0 ..< 4 {
+            let changed = dataSource.finishThumbnailDecodes()
+            view.thumbnailsDidChange(indices: changed)
+        }
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        for scale in [CGFloat(0.97), 1.03] {
+            dataSource.holdsDeliveries = true
+            view._testPinch(.began, center: center)
+            view._testPinch(.changed, center: center, scale: scale)
+            guard let transition = view.transition else {
+                XCTFail("no transition at \(scale)")
+                return
+            }
+            let rect = transition.incomingRect(at: transition.progress)
+            let incoming = transition.incoming.visibleCells.filter { $0.value.frame.intersects(rect) }
+            XCTAssertFalse(incoming.isEmpty)
+            let empty = incoming.filter { $0.value.contents == nil }.map { $0.key }.sorted()
+            XCTAssertEqual(empty, [], "scale \(scale): empty incoming \(empty.prefix(8))")
+            view._testPinch(.ended, center: center, scale: 1.0)
+            view._testFinishAnimations()
+            XCTAssertEqual(view.level, .three)
+        }
+    }
+
+    func testDegradedDoesNotReplaceDonatedSharpImage() {
+        let (view, dataSource) = self.makeView()
+        var images: [Int: UIImage] = [:]
+        dataSource.imageForIndex = { index in
+            if let image = images[index] {
+                return image
+            }
+            let image = TestDataSource.distinctImage(index, side: 400.0)
+            images[index] = image
+            return image
+        }
+        view.setContentOffset(20_000.0)
+        dataSource.imageForIndex = nil
+        let small = TestDataSource.distinctImage(1, side: 120.0)
+        let big = TestDataSource.distinctImage(2, side: 1300.0)
+        dataSource.deliveries = [(small, true), (big, false)]
+        dataSource.holdsDeliveries = true
+        view.setLevel(.one, animated: true)
+        guard let transition = view.transition else {
+            XCTFail("no transition")
+            return
+        }
+        let donated = transition.incoming.visibleCells.filter { images[$0.key] != nil && ($0.value.contents as AnyObject?) === images[$0.key]?.cgImage }
+        XCTAssertFalse(donated.isEmpty)
+        dataSource.flushNextHeldDelivery()
+        for (index, cell) in donated {
+            XCTAssertTrue((cell.contents as AnyObject?) === images[index]?.cgImage, "index \(index) lost its donated image to a smaller degraded one")
+        }
+        dataSource.flushHeldDeliveries()
+        for (index, cell) in donated {
+            XCTAssertTrue((cell.contents as AnyObject?) === big.cgImage, "index \(index)")
+            XCTAssertTrue(cell.hasFinalImage)
+        }
+        view._testFinishAnimations()
+    }
+
+    func testZoomOutDoesNotAdoptOversizedDonor() {
+        for (source, target, side) in [(MediaGridLevel.one, MediaGridLevel.three, CGFloat(1300.0)), (.three, .fifteen, 400.0)] {
+            let (view, dataSource) = self.makeView()
+            view.setLevel(source, animated: false)
+            var images: [Int: UIImage] = [:]
+            dataSource.imageForIndex = { index in
+                if let image = images[index] {
+                    return image
+                }
+                let image = TestDataSource.distinctImage(index, side: side)
+                images[index] = image
+                return image
+            }
+            view.setContentOffset(view.contentHeight * 0.2)
+            let outgoing = view.activeLayoutLayer.visibleCells
+            XCTAssertTrue(outgoing.values.allSatisfy { !$0.isShowingThumbnail })
+            dataSource.holdsDeliveries = true
+            let before = dataSource.requests.count
+            view.setLevel(target, animated: true)
+            guard let transition = view.transition else {
+                XCTFail("no transition")
+                return
+            }
+            let shared = Set(transition.incoming.visibleCells.keys).intersection(outgoing.keys)
+            XCTAssertFalse(shared.isEmpty)
+            for index in shared {
+                let cell = transition.incoming.visibleCells[index]!
+                XCTAssertTrue(cell.isShowingThumbnail, "\(source.columns) -> \(target.columns) index \(index) adopted an oversized donor")
+            }
+            let incomingSize = transition.targetLayout.pixelSize(at: 0)
+            let requested = Set(dataSource.requests[before...].filter { $0.pixelSize == incomingSize }.map { $0.index })
+            if target.isInteractive {
+                XCTAssertTrue(shared.isSubset(of: requested))
+            } else {
+                XCTAssertTrue(requested.isEmpty)
+            }
+            view._testFinishAnimations()
+        }
+    }
+
+    func testKeptFinalImageStaysFinal() {
+        let (view, dataSource) = self.makeView(thumbnails: false)
+        view.setContentOffset(5_000.0)
+        let before = view.activeLayoutLayer.visibleCells
+        XCTAssertTrue(before.values.allSatisfy { $0.hasFinalImage })
+        dataSource.holdsDeliveries = true
+        let requests = dataSource.requests.count
+        view.setLevel(.five, animated: false)
+        var kept = 0
+        for (index, cell) in view.activeLayoutLayer.visibleCells where before[index] === cell {
+            kept += 1
+            XCTAssertTrue(cell.hasFinalImage, "index \(index)")
+            XCTAssertNotNil(cell.contents)
+        }
+        XCTAssertGreaterThan(kept, 0)
+        XCTAssertGreaterThan(dataSource.requests.count, requests)
+    }
+
+    func testJumpReassignsCellsInPlace() {
+        let (view, dataSource) = self.makeView()
+        dataSource.holdsDeliveries = true
+        view.setContentOffset(10_000.0)
+        let before = Set(view.activeLayoutLayer.visibleCells.values.map { ObjectIdentifier($0) })
+        let pooled = view.pool.count
+        let reuses = self.reuses
+        let cancels = dataSource.cancelCount
+        view.setContentOffset(60_000.0)
+        let after = view.activeLayoutLayer.visibleCells
+        let afterIdentities = Set(after.values.map { ObjectIdentifier($0) })
+        let excess = max(0, before.count - after.count)
+        XCTAssertEqual(afterIdentities.intersection(before).count, min(before.count, after.count))
+        XCTAssertEqual(self.reuses - reuses, excess)
+        XCTAssertEqual(view.pool.count - pooled, excess)
+        XCTAssertEqual(dataSource.cancelCount - cancels, before.count)
+        for (index, cell) in after {
+            XCTAssertFalse(cell.isHidden)
+            XCTAssertEqual(cell.index, index)
+            XCTAssertTrue(cell.isShowingThumbnail)
+        }
+        self.assertNoEmptyCells(view, "after jump")
     }
 
     func testNeverReturnsToEmpty() {

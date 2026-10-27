@@ -16,7 +16,7 @@ public protocol MediaGridDataSource: AnyObject {
     func stopCaching(indices: [Int], pixelSize: CGSize)
     func performBatch(_ updates: () -> Void)
     func thumbnail(at index: Int) -> MediaGridThumbnail?
-    func prepareThumbnails(indices: Range<Int>)
+    func prepareThumbnails(ranges: [Range<Int>])
 }
 
 public extension MediaGridDataSource {
@@ -28,7 +28,7 @@ public extension MediaGridDataSource {
         return nil
     }
 
-    func prepareThumbnails(indices: Range<Int>) {
+    func prepareThumbnails(ranges: [Range<Int>]) {
     }
 }
 

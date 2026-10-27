@@ -95,8 +95,8 @@ final class InstrumentedDataSource: MediaGridDataSource {
         return self.base.thumbnail(at: index)
     }
 
-    func prepareThumbnails(indices: Range<Int>) {
-        self.base.prepareThumbnails(indices: indices)
+    func prepareThumbnails(ranges: [Range<Int>]) {
+        self.base.prepareThumbnails(ranges: ranges)
     }
 
     func startCaching(indices: [Int], pixelSize: CGSize) {

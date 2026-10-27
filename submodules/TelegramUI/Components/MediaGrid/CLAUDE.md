@@ -12,7 +12,7 @@ xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$
 xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$SIM" build
 ```
 
-`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 249 tests (2 skipped), CoreList 1048, 0 failures.
+`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 259 tests (2 skipped), CoreList 1048, 0 failures.
 
 Run only on the dedicated simulator `MediaGridDemo iPhone 18 Pro 27.0` (UDID above); never on the booted logged-in simulators.
 
@@ -38,14 +38,15 @@ Binding a frame's cells happens inside `MediaGridDataSource.performBatch`, so a 
 
 ## Thumbnails
 
-`MediaGridDataSource.thumbnail(at:)` (main, O(1)) and `prepareThumbnails(indices:)` (both defaulted) feed a 48 px placeholder per cell; the grid stays index-based and never sees `MediaGridThumbnailStore`.
+`MediaGridDataSource.thumbnail(at:)` (main, O(1)) and `prepareThumbnails(ranges:)` (both defaulted) feed a 48 px placeholder per cell; the grid stays index-based and never sees `MediaGridThumbnailStore`.
 
 - Binding sets the thumbnail synchronously (`setThumbnail`: the page image as `contents`, the slot cropped aspect-fill as `contentsRect`), then requests the sharp image unless the cell shows a thumbnail at a compact level (15, 31) or its longer pixel side is at most 1.25 × the thumbnail's. Without a thumbnail it requests as before.
-- `setImage` replaces a thumbnail only with an image wider in visible pixels; a final image that is not is still marked final. A cell never returns to empty: only reuse for an index whose page is not decoded yet leaves it empty, until `thumbnailsDidChange(indices:)` fills it (the demo HUD's `empty` line counts those).
+- `setImage` replaces a thumbnail only with an image wider in visible pixels; a final image that is not is still marked final. Over a sharp image, a degraded image must be wider than what is shown (capped at the cell's pixel width) and a final one at least as wide; a changed photo's stale image accepts anything. A cell never returns to empty: only reuse for an index whose page is not decoded yet leaves it empty, until `thumbnailsDidChange(indices:)` fills it (the demo HUD's `empty` line counts those).
 - While moving fast (above 2 screens/s, or a frame step over a screen), during a rotation's deferred binding, cells get thumbnails only and are marked `isAwaitingSharpImage`; the 0.12 s settle (or the deferred binding's run-loop wake) requests them, viewport last and top-left last of all. Sharp prefetch (`startCaching`) pauses while moving fast and does not run at 15 and 31.
-- A zoom's incoming cells get thumbnails before the first transition frame, and take the outgoing cell's sharp image for the same index when it is wider (3 → 1 keeps sharpness).
+- A zoom's incoming cells get thumbnails before the first transition frame, and take the outgoing cell's sharp image for the same index when it is wider and at most 2× the incoming cell's pixel width (3 → 1 keeps sharpness; 1 → 3 and 3 → 15 do not carry oversized images). A kept image over 2× asks for a right-sized one at 1, 3 and 5 and falls back to the thumbnail at 15 and 31. A rebind for a new pixel size keeps a final image final.
+- Cells leaving the window are reassigned in place to the indices entering it (request cancelled, token bumped; no `prepareForReuse`, no hide/unhide, `contents` replaced by the new thumbnail); only the surplus goes to the pool. Binding runs with actions disabled. At 15 and 31 the binding window has no margin while moving fast.
 - `thumbnailsDidChange` refreshes only visible cells showing nothing or a thumbnail; a sharp cell refreshes through `apply`'s `changed`. At a compact level the arrival also cancels a pending sharp request.
-- Prepare order within one main turn (the store drops what an earlier turn left queued, and decodes the last call first): one screen above and below, the fling target, the next scrub step's viewport, the binding window, the viewport. A pinch begin prepares both neighbour levels' target viewports; a transition prepares the outgoing range, the incoming final viewport, then the incoming bound range.
+- `prepareThumbnails(ranges:)` gets one complete, disjoint, most-important-first list, sent only when it changes; the store replaces its queue with it, caps it at the decoded-page budget and returns early when the page list is unchanged. The list: the viewport; while moving fast the next scrub step's viewport; at rest (or in a pinch) both neighbour levels' target viewports (the pinch anchor, else the centre); the binding window; the fling target; one screen above and below (dropped while moving fast at 15 and 31). During a transition: the incoming bound range, the incoming final viewport, the outgoing range.
 
 ## Uniform levels
 
@@ -86,7 +87,7 @@ The host sets the frame, then calls `updateLayout(size:safeInsets:isLandscape:tr
 - Pinch crossings `-autoPinch`: 1.2 to 5.5 ms of main-thread work per crossing, worst frame 16.7 ms, no drops (Photo Library and Synthetic).
 - Rotation (Photo Library, 1 → 3 and 3 → 5, 4 runs each): first main-thread turn 8.7–14.8 ms with no image requests in it, 0 dropped frames in all 8 runs (3 in 8 before the binding moved past the first commit); `updateLayout` 0.16–0.9 ms.
 - Scrub `-scrubTo 0.2`, 120 steps per leg (1.4 screens per frame at level 3), 3 runs, measured before the thumbnail-store redesign: empty visible-cell fraction L1 0–0.003, L3 0.63–0.70, L5 0.45, L15 0.35–0.45, L31 0.67–0.69, 0 dropped frames, settle 83–133 ms (L3/L5), 117–350 ms (L15), 2.75–2.82 s (L31). Synthetic default scrub: L15 0 dropped; L31 3, 6 and 7 dropped frames, worst 50–54 ms, `setContentOffset` up to 6.3 ms.
-- With thumbnails (Synthetic 100k, generated pages decoded off main): default `-autoScrub` at 1, 3, 15 and 31, 0 empty frames of 240 and 0 dropped frames in every run (L31 3 runs, work_worst 3.6–5.8 ms); `-autoPinch` 0 empty frames, 0 dropped. A 4× faster scrub (`-scrubSteps 30`, L31) drops 15–41 of 60 frames with 0–2 empty frames, against 0–1 drops before (when every cell was empty): rebinding ~2,000 textured cells a frame costs ~7 ms of binding plus ~3.5 ms of commit on main in this `-Onone` build, against ~4 + 0.6 ms with no contents.
+- With thumbnails (Synthetic 100k, generated pages decoded off main): default `-autoScrub` at 1, 3, 15 and 31, 0 empty frames of 240 and 0 dropped frames in every run; `-autoPinch` 0 empty frames, 0 dropped. A 4× faster scrub (`-scrubSteps 30`, L31; the `AUTOSCRUB` line's `main_avg`/`main_worst` is `setContentOffset` plus a forced commit): 0–1 dropped of 60 in 6 debug and 3 `-O` runs (empty frames 0, one debug run 13), main 5.3–6.9 ms/frame debug and 5.2–5.7 ms `-O`; before in-place reassignment and the other per-cell savings it was 15–23 dropped and 7.8–8.6 ms debug, 0–1 dropped and 6.7–7.5 ms `-O`. `-O` here means `SWIFT_OPTIMIZATION_LEVEL=-O` on the Debug configuration.
 
 ## Device (pending)
 

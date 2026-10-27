@@ -15,8 +15,14 @@ open class MediaGridCellLayer: CALayer {
     var hasFinalImage = false
     var isAwaitingSharpImage = false
     public private(set) var isShowingThumbnail = false
-    private(set) var shownPixelWidth: CGFloat = 0.0
+    private(set) var sharpImage: UIImage?
+    private(set) var isImageStale = false
+    private(set) var thumbnailPixelWidth: CGFloat = 0.0
     private(set) var thumbnailPixelSize: CGFloat = 0.0
+
+    var hasImage: Bool {
+        return self.isShowingThumbnail || self.sharpImage != nil
+    }
 
     public override init() {
         super.init()
@@ -48,11 +54,14 @@ open class MediaGridCellLayer: CALayer {
 
     open func setThumbnail(_ thumbnail: MediaGridThumbnail, cellAspect: CGFloat) {
         let rect = thumbnail.contentsRect(fillingAspect: cellAspect)
-        self.contentsGravity = .resizeAspectFill
         self.contentsRect = rect
-        self.contents = thumbnail.image
+        if !self.isShowingThumbnail || (self.contents as AnyObject?) !== thumbnail.image {
+            self.contents = thumbnail.image
+        }
         self.isShowingThumbnail = true
-        self.shownPixelWidth = rect.width * CGFloat(thumbnail.image.width)
+        self.sharpImage = nil
+        self.isImageStale = false
+        self.thumbnailPixelWidth = rect.width * CGFloat(thumbnail.image.width)
         self.thumbnailPixelSize = thumbnail.pixelSize
     }
 
@@ -61,27 +70,60 @@ open class MediaGridCellLayer: CALayer {
             self.clearImage()
             return
         }
-        let width = MediaGridCellLayer.visiblePixelWidth(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height), in: self.bounds.size)
-        if self.isShowingThumbnail && width <= self.shownPixelWidth {
+        if self.isShowingThumbnail && MediaGridCellLayer.visiblePixelWidth(of: image, in: self.bounds.size) <= self.thumbnailPixelWidth {
             return
         }
-        self.contentsGravity = .resizeAspectFill
-        self.contentsRect = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
+        if self.isShowingThumbnail {
+            self.contentsRect = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
+        }
         self.contentsScale = image.scale
         self.contents = cgImage
         self.isShowingThumbnail = false
-        self.shownPixelWidth = width
+        self.sharpImage = image
+        self.isImageStale = false
+        self.thumbnailPixelWidth = 0.0
         self.thumbnailPixelSize = 0.0
     }
 
-    var sharpImage: UIImage? {
-        guard !self.isShowingThumbnail, let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID else {
-            return nil
+    func shownPixelWidth(in size: CGSize) -> CGFloat {
+        if self.isShowingThumbnail {
+            return self.thumbnailPixelWidth
         }
-        return UIImage(cgImage: contents as! CGImage, scale: self.contentsScale, orientation: .up)
+        if let sharpImage = self.sharpImage {
+            return MediaGridCellLayer.visiblePixelWidth(of: sharpImage, in: size)
+        }
+        return 0.0
     }
 
-    static func visiblePixelWidth(width: CGFloat, height: CGFloat, in size: CGSize) -> CGFloat {
+    func accepts(_ image: UIImage, isDegraded: Bool, in size: CGSize, targetPixelWidth: CGFloat) -> Bool {
+        guard self.hasImage, !self.isImageStale else {
+            return true
+        }
+        let width = MediaGridCellLayer.visiblePixelWidth(of: image, in: size)
+        if self.isShowingThumbnail {
+            return width > self.thumbnailPixelWidth
+        }
+        let current = min(self.shownPixelWidth(in: size), targetPixelWidth)
+        return isDegraded ? width > current : width >= current
+    }
+
+    func markImageStale() {
+        self.isImageStale = true
+    }
+
+    func prepareForReassignment() {
+        if let request = self.imageRequest {
+            self.imageRequest = nil
+            request.cancel()
+        }
+        self.bindingToken += 1
+        self.hasFinalImage = false
+        self.isAwaitingSharpImage = false
+    }
+
+    static func visiblePixelWidth(of image: UIImage, in size: CGSize) -> CGFloat {
+        let width = image.size.width * image.scale
+        let height = image.size.height * image.scale
         guard size.width > 0.0, size.height > 0.0 else {
             return width
         }
@@ -92,7 +134,9 @@ open class MediaGridCellLayer: CALayer {
         self.contents = nil
         self.contentsRect = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
         self.isShowingThumbnail = false
-        self.shownPixelWidth = 0.0
+        self.sharpImage = nil
+        self.isImageStale = false
+        self.thumbnailPixelWidth = 0.0
         self.thumbnailPixelSize = 0.0
     }
 

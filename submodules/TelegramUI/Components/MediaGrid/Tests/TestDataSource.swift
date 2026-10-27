@@ -26,7 +26,10 @@ final class TestDataSource: MediaGridDataSource {
     var aspectRatios: [CGFloat]?
     var providesThumbnails = false
     var thumbnailAvailable: ((Int) -> Bool)?
-    private(set) var preparedRanges: [Range<Int>] = []
+    var decodesThumbnailPages = false
+    private(set) var decodedPages = Set<Int>()
+    private(set) var pendingPages: [Int] = []
+    private(set) var prepareCalls: [[Range<Int>]] = []
     private(set) var events: [String] = []
     private(set) var requests: [(index: Int, pixelSize: CGSize)] = []
     private(set) var startedCachingOrder: [[Int]] = []
@@ -75,8 +78,13 @@ final class TestDataSource: MediaGridDataSource {
         }
     }
 
+    static let thumbnailPageCapacity = TestDataSource.thumbnailPageSide * TestDataSource.thumbnailPageSide
+
     func thumbnail(at index: Int) -> MediaGridThumbnail? {
         guard self.providesThumbnails, index >= 0, index < self.count, self.thumbnailAvailable?(index) ?? true else {
+            return nil
+        }
+        if self.decodesThumbnailPages && !self.decodedPages.contains(index / TestDataSource.thumbnailPageCapacity) {
             return nil
         }
         let side = CGFloat(TestDataSource.thumbnailSlotPixelSize)
@@ -93,12 +101,43 @@ final class TestDataSource: MediaGridDataSource {
         return MediaGridThumbnail(image: TestDataSource.thumbnailPage, contentsRect: CGRect(x: x / pageSize, y: y / pageSize, width: width / pageSize, height: height / pageSize))
     }
 
-    func prepareThumbnails(indices: Range<Int>) {
-        self.preparedRanges.append(indices)
+    func prepareThumbnails(ranges: [Range<Int>]) {
+        self.prepareCalls.append(ranges)
+        var pages: [Int] = []
+        var seen = Set<Int>()
+        for range in ranges where !range.isEmpty {
+            for page in range.lowerBound / TestDataSource.thumbnailPageCapacity ... (range.upperBound - 1) / TestDataSource.thumbnailPageCapacity where seen.insert(page).inserted && !self.decodedPages.contains(page) {
+                pages.append(page)
+            }
+        }
+        self.pendingPages = pages
+    }
+
+    var preparedRanges: [Range<Int>] {
+        return self.prepareCalls.last ?? []
+    }
+
+    var preparedIndices: IndexSet {
+        var result = IndexSet()
+        for range in self.preparedRanges {
+            result.insert(integersIn: range)
+        }
+        return result
     }
 
     func resetPreparedRanges() {
-        self.preparedRanges = []
+        self.prepareCalls = []
+    }
+
+    func finishThumbnailDecodes() -> IndexSet {
+        var changed = IndexSet()
+        for page in self.pendingPages {
+            self.decodedPages.insert(page)
+            let lower = page * TestDataSource.thumbnailPageCapacity
+            changed.insert(integersIn: lower ..< min(self.count, lower + TestDataSource.thumbnailPageCapacity))
+        }
+        self.pendingPages = []
+        return changed
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
@@ -120,20 +159,37 @@ final class TestDataSource: MediaGridDataSource {
             self?.events.append("cancel \(index)")
         })
         let deliversAfterCancel = self.deliversAfterCancel
-        let deliver = {
-            if cancelled && !deliversAfterCancel {
-                return
-            }
-            for (image, isDegraded) in deliveries {
+        for (image, isDegraded) in deliveries {
+            let deliver = {
+                if cancelled && !deliversAfterCancel {
+                    return
+                }
                 completion(image, isDegraded)
             }
-        }
-        if self.holdsDeliveries {
-            self.held.append((index, deliver))
-        } else {
-            deliver()
+            if self.holdsDeliveries {
+                self.held.append((index, deliver))
+            } else {
+                deliver()
+            }
         }
         return request
+    }
+
+    func flushNextHeldDelivery(where predicate: (Int) -> Bool = { _ in true }) {
+        var flushed = Set<Int>()
+        var remaining: [(index: Int, deliver: () -> Void)] = []
+        var due: [() -> Void] = []
+        for entry in self.held {
+            if predicate(entry.index) && flushed.insert(entry.index).inserted {
+                due.append(entry.deliver)
+            } else {
+                remaining.append(entry)
+            }
+        }
+        self.held = remaining
+        for deliver in due {
+            deliver()
+        }
     }
 
     func flushHeldDeliveries(where predicate: (Int) -> Bool = { _ in true }) {

@@ -35,6 +35,9 @@ final class DemoViewController: UIViewController {
     private var autoScrubEmptyTotal = 0
     private var autoScrubVisibleTotal = 0
     private var autoScrubWorkWorst: CFTimeInterval = 0.0
+    private var autoScrubMainTotal: CFTimeInterval = 0.0
+    private var autoScrubMainWorst: CFTimeInterval = 0.0
+    private var autoScrubMainFrames = 0
     private var autoScrubSettleStart: CFTimeInterval?
     private var autoPinchLink: CADisplayLink?
     private var autoPinchStart: CFTimeInterval?
@@ -110,7 +113,7 @@ final class DemoViewController: UIViewController {
             self.hudLabel.text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms\nempty %d  max %d  frames %d", summary.frames, summary.dropped, summary.worst * 1000.0, self.emptyNow, self.emptyMax, self.emptyFrames)
         }
         self.frameMonitor.start()
-        let emptyLink = CADisplayLink(target: self, selector: #selector(self.emptyTick))
+        let emptyLink = CADisplayLink(target: DisplayLinkTarget(owner: self), selector: #selector(DisplayLinkTarget.tick))
         if #available(iOS 15.0, *) {
             emptyLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
         }
@@ -118,7 +121,11 @@ final class DemoViewController: UIViewController {
         self.emptyLink = emptyLink
     }
 
-    @objc private func emptyTick() {
+    deinit {
+        self.emptyLink?.invalidate()
+    }
+
+    fileprivate func emptyTick() {
         #if DEBUG
         guard let gridView = self.gridView else {
             return
@@ -441,6 +448,9 @@ final class DemoViewController: UIViewController {
         self.autoScrubEmptyTotal = 0
         self.autoScrubVisibleTotal = 0
         self.autoScrubWorkWorst = 0.0
+        self.autoScrubMainTotal = 0.0
+        self.autoScrubMainWorst = 0.0
+        self.autoScrubMainFrames = 0
         let link = CADisplayLink(target: self, selector: #selector(self.autoScrubTick(_:)))
         if #available(iOS 15.0, *) {
             link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
@@ -457,6 +467,9 @@ final class DemoViewController: UIViewController {
     }
 
     private func countEmptyVisibleCells(_ gridView: MediaGridView) -> (empty: Int, visible: Int) {
+        #if DEBUG
+        return gridView.debugEmptyVisibleCellCount()
+        #else
         var empty = 0
         var visible = 0
         let bounds = gridView.bounds
@@ -470,6 +483,7 @@ final class DemoViewController: UIViewController {
             }
         }
         return (empty, visible)
+        #endif
     }
 
     private func autoScrubFraction(step: Int, steps: Int) -> CGFloat? {
@@ -523,15 +537,20 @@ final class DemoViewController: UIViewController {
         let workStart = CACurrentMediaTime()
         if let fraction = self.autoScrubFraction(step: step, steps: steps) {
             gridView.setContentOffset(maximum * fraction)
+            self.autoScrubWorkWorst = max(self.autoScrubWorkWorst, CACurrentMediaTime() - workStart)
+            CATransaction.flush()
+            let main = CACurrentMediaTime() - workStart
+            self.autoScrubMainTotal += main
+            self.autoScrubMainWorst = max(self.autoScrubMainWorst, main)
+            self.autoScrubMainFrames += 1
         } else {
             let summary = self.frameMonitor.summary
             let measured = max(1, 2 * steps)
-            print(String(format: "AUTOSCRUB count=%d level=%d frames=%d dropped=%d worst=%.2fms avg=%.2fms work_worst=%.2fms steps=%d empty_frames=%d/%d empty_max=%d empty_fraction=%.3f (simulator-only)", gridView.contentHeight > 0.0 ? self.gridItemCount : 0, gridView.level.columns, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoScrubWorkWorst * 1000.0, 2 * steps, self.autoScrubEmptyFrames, measured, self.autoScrubEmptyMax, self.autoScrubVisibleTotal > 0 ? Double(self.autoScrubEmptyTotal) / Double(self.autoScrubVisibleTotal) : 0.0))
+            print(String(format: "AUTOSCRUB count=%d level=%d frames=%d dropped=%d worst=%.2fms avg=%.2fms work_worst=%.2fms steps=%d empty_frames=%d/%d empty_max=%d empty_fraction=%.3f main_avg=%.2fms main_worst=%.2fms (simulator-only)", gridView.contentHeight > 0.0 ? self.gridItemCount : 0, gridView.level.columns, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoScrubWorkWorst * 1000.0, 2 * steps, self.autoScrubEmptyFrames, measured, self.autoScrubEmptyMax, self.autoScrubVisibleTotal > 0 ? Double(self.autoScrubEmptyTotal) / Double(self.autoScrubVisibleTotal) : 0.0, self.autoScrubMainFrames > 0 ? self.autoScrubMainTotal / Double(self.autoScrubMainFrames) * 1000.0 : 0.0, self.autoScrubMainWorst * 1000.0))
             fflush(stdout)
             self.autoScrubSettleStart = link.timestamp
             return
         }
-        self.autoScrubWorkWorst = max(self.autoScrubWorkWorst, CACurrentMediaTime() - workStart)
     }
 
     private func installGrid(dataSource: MediaGridDataSource) {
@@ -661,6 +680,18 @@ final class DemoViewController: UIViewController {
         self.zoomInButton.frame = CGRect(x: 8.0, y: self.view.bounds.height - insets.bottom - 40.0, width: 84.0, height: 32.0)
         self.zoomOutButton.frame = CGRect(x: self.zoomInButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 84.0, height: 32.0)
         self.measureButton.frame = CGRect(x: self.zoomOutButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 140.0, height: 32.0)
+    }
+}
+
+private final class DisplayLinkTarget: NSObject {
+    private weak var owner: DemoViewController?
+
+    init(owner: DemoViewController) {
+        self.owner = owner
+    }
+
+    @objc func tick() {
+        self.owner?.emptyTick()
     }
 }
 

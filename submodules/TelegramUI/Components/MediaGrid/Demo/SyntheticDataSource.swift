@@ -49,7 +49,9 @@ final class SyntheticDataSource: MediaGridDataSource {
     private var useTick = 0
     private var renderStack: [Int] = []
     private var rendersInFlight = Set<Int>()
-    private var isPrepareTurnOpen = false
+    private var preparedPageList: [Int] = []
+    private var lastPage: (page: Int, image: CGImage)?
+    private var lastTouchedPage: Int?
 
     init(count: Int = 100_000, seed: UInt64 = 1) {
         self.count = count
@@ -126,8 +128,15 @@ final class SyntheticDataSource: MediaGridDataSource {
             return nil
         }
         let page = index / SyntheticDataSource.slotsPerPage
-        guard let image = self.pages[page] else {
-            return nil
+        let image: CGImage
+        if let lastPage = self.lastPage, lastPage.page == page {
+            image = lastPage.image
+        } else {
+            guard let found = self.pages[page] else {
+                return nil
+            }
+            image = found
+            self.lastPage = (page, found)
         }
         self.touch(page: page)
         let rect = SyntheticDataSource.drawnRect(slot: index % SyntheticDataSource.slotsPerPage, aspect: self.aspects[index])
@@ -135,38 +144,37 @@ final class SyntheticDataSource: MediaGridDataSource {
         return MediaGridThumbnail(image: image, contentsRect: CGRect(x: rect.minX / size, y: rect.minY / size, width: rect.width / size, height: rect.height / size))
     }
 
-    func prepareThumbnails(indices: Range<Int>) {
-        if !self.isPrepareTurnOpen {
-            self.isPrepareTurnOpen = true
-            self.renderStack.removeAll()
-            DispatchQueue.main.async { [weak self] in
-                self?.isPrepareTurnOpen = false
+    func prepareThumbnails(ranges: [Range<Int>]) {
+        var seen = Set<Int>()
+        var pages: [Int] = []
+        outer: for range in ranges {
+            let clamped = range.clamped(to: 0 ..< self.count)
+            guard !clamped.isEmpty else {
+                continue
+            }
+            for page in clamped.lowerBound / SyntheticDataSource.slotsPerPage ... (clamped.upperBound - 1) / SyntheticDataSource.slotsPerPage where seen.insert(page).inserted {
+                pages.append(page)
+                if pages.count >= SyntheticDataSource.pageBudget {
+                    break outer
+                }
             }
         }
-        let clamped = indices.clamped(to: 0 ..< self.count)
-        guard !clamped.isEmpty else {
+        if pages == self.preparedPageList && pages.allSatisfy({ self.pages[$0] != nil || self.rendersInFlight.contains($0) || self.renderStack.contains($0) }) {
             return
         }
-        let first = clamped.lowerBound / SyntheticDataSource.slotsPerPage
-        let last = (clamped.upperBound - 1) / SyntheticDataSource.slotsPerPage
-        var wanted: [Int] = []
-        for page in first ... last {
-            if self.pages[page] != nil {
-                self.touch(page: page)
-            } else if !self.rendersInFlight.contains(page) {
-                wanted.append(page)
-            }
+        self.preparedPageList = pages
+        for page in pages.reversed() where self.pages[page] != nil {
+            self.touch(page: page)
         }
-        if wanted.count > SyntheticDataSource.pageBudget {
-            wanted.removeLast(wanted.count - SyntheticDataSource.pageBudget)
-        }
-        let wantedSet = Set(wanted)
-        self.renderStack.removeAll { wantedSet.contains($0) }
-        self.renderStack.append(contentsOf: wanted.reversed())
+        self.renderStack = pages.reversed().filter { self.pages[$0] == nil && !self.rendersInFlight.contains($0) }
         self.startRenders()
     }
 
     private func touch(page: Int) {
+        if self.lastTouchedPage == page {
+            return
+        }
+        self.lastTouchedPage = page
         self.useTick += 1
         self.pageUses[page] = self.useTick
     }
@@ -198,6 +206,12 @@ final class SyntheticDataSource: MediaGridDataSource {
                 for victim in victims.prefix(self.pages.count - SyntheticDataSource.pageBudget) {
                     self.pages.removeValue(forKey: victim)
                     self.pageUses.removeValue(forKey: victim)
+                    if self.lastPage?.page == victim {
+                        self.lastPage = nil
+                    }
+                    if self.lastTouchedPage == victim {
+                        self.lastTouchedPage = nil
+                    }
                 }
             }
             let lower = page * SyntheticDataSource.slotsPerPage
