@@ -52,15 +52,8 @@ public final class MediaGridLaunchCacheKeeper {
         self.scheduleRefresh()
     }
 
-    static let derivativeTolerance: CGFloat = 0.65
-
-    public static func coverage(of image: CGImage, target: CGSize) -> Int {
-        let side = min(image.width, image.height)
-        let targetSide = min(target.width, target.height)
-        if CGFloat(side) >= MediaGridLaunchCacheKeeper.derivativeTolerance * targetSide {
-            return max(side, Int(targetSide.rounded(.down)))
-        }
-        return side
+    public static func coverage(of image: CGImage) -> Int {
+        return min(image.width, image.height)
     }
 
     public func targetSize(at index: Int, pixelSize: CGSize) -> CGSize {
@@ -73,12 +66,12 @@ public final class MediaGridLaunchCacheKeeper {
         return CGSize(width: (pixelSize.width * scale).rounded(.up), height: (pixelSize.height * scale).rounded(.up))
     }
 
-    public func delivered(id: String, image: CGImage, target: CGSize) {
+    public func delivered(id: String, image: CGImage) {
         guard let index = self.head.firstIndex(where: { $0.id == id }) else {
             return
         }
         let version = self.head[index].version
-        let delivery = MediaGridLaunchCache.Delivered(version: version, image: image, coverage: MediaGridLaunchCacheKeeper.coverage(of: image, target: target))
+        let delivery = MediaGridLaunchCache.Delivered(version: version, image: image, coverage: MediaGridLaunchCacheKeeper.coverage(of: image))
         if let current = self.delivered[id], current.version == version, !delivery.isBetter(than: current) {
             return
         }

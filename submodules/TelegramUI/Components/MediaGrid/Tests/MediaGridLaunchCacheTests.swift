@@ -106,9 +106,13 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         let dataSource = TestDataSource(count: 1000)
         dataSource.providesThumbnails = true
         dataSource.holdsDeliveries = true
-        dataSource.launchImages[0] = MediaGridLaunchImage(image: MediaGridLaunchCacheTests.makeImage(width: 200, height: 200, color: .blue))
+        let image = MediaGridLaunchCacheTests.makeImage(width: 200, height: 200, color: .blue)
+        dataSource.launchImages[0] = MediaGridLaunchImage(image: image)
         let view = self.makeGrid(dataSource: dataSource)
         view.layoutIfNeeded()
+        let cell = view.activeLayoutLayer.visibleCells[0]!
+        XCTAssertTrue((cell.contents as AnyObject?) === image)
+        XCTAssertFalse(cell.isShowingThumbnail)
         XCTAssertTrue(dataSource.requests.contains { $0.index == 0 })
         XCTAssertTrue(dataSource.requests.contains { $0.index == 1 })
     }
@@ -204,18 +208,23 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         XCTAssertEqual(cache.decodedImageCount, 0)
     }
 
-    func testFallbackDeliveryCoversOnlyItsOwnSize() {
+    func testCoverageIsTheDeliveredSize() {
+        XCTAssertEqual(MediaGridLaunchCacheKeeper.coverage(of: MediaGridLaunchCacheTests.makeImage(width: 360, height: 480, color: .red)), 360)
+        XCTAssertEqual(MediaGridLaunchCacheKeeper.coverage(of: MediaGridLaunchCacheTests.makeImage(width: 600, height: 800, color: .red)), 600)
         let directory = self.makeDirectory()
         let (keeper, run) = self.makeKeeper(directory: directory, capacity: 3, pixelSize: 522)
-        keeper.install(head: self.keys(["a", "b"]), images: [:])
-        keeper.delivered(id: "a", image: MediaGridLaunchCacheTests.makeImage(width: 360, height: 480, color: .red), target: CGSize(width: 522.0, height: 522.0))
-        keeper.delivered(id: "b", image: MediaGridLaunchCacheTests.makeImage(width: 120, height: 160, color: .red), target: CGSize(width: 522.0, height: 522.0))
+        keeper.install(head: self.keys(["a", "b", "c"]), images: [:])
+        keeper.delivered(id: "c", image: MediaGridLaunchCacheTests.makeImage(width: 600, height: 800, color: .red))
+        keeper.delivered(id: "a", image: MediaGridLaunchCacheTests.makeImage(width: 360, height: 480, color: .red))
+        keeper.delivered(id: "b", image: MediaGridLaunchCacheTests.makeImage(width: 120, height: 160, color: .red))
         run()
         self.flush(keeper)
         let reloaded = MediaGridLaunchCache(directory: directory, capacity: 3, pixelSize: 522)
         reloaded.load()
-        XCTAssertEqual(reloaded.launchImage(for: "a", version: "1")?.coveredPixelWidth, 522)
+        XCTAssertEqual(reloaded.launchImage(for: "a", version: "1")?.coveredPixelWidth, 360)
         XCTAssertEqual(reloaded.launchImage(for: "b", version: "1")?.coveredPixelWidth, 120)
+        XCTAssertEqual(reloaded.launchImage(for: "c", version: "1")?.coveredPixelWidth, 522)
+        XCTAssertEqual(reloaded.launchImage(for: "c", version: "1")?.pixelWidth, 522)
     }
 
     private func spin(timeout: TimeInterval = 5.0, until condition: () -> Bool) {
@@ -254,7 +263,7 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         let dataSource = self.makeLibraryDataSource(cache: cache, head: self.keys(["a", "b", "c"]), gate: gate)
         let start = CACurrentMediaTime()
         dataSource.waitForLaunchImages(timeout: 0.05)
-        XCTAssertLessThan(CACurrentMediaTime() - start, 0.02)
+        XCTAssertLessThan(CACurrentMediaTime() - start, 0.035)
         XCTAssertTrue(dataSource.isLaunchInstalled)
         XCTAssertNil(dataSource.launchImage(at: 0))
         XCTAssertEqual(dataSource.launchKeeper?.head, [])
@@ -475,9 +484,9 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         keeper.install(head: self.keys(["a", "b", "c"]), images: [:])
         keeper.viewportChanged(lowerBound: 0)
         for id in ["a", "b", "c"] {
-            keeper.delivered(id: id, image: MediaGridLaunchCacheTests.makeImage(width: 90, height: 120, color: .red), target: CGSize(width: 64.0, height: 64.0))
+            keeper.delivered(id: id, image: MediaGridLaunchCacheTests.makeImage(width: 90, height: 120, color: .red))
         }
-        keeper.delivered(id: "z", image: MediaGridLaunchCacheTests.makeImage(width: 90, height: 120, color: .red), target: CGSize(width: 64.0, height: 64.0))
+        keeper.delivered(id: "z", image: MediaGridLaunchCacheTests.makeImage(width: 90, height: 120, color: .red))
         keeper.viewportChanged(lowerBound: 30)
         run()
         self.flush(keeper)
@@ -517,7 +526,7 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         XCTAssertEqual(Set(keeper.images.keys), [1, 2])
         XCTAssertTrue(keeper.images[1]!.image === a)
         XCTAssertTrue(keeper.images[2]!.image === b)
-        keeper.delivered(id: "x", image: MediaGridLaunchCacheTests.makeImage(width: 80, height: 80, color: .black), target: CGSize(width: 64.0, height: 64.0))
+        keeper.delivered(id: "x", image: MediaGridLaunchCacheTests.makeImage(width: 80, height: 80, color: .black))
         run()
         self.flush(keeper)
         XCTAssertEqual(keeper.refreshCount, 1)

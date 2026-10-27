@@ -155,7 +155,7 @@ final class DemoViewController: UIViewController {
         let (empty, visible) = gridView.debugEmptyVisibleCellCount()
         if !self.didReportFirstGridFrame, visible > 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
             self.didReportFirstGridFrame = true
-            print(String(format: "FIRST_GRID_FRAME since_launch=%.0fms visible=%d empty=%d launch_wait=%.2fms", DemoViewController.timeSinceProcessStart() * 1000.0, visible, empty, (gridView.launchImageWaitDuration ?? 0.0) * 1000.0))
+            print(String(format: "FIRST_GRID_FRAME since_launch=%.0fms visible=%d empty=%d launch_wait=%.2fms requests=%d", DemoViewController.timeSinceProcessStart() * 1000.0, visible, empty, (gridView.launchImageWaitDuration ?? 0.0) * 1000.0, self.instrumentedDataSource?.counters.requests ?? -1))
             fflush(stdout)
         }
         if !self.didReportFirstFilledFrame, visible > 0, empty == 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {

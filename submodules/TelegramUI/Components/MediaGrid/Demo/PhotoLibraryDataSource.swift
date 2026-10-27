@@ -895,7 +895,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             self.cache.setObject(image, forKey: job.key.cacheKey, cost: cgImage.bytesPerRow * cgImage.height)
             self.harvest(image, id: job.key.identifier)
             if job.key.revision == self.imageRevision(for: job.key.identifier) {
-                self.launchKeeper?.delivered(id: job.key.identifier, image: cgImage, target: job.payload.targetSize)
+                self.launchKeeper?.delivered(id: job.key.identifier, image: cgImage)
             }
         }
         self.scheduler.finish(job, attempt: attempt, image: image)
