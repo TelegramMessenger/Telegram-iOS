@@ -107,6 +107,25 @@ final class ChatInputContentInstantPageTests: XCTestCase {
         ])]), "spoiler+italic url")
     }
 
+    // A mention carries the raw user id on the page (`user_id:long`), which differs from a packed `PeerId` for
+    // every id of 2^32 and above: a packed one names another user, or none.
+    func test_mentionCarriesTheRawUserId() {
+        let peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value((1 << 33) + 5))
+        var mention = ChatInputInlineAttributes(); mention.entity = .mention(peerId)
+        let content = ChatInputContent(blocks: [body([ChatInputRun(text: "Bob", attributes: mention)])])
+        XCTAssertEqual(instantPage(from: content).referencedUserIds, [peerId])
+        assertRoundTrips(content, "mention of a user id above 2^32")
+    }
+
+    // Only a user can be mentioned by name; any other id (a crafted clipboard or .rtdoc) leaves the text plain.
+    func test_mentionOfANonUserIsPlainText() {
+        let channelId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(777))
+        var mention = ChatInputInlineAttributes(); mention.entity = .mention(channelId)
+        let page = instantPage(from: ChatInputContent(blocks: [body([ChatInputRun(text: "Chan", attributes: mention)])]))
+        XCTAssertEqual(page.referencedUserIds, [])
+        XCTAssertEqual(chatInputContent(fromInstantPage: page), ChatInputContent(blocks: [body([ChatInputRun(text: "Chan")])]))
+    }
+
     func test_formulaRun_roundTripsAsStandaloneFormulaBlock() {
         var formula = ChatInputInlineAttributes()
         formula.formula = "e^{I\\pi}=-1"

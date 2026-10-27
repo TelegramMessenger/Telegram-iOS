@@ -13,7 +13,8 @@ public class RichTextMessageAttribute: MessageAttribute, Equatable {
             return self.instantPage.referencedUserIds
         }
         var result = self.instantPage.referencedUserIds
-        for peerId in fullInstantPage.referencedUserIds where !result.contains(peerId) {
+        var seen = Set(result)
+        for peerId in fullInstantPage.referencedUserIds where seen.insert(peerId).inserted {
             result.append(peerId)
         }
         return result
