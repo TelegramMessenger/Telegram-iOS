@@ -215,7 +215,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         if let panGestureRecognizer = self.panGestureRecognizer, gestureRecognizer === panGestureRecognizer {
             let hitView = self.hitTest(gestureRecognizer.location(in: self.view), with: nil)
-            if self.findScrollView(view: hitView) == nil, let content = self.findScrollableContent(view: hitView) {
+            if let content = self.findScrollableContent(view: hitView) {
                 if content.attachmentBlocksContainerPan || panGestureRecognizer.numberOfTouches > 1 {
                     return false
                 }
@@ -253,6 +253,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             return true
         }
         if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer {
+            return true
+        }
+        if gestureRecognizer === self.panGestureRecognizer, otherGestureRecognizer is UIPinchGestureRecognizer, self.findScrollableContent(view: otherGestureRecognizer.view) != nil {
             return true
         }
         return false
@@ -296,13 +299,13 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 let point = recognizer.location(in: self.view)
                 let currentHitView = self.hitTest(point, with: nil)
                 
-                var scrollViewAndListNode = self.findScrollView(view: currentHitView)
+                let content = self.findScrollableContent(view: currentHitView)
+                var scrollViewAndListNode = content == nil ? self.findScrollView(view: currentHitView) : nil
                 if scrollViewAndListNode?.0.frame.height == self.frame.width || scrollViewAndListNode?.0.isDescendant(of: self.view) == false {
                     scrollViewAndListNode = nil
                 }
                 let scrollView = scrollViewAndListNode?.0
                 let listNode = scrollViewAndListNode?.1
-                let content = scrollViewAndListNode == nil ? self.findScrollableContent(view: currentHitView) : nil
             
                 let topInset: CGFloat
                 if self.isExpanded {
@@ -314,6 +317,10 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 self.panGestureArguments = (topInset, 0.0, scrollView, listNode, content, isFullSize)
             case .changed:
                 guard let (topInset, panOffset, scrollView, listNode, content, isFullSize) = self.panGestureArguments else {
+                    return
+                }
+                if let content, content.attachmentBlocksContainerPan || recognizer.numberOfTouches > 1 {
+                    self.cancelPanGesture()
                     return
                 }
                 let visibleContentOffset = listNode?.visibleContentOffset()
@@ -800,13 +807,22 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     }
     
     private func findScrollableContent(view: UIView?) -> AttachmentScrollableContent? {
-        guard let view else {
+        guard let view, view !== self.view else {
             return nil
         }
         if let content = view as? AttachmentScrollableContent {
             return content
         }
-        if view is UIScrollView || view.asyncdisplaykit_node is ListView || view === self.view {
+        if let scrollView = view as? UIScrollView {
+            if scrollView.description.contains("WKChildScroll") {
+                return nil
+            } else if scrollView is UITextView {
+            } else if scrollView.frame.height > 0.0 && scrollView.frame.width / scrollView.frame.height > 2.5 {
+            } else {
+                return nil
+            }
+        }
+        if view.asyncdisplaykit_node is ListView {
             return nil
         }
         return self.findScrollableContent(view: view.superview)
