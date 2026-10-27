@@ -456,8 +456,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if let strongSelf = self {
                 if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
+                    strongSelf.tabBarItem.accessibilityValue = nil
                 } else {
                     strongSelf.tabBarItem.badgeValue = compactNumericCountString(Int(count.0), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+                    strongSelf.tabBarItem.accessibilityValue = presentationData.strings.VoiceOver_Chat_UnreadMessages(count.0)
                 }
             }
         }).strict()

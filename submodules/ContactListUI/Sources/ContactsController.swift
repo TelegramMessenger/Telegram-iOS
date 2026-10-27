@@ -221,7 +221,9 @@ public class ContactsController: ViewController {
             |> deliverOnMainQueue).start(next: { [weak self] status, suppressedAndSortOrder in
                 if let strongSelf = self {
                     let (suppressed, sortOrder) = suppressedAndSortOrder
-                    strongSelf.tabBarItem.badgeValue = ![.allowed, .limited].contains(status) && !suppressed ? "!" : nil
+                    let needsAttention = ![.allowed, .limited].contains(status) && !suppressed
+                    strongSelf.tabBarItem.badgeValue = needsAttention ? "!" : nil
+                    strongSelf.tabBarItem.accessibilityValue = needsAttention ? strongSelf.presentationData.strings.VoiceOver_TabBar_AttentionRequired : nil
                     strongSelf.sortOrderPromise.set(.single(sortOrder))
                 }
             }).strict()

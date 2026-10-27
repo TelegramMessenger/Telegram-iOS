@@ -5972,6 +5972,8 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.On" = "On";
 "VoiceOver.Common.Off" = "Off";
 
+"VoiceOver.TabBar.AttentionRequired" = "Attention required";
+
 "VoiceOver.Chat.MessagesSelected_0" = "%@ messages selected";
 "VoiceOver.Chat.MessagesSelected_1" = "%@ message selected";
 "VoiceOver.Chat.MessagesSelected_2" = "%@ messages selected";

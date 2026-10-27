@@ -99,7 +99,20 @@ public final class NavigationSearchView: UIView {
         self.update(params: params, transition: transition)
     }
 
+    override public func accessibilityActivate() -> Bool {
+        if self.isAccessibilityElement {
+            self.action()
+            return true
+        }
+        return false
+    }
+    
     private func update(params: Params, transition: ComponentTransition) {
+        // The idle button is one element; once active the search bar inside is what VoiceOver reaches.
+        self.isAccessibilityElement = !params.isActive
+        self.accessibilityLabel = params.strings.Common_Search
+        self.accessibilityTraits = .button
+        
         let backgroundSize: CGSize
         if params.isActive {
             backgroundSize = CGSize(width: params.size.width - 48.0 - 8.0, height: params.size.height)
@@ -347,6 +360,31 @@ public final class TabBarComponent: Component {
             }
         }
 
+        /// What VoiceOver says: the title shown under the icon.
+        fileprivate var accessibilityLabel: String? {
+            switch self.content {
+            case let .tabBarItem(tabBarItem):
+                return tabBarItem.accessibilityLabel ?? tabBarItem.title
+            case let .customItem(customItem):
+                return customItem.title
+            }
+        }
+        
+        /// The badge's text, unless the item describes it better (`UITabBarItem.accessibilityValue`: "3 unread messages").
+        fileprivate var accessibilityValue: String? {
+            let value: String?
+            switch self.content {
+            case let .tabBarItem(tabBarItem):
+                value = tabBarItem.accessibilityValue ?? tabBarItem.badgeValue
+            case let .customItem(customItem):
+                value = customItem.badge
+            }
+            if let value, !value.isEmpty {
+                return value
+            }
+            return nil
+        }
+        
         public init(content: Content, action: @escaping (Bool) -> Void, doubleTapAction: (() -> Void)?, contextAction: ((ContextGesture, ContextExtractedContentContainingView) -> Void)?) {
             self.content = content
             self.action = action
@@ -469,6 +507,16 @@ public final class TabBarComponent: Component {
         return true
     }
 
+    /// One tab as VoiceOver sees it. Activating it selects the tab.
+    private final class ItemAccessibilityElement: UIAccessibilityElement {
+        var activate: (() -> Void)?
+        
+        override func accessibilityActivate() -> Bool {
+            self.activate?()
+            return self.activate != nil
+        }
+    }
+    
     public final class View: UIView, UIGestureRecognizerDelegate {
         private let backgroundContainer: GlassBackgroundContainerView
         private let liquidLensView: LiquidLensView
@@ -479,6 +527,7 @@ public final class TabBarComponent: Component {
         private var selectedItemViews: [AnyHashable: ComponentView<Empty>] = [:]
 
         private var searchView: NavigationSearchView?
+        private var accessibilityItemElements: [AnyHashable: ItemAccessibilityElement] = [:]
         
         private var tabSelectionRecognizer: TabSelectionRecognizer?
         private var itemWithActiveContextGesture: AnyHashable?
@@ -508,6 +557,11 @@ public final class TabBarComponent: Component {
                 self.traitOverrides.verticalSizeClass = .compact
                 self.traitOverrides.horizontalSizeClass = .compact
             }
+            
+            // Every item is drawn twice (regular and under the lens), so the views are no elements: the bar lists one
+            // element per item itself.
+            self.isAccessibilityElement = false
+            self.accessibilityTraits = .tabBar
             
             self.addSubview(self.backgroundContainer)
             self.backgroundContainer.contentView.addSubview(self.contextGestureContainerView)
@@ -682,6 +736,54 @@ public final class TabBarComponent: Component {
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             return super.hitTest(point, with: event)
+        }
+        
+        /// The tap without the gesture: what activating an item from VoiceOver does.
+        private func select(item: Item) {
+            self.overrideSelectedItemId = item.id
+            item.action(false)
+            self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
+        }
+        
+        override public var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component else {
+                    return []
+                }
+                let selectedId = self.overrideSelectedItemId ?? component.selectedId
+                var elements: [Any] = []
+                var validIds: [AnyHashable] = []
+                for item in component.items {
+                    guard let itemView = self.itemViews[item.id]?.view, itemView.superview != nil else {
+                        continue
+                    }
+                    validIds.append(item.id)
+                    let element: ItemAccessibilityElement
+                    if let current = self.accessibilityItemElements[item.id] {
+                        element = current
+                    } else {
+                        element = ItemAccessibilityElement(accessibilityContainer: self)
+                        self.accessibilityItemElements[item.id] = element
+                    }
+                    element.accessibilityLabel = item.accessibilityLabel
+                    element.accessibilityValue = item.accessibilityValue
+                    element.accessibilityTraits = item.id == selectedId ? [.button, .selected] : [.button]
+                    element.accessibilityFrameInContainerSpace = self.convert(itemView.bounds, from: itemView)
+                    element.activate = { [weak self] in
+                        self?.select(item: item)
+                    }
+                    elements.append(element)
+                }
+                for id in Array(self.accessibilityItemElements.keys) where !validIds.contains(id) {
+                    self.accessibilityItemElements.removeValue(forKey: id)
+                }
+                if let searchView = self.searchView {
+                    elements.append(searchView)
+                }
+                return elements
+            }
+            set {
+            }
         }
         
         public func frameForItem(at index: Int) -> CGRect? {
