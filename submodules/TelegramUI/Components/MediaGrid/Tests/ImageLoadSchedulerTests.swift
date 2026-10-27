@@ -69,6 +69,17 @@ final class ImageLoadSchedulerTests: XCTestCase {
         XCTAssertEqual(scheduler.localLane.running, 2)
     }
 
+    func testBatchStartsNewestFirst() {
+        let scheduler = self.makeScheduler(localLimit: 2)
+        scheduler.batch {
+            for key in ["a", "b", "c"] {
+                _ = scheduler.request(key: key, payload: 0, isReduced: false, completion: { _, _ in })
+            }
+            XCTAssertTrue(self.started.isEmpty)
+        }
+        XCTAssertEqual(self.started.map { $0.key }, ["c", "b"])
+    }
+
     func testCancellingQueuedRequestNeverStartsIt() {
         let scheduler = self.makeScheduler(localLimit: 1)
         _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { _, _ in })

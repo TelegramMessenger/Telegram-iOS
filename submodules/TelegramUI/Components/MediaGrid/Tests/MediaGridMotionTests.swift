@@ -68,6 +68,40 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertFalse(view.isMovingFast)
     }
 
+    func testFrameJumpOverAScreenBindsFast() {
+        let (view, dataSource) = self.makeView()
+        self.scroll(view, to: 1000.0)
+        let before = dataSource.requests.count
+        self.scroll(view, to: 1000.0 + view.bounds.height * 1.5, after: 1.0 / 60.0)
+        XCTAssertTrue(view.isMovingFast)
+        let added = dataSource.requests[before...]
+        XCTAssertFalse(added.isEmpty)
+        XCTAssertTrue(added.allSatisfy { $0.quality == .fast })
+    }
+
+    func testScrollBindsInsideOneDataSourceBatch() {
+        let (view, dataSource) = self.makeView()
+        let before = dataSource.requests.count
+        let batchedBefore = dataSource.batchedRequests
+        self.scroll(view, to: 5000.0)
+        XCTAssertGreaterThan(dataSource.requests.count, before)
+        XCTAssertEqual(dataSource.batchedRequests - batchedBefore, dataSource.requests.count - before)
+        let upgradeBefore = dataSource.requests.count
+        let upgradeBatchedBefore = dataSource.batchedRequests
+        self.startFastScrub(view)
+        self.time += 1.0
+        view._testSettleMotion()
+        XCTAssertGreaterThan(dataSource.requests.count, upgradeBefore)
+        XCTAssertEqual(dataSource.batchedRequests - upgradeBatchedBefore, dataSource.requests.count - upgradeBefore)
+    }
+
+    func testFrameStepUnderAScreenWaitsForSample() {
+        let (view, _) = self.makeView()
+        self.scroll(view, to: 1000.0)
+        self.scroll(view, to: 1000.0 + view.bounds.height * 0.9, after: 1.0 / 60.0)
+        XCTAssertFalse(view.isMovingFast)
+    }
+
     func testSettleUpgradesFastCellsKeepingTheirImage() {
         let (view, dataSource) = self.makeView()
         dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
@@ -211,6 +245,42 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertFalse(added.isEmpty)
         XCTAssertTrue(added.allSatisfy { $0.quality == .full })
         view._testFinishAnimations()
+    }
+
+    func testZoomStartDoesNotUpgradeOutgoingFastCells() {
+        let (view, dataSource) = self.makeView()
+        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
+        self.startFastScrub(view)
+        XCTAssertTrue(view.isMovingFast)
+        let outgoing = Set(self.viewportIndices(view))
+        let before = dataSource.requests.count
+        view.setLevel(.five, animated: true)
+        guard let transition = view.transition else {
+            XCTFail("no transition")
+            return
+        }
+        XCTAssertFalse(view.isMovingFast)
+        let added = dataSource.requests[before...]
+        XCTAssertEqual(added.count, transition.incoming.visibleCells.count)
+        XCTAssertFalse(outgoing.isEmpty)
+        view._testFinishAnimations()
+    }
+
+    func testCancelledZoomUpgradesFastCells() {
+        let (view, dataSource) = self.makeView()
+        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
+        self.startFastScrub(view)
+        let viewport = Set(self.viewportIndices(view))
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 0.95)
+        XCTAssertNotNil(view.transition)
+        let before = dataSource.requests.count
+        view._testPinch(.ended, center: centre, scale: 1.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .three)
+        let upgraded = Set(dataSource.requests[before...].filter { $0.quality == .full }.map { $0.index })
+        XCTAssertTrue(viewport.isSubset(of: upgraded))
     }
 
     func testNearestFirstOrdersByDistanceFromCentre() {

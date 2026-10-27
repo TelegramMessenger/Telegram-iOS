@@ -69,11 +69,14 @@ final class SyntheticDataSource: MediaGridDataSource {
         return self.dates[index]
     }
 
-    func aspectRatio(at index: Int) -> CGFloat {
-        guard index >= 0, index < self.count else {
-            return 1.0
+    func aspectRatioReader() -> MediaGridAspectRatioReader {
+        let aspects = self.aspects
+        return { index in
+            guard index >= 0, index < aspects.count else {
+                return 1.0
+            }
+            return aspects[index]
         }
-        return self.aspects[index]
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {

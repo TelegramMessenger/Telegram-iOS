@@ -13,6 +13,7 @@ final class MediaGridLayoutLayer: CALayer {
     var quality: MediaGridImageQuality = .full
     private(set) var visibleRange: Range<Int> = 0 ..< 0
     private var needsRebind = false
+    private var staleIndices = Set<Int>()
 
     init(dataSource: MediaGridDataSource, pool: MediaGridCellPool) {
         self.dataSource = dataSource
@@ -36,20 +37,17 @@ final class MediaGridLayoutLayer: CALayer {
     }
 
     func setLayout(_ layout: MediaGridLayout, detail: MediaGridCellDetail) {
-        var rebind = detail != self.detail
-        if !rebind, let previous = self.layout {
+        if detail != self.detail {
+            self.needsRebind = true
+        } else if !self.needsRebind, let previous = self.layout {
             for index in self.visibleCells.keys where index < layout.count && index < previous.count {
                 if previous.pixelSize(at: index) != layout.pixelSize(at: index) {
-                    rebind = true
-                    break
+                    self.staleIndices.insert(index)
                 }
             }
         }
         self.layout = layout
         self.detail = detail
-        if rebind {
-            self.needsRebind = true
-        }
         let kept = self.visibleRange.clamped(to: 0 ..< layout.count)
         if kept != self.visibleRange {
             for index in self.visibleCells.keys where !kept.contains(index) {
@@ -84,6 +82,7 @@ final class MediaGridLayoutLayer: CALayer {
         self.visibleCells.removeAll()
         self.visibleRange = 0 ..< 0
         self.needsRebind = false
+        self.staleIndices.removeAll()
     }
 
     private func remove(_ lower: Int, _ upper: Int) {
@@ -135,14 +134,14 @@ final class MediaGridLayoutLayer: CALayer {
         }
         let range = range.clamped(to: 0 ..< layout.count)
         let old = self.visibleRange
-        if range == old && !self.needsRebind {
+        if range == old && !self.needsRebind && self.staleIndices.isEmpty {
             return
         }
         if old.overlaps(range) {
             self.remove(old.lowerBound, range.lowerBound)
             self.remove(range.upperBound, old.upperBound)
-            if self.needsRebind {
-                for index in range.clamped(to: old) {
+            if self.needsRebind || !self.staleIndices.isEmpty {
+                for index in range.clamped(to: old) where self.needsRebind || self.staleIndices.contains(index) {
                     if let cell = self.visibleCells[index] {
                         cell.imageRequest?.cancel()
                         cell.imageRequest = nil
@@ -157,6 +156,7 @@ final class MediaGridLayoutLayer: CALayer {
             self.add(range.lowerBound, range.upperBound, layout: layout, priority: priority)
         }
         self.needsRebind = false
+        self.staleIndices.removeAll()
         self.visibleRange = range
     }
 

@@ -54,9 +54,20 @@ public enum MediaGridZoomMath {
     }
 
     static func transform(scale: CGFloat, about point: CGPoint, layerPosition: CGPoint) -> CATransform3D {
+        return MediaGridZoomMath.transform(scaleX: scale, scaleY: scale, about: point, layerPosition: layerPosition)
+    }
+
+    static func transform(scaleX: CGFloat, scaleY: CGFloat, about point: CGPoint, layerPosition: CGPoint) -> CATransform3D {
         let dx = point.x - layerPosition.x
         let dy = point.y - layerPosition.y
-        return CATransform3DConcat(CATransform3DMakeScale(scale, scale, 1.0), CATransform3DMakeTranslation((1.0 - scale) * dx, (1.0 - scale) * dy, 0.0))
+        return CATransform3DConcat(CATransform3DMakeScale(scaleX, scaleY, 1.0), CATransform3DMakeTranslation((1.0 - scaleX) * dx, (1.0 - scaleY) * dy, 0.0))
+    }
+
+    static func scaled(_ rect: CGRect, about point: CGPoint, byX scaleX: CGFloat, y scaleY: CGFloat) -> CGRect {
+        guard scaleX.isFinite, scaleX > 0.0, scaleY.isFinite, scaleY > 0.0 else {
+            return rect
+        }
+        return CGRect(x: point.x + (rect.minX - point.x) * scaleX, y: point.y + (rect.minY - point.y) * scaleY, width: rect.width * scaleX, height: rect.height * scaleY)
     }
 }
 
@@ -183,6 +194,7 @@ final class MediaGridZoomTransition {
     let incoming: MediaGridLayoutLayer
     let anchorPoint: CGPoint
     let scale: CGFloat
+    let heightRatio: CGFloat
     let targetLayout: MediaGridLayout
     let targetOffset: CGFloat
     let camera: UIView?
@@ -195,7 +207,7 @@ final class MediaGridZoomTransition {
     var boundRange: ClosedRange<CGFloat>?
     private var animationToken = 0
 
-    init(sourceLevel: MediaGridLevel, targetLevel: MediaGridLevel, sourceLayout: MediaGridLayout, outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, targetLayout: MediaGridLayout, targetOffset: CGFloat, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
+    init(sourceLevel: MediaGridLevel, targetLevel: MediaGridLevel, sourceLayout: MediaGridLayout, outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, heightRatio: CGFloat = 1.0, targetLayout: MediaGridLayout, targetOffset: CGFloat, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
         self.sourceLevel = sourceLevel
         self.targetLevel = targetLevel
         self.sourceLayout = sourceLayout
@@ -203,6 +215,7 @@ final class MediaGridZoomTransition {
         self.incoming = incoming
         self.anchorPoint = anchorPoint
         self.scale = scale
+        self.heightRatio = heightRatio.isFinite && heightRatio > 0.0 ? heightRatio : 1.0
         self.targetLayout = targetLayout
         self.targetOffset = targetOffset
         self.camera = camera
@@ -237,22 +250,28 @@ final class MediaGridZoomTransition {
         return start + (1.0 - start) * progress
     }
 
+    private func outgoingScaleY(_ progress: CGFloat) -> CGFloat {
+        return self.outgoingScale(progress) * pow(self.heightRatio, progress)
+    }
+
+    private func incomingScaleY(_ progress: CGFloat) -> CGFloat {
+        return self.incomingScale(progress) * pow(self.heightRatio, progress - 1.0)
+    }
+
     func incomingRect(at progress: CGFloat) -> CGRect {
-        return MediaGridZoomMath.scaled(self.viewport, about: self.anchorPoint, by: 1.0 / self.incomingScale(progress)).offsetBy(dx: 0.0, dy: -self.shift)
+        return MediaGridZoomMath.scaled(self.viewport, about: self.anchorPoint, byX: 1.0 / self.incomingScale(progress), y: 1.0 / self.incomingScaleY(progress)).offsetBy(dx: 0.0, dy: -self.shift)
     }
 
     func outgoingRect(at progress: CGFloat) -> CGRect {
-        return MediaGridZoomMath.scaled(self.viewport, about: self.anchorPoint, by: 1.0 / self.outgoingScale(progress))
+        return MediaGridZoomMath.scaled(self.viewport, about: self.anchorPoint, byX: 1.0 / self.outgoingScale(progress), y: 1.0 / self.outgoingScaleY(progress))
     }
 
     private func outgoingTransform(_ progress: CGFloat) -> CATransform3D {
-        let scale = self.outgoingScale(progress)
-        return CATransform3DMakeScale(scale, scale, 1.0)
+        return CATransform3DMakeScale(self.outgoingScale(progress), self.outgoingScaleY(progress), 1.0)
     }
 
     private func incomingTransform(_ progress: CGFloat) -> CATransform3D {
-        let scale = self.incomingScale(progress)
-        return CATransform3DMakeScale(scale, scale, 1.0)
+        return CATransform3DMakeScale(self.incomingScale(progress), self.incomingScaleY(progress), 1.0)
     }
 
     private func cameraTransform(_ progress: CGFloat, layer: CALayer) -> CATransform3D {
@@ -260,9 +279,9 @@ final class MediaGridZoomTransition {
         case .none, .moving:
             return CATransform3DIdentity
         case .outgoing:
-            return MediaGridZoomMath.transform(scale: self.outgoingScale(progress), about: self.anchorPoint, layerPosition: layer.position)
+            return MediaGridZoomMath.transform(scaleX: self.outgoingScale(progress), scaleY: self.outgoingScaleY(progress), about: self.anchorPoint, layerPosition: layer.position)
         case .incoming:
-            return MediaGridZoomMath.transform(scale: self.incomingScale(progress), about: self.anchorPoint, layerPosition: layer.position)
+            return MediaGridZoomMath.transform(scaleX: self.incomingScale(progress), scaleY: self.incomingScaleY(progress), about: self.anchorPoint, layerPosition: layer.position)
         }
     }
 

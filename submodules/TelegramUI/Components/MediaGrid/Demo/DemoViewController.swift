@@ -166,12 +166,18 @@ final class DemoViewController: UIViewController {
         self.autoPinchLastTimestamp = nil
         self.autoPinchPair = nil
         self.autoPinchState = MediaGridPinchState(startLevel: gridView.level, anchor: MediaGridZoomAnchor(index: 0, pointInView: self.autoPinchCentre))
-        let link = CADisplayLink(target: self, selector: #selector(self.autoPinchTick(_:)))
-        if #available(iOS 15.0, *) {
-            link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+        let delay = DemoViewController.argument("-pinchDelay").flatMap(Double.init) ?? 0.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.autoPinchLink == nil else {
+                return
+            }
+            let link = CADisplayLink(target: self, selector: #selector(self.autoPinchTick(_:)))
+            if #available(iOS 15.0, *) {
+                link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+            }
+            link.add(to: .main, forMode: .common)
+            self.autoPinchLink = link
         }
-        link.add(to: .main, forMode: .common)
-        self.autoPinchLink = link
         #endif
     }
 

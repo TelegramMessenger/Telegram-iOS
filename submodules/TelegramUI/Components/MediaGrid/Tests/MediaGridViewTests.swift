@@ -1334,21 +1334,34 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(dataSource.cancelCount - cancels, kept)
     }
 
-    private func makeLevelOneView(count: Int) -> (MediaGridView, TestDataSource, () -> (([Float]) -> Void)?) {
+    private func makeLevelOneView(count: Int, harness: LevelOneHarness = LevelOneHarness()) -> (MediaGridView, TestDataSource, LevelOneHarness) {
         let dataSource = TestDataSource(count: count)
         let view = MediaGridView(dataSource: dataSource, cellFactory: {
             return MediaGridCellLayer()
         })
-        var pending: (([Float]) -> Void)?
         view.aspectLoader = { _, _, completion in
-            pending = completion
+            harness.pendingAspects = completion
+            return {
+                harness.cancelCount += 1
+            }
+        }
+        view.aspectTableBuilder = { key, aspects, completion in
+            harness.tableBuilds += 1
+            let build = {
+                completion(MediaGridAspectTable(key: key, aspects: aspects))
+            }
+            if harness.buildsTablesImmediately {
+                build()
+            } else {
+                harness.pendingTables.append(build)
+            }
         }
         view.motionClock = { 0.0 }
         view.scaleOverride = 3.0
         view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
         view.layoutIfNeeded()
         view.setLevel(.one, animated: false)
-        return (view, dataSource, { pending })
+        return (view, dataSource, harness)
     }
 
     private func assertFrame(_ frame: CGRect, _ expected: CGRect, file: StaticString = #filePath, line: UInt = #line) {
@@ -1362,14 +1375,19 @@ final class MediaGridViewTests: XCTestCase {
         return (0 ..< count).map { index in [0.5, 2.0, 1.0, 1.5, 0.75][index % 5] }
     }
 
+    private func isExact(_ view: MediaGridView) -> Bool {
+        return (view.gridLayout as? MediaGridAspectLayout)?.isExact ?? false
+    }
+
     func testLevelOneUsesEstimatesUntilAspectsArrive() {
-        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
         XCTAssertEqual(view.level, .one)
-        XCTAssertNotNil(pending())
+        XCTAssertNotNil(harness.pendingAspects)
         guard let layout = view.gridLayout as? MediaGridAspectLayout else {
             XCTFail("no aspect layout")
             return
         }
+        XCTAssertFalse(layout.isExact)
         XCTAssertEqual(layout.frame(at: 0).width, 393.0, accuracy: 1e-9)
         XCTAssertEqual(layout.frame(at: 0).height, floor(393.0 / 0.75 * 3.0) / 3.0, accuracy: 1e-9)
         for (index, cell) in self.visibleCells(view) {
@@ -1379,14 +1397,15 @@ final class MediaGridViewTests: XCTestCase {
     }
 
     func testLevelOneRequestsRowPixelSize() {
-        let (view, dataSource, pending) = self.makeLevelOneView(count: 1000)
-        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        let (view, dataSource, harness) = self.makeLevelOneView(count: 1000)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
         let requests = dataSource.pixelSizes
         view.setContentOffset(5000.0)
         guard let layout = view.gridLayout as? MediaGridAspectLayout else {
             XCTFail("no aspect layout")
             return
         }
+        XCTAssertTrue(layout.isExact)
         let fresh = dataSource.pixelSizes.dropFirst(requests.count)
         XCTAssertFalse(fresh.isEmpty)
         for (index, size) in fresh {
@@ -1398,7 +1417,7 @@ final class MediaGridViewTests: XCTestCase {
     }
 
     func testExactHeightsKeepTopItem() {
-        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
         guard let estimated = view.gridLayout else {
             XCTFail("no layout")
             return
@@ -1409,9 +1428,8 @@ final class MediaGridViewTests: XCTestCase {
             XCTFail("no frame")
             return
         }
-        let aspects = MediaGridViewTests.testAspects(count: 1000)
-        pending()?(aspects)
-        guard let exact = view.gridLayout as? MediaGridAspectLayout, let after = view.frameForItem(at: 300) else {
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        guard let exact = view.gridLayout as? MediaGridAspectLayout, exact.isExact, let after = view.frameForItem(at: 300) else {
             XCTFail("no exact layout")
             return
         }
@@ -1427,22 +1445,168 @@ final class MediaGridViewTests: XCTestCase {
         }
     }
 
+    func testExactHeightsKeepFractionInsideTopRow() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        guard let estimated = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        let row = estimated.frame(at: 301)
+        view.setContentOffset(row.minY + row.height * 0.4)
+        XCTAssertEqual(view.topVisibleIndex, 301)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        guard let exact = view.gridLayout as? MediaGridAspectLayout, exact.isExact else {
+            XCTFail("no exact layout")
+            return
+        }
+        let newRow = exact.frame(at: 301)
+        XCTAssertNotEqual(newRow.height, row.height, accuracy: 1.0)
+        XCTAssertEqual((view.contentOffset - newRow.minY) / newRow.height, 0.4, accuracy: 0.5 / newRow.height)
+        XCTAssertEqual(view.topVisibleIndex, 301)
+    }
+
     func testAspectsArrivingAtOtherLevelApplyOnEntry() {
-        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
         view.setLevel(.three, animated: false)
-        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
         XCTAssertNotNil(view.currentLayout)
         view.setLevel(.one, animated: false)
         guard let layout = view.gridLayout as? MediaGridAspectLayout else {
             XCTFail("no aspect layout")
             return
         }
+        XCTAssertTrue(layout.isExact)
         XCTAssertEqual(layout.frame(at: 0).height, 786.0, accuracy: 1e-9)
     }
 
+    func testSwapWaitsForFlightToEnd() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        view.setContentOffset(20_000.0)
+        view.engine.onWillBeginDragging?()
+        view._testFlight(settledOffset: 30_000.0)
+        view.engine.onDidEndDragging?()
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertFalse(self.isExact(view))
+        guard let top = view.topVisibleIndex, let estimated = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        let fraction = (view.contentOffset - estimated.frame(at: top).minY) / estimated.frame(at: top).height
+        view.engine.onFlightChanged?(nil)
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.topVisibleIndex, top)
+        guard let exact = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        XCTAssertEqual((view.contentOffset - exact.frame(at: top).minY) / exact.frame(at: top).height, fraction, accuracy: 0.01)
+    }
+
+    func testSwapWaitsForDragToEnd() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        view.engine.onWillBeginDragging?()
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertFalse(self.isExact(view))
+        view.engine.onDidEndDragging?()
+        XCTAssertTrue(self.isExact(view))
+    }
+
+    func testSwapWaitsForSelectionPan() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        view.selectionGesture.updateIsScrollEnabled(false)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertFalse(self.isExact(view))
+        view.selectionGesture.updateIsScrollEnabled(true)
+        XCTAssertTrue(self.isExact(view))
+    }
+
+    func testRowTableIsBuiltOnceAcrossCrossings() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertEqual(harness.tableBuilds, 1)
+        view.setContentOffset(3000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        for _ in 0 ..< 3 {
+            view._testPinch(.began, center: centre)
+            for scale in stride(from: 1.0, through: 0.3, by: -0.05) as StrideThrough<CGFloat> {
+                view._testPinch(.changed, center: centre, scale: scale)
+            }
+            for scale in stride(from: 0.3, through: 1.0, by: 0.05) as StrideThrough<CGFloat> {
+                view._testPinch(.changed, center: centre, scale: scale)
+            }
+            view._testPinch(.ended, center: centre, scale: 1.0)
+            view._testFinishAnimations()
+            XCTAssertEqual(view.level, .one)
+            XCTAssertTrue(self.isExact(view))
+        }
+        view.setLevel(.three, animated: true)
+        XCTAssertTrue((view.transition?.sourceLayout as? MediaGridAspectLayout)?.isExact ?? false)
+        view._testFinishAnimations()
+        view.setLevel(.one, animated: true)
+        XCTAssertTrue((view.transition?.targetLayout as? MediaGridAspectLayout)?.isExact ?? false)
+        view._testFinishAnimations()
+        XCTAssertEqual(harness.tableBuilds, 1)
+    }
+
+    func testWidthChangeUsesScaledRowsUntilRebuilt() {
+        let harness = LevelOneHarness()
+        let (view, _, _) = self.makeLevelOneView(count: 1000, harness: harness)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        harness.buildsTablesImmediately = false
+        view.setContentOffset(view.gridLayout!.frame(at: 200).minY)
+        view.geometryInsets = UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0)
+        view.layoutIfNeeded()
+        XCTAssertEqual(harness.tableBuilds, 2)
+        guard let scaled = view.gridLayout as? MediaGridAspectLayout else {
+            XCTFail("no layout")
+            return
+        }
+        XCTAssertFalse(scaled.isExact)
+        XCTAssertEqual(scaled.frame(at: 1).width, 373.0, accuracy: 1e-9)
+        for index in 0 ..< 999 {
+            let frame = scaled.frame(at: index)
+            let next = scaled.frame(at: index + 1)
+            XCTAssertEqual(next.minY, frame.maxY + 1.0, accuracy: 1e-6)
+            XCTAssertEqual(frame.height * 3.0, (frame.height * 3.0).rounded(), accuracy: 1e-6)
+            let exactHeight = floor(373.0 / CGFloat([0.5, 2.0, 1.0, 1.5, 0.75][index % 5]) * 3.0) / 3.0
+            XCTAssertEqual(frame.height, exactHeight, accuracy: 1.0)
+        }
+        let top = view.topVisibleIndex
+        harness.pendingTables.removeFirst()()
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.topVisibleIndex, top)
+        XCTAssertEqual(view.gridLayout!.frame(at: 1).height, floor(373.0 / 2.0 * 3.0) / 3.0, accuracy: 1e-9)
+    }
+
+    func testExactSwapRebindsOnlyResizedCells() {
+        let (view, dataSource, harness) = self.makeLevelOneView(count: 1000)
+        view.setContentOffset(view.gridLayout!.frame(at: 100).minY)
+        let visible = self.visibleCells(view).keys.sorted()
+        XCTAssertGreaterThan(visible.count, 2)
+        var aspects = [Float](repeating: 0.75, count: 1000)
+        let changed = visible[1]
+        aspects[changed] = 1.5
+        let before = dataSource.requests.count
+        harness.pendingAspects?(aspects)
+        XCTAssertTrue(self.isExact(view))
+        let rebound = dataSource.requests[before...].map { $0.index }
+        XCTAssertTrue(rebound.contains(changed))
+        XCTAssertFalse(rebound.contains(visible[0]))
+        XCTAssertFalse(rebound.contains(visible[2]))
+    }
+
+    func testReloadCancelsAspectBuild() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        let stale = harness.pendingAspects
+        view.reloadData()
+        XCTAssertEqual(harness.cancelCount, 1)
+        stale?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertFalse(self.isExact(view))
+    }
+
     func testZoomOneToThreeAnchors() {
-        let (view, _, pending) = self.makeLevelOneView(count: 1000)
-        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
         guard let layout = view.gridLayout else {
             XCTFail("no layout")
             return
@@ -1475,9 +1639,52 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertTrue(back.minY <= after.midY + 1.0 && after.midY <= back.maxY + 1.0)
     }
 
+    func testAnchorCellMorphsBetweenOneAndThree() {
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        view.setLevel(.three, animated: false)
+        view.setContentOffset(3000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        guard let index = view.index(at: centre) else {
+            XCTFail("no index")
+            return
+        }
+        XCTAssertNotEqual(MediaGridViewTests.testAspects(count: 1000)[index], 1.0)
+        view.setLevel(.one, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: centre))
+        guard let transition = view.transition else {
+            XCTFail("no transition")
+            return
+        }
+        let host = view.layer
+        let sourceFrame = transition.sourceLayout.frame(at: index)
+        let targetFrame = transition.targetLayout.frame(at: index)
+        XCTAssertGreaterThan(abs(targetFrame.height / sourceFrame.height - targetFrame.width / sourceFrame.width), 0.1)
+        var heights: [CGFloat] = []
+        for progress in [0.0, 0.25, 0.5, 0.75, 1.0] as [CGFloat] {
+            transition.apply(progress: progress)
+            let outgoing = transition.outgoing.convert(sourceFrame, to: host)
+            let incoming = transition.incoming.convert(targetFrame, to: host)
+            XCTAssertEqual(outgoing.minY, incoming.minY, accuracy: 0.5, "progress \(progress)")
+            XCTAssertEqual(outgoing.height, incoming.height, accuracy: 0.5, "progress \(progress)")
+            XCTAssertEqual(outgoing.width, incoming.width, accuracy: 0.5, "progress \(progress)")
+            XCTAssertTrue(outgoing.minY <= centre.y && centre.y <= outgoing.maxY, "progress \(progress)")
+            heights.append(incoming.height)
+        }
+        XCTAssertEqual(heights[0], sourceFrame.height, accuracy: 0.5)
+        XCTAssertEqual(heights[4], targetFrame.height, accuracy: 0.5)
+        let lastIncoming = transition.incoming.convert(targetFrame, to: host)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .one)
+        guard let settled = view.frameForItem(at: index) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertEqual(settled.minY, lastIncoming.minY, accuracy: 0.5)
+    }
+
     func testPinchThreeToOneSettlesAtOne() {
-        let (view, _, pending) = self.makeLevelOneView(count: 1000)
-        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        let (view, _, harness) = self.makeLevelOneView(count: 1000)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
         view.setLevel(.three, animated: false)
         view.setContentOffset(3000.0)
         let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
@@ -1499,6 +1706,14 @@ final class MediaGridViewTests: XCTestCase {
         }
         XCTAssertTrue(view.bounds.intersects(frame))
     }
+}
+
+private final class LevelOneHarness {
+    var pendingAspects: (([Float]) -> Void)?
+    var cancelCount = 0
+    var tableBuilds = 0
+    var buildsTablesImmediately = true
+    var pendingTables: [() -> Void] = []
 }
 
 private final class MarkerTestCell: MediaGridCellLayer {

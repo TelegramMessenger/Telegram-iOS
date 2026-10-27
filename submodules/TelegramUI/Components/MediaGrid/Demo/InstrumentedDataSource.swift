@@ -52,8 +52,8 @@ final class InstrumentedDataSource: MediaGridDataSource {
         return self.base.date(at: index)
     }
 
-    func aspectRatio(at index: Int) -> CGFloat {
-        return self.base.aspectRatio(at: index)
+    func aspectRatioReader() -> MediaGridAspectRatioReader {
+        return self.base.aspectRatioReader()
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
@@ -85,6 +85,10 @@ final class InstrumentedDataSource: MediaGridDataSource {
         isCalling = false
         self.counters.requestCallWorst = max(self.counters.requestCallWorst, CACurrentMediaTime() - start)
         return request
+    }
+
+    func performBatch(_ updates: () -> Void) {
+        self.base.performBatch(updates)
     }
 
     func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {

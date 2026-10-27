@@ -85,11 +85,19 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
         return self.asset(at: index)?.creationDate
     }
 
-    func aspectRatio(at index: Int) -> CGFloat {
-        guard let asset = self.asset(at: index), asset.pixelWidth > 0, asset.pixelHeight > 0 else {
-            return 1.0
+    func aspectRatioReader() -> MediaGridAspectRatioReader {
+        let fetchResult = self.fetchResult
+        return { index in
+            let count = fetchResult.count
+            guard index >= 0, index < count else {
+                return 1.0
+            }
+            let asset = fetchResult.object(at: count - 1 - index)
+            guard asset.pixelWidth > 0, asset.pixelHeight > 0 else {
+                return 1.0
+            }
+            return CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
         }
-        return CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
     }
 
     static func targetSize(for pixelSize: CGSize, quality: MediaGridImageQuality) -> CGSize {
@@ -134,6 +142,10 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
             }
         }
         return self.scheduler.request(key: key, payload: Load(asset: asset, targetSize: targetSize), isReduced: isReduced, completion: completion)
+    }
+
+    func performBatch(_ updates: () -> Void) {
+        self.scheduler.batch(updates)
     }
 
     func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
@@ -209,21 +221,58 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
             let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
             let isCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
             let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
-            let handle = {
+            let handle: (UIImage?) -> Void = { image in
                 guard let self, let job else {
                     return
                 }
                 self.handle(job, attempt: attempt, image: image, isDegraded: isDegraded, isCancelled: isCancelled, isInCloud: isInCloud)
             }
-            if Thread.isMainThread {
-                handle()
+            if let image, !isDegraded, Thread.isMainThread, job.map({ !$0.consumers.isEmpty }) ?? false, PhotoLibraryDataSource.needsPreparation(image) {
+                PhotoLibraryDataSource.preparationQueue.async {
+                    let prepared = PhotoLibraryDataSource.prepare(image)
+                    DispatchQueue.main.async {
+                        handle(prepared)
+                    }
+                }
+            } else if Thread.isMainThread {
+                handle(image)
             } else {
-                DispatchQueue.main.async(execute: handle)
+                DispatchQueue.main.async {
+                    handle(image)
+                }
             }
         })
         if job.state == .running && job.attempt == attempt {
             job.token = token
         }
+    }
+
+    static let preparationQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.imagePreparation", qos: .userInitiated)
+    static let preparationMinPixels = 512 * 512
+
+    static func needsPreparation(_ image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else {
+            return false
+        }
+        return cgImage.width * cgImage.height >= PhotoLibraryDataSource.preparationMinPixels
+    }
+
+    static func prepare(_ image: UIImage) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        format.opaque = true
+        format.preferredRange = .automatic
+        let size = CGSize(width: round(image.size.width * image.scale), height: round(image.size.height * image.scale))
+        guard size.width > 0.0, size.height > 0.0 else {
+            return image
+        }
+        let rendered = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        guard let renderedImage = rendered.cgImage else {
+            return image
+        }
+        return UIImage(cgImage: renderedImage, scale: image.scale, orientation: .up)
     }
 
     private func handle(_ job: Scheduler.Job, attempt: Int, image: UIImage?, isDegraded: Bool, isCancelled: Bool, isInCloud: Bool) {

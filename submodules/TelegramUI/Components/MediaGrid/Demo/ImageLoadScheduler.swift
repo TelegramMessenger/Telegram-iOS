@@ -129,6 +129,16 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         return Handle(scheduler: self, job: job, consumer: consumer)
     }
 
+    func batch(_ body: () -> Void) {
+        let wasBatching = self.isBatching
+        self.isBatching = true
+        body()
+        self.isBatching = wasBatching
+        if !wasBatching {
+            self.pump()
+        }
+    }
+
     func startPrefetching(_ keys: [PrefetchKey]) {
         for key in keys {
             if self.prefetchWanted.insert(key).inserted && self.prefetchJobs[key] == nil {

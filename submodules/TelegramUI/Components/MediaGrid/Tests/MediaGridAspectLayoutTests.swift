@@ -85,6 +85,75 @@ final class MediaGridAspectLayoutTests: XCTestCase {
         XCTAssertEqual(short.frame(at: 2).height, height, accuracy: 1e-9)
     }
 
+    func testIndexBuildStopsWhenCancelled() {
+        var index: MediaGridAspectIndex?
+        let lock = NSLock()
+        var calls = 0
+        let started = DispatchSemaphore(value: 0)
+        let resume = DispatchSemaphore(value: 0)
+        index = MediaGridAspectIndex(count: 1_000_000, aspectRatio: { i in
+            lock.lock()
+            calls += 1
+            lock.unlock()
+            if i == 10 {
+                started.signal()
+                resume.wait()
+            }
+            return 1.0
+        })
+        let completed = self.expectation(description: "completed")
+        completed.isInverted = true
+        index?.build { _ in
+            completed.fulfill()
+        }
+        started.wait()
+        index?.cancel()
+        resume.signal()
+        self.wait(for: [completed], timeout: 0.5)
+        lock.lock()
+        XCTAssertLessThan(calls, 1000)
+        lock.unlock()
+    }
+
+    func testTableLayoutMatchesDirectLayout() {
+        var generator = SeededGenerator(state: 3)
+        let geometry = self.geometry(topInset: 50, bottomInset: 30)
+        let aspects = (0 ..< 500).map { _ in Float.random(in: 0.2 ... 3.0, using: &generator) }
+        let direct = MediaGridAspectLayout(geometry: geometry, count: 500, aspects: aspects)
+        let table = MediaGridAspectTable(key: MediaGridAspectTable.Key(geometry: geometry), aspects: aspects)
+        let shared = MediaGridAspectLayout(geometry: geometry, count: 500, table: table)
+        XCTAssertTrue(direct.isExact)
+        XCTAssertTrue(shared.isExact)
+        XCTAssertEqual(direct.contentHeight, shared.contentHeight, accuracy: 1e-9)
+        for index in 0 ..< 500 {
+            XCTAssertEqual(direct.frame(at: index), shared.frame(at: index))
+            XCTAssertEqual(direct.pixelSize(at: index), shared.pixelSize(at: index))
+        }
+        let longer = MediaGridAspectLayout(geometry: geometry, count: 510, table: table)
+        let estimate = floor(393.0 / 0.75 * 3.0) / 3.0
+        XCTAssertEqual(longer.frame(at: 500).minY, shared.frame(at: 499).maxY + 1.0, accuracy: 1e-6)
+        XCTAssertEqual(longer.frame(at: 505).height, estimate, accuracy: 1e-9)
+        XCTAssertEqual(longer.contentHeight, shared.contentHeight + 10.0 * (estimate + 1.0), accuracy: 1e-6)
+    }
+
+    func testTableForOtherWidthIsScaledAndContiguous() {
+        let aspects: [Float] = (0 ..< 300).map { [0.5, 2.0, 1.0, 1.5, 0.75][$0 % 5] }
+        let table = MediaGridAspectTable(key: MediaGridAspectTable.Key(geometry: self.geometry(width: 393)), aspects: aspects)
+        let layout = MediaGridAspectLayout(geometry: self.geometry(width: 430), count: 300, table: table)
+        XCTAssertFalse(layout.isExact)
+        for index in 0 ..< 299 {
+            let frame = layout.frame(at: index)
+            XCTAssertEqual(frame.width, 430.0, accuracy: 1e-9)
+            XCTAssertEqual(layout.frame(at: index + 1).minY, frame.maxY + 1.0, accuracy: 1e-6)
+            XCTAssertEqual(frame.minY * 3.0, (frame.minY * 3.0).rounded(), accuracy: 1e-6)
+            let exact = floor(430.0 / CGFloat(aspects[index]) * 3.0) / 3.0
+            XCTAssertEqual(frame.height, exact, accuracy: 1.0)
+        }
+        let otherScale = MediaGridAspectLayout(geometry: self.geometry(width: 393, scale: 2.0), count: 300, table: table)
+        XCTAssertFalse(otherScale.isExact)
+        XCTAssertEqual(otherScale.frame(at: 0).height, floor(393.0 / 0.75 * 2.0) / 2.0, accuracy: 1e-9)
+    }
+
     func testDeepOffsetsArePixelAligned() {
         var generator = SeededGenerator(state: 11)
         let count = 100_000

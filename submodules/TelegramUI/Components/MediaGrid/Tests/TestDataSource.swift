@@ -29,6 +29,8 @@ final class TestDataSource: MediaGridDataSource {
     private(set) var cachingQualities: [MediaGridImageQuality] = []
     private(set) var startedCachingOrder: [[Int]] = []
     private(set) var pixelSizes: [(index: Int, size: CGSize)] = []
+    private(set) var batchDepth = 0
+    private(set) var batchedRequests = 0
     private(set) var cachingPixelSizes: [CGSize] = []
     private var held: [(index: Int, quality: MediaGridImageQuality, deliver: () -> Void)] = []
 
@@ -50,14 +52,19 @@ final class TestDataSource: MediaGridDataSource {
         return Date(timeIntervalSince1970: 1_600_000_000 - Double(index) * 3600.0)
     }
 
-    func aspectRatio(at index: Int) -> CGFloat {
-        return 1.0
+    func aspectRatioReader() -> MediaGridAspectRatioReader {
+        return { _ in
+            return 1.0
+        }
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         self.requestCount += 1
         self.requests.append((index, quality))
         self.pixelSizes.append((index, pixelSize))
+        if self.batchDepth > 0 {
+            self.batchedRequests += 1
+        }
         self.events.append("request \(index)")
         var deliveries = self.deliveriesByQuality[quality] ?? self.deliveries ?? [(TestDataSource.image, false)]
         if let imageForIndex = self.imageForIndex {
@@ -101,6 +108,12 @@ final class TestDataSource: MediaGridDataSource {
             UIColor(white: CGFloat(value % 256) / 255.0, alpha: 1.0).setFill()
             context.fill(CGRect(x: 0.0, y: 0.0, width: 2.0, height: 2.0))
         }
+    }
+
+    func performBatch(_ updates: () -> Void) {
+        self.batchDepth += 1
+        updates()
+        self.batchDepth -= 1
     }
 
     func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {

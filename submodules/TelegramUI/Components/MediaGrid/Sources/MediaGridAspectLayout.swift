@@ -1,80 +1,124 @@
 import Foundation
 import CoreGraphics
 
+public final class MediaGridAspectTable {
+    public struct Key: Hashable {
+        public var contentWidth: CGFloat
+        public var scale: CGFloat
+        public var spacing: CGFloat
+
+        public init(geometry: MediaGridGeometry) {
+            self.contentWidth = max(0.0, geometry.width - 2.0 * geometry.sideInset)
+            self.scale = max(1.0, geometry.scale)
+            self.spacing = geometry.spacing
+        }
+
+        var widthPixels: CGFloat {
+            return self.contentWidth * self.scale
+        }
+
+        var spacingPixels: Int {
+            return Int((self.spacing * self.scale).rounded())
+        }
+
+        func heightPixels(aspect: CGFloat) -> Int {
+            return max(1, Int(floor(self.contentWidth / aspect * self.scale)))
+        }
+    }
+
+    public let key: Key
+    public let count: Int
+    let pixelOffsets: [Int]
+
+    public init(key: Key, aspects: [Float]) {
+        self.key = key
+        self.count = aspects.count
+        let spacing = key.spacingPixels
+        var offsets = [Int](repeating: 0, count: aspects.count + 1)
+        var pixels = 0
+        for index in 0 ..< aspects.count {
+            offsets[index] = pixels
+            pixels += key.heightPixels(aspect: MediaGridAspectIndex.clamp(CGFloat(aspects[index]))) + spacing
+        }
+        offsets[aspects.count] = pixels
+        self.pixelOffsets = offsets
+    }
+}
+
 public struct MediaGridAspectLayout: MediaGridLayout {
     public let geometry: MediaGridGeometry
     public let count: Int
     public let contentHeight: CGFloat
     public let estimatedAspect: CGFloat
-    public let hasExactAspects: Bool
+    public let isExact: Bool
 
-    private let contentWidth: CGFloat
-    private let aspects: [Float]
+    private let key: MediaGridAspectTable.Key
+    private let table: MediaGridAspectTable?
+    private let ratio: Double
     private let estimatedHeightPixels: Int
     private let spacingPixels: Int
-    private let offsets: [Double]?
 
     public init(geometry: MediaGridGeometry, count: Int, aspects: [Float]?, estimatedAspect: CGFloat = 0.75) {
+        self.init(geometry: geometry, count: count, table: aspects.map { MediaGridAspectTable(key: MediaGridAspectTable.Key(geometry: geometry), aspects: $0) }, estimatedAspect: estimatedAspect)
+    }
+
+    public init(geometry: MediaGridGeometry, count: Int, table: MediaGridAspectTable?, estimatedAspect: CGFloat = 0.75) {
         self.geometry = geometry
         self.count = max(0, count)
         self.estimatedAspect = MediaGridAspectIndex.clamp(estimatedAspect)
-        self.hasExactAspects = aspects != nil
-        self.aspects = aspects ?? []
-        let contentWidth = max(0.0, geometry.width - 2.0 * geometry.sideInset)
-        self.contentWidth = contentWidth
-        let scale = max(1.0, geometry.scale)
-        self.estimatedHeightPixels = MediaGridAspectLayout.heightPixels(width: contentWidth, aspect: self.estimatedAspect, scale: scale)
-        self.spacingPixels = Int((geometry.spacing * scale).rounded())
-
-        var totalPixels = 0
-        if let aspects, self.count > 0 {
-            var offsets = [Double](repeating: 0.0, count: self.count + 1)
-            var pixels = 0
-            for index in 0 ..< self.count {
-                offsets[index] = Double(geometry.topInset) + Double(pixels) / Double(scale)
-                let aspect = index < aspects.count ? MediaGridAspectIndex.clamp(CGFloat(aspects[index])) : self.estimatedAspect
-                pixels += MediaGridAspectLayout.heightPixels(width: contentWidth, aspect: aspect, scale: scale) + self.spacingPixels
-            }
-            offsets[self.count] = Double(geometry.topInset) + Double(pixels) / Double(scale)
-            self.offsets = offsets
-            totalPixels = pixels - self.spacingPixels
+        let key = MediaGridAspectTable.Key(geometry: geometry)
+        self.key = key
+        self.estimatedHeightPixels = key.heightPixels(aspect: self.estimatedAspect)
+        self.spacingPixels = key.spacingPixels
+        if let table, table.key.scale == key.scale, table.key.spacing == key.spacing, table.key.widthPixels > 0.0 {
+            self.table = table
+            self.ratio = table.key == key ? 1.0 : Double(key.widthPixels / table.key.widthPixels)
+            self.isExact = table.key == key
         } else {
-            self.offsets = nil
-            if self.count > 0 {
-                totalPixels = self.count * (self.estimatedHeightPixels + self.spacingPixels) - self.spacingPixels
-            }
+            self.table = nil
+            self.ratio = 1.0
+            self.isExact = false
         }
-        self.contentHeight = geometry.topInset + geometry.bottomInset + CGFloat(totalPixels) / scale
+        var contentHeight = geometry.topInset + geometry.bottomInset
+        if self.count > 0 {
+            contentHeight += CGFloat(MediaGridAspectLayout.pixels(self.count, table: self.table, ratio: self.ratio, spacing: self.spacingPixels, estimated: self.estimatedHeightPixels) - self.spacingPixels) / key.scale
+        }
+        self.contentHeight = contentHeight
     }
 
-    private static func heightPixels(width: CGFloat, aspect: CGFloat, scale: CGFloat) -> Int {
-        return max(1, Int(floor(width / aspect * scale)))
+    private static func pixels(_ index: Int, table: MediaGridAspectTable?, ratio: Double, spacing: Int, estimated: Int) -> Int {
+        guard let table else {
+            return index * (estimated + spacing)
+        }
+        let rows = min(index, table.count)
+        var result = table.pixelOffsets[rows]
+        if ratio != 1.0 {
+            result = Int((Double(result - rows * spacing) * ratio).rounded()) + rows * spacing
+        }
+        if index > rows {
+            result += (index - rows) * (estimated + spacing)
+        }
+        return result
     }
 
-    private var scale: CGFloat {
-        return max(1.0, self.geometry.scale)
+    private func pixels(_ index: Int) -> Int {
+        return MediaGridAspectLayout.pixels(index, table: self.table, ratio: self.ratio, spacing: self.spacingPixels, estimated: self.estimatedHeightPixels)
     }
 
     private func heightPixels(at index: Int) -> Int {
-        guard index < self.aspects.count else {
-            return self.estimatedHeightPixels
-        }
-        return MediaGridAspectLayout.heightPixels(width: self.contentWidth, aspect: MediaGridAspectIndex.clamp(CGFloat(self.aspects[index])), scale: self.scale)
+        return max(1, self.pixels(index + 1) - self.pixels(index) - self.spacingPixels)
     }
 
     private func minY(at index: Int) -> CGFloat {
-        if let offsets = self.offsets {
-            return CGFloat(offsets[index])
-        }
-        return self.geometry.topInset + CGFloat(index * (self.estimatedHeightPixels + self.spacingPixels)) / self.scale
+        return self.geometry.topInset + CGFloat(self.pixels(index)) / self.key.scale
     }
 
     private func maxY(at index: Int) -> CGFloat {
-        return self.minY(at: index) + CGFloat(self.heightPixels(at: index)) / self.scale
+        return self.minY(at: index) + CGFloat(self.heightPixels(at: index)) / self.key.scale
     }
 
     public func frame(at index: Int) -> CGRect {
-        return CGRect(x: self.geometry.sideInset, y: self.minY(at: index), width: self.contentWidth, height: CGFloat(self.heightPixels(at: index)) / self.scale)
+        return CGRect(x: self.geometry.sideInset, y: self.minY(at: index), width: self.key.contentWidth, height: CGFloat(self.heightPixels(at: index)) / self.key.scale)
     }
 
     private func firstIndex(where predicate: (Int) -> Bool) -> Int {
@@ -112,6 +156,10 @@ public struct MediaGridAspectLayout: MediaGridLayout {
     }
 
     public func pixelSize(at index: Int) -> CGSize {
-        return CGSize(width: ceil(self.contentWidth * self.scale), height: CGFloat(self.heightPixels(at: index)))
+        return CGSize(width: ceil(self.key.widthPixels), height: CGFloat(self.heightPixels(at: index)))
+    }
+
+    var tableKey: MediaGridAspectTable.Key {
+        return self.key
     }
 }
