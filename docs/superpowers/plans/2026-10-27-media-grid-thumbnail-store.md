@@ -182,6 +182,49 @@
 - [ ] **Step 5:** Run the demo on the dedicated simulator in Photo Library mode. Record the fill time for the simulator library, the store size on disk, and the decoded-page memory.
 - [ ] **Step 6: Commit** `feat(media-grid): fill the thumbnail store from the photo library`.
 
+### Task 4b: The first screen opens sharp (Ilya, 2026-10-27)
+
+Ilya's requirement: "При открытии первый набор фоток (те что влазят на экран), синхронно бы в хорошем качестве сразу показать, а не в маленьком". The first frame the grid shows on open has sharp images in every visible cell, not 48 px thumbnails.
+
+**Files:**
+- Create: `Sources/MediaGridLaunchCache.swift` (Photos-free)
+- Modify: `Sources/MediaGridDataSource.swift`, `Sources/MediaGridView.swift`, `Demo/PhotoLibraryDataSource.swift`
+- Test: `Tests/MediaGridLaunchCacheTests.swift`
+
+**Interfaces:**
+- **`MediaGridLaunchCache`** is a small persisted set of sharp images for the opening viewport. It lives in `<Caches>/MediaGridThumbnails/launch/` and is keyed by `(id, version, pixel width)`.
+  - **What it covers:**
+    - the newest photos (the picker opens at the top);
+    - the default levels in both orientations: level 3 in portrait, level 5 in landscape;
+    - one screen plus one row.
+  - **Pixel size:** each image is stored at the cell pixel size of the level that needs the larger image.
+  - **Storage:** one JPEG per image at quality 0.85, or a single atlas if that measures faster.
+  - **Read API:**
+    - `load()`: synchronous. It reads and decodes everything off main, starting as early as possible (data-source init).
+    - `image(for id:, version:) -> CGImage?`: O(1) on main.
+    - `waitUntilLoaded(timeout:)`: called by the grid's first layout, so the first frame is sharp. It waits at most 50 ms. Measure: with ~15–21 small JPEGs it should finish before the first layout.
+  - **Refresh:** `update(entries:)` runs off main after the sharp images for the opening viewport have been delivered while the grid sat at rest at the top. It also runs when a library change touches the newest photos. It writes atomically.
+- **Data source:** gains `func launchImage(at index: Int) -> MediaGridLaunchImage?`, with a default of nil.
+- **Grid binding:**
+  - On first bind, a cell uses the launch image if one exists, then the thumbnail. A launch image counts as sharp: no sharp request is made when its pixel size is ≥ the cell's.
+  - The first layout calls the data source's wait hook.
+- **No launch cache yet** (first ever open): the grid shows thumbnails, then sharp images, as today.
+- **Stale entries:** a stale entry (version mismatch) is never shown.
+
+- [ ] **Step 1: Failing tests.**
+  - `testFirstLayoutShowsLaunchImagesSynchronously`: every visible cell's `contents` is a launch image after the first `layoutIfNeeded`, and there are no sharp requests for those cells.
+  - `testStaleLaunchEntryIgnored`.
+  - `testLaunchCacheRoundTrip`.
+  - `testWaitTimesOut`: a slow decode yields thumbnails, and no hang longer than 50 ms.
+  - `testRefreshAfterRestAtTop`.
+  - `testLibraryInsertAtTopRefreshes`.
+- [ ] **Step 2: Run, expect failure.** **Step 3: Implement.** **Step 4: Run, expect PASS.** Run the full suite.
+- [ ] **Step 5:** Measure on the dedicated simulator, at a cold launch into Photo Library mode, then record a video of the cold launch and check its first frames:
+  - the main-thread time spent waiting in the first layout;
+  - the time from process start to the first frame;
+  - whether every visible cell is sharp in the first frame.
+- [ ] **Step 6: Commit** `feat(media-grid): open with sharp images for the first screen`.
+
 ### Task 5: Acceptance on recordings (Ilya's scenarios)
 
 **Files:**
@@ -194,7 +237,7 @@
   3. a fling at 3 and at 31;
   4. a scrub from top to bottom and back at each of 1, 3, 5, 15 and 31;
   5. rotation portrait→landscape→portrait at 3;
-  6. a cold launch with a full store.
+  6. a cold launch with a full store and a launch cache: every visible cell sharp in the first frame.
 - [ ] **Step 2:** Make frame sheets with `tools/animation_sheet.py` for scenarios 1, 2 and 4 at 31. Look at them.
   - Requirement: 0 empty cells in every frame, in every scenario, for filled photos.
   - No white flashes during zoom, and no bottom-up fill ("snake").
