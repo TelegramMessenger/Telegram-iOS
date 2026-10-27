@@ -165,6 +165,45 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         }
     }
 
+    func remapPrefetching(_ transform: (PrefetchKey) -> PrefetchKey?) {
+        var wanted = Set<PrefetchKey>()
+        for key in self.prefetchWanted {
+            if let mapped = transform(key) {
+                wanted.insert(mapped)
+            }
+        }
+        var queue: [PrefetchKey] = []
+        for index in self.prefetchHead ..< self.prefetchQueue.count {
+            if let mapped = transform(self.prefetchQueue[index]) {
+                queue.append(mapped)
+            }
+        }
+        var jobs: [PrefetchKey: Job] = [:]
+        var dropped: [Job] = []
+        for (key, job) in self.prefetchJobs {
+            if let mapped = transform(key) {
+                jobs[mapped] = job
+            } else {
+                dropped.append(job)
+            }
+        }
+        self.pendingDrops = self.pendingDrops.compactMap(transform)
+        self.prefetchWanted = wanted
+        self.prefetchQueue = queue
+        self.prefetchHead = 0
+        self.prefetchJobs = jobs
+        let wasBatching = self.isBatching
+        self.isBatching = true
+        for job in dropped {
+            job.isPrefetched = false
+            self.dropIfUnwanted(job)
+        }
+        self.isBatching = wasBatching
+        if !wasBatching {
+            self.pump()
+        }
+    }
+
     func flushPendingDrops() {
         self.isFlushScheduled = false
         let drops = self.pendingDrops

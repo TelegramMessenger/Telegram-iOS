@@ -23,11 +23,84 @@ public final class MediaGridAspectIndex {
 
     private let count: Int
     private let aspectRatio: (Int) -> CGFloat
+    private let aspects: [Float]?
     private let cancellation = Cancellation()
 
     public init(count: Int, aspectRatio: @escaping (Int) -> CGFloat) {
         self.count = max(0, count)
         self.aspectRatio = aspectRatio
+        self.aspects = nil
+    }
+
+    public init(aspects: [Float]) {
+        self.count = aspects.count
+        self.aspectRatio = { index in
+            return CGFloat(aspects[index])
+        }
+        self.aspects = aspects
+    }
+
+    public func apply(_ changes: MediaGridChanges, aspectRatio: (Int) -> CGFloat) -> [Float] {
+        return self.apply([changes], aspectRatio: aspectRatio)
+    }
+
+    public func apply(_ changes: [MediaGridChanges], aspectRatio: (Int) -> CGFloat) -> [Float] {
+        var aspects = self.aspects ?? (0 ..< self.count).map { Float(MediaGridAspectIndex.clamp(self.aspectRatio($0))) }
+        for change in changes {
+            aspects = MediaGridAspectIndex.marking(change, in: aspects)
+        }
+        for index in aspects.indices where aspects[index].isNaN {
+            aspects[index] = Float(MediaGridAspectIndex.clamp(aspectRatio(index)))
+        }
+        return aspects
+    }
+
+    public func build(applying changes: [MediaGridChanges], aspectRatio: @escaping (Int) -> CGFloat, completion: @escaping ([Float]) -> Void) {
+        let cancellation = self.cancellation
+        DispatchQueue.global(qos: .userInitiated).async {
+            if cancellation.isCancelled {
+                return
+            }
+            let aspects = self.apply(changes, aspectRatio: aspectRatio)
+            DispatchQueue.main.async {
+                if !cancellation.isCancelled {
+                    completion(aspects)
+                }
+            }
+        }
+    }
+
+    private static func marking(_ changes: MediaGridChanges, in aspects: [Float]) -> [Float] {
+        let newCount = max(0, aspects.count - changes.removed.count + changes.inserted.count)
+        var result: [Float] = []
+        result.reserveCapacity(newCount)
+        var removed = changes.removed.rangeView.makeIterator()
+        var nextRemoved = removed.next()
+        var inserted = changes.inserted.rangeView.makeIterator()
+        var nextInserted = inserted.next()
+        var oldIndex = 0
+        while result.count < newCount {
+            if let range = nextInserted, range.lowerBound <= result.count {
+                result.append(contentsOf: repeatElement(Float.nan, count: min(range.count, newCount - result.count)))
+                nextInserted = inserted.next()
+                continue
+            }
+            while let range = nextRemoved, range.lowerBound <= oldIndex {
+                oldIndex = max(oldIndex, range.upperBound)
+                nextRemoved = removed.next()
+            }
+            let upper = min(aspects.count, nextRemoved?.lowerBound ?? aspects.count, oldIndex + (nextInserted.map { $0.lowerBound - result.count } ?? newCount - result.count), oldIndex + newCount - result.count)
+            if upper <= oldIndex {
+                result.append(contentsOf: repeatElement(Float.nan, count: newCount - result.count))
+                break
+            }
+            result.append(contentsOf: aspects[oldIndex ..< upper])
+            oldIndex = upper
+        }
+        for index in changes.changed where index < result.count {
+            result[index] = .nan
+        }
+        return result
     }
 
     public func build(completion: @escaping ([Float]) -> Void) {

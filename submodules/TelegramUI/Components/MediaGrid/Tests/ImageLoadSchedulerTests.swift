@@ -154,6 +154,24 @@ final class ImageLoadSchedulerTests: XCTestCase {
         XCTAssertEqual(self.started.map { $0.key }, ["p1", "p2"])
     }
 
+    func testRemapPrefetchingMovesKeysAndDropsRemoved() {
+        let scheduler = self.makeScheduler(localLimit: 2, prefetchLimit: 2)
+        scheduler.startPrefetching([1, 2, 3, 4])
+        XCTAssertEqual(self.started.map { $0.key }, ["p1", "p2"])
+        scheduler.remapPrefetching { key in
+            return key == 2 || key == 4 ? nil : key + 10
+        }
+        XCTAssertEqual(self.cancelled, ["p2"])
+        XCTAssertEqual(scheduler.wantedPrefetchCount, 2)
+        XCTAssertEqual(self.started.map { $0.key }, ["p1", "p2", "p13"])
+        scheduler.stopPrefetching([11])
+        self.runFlushes()
+        XCTAssertEqual(self.cancelled, ["p2", "p1"])
+        scheduler.startPrefetching([13])
+        XCTAssertEqual(self.started.count, 3)
+        XCTAssertEqual(scheduler.wantedPrefetchCount, 1)
+    }
+
     func testStoppedPrefetchIsCancelledAtFlush() {
         let scheduler = self.makeScheduler(localLimit: 2, prefetchLimit: 2)
         scheduler.startPrefetching([1])

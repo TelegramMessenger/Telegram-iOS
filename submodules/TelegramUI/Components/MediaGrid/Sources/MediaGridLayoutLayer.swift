@@ -62,6 +62,40 @@ final class MediaGridLayoutLayer: CALayer {
         }
     }
 
+    func apply(_ changes: MediaGridChanges, layout: MediaGridLayout) {
+        let previous = self.layout
+        var cells: [Int: MediaGridCellLayer] = [:]
+        var stale = Set<Int>()
+        for (index, cell) in self.visibleCells {
+            guard let newIndex = changes.newIndex(forOld: index), newIndex < layout.count else {
+                self.pool.enqueue(cell)
+                continue
+            }
+            cells[newIndex] = cell
+            let resized = previous.map { index < $0.count && $0.pixelSize(at: index) != layout.pixelSize(at: newIndex) } ?? true
+            if changes.changed.contains(newIndex) || resized || self.staleIndices.contains(index) {
+                stale.insert(newIndex)
+            } else if newIndex != index {
+                cell.bind(index: newIndex, detail: self.detail)
+                cell.setSelected(self.detail == .full ? (self.isItemSelected?(newIndex) ?? false) : false)
+            }
+        }
+        self.layout = layout
+        self.visibleCells = cells
+        if let lower = cells.keys.min(), let upper = cells.keys.max() {
+            self.visibleRange = lower ..< upper + 1
+            for index in self.visibleRange where cells[index] == nil {
+                stale.insert(index)
+            }
+        } else {
+            self.visibleRange = 0 ..< 0
+        }
+        self.staleIndices = stale
+        for (index, cell) in cells {
+            cell.frame = layout.frame(at: index)
+        }
+    }
+
     func refreshSelection() {
         guard self.detail == .full else {
             return
@@ -146,6 +180,8 @@ final class MediaGridLayoutLayer: CALayer {
                         cell.imageRequest?.cancel()
                         cell.imageRequest = nil
                         self.bind(cell, index: index, layout: layout)
+                    } else {
+                        self.add(index, layout: layout)
                     }
                 }
             }

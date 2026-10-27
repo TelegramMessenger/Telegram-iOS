@@ -15,4 +15,16 @@ final class PhysicsScrollEnginePublicSurfaceTests: XCTestCase {
         XCTAssertEqual(engine.contentHost.gestureRecognizers?.first?.isEnabled, false)
         XCTAssertFalse(engine.isScrollEnabled)
     }
+
+    func testApplyShiftMovesOffsetRigidly() {
+        let engine = PhysicsScrollEngine()
+        engine.setEdges(min: 0, max: 10_000)
+        engine.setOffset(500)
+
+        engine.applyShift(120)
+
+        XCTAssertEqual(engine.offset, 620)
+        XCTAssertEqual(engine.contentHost.bounds.origin.y, 620)
+        XCTAssertFalse(engine.isDecelerating)
+    }
 }

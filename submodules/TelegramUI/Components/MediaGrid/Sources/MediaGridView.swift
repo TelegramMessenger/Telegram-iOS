@@ -30,11 +30,23 @@ public final class MediaGridView: UIView {
     private var isLoadingAspects = false
     private var aspectTables: [MediaGridAspectTable] = []
     private var pendingTableKeys = Set<MediaGridAspectTable.Key>()
+    private var listVersion = 0
+    private var aspectsVersion = 0
+    private var tableVersion = 0
+    private var changeLog: [(version: Int, changes: MediaGridChanges)] = []
+    private var isApplyingAspectChanges = false
     private var isFlightActive = false
     private var isSelecting = false
     var aspectLoader: (Int, @escaping MediaGridAspectRatioReader, @escaping ([Float]) -> Void) -> (() -> Void) = { count, reader, completion in
         let index = MediaGridAspectIndex(count: count, aspectRatio: reader)
         index.build(completion: completion)
+        return {
+            index.cancel()
+        }
+    }
+    var aspectChangeApplier: ([Float], [MediaGridChanges], @escaping MediaGridAspectRatioReader, @escaping ([Float]) -> Void) -> (() -> Void) = { aspects, changes, reader, completion in
+        let index = MediaGridAspectIndex(aspects: aspects)
+        index.build(applying: changes, aspectRatio: reader, completion: completion)
         return {
             index.cancel()
         }
@@ -270,14 +282,110 @@ public final class MediaGridView: UIView {
         self.cancelAspectLoad = nil
         self.aspects = nil
         self.isLoadingAspects = false
+        self.isApplyingAspectChanges = false
         self.aspectTables = []
         self.pendingTableKeys = []
+        self.changeLog = []
+        self.aspectsVersion = self.listVersion
+        self.tableVersion = self.listVersion
         self.needsLayoutRebuild = true
         self.dateCache = [:]
         self.motionSample = nil
         self.resetPrefetch()
         self.activeLayoutLayer.reloadCells()
         self.updateGridLayout()
+    }
+
+    public func apply(_ changes: MediaGridChanges) {
+        let newCount = max(0, self.dataSource.count)
+        guard changes.isValid(oldCount: self.itemCount, newCount: newCount) else {
+            self.reloadData()
+            return
+        }
+        if changes.isEmpty {
+            return
+        }
+        self.endInteraction()
+        var anchor: (index: Int, y: CGFloat)?
+        if let layout = self.gridLayout, let top = self.topVisibleIndex, let survivor = changes.nearestSurvivor(toOld: top, oldCount: self.itemCount), let index = changes.newIndex(forOld: survivor) {
+            anchor = (index, layout.frame(at: top).minY - self.engine.offset)
+        }
+        self.itemCount = newCount
+        self.dateCache = [:]
+        self.listVersion += 1
+        self.changeLog.append((self.listVersion, changes))
+        self.updateAspects()
+        guard let previous = self.gridLayout, self.bounds.width > 0.0, self.bounds.height > 0.0 else {
+            self.invalidateGridLayout()
+            return
+        }
+        let layout = self.makeLayout(level: self.layoutLevel, geometry: previous.geometry)
+        self.motionSample = nil
+        self.prefetchPlanner.apply(changes)
+        self.prefetchLayout = layout
+        self.gridLayout = layout
+        self.activeLayoutLayer.apply(changes, layout: layout)
+        self.activeLayoutLayer.frame = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: layout.contentHeight)
+        self.layoutCamera(layout: layout)
+        let isMoving = self.isDragging || self.engine.isDecelerating
+        var target = anchor.map { layout.frame(at: $0.index).minY - $0.y } ?? self.engine.offset
+        if !isMoving || layout.count == 0 {
+            target = min(max(0.0, target), self.maxOffset)
+        }
+        let delta = target - self.engine.offset
+        if delta < 0.0 {
+            self.engine.applyShift(delta)
+            self.engine.setEdges(min: 0.0, max: self.maxOffset)
+        } else {
+            self.engine.setEdges(min: 0.0, max: self.maxOffset)
+            if delta > 0.0 {
+                self.engine.applyShift(delta)
+            }
+        }
+        self.scrolled(to: self.engine.offset)
+        self.startAspectLoad()
+    }
+
+    private func updateAspects() {
+        self.aspectGeneration += 1
+        self.pendingTableKeys = []
+        self.cancelAspectLoad?()
+        self.cancelAspectLoad = nil
+        self.isApplyingAspectChanges = false
+        if self.isLoadingAspects {
+            self.isLoadingAspects = false
+            self.aspects = nil
+        }
+        if let aspects = self.aspects {
+            let base = self.aspectsVersion
+            let version = self.listVersion
+            let generation = self.aspectGeneration
+            let pending = self.changeLog.filter { $0.version > base }.map { $0.changes }
+            self.isApplyingAspectChanges = true
+            self.cancelAspectLoad = self.aspectChangeApplier(aspects, pending, self.dataSource.aspectRatioReader(), { [weak self] aspects in
+                guard let self, self.aspectGeneration == generation else {
+                    return
+                }
+                self.isApplyingAspectChanges = false
+                self.cancelAspectLoad = nil
+                self.aspects = aspects
+                self.aspectsVersion = version
+                self.pruneChangeLog()
+                self.requestCurrentAspectTable()
+            })
+        }
+        self.pruneChangeLog()
+    }
+
+    private func pruneChangeLog() {
+        let aspectsBase = self.aspects == nil ? self.listVersion : self.aspectsVersion
+        let tableBase = self.aspectTables.isEmpty ? self.listVersion : self.tableVersion
+        let base = min(aspectsBase, tableBase)
+        self.changeLog.removeAll(where: { $0.version <= base })
+    }
+
+    private func aspectPatches(since version: Int) -> [MediaGridChanges] {
+        return self.changeLog.filter { $0.version > version }.map { $0.changes }
     }
 
     public func setContentOffset(_ y: CGFloat) {
@@ -421,20 +529,21 @@ public final class MediaGridView: UIView {
         if level == .one {
             let key = MediaGridAspectTable.Key(geometry: geometry)
             let table = self.aspectTables.first(where: { $0.key == key }) ?? self.aspectTables.first
-            if table?.key != key {
+            if table?.key != key || self.tableVersion != self.listVersion {
                 self.requestAspectTable(key: key)
             }
-            return MediaGridAspectLayout(geometry: geometry, count: self.itemCount, table: table)
+            return MediaGridAspectLayout(geometry: geometry, count: self.itemCount, table: table, patches: table == nil ? [] : self.aspectPatches(since: self.tableVersion))
         }
         return MediaGridUniformLayout(geometry: geometry, columns: level.columns, cellAspect: self.cellAspect, reservedSlots: self.reservedSlots(for: level), count: self.itemCount)
     }
 
     private func startAspectLoad() {
-        guard self.aspects == nil, !self.isLoadingAspects, self.itemCount > 0 else {
+        guard self.aspects == nil, !self.isLoadingAspects, !self.isApplyingAspectChanges, self.itemCount > 0 else {
             return
         }
         self.isLoadingAspects = true
         let generation = self.aspectGeneration
+        let version = self.listVersion
         self.cancelAspectLoad = self.aspectLoader(self.itemCount, self.dataSource.aspectRatioReader(), { [weak self] aspects in
             guard let self, self.aspectGeneration == generation else {
                 return
@@ -442,30 +551,42 @@ public final class MediaGridView: UIView {
             self.isLoadingAspects = false
             self.cancelAspectLoad = nil
             self.aspects = aspects
-            if let layout = self.gridLayout as? MediaGridAspectLayout {
-                self.requestAspectTable(key: layout.tableKey)
-            } else if let geometry = self.gridLayout?.geometry {
-                self.requestAspectTable(key: MediaGridAspectTable.Key(geometry: geometry))
-            }
+            self.aspectsVersion = version
+            self.pruneChangeLog()
+            self.requestCurrentAspectTable()
         })
     }
 
+    private func requestCurrentAspectTable() {
+        if let layout = self.gridLayout as? MediaGridAspectLayout {
+            self.requestAspectTable(key: layout.tableKey)
+        } else if let geometry = self.gridLayout?.geometry {
+            self.requestAspectTable(key: MediaGridAspectTable.Key(geometry: geometry))
+        }
+    }
+
     private func requestAspectTable(key: MediaGridAspectTable.Key) {
-        guard let aspects = self.aspects, !self.pendingTableKeys.contains(key), !self.aspectTables.contains(where: { $0.key == key }) else {
+        guard let aspects = self.aspects, self.aspectsVersion == self.listVersion, !self.pendingTableKeys.contains(key), !(self.tableVersion == self.listVersion && self.aspectTables.contains(where: { $0.key == key })) else {
             return
         }
         self.pendingTableKeys.insert(key)
         let generation = self.aspectGeneration
+        let version = self.listVersion
         self.aspectTableBuilder(key, aspects, { [weak self] table in
             guard let self, self.aspectGeneration == generation else {
                 return
             }
             self.pendingTableKeys.remove(key)
+            if self.tableVersion != version {
+                self.aspectTables = []
+                self.tableVersion = version
+            }
             self.aspectTables.removeAll(where: { $0.key == table.key })
             self.aspectTables.insert(table, at: 0)
             if self.aspectTables.count > 2 {
                 self.aspectTables.removeLast(self.aspectTables.count - 2)
             }
+            self.pruneChangeLog()
             self.applyAspects()
         })
     }
@@ -475,7 +596,7 @@ public final class MediaGridView: UIView {
     }
 
     private func applyAspects(notify: Bool = true) {
-        guard self.layoutLevel == .one, let layout = self.gridLayout as? MediaGridAspectLayout, !layout.isExact, let table = self.aspectTables.first(where: { $0.key == layout.tableKey }) else {
+        guard self.layoutLevel == .one, let layout = self.gridLayout as? MediaGridAspectLayout, !layout.isExact, self.tableVersion == self.listVersion, let table = self.aspectTables.first(where: { $0.key == layout.tableKey }) else {
             return
         }
         guard !self.isAspectSwapBlocked, self.bounds.height > 0.0 else {

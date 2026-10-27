@@ -1339,10 +1339,17 @@ final class MediaGridViewTests: XCTestCase {
         let view = MediaGridView(dataSource: dataSource, cellFactory: {
             return MediaGridCellLayer()
         })
-        view.aspectLoader = { _, _, completion in
+        view.aspectLoader = { count, _, completion in
+            harness.loadCounts.append(count)
             harness.pendingAspects = completion
             return {
                 harness.cancelCount += 1
+            }
+        }
+        view.aspectChangeApplier = { aspects, changes, reader, completion in
+            harness.pendingAspectChanges = (aspects, changes, reader, completion)
+            return {
+                harness.changeCancelCount += 1
             }
         }
         view.aspectTableBuilder = { key, aspects, completion in
@@ -1706,11 +1713,387 @@ final class MediaGridViewTests: XCTestCase {
         }
         XCTAssertTrue(view.bounds.intersects(frame))
     }
+
+    private func assertCellsMatchLayout(_ view: MediaGridView, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        guard let layout = view.gridLayout else {
+            XCTFail("no layout \(message)", file: file, line: line)
+            return
+        }
+        let cells = self.visibleCells(view)
+        for (index, cell) in cells {
+            XCTAssertLessThan(index, layout.count, message, file: file, line: line)
+            XCTAssertEqual(cell.index, index, message, file: file, line: line)
+            self.assertFrame(cell.frame, layout.frame(at: index), file: file, line: line)
+        }
+        for index in layout.indexRange(intersecting: self.viewport(view)) {
+            XCTAssertNotNil(cells[index], "\(message): viewport index \(index) has no cell", file: file, line: line)
+        }
+        XCTAssertEqual(self.layoutLayerCount(view), 1, message, file: file, line: line)
+    }
+
+    private func assertContiguousRows(_ layout: MediaGridLayout, file: StaticString = #filePath, line: UInt = #line) {
+        for index in 0 ..< layout.count - 1 {
+            XCTAssertEqual(layout.frame(at: index + 1).minY, layout.frame(at: index).maxY + 1.0, accuracy: 1e-6, "row \(index)", file: file, line: line)
+        }
+    }
+
+    func testInsertAboveKeepsTopItem() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        view.setLevel(.five, animated: false)
+        guard let layout = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(layout.frame(at: 500).minY + 7.0)
+        XCTAssertEqual(view.topVisibleIndex, 500)
+        guard let before = view.frameForItem(at: 500) else {
+            XCTFail("no frame")
+            return
+        }
+        let requests = dataSource.requestCount
+        dataSource.count += 10
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 10), changed: []))
+        XCTAssertEqual(view.topVisibleIndex, 510)
+        XCTAssertEqual(view.frameForItem(at: 510)?.minY ?? -1.0, before.minY, accuracy: 1e-6)
+        XCTAssertEqual(view.gridLayout?.count, 10_010)
+        XCTAssertEqual(dataSource.requestCount, requests)
+        self.assertCellsMatchLayout(view, "after insert")
+    }
+
+    func testRemoveAnchorKeepsNearest() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        view.setLevel(.five, animated: false)
+        guard let layout = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(layout.frame(at: 500).minY + 7.0)
+        guard let before = view.frameForItem(at: 500) else {
+            XCTFail("no frame")
+            return
+        }
+        dataSource.count -= 5
+        view.apply(MediaGridChanges(removed: IndexSet(498 ..< 503), inserted: [], changed: []))
+        XCTAssertEqual(view.frameForItem(at: 498)?.minY ?? -1.0, before.minY, accuracy: 1e-6)
+        self.assertCellsMatchLayout(view, "after tie removal")
+
+        guard let anchor = view.topVisibleIndex, let top = view.frameForItem(at: anchor) else {
+            XCTFail("no top")
+            return
+        }
+        XCTAssertEqual(anchor, 495)
+        dataSource.count -= 4
+        view.apply(MediaGridChanges(removed: IndexSet(496 ..< 500), inserted: [], changed: []))
+        XCTAssertEqual(view.frameForItem(at: 495)?.minY ?? -1.0, top.minY, accuracy: 1e-6)
+        XCTAssertEqual(view.topVisibleIndex, 495)
+        self.assertCellsMatchLayout(view, "after second removal")
+
+        dataSource.count = 0
+        view.apply(MediaGridChanges(removed: IndexSet(0 ..< 9_991), inserted: [], changed: []))
+        XCTAssertEqual(view.contentOffset, 0.0)
+        XCTAssertTrue(self.visibleCells(view).isEmpty)
+    }
+
+    func testChangedRebindsOnlyVisible() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        view.setContentOffset(20_000.0)
+        let visible = self.visibleCells(view).keys.sorted()
+        XCTAssertGreaterThan(visible.count, 10)
+        let requests = dataSource.requests.count
+        let changed: IndexSet = [visible[2], visible[7], 5, visible.last! + 3000]
+        view.apply(MediaGridChanges(removed: [], inserted: [], changed: changed))
+        let rebound = dataSource.requests[requests...].map { $0.index }
+        XCTAssertEqual(rebound.sorted(), [visible[2], visible[7]])
+        self.assertCellsMatchLayout(view, "after change")
+    }
+
+    func testAspectIndexAppliesChanges() {
+        let index = MediaGridAspectIndex(aspects: [1.0, 0.5, 2.0, 1.5, 0.75])
+        var reads: [Int] = []
+        let changes = MediaGridChanges(removed: [1, 3], inserted: [0, 4], changed: [2])
+        let result = index.apply(changes, aspectRatio: { i in
+            reads.append(i)
+            return [3.0, 9.0, 1.25, 9.0, 0.2][i]
+        })
+        XCTAssertEqual(result, [2.0, 1.0, 1.25, 0.75, 0.5])
+        XCTAssertEqual(reads.sorted(), [0, 2, 4])
+
+        var chainReads: [Int] = []
+        let chained = index.apply([changes, MediaGridChanges(removed: [0], inserted: [2], changed: [])], aspectRatio: { i in
+            chainReads.append(i)
+            return [1.0, 1.25, 0.6, 0.75, 0.5][i]
+        })
+        XCTAssertEqual(chained, [1.0, 1.25, 0.6, 0.75, 0.5])
+        XCTAssertEqual(chainReads.sorted(), [1, 2, 4])
+
+        let counted = MediaGridAspectIndex(count: 3, aspectRatio: { [0.5, 1.0, 2.0][$0] })
+        XCTAssertEqual(counted.apply(MediaGridChanges(removed: [1], inserted: [], changed: []), aspectRatio: { _ in 9.0 }), [0.5, 2.0])
+    }
+
+    func testChangesMapIndices() {
+        let changes = MediaGridChanges(removed: [2, 3, 7], inserted: [0, 5], changed: [])
+        let mapped = (0 ..< 10).map { changes.newIndex(forOld: $0) }
+        XCTAssertEqual(mapped, [1, 2, nil, nil, 3, 4, 6, nil, 7, 8])
+        XCTAssertTrue(changes.isValid(oldCount: 10, newCount: 9))
+        XCTAssertFalse(changes.isValid(oldCount: 10, newCount: 10))
+        XCTAssertFalse(MediaGridChanges(removed: [10], inserted: [], changed: []).isValid(oldCount: 10, newCount: 9))
+        XCTAssertFalse(MediaGridChanges(removed: [], inserted: [], changed: [10]).isValid(oldCount: 10, newCount: 10))
+    }
+
+    func testMovedIndexShowsRightImage() {
+        let (view, dataSource) = self.makeView(count: 1000)
+        let bank = ImageBank()
+        bank.identifiers = Array(0 ..< 1000)
+        dataSource.imageForIndex = { index, _ in
+            return bank.image(for: bank.identifiers[index])
+        }
+        view.reloadData()
+        view.setContentOffset(3000.0)
+        let check: (String) -> Void = { message in
+            let cells = self.visibleCells(view)
+            XCTAssertFalse(cells.isEmpty)
+            for (index, cell) in cells {
+                XCTAssertTrue((cell.contents as AnyObject?) === bank.image(for: bank.identifiers[index]).cgImage, "\(message): index \(index)")
+            }
+        }
+        check("before")
+        let visible = self.visibleCells(view).keys.sorted()
+        let middle = visible[visible.count / 2]
+        bank.identifiers.insert(contentsOf: [5000, 5001], at: middle)
+        bank.identifiers.remove(at: visible[1])
+        dataSource.count += 1
+        view.apply(MediaGridChanges(removed: [visible[1]], inserted: [middle - 1, middle], changed: []))
+        check("after insert")
+
+        dataSource.holdsDeliveries = true
+        view.reloadData()
+        bank.identifiers.insert(contentsOf: [6000, 6001, 6002], at: middle + 4)
+        bank.identifiers.remove(at: middle)
+        dataSource.count += 2
+        view.apply(MediaGridChanges(removed: [middle], inserted: IndexSet(middle + 3 ..< middle + 6), changed: []))
+        dataSource.flushHeldDeliveries()
+        check("after held deliveries")
+    }
+
+    func testSelectionFollowsChange() {
+        let selected = Box()
+        let dataSource = TestDataSource(count: 100)
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return SelectableTestCell()
+        })
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.isItemSelected = { selected.values.contains($0) }
+        view.layoutIfNeeded()
+        selected.values = [4, 9]
+        view.updateSelectionForVisibleItems()
+        let changes = MediaGridChanges(removed: [0], inserted: [6, 7], changed: [])
+        selected.values = Set(selected.values.compactMap { changes.newIndex(forOld: $0) })
+        dataSource.count += 1
+        view.apply(changes)
+        var result: [Int: Bool] = [:]
+        view.forEachVisibleCell { index, cell in
+            result[index] = (cell as? SelectableTestCell)?.selected
+        }
+        XCTAssertEqual(selected.values, [3, 10])
+        XCTAssertEqual(result[3], true)
+        XCTAssertEqual(result[10], true)
+        XCTAssertEqual(result[4], false)
+        XCTAssertEqual(result[9], false)
+    }
+
+    func testChangeDuringAnimatedZoomFinishesIt() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        view.setContentOffset(5000.0)
+        view.setLevel(.five, animated: true)
+        XCTAssertNotNil(view.transition)
+        dataSource.count += 3
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 3), changed: []))
+        XCTAssertNil(view.transition)
+        XCTAssertEqual(view.level, .five)
+        XCTAssertEqual(view.gridLayout?.count, 10_003)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        self.assertCellsMatchLayout(view, "after change mid-zoom")
+    }
+
+    func testChangeDuringPinchEndsIt() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        view.setContentOffset(5000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 0.8)
+        XCTAssertNotNil(view.transition)
+        dataSource.count -= 3
+        view.apply(MediaGridChanges(removed: IndexSet(0 ..< 3), inserted: [], changed: []))
+        XCTAssertNil(view.transition)
+        XCTAssertNil(view.pinchAnchor)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        view._testPinch(.changed, center: centre, scale: 0.6)
+        XCTAssertNil(view.transition)
+        view._testPinch(.ended, center: centre, scale: 0.6)
+        XCTAssertEqual(view.gridLayout?.count, 9_997)
+        self.assertCellsMatchLayout(view, "after change mid-pinch")
+    }
+
+    func testChangeDuringDragShiftsWithoutClamping() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(5000.0)
+        view.engine.onWillBeginDragging?()
+        dataSource.count += 30
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 30), changed: []))
+        XCTAssertEqual(view.contentOffset, 5000.0 + 10.0 * (layout.itemSize.height + 1.0), accuracy: 1e-6)
+        XCTAssertTrue(view.isUserScrolling)
+        self.assertCellsMatchLayout(view, "after change mid-drag")
+        view.engine.onDidEndDragging?()
+    }
+
+    func testLevelOneChangeUsesPatchedRowsUntilRebuilt() {
+        let (view, dataSource, harness) = self.makeLevelOneView(count: 1000)
+        let aspects = MediaGridViewTests.testAspects(count: 1000)
+        harness.pendingAspects?(aspects)
+        XCTAssertTrue(self.isExact(view))
+        guard let old = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(old.frame(at: 300).minY + 10.0)
+        XCTAssertEqual(view.topVisibleIndex, 300)
+        guard let before = view.frameForItem(at: 300) else {
+            XCTFail("no frame")
+            return
+        }
+        harness.buildsTablesImmediately = false
+        let builds = harness.tableBuilds
+        dataSource.count = 1001
+        dataSource.aspectRatios = [0.5, 2.0, 1.0] + aspects.enumerated().filter { $0.offset != 10 && $0.offset != 11 }.map { CGFloat($0.element) }
+        view.apply(MediaGridChanges(removed: [10, 11], inserted: [0, 1, 2], changed: []))
+        XCTAssertNotNil(harness.pendingAspectChanges)
+        guard let patched = view.gridLayout as? MediaGridAspectLayout else {
+            XCTFail("no aspect layout")
+            return
+        }
+        XCTAssertFalse(patched.isExact)
+        XCTAssertEqual(patched.count, 1001)
+        XCTAssertEqual(view.topVisibleIndex, 301)
+        XCTAssertEqual(view.frameForItem(at: 301)?.minY ?? -1.0, before.minY, accuracy: 1e-6)
+        for index in 0 ..< 3 {
+            XCTAssertEqual(patched.frame(at: index).height, floor(393.0 / 0.75 * 3.0) / 3.0, accuracy: 1e-9)
+        }
+        for oldIndex in 0 ..< 1000 where oldIndex != 10 && oldIndex != 11 {
+            let newIndex = oldIndex < 10 ? oldIndex + 3 : oldIndex + 1
+            XCTAssertEqual(patched.frame(at: newIndex).height, old.frame(at: oldIndex).height, accuracy: 1e-9, "old \(oldIndex)")
+        }
+        self.assertContiguousRows(patched)
+        self.assertCellsMatchLayout(view, "patched")
+
+        harness.completeAspectChanges()
+        XCTAssertEqual(harness.tableBuilds, builds + 1)
+        XCTAssertFalse(self.isExact(view))
+        harness.pendingTables.popLast()?()
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.topVisibleIndex, 301)
+        XCTAssertEqual(view.frameForItem(at: 301)?.minY ?? -1.0, before.minY, accuracy: 0.5)
+        XCTAssertEqual(view.gridLayout?.frame(at: 1).height ?? 0.0, floor(393.0 / 2.0 * 3.0) / 3.0, accuracy: 1e-9)
+        self.assertContiguousRows(view.gridLayout!)
+        self.assertCellsMatchLayout(view, "exact")
+    }
+
+    func testSecondChangeRestartsAspectRebuild() {
+        let (view, dataSource, harness) = self.makeLevelOneView(count: 1000)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        view.setContentOffset(view.gridLayout!.frame(at: 200).minY)
+        dataSource.count = 1002
+        view.apply(MediaGridChanges(removed: [], inserted: [0, 1], changed: []))
+        XCTAssertEqual(harness.pendingAspectChanges?.changes.count, 1)
+        dataSource.count = 1001
+        view.apply(MediaGridChanges(removed: [5], inserted: [], changed: [0]))
+        XCTAssertEqual(harness.changeCancelCount, 1)
+        XCTAssertEqual(harness.pendingAspectChanges?.changes.count, 2)
+        XCTAssertEqual(harness.pendingAspectChanges?.aspects.count, 1000)
+        XCTAssertEqual(view.gridLayout?.count, 1001)
+        XCTAssertEqual(view.topVisibleIndex, 201)
+        self.assertContiguousRows(view.gridLayout!)
+        harness.completeAspectChanges()
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.gridLayout?.count, 1001)
+        XCTAssertEqual(view.topVisibleIndex, 201)
+        self.assertCellsMatchLayout(view, "exact after two changes")
+    }
+
+    func testChangeDuringAspectLoadRestartsLoad() {
+        let (view, dataSource, harness) = self.makeLevelOneView(count: 1000)
+        let stale = harness.pendingAspects
+        dataSource.count = 1005
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 5), changed: []))
+        XCTAssertEqual(harness.cancelCount, 1)
+        XCTAssertEqual(harness.loadCounts, [1000, 1005])
+        stale?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertFalse(self.isExact(view))
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1005))
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.gridLayout?.count, 1005)
+    }
+
+    func testChangeDropsStaleTableBuild() {
+        let (view, dataSource, harness) = self.makeLevelOneView(count: 1000)
+        harness.buildsTablesImmediately = false
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertEqual(harness.pendingTables.count, 1)
+        dataSource.count = 999
+        view.apply(MediaGridChanges(removed: [3], inserted: [], changed: []))
+        harness.pendingTables.popLast()?()
+        XCTAssertFalse(self.isExact(view))
+        XCTAssertEqual(view.gridLayout?.count, 999)
+        harness.completeAspectChanges()
+        XCTAssertEqual(harness.pendingTables.count, 1)
+        harness.pendingTables.popLast()?()
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.gridLayout?.count, 999)
+        self.assertContiguousRows(view.gridLayout!)
+    }
+
+    func testInvalidChangesReload() {
+        let (view, dataSource) = self.makeView(count: 1000)
+        view.setContentOffset(3000.0)
+        dataSource.count = 500
+        view.apply(MediaGridChanges(removed: [1], inserted: [], changed: []))
+        XCTAssertEqual(view.gridLayout?.count, 500)
+        self.assertCellsMatchLayout(view, "after invalid change")
+    }
+}
+
+private final class ImageBank {
+    var identifiers: [Int] = []
+    private var images: [Int: UIImage] = [:]
+
+    func image(for identifier: Int) -> UIImage {
+        if let image = self.images[identifier] {
+            return image
+        }
+        let image = TestDataSource.distinctImage(identifier)
+        self.images[identifier] = image
+        return image
+    }
 }
 
 private final class LevelOneHarness {
     var pendingAspects: (([Float]) -> Void)?
+    var loadCounts: [Int] = []
     var cancelCount = 0
+    var pendingAspectChanges: (aspects: [Float], changes: [MediaGridChanges], reader: MediaGridAspectRatioReader, completion: ([Float]) -> Void)?
+    var changeCancelCount = 0
+
+    func completeAspectChanges() {
+        guard let pending = self.pendingAspectChanges else {
+            return
+        }
+        self.pendingAspectChanges = nil
+        pending.completion(MediaGridAspectIndex(aspects: pending.aspects).apply(pending.changes, aspectRatio: pending.reader))
+    }
     var tableBuilds = 0
     var buildsTablesImmediately = true
     var pendingTables: [() -> Void] = []

@@ -482,9 +482,23 @@ final class DemoViewController: UIViewController {
         }
     }
 
+    private func photoLibraryChanged(_ changes: MediaGridChanges?) {
+        guard let gridView = self.gridView else {
+            return
+        }
+        if let changes {
+            self.selectedIndices = Set(self.selectedIndices.compactMap { changes.newIndex(forOld: $0) })
+            gridView.apply(changes)
+        } else {
+            self.selectedIndices = []
+            gridView.reloadData()
+        }
+    }
+
     @objc private func sourceChanged() {
         switch Source(rawValue: self.sourceControl.selectedSegmentIndex) ?? .synthetic {
         case .synthetic:
+            self.photoDataSource?.onChange = nil
             self.installGrid(dataSource: self.syntheticDataSource)
         case .photoLibrary:
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
@@ -494,7 +508,11 @@ final class DemoViewController: UIViewController {
                     }
                     if status == .authorized || status == .limited {
                         let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult())
+                        self.photoDataSource?.onChange = nil
                         self.photoDataSource = dataSource
+                        dataSource.onChange = { [weak self] changes in
+                            self?.photoLibraryChanged(changes)
+                        }
                         let instrumented = InstrumentedDataSource(base: dataSource)
                         instrumented.forwardsCaching = !ProcessInfo.processInfo.arguments.contains("-noCaching")
                         self.instrumentedDataSource = instrumented

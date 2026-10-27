@@ -33,6 +33,22 @@ public struct MediaGridPrefetchPlanner {
         return stale
     }
 
+    public mutating func apply(_ changes: MediaGridChanges) {
+        var ranges: [Range<Int>] = []
+        for index in self.cachedIndices {
+            guard let newIndex = changes.newIndex(forOld: index) else {
+                continue
+            }
+            if let last = ranges.last, last.upperBound == newIndex {
+                ranges[ranges.count - 1] = last.lowerBound ..< newIndex + 1
+            } else {
+                ranges.append(newIndex ..< newIndex + 1)
+            }
+        }
+        self.cached = ranges
+        self.previousOffset = nil
+    }
+
     public mutating func update(layout: MediaGridLayout, viewportHeight: CGFloat, offset: CGFloat, settledOffset: CGFloat?) -> MediaGridPrefetchPlan {
         guard offset.isFinite, viewportHeight.isFinite, viewportHeight > 0.0, layout.count > 0 else {
             let stale = self.reset()

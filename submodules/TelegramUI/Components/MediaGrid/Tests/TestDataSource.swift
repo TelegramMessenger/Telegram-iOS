@@ -24,6 +24,7 @@ final class TestDataSource: MediaGridDataSource {
     var holdsDeliveries = false
     var deliversAfterCancel = false
     var imageForIndex: ((Int, MediaGridImageQuality) -> UIImage)?
+    var aspectRatios: [CGFloat]?
     private(set) var events: [String] = []
     private(set) var requests: [(index: Int, quality: MediaGridImageQuality)] = []
     private(set) var cachingQualities: [MediaGridImageQuality] = []
@@ -53,8 +54,12 @@ final class TestDataSource: MediaGridDataSource {
     }
 
     func aspectRatioReader() -> MediaGridAspectRatioReader {
-        return { _ in
-            return 1.0
+        let aspectRatios = self.aspectRatios
+        return { index in
+            guard let aspectRatios, index >= 0, index < aspectRatios.count else {
+                return 1.0
+            }
+            return aspectRatios[index]
         }
     }
 

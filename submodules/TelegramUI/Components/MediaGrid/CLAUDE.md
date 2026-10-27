@@ -33,3 +33,12 @@ Level 1 is `MediaGridAspectLayout`: one photo per row at its aspect ratio, clamp
 - Level-1 rows differ in pixel size, so prefetch calls `startCaching`/`stopCaching` once per run of equal sizes.
 
 Binding a frame's cells happens inside `MediaGridDataSource.performBatch`, so a LIFO loader starts the viewport's requests first even with free slots. A frame step longer than the viewport switches to `.fast` at once (a scrubber jump), without waiting for the 50 ms speed sample. `PhotoLibraryDataSource` redraws images of 512×512 px or more off the main thread before delivering them: committing PhotoKit's full-size level-1 images as delivered cost ~7 ms each on main.
+
+## Library changes
+
+`MediaGridView.apply(_ changes: MediaGridChanges)` takes `removed` (old indices), `inserted` and `changed` (new indices), called after the data source already serves the new list, in the same main-thread turn. A change whose counts do not add up reloads instead.
+
+- The top visible photo (or, if removed, the nearest survivor, the later one on a tie) keeps its y in the viewport. At rest the offset is clamped; mid-drag or mid-flight it moves by `PhysicsScrollEngine.applyShift`, so the gesture or fling continues.
+- A zoom transition or pinch in progress is finished first (as `reloadData` does): the data source has already swapped, so neither layout can keep binding old indices.
+- Visible cells are re-keyed, not rebound; only `changed` cells, cells whose pixel size changed and inserted holes are requested. Data-source state keyed by index (the demo's prefetch keys) must be remapped by the data source before calling `apply`; the host remaps its selection the same way (`MediaGridChanges.newIndex(forOld:)`).
+- Level 1: the new aspects array is built off main by `MediaGridAspectIndex.apply` from the previous one, reading only inserted and changed assets; until its table arrives the layout is the old table patched by the change log (`MediaGridAspectLayout(patches:)`, O(changed ranges) to build), inserted rows at the estimate. A newer change cancels the in-flight rebuild and restarts it from the last built aspects with all pending changes.

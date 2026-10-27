@@ -226,7 +226,7 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         // animation is untouched, so the flight keeps playing — only the value the list reads becomes current.
         flight?.beginTick(now: localNow())
     }
-    func applyShift(_ dy: CGFloat) {
+    public func applyShift(_ dy: CGFloat) {
         if flight != nil {
             // With two open edges this is a rigid coordinate translation and needs no re-emit. A finite
             // edge stays fixed while the offset moves, however, so its relative geometry changes and the

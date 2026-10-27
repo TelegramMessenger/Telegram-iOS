@@ -2,14 +2,15 @@ import UIKit
 import Photos
 import MediaGrid
 
-final class PhotoLibraryDataSource: MediaGridDataSource {
+final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibraryChangeObserver {
     struct ImageKey: Hashable {
         var identifier: String
         var width: Int
         var height: Int
+        var revision: Int
 
         var cacheKey: NSString {
-            return "\(self.identifier)|\(self.width)x\(self.height)" as NSString
+            return "\(self.identifier)|\(self.width)x\(self.height)|\(self.revision)" as NSString
         }
     }
 
@@ -31,7 +32,10 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
     static let fastFormatProbeLimit = 32
     static let fastFormatReprobeInterval: CFTimeInterval = 10.0
 
-    private let fetchResult: PHFetchResult<PHAsset>
+    private var fetchResult: PHFetchResult<PHAsset>
+    private var revisions: [String: Int] = [:]
+    private var revisionBase = 0
+    var onChange: ((MediaGridChanges?) -> Void)?
     private let manager = PHImageManager.default()
     private let cache = NSCache<NSString, UIImage>()
     private let scheduler = Scheduler(localLimit: 12, localPrefetchLimit: 6, networkLimit: 4)
@@ -43,6 +47,7 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
 
     init(fetchResult: PHFetchResult<PHAsset>) {
         self.fetchResult = fetchResult
+        super.init()
         self.cache.totalCostLimit = 80 * 1024 * 1024
         self.scheduler.startJob = { [weak self] job in
             self?.start(job)
@@ -56,11 +61,64 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
             guard let self, let asset = self.asset(at: key.index) else {
                 return nil
             }
-            return (ImageKey(identifier: asset.localIdentifier, width: key.width, height: key.height), Load(asset: asset, targetSize: CGSize(width: key.width, height: key.height)))
+            let size = CGSize(width: key.width, height: key.height)
+            return (self.key(for: asset, size: size), Load(asset: asset, targetSize: size))
         }
         self.scheduler.isCached = { [weak self] key in
             return self?.cache.object(forKey: key.cacheKey) != nil
         }
+        PHPhotoLibrary.shared().register(self)
+    }
+
+    deinit {
+        PHPhotoLibrary.shared().unregisterChangeObserver(self)
+    }
+
+    func photoLibraryDidChange(_ changeInstance: PHChange) {
+        DispatchQueue.main.async { [weak self] in
+            self?.applyLibraryChange(changeInstance)
+        }
+    }
+
+    private func applyLibraryChange(_ change: PHChange) {
+        guard let details = change.changeDetails(for: self.fetchResult) else {
+            return
+        }
+        let oldCount = self.fetchResult.count
+        let fetchResult = details.fetchResultAfterChanges
+        if !details.hasIncrementalChanges || details.hasMoves {
+            self.fetchResult = fetchResult
+            self.revisionBase += 1
+            self.scheduler.remapPrefetching { _ in nil }
+            self.onChange?(nil)
+            return
+        }
+        for asset in details.changedObjects {
+            self.revisions[asset.localIdentifier, default: 0] += 1
+        }
+        for asset in details.removedObjects {
+            self.revisions.removeValue(forKey: asset.localIdentifier)
+        }
+        let changes = PhotoLibraryDataSource.gridChanges(removed: details.removedIndexes ?? IndexSet(), inserted: details.insertedIndexes ?? IndexSet(), changed: details.changedIndexes ?? IndexSet(), oldCount: oldCount, newCount: fetchResult.count)
+        self.scheduler.remapPrefetching { key in
+            guard let index = changes.newIndex(forOld: key.index), !changes.changed.contains(index) else {
+                return nil
+            }
+            return PrefetchKey(index: index, width: key.width, height: key.height)
+        }
+        self.fetchResult = fetchResult
+        self.onChange?(changes)
+    }
+
+    static func gridChanges(removed: IndexSet, inserted: IndexSet, changed: IndexSet, oldCount: Int, newCount: Int) -> MediaGridChanges {
+        let reversed: (IndexSet, Int) -> IndexSet = { indices, count in
+            var result = IndexSet()
+            for range in indices.rangeView {
+                result.insert(integersIn: (count - range.upperBound) ..< (count - range.lowerBound))
+            }
+            return result
+        }
+        return MediaGridChanges(removed: reversed(removed, oldCount), inserted: reversed(inserted, newCount), changed: reversed(changed, newCount))
     }
 
     static func makeFetchResult() -> PHFetchResult<PHAsset> {
@@ -110,7 +168,8 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
     }
 
     private func key(for asset: PHAsset, size: CGSize) -> ImageKey {
-        return ImageKey(identifier: asset.localIdentifier, width: Int(size.width), height: Int(size.height))
+        let identifier = asset.localIdentifier
+        return ImageKey(identifier: identifier, width: Int(size.width), height: Int(size.height), revision: self.revisionBase + (self.revisions[identifier] ?? 0))
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
