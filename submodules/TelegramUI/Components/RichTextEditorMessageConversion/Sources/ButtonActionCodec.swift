@@ -42,7 +42,13 @@ public func replyMarkupButtonAction(from action: ButtonAction) -> ReplyMarkupBut
     case let .copyText(payload):
         return .copyText(payload: payload)
     case let .userProfile(peerId):
-        return .openUserProfile(peerId: EnginePeer.Id(peerId))
+        // The schema's profile button names a user (`user_id`). An id of another namespace can only come
+        // from a crafted clipboard or `.rtdoc`; it degrades like an undecodable action.
+        let peerId = EnginePeer.Id(peerId)
+        guard peerId.namespace == Namespaces.Peer.CloudUser else {
+            return .disabled
+        }
+        return .openUserProfile(peerId: peerId)
     case .disabled:
         return .disabled
     case let .unsupported(kind, payload):

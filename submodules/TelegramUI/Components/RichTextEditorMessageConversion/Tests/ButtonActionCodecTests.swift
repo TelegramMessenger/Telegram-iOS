@@ -50,6 +50,13 @@ final class ButtonActionCodecTests: XCTestCase {
         XCTAssertEqual(replyMarkupButtonAction(from: .unsupported(kind: "notARealKind", payload: "")), .disabled)
     }
 
+    /// The profile button names a user; a chat or channel id (a crafted clipboard or .rtdoc) must not
+    /// go out as a `user_id`.
+    func testProfileOfANonUserDegradesToDisabled() {
+        let channelId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(777))
+        XCTAssertEqual(replyMarkupButtonAction(from: .userProfile(peerId: channelId.toInt64())), .disabled)
+    }
+
     func testColorAndAlignmentMapBothWays() {
         XCTAssertEqual(buttonColor(from: .danger), .danger)
         XCTAssertNil(buttonColor(from: nil))
