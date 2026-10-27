@@ -15,8 +15,9 @@ import Foundation
 /// - all of them are the same custom emoji: each occurrence in the body is that emoji, provided the body has no more
 ///   of them than the page;
 /// - otherwise the body must have exactly the page's occurrences, taken in order, and the custom ones get their emoji.
-/// The runs put each block-level text unit on its own line, so text never fuses across units in the page; the body may
-/// separate them any way.
+/// The runs put each block-level text unit on its own line, so text never fuses across units in the page. This assumes
+/// the body also separates units by at least one character that does not attach to the one before it (a newline or a
+/// space); a body that ran two units together could join an alt text across them and misplace a glyph.
 /// Anything else stays plain rather than put a glyph on a plain emoji or on another custom one, and so do two mapped
 /// emoji that overlap in the body. An emoji with an empty alt text is skipped.
 func notificationRichTextCustomEmoji(body: String, from location: Int, runs: [(text: String, customEmojiFileId: Int64?)]) -> [(range: Range<Int>, fileId: Int64)] {
