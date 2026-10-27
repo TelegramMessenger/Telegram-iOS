@@ -759,28 +759,15 @@ final class CameraNeo: NSObject, CameraProtocol {
         let output = AVCaptureAudioDataOutput()
         output.setSampleBufferDelegate(self, queue: self.mediaQueue)
 
-        if self.useMultiCam, #available(iOS 13.0, *), let multiCamSession = self.session as? AVCaptureMultiCamSession {
-            guard multiCamSession.canAddInput(input), multiCamSession.canAddOutput(output) else {
-                return false
-            }
-            multiCamSession.addInputWithNoConnections(input)
-            multiCamSession.addOutputWithNoConnections(output)
-            let audioPorts = input.ports.filter { $0.mediaType == .audio }
-            guard !audioPorts.isEmpty else {
-                return false
-            }
-            let connection = AVCaptureConnection(inputPorts: audioPorts, output: output)
-            guard multiCamSession.canAddConnection(connection) else {
-                return false
-            }
-            multiCamSession.addConnection(connection)
-        } else {
-            guard self.session.canAddInput(input), self.session.canAddOutput(output) else {
-                return false
-            }
-            self.session.addInput(input)
-            self.session.addOutput(output)
+        // Let the session form the audio connection, in multi-camera mode too, as the legacy camera
+        // does. A manual connection over every audio port of the input is the likely reason recording
+        // never started with a headset microphone (bugs.telegram.org/c/66487): the recorder waits for
+        // the first audio sample before it writes anything.
+        guard self.session.canAddInput(input), self.session.canAddOutput(output) else {
+            return false
         }
+        self.session.addInput(input)
+        self.session.addOutput(output)
 
         self.audioInput = input
         self.audioOutput = output
