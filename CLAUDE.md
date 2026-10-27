@@ -205,6 +205,8 @@ subsystem from elsewhere.
 - **CI VMs, CI compiler-crash repro**: `build-system/Make/CLAUDE.md`; xctestrunner patch: `build-system/bazel-patches/`.
 - **Composer harness** (`Tests/ComposerHarness`, a loginless app hosting the real chat composer, for regression
   tests): [`Tests/ComposerHarness/CLAUDE.md`](Tests/ComposerHarness/CLAUDE.md).
+- **MediaGrid** (`submodules/TelegramUI/Components/MediaGrid`, the layer-based photo grid on CoreList's scroll engine,
+  with its demo app): `submodules/TelegramUI/Components/MediaGrid/CLAUDE.md`.
 - **Framework export lists** (`TelegramUIFramework` and `TelegramCoreFramework` export only what their clients use, in
   release builds only): `Telegram/CLAUDE.md`. A new extension, app library or framework must be added to the rule's
   lists or the *release* link fails; nothing may look up the app's own symbols by name at runtime (`dlsym`).
