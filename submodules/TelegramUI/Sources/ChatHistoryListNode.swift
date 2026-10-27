@@ -2782,10 +2782,18 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     
     /// Plays the unseen reactions of messages the caller has just brought on screen (the unseen-reactions jump) and
     /// marks them seen, on the same path the history plays them on, so they don't play again when they come into view.
+    /// A hold keeps back only what the chat marks by itself: the user asked for these, and with the path held the
+    /// jump would find the same reaction on every tap.
     func displayUnseenReactionAnimationsAndMarkSeen(messageIds: [MessageId]) {
         let displayedMessageIds = self.displayUnseenReactionAnimations(messageIds: messageIds)
         if !displayedMessageIds.isEmpty {
-            self.unseenReactionsProcessingManager.add(displayedMessageIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
+            if self.holdsReadsForSenderValue {
+                if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                    self.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set(displayedMessageIds))
+                }
+            } else {
+                self.unseenReactionsProcessingManager.add(displayedMessageIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
+            }
         }
     }
     
