@@ -733,10 +733,11 @@ public final class MediaGridView: UIView {
 
     private var scrollAnimation: (from: CGFloat, start: CFTimeInterval)?
     private var scrollAnimationLink: CADisplayLink?
+    private var velocityTransfer: (velocity: CGFloat, start: CFTimeInterval)?
     var _testAllowsWindowlessScrollAnimation = false
 
     public var isAnimatingScroll: Bool {
-        return self.scrollAnimation != nil
+        return self.scrollAnimation != nil || self.velocityTransfer != nil
     }
 
     public func scrollToTop(animated: Bool) {
@@ -762,13 +763,59 @@ public final class MediaGridView: UIView {
         }
     }
 
+    public func transferVelocity(_ velocity: CGFloat) {
+        guard velocity > 0.0, velocity.isFinite, self.gridLayout != nil else {
+            return
+        }
+        self.stopScrollAnimation()
+        self.endInteraction()
+        self.engine.haltMotionInPlace()
+        self.velocityTransfer = (velocity, self.motionClock())
+        if self.window != nil {
+            let link = CADisplayLink(target: MediaGridDisplayLinkTarget(self), selector: #selector(MediaGridDisplayLinkTarget.tick))
+            link.add(to: .main, forMode: .common)
+            self.scrollAnimationLink = link
+        }
+    }
+
+    private func stepVelocityTransfer() {
+        guard let transfer = self.velocityTransfer else {
+            return
+        }
+        let t = max(0.0, self.motionClock() - transfer.start)
+        let velocity = transfer.velocity * 15.0 * CGFloat(pow(MediaGridView.velocityTransferDecelerationRate, 1000.0 * t))
+        let maxOffset = max(0.0, self.contentHeight - self.bounds.height)
+        var offset = self.engine.offset + velocity
+        var ended = abs(velocity) < 0.1
+        if offset >= maxOffset {
+            offset = maxOffset
+            ended = true
+        }
+        if ended {
+            self.stopScrollAnimation()
+        }
+        self.engine.setOffset(offset)
+        self.scrolled(to: offset)
+    }
+
+    private static let velocityTransferDecelerationRate: Double = 0.998
+
+    func _testStepTransferredVelocity() {
+        self.stepVelocityTransfer()
+    }
+
     private func stopScrollAnimation() {
         self.scrollAnimation = nil
+        self.velocityTransfer = nil
         self.scrollAnimationLink?.invalidate()
         self.scrollAnimationLink = nil
     }
 
     fileprivate func stepScrollAnimation() {
+        if self.velocityTransfer != nil {
+            self.stepVelocityTransfer()
+            return
+        }
         guard let animation = self.scrollAnimation else {
             self.stopScrollAnimation()
             return
@@ -2170,6 +2217,25 @@ public final class MediaGridView: UIView {
             self.activeLayoutLayer.updateVisibleRange(range, priority: priority)
         }
         self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count)
+        self.noteVisibleRange(priority)
+    }
+
+    public var visibleIndexRange: Range<Int>? {
+        guard let layout = self.gridLayout, self.bounds.height > 0.0 else {
+            return nil
+        }
+        return layout.indexRange(intersecting: CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height))
+    }
+
+    public var onVisibleRangeChanged: ((Range<Int>) -> Void)?
+    private var lastReportedVisibleRange: Range<Int>?
+
+    private func noteVisibleRange(_ range: Range<Int>) {
+        if range == self.lastReportedVisibleRange {
+            return
+        }
+        self.lastReportedVisibleRange = range
+        self.onVisibleRangeChanged?(range)
     }
 
     private func scheduleCellBinding() {
