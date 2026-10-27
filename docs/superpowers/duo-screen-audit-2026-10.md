@@ -176,8 +176,9 @@ Deliberately not changed:
 
 - Chat list empty state: the side tab bar sits in the strip at the bottom of the root screens.
 - Call screen button row: centred under the band-centred avatar.
-- Login intro (legacy RMIntroViewController): its Start button stays in the band, so the phone entry's button widens
-  as it animates in from it.
+- Login intro (legacy RMIntroViewController): its Start button stays in the band. Since issue #18 the phone entry's
+  button keeps the band too on the folded screen (`authorizationBottomBand`), so it no longer widens as it animates in
+  from it.
 - SheetComponent's landscape band, emoji keyboards and the business intro emoji panel (grows to 540pt in search),
   PeerInfoPaneContainer, the chat's footer panels and input media, toasts.
 
