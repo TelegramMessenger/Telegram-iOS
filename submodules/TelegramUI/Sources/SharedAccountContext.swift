@@ -5,6 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import WebProxyTransport
 import Display
+import ComponentFlow
 import TelegramPresentationData
 import TelegramCallsUI
 import TelegramAudio
@@ -467,6 +468,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                     return next
                 }
+                ComponentAccessibilityStrings.on = next.strings.VoiceOver_Common_On
+                ComponentAccessibilityStrings.off = next.strings.VoiceOver_Common_Off
                 if stringsUpdated {
                     updateLegacyLocalization(strings: next.strings)
                 }

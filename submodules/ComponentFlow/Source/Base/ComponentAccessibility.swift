@@ -100,14 +100,30 @@ public extension UIView {
     }
 }
 
+/// The localized on/off words of switch rows below iOS 17. The app sets them from `VoiceOver_Common_On` and
+/// `VoiceOver_Common_Off` whenever the presentation strings change; main thread only.
+public enum ComponentAccessibilityStrings {
+    public static var on: String = "On"
+    public static var off: String = "Off"
+}
+
 public extension ComponentAccessibility {
     /// Value and trait of a switch row when the call site gives none. On iOS 17 and later `.toggleButton` makes
-    /// VoiceOver say the on/off state in the system language from the `1`/`0` value; earlier systems read the value.
+    /// VoiceOver say the on/off state in the system language from the `1`/`0` value; earlier systems get the
+    /// localized `ComponentAccessibilityStrings`.
     static func toggleDefaults(isOn: Bool) -> (value: String, traits: UIAccessibilityTraits) {
-        let value = isOn ? "1" : "0"
         if #available(iOS 17.0, *) {
-            return (value, .toggleButton)
+            return toggleDefaults(isOn: isOn, isIOS17OrLater: true)
         }
-        return (value, .button)
+        return toggleDefaults(isOn: isOn, isIOS17OrLater: false)
+    }
+    
+    internal static func toggleDefaults(isOn: Bool, isIOS17OrLater: Bool) -> (value: String, traits: UIAccessibilityTraits) {
+        if isIOS17OrLater {
+            if #available(iOS 17.0, *) {
+                return (isOn ? "1" : "0", .toggleButton)
+            }
+        }
+        return (isOn ? ComponentAccessibilityStrings.on : ComponentAccessibilityStrings.off, .button)
     }
 }

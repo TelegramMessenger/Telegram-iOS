@@ -1,7 +1,7 @@
 import XCTest
 import UIKit
 import Display
-import ComponentFlow
+@testable import ComponentFlow
 import MultilineTextComponent
 import TelegramPresentationData
 import ListActionItemComponent
@@ -122,5 +122,24 @@ final class ComponentAccessibilityListTests: XCTestCase {
         XCTAssertNotNil(footer)
         XCTAssertTrue(footer?.accessibilityTraits.contains(.staticText) ?? false)
         XCTAssertNotNil(element(labelled: "Row"))
+    }
+    
+    func testPreIOS17SwitchValueUsesLocalizedStrings() {
+        let previous = (ComponentAccessibilityStrings.on, ComponentAccessibilityStrings.off)
+        defer {
+            ComponentAccessibilityStrings.on = previous.0
+            ComponentAccessibilityStrings.off = previous.1
+        }
+        ComponentAccessibilityStrings.on = "Вкл."
+        ComponentAccessibilityStrings.off = "Выкл."
+        let on = ComponentAccessibility.toggleDefaults(isOn: true, isIOS17OrLater: false)
+        XCTAssertEqual(on.value, "Вкл.")
+        XCTAssertTrue(on.traits.contains(.button))
+        XCTAssertEqual(ComponentAccessibility.toggleDefaults(isOn: false, isIOS17OrLater: false).value, "Выкл.")
+        if #available(iOS 17.0, *) {
+            let modern = ComponentAccessibility.toggleDefaults(isOn: true, isIOS17OrLater: true)
+            XCTAssertEqual(modern.value, "1")
+            XCTAssertTrue(modern.traits.contains(.toggleButton))
+        }
     }
 }
