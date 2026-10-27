@@ -816,12 +816,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         strongSelf.playbackStatusDisposable.set((updatedPlaybackStatus
                         |> deliverOnMainQueue).startStrict(next: { status in
                             if let strongSelf = self {
-                                let wasPlaying = strongSelf.isPlaying
                                 strongSelf.status = status
                                 strongSelf.updateStatus(animator: nil)
-                                if strongSelf.isPlaying != wasPlaying {
-                                    strongSelf.updateHeaderAccessoriesVisibility()
-                                }
                             }
                         }))
                     }
@@ -1161,17 +1157,17 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         backgroundContent.frame = forwardBackgroundFrame
                     }
                     
-                    strongSelf.updateHeaderAccessoriesVisibility()
+                    strongSelf.updateHeaderAccessoriesAlpha(scaleProgress.isZero ? 1.0 : 0.0)
                 }
             })
         }
     }
     
-    // The via-bot, reply and forward headers hide while the video plays. Playback status arrives
-    // independently of layout, so this runs on both: a layout applied while the status still reads
-    // "playing" would otherwise leave the headers hidden after playback stops.
-    private func updateHeaderAccessoriesVisibility() {
-        let alpha: CGFloat = self.isPlaying ? 0.0 : 1.0
+    // The via-bot, reply and forward headers hide while the video is enlarged, which is the layout's
+    // own state (`scaleProgress`, from the chat's currently playing message), paused or not. Reading the
+    // separately delivered playback status here instead raced the layout: a layout applied when playback
+    // stopped, while the status still read "playing", left the headers hidden for good.
+    private func updateHeaderAccessoriesAlpha(_ alpha: CGFloat) {
         let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         if let viaBotNode = self.viaBotNode {
             transition.updateAlpha(node: viaBotNode, alpha: alpha)
