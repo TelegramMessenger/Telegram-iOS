@@ -2375,6 +2375,141 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertFalse(view.engine.isDecelerating)
     }
 
+    func testRotationRoundTripsKeepTopIndex() {
+        let (view, _) = self.makeView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        let row = view.currentLayout!.frame(at: 903)
+        view.setContentOffset(row.minY + row.height * 0.3)
+        XCTAssertEqual(view.topVisibleIndex, 903)
+        self.rotate(view, toLandscape: true)
+        let landscapeTop = view.topVisibleIndex
+        XCTAssertEqual(landscapeTop, 900)
+        self.assertInFirstRow(view, 903, fraction: 0.3)
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.topVisibleIndex, 903)
+        self.assertInFirstRow(view, 903, fraction: 0.3)
+        self.rotate(view, toLandscape: true)
+        XCTAssertEqual(view.topVisibleIndex, landscapeTop)
+        self.assertInFirstRow(view, 903, fraction: 0.3)
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.topVisibleIndex, 903)
+        view.setContentOffset(view.contentOffset + 2000.0)
+        guard let scrolledTop = view.topVisibleIndex, let scrolledFrame = view.frameForItem(at: scrolledTop) else {
+            XCTFail("no top")
+            return
+        }
+        self.rotate(view, toLandscape: true)
+        self.assertInFirstRow(view, scrolledTop, fraction: -scrolledFrame.minY / scrolledFrame.height)
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.topVisibleIndex, scrolledTop)
+    }
+
+    func testRotationAnchorClearedByZoomAndChanges() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(view.currentLayout!.frame(at: 903).minY)
+        self.rotate(view, toLandscape: true)
+        dataSource.count += 5
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 5), changed: []))
+        guard let top = view.topVisibleIndex else {
+            XCTFail("no top")
+            return
+        }
+        XCTAssertEqual(top, 905)
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.topVisibleIndex, 903)
+        self.assertInFirstRow(view, top)
+    }
+
+    func testRotationDuringDragReleasesWithoutFlight() {
+        let (view, _, window) = self.makeWindowedSourceView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(5000.0)
+        var flights = 0
+        let forward = view.engine.onFlightChanged
+        view.engine.onFlightChanged = { flight in
+            if flight != nil {
+                flights += 1
+            }
+            forward?(flight)
+        }
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        for step in 1 ... 5 {
+            view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -24.0 * CGFloat(step)), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+        }
+        window.frame = CGRect(origin: .zero, size: MediaGridViewTests.landscape)
+        self.rotate(view, toLandscape: true)
+        let offset = view.contentOffset
+        view.engine.applyPanUpdate(state: .cancelled, translation: CGPoint(x: 0.0, y: -120.0), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+        XCTAssertEqual(flights, 0)
+        XCTAssertFalse(view.engine.isDecelerating)
+        XCTAssertEqual(view.contentOffset, offset, accuracy: 1e-6)
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        for step in 1 ... 5 {
+            view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -24.0 * CGFloat(step)), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+        }
+        view.engine.applyPanUpdate(state: .ended, translation: CGPoint(x: 0.0, y: -120.0), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+        XCTAssertEqual(flights, 1)
+        view.engine.haltMotionInPlace()
+        window.isHidden = true
+    }
+
+    func testRotationBeforeFrameChangeRebuildsAtNewLevel() {
+        let (view, dataSource) = self.makeView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(view.currentLayout!.frame(at: 903).minY)
+        view.updateLayout(size: MediaGridViewTests.landscape, safeInsets: .zero, isLandscape: true, transition: 0.0)
+        XCTAssertEqual(view.level, .five)
+        XCTAssertEqual(view.currentLayout?.columns, 5)
+        XCTAssertEqual(view.currentLayout?.geometry.width, 393.0)
+        self.assertCellsMatchLayout(view, "rebuilt before the frame change")
+        self.assertInFirstRow(view, 903)
+        dataSource.count += 30
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 30), changed: []))
+        XCTAssertEqual(view.currentLayout?.columns, 5)
+        self.assertCellsMatchLayout(view, "change before the frame change")
+        view.frame = CGRect(origin: .zero, size: MediaGridViewTests.landscape)
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.currentLayout?.geometry.width, 852.0)
+        XCTAssertEqual(view.currentLayout?.columns, 5)
+        self.assertInFirstRow(view, 933)
+        self.assertCellsMatchLayout(view, "after the frame change")
+    }
+
+    func testBottomInsetChangeKeepsFling() {
+        let (view, _, window) = self.makeWindowedSourceView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(5000.0)
+        self.fling(view, velocity: 3000.0)
+        XCTAssertTrue(view.engine.isDecelerating)
+        view.updateLayout(size: MediaGridViewTests.portrait, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 50.0, right: 0.0), isLandscape: false, transition: 0.3)
+        XCTAssertTrue(view.engine.isDecelerating)
+        view.layoutIfNeeded()
+        XCTAssertTrue(view.engine.isDecelerating)
+        XCTAssertEqual(view.currentLayout?.geometry.bottomInset, 50.0)
+        XCTAssertNil(view.layer.animation(forKey: kCATransition))
+        self.spinUntilSettled(view)
+        self.assertCellsMatchLayout(view, "after fling")
+        window.isHidden = true
+    }
+
+    func testAnimatedRotationDefersBindingOneTurn() {
+        let (view, dataSource, window) = self.makeWindowedSourceView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(view.currentLayout!.frame(at: 900).minY)
+        let requests = dataSource.requests.count
+        window.frame = CGRect(origin: .zero, size: MediaGridViewTests.landscape)
+        self.rotate(view, toLandscape: true, duration: 0.3)
+        XCTAssertEqual(view.currentLayout?.columns, 5)
+        XCTAssertEqual(dataSource.requests.count, requests)
+        XCTAssertNotNil(view.layer.animation(forKey: kCATransition))
+        self.assertInFirstRow(view, 900)
+        self.spin(0.05)
+        XCTAssertGreaterThan(dataSource.requests.count, requests)
+        self.assertCellsMatchLayout(view, "after the deferred binding")
+        window.isHidden = true
+    }
+
     func testCameraFollowsRotatedLevel() {
         let (view, _) = self.makeView(count: 1000)
         let camera = UIView()

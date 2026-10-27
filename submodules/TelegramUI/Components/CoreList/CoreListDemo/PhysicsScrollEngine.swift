@@ -129,7 +129,7 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     public var onDidEndDecelerating: (() -> Void)?
     public var onWillBeginDragging: (() -> Void)?
     public var onDidEndDragging: (() -> Void)?
-    var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
+    public var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
     /// The physics scroll position, advanced once per frame by whichever driver is running — NEVER a sample of
     /// the flight. Consumers may read this as many times as they like within a frame and get one coherent
     /// value; a consumer that reads it twice around its own work (the list does, three times per mutation

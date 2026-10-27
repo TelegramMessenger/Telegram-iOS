@@ -623,7 +623,11 @@ private final class RotationProbe {
     private var link: CADisplayLink?
     private var last: CFTimeInterval?
     private var intervals: [Double] = []
+    private var timestamps: [CFTimeInterval] = []
     private var updates: [Double] = []
+    private var updateTime: CFTimeInterval?
+    private let turnStart = CACurrentMediaTime()
+    private var turnDuration: Double?
 
     init(level: MediaGridLevel?, top: Int?) {
         self.startLevel = level
@@ -634,15 +638,26 @@ private final class RotationProbe {
         }
         link.add(to: .main, forMode: .common)
         self.link = link
+        let observer = CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault, CFRunLoopActivity.beforeWaiting.rawValue, false, CFIndex.max) { [weak self] _, _ in
+            guard let self else {
+                return
+            }
+            self.turnDuration = (CACurrentMediaTime() - self.turnStart) * 1000.0
+        }
+        CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
     }
 
     func noteUpdate(_ duration: CFTimeInterval) {
         self.updates.append(duration * 1000.0)
+        if self.updateTime == nil {
+            self.updateTime = CACurrentMediaTime() - duration
+        }
     }
 
     @objc private func tick(_ link: CADisplayLink) {
         if let last = self.last {
             self.intervals.append((link.timestamp - last) * 1000.0)
+            self.timestamps.append(link.timestamp)
         }
         self.last = link.timestamp
     }
@@ -654,7 +669,16 @@ private final class RotationProbe {
         let worst = sorted.last ?? 0.0
         let median = sorted.isEmpty ? 0.0 : sorted[sorted.count / 2]
         let over = self.intervals.filter { $0 > median * 1.5 }.count
+        var slow = ""
+        if let updateTime = self.updateTime {
+            for (index, interval) in self.intervals.enumerated() where interval > median * 1.5 {
+                slow += String(format: " slow %.1fms@%+.0fms", interval, (self.timestamps[index] - updateTime) * 1000.0)
+            }
+        }
+        if let turn = self.turnDuration {
+            slow += String(format: " turn %.1fms", turn)
+        }
         let updates = self.updates.map { String(format: "%.2f", $0) }.joined(separator: ",")
-        print(String(format: "rotate %@ -> %@ top %@ -> %@ firstRow %@ updateLayout ms [%@] frames %d median %.2f worst %.2f dropped %d", self.startLevel.map { "\($0.rawValue)" } ?? "-", level.map { "\($0.rawValue)" } ?? "-", self.startTop.map { "\($0)" } ?? "-", top.map { "\($0)" } ?? "-", firstRow, updates, self.intervals.count, median, worst, over))
+        print(String(format: "rotate %@ -> %@ top %@ -> %@ firstRow %@ updateLayout ms [%@] frames %d median %.2f worst %.2f dropped %d%@", self.startLevel.map { "\($0.rawValue)" } ?? "-", level.map { "\($0.rawValue)" } ?? "-", self.startTop.map { "\($0)" } ?? "-", top.map { "\($0)" } ?? "-", firstRow, updates, self.intervals.count, median, worst, over, slow))
     }
 }
