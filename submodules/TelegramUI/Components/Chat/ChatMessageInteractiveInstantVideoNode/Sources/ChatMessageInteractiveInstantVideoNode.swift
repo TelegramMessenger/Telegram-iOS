@@ -816,8 +816,12 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         strongSelf.playbackStatusDisposable.set((updatedPlaybackStatus
                         |> deliverOnMainQueue).startStrict(next: { status in
                             if let strongSelf = self {
+                                let wasPlaying = strongSelf.isPlaying
                                 strongSelf.status = status
                                 strongSelf.updateStatus(animator: nil)
+                                if strongSelf.isPlaying != wasPlaying {
+                                    strongSelf.updateHeaderAccessoriesVisibility()
+                                }
                             }
                         }))
                     }
@@ -1157,27 +1161,35 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         backgroundContent.frame = forwardBackgroundFrame
                     }
                     
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                    if let viaBotNode = strongSelf.viaBotNode {
-                        transition.updateAlpha(node: viaBotNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let replyBackgroundContent = strongSelf.replyBackgroundContent {
-                        transition.updateAlpha(node: replyBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let forwardBackgroundContent = strongSelf.forwardBackgroundContent {
-                        transition.updateAlpha(node: forwardBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let forwardInfoNode = strongSelf.forwardInfoNode {
-                        transition.updateAlpha(node: forwardInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let replyInfoNode = strongSelf.replyInfoNode {
-                        transition.updateAlpha(node: replyInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
+                    strongSelf.updateHeaderAccessoriesVisibility()
                 }
             })
         }
     }
-    
+
+    // The via-bot, reply and forward headers hide while the video plays. Playback status arrives
+    // independently of layout, so this runs on both: a layout applied while the status still reads
+    // "playing" would otherwise leave the headers hidden after playback stops.
+    private func updateHeaderAccessoriesVisibility() {
+        let alpha: CGFloat = self.isPlaying ? 0.0 : 1.0
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        if let viaBotNode = self.viaBotNode {
+            transition.updateAlpha(node: viaBotNode, alpha: alpha)
+        }
+        if let replyBackgroundContent = self.replyBackgroundContent {
+            transition.updateAlpha(node: replyBackgroundContent, alpha: alpha)
+        }
+        if let forwardBackgroundContent = self.forwardBackgroundContent {
+            transition.updateAlpha(node: forwardBackgroundContent, alpha: alpha)
+        }
+        if let forwardInfoNode = self.forwardInfoNode {
+            transition.updateAlpha(node: forwardInfoNode, alpha: alpha)
+        }
+        if let replyInfoNode = self.replyInfoNode {
+            transition.updateAlpha(node: replyInfoNode, alpha: alpha)
+        }
+    }
+
     private func updateStatus(animator: ControlledTransitionAnimator? = nil) {
         guard let item = self.item, let status = self.status, let videoFrame = self.videoFrame else {
             return
