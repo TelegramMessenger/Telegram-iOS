@@ -8,9 +8,11 @@ The `.xcodeproj` is generated and untracked; edit `project.yml`. The `CoreList` 
 cd submodules/TelegramUI/Components/MediaGrid
 xcodegen generate --quiet
 SIM=4FAA8C5A-1B8A-4350-9627-917227146FA2
-xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$SIM" -parallel-testing-enabled NO test
+xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test
 xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$SIM" build
 ```
+
+`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 183 tests, CoreList 1048, 0 failures.
 
 Run only on the dedicated simulator `MediaGridDemo iPhone 18 Pro 27.0` (UDID above); never on the booted logged-in simulators.
 
@@ -53,3 +55,28 @@ The host sets the frame, then calls `updateLayout(size:safeInsets:isLandscape:tr
 - A level change from rotation rebuilds at once, even before the host's frame catches up, so `level`, the layout and `apply(_:)` never disagree; the later frame change rebuilds again from the remembered anchor.
 - Landing on level 1 at a width without a table uses the cached table scaled, requests the exact one off main and swaps it in by the deferred `applyAspects`, as any width change does.
 - With a duration (and a window), the change crossfades (a `CATransition` fade on the grid's layer; cells are not animated frame by frame), and binding newly visible or resized cells plus prefetch waits one runloop turn, so the rotation's first commit carries only layout (~0.5 ms instead of 2–5 ms with PhotoKit requests). That first turn is UIKit's rotation setup, 15–20 ms on the simulator, and occasionally drops one frame whatever the grid does.
+
+## Invariants worth knowing
+
+- The CoreList surface MediaGrid depends on (`PhysicsScrollEngine`, `ScrollFlight`, `applyShift`, `reanchorDragToCurrentPosition`, `shouldStopScrollingOnRelease`, `isScrollEnabled`) is listed, with the reasons, in `../CoreList/CLAUDE.md`. CoreList's behaviour is unchanged.
+- In keyframe mode only `onFlightChanged(nil)` ends a fling.
+- Images, the memory cache and the scheduler's jobs are keyed by `PHAsset.localIdentifier`, never by index, so library changes and re-keyed cells keep their images. Index-keyed state (prefetch keys) is remapped by the data source.
+- `performBatch` is part of `MediaGridDataSource` (with a default); the app's data source needs the same viewport-first batching and large-image redraw as the demo's.
+
+## Measured results (simulator only)
+
+`MediaGridDemo iPhone 18 Pro 27.0`, debug build, 60 Hz. The simulator's PhotoKit is not a device's (see above), so these are functional checks and not the success measures.
+
+- Scrub `-scrubTo 0.05`/`0.2`, 120 steps per leg: 0 dropped frames. Cells without an image: level 3 0/240 frames; level 1 0/240 in 5 of 9 runs and 1/240 in the rest (step 1 after a jump of 3.6 screens, PhotoKit's first image takes up to 15 ms here).
+- Pinch crossings `-autoPinch`: 1.2 to 5.5 ms of main-thread work per crossing, worst frame 16.7 ms, no drops (Photo Library and Synthetic).
+- Rotation: `updateLayout` about 0.5 ms; the first frame of the system rotation drops one frame in some runs (UIKit's own 15 to 21 ms turn), at every level and source.
+
+## Device (pending)
+
+Dropped frames and worst frame from the demo's HUD, on a real device. Fill in before stage 2.
+
+| Gesture | Real library | Synthetic 100k |
+|---|---|---|
+| Fling | | |
+| Scrub top to bottom and back | | |
+| Pinch through all levels | | |
