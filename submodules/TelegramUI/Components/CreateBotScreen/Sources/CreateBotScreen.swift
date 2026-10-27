@@ -879,8 +879,8 @@ public class CreateBotScreen: ViewControllerComponentContainer {
     private let context: AccountContext
 
     /// `viaDeeplink` is set only when the sheet was opened from a managed bot creation link. A peer
-    /// request (a Mini App's `requestChat`) passes false: its `messages.sendBotRequestedPeer` already
-    /// produces the manager bot's "bot created" service message, and the flag would add a second one.
+    /// request (a Mini App's `requestChat`) passes false: the `messages.sendBotRequestedPeer` that follows
+    /// creation produces the manager bot's "bot created" service message, and the flag would add a second one.
     public init?(
         context: AccountContext,
         parentBot: EnginePeer.Id,
