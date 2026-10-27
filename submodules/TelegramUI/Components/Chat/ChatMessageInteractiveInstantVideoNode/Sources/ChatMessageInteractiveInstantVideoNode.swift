@@ -1157,24 +1157,32 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         backgroundContent.frame = forwardBackgroundFrame
                     }
                     
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                    if let viaBotNode = strongSelf.viaBotNode {
-                        transition.updateAlpha(node: viaBotNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let replyBackgroundContent = strongSelf.replyBackgroundContent {
-                        transition.updateAlpha(node: replyBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let forwardBackgroundContent = strongSelf.forwardBackgroundContent {
-                        transition.updateAlpha(node: forwardBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let forwardInfoNode = strongSelf.forwardInfoNode {
-                        transition.updateAlpha(node: forwardInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
-                    if let replyInfoNode = strongSelf.replyInfoNode {
-                        transition.updateAlpha(node: replyInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
-                    }
+                    strongSelf.updateHeaderAccessoriesAlpha(scaleProgress.isZero ? 1.0 : 0.0)
                 }
             })
+        }
+    }
+    
+    // The via-bot, reply and forward headers hide while the video is enlarged, which is the layout's
+    // own state (`scaleProgress`, from the chat's currently playing message), paused or not. Reading the
+    // separately delivered playback status here instead raced the layout: a layout applied when playback
+    // stopped, while the status still read "playing", left the headers hidden for good.
+    private func updateHeaderAccessoriesAlpha(_ alpha: CGFloat) {
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        if let viaBotNode = self.viaBotNode {
+            transition.updateAlpha(node: viaBotNode, alpha: alpha)
+        }
+        if let replyBackgroundContent = self.replyBackgroundContent {
+            transition.updateAlpha(node: replyBackgroundContent, alpha: alpha)
+        }
+        if let forwardBackgroundContent = self.forwardBackgroundContent {
+            transition.updateAlpha(node: forwardBackgroundContent, alpha: alpha)
+        }
+        if let forwardInfoNode = self.forwardInfoNode {
+            transition.updateAlpha(node: forwardInfoNode, alpha: alpha)
+        }
+        if let replyInfoNode = self.replyInfoNode {
+            transition.updateAlpha(node: replyInfoNode, alpha: alpha)
         }
     }
     
