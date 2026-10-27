@@ -116,6 +116,11 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
     var resolvePrefetch: (PrefetchKey) -> (key: Key, payload: Payload)? = { _ in nil }
     var isCached: (Key) -> Bool = { _ in false }
     var scheduleFlush: (@escaping () -> Void) -> Void = { DispatchQueue.main.async(execute: $0) }
+    var networkLaneDidChange: () -> Void = {}
+
+    var isNetworkLaneIdle: Bool {
+        return self.networkLane.running == 0 && !self.networkLane.visible.contains(where: { $0.state == .pending && $0.isWanted })
+    }
 
     private(set) var jobs: [Key: Job] = [:]
     private var prefetchQueue: [PrefetchKey] = []
@@ -266,6 +271,9 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         if self.jobs[job.key] === job {
             self.jobs.removeValue(forKey: job.key)
         }
+        if job.usesNetwork {
+            self.networkLaneDidChange()
+        }
         let consumers = Array(job.consumers.values)
         job.consumers.removeAll()
         for consumer in consumers {
@@ -284,6 +292,7 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         job.usesNetwork = true
         self.push(job)
         self.pump()
+        self.networkLaneDidChange()
         return true
     }
 
@@ -364,6 +373,9 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
             self.cancelJob(job)
             self.lane(for: job).running -= 1
             self.pump()
+        }
+        if job.usesNetwork {
+            self.networkLaneDidChange()
         }
     }
 

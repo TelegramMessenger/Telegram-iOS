@@ -41,6 +41,37 @@ final class ImageLoadSchedulerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testNetworkLaneChangesAreReported() {
+        let scheduler = self.makeScheduler()
+        var changes = 0
+        scheduler.networkLaneDidChange = { changes += 1 }
+        XCTAssertTrue(scheduler.isNetworkLaneIdle)
+        _ = scheduler.request(key: "a", payload: 1, completion: { _, _ in })
+        XCTAssertEqual(changes, 0)
+        let job = self.started[0]
+        XCTAssertTrue(scheduler.moveToNetwork(job, attempt: job.attempt))
+        XCTAssertGreaterThan(changes, 0)
+        XCTAssertFalse(scheduler.isNetworkLaneIdle)
+        let moved = changes
+        let networkJob = self.started.last!
+        scheduler.finish(networkJob, attempt: networkJob.attempt, image: TestDataSource.sampleImage)
+        XCTAssertGreaterThan(changes, moved)
+        XCTAssertTrue(scheduler.isNetworkLaneIdle)
+    }
+
+    func testCancelledNetworkJobLeavesLaneIdle() {
+        let scheduler = self.makeScheduler()
+        var changes = 0
+        scheduler.networkLaneDidChange = { changes += 1 }
+        let handle = scheduler.request(key: "a", payload: 1, completion: { _, _ in })
+        let job = self.started[0]
+        XCTAssertTrue(scheduler.moveToNetwork(job, attempt: job.attempt))
+        let moved = changes
+        handle.cancel()
+        XCTAssertGreaterThan(changes, moved)
+        XCTAssertTrue(scheduler.isNetworkLaneIdle)
+    }
+
     func testRequestsForOneKeyShareOneLoad() {
         let scheduler = self.makeScheduler()
         var results: [Bool] = []

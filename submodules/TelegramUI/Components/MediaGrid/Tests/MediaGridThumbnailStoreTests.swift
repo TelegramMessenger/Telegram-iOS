@@ -147,6 +147,17 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         XCTAssertNil(store.page(for: "256"))
     }
 
+    func testStoredIdsListsIndexedIds() {
+        let store = MediaGridThumbnailStore(directory: nil)
+        XCTAssertEqual(store.storedIds(), [])
+        let image = self.makeImage(width: 10, height: 10, top: .red)
+        store.write(image, id: "a", version: "1")
+        store.write(image, id: "b", version: "1")
+        XCTAssertEqual(Set(store.storedIds()), ["a", "b"])
+        store.remove(ids: ["a"])
+        XCTAssertEqual(store.storedIds(), ["b"])
+    }
+
     func testSecondPageAfter256() {
         let store = MediaGridThumbnailStore(directory: nil)
         let image = self.makeImage(width: 10, height: 10, top: .red)

@@ -130,7 +130,7 @@ final class DemoViewController: UIViewController {
             }
             var text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms\nempty %d  max %d  frames %d", summary.frames, summary.dropped, summary.worst * 1000.0, self.emptyNow, self.emptyMax, self.emptyFrames)
             if self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue, let dataSource = self.photoDataSource {
-                text += String(format: "\nthumbs %d/%d\nno local thumb %d", dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount)
+                text += String(format: "\nthumbs %d/%d\nno local thumb %d  net %d", dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount, dataSource.networkFills)
             }
             self.hudLabel.text = text
         }
@@ -219,11 +219,28 @@ final class DemoViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         self.startBenchmarkIfRequested()
+        if ProcessInfo.processInfo.arguments.contains("-fillLog") {
+            self.logFillProgress(started: CACurrentMediaTime())
+        }
         if ProcessInfo.processInfo.arguments.contains("-waitForFill") {
-            self.waitForFill(started: CACurrentMediaTime())
-            return
+            if DemoViewController.argument("-source") == "photos" {
+                self.waitForFill(started: CACurrentMediaTime())
+                return
+            }
+            print("WAITFORFILL skipped: -waitForFill needs -source photos")
+            fflush(stdout)
         }
         self.startAutomation()
+    }
+
+    private func logFillProgress(started: CFTimeInterval) {
+        if let dataSource = self.photoDataSource {
+            print(String(format: "FILL_PROGRESS t=%.0fs filled=%d/%d unavailable=%d missing=%d in_flight=%d net_in_flight=%d net_fills=%d harvests=%d retry_entries=%d", CACurrentMediaTime() - started, dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount, dataSource.filler.missingCount, dataSource.filler.inFlightCount, dataSource.filler.networkInFlightCount, dataSource.networkFills, dataSource.harvests, dataSource.filler.registry.count))
+            fflush(stdout)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
+            self?.logFillProgress(started: started)
+        }
     }
 
     private func waitForFill(started: CFTimeInterval) {
@@ -254,7 +271,44 @@ final class DemoViewController: UIViewController {
         }
     }
 
+    private func runSharpProbe(fractions: [CGFloat]) {
+        #if DEBUG
+        guard let fraction = fractions.first, let gridView = self.gridView else {
+            print("SHARP_PROBE done")
+            fflush(stdout)
+            return
+        }
+        gridView.setContentOffset(fraction * max(0.0, gridView.contentHeight - gridView.bounds.height))
+        let start = CACurrentMediaTime()
+        func poll() {
+            let (final, visible) = gridView.debugVisibleFinalImageCount()
+            let elapsed = CACurrentMediaTime() - start
+            if (visible > 0 && final == visible) || elapsed > 20.0 {
+                print(String(format: "SHARP_PROBE fraction=%.2f time=%.0fms final=%d visible=%d net_in_flight=%d", fraction, elapsed * 1000.0, final, visible, self.photoDataSource?.filler.networkInFlightCount ?? 0))
+                fflush(stdout)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                    self?.runSharpProbe(fractions: Array(fractions.dropFirst()))
+                }
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.008) {
+                poll()
+            }
+        }
+        poll()
+        #endif
+    }
+
     private func startAutomation() {
+        if let delay = DemoViewController.argument("-sharpProbe").flatMap(Double.init) {
+            if ProcessInfo.processInfo.arguments.contains("-noNetworkLane") {
+                self.photoDataSource?.filler.networkGate = { false }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                let fractions = DemoViewController.argument("-probeFractions").map { $0.split(separator: ",").compactMap { Double($0).map { CGFloat($0) } } } ?? [0.1, 0.6, 0.3, 0.8, 0.2, 0.7, 0.15, 0.9]
+                self?.runSharpProbe(fractions: fractions)
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("-autoScrub") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.startAutoScrub()
@@ -716,6 +770,8 @@ final class DemoViewController: UIViewController {
         guard let gridView = self.gridView else {
             return
         }
+        print("LIBRARY_CHANGE removed=\(changes?.removed.count ?? -1) inserted=\(changes?.inserted.count ?? -1) changed=\(changes?.changed.count ?? -1)")
+        fflush(stdout)
         if let changes {
             self.selectedIndices = Set(self.selectedIndices.compactMap { changes.newIndex(forOld: $0) })
             gridView.apply(changes)

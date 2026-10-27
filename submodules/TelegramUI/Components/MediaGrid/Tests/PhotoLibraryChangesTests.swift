@@ -23,9 +23,36 @@ final class PhotoLibraryChangesTests: XCTestCase {
         return PhotoLibraryDataSource.LibraryUpdate(previous: previous, fetchResult: PHFetchResult<PHAsset>(), changes: changes, invalidatesAll: invalidatesAll, changedIdentifiers: changed, removedIdentifiers: [])
     }
 
+    func testChangesWithUnchangedVersionAreDropped() {
+        let previous = ThumbnailCatalog(ids: ["a", "b", "c", "d"], versions: ["1", "1", "1", "1"])
+        let changes = MediaGridChanges(removed: [3], inserted: [0], changed: [1, 3])
+        let filtered = PhotoLibraryDataSource.droppingUnversionedChanges(changes, changedIdentifiers: ["a", "c"], newVersions: ["a": "1", "c": "2"], previous: previous)
+        XCTAssertEqual(filtered.changes.changed, [3])
+        XCTAssertEqual(filtered.changes.removed, [3])
+        XCTAssertEqual(filtered.changes.inserted, [0])
+        XCTAssertEqual(filtered.changedIdentifiers, ["c"])
+        let availability = PhotoLibraryDataSource.droppingUnversionedChanges(MediaGridChanges(removed: [], inserted: [], changed: [2]), changedIdentifiers: ["c"], newVersions: ["c": "1"], previous: previous)
+        XCTAssertTrue(availability.changes.isEmpty)
+        XCTAssertTrue(availability.changedIdentifiers.isEmpty)
+    }
+
+    func testAvailabilityOnlyUpdateSwapsWithoutNotifying() {
+        let initial = PHFetchResult<PHAsset>()
+        let dataSource = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)
+        var received: [MediaGridChanges?] = []
+        dataSource.onChange = { received.append($0) }
+        var update = self.update(previous: initial, changes: MediaGridChanges(removed: [], inserted: [], changed: []))
+        update.isAvailabilityOnly = true
+        dataSource.apply(update)
+        XCTAssertTrue(received.isEmpty)
+        dataSource.apply(self.update(previous: update.fetchResult, changes: MediaGridChanges(removed: [], inserted: [], changed: []), changed: ["a"]))
+        XCTAssertEqual(received.count, 1)
+        XCTAssertNotNil(received[0] ?? nil)
+    }
+
     func testConsecutiveUpdateAppliesIncrementally() {
         let initial = PHFetchResult<PHAsset>()
-        let dataSource = PhotoLibraryDataSource(fetchResult: initial)
+        let dataSource = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)
         var received: [MediaGridChanges?] = []
         dataSource.onChange = { received.append($0) }
         let first = self.update(previous: initial, changes: MediaGridChanges(removed: [], inserted: [], changed: []), changed: ["a"])
@@ -43,14 +70,14 @@ final class PhotoLibraryChangesTests: XCTestCase {
 
     func testOutOfOrderUpdateReloadsAndInvalidates() {
         let initial = PHFetchResult<PHAsset>()
-        let dataSource = PhotoLibraryDataSource(fetchResult: initial)
+        let dataSource = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)
         var received: [MediaGridChanges?] = []
         dataSource.onChange = { received.append($0) }
         dataSource.apply(self.update(previous: PHFetchResult<PHAsset>(), changes: MediaGridChanges(removed: [], inserted: [], changed: [])))
         XCTAssertEqual(received.count, 1)
         XCTAssertNil(received[0] ?? nil)
         XCTAssertEqual(dataSource.imageRevision(for: "a"), 1)
-        let full = PhotoLibraryDataSource(fetchResult: initial)
+        let full = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)
         full.apply(self.update(previous: initial, changes: nil, invalidatesAll: true))
         XCTAssertEqual(full.imageRevision(for: "a"), 1)
     }

@@ -88,80 +88,130 @@ struct ThumbnailFillPlan {
     var states: [ThumbnailFillState]
     var filled: Int
     var unavailable: Int
+    var missing: IndexSet
+    var unavailableIndices: IndexSet
+    var failures: [(index: Int, failures: Int)]
+    var orphans: [String]
+    var retryOrphans: [String]
 
-    static func make(catalog: ThumbnailCatalog, isFilled: (String, String) -> Bool, isUnavailable: (String, String) -> Bool) -> ThumbnailFillPlan {
+    static func make(catalog: ThumbnailCatalog, isFilled: (String, String) -> Bool, retryFailures: (String, String) -> Int?, storedIds: [String], retryIds: [String] = []) -> ThumbnailFillPlan {
         var states: [ThumbnailFillState] = []
         states.reserveCapacity(catalog.count)
         var filled = 0
-        var unavailable = 0
+        var missing = IndexSet()
+        var unavailableIndices = IndexSet()
+        var failures: [(index: Int, failures: Int)] = []
         for index in 0 ..< catalog.count {
             let id = catalog.ids[index]
             let version = catalog.versions[index]
             if isFilled(id, version) {
                 states.append(.filled)
                 filled += 1
-            } else if isUnavailable(id, version) {
+            } else if let count = retryFailures(id, version) {
                 states.append(.unavailable)
-                unavailable += 1
+                unavailableIndices.insert(index)
+                failures.append((index, count))
             } else {
                 states.append(.missing)
+                missing.insert(index)
             }
         }
-        return ThumbnailFillPlan(catalog: catalog, states: states, filled: filled, unavailable: unavailable)
+        let orphans = storedIds.filter { catalog.indexById[$0] == nil }
+        let retryOrphans = retryIds.filter { catalog.indexById[$0] == nil }
+        return ThumbnailFillPlan(catalog: catalog, states: states, filled: filled, unavailable: unavailableIndices.count, missing: missing, unavailableIndices: unavailableIndices, failures: failures, orphans: orphans, retryOrphans: retryOrphans)
     }
 }
 
 enum ThumbnailImageResult {
     case image(CGImage)
     case unavailable
+    case cancelled
+}
+
+protocol ThumbnailRequest: AnyObject {
+    func cancel()
 }
 
 protocol ThumbnailImageSource: AnyObject {
-    func requestThumbnail(index: Int, id: String, completion: @escaping (ThumbnailImageResult) -> Void)
+    func requestThumbnail(index: Int, id: String, network: Bool, completion: @escaping (ThumbnailImageResult) -> Void) -> ThumbnailRequest?
 }
 
-final class UnavailableThumbnailRegistry {
+final class ThumbnailRetryRegistry {
+    private struct Entry: Codable {
+        var version: String
+        var failures: Int
+    }
+
     private let lock = NSLock()
-    private var entries: [String: String]
+    private var entries: [String: Entry] = [:]
+    private var isLoaded = false
     private let url: URL?
     private var isSaveScheduled = false
-    private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.unavailableThumbnails", qos: .utility)
+    private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.thumbnailRetries", qos: .utility)
 
     init(url: URL?) {
         self.url = url
-        if let url, let data = try? Data(contentsOf: url), let entries = try? PropertyListDecoder().decode([String: String].self, from: data) {
+    }
+
+    private func loadIfNeeded() {
+        if self.isLoaded {
+            return
+        }
+        self.isLoaded = true
+        if let url = self.url, let data = try? Data(contentsOf: url), let entries = try? PropertyListDecoder().decode([String: Entry].self, from: data) {
             self.entries = entries
-        } else {
-            self.entries = [:]
         }
     }
 
-    func contains(id: String, version: String) -> Bool {
+    private func locked<T>(_ body: () -> T) -> T {
         self.lock.lock()
         defer { self.lock.unlock() }
-        return self.entries[id] == version
+        self.loadIfNeeded()
+        return body()
+    }
+
+    func failures(id: String, version: String) -> Int? {
+        return self.locked {
+            guard let entry = self.entries[id], entry.version == version else {
+                return nil
+            }
+            return entry.failures
+        }
     }
 
     var count: Int {
-        self.lock.lock()
-        defer { self.lock.unlock() }
-        return self.entries.count
+        return self.locked { self.entries.count }
     }
 
-    func insert(id: String, version: String) {
-        self.lock.lock()
-        self.entries[id] = version
-        self.lock.unlock()
+    func ids() -> [String] {
+        return self.locked { Array(self.entries.keys) }
+    }
+
+    func recordFailure(id: String, version: String) -> Int {
+        let failures: Int = self.locked {
+            var entry = self.entries[id] ?? Entry(version: version, failures: 0)
+            if entry.version != version {
+                entry = Entry(version: version, failures: 0)
+            }
+            entry.failures += 1
+            self.entries[id] = entry
+            return entry.failures
+        }
         self.scheduleSave()
+        return failures
     }
 
     func remove(ids: [String]) {
-        self.lock.lock()
-        for id in ids {
-            self.entries.removeValue(forKey: id)
+        let changed: Bool = self.locked {
+            var changed = false
+            for id in ids where self.entries.removeValue(forKey: id) != nil {
+                changed = true
+            }
+            return changed
         }
-        self.lock.unlock()
-        self.scheduleSave()
+        if changed {
+            self.scheduleSave()
+        }
     }
 
     private func scheduleSave() {
@@ -190,29 +240,53 @@ final class UnavailableThumbnailRegistry {
 final class ThumbnailFiller {
     static let idleLimit = 16
     static let fastLimit = 4
+    static let networkLimit = 2
+    static let backoff: [Double] = [30.0, 120.0, 600.0]
+    static let launchRetryDelay: Double = 30.0
 
-    private let store: MediaGridThumbnailStore
+    private struct PendingRetry {
+        let due: Double
+        let id: String
+        let version: String
+        let failures: Int
+    }
+
+    private struct NetworkRequest {
+        let version: String
+        let serial: Int
+        let request: ThumbnailRequest?
+    }
+
+    let store: MediaGridThumbnailStore
     private let source: ThumbnailImageSource
-    let registry: UnavailableThumbnailRegistry
+    let registry: ThumbnailRetryRegistry
+    private let clock: () -> Double
+    private let schedule: (Double, @escaping () -> Void) -> Void
 
     private(set) var catalog = ThumbnailCatalog.empty
-    private(set) var states: [ThumbnailFillState] = []
+    private var states: [ThumbnailFillState] = []
+    private var missing = IndexSet()
+    private var networkEligible = IndexSet()
+    private var networkTried = Set<String>()
     private(set) var filledCount = 0
     private(set) var unavailableCount = 0
-    private(set) var missingCount = 0
     private(set) var hasPlan = false
     private(set) var isComplete = false
+    private(set) var probeCount = 0
     private var inFlight: [String: String] = [:]
+    private var networkInFlight: [String: NetworkRequest] = [:]
+    private var networkSerial = 0
     private var urgent: [String] = []
-    private var urgentPosition = 0
     private var ranges: [Range<Int>] = []
-    private var rangeIndex = 0
-    private var rangePosition = 0
     private var center = 0
-    private var outwardStep = 0
     private var outwardRadius = 0
-    private var gridPosition = 0
+    private var retryQueues: [[PendingRetry]] = Array(repeating: [], count: ThumbnailFiller.backoff.count + 1)
+    private var retryHeads: [Int] = Array(repeating: 0, count: ThumbnailFiller.backoff.count + 1)
+    private var scheduledRetryTime: Double?
+    private var hasScheduledLaunchRetries = false
+    var networkGate: () -> Bool = { false }
     var onProgress: (() -> Void)?
+    var onNetworkFill: ((String) -> Void)?
 
     var isMovingFast = false {
         didSet {
@@ -234,14 +308,25 @@ final class ThumbnailFiller {
         return self.inFlight.count
     }
 
+    var networkInFlightCount: Int {
+        return self.networkInFlight.count
+    }
+
+    var missingCount: Int {
+        return self.missing.count
+    }
+
     var limit: Int {
         return self.isMovingFast ? ThumbnailFiller.fastLimit : ThumbnailFiller.idleLimit
     }
 
-    init(store: MediaGridThumbnailStore, source: ThumbnailImageSource, registry: UnavailableThumbnailRegistry) {
+    init(store: MediaGridThumbnailStore, source: ThumbnailImageSource, registry: ThumbnailRetryRegistry, clock: @escaping () -> Double = { CACurrentMediaTime() }, schedule: @escaping (Double, @escaping () -> Void) -> Void = { delay, body in DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: body) }) {
         self.store = store
         self.source = source
         self.registry = registry
+        self.clock = clock
+        self.schedule = schedule
+        self.isPaused = !store.isWritable
     }
 
     func makePlan(for catalog: ThumbnailCatalog) -> ThumbnailFillPlan {
@@ -249,32 +334,50 @@ final class ThumbnailFiller {
         let registry = self.registry
         return ThumbnailFillPlan.make(catalog: catalog, isFilled: { id, version in
             return store.version(for: id) == version
-        }, isUnavailable: { id, version in
-            return registry.contains(id: id, version: version)
-        })
+        }, retryFailures: { id, version in
+            return registry.failures(id: id, version: version)
+        }, storedIds: store.storedIds(), retryIds: registry.ids())
     }
 
     func install(_ plan: ThumbnailFillPlan, removed: [String] = [], urgent: [String] = []) {
-        if !removed.isEmpty {
-            self.store.remove(ids: removed)
-            self.registry.remove(ids: removed)
+        let orphans = removed + plan.orphans
+        if !orphans.isEmpty {
+            self.store.remove(ids: orphans)
         }
-        self.catalog = plan.catalog
+        let catalog = plan.catalog
+        if !removed.isEmpty || !plan.retryOrphans.isEmpty {
+            self.registry.remove(ids: removed + plan.retryOrphans)
+        }
+        self.catalog = catalog
         self.states = plan.states
         self.filledCount = plan.filled
         self.unavailableCount = plan.unavailable
-        self.missingCount = plan.catalog.count - plan.filled - plan.unavailable
+        self.missing = plan.missing
+        self.networkEligible = plan.unavailableIndices
+        for id in self.networkTried {
+            if let index = catalog.indexById[id] {
+                self.networkEligible.remove(index)
+            }
+        }
         for id in self.inFlight.keys {
-            if let index = plan.catalog.indexById[id] {
+            if let index = catalog.indexById[id] {
                 self.setState(.inFlight, at: index)
             }
         }
-        self.urgent = Array(self.urgent[self.urgentPosition...]) + urgent
-        self.urgentPosition = 0
-        self.rangeIndex = 0
-        self.rangePosition = 0
-        self.outwardStep = 0
-        self.gridPosition = 0
+        for id in self.networkInFlight.keys {
+            if let index = catalog.indexById[id] {
+                self.networkEligible.remove(index)
+            }
+        }
+        if !self.hasScheduledLaunchRetries {
+            self.hasScheduledLaunchRetries = true
+            let due = self.clock() + ThumbnailFiller.launchRetryDelay
+            for (index, failures) in plan.failures {
+                self.retryQueues[ThumbnailFiller.backoff.count].append(PendingRetry(due: due, id: catalog.ids[index], version: catalog.versions[index], failures: failures))
+            }
+            self.scheduleRetryTimer()
+        }
+        self.urgent.append(contentsOf: urgent)
         self.hasPlan = true
         self.isComplete = false
         self.pump()
@@ -286,17 +389,116 @@ final class ThumbnailFiller {
             return
         }
         self.ranges = ranges
-        self.rangeIndex = 0
-        self.rangePosition = 0
         if let first = ranges.first {
-            let center = (first.lowerBound + first.upperBound) / 2
-            if center != self.center {
-                self.center = center
-                self.outwardStep = 0
-            }
+            self.center = (first.lowerBound + first.upperBound) / 2
             self.outwardRadius = max(512, first.count * 4)
         }
         self.pump()
+    }
+
+    func networkConditionsChanged() {
+        self.pump()
+    }
+
+    func wantsHarvest(id: String) -> Bool {
+        guard let index = self.catalog.indexById[id] else {
+            return false
+        }
+        return self.store.version(for: id) != self.catalog.versions[index]
+    }
+
+    func harvest(id: String, image: CGImage) {
+        guard let index = self.catalog.indexById[id] else {
+            return
+        }
+        let version = self.catalog.versions[index]
+        if self.store.version(for: id) != version {
+            self.store.write(image, id: id, version: version)
+        }
+        self.registry.remove(ids: [id])
+        if let network = self.networkInFlight.removeValue(forKey: id) {
+            network.request?.cancel()
+        }
+        if self.states[index] != .inFlight {
+            self.setState(.filled, at: index)
+        }
+        self.pump()
+        self.onProgress?()
+    }
+
+    func storeChanged(ids: Set<String>) {
+        var changed = false
+        for id in ids {
+            guard let index = self.catalog.indexById[id], self.states[index] == .filled else {
+                continue
+            }
+            if self.store.version(for: id) != self.catalog.versions[index] {
+                self.setState(.missing, at: index)
+                changed = true
+            }
+        }
+        if changed {
+            self.isComplete = false
+            self.pump()
+        }
+    }
+
+    func processRetries() {
+        let now = self.clock()
+        var changed = false
+        for level in 0 ..< self.retryQueues.count {
+            while self.retryHeads[level] < self.retryQueues[level].count, self.retryQueues[level][self.retryHeads[level]].due <= now {
+                let retry = self.retryQueues[level][self.retryHeads[level]]
+                self.retryHeads[level] += 1
+                guard let index = self.catalog.indexById[retry.id], self.catalog.versions[index] == retry.version, self.states[index] == .unavailable, self.networkInFlight[retry.id] == nil, self.registry.failures(id: retry.id, version: retry.version) == retry.failures else {
+                    continue
+                }
+                self.networkTried.remove(retry.id)
+                self.setState(.missing, at: index)
+                changed = true
+            }
+            if self.retryHeads[level] > 256 && self.retryHeads[level] * 2 > self.retryQueues[level].count {
+                self.retryQueues[level].removeFirst(self.retryHeads[level])
+                self.retryHeads[level] = 0
+            }
+        }
+        self.scheduledRetryTime = nil
+        self.scheduleRetryTimer()
+        if changed {
+            self.isComplete = false
+            self.pump()
+        }
+    }
+
+    private func scheduleRetryTimer() {
+        var earliest: Double?
+        for level in 0 ..< self.retryQueues.count where self.retryHeads[level] < self.retryQueues[level].count {
+            let due = self.retryQueues[level][self.retryHeads[level]].due
+            earliest = min(earliest ?? due, due)
+        }
+        guard let earliest else {
+            return
+        }
+        if let scheduled = self.scheduledRetryTime, scheduled <= earliest {
+            return
+        }
+        self.scheduledRetryTime = earliest
+        self.schedule(max(0.0, earliest - self.clock()), { [weak self] in
+            guard let self, let scheduled = self.scheduledRetryTime, scheduled <= self.clock() + 0.001 else {
+                return
+            }
+            self.processRetries()
+        })
+    }
+
+    private func recordFailure(id: String, version: String) {
+        let failures = self.registry.recordFailure(id: id, version: version)
+        guard failures <= ThumbnailFiller.backoff.count else {
+            return
+        }
+        let level = failures - 1
+        self.retryQueues[level].append(PendingRetry(due: self.clock() + ThumbnailFiller.backoff[level], id: id, version: version, failures: failures))
+        self.scheduleRetryTimer()
     }
 
     private func setState(_ state: ThumbnailFillState, at index: Int) {
@@ -309,8 +511,9 @@ final class ThumbnailFiller {
             self.filledCount -= 1
         case .unavailable:
             self.unavailableCount -= 1
+            self.networkEligible.remove(index)
         case .missing:
-            self.missingCount -= 1
+            self.missing.remove(index)
         case .inFlight:
             break
         }
@@ -319,70 +522,64 @@ final class ThumbnailFiller {
             self.filledCount += 1
         case .unavailable:
             self.unavailableCount += 1
+            if !self.networkTried.contains(self.catalog.ids[index]) && self.networkInFlight[self.catalog.ids[index]] == nil {
+                self.networkEligible.insert(index)
+            }
         case .missing:
-            self.missingCount += 1
+            self.missing.insert(index)
         case .inFlight:
             break
         }
         self.states[index] = state
     }
 
-    private func isMissing(_ index: Int) -> Bool {
-        return index >= 0 && index < self.states.count && self.states[index] == .missing
+    private func nearest(in set: IndexSet, radius: Int?) -> Int? {
+        self.probeCount += 1
+        for range in self.ranges {
+            guard !range.isEmpty, let index = set.integerGreaterThanOrEqualTo(range.lowerBound), index < range.upperBound else {
+                continue
+            }
+            return index
+        }
+        if !self.ranges.isEmpty {
+            let up = set.integerGreaterThanOrEqualTo(self.center)
+            let down = set.integerLessThan(self.center)
+            let upDistance = up.map { $0 - self.center }
+            let downDistance = down.map { self.center - $0 }
+            var best: Int?
+            if let up, let upDistance, let downDistance {
+                best = upDistance < downDistance ? up : down
+            } else {
+                best = up ?? down
+            }
+            if let best, radius.map({ abs(best - self.center) <= $0 }) ?? true {
+                return best
+            }
+        }
+        return set.first
     }
 
     private func nextCandidate() -> Int? {
-        if self.missingCount == 0 {
+        if self.missing.isEmpty {
             self.urgent.removeAll()
-            self.urgentPosition = 0
             return nil
         }
-        while self.urgentPosition < self.urgent.count {
-            let id = self.urgent[self.urgentPosition]
-            self.urgentPosition += 1
-            if let index = self.catalog.indexById[id], self.isMissing(index) {
+        while let id = self.urgent.first {
+            self.urgent.removeFirst()
+            self.probeCount += 1
+            if let index = self.catalog.indexById[id], self.states[index] == .missing {
                 return index
             }
         }
-        if self.urgentPosition > 0 {
-            self.urgent.removeAll()
-            self.urgentPosition = 0
-        }
-        while self.rangeIndex < self.ranges.count {
-            let range = self.ranges[self.rangeIndex]
-            while range.lowerBound + self.rangePosition < range.upperBound {
-                let index = range.lowerBound + self.rangePosition
-                self.rangePosition += 1
-                if self.isMissing(index) {
-                    return index
-                }
-            }
-            self.rangeIndex += 1
-            self.rangePosition = 0
-        }
-        let count = self.states.count
-        if !self.ranges.isEmpty {
-            while self.outwardStep <= 2 * self.outwardRadius {
-                let step = self.outwardStep
-                self.outwardStep += 1
-                let index = step % 2 == 0 ? self.center + step / 2 : self.center - (step + 1) / 2
-                if self.isMissing(index) {
-                    return index
-                }
-            }
-        }
-        while self.gridPosition < count {
-            let index = self.gridPosition
-            self.gridPosition += 1
-            if self.isMissing(index) {
-                return index
-            }
-        }
-        return nil
+        return self.nearest(in: self.missing, radius: self.outwardRadius)
     }
 
     func pump() {
-        guard self.hasPlan, !self.isPaused else {
+        guard self.hasPlan else {
+            return
+        }
+        self.pumpNetwork()
+        guard !self.isPaused else {
             return
         }
         var exhausted = false
@@ -397,23 +594,53 @@ final class ThumbnailFiller {
                 self.setState(.filled, at: index)
                 continue
             }
-            if self.registry.contains(id: id, version: version) {
-                self.setState(.unavailable, at: index)
-                continue
-            }
             if self.inFlight[id] != nil {
                 self.setState(.inFlight, at: index)
                 continue
             }
             self.inFlight[id] = version
             self.setState(.inFlight, at: index)
-            self.source.requestThumbnail(index: index, id: id, completion: { [weak self] result in
+            _ = self.source.requestThumbnail(index: index, id: id, network: false, completion: { [weak self] result in
                 self?.complete(id: id, version: version, result: result)
             })
         }
         if exhausted && self.inFlight.isEmpty && !self.isComplete {
             self.isComplete = true
             self.onProgress?()
+        }
+        self.pumpNetwork()
+    }
+
+    private func pumpNetwork() {
+        guard self.networkGate() else {
+            if !self.networkInFlight.isEmpty {
+                let running = self.networkInFlight
+                self.networkInFlight.removeAll()
+                for (id, network) in running {
+                    network.request?.cancel()
+                    if let index = self.catalog.indexById[id], self.states[index] == .unavailable {
+                        self.networkEligible.insert(index)
+                    }
+                }
+            }
+            return
+        }
+        guard !self.isPaused, !self.isMovingFast else {
+            return
+        }
+        while self.networkInFlight.count < ThumbnailFiller.networkLimit, let index = self.nearest(in: self.networkEligible, radius: nil) {
+            let id = self.catalog.ids[index]
+            let version = self.catalog.versions[index]
+            self.networkEligible.remove(index)
+            self.networkSerial += 1
+            let serial = self.networkSerial
+            self.networkInFlight[id] = NetworkRequest(version: version, serial: serial, request: nil)
+            let request = self.source.requestThumbnail(index: index, id: id, network: true, completion: { [weak self] result in
+                self?.completeNetwork(id: id, version: version, serial: serial, result: result)
+            })
+            if self.networkInFlight[id]?.serial == serial {
+                self.networkInFlight[id] = NetworkRequest(version: version, serial: serial, request: request)
+            }
         }
     }
 
@@ -425,52 +652,240 @@ final class ThumbnailFiller {
             case let .image(image):
                 if isCurrent {
                     self.store.write(image, id: id, version: version)
+                    self.registry.remove(ids: [id])
                     self.setState(.filled, at: index)
                 } else {
                     self.setState(.missing, at: index)
-                    self.restartScan()
                 }
             case .unavailable:
-                self.registry.insert(id: id, version: version)
                 if isCurrent {
-                    self.setState(.unavailable, at: index)
+                    if self.states[index] == .inFlight {
+                        self.recordFailure(id: id, version: version)
+                        self.setState(.unavailable, at: index)
+                    }
                 } else {
                     self.setState(.missing, at: index)
-                    self.restartScan()
+                }
+            case .cancelled:
+                if self.states[index] == .inFlight {
+                    self.setState(.missing, at: index)
                 }
             }
+        }
+        if !self.missing.isEmpty {
+            self.isComplete = false
         }
         self.pump()
         self.onProgress?()
     }
 
-    private func restartScan() {
-        self.rangeIndex = 0
-        self.rangePosition = 0
-        self.outwardStep = 0
-        self.gridPosition = 0
-        self.isComplete = false
+    private func completeNetwork(id: String, version: String, serial: Int, result: ThumbnailImageResult) {
+        guard self.networkInFlight[id]?.serial == serial else {
+            return
+        }
+        self.networkInFlight.removeValue(forKey: id)
+        guard let index = self.catalog.indexById[id], self.catalog.versions[index] == version, self.states[index] == .unavailable else {
+            self.pump()
+            return
+        }
+        switch result {
+        case let .image(image):
+            self.store.write(image, id: id, version: version)
+            self.registry.remove(ids: [id])
+            self.setState(.filled, at: index)
+            self.onNetworkFill?(id)
+        case .unavailable:
+            self.networkTried.insert(id)
+            self.recordFailure(id: id, version: version)
+        case .cancelled:
+            self.networkEligible.insert(index)
+        }
+        self.pump()
+        self.onProgress?()
+    }
+}
+
+final class ThumbnailFormatPolicy {
+    enum Attempt {
+        case fastFormat
+        case highQuality
+    }
+
+    static let fallbackLimit = 32
+
+    private(set) var usesFastFormat = true
+    private(set) var fastFormatSuccesses = 0
+    private(set) var fastFormatFailures = 0
+
+    func run(attempt: @escaping (Attempt, @escaping (CGImage?, Bool) -> Void) -> Void, completion: @escaping (ThumbnailImageResult) -> Void) {
+        let highQuality = {
+            attempt(.highQuality, { image, _ in
+                if let image {
+                    completion(.image(image))
+                } else {
+                    completion(.unavailable)
+                }
+            })
+        }
+        guard self.usesFastFormat else {
+            highQuality()
+            return
+        }
+        attempt(.fastFormat, { [weak self] image, _ in
+            if let image {
+                self?.fastFormatSuccesses += 1
+                completion(.image(image))
+                return
+            }
+            if let self {
+                self.fastFormatFailures += 1
+                if self.usesFastFormat && self.fastFormatSuccesses == 0 && self.fastFormatFailures >= ThumbnailFormatPolicy.fallbackLimit {
+                    self.usesFastFormat = false
+                    print("THUMBS fastFormat unavailable after \(self.fastFormatFailures) failures, using highQualityFormat")
+                    fflush(stdout)
+                }
+            }
+            highQuality()
+        })
+    }
+}
+
+struct ThumbnailLaunchSnapshot: Codable, Equatable {
+    struct Segment: Codable, Equatable {
+        var start: Int
+        var ids: [String]
+    }
+
+    var count: Int
+    var segments: [Segment]
+
+    func id(at index: Int) -> String? {
+        for segment in self.segments where index >= segment.start && index < segment.start + segment.ids.count {
+            return segment.ids[index - segment.start]
+        }
+        return nil
+    }
+
+    var indices: IndexSet {
+        var result = IndexSet()
+        for segment in self.segments {
+            result.insert(integersIn: segment.start ..< segment.start + segment.ids.count)
+        }
+        return result
+    }
+
+    func encode() -> Data {
+        return (try? PropertyListEncoder().encode(self)) ?? Data()
+    }
+
+    static func decode(_ data: Data) -> ThumbnailLaunchSnapshot? {
+        return try? PropertyListDecoder().decode(ThumbnailLaunchSnapshot.self, from: data)
+    }
+
+    static func make(catalog: ThumbnailCatalog, head: Int, ranges: [Range<Int>]) -> ThumbnailLaunchSnapshot {
+        var covered = IndexSet(integersIn: 0 ..< min(head, catalog.count))
+        for range in ranges {
+            let clamped = range.clamped(to: 0 ..< catalog.count)
+            if !clamped.isEmpty {
+                covered.insert(integersIn: clamped)
+            }
+        }
+        let segments = covered.rangeView.map { Segment(start: $0.lowerBound, ids: Array(catalog.ids[$0])) }
+        return ThumbnailLaunchSnapshot(count: catalog.count, segments: segments)
+    }
+}
+
+enum ThumbnailDownscaler {
+    static let maxPixelSize: CGFloat = 96.0
+
+    static func image(from image: UIImage) -> CGImage? {
+        guard let cgImage = image.cgImage else {
+            return nil
+        }
+        let width = CGFloat(cgImage.width)
+        let height = CGFloat(cgImage.height)
+        let longest = max(width, height)
+        if image.imageOrientation == .up && longest <= ThumbnailDownscaler.maxPixelSize {
+            return cgImage
+        }
+        let pixelSize = CGSize(width: round(image.size.width * image.scale), height: round(image.size.height * image.scale))
+        guard pixelSize.width > 0.0, pixelSize.height > 0.0 else {
+            return nil
+        }
+        let scale = min(1.0, ThumbnailDownscaler.maxPixelSize / max(pixelSize.width, pixelSize.height))
+        let size = CGSize(width: max(1.0, round(pixelSize.width * scale)), height: max(1.0, round(pixelSize.height * scale)))
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }.cgImage
     }
 }
 
 final class PhotoKitThumbnailSource: ThumbnailImageSource {
     static let targetSize = CGSize(width: 96.0, height: 96.0)
-    static let fastFormatFallbackLimit = 32
+
+    final class Request: ThumbnailRequest {
+        private let lock = NSLock()
+        private var cancelled = false
+        private var token: PHImageRequestID?
+        private let manager: PHImageManager
+
+        init(manager: PHImageManager) {
+            self.manager = manager
+        }
+
+        var isCancelled: Bool {
+            self.lock.lock()
+            defer { self.lock.unlock() }
+            return self.cancelled
+        }
+
+        func setToken(_ token: PHImageRequestID) {
+            self.lock.lock()
+            self.token = token
+            let cancelled = self.cancelled
+            self.lock.unlock()
+            if cancelled {
+                self.manager.cancelImageRequest(token)
+            }
+        }
+
+        func cancel() {
+            self.lock.lock()
+            self.cancelled = true
+            let token = self.token
+            self.lock.unlock()
+            if let token {
+                self.manager.cancelImageRequest(token)
+            }
+        }
+    }
 
     var fetchResult: PHFetchResult<PHAsset>
+    var onNetworkDelivery: ((Int, Int) -> Void)?
     private let manager = PHImageManager.default()
     private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.thumbnailRequests", qos: .utility)
-    private var usesFastFormat = true
-    private var fastFormatSuccesses = 0
-    private var fastFormatFailures = 0
+    private let policy = ThumbnailFormatPolicy()
 
     init(fetchResult: PHFetchResult<PHAsset>) {
         self.fetchResult = fetchResult
     }
 
-    func requestThumbnail(index: Int, id: String, completion: @escaping (ThumbnailImageResult) -> Void) {
+    func requestThumbnail(index: Int, id: String, network: Bool, completion: @escaping (ThumbnailImageResult) -> Void) -> ThumbnailRequest? {
         let fetchResult = self.fetchResult
+        let request = Request(manager: self.manager)
+        let finish: (ThumbnailImageResult) -> Void = { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
         self.queue.async {
+            if request.isCancelled {
+                finish(.cancelled)
+                return
+            }
             let count = fetchResult.count
             var asset: PHAsset?
             if index >= 0, index < count {
@@ -483,67 +898,43 @@ final class PhotoKitThumbnailSource: ThumbnailImageSource {
                 asset = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject
             }
             guard let asset else {
-                DispatchQueue.main.async {
-                    completion(.unavailable)
-                }
+                finish(.unavailable)
                 return
             }
-            self.request(asset, fastFormat: self.usesFastFormat, completion: completion)
+            if network {
+                self.perform(asset, attempt: .highQuality, network: true, request: request, done: { image, _ in
+                    if request.isCancelled {
+                        finish(.cancelled)
+                    } else if let image {
+                        finish(.image(image))
+                    } else {
+                        finish(.unavailable)
+                    }
+                })
+            } else {
+                self.policy.run(attempt: { attempt, done in
+                    self.perform(asset, attempt: attempt, network: false, request: request, done: done)
+                }, completion: finish)
+            }
         }
+        return request
     }
 
-    private func request(_ asset: PHAsset, fastFormat: Bool, completion: @escaping (ThumbnailImageResult) -> Void) {
+    private func perform(_ asset: PHAsset, attempt: ThumbnailFormatPolicy.Attempt, network: Bool, request: Request, done: @escaping (CGImage?, Bool) -> Void) {
         let options = PHImageRequestOptions()
-        options.deliveryMode = fastFormat ? .fastFormat : .highQualityFormat
-        options.resizeMode = .exact
-        options.isNetworkAccessAllowed = false
+        options.deliveryMode = attempt == .fastFormat ? .fastFormat : .highQualityFormat
+        options.resizeMode = network ? .fast : .exact
+        options.isNetworkAccessAllowed = network
         options.isSynchronous = false
-        self.manager.requestImage(for: asset, targetSize: PhotoKitThumbnailSource.targetSize, contentMode: .aspectFit, options: options, resultHandler: { image, info in
+        let token = self.manager.requestImage(for: asset, targetSize: PhotoKitThumbnailSource.targetSize, contentMode: .aspectFit, options: options, resultHandler: { image, info in
             let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
-            let hasError = info?[PHImageErrorKey] != nil
             self.queue.async {
-                if let image, let cgImage = PhotoKitThumbnailSource.upright(image) {
-                    if fastFormat {
-                        self.fastFormatSuccesses += 1
-                    }
-                    DispatchQueue.main.async {
-                        completion(.image(cgImage))
-                    }
-                    return
+                if network, let cgImage = image?.cgImage {
+                    self.onNetworkDelivery?(cgImage.width, cgImage.height)
                 }
-                if fastFormat && !isInCloud && hasError {
-                    self.fastFormatFailures += 1
-                    if self.usesFastFormat && self.fastFormatSuccesses == 0 && self.fastFormatFailures >= PhotoKitThumbnailSource.fastFormatFallbackLimit {
-                        self.usesFastFormat = false
-                        print("THUMBS fastFormat unavailable after \(self.fastFormatFailures) failures, using highQualityFormat")
-                        fflush(stdout)
-                    }
-                    self.request(asset, fastFormat: false, completion: completion)
-                    return
-                }
-                DispatchQueue.main.async {
-                    completion(.unavailable)
-                }
+                done(image.flatMap(ThumbnailDownscaler.image(from:)), isInCloud)
             }
         })
-    }
-
-    static func upright(_ image: UIImage) -> CGImage? {
-        guard let cgImage = image.cgImage else {
-            return nil
-        }
-        if image.imageOrientation == .up {
-            return cgImage
-        }
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1.0
-        format.opaque = true
-        let size = CGSize(width: round(image.size.width * image.scale), height: round(image.size.height * image.scale))
-        guard size.width > 0.0, size.height > 0.0 else {
-            return nil
-        }
-        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
-        }.cgImage
+        request.setToken(token)
     }
 }
