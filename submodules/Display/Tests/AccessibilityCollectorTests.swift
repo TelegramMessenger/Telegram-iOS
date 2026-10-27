@@ -101,6 +101,49 @@ final class AccessibilityCollectorTests: XCTestCase {
         return rows.sorted(by: { $0.0 < $1.0 }).map(\.1)
     }
 
+    /// The visible rows plus the nearest loaded row above and below the list's bounds, in index order.
+    private func visibleAndEdgeRowLabels(_ listView: ListViewImpl) -> [String] {
+        var visible: [(Int, String)] = []
+        var above: (Int, String, CGFloat)?
+        var below: (Int, String, CGFloat)?
+        listView.forEachItemNode { node in
+            guard let itemNode = node as? ListViewItemNode, let index = itemNode.index else {
+                return
+            }
+            let frame = itemNode.frame
+            let label = itemNode.accessibilityLabel ?? ""
+            if !frame.intersection(listView.bounds).isEmpty {
+                visible.append((index, label))
+            } else if frame.maxY <= listView.bounds.minY {
+                if above == nil || frame.maxY > above!.2 {
+                    above = (index, label, frame.maxY)
+                }
+            } else if frame.minY >= listView.bounds.maxY {
+                if below == nil || frame.minY < below!.2 {
+                    below = (index, label, frame.minY)
+                }
+            }
+        }
+        var rows = visible
+        if let above {
+            rows.append((above.0, above.1))
+        }
+        if let below {
+            rows.append((below.0, below.1))
+        }
+        return rows.sorted(by: { $0.0 < $1.0 }).map(\.1)
+    }
+
+    private func rowNode(_ listView: ListViewImpl, label: String) -> ListViewItemNode? {
+        var result: ListViewItemNode?
+        listView.forEachItemNode { node in
+            if let itemNode = node as? ListViewItemNode, itemNode.accessibilityLabel == label {
+                result = itemNode
+            }
+        }
+        return result
+    }
+
     // MARK: - Tests
 
     func testNodeOverrideIsForwarded() {
@@ -158,12 +201,35 @@ final class AccessibilityCollectorTests: XCTestCase {
         XCTAssertEqual(self.labels(of: root.view), ["page 0"])
     }
 
-    func testListViewExposesOnlyVisibleRows() {
+    /// ListView's exception to the visibility rule: the visible rows plus the nearest loaded row beyond each edge, so
+    /// VoiceOver's swipe reaches row N+1 (as with UITableView). Rows further out stay out of the tree.
+    func testListViewExposesVisibleRowsPlusOneLoadedRowPerEdge() {
         let listView = self.makeListView(rowCount: 20)
 
-        let expected = self.visibleRowLabels(listView)
-        XCTAssertEqual(expected, ["row 0", "row 1", "row 2", "row 3"])
-        XCTAssertEqual(self.labels(of: listView.view), expected)
+        XCTAssertEqual(self.visibleRowLabels(listView), ["row 0", "row 1", "row 2", "row 3"])
+        XCTAssertEqual(self.labels(of: listView.view), ["row 0", "row 1", "row 2", "row 3", "row 4"])
+        XCTAssertEqual(self.labels(of: listView.view), self.visibleAndEdgeRowLabels(listView))
+    }
+
+    /// Focusing the exposed row below the bottom edge scrolls it into view (`ensureItemNodeVisible`), and the row after
+    /// it becomes the new edge row in the tree.
+    func testFocusingEdgeRowScrollsItIntoView() {
+        let listView = self.makeListView(rowCount: 20)
+        XCTAssertTrue(self.labels(of: listView.view).contains("row 4"))
+        guard let edgeRow = self.rowNode(listView, label: "row 4") else {
+            XCTFail("row 4 is not loaded")
+            return
+        }
+        XCTAssertTrue(edgeRow.frame.intersection(listView.bounds).isEmpty)
+
+        edgeRow.view.accessibilityElementDidBecomeFocused()
+        self.spinRunLoop()
+
+        XCTAssertFalse(edgeRow.frame.intersection(listView.bounds).isEmpty, "the focused edge row is scrolled into view")
+        let after = self.labels(of: listView.view)
+        XCTAssertTrue(after.contains("row 4"))
+        XCTAssertTrue(after.contains("row 5"))
+        XCTAssertEqual(after, self.visibleAndEdgeRowLabels(listView))
     }
 
     func testLayerBackedLabelledNodeBecomesElement() {
@@ -221,13 +287,13 @@ final class AccessibilityCollectorTests: XCTestCase {
 
     func testListViewAccessibilityScrollStillForwarded() {
         let listView = self.makeListView(rowCount: 20)
-        XCTAssertEqual(self.labels(of: listView.view), ["row 0", "row 1", "row 2", "row 3"])
+        XCTAssertEqual(self.labels(of: listView.view), ["row 0", "row 1", "row 2", "row 3", "row 4"])
 
         XCTAssertTrue(listView.view.accessibilityScroll(.down))
         self.spinRunLoop()
 
         let after = self.labels(of: listView.view)
-        XCTAssertEqual(after, self.visibleRowLabels(listView))
+        XCTAssertEqual(after, self.visibleAndEdgeRowLabels(listView))
         XCTAssertFalse(after.contains("row 0"))
         XCTAssertTrue(after.contains("row 5"))
     }

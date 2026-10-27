@@ -36,9 +36,10 @@
 //
 // The collector exposes only what can be seen: it skips hidden, alpha < 0.01 and `accessibilityElementsHidden`
 // subtrees, and elements (and clipping containers) that are zero-size or do not intersect the visible rect, which is
-// the window intersected with every clipping ancestor (`clipsToBounds` or a scroll view). ListView's rows are
-// therefore exactly the rows inside its bounds; VoiceOver's three-finger scroll goes through ListView's own
-// `accessibilityScroll:`, which brings the next page into view.
+// the window intersected with every clipping ancestor (`clipsToBounds` or a scroll view). ListView is the one
+// exception: the rows inside its bounds plus the nearest already-loaded row beyond each edge (`AddListViewEdgeRows`),
+// so VoiceOver's swipe reaches the next row and focusing it scrolls it in; three-finger scroll goes through ListView's
+// own `accessibilityScroll:`.
 
 NS_INLINE UIAccessibilityTraits InteractiveAccessibilityTraitsMask() {
   return UIAccessibilityTraitLink | UIAccessibilityTraitKeyboardKey | UIAccessibilityTraitButton;
@@ -78,7 +79,18 @@ static void SortAccessibilityElements(NSMutableArray *elements)
   std::vector<Key> keys;
   keys.reserve(count);
   for (NSUInteger i = 0; i < count; i++) {
-    keys.push_back({ [(NSObject *)elements[i] accessibilityFrame].origin, i });
+    id element = elements[i];
+    CGRect frame;
+    if ([element isKindOfClass:[UIView class]]) {
+      // From the geometry, unclipped: UIKit's `accessibilityFrame` (and UIAccessibilityConvertFrameToScreenCoordinates)
+      // of a view outside the window (ListView's edge rows) is null, which would sort it last.
+      UIView *view = (UIView *)element;
+      UIScreen *screen = view.window.screen;
+      frame = (screen != nil) ? [view convertRect:view.bounds toCoordinateSpace:screen.coordinateSpace] : [view convertRect:view.bounds toView:nil];
+    } else {
+      frame = [(NSObject *)element accessibilityFrame];
+    }
+    keys.push_back({ frame.origin, i });
   }
   std::stable_sort(keys.begin(), keys.end(), [](const Key &a, const Key &b) {
     if (a.origin.y != b.origin.y) {
@@ -457,6 +469,57 @@ static void AddPlainSubview(UIView *subview, UIView *view, CGRect visibleRect, N
   }
 }
 
+/// ListView's exception to the visibility rule, as UITableView does: besides the rows inside its bounds, the nearest
+/// already-loaded row beyond each edge, so VoiceOver's swipe reaches it and focusing it scrolls it into view
+/// (`ListViewItemNode.accessibilityElementDidBecomeFocused` → `ensureItemNodeVisible`). Only rows ListView already has
+/// nodes for; nothing is loaded for this.
+static void AddListViewEdgeRows(UIView *view, CGRect visibleRect, NSMutableArray *elements)
+{
+  static Class itemNodeClass = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    itemNodeClass = NSClassFromString(@"Display.ListViewItemNode");
+  });
+  if (itemNodeClass == nil) {
+    return;
+  }
+  UIView *above = nil;
+  CGFloat aboveMaxY = -CGFLOAT_MAX;
+  UIView *below = nil;
+  CGFloat belowMinY = CGFLOAT_MAX;
+  for (UIView *subview in view.subviews) {
+    ASDisplayNode *subnode = subview.asyncdisplaykit_node;
+    if (subnode == nil || ![subnode isKindOfClass:itemNodeClass] || ![subview isKindOfClass:[_ASDisplayView class]]) {
+      continue;
+    }
+    if (!ASAccessibilityViewIsShown(subview)) {
+      continue;
+    }
+    CGRect frame = [subview convertRect:subview.bounds toView:view];
+    if (frame.size.width <= 0.0 || frame.size.height <= 0.0 || ASAccessibilityRectIsVisible(frame, visibleRect)) {
+      continue;
+    }
+    if (CGRectGetMaxY(frame) <= CGRectGetMinY(visibleRect)) {
+      if (CGRectGetMaxY(frame) > aboveMaxY) {
+        aboveMaxY = CGRectGetMaxY(frame);
+        above = subview;
+      }
+    } else if (CGRectGetMinY(frame) >= CGRectGetMaxY(visibleRect)) {
+      if (CGRectGetMinY(frame) < belowMinY) {
+        belowMinY = CGRectGetMinY(frame);
+        below = subview;
+      }
+    }
+  }
+  // In reading order even before the frame sort (which needs a frame from each element).
+  if (above != nil) {
+    [elements insertObject:above atIndex:0];
+  }
+  if (below != nil) {
+    [elements addObject:below];
+  }
+}
+
 /// Collect all accessibility elements for a given view and view node
 static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *elements)
 {
@@ -492,6 +555,10 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
     } else {
       AddPlainSubview(subview, view, visibleRect, elements);
     }
+  }
+
+  if (ASAccessibilityNodeIsListView(node)) {
+    AddListViewEdgeRows(view, visibleRect, elements);
   }
 
   // Layer-backed subnodes have no view, so they are not among the subviews above.

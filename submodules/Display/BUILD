@@ -2,6 +2,7 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@build_bazel_rules_apple//apple:ios.bzl", "ios_application", "ios_unit_test")
 load("//build-system/bazel-utils:plist_fragment.bzl", "plist_fragment")
 load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 swift_library(
     name = "Display",
@@ -118,8 +119,15 @@ ios_application(
     ],
 )
 
+# The reused test simulator would otherwise keep the previous host build (and with it the previous Display/ASDK).
+sh_binary(
+    name = "UninstallDisplayAccessibilityTestHost",
+    srcs = ["TestHost/uninstall_test_host.sh"],
+)
+
 ios_test_runner(
     name = "DisplayAccessibilityTestRunner",
+    pre_action = ":UninstallDisplayAccessibilityTestHost",
     device_type = "iPhone 17",
     os_version = "26.5",
 )
