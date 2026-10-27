@@ -919,6 +919,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             return self.textField.placeholderString
         } set(value) {
             self.textField.placeholderString = value
+            // The placeholder is the field's name for VoiceOver ("Search"), also once text hides it.
+            self.textField.accessibilityLabel = value?.string
         }
     }
     
@@ -1242,6 +1244,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
                         }
                         self.cancel?()
                     }
+                    inlineSearchPlaceholderContentsView.closeAccessibilityLabel = self.strings?.Common_Close
                     self.inlineSearchPlaceholderContentsView = inlineSearchPlaceholderContentsView
                     self.view.insertSubview(inlineSearchPlaceholderContentsView, at: 0)
                 }
@@ -1291,6 +1294,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             }
             self.cancel?()
         }
+        takenSearchPlaceholderContentView.closeAccessibilityLabel = self.strings?.Common_Close
         self.takenSearchPlaceholderContentView = takenSearchPlaceholderContentView
         self.view.insertSubview(takenSearchPlaceholderContentView, at: 0)
         if let inlineSearchPlaceholderContentsView  = self.inlineSearchPlaceholderContentsView {
@@ -1646,6 +1650,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         transition.updateAlpha(node: self.clearButton.imageNode, alpha: clearIsHidden ? 0.0 : 1.0)
         transition.updateTransformScale(node: self.clearButton, scale: clearIsHidden ? 0.2 : 1.0)
         self.clearButton.isUserInteractionEnabled = !clearIsHidden
+        self.clearButton.isAccessibilityElement = !clearIsHidden
+        self.clearButton.accessibilityTraits = .button
+        self.clearButton.accessibilityElementsHidden = clearIsHidden
     }
     
     @objc private func cancelPressed() {

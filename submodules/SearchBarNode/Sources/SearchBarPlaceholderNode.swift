@@ -76,6 +76,12 @@ public final class SearchBarPlaceholderContentView: UIView {
     private var params: Params?
     
     public var onCancel: (() -> Void)?
+    /// VoiceOver label of the close button shown while the search is active.
+    public var closeAccessibilityLabel: String? {
+        didSet {
+            self.close?.background.accessibilityLabel = self.closeAccessibilityLabel
+        }
+    }
     
     init(fieldStyle: SearchBarStyle, hasOwnGlassContainer: Bool) {
         self.fieldStyle = fieldStyle
@@ -380,6 +386,9 @@ public final class SearchBarPlaceholderContentView: UIView {
                     })?.withRenderingMode(.alwaysTemplate)
                     
                     close.background.contentView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onCloseTapGesture(_:))))
+                    close.background.isAccessibilityElement = true
+                    close.background.accessibilityLabel = self.closeAccessibilityLabel
+                    close.background.accessibilityTraits = .button
                     
                     close.background.contentView.addSubview(close.icon)
                     self.insertSubview(close.background, at: 0)
@@ -613,11 +622,14 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     
     public func takeContents() -> SearchBarPlaceholderContentView {
         self.isTakenOut = true
+        // The search bar that took the contents is the field now; this placeholder stays behind it, empty.
+        self.accessibilityElementsHidden = true
         return self.contentView
     }
     
     public func putBackContents() {
         self.isTakenOut = false
+        self.accessibilityElementsHidden = false
         self.containerView.addSubview(self.contentView)
         if let params = self.params {
             let _ = self.update(params: params, transition: .immediate)

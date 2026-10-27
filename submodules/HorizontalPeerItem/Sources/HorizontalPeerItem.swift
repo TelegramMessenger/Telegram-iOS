@@ -271,6 +271,16 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                     
                     let _ = badgeApply()
                     let _ = onlineApply(animateContent)
+                    
+                    // One element per peer: the title it shows, its unread count, selected when picked.
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityLabel = strongSelf.peerNode.displayedTitle
+                    if let (unreadCount, _) = item.unreadBadge, unreadCount > 0 {
+                        strongSelf.accessibilityValue = item.strings.VoiceOver_Chat_UnreadMessages(unreadCount)
+                    } else {
+                        strongSelf.accessibilityValue = nil
+                    }
+                    strongSelf.accessibilityTraits = item.isPeerSelected(item.peer.id) ? [.button, .selected] : [.button]
                 }
             })
         }

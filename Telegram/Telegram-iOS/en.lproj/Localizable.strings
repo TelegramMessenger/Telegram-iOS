@@ -6227,6 +6227,11 @@ Sorry for the inconvenience.";
 "VoiceOver.ChatList.MessageFrom" = "From: %@";
 "VoiceOver.ChatList.MessageRead" = "Read";
 "VoiceOver.ChatList.MessageEmpty" = "Empty";
+"VoiceOver.ChatList.Pinned" = "Pinned";
+"VoiceOver.ChatList.Muted" = "Muted";
+"VoiceOver.ChatList.UnreadMentions" = "Unread mentions";
+"VoiceOver.ChatList.UnreadReactions" = "Unread reactions";
+"VoiceOver.ChatList.ShowStoriesHint" = "Double tap to show stories";
 
 "VoiceOver.Chat.Profile" = "Profile";
 "VoiceOver.Chat.GroupInfo" = "Group Info";

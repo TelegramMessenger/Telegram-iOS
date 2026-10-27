@@ -249,8 +249,10 @@ public final class HorizontalTabsComponent: Component {
         /// badge's title unless given (the badge shows "267", VoiceOver can say "267 unread messages").
         public let accessibilityLabel: String?
         public let accessibilityValue: String?
+        /// The name of the VoiceOver custom action that does what the delete badge (`deleteAction`) does.
+        public let deleteAccessibilityLabel: String?
         
-        public init(id: AnyHashable, content: Content, badge: Badge?, action: @escaping () -> Void, contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)? = nil, deleteAction: (() -> Void)? = nil, accessibilityLabel: String? = nil, accessibilityValue: String? = nil) {
+        public init(id: AnyHashable, content: Content, badge: Badge?, action: @escaping () -> Void, contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)? = nil, deleteAction: (() -> Void)? = nil, accessibilityLabel: String? = nil, accessibilityValue: String? = nil, deleteAccessibilityLabel: String? = nil) {
             self.id = id
             self.content = content
             self.badge = badge
@@ -259,6 +261,7 @@ public final class HorizontalTabsComponent: Component {
             self.deleteAction = deleteAction
             self.accessibilityLabel = accessibilityLabel
             self.accessibilityValue = accessibilityValue
+            self.deleteAccessibilityLabel = deleteAccessibilityLabel
         }
         
         public static func ==(lhs: Tab, rhs: Tab) -> Bool {
@@ -278,6 +281,9 @@ public final class HorizontalTabsComponent: Component {
                 return false
             }
             if lhs.accessibilityLabel != rhs.accessibilityLabel || lhs.accessibilityValue != rhs.accessibilityValue {
+                return false
+            }
+            if lhs.deleteAccessibilityLabel != rhs.deleteAccessibilityLabel {
                 return false
             }
             return true
@@ -378,10 +384,18 @@ public final class HorizontalTabsComponent: Component {
     /// One tab as VoiceOver sees it. Activating it is a tap on the tab.
     private final class TabAccessibilityElement: UIAccessibilityElement {
         var activate: (() -> Void)?
+        /// Scrolls the strip so the tab is on screen: the strip scrolls sideways and lists every tab, also those
+        /// scrolled out of view, so swiping reaches them.
+        var didBecomeFocused: (() -> Void)?
         
         override func accessibilityActivate() -> Bool {
             self.activate?()
             return self.activate != nil
+        }
+        
+        override func accessibilityElementDidBecomeFocused() {
+            super.accessibilityElementDidBecomeFocused()
+            self.didBecomeFocused?()
         }
     }
     
@@ -715,6 +729,20 @@ public final class HorizontalTabsComponent: Component {
                     element.accessibilityFrameInContainerSpace = regularView.convert(regularView.bounds, to: self)
                     element.activate = { [weak self] in
                         self?.select(tab: tab)
+                    }
+                    element.didBecomeFocused = { [weak self, weak regularView] in
+                        guard let self, let regularView, regularView.isDescendant(of: self.scrollView) else {
+                            return
+                        }
+                        self.scrollView.scrollRectToVisible(regularView.convert(regularView.bounds, to: self.scrollView).insetBy(dx: -16.0, dy: 0.0), animated: true)
+                    }
+                    if let deleteAction = tab.deleteAction, let deleteAccessibilityLabel = tab.deleteAccessibilityLabel {
+                        element.accessibilityCustomActions = [UIAccessibilityCustomAction(name: deleteAccessibilityLabel, actionHandler: { _ in
+                            deleteAction()
+                            return true
+                        })]
+                    } else {
+                        element.accessibilityCustomActions = nil
                     }
                     elements.append(element)
                 }

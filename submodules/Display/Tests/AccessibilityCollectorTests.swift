@@ -320,6 +320,29 @@ final class AccessibilityCollectorTests: XCTestCase {
         self.spinRunLoop()
         XCTAssertEqual(self.labels(of: root.view), ["auto"])
     }
+
+    /// A section header drawn in the top inset of its first row is read before the row, although the row's frame
+    /// (which includes the inset) starts above the header.
+    func testListRowReadsFromBelowItsTopInset() {
+        let root = self.makeRoot()
+        let row = ListViewItemNode(layerBacked: false)
+        row.frame = CGRect(x: 0.0, y: 100.0, width: 400.0, height: 80.0)
+        row.insets = UIEdgeInsets(top: 30.0, left: 0.0, bottom: 0.0, right: 0.0)
+        row.isAccessibilityElement = true
+        row.accessibilityLabel = "row"
+        root.addSubnode(row)
+        let header = UIView(frame: CGRect(x: 16.0, y: 106.0, width: 200.0, height: 15.0))
+        header.isAccessibilityElement = true
+        header.accessibilityLabel = "header"
+        root.view.addSubview(header)
+        let next = UIView(frame: CGRect(x: 0.0, y: 180.0, width: 400.0, height: 50.0))
+        next.isAccessibilityElement = true
+        next.accessibilityLabel = "next"
+        root.view.addSubview(next)
+
+        let ordered = listViewAccessibilityReadingOrder([row.view, next, header])
+        XCTAssertEqual(ordered.compactMap { ($0 as? UIView)?.accessibilityLabel }, ["header", "row", "next"])
+    }
 }
 
 private final class OverridingNode: ASDisplayNode {

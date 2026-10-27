@@ -90,6 +90,11 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let iconView: ComponentView<Empty>
 
     public var toggleSelection: ((Bool) -> Void)?
+    
+    /// The title shown under the avatar, for a host that describes the item to VoiceOver.
+    public var displayedTitle: String? {
+        return self.textNode.attributedText?.string
+    }
     public var contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? {
         didSet {
             self.contextContainer.isGestureEnabled = self.contextAction != nil

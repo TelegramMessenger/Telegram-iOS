@@ -81,4 +81,23 @@ final class HorizontalTabsAccessibilityTests: XCTestCase {
         let described = (componentView.view!.accessibilityElements ?? []).compactMap { $0 as? UIAccessibilityElement }
         XCTAssertEqual(described.map { $0.accessibilityValue }, ["267 unread messages"])
     }
+    
+    // In edit mode a folder's delete badge is a custom action on its tab that runs the same delete action.
+    func testDeleteBadgeIsACustomAction() {
+        var deleted = 0
+        let tabs = [
+            HorizontalTabsComponent.Tab(id: AnyHashable(0), content: .title(HorizontalTabsComponent.Tab.Title(text: "All", entities: [], enableAnimations: false)), badge: nil, action: {}),
+            HorizontalTabsComponent.Tab(id: AnyHashable(1), content: .title(HorizontalTabsComponent.Tab.Title(text: "Forums", entities: [], enableAnimations: false)), badge: nil, action: {}, deleteAction: { deleted += 1 }, deleteAccessibilityLabel: "Delete")
+        ]
+        let componentView = ComponentView<Empty>()
+        let _ = componentView.update(transition: .immediate, component: AnyComponent(HorizontalTabsComponent(context: nil, theme: defaultDarkPresentationTheme, tabs: tabs, selectedTab: AnyHashable(0), isEditing: true)), environment: {}, containerSize: CGSize(width: 370.0, height: 44.0))
+        let view = componentView.view as! HorizontalTabsComponent.View
+        let elements = (view.accessibilityElements ?? []).compactMap { $0 as? UIAccessibilityElement }
+        XCTAssertEqual(elements.count, 2)
+        XCTAssertNil(elements[0].accessibilityCustomActions)
+        let actions = elements[1].accessibilityCustomActions ?? []
+        XCTAssertEqual(actions.map { $0.name }, ["Delete"])
+        XCTAssertTrue(actions[0].actionHandler?(actions[0]) ?? false)
+        XCTAssertEqual(deleted, 1)
+    }
 }

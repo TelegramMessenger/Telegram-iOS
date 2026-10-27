@@ -1509,6 +1509,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var onlineIsVoiceChat: Bool = false
     private var currentOnline: Bool?
     
+    /// State the row shows only as icons (pin, muted bell), read out after the title.
+    private var accessibilityIsPinned: Bool = false
+    private var accessibilityIsMuted: Bool = false
+    
     override public var canBeSelected: Bool {
         if self.selectableControlNode != nil || self.item?.editing == true {
             return false
@@ -1563,6 +1567,18 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     if let combinedReadState = peerData.combinedReadState, combinedReadState.count > 0 {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
+                    }
+                    if peerData.hasUnseenMentions {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_UnreadMentions)"
+                    }
+                    if peerData.hasUnseenReactions {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_UnreadReactions)"
+                    }
+                    if self.accessibilityIsPinned {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_Pinned)"
+                    }
+                    if self.accessibilityIsMuted {
+                        result += "\n\(item.presentationData.strings.VoiceOver_ChatList_Muted)"
                     }
                     return result
             }
@@ -5514,16 +5530,27 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
                     }
                     
+                    strongSelf.accessibilityIsPinned = item.isPinned && promoInfo == nil
+                    strongSelf.accessibilityIsMuted = isMuted
                     strongSelf.view.accessibilityLabel = strongSelf.accessibilityLabel
                     strongSelf.view.accessibilityValue = strongSelf.accessibilityValue
-                    
-                    if !customActions.isEmpty {
-                        strongSelf.view.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
-                            return ChatListItemAccessibilityCustomAction(name: action.name, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)), key: action.key)
-                        })
+                    if item.editing {
+                        strongSelf.view.accessibilityTraits = item.selected ? [.button, .selected] : [.button]
                     } else {
-                        strongSelf.view.accessibilityCustomActions = nil
+                        strongSelf.view.accessibilityTraits = [.button]
                     }
+                    
+                    var accessibilityCustomActions: [UIAccessibilityCustomAction] = customActions.map({ action -> UIAccessibilityCustomAction in
+                        return ChatListItemAccessibilityCustomAction(name: action.name, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)), key: action.key)
+                    })
+                    if actionButtonTitleNodeLayoutAndApply != nil {
+                        // The inline OPEN button of a bot with a web app: the same path as its tap.
+                        accessibilityCustomActions.insert(UIAccessibilityCustomAction(name: item.presentationData.strings.ChatList_InlineButtonOpenApp, actionHandler: { [weak strongSelf] _ in
+                            strongSelf?.actionButtonPressed()
+                            return true
+                        }), at: 0)
+                    }
+                    strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                     
                     strongSelf.avatarTapRecognizer?.isEnabled = item.interaction.inlineNavigationLocation == nil
                     

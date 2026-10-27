@@ -122,7 +122,9 @@ public final class ChatListSearchFiltersContainerNode: ASDisplayNode {
                 badge: badge,
                 action: { [weak self] in
                     self?.filterPressed?(filter)
-                }
+                },
+                // A suggested peer or date is drawn as icon + text (`.custom`): VoiceOver reads the text.
+                accessibilityLabel: title
             )
         }
         

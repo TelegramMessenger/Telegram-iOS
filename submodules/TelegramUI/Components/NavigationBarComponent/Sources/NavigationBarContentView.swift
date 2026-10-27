@@ -226,7 +226,7 @@ final class NavigationBarContentView: UIView {
                 buttonTransition = .immediate
                 container.addSubview(buttonComponentView)
             }
-            if let accessibilityLabel = button.overflow?.title {
+            if let accessibilityLabel = button.overflow?.title ?? navigationButtonTextLabel(button.content) {
                 buttonComponentView.accessibilityLabel = accessibilityLabel
             }
             buttonTransition.setFrame(view: buttonComponentView, frame: frame(buttonSize))
@@ -539,4 +539,13 @@ func navigationButtonContainerWidth(content: NavigationBarComponent.Button.Conte
     default:
         return 100.0
     }
+}
+
+/// A text button's VoiceOver label when the screen gives none (`OverflowInfo.title`): the text it shows. The
+/// `___`-prefixed sentinel titles draw icons and are not labels.
+func navigationButtonTextLabel(_ content: NavigationBarComponent.Button.Content) -> String? {
+    if case let .text(title, _) = content, !title.isEmpty, !title.hasPrefix("___") {
+        return title
+    }
+    return nil
 }

@@ -197,6 +197,21 @@ public final class ChatListHeaderComponent: Component {
         private var navigationBarView: NavigationBarComponent.View? {
             return self.navigationBar.view as? NavigationBarComponent.View
         }
+        
+        /// Faded out and scrolled away while the list searches (`ChatListNavigationBar` sets
+        /// `accessibilityElementsHidden`): UIKit's own walk of these plain views does not skip such a subtree, so it
+        /// answers with no elements itself.
+        override public var accessibilityElements: [Any]? {
+            get {
+                if self.accessibilityElementsHidden || self.alpha < 0.01 {
+                    return []
+                }
+                return super.accessibilityElements
+            }
+            set {
+                super.accessibilityElements = newValue
+            }
+        }
 
         /// The row the chat list's header is built on (the regular bar's component).
         public var navigationBarComponentView: NavigationBarComponent.View? {

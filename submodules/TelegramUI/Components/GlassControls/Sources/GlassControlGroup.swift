@@ -42,15 +42,21 @@ public final class GlassControlGroupComponent: Component {
         public let id: AnyHashable
         public let content: Content
         public let action: (() -> Void)?
+        /// VoiceOver label of an item without text of its own (an icon, an animation); a text item reads its text.
+        public let accessibilityLabel: String?
 
-        public init(id: AnyHashable, content: Content, action: (() -> Void)?) {
+        public init(id: AnyHashable, content: Content, action: (() -> Void)?, accessibilityLabel: String? = nil) {
             self.id = id
             self.content = content
             self.action = action
+            self.accessibilityLabel = accessibilityLabel
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.accessibilityLabel != rhs.accessibilityLabel {
                 return false
             }
             if lhs.content != rhs.content {
@@ -272,7 +278,8 @@ public final class GlassControlGroupComponent: Component {
                         isEnabled: item.action != nil,
                         animateAlpha: false,
                         animateScale: false,
-                        animateContents: false
+                        animateContents: false,
+                        accessibility: glassControlItemAccessibilityLabel(item).map { ComponentAccessibility(label: $0) }
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
@@ -332,4 +339,15 @@ public final class GlassControlGroupComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+/// The label VoiceOver reads for a control group item: the label given, else the text the item shows.
+func glassControlItemAccessibilityLabel(_ item: GlassControlGroupComponent.Item) -> String? {
+    if let accessibilityLabel = item.accessibilityLabel {
+        return accessibilityLabel
+    }
+    if case let .text(text) = item.content, !text.isEmpty {
+        return text
+    }
+    return nil
 }

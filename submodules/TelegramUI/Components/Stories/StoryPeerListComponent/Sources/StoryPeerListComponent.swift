@@ -453,6 +453,30 @@ public final class StoryPeerListComponent: Component {
             self.loadingItemDisposable?.dispose()
         }
         
+        /// The chat list's title for VoiceOver. It is drawn here as an image (`titleView`), so it is labelled here: a
+        /// header, which is also the button that shows the stories while they are collapsed beside it (the tap on
+        /// the title), or the passcode lock button when the title has a lock.
+        private func updateTitleAccessibility(component: StoryPeerListComponent) {
+            let titleShowsStories = self.collapsedButton.isUserInteractionEnabled && !self.sortedItems.isEmpty && !component.titleHasLock
+            
+            self.collapsedButton.isAccessibilityElement = titleShowsStories
+            self.collapsedButton.accessibilityElementsHidden = !titleShowsStories
+            self.collapsedButton.accessibilityLabel = component.title
+            self.collapsedButton.accessibilityHint = component.strings.VoiceOver_ChatList_ShowStoriesHint
+            self.collapsedButton.accessibilityTraits = [.header, .button]
+            
+            self.titleView.isAccessibilityElement = !titleShowsStories && !component.titleHasLock
+            self.titleView.accessibilityLabel = component.title
+            self.titleView.accessibilityTraits = .header
+            
+            if let titleLockButton = self.titleLockButton {
+                titleLockButton.isAccessibilityElement = true
+                titleLockButton.accessibilityLabel = component.title
+                titleLockButton.accessibilityHint = component.strings.DialogList_PasscodeLockHelp
+                titleLockButton.accessibilityTraits = [.header, .button]
+            }
+        }
+        
         @objc private func collapsedButtonPressed() {
             guard let component = self.component else {
                 return
@@ -1858,6 +1882,8 @@ public final class StoryPeerListComponent: Component {
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
+            
+            self.updateTitleAccessibility(component: component)
             
             return availableSize
         }

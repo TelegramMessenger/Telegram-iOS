@@ -119,6 +119,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     
     private var item: ChatListNoticeItem?
     
+    private var accessibilityBodyElement: ChatListNoticeBodyAccessibilityElement?
+    
     override var apparentHeight: CGFloat {
         didSet {
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.width, height: self.apparentHeight))
@@ -144,6 +146,52 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.contentContainer.addSubnode(self.arrowNode)
         
         self.addSubnode(self.contentContainer)
+    }
+    
+    /// The panel for VoiceOver, in reading order: its text as one button (the tap on the panel), then the close
+    /// button or the two choice buttons. The panel's own nodes are not elements.
+    func accessibilityElements(container: UIView) -> [Any] {
+        guard let item = self.item else {
+            return []
+        }
+        var result: [Any] = []
+        
+        let title = noticeAccessibilityText(self.titleNode.textNode.cachedLayout?.attributedString)
+        let text = noticeAccessibilityText(self.textNode.textNode.cachedLayout?.attributedString)
+        if !title.isEmpty || !text.isEmpty {
+            let element: ChatListNoticeBodyAccessibilityElement
+            if let current = self.accessibilityBodyElement, current.accessibilityContainer as? UIView === container {
+                element = current
+            } else {
+                element = ChatListNoticeBodyAccessibilityElement(accessibilityContainer: container)
+                self.accessibilityBodyElement = element
+            }
+            element.accessibilityLabel = title
+            element.accessibilityValue = text
+            element.accessibilityTraits = .button
+            element.activate = { [weak self] in
+                self?.item?.action(.activate)
+            }
+            let bodyFrame = self.titleNode.textNode.frame.union(self.textNode.textNode.frame)
+            element.accessibilityFrameInContainerSpace = self.contentContainer.view.convert(bodyFrame, to: container)
+            result.append(element)
+        }
+        
+        if let closeButton = self.closeButton, !closeButton.isHidden {
+            closeButton.view.isAccessibilityElement = true
+            closeButton.view.accessibilityLabel = item.strings.Common_Close
+            closeButton.view.accessibilityTraits = .button
+            result.append(closeButton.view)
+        }
+        for (button, text) in [(self.okButton, self.okButtonText), (self.cancelButton, self.cancelButtonText)] {
+            if let button, !button.isHidden {
+                button.view.isAccessibilityElement = true
+                button.view.accessibilityLabel = text?.cachedLayout?.attributedString?.string
+                button.view.accessibilityTraits = .button
+                result.append(button.view)
+            }
+        }
+        return result
     }
     
     @objc private func closePressed() {
@@ -601,5 +649,33 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()
+    }
+}
+
+/// The text VoiceOver reads for a notice line: custom emoji are drawn over placeholder characters (a server notice's
+/// "&" before its title), which are not read.
+private func noticeAccessibilityText(_ attributedString: NSAttributedString?) -> String {
+    guard let attributedString else {
+        return ""
+    }
+    let result = NSMutableString(string: attributedString.string)
+    var ranges: [NSRange] = []
+    attributedString.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: attributedString.length), options: []) { value, range, _ in
+        if value != nil {
+            ranges.append(range)
+        }
+    }
+    for range in ranges.reversed() {
+        result.replaceCharacters(in: range, with: "")
+    }
+    return (result as String).trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+private final class ChatListNoticeBodyAccessibilityElement: UIAccessibilityElement {
+    var activate: (() -> Void)?
+    
+    override func accessibilityActivate() -> Bool {
+        self.activate?()
+        return self.activate != nil
     }
 }

@@ -1283,7 +1283,18 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.layoutParams = (item, params, first, last, firstWithHeader, neighbors)
                             
                             strongSelf.accessibilityLabel = titleAttributedString?.string
-                            strongSelf.accessibilityValue = statusAttributedString?.string
+                            var accessibilityValue = statusAttributedString?.string ?? ""
+                            if let badge = item.badge, badge.count > 0 {
+                                // The unread badge: a number on screen, "7 unread messages" for VoiceOver.
+                                let unreadString = item.presentationData.strings.VoiceOver_Chat_UnreadMessages(badge.count)
+                                accessibilityValue = accessibilityValue.isEmpty ? unreadString : accessibilityValue + "\n" + unreadString
+                            }
+                            strongSelf.accessibilityValue = accessibilityValue.isEmpty ? nil : accessibilityValue
+                            if case .selectable(selected: true) = item.selection {
+                                strongSelf.accessibilityTraits = [.button, .selected]
+                            } else {
+                                strongSelf.accessibilityTraits = [.button]
+                            }
                             
                             strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
