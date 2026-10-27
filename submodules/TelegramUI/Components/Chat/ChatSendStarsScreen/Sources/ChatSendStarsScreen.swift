@@ -2981,11 +2981,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         
         let allPeerIds = topPeers.compactMap(\.peerId)
         
-        var topPeers = topPeers.sorted(by: { $0.count > $1.count })
-        if topPeers.count > 3 {
-            topPeers = Array(topPeers.prefix(3))
-        }
-        
         let channelsForPublicReaction: Signal<[EnginePeer], NoError>
         switch reactSubject {
         case .message:
@@ -3053,30 +3048,14 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                     channelsForPublicReaction: channelsForPublicReaction,
                     reactSubject: reactSubject,
                     currentSentAmount: currentSentAmount,
-                    topPeers: topPeers.compactMap { topPeer -> ChatSendStarsScreen.TopPeer? in
-                        guard let topPeerId = topPeer.peerId else {
-                            let randomIndex = nextRandomIndex
-                            nextRandomIndex += 1
-                            return ChatSendStarsScreen.TopPeer(
-                                randomIndex: randomIndex,
-                                peer: nil,
-                                isMy: topPeer.isMy,
-                                count: Int(topPeer.count)
-                            )
-                        }
-                        guard let topPeerValue = topPeerMap[topPeerId] else {
-                            return nil
-                        }
-                        guard let topPeerValue else {
-                            return nil
-                        }
+                    topPeers: chatSendStarsShownTopPeers(topPeers, peer: { topPeerMap[$0] ?? nil }, limit: 3).map { topPeer -> ChatSendStarsScreen.TopPeer in
                         let randomIndex = nextRandomIndex
                         nextRandomIndex += 1
                         return ChatSendStarsScreen.TopPeer(
                             randomIndex: randomIndex,
-                            peer: topPeer.isAnonymous ? nil : topPeerValue,
+                            peer: topPeer.peer,
                             isMy: topPeer.isMy,
-                            count: Int(topPeer.count)
+                            count: topPeer.count
                         )
                     },
                     myTopPeer: myTopPeer.flatMap { topPeer -> ChatSendStarsScreen.TopPeer? in

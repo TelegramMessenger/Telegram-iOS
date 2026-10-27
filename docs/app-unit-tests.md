@@ -61,6 +61,14 @@ copies the chosen photo's downloaded sizes to the returned photo's files (the re
 `TelegramUser.photo` from the returned photo, because the result's user list does not carry it for the account itself;
 otherwise every avatar downloads the photo again.
 
+`//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen:ChatSendStarsScreenTests` covers
+`chatSendStarsShownTopPeers`, the paid-reaction sheet's "Top Senders": the message's top reactors, most Stars first, cut
+to three only after dropping a sender whose peer is not stored locally (it has no name or avatar to draw); an anonymous
+sender needs no stored peer. The server sends only the top three plus the account's own entry, so a dropped sender
+leaves the sheet with two: what keeps three is the reactions poll (`AccountViewTracker.updateReactionsForMessageIds`)
+storing the users and chats it returns, since a sender who reached the leaderboard after the message was stored is known
+only from that response. No test covers that networked path.
+
 `//submodules/MediaPlayer:UniversalMediaPlayerTests` drives a real `ChunkMediaPlayerV2` (wait for
 `MediaPlayerNode.videoLayer`, which the node creates asynchronously, before constructing it) from an `.externalParts`
 promise. With no parts the player stays buffering, so the clock only moves on a seek; a part backed by an empty
