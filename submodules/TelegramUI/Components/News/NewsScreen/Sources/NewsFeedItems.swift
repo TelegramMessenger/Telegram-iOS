@@ -49,6 +49,9 @@ struct NewsFeedItemEnvironment {
     let displayMode: NewsFeedDisplayMode
     /// The posts a swipe switched to the other mode on their own (`NewsPostSwipeAction.expand` / `.collapse`).
     let rowModeOverrides: Set<AnyHashable>
+    /// This pass switches rows between the modes with a morph: a floating avatar made now fades in over the row's
+    /// own avatar growing into its place.
+    let rowsMorph: Bool
     /// The content an expanded row needs, per post (its first message and its identity).
     let expandedContent: ((EngineMessage, AnyHashable) -> NewsFeedPostExpandedContent?)?
 
@@ -139,7 +142,7 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
     var attachedItems: [AnyHashable: CoreListAttachedItem] = [:]
     let displayMode = environment.rowDisplayMode(identity)
     if displayMode == .expanded {
-        attachedItems[AnyHashable(peer.id)] = NewsFloatingAvatarAttachedItem(context: environment.context, theme: presentationData.theme, peer: peer, loading: environment.rowLoading)
+        attachedItems[AnyHashable(peer.id)] = NewsFloatingAvatarAttachedItem(context: environment.context, theme: presentationData.theme, peer: peer, loading: environment.rowLoading, fadesIn: environment.rowsMorph)
     }
     return CoreListComponentItem(identity: identity, attachedItems: attachedItems, component: AnyComponent(NewsFeedPostComponent(
         context: environment.context,

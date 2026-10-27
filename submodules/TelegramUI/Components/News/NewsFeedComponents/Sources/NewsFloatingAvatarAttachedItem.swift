@@ -17,12 +17,16 @@ public final class NewsFloatingAvatarAttachedItem: CoreListAttachedItem {
     let theme: PresentationTheme
     let peer: EnginePeer
     let loading: NewsFeedRowLoading
+    /// The avatar's view, when made by this item, fades in: the row is morphing from compact, and its own avatar is
+    /// growing into this place underneath. A view made by a scroll appears at once, as the rows do.
+    let fadesIn: Bool
 
-    public init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer, loading: NewsFeedRowLoading) {
+    public init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer, loading: NewsFeedRowLoading, fadesIn: Bool) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.loading = loading
+        self.fadesIn = fadesIn
     }
 
     public var placement: CoreListAttachmentPlacement {
@@ -105,9 +109,11 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
         self.applyObstacle()
         if !self.hasAppeared {
             self.hasAppeared = true
-            // Fades in: on a morph from compact the row's own avatar grows into this place underneath, and the
-            // floating one must not cover it before it has arrived.
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.45)
+            // On a morph from compact the row's own avatar grows into this place underneath, and the floating one
+            // must not cover it before it has arrived.
+            if self.item.fadesIn {
+                self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.45)
+            }
         }
         return metrics.avatarTop + metrics.avatarSize + metrics.bottomInset
     }

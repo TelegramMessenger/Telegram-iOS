@@ -61,7 +61,9 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   screen (`.overlay`, `.top`, `isFloating`) and park it at the run's end. The row learns its attachment views
   through `CoreListComponentAttachmentsReceiver` and hands each a closure returning its gallery's frame and
   scroll, so an avatar over a gallery scrolled under its column moves aside (`newsExpandedAvatarOffset`, applied
-  on every stick update). Do not draw the avatar in the row again: two avatars, one of them not floating.
+  on every stick update). Do not draw the avatar in the row again: two avatars, one of them not floating. The
+  floating avatar fades in only when its item was made by a morphing pass (`NewsFeedItemEnvironment.rowsMorph`
+  → `fadesIn`), over the row's own avatar growing into place; one made by a scroll appears at once, as rows do.
 - **Show more.** While a post is collapsed its text is cut to its first ten lines as plain text, measured with a
   `TextNode` at the bubble's font and width (`newsCollapsedText`), and the entities are dropped: formatting and
   links come with Show more (`NewsScreenNode.expandedTextPosts`, per post identity, for the screen's lifetime).

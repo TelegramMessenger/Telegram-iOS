@@ -86,6 +86,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     /// expanded one), per tab (0 For you, 1 Added: a post in both expands in one); a change of the feed's mode
     /// forgets them.
     private var rowModeOverrides: [Int: Set<AnyHashable>] = [:]
+    /// The list pass in progress morphs rows between the modes (`NewsFeedItemEnvironment.rowsMorph`).
+    private var rowsMorph = false
     /// Pinching the feed switches the modes (`NewsFeedPinch`): the lists' container scales about its centre.
     private var pinchRecognizer: UIPinchGestureRecognizer?
     private var pinchState = NewsFeedPinchState()
@@ -272,7 +274,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             // Every row the switch carries across the screen morphs, not only the few loaded in both layouts.
             self.activeList.widenRowWindow(for: NewsScreenNode.displayModeTransition.duration)
         }
+        self.rowsMorph = animated
         self.updateLists(transition: animated ? NewsScreenNode.displayModeTransition : .immediate)
+        self.rowsMorph = false
     }
 
     private func toggleTextExpanded(_ identity: AnyHashable) {
@@ -707,7 +711,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), rowLoading: list.rowLoading, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
-        }, postSwipe: postSwipe, feedback: feedback, displayMode: self.displayMode, rowModeOverrides: segment.flatMap { self.rowModeOverrides[$0] } ?? [], expandedContent: { [weak self] message, identity in
+        }, postSwipe: postSwipe, feedback: feedback, displayMode: self.displayMode, rowModeOverrides: segment.flatMap { self.rowModeOverrides[$0] } ?? [], rowsMorph: self.rowsMorph, expandedContent: { [weak self] message, identity in
             return self?.expandedContent(message: message, identity: identity)
         })
     }
@@ -729,7 +733,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 overrides.insert(post)
             }
             self.rowModeOverrides[segment] = overrides
+            self.rowsMorph = true
             self.updateLists(transition: NewsScreenNode.displayModeTransition)
+            self.rowsMorph = false
         }
     }
 
