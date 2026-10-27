@@ -28,7 +28,8 @@ public struct HLSLinkLoadToken: Hashable {
 //
 // It also keeps the link's busy time, so that loads in flight together (two of one player's, or several players') are
 // not charged the same seconds twice: a load is charged from the later of the start of the link's busy period and the
-// end of the previous load in it.
+// end of the previous load in it that completed. A cancelled load's time goes to the loads still running, so the
+// estimate errs low rather than high.
 //
 // Thread-safe.
 public final class HLSBandwidthStore {
@@ -99,6 +100,23 @@ public final class HLSBandwidthStore {
         return estimator
     }
 
+    // A starting estimate from outside the player (the account's other downloads) for a class with no sample of its own:
+    // one with that estimate and no weight, which the class's first sample replaces, as does a later seed. False when
+    // the class has sampled.
+    @discardableResult
+    public func seedPrior(bitsPerSecond: Double, networkClass: HLSNetworkClass) -> Bool {
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        let state = self.state(networkClass)
+        if state.estimator != nil && state.lastSampleTime != nil {
+            return false
+        }
+        state.estimator = HLSBandwidthEstimator(defaultEstimate: bitsPerSecond)
+        return true
+    }
+
     // An abandon's sample and reset.
     public func replace(_ estimator: HLSBandwidthEstimator, networkClass: HLSNetworkClass, now: Double) {
         self.lock.lock()
@@ -135,16 +153,16 @@ public final class HLSBandwidthStore {
         return self.finishLoad(token, now: now)
     }
 
-    // Ends the load's share uncharged.
+    // Ends the load's share uncharged: its time goes to the loads still running, whose bytes moved during it too.
     public func cancelLoad(_ token: HLSLinkLoadToken, now: Double) {
         self.lock.lock()
         defer {
             self.lock.unlock()
         }
-        let _ = self.finishLoad(token, now: now)
+        let _ = self.finishLoad(token, now: now, isCancelled: true)
     }
 
-    private func finishLoad(_ token: HLSLinkLoadToken, now: Double) -> Double {
+    private func finishLoad(_ token: HLSLinkLoadToken, now: Double, isCancelled: Bool = false) -> Double {
         guard let state = self.classes[token.networkClass], state.activeLoads.contains(token.id) else {
             return 0.0
         }
@@ -154,7 +172,7 @@ public final class HLSBandwidthStore {
         if state.activeLoads.isEmpty {
             state.busyStart = nil
             state.lastEnd = nil
-        } else {
+        } else if !isCancelled {
             state.lastEnd = now
         }
         return charged

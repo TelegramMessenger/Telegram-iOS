@@ -46,12 +46,12 @@ final class WebpageUpdateEventsTests: XCTestCase {
         XCTAssertTrue(updatedWebpages.isEmpty)
     }
 
-    /// `pollDifference` starts from empty events and unions each difference slice in, so the
+    /// `fetchDifference` starts from empty events and unions each difference slice in, so the
     /// right-hand side is where every webpage update from getDifference arrives.
     func testMergingEventsKeepsTheWebpageUpdatesOfBothSides() {
-        let earlier = AccountFinalStateEvents(updatedWebpages: [self.webpageId: self.pendingWebpage(self.webpageId)])
+        let earlier = AccountFinalStateEvents.testing(updatedWebpages: [self.webpageId: self.pendingWebpage(self.webpageId)])
         // A nil value in a literal keeps its key; only assigning nil through the subscript drops it.
-        let later = AccountFinalStateEvents(updatedWebpages: [self.otherWebpageId: nil])
+        let later = AccountFinalStateEvents.testing(updatedWebpages: [self.otherWebpageId: nil])
 
         let merged = AccountFinalStateEvents().union(with: earlier).union(with: later)
 
@@ -61,8 +61,8 @@ final class WebpageUpdateEventsTests: XCTestCase {
     }
 
     func testMergingEventsKeepsTheLaterStateOfTheSameWebpage() {
-        let earlier = AccountFinalStateEvents(updatedWebpages: [self.webpageId: self.pendingWebpage(self.webpageId)])
-        let later = AccountFinalStateEvents(updatedWebpages: [self.webpageId: nil])
+        let earlier = AccountFinalStateEvents.testing(updatedWebpages: [self.webpageId: self.pendingWebpage(self.webpageId)])
+        let later = AccountFinalStateEvents.testing(updatedWebpages: [self.webpageId: nil])
 
         let merged = earlier.union(with: later)
 

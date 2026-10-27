@@ -2940,6 +2940,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return nil
     }
     
+    /// The source for a menu a header button opens: the glass pill the button is in, which morphs into the menu.
+    func headerMenuSourceView(_ sourceView: UIView) -> UIView {
+        return self.chatListHeaderView()?.navigationButtonContextContainer(sourceView: sourceView) ?? sourceView
+    }
+    
     private func makeCommunityViewController(communityId: EnginePeer.Id, mode: CommunityViewScreenMode = .fullscreen) -> ViewController {
         let controller = self.context.sharedContext.makeCommunityViewScreen(
             context: self.context,
@@ -4006,7 +4011,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 })))
             }
 
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: self.headerMenuSourceView(sourceView))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             self.presentInGlobalOverlay(contextController)
         })
     }
@@ -7098,7 +7103,7 @@ private final class ChatListLocationContext {
                             }
                         }
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: displayArchive ? ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled) : nil)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete, color: .custom(presentationData.theme.actionSheet.destructiveActionTextColor)), middleAction: displayArchive ? ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled) : nil)
                 } else if case .forum = strongSelf.location {
                     let leftAction: ToolbarAction
                     switch options.read {
@@ -7107,7 +7112,7 @@ private final class ChatListLocationContext {
                     case let .selective(enabled):
                         leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: nil)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete, color: .custom(presentationData.theme.actionSheet.destructiveActionTextColor)), middleAction: nil)
                 } else {
                     let middleAction = ToolbarAction(title: presentationData.strings.ChatList_UnarchiveAction, isEnabled: !peerIds.isEmpty)
                     let leftAction: ToolbarAction
@@ -7117,7 +7122,7 @@ private final class ChatListLocationContext {
                     case let .selective(enabled):
                         leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: middleAction)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete, color: .custom(presentationData.theme.actionSheet.destructiveActionTextColor)), middleAction: middleAction)
                 }
             } else if let peerView = peerView, let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                 switch channel.participationStatus {
@@ -7484,7 +7489,7 @@ private final class ChatListLocationContext {
                     guard let self, let parentController = self.parentController else {
                         return
                     }
-                    ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: gesture)
+                    ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: parentController.headerMenuSourceView(sourceView), gesture: gesture)
                 }
             )
         }
@@ -7519,7 +7524,7 @@ private final class ChatListLocationContext {
                 parentController.openArchiveMoreMenu(sourceView: sourceView, gesture: nil)
             }
         case let .forum(peerId):
-            ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: nil)
+            ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: parentController.headerMenuSourceView(sourceView), gesture: nil)
         case .savedMessagesChats:
             break
         }

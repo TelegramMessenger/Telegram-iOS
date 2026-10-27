@@ -82,6 +82,10 @@ String trimmed(JSContext* ctx, const String& s) {
 
 void postLink(JSContext* ctx, LinkMethod method, const std::string& url) {
     const char* name = method == LinkMethod::OpenLink ? "openLink" : "openTelegramLink";
+    // The glue's order: the URL's check, then a preview's refusal, then the press.
+    if (refusedInPreview(ctx, name)) {
+        return;
+    }
     HostState& state = HostState::of(ctx);
     if (!state.consumeActivation(ctx)) {
         state.reportLinkDiagnostic(ctx, "activation-blocked",

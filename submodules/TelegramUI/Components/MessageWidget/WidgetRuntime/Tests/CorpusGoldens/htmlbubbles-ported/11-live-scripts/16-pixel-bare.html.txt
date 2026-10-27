@@ -1,0 +1,99 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad" style="width: 330px; max-width: 100%">
+  <div class="row between"><b>🐷 Greedy timer</b><span class="badge" id="badge"><span id="ticks">0</span> ticks</span></div>
+  <p class="small muted" style="margin: 6px 0 8px 0">Each tick burns 40 ms of CPU, 10 times a second. Every call is under the 500 ms per-task cap, but together they ask for 400 ms of a 300 ms per second budget. twidget doesn't stop the script: it defers the timer until the budget frees up, so the rate drops.</p>
+  <button class="primary" id="go">Start</button>
+  <div class="small muted" id="rate" style="margin-top: 6px" hidden=""></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 194.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 194.2
+    div 15 13 330 168.2
+      div 15 13 330 18.2
+        b 15 13 136 18.2
+        span 281 14.95 56 14.3
+          span 281 14.95 0 0
+      p 15 37.2 330 109.2
+      button 28 159.4 40 16.8
+      div 0 0 0 0
+
+== paint
+root 360x194.2 items=63
+  solid-fill bounds=(0,0,360,194) layer=(border=(0,0,360,194),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,194),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,194) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,194) root=0
+  solid-fill bounds=(273,14,72,16) layer=(border=(273,14,72,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(273,14,72,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f2e
+  text bounds=(7,6,48,32) pos=(15,14,32,16) color=#000000ff text="🐷" font=f1 glyphs=4 advance=32
+  text bounds=(47,6,64,32) pos=(55,14,48,16) color=#000000ff text="Greedy" font=f1 glyphs=6 advance=48
+  text bounds=(103,6,56,32) pos=(111,14,40,16) color=#000000ff text="timer" font=f1 glyphs=5 advance=40
+  text bounds=(273,7,24,32) pos=(281,15,8,16) color=#000000ff text="0" font=f2 glyphs=1 advance=8
+  text bounds=(289,7,56,32) pos=(297,15,40,16) color=#000000ff text="ticks" font=f2 glyphs=5 advance=40
+  text bounds=(7,29,48,32) pos=(15,37,32,16) color=#6e6e73ff text="Each" font=f3 glyphs=4 advance=32
+  text bounds=(47,29,48,32) pos=(55,37,32,16) color=#6e6e73ff text="tick" font=f3 glyphs=4 advance=32
+  text bounds=(87,29,56,32) pos=(95,37,40,16) color=#6e6e73ff text="burns" font=f3 glyphs=5 advance=40
+  text bounds=(135,29,32,32) pos=(143,37,16,16) color=#6e6e73ff text="40" font=f3 glyphs=2 advance=16
+  text bounds=(159,29,32,32) pos=(167,37,16,16) color=#6e6e73ff text="ms" font=f3 glyphs=2 advance=16
+  text bounds=(183,29,32,32) pos=(191,37,16,16) color=#6e6e73ff text="of" font=f3 glyphs=2 advance=16
+  text bounds=(207,29,48,32) pos=(215,37,32,16) color=#6e6e73ff text="CPU," font=f3 glyphs=4 advance=32
+  text bounds=(247,29,32,32) pos=(255,37,16,16) color=#6e6e73ff text="10" font=f3 glyphs=2 advance=16
+  text bounds=(271,29,56,32) pos=(279,37,40,16) color=#6e6e73ff text="times" font=f3 glyphs=5 advance=40
+  text bounds=(319,29,24,32) pos=(327,37,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(7,45,72,32) pos=(15,53,56,16) color=#6e6e73ff text="second." font=f3 glyphs=7 advance=56
+  text bounds=(71,45,56,32) pos=(79,53,40,16) color=#6e6e73ff text="Every" font=f3 glyphs=5 advance=40
+  text bounds=(119,45,48,32) pos=(127,53,32,16) color=#6e6e73ff text="call" font=f3 glyphs=4 advance=32
+  text bounds=(159,45,32,32) pos=(167,53,16,16) color=#6e6e73ff text="is" font=f3 glyphs=2 advance=16
+  text bounds=(183,45,56,32) pos=(191,53,40,16) color=#6e6e73ff text="under" font=f3 glyphs=5 advance=40
+  text bounds=(231,45,40,32) pos=(239,53,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(263,45,40,32) pos=(271,53,24,16) color=#6e6e73ff text="500" font=f3 glyphs=3 advance=24
+  text bounds=(295,45,32,32) pos=(303,53,16,16) color=#6e6e73ff text="ms" font=f3 glyphs=2 advance=16
+  text bounds=(7,60,48,32) pos=(15,68,32,16) color=#6e6e73ff text="per-" font=f3 glyphs=4 advance=32
+  text bounds=(39,60,48,32) pos=(47,68,32,16) color=#6e6e73ff text="task" font=f3 glyphs=4 advance=32
+  text bounds=(79,60,48,32) pos=(87,68,32,16) color=#6e6e73ff text="cap," font=f3 glyphs=4 advance=32
+  text bounds=(119,60,40,32) pos=(127,68,24,16) color=#6e6e73ff text="but" font=f3 glyphs=3 advance=24
+  text bounds=(151,60,80,32) pos=(159,68,64,16) color=#6e6e73ff text="together" font=f3 glyphs=8 advance=64
+  text bounds=(223,60,48,32) pos=(231,68,32,16) color=#6e6e73ff text="they" font=f3 glyphs=4 advance=32
+  text bounds=(263,60,40,32) pos=(271,68,24,16) color=#6e6e73ff text="ask" font=f3 glyphs=3 advance=24
+  text bounds=(295,60,40,32) pos=(303,68,24,16) color=#6e6e73ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(7,76,40,32) pos=(15,84,24,16) color=#6e6e73ff text="400" font=f3 glyphs=3 advance=24
+  text bounds=(39,76,32,32) pos=(47,84,16,16) color=#6e6e73ff text="ms" font=f3 glyphs=2 advance=16
+  text bounds=(63,76,32,32) pos=(71,84,16,16) color=#6e6e73ff text="of" font=f3 glyphs=2 advance=16
+  text bounds=(87,76,24,32) pos=(95,84,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(103,76,40,32) pos=(111,84,24,16) color=#6e6e73ff text="300" font=f3 glyphs=3 advance=24
+  text bounds=(135,76,32,32) pos=(143,84,16,16) color=#6e6e73ff text="ms" font=f3 glyphs=2 advance=16
+  text bounds=(159,76,40,32) pos=(167,84,24,16) color=#6e6e73ff text="per" font=f3 glyphs=3 advance=24
+  text bounds=(191,76,64,32) pos=(199,84,48,16) color=#6e6e73ff text="second" font=f3 glyphs=6 advance=48
+  text bounds=(247,76,72,32) pos=(255,84,56,16) color=#6e6e73ff text="budget." font=f3 glyphs=7 advance=56
+  text bounds=(7,92,72,32) pos=(15,100,56,16) color=#6e6e73ff text="twidget" font=f3 glyphs=7 advance=56
+  text bounds=(71,92,72,32) pos=(79,100,56,16) color=#6e6e73ff text="doesn't" font=f3 glyphs=7 advance=56
+  text bounds=(135,92,48,32) pos=(143,100,32,16) color=#6e6e73ff text="stop" font=f3 glyphs=4 advance=32
+  text bounds=(175,92,40,32) pos=(183,100,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(207,92,72,32) pos=(215,100,56,16) color=#6e6e73ff text="script:" font=f3 glyphs=7 advance=56
+  text bounds=(271,92,32,32) pos=(279,100,16,16) color=#6e6e73ff text="it" font=f3 glyphs=2 advance=16
+  text bounds=(7,107,64,32) pos=(15,115,48,16) color=#6e6e73ff text="defers" font=f3 glyphs=6 advance=48
+  text bounds=(63,107,40,32) pos=(71,115,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(95,107,56,32) pos=(103,115,40,16) color=#6e6e73ff text="timer" font=f3 glyphs=5 advance=40
+  text bounds=(143,107,56,32) pos=(151,115,40,16) color=#6e6e73ff text="until" font=f3 glyphs=5 advance=40
+  text bounds=(191,107,40,32) pos=(199,115,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(223,107,64,32) pos=(231,115,48,16) color=#6e6e73ff text="budget" font=f3 glyphs=6 advance=48
+  text bounds=(279,107,56,32) pos=(287,115,40,16) color=#6e6e73ff text="frees" font=f3 glyphs=5 advance=40
+  text bounds=(7,123,40,32) pos=(15,131,24,16) color=#6e6e73ff text="up," font=f3 glyphs=3 advance=24
+  text bounds=(39,123,32,32) pos=(47,131,16,16) color=#6e6e73ff text="so" font=f3 glyphs=2 advance=16
+  text bounds=(63,123,40,32) pos=(71,131,24,16) color=#6e6e73ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(95,123,48,32) pos=(103,131,32,16) color=#6e6e73ff text="rate" font=f3 glyphs=4 advance=32
+  text bounds=(135,123,64,32) pos=(143,131,48,16) color=#6e6e73ff text="drops." font=f3 glyphs=6 advance=48
+  solid-fill bounds=(15,154,66,27) layer=(border=(15,154,66,27),radius=(8,8,8,8,8,8,8,8),clip=(15,154,66,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(20,151,56,32) pos=(28,159,40,16) color=#ffffffff text="Start" font=f1 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

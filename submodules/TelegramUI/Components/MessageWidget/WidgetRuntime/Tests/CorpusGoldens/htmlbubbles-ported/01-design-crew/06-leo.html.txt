@@ -1,0 +1,96 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>Here's roughly how a bubble gets its size:</p>
+<pre><code><span style="color:#af52de">let</span> doc  = <span style="color:#007aff">LHDocument</span>(html: msg.html, css: bubbleCSS)
+<span style="color:#af52de">let</span> size = doc.<span style="color:#ff9500">layout</span>(maxWidth: <span style="color:#34c759">480</span>) <span style="color:#8e8e93">// shrink-to-fit</span>
+bubble.frame.size = size + insets</code></pre>
+<p style="font-size: 12px; color: #8e8e93">(it's Objective-C++ really, but you get the idea)</p>
+</body></html>
+
+== layout
+html 0 0 360 172.025
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 172.025
+    p 0 0 360 18.2
+    pre 10 34.2 340 90.625
+      code 10 34.2 0 0
+        span 10 34.2 0 0
+        span 10 34.2 0 0
+        span 10 34.2 0 0
+        span 10 34.2 0 0
+        span 10 34.2 0 0
+        span 10 34.2 0 0
+    p 0 140.825 360 31.2
+
+== paint
+root 360x172.425 items=60
+  solid-fill bounds=(0,26,360,107) layer=(border=(0,26,360,107),radius=(8,8,8,8,8,8,8,8),clip=(0,26,360,107),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  text bounds=(-8,-7,64,32) pos=(0,1,48,16) color=#000000ff text="Here's" font=f1 glyphs=6 advance=48
+  text bounds=(48,-7,72,32) pos=(56,1,56,16) color=#000000ff text="roughly" font=f1 glyphs=7 advance=56
+  text bounds=(112,-7,40,32) pos=(120,1,24,16) color=#000000ff text="how" font=f1 glyphs=3 advance=24
+  text bounds=(144,-7,24,32) pos=(152,1,8,16) color=#000000ff text="a" font=f1 glyphs=1 advance=8
+  text bounds=(160,-7,64,32) pos=(168,1,48,16) color=#000000ff text="bubble" font=f1 glyphs=6 advance=48
+  text bounds=(216,-7,48,32) pos=(224,1,32,16) color=#000000ff text="gets" font=f1 glyphs=4 advance=32
+  text bounds=(256,-7,40,32) pos=(264,1,24,16) color=#000000ff text="its" font=f1 glyphs=3 advance=24
+  text bounds=(288,-7,56,32) pos=(296,1,40,16) color=#000000ff text="size:" font=f1 glyphs=5 advance=40
+  text bounds=(2,27,40,32) pos=(10,35,24,16) color=#af52deff text="let" font=f2 glyphs=3 advance=24
+  text bounds=(26,27,24,32) pos=(34,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(34,27,40,32) pos=(42,35,24,16) color=#000000ff text="doc" font=f2 glyphs=3 advance=24
+  text bounds=(58,27,24,32) pos=(66,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(66,27,24,32) pos=(74,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(74,27,24,32) pos=(82,35,8,16) color=#000000ff text="=" font=f2 glyphs=1 advance=8
+  text bounds=(82,27,24,32) pos=(90,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(90,27,96,32) pos=(98,35,80,16) color=#007affff text="LHDocument" font=f2 glyphs=10 advance=80
+  text bounds=(170,27,64,32) pos=(178,35,48,16) color=#000000ff text="(html:" font=f2 glyphs=6 advance=48
+  text bounds=(218,27,24,32) pos=(226,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(226,27,88,32) pos=(234,35,72,16) color=#000000ff text="msg.html," font=f2 glyphs=9 advance=72
+  text bounds=(298,27,24,32) pos=(306,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(306,27,48,32) pos=(314,35,32,16) color=#000000ff text="css:" font=f2 glyphs=4 advance=32
+  text bounds=(338,27,24,32) pos=(346,35,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(2,45,96,32) pos=(10,53,80,16) color=#000000ff text="bubbleCSS)" font=f2 glyphs=10 advance=80
+  text bounds=(2,63,40,32) pos=(10,71,24,16) color=#af52deff text="let" font=f2 glyphs=3 advance=24
+  text bounds=(26,63,24,32) pos=(34,71,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(34,63,48,32) pos=(42,71,32,16) color=#000000ff text="size" font=f2 glyphs=4 advance=32
+  text bounds=(66,63,24,32) pos=(74,71,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(74,63,24,32) pos=(82,71,8,16) color=#000000ff text="=" font=f2 glyphs=1 advance=8
+  text bounds=(82,63,24,32) pos=(90,71,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(90,63,48,32) pos=(98,71,32,16) color=#000000ff text="doc." font=f2 glyphs=4 advance=32
+  text bounds=(122,63,64,32) pos=(130,71,48,16) color=#ff9500ff text="layout" font=f2 glyphs=6 advance=48
+  text bounds=(170,63,96,32) pos=(178,71,80,16) color=#000000ff text="(maxWidth:" font=f2 glyphs=10 advance=80
+  text bounds=(250,63,24,32) pos=(258,71,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(258,63,40,32) pos=(266,71,24,16) color=#34c759ff text="480" font=f2 glyphs=3 advance=24
+  text bounds=(282,63,24,32) pos=(290,71,8,16) color=#000000ff text=")" font=f2 glyphs=1 advance=8
+  text bounds=(290,63,24,32) pos=(298,71,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(298,63,32,32) pos=(306,71,16,16) color=#8e8e93ff text="//" font=f2 glyphs=2 advance=16
+  text bounds=(314,63,24,32) pos=(322,71,8,16) color=#8e8e93ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(2,82,72,32) pos=(10,90,56,16) color=#8e8e93ff text="shrink-" font=f2 glyphs=7 advance=56
+  text bounds=(58,82,40,32) pos=(66,90,24,16) color=#8e8e93ff text="to-" font=f2 glyphs=3 advance=24
+  text bounds=(82,82,40,32) pos=(90,90,24,16) color=#8e8e93ff text="fit" font=f2 glyphs=3 advance=24
+  text bounds=(2,100,152,32) pos=(10,108,136,16) color=#000000ff text="bubble.frame.size" font=f2 glyphs=17 advance=136
+  text bounds=(138,100,24,32) pos=(146,108,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(146,100,24,32) pos=(154,108,8,16) color=#000000ff text="=" font=f2 glyphs=1 advance=8
+  text bounds=(154,100,24,32) pos=(162,108,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(162,100,48,32) pos=(170,108,32,16) color=#000000ff text="size" font=f2 glyphs=4 advance=32
+  text bounds=(194,100,24,32) pos=(202,108,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(202,100,24,32) pos=(210,108,8,16) color=#000000ff text="+" font=f2 glyphs=1 advance=8
+  text bounds=(210,100,24,32) pos=(218,108,8,16) color=#000000ff text=" " font=f2 glyphs=1 advance=8
+  text bounds=(218,100,64,32) pos=(226,108,48,16) color=#000000ff text="insets" font=f2 glyphs=6 advance=48
+  text bounds=(-8,133,56,32) pos=(0,141,40,16) color=#8e8e93ff text="(it's" font=f3 glyphs=5 advance=40
+  text bounds=(40,133,96,32) pos=(48,141,80,16) color=#8e8e93ff text="Objective-" font=f3 glyphs=10 advance=80
+  text bounds=(120,133,40,32) pos=(128,141,24,16) color=#8e8e93ff text="C++" font=f3 glyphs=3 advance=24
+  text bounds=(152,133,72,32) pos=(160,141,56,16) color=#8e8e93ff text="really," font=f3 glyphs=7 advance=56
+  text bounds=(216,133,40,32) pos=(224,141,24,16) color=#8e8e93ff text="but" font=f3 glyphs=3 advance=24
+  text bounds=(248,133,40,32) pos=(256,141,24,16) color=#8e8e93ff text="you" font=f3 glyphs=3 advance=24
+  text bounds=(280,133,40,32) pos=(288,141,24,16) color=#8e8e93ff text="get" font=f3 glyphs=3 advance=24
+  text bounds=(312,133,40,32) pos=(320,141,24,16) color=#8e8e93ff text="the" font=f3 glyphs=3 advance=24
+  text bounds=(-8,148,56,32) pos=(0,156,40,16) color=#8e8e93ff text="idea)" font=f3 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="ui-monospace,monospace",size=12.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

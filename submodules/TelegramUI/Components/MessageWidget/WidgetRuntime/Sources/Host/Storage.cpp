@@ -4,6 +4,7 @@
 
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/Globals.h"
+#include "Sources/Host/HostState.h"
 #include "Sources/Runtime/Runtime.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Work.h"
@@ -20,7 +21,10 @@ void Storage::load(JSContext* ctx) {
     m_loaded = true;
     JSRuntime* rt = JS_GetRuntime(ctx);
     Host& host = Runtime::from(ctx).host();
-    const std::vector<std::pair<std::string, std::string>> stored = host.storageArea(m_area);
+    // SDK v1 §2.16: a preview's storage starts empty and is never kept.
+    const HostState* state = HostState::find(ctx);
+    const bool preview = state && state->isPreview();
+    const std::vector<std::pair<std::string, std::string>> stored = preview ? std::vector<std::pair<std::string, std::string>>{} : host.storageArea(m_area);
     // The client stores what it got and the quota is the framework's (§5.4): a preload past it is dropped whole, with
     // storage-rejected, and the widget starts empty (§3.1).
     size_t bytes = 0;
@@ -174,6 +178,10 @@ void Storage::commitIfChanged(JSContext* ctx) {
         return;
     }
     m_changed = false;
+    // SDK v1 §2.16: a preview's storage lives only for its run.
+    if (const HostState* state = HostState::find(ctx); state && state->isPreview()) {
+        return;
+    }
     charge(ctx, work::kNodeVisit * uint64_t(m_entries.size() + 1) + work::kCssByte * uint64_t(m_bytes));
     std::vector<std::pair<std::string, std::string>> entries;
     entries.reserve(m_entries.size());

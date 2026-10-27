@@ -27,17 +27,24 @@ func widgetConformanceDebugPosts() -> [EngineLocalWidgetPost] {
             }
             return EngineLocalWidgetPost.Photo(png: png, width: Int32(image.width), height: Int32(image.height))
         }
-        return EngineLocalWidgetPost(html: html, width: post.width, height: post.height, caption: post.caption, photos: photos)
+        // widget-sandbox v0.2.1: the post's message kind and state, so the inserted widget runs with them. Its requests
+        // fail (a local message means nothing to the server) and nothing polls it.
+        let context = post.message?.kind.context(viewer: nil)
+        return EngineLocalWidgetPost(html: html, width: post.width, height: post.height, caption: post.caption, photos: photos, isCopy: context?.isCopy ?? false, canQuery: context?.canQuery ?? false, backgroundQuery: context?.backgroundQuery ?? false, chatData: post.message?.chatData.map { Data($0.utf8) }, publicData: post.message?.publicData.map { Data($0.utf8) })
     }
 }
 
-/// widget-sandbox v0.1.0's corpus but the attacks, each file a widget with auto anchors and its path as caption. Empty
-/// without `WidgetCorpus.bundle`.
-func widgetCorpusDebugPosts() -> [EngineLocalWidgetPost] {
-    guard let root = widgetDebugBundleRoot("WidgetCorpus") else {
+/// The client's game examples (`MessageWidget/Fixtures` 11–14), to play with several fingers: each a widget with auto
+/// anchors and its file name as caption. Empty without `WidgetGames.bundle`.
+func widgetGamesDebugPosts() -> [EngineLocalWidgetPost] {
+    guard let root = widgetDebugBundleRoot("WidgetGames"), let names = try? FileManager.default.contentsOfDirectory(atPath: root.path) else {
         return []
     }
-    return MessageWidgetCorpusListing.items(in: root).map { item in
-        return EngineLocalWidgetPost(html: item.source, width: 0, height: 0, caption: item.path, photos: [])
+    return names.filter { $0.hasSuffix(".html") }.sorted().compactMap { name in
+        guard let html = try? String(contentsOf: root.appendingPathComponent(name), encoding: .utf8) else {
+            return nil
+        }
+        return EngineLocalWidgetPost(html: html, width: 0, height: 0, caption: name, photos: [])
     }
 }
+

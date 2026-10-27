@@ -46,6 +46,19 @@ final class BubbleSizeTests: XCTestCase {
         XCTAssertNil(cache.height(for: AnyHashable("B")))
     }
 
+    /// widget-sandbox v0.1.3 (integration.md, "Which edge stays put"): the anchor is kept next to the height, for a bubble
+    /// re-created from the cache before its widget reports.
+    func testTheCacheKeepsTheAnchorWithTheHeight() {
+        let cache = MessageWidgetHeightCache()
+        cache.set(100.0, anchor: .bottom, for: AnyHashable("A"))
+        XCTAssertEqual(cache.entry(for: AnyHashable("A"))?.height, 100.0)
+        XCTAssertEqual(cache.entry(for: AnyHashable("A"))?.anchor, .bottom)
+        XCTAssertEqual(cache.height(for: AnyHashable("A")), 100.0)
+        cache.set(140.0, anchor: .top, for: AnyHashable("A"))
+        XCTAssertEqual(cache.entry(for: AnyHashable("A"))?.anchor, .top)
+        XCTAssertNil(cache.entry(for: AnyHashable("B")))
+    }
+
     /// Every layout pass sets its message's height again: that must not grow the cache's bookkeeping (task 7 review M2).
     func testSettingTheSameKeysAgainKeepsTheCacheBounded() {
         let cache = MessageWidgetHeightCache(capacity: 2)
@@ -65,5 +78,60 @@ final class BubbleSizeTests: XCTestCase {
         XCTAssertNil(cache.height(for: AnyHashable("A")))
         XCTAssertEqual(cache.height(for: AnyHashable("B")), 110.0)
         XCTAssertEqual(cache.height(for: AnyHashable("C")), 120.0)
+    }
+
+    // MARK: the edge a bubble's next update keeps (widget-sandbox v0.1.3, integration.md "Which edge stays put")
+
+    private func laidOut(height: CGFloat = 220.0, autoHeight: Bool = true, placeholder: Bool = false, pill: Bool = false, widgetsEnabled: Bool = true) -> MessageWidgetLaidOutHeight {
+        return MessageWidgetLaidOutHeight(autoHeight: autoHeight, placeholder: placeholder, pill: pill, widgetsEnabled: widgetsEnabled, height: height)
+    }
+
+    private func widget(reported: CGFloat?, anchor: MessageWidgetResizeAnchor = .bottom, failedToStart: Bool = false) -> MessageWidgetRunState {
+        return MessageWidgetRunState(reportedHeight: reported, resizeAnchor: anchor, failedToStart: failedToStart)
+    }
+
+    func testANewReportedHeightKeepsTheWidgetsEdge() {
+        XCTAssertEqual(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(), widgetsEnabled: true, widget: self.widget(reported: 340.0), cachedAnchor: .top), .bottom)
+    }
+
+    /// An update that leaves the height as it is keeps no edge: its scroll target would end a held jump for nothing.
+    func testAnUpdateThatKeepsTheHeightKeepsNoEdge() {
+        XCTAssertNil(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(), widgetsEnabled: true, widget: self.widget(reported: 220.0), cachedAnchor: .bottom))
+        // Clamped alike: a report past 600 laid out at 600.
+        XCTAssertNil(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(height: 600.0), widgetsEnabled: true, widget: self.widget(reported: 900.0), cachedAnchor: .bottom))
+        // Nothing reported yet in this run: the cached height stays.
+        XCTAssertNil(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(), widgetsEnabled: true, widget: self.widget(reported: nil), cachedAnchor: .bottom))
+    }
+
+    /// The first height after the placeholder is placed as a new message is; a fixed height no report changes.
+    func testTheFirstHeightAndAFixedHeightKeepNoEdge() {
+        XCTAssertNil(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(height: 160.0, placeholder: true), widgetsEnabled: true, widget: self.widget(reported: 340.0), cachedAnchor: nil))
+        XCTAssertNil(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(height: 300.0, autoHeight: false), widgetsEnabled: true, widget: self.widget(reported: 340.0), cachedAnchor: .bottom))
+    }
+
+    /// Widgets switched off: the live widget becomes the pill, keeping the edge it asked for.
+    func testWidgetsSwitchedOffKeepTheLiveWidgetsEdge() {
+        XCTAssertEqual(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(), widgetsEnabled: false, widget: self.widget(reported: 220.0), cachedAnchor: .top), .bottom)
+    }
+
+    /// Widgets switched on: the pill becomes the widget, with no widget yet, keeping the edge cached with its height.
+    func testWidgetsSwitchedOnKeepTheCachedEdge() {
+        XCTAssertEqual(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(height: 64.0, pill: true, widgetsEnabled: false), widgetsEnabled: true, widget: nil, cachedAnchor: .bottom), .bottom)
+    }
+
+    func testAPillThatStaysAPillKeepsNoEdge() {
+        XCTAssertNil(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(height: 64.0, pill: true), widgetsEnabled: true, widget: nil, cachedAnchor: .bottom))
+    }
+
+    /// A widget re-created at its cached height that fails to start goes to the pill, a height change; it never ran,
+    /// so the edge is the one cached with the height.
+    func testAWidgetThatFailsToStartKeepsTheCachedEdge() {
+        XCTAssertEqual(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(), widgetsEnabled: true, widget: self.widget(reported: nil, anchor: .top, failedToStart: true), cachedAnchor: .bottom), .bottom)
+    }
+
+    /// A re-created widget that has not reported has not run its script either, so its top is no choice of its own:
+    /// switched off then, the bubble keeps the edge cached with its height.
+    func testAWidgetThatHasNotRunKeepsTheCachedEdge() {
+        XCTAssertEqual(MessageWidgetBubbleSize.resizeAnchor(laidOut: self.laidOut(), widgetsEnabled: false, widget: self.widget(reported: nil, anchor: .top), cachedAnchor: .bottom), .bottom)
     }
 }

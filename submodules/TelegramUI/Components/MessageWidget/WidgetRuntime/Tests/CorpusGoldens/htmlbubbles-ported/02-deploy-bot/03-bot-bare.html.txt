@@ -1,0 +1,479 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad env" id="root">
+  <div class="row between"><b>Environments</b><span><span class="small muted" id="checked">Checked 2 min ago</span> <button id="refresh">↻ Refresh</button></span></div>
+  <div style="margin-top: 6px" id="chips">
+    <span class="fl on" data-filter="all">All <span class="n">4</span></span><span class="fl" data-filter="ok">Healthy <span class="n">2</span></span><span class="fl" data-filter="warn">Degraded <span class="n">1</span></span><span class="fl" data-filter="down">Down <span class="n">1</span></span>
+  </div>
+  <div class="th"><span class="c1">ENVIRONMENT</span><span class="c2">VERSION</span><span class="c3">UPTIME (30D)</span><span class="c4">&nbsp;</span></div>
+  <div class="rows" id="rows">
+    <div class="item" data-id="production">
+      <div class="r settled" data-row="production" style="animation-delay: 250ms"><span class="c1"><span class="ind" style="--halo: rgba(52,199,89,0.4)"><span class="dot" style="background-color: #34c759"></span></span>production</span><span class="c2"><code>#1839</code></span><span class="c3"><span class="up">99.35%</span></span><span class="c4">›</span></div>
+      <div class="det" hidden="">
+        <div class="row between"><span class="muted">Last 30 days</span><b class="d-up">99.98% uptime</b></div>
+        <div class="ub"><div style="animation-delay: 0.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 9.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 19.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 29.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 38.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 48.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 58.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 68.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 77.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 87.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 97.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 106.9ms; height: 13px; background-color: #ff9500;"></div><div style="animation-delay: 116.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 126.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 136.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 145.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 155.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 165.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 175.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 184.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 194.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 204.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 213.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 223.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 233.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 243.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 252.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 262.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 272.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 281.9ms; height: 22px; background-color: #34c759;"></div></div>
+        <div class="kv"><span class="muted">Region</span><span class="d-region">eu-west-1 · us-east-1</span></div>
+        <div class="kv"><span class="muted">Pods ready</span><span class="d-pods">10/10</span></div>
+        <div class="kv"><span class="muted">Last deploy</span><span class="d-deploy">#1839 · 2 days ago · Maya</span></div>
+        <div class="kv"><span class="muted">Errors · p95</span><span class="d-err">0.02% · 182 ms</span></div>
+        <div class="d-note" style="margin-top: 4px" hidden=""></div>
+        <div style="margin-top: 7px"><span class="mini d-act" data-act="ping">Ping</span></div>
+      </div>
+    </div>
+    <div class="item" data-id="staging">
+      <div class="r settled" data-row="staging" style="animation-delay: 340ms"><span class="c1"><span class="ind" style="--halo: rgba(52,199,89,0.4)"><span class="dot" style="background-color: #34c759"></span></span>staging</span><span class="c2"><code>#1842</code></span><span class="c3"><span class="up">99.36%</span></span><span class="c4">›</span></div>
+      <div class="det" hidden="">
+        <div class="row between"><span class="muted">Last 30 days</span><b class="d-up">100.00% uptime</b></div>
+        <div class="ub"><div style="animation-delay: 0.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 9.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 19.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 29.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 38.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 48.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 58.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 68.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 77.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 87.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 97.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 106.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 116.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 126.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 136.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 145.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 155.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 165.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 175.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 184.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 194.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 204.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 213.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 223.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 233.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 243.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 252.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 262.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 272.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 281.9ms; height: 22px; background-color: #34c759;"></div></div>
+        <div class="kv"><span class="muted">Region</span><span class="d-region">eu-west-1</span></div>
+        <div class="kv"><span class="muted">Pods ready</span><span class="d-pods">4/4</span></div>
+        <div class="kv"><span class="muted">Last deploy</span><span class="d-deploy">#1842 · 18 min ago · Leo</span></div>
+        <div class="kv"><span class="muted">Errors · p95</span><span class="d-err">0.00% · 141 ms</span></div>
+        <div class="d-note" style="margin-top: 4px" hidden=""></div>
+        <div style="margin-top: 7px"><span class="mini d-act" data-act="ping">Ping</span></div>
+      </div>
+    </div>
+    <div class="item" data-id="canary">
+      <div class="r settled" data-row="canary" style="animation-delay: 430ms"><span class="c1"><span class="ind" style="--halo: rgba(255,149,0,0.4)"><span class="dot" style="background-color: #ff9500"></span></span>canary</span><span class="c2"><code>#1842</code></span><span class="c3"><span class="up t-orange">96.58%</span></span><span class="c4">›</span></div>
+      <div class="det" hidden="">
+        <div class="row between"><span class="muted">Last 30 days</span><b class="d-up">97.20% uptime</b></div>
+        <div class="ub"><div style="animation-delay: 0.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 9.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 19.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 29.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 38.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 48.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 58.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 68.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 77.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 87.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 97.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 106.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 116.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 126.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 136.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 145.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 155.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 165.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 175.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 184.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 194.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 204.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 213.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 223.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 233.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 243.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 252.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 262.4ms; height: 13px; background-color: #ff9500;"></div><div style="animation-delay: 272.2ms; height: 13px; background-color: #ff9500;"></div><div style="animation-delay: 281.9ms; height: 13px; background-color: #ff9500;"></div></div>
+        <div class="kv"><span class="muted">Region</span><span class="d-region">us-east-1</span></div>
+        <div class="kv"><span class="muted">Pods ready</span><span class="d-pods">2/2</span></div>
+        <div class="kv"><span class="muted">Last deploy</span><span class="d-deploy">#1842 · 12 min ago · CI</span></div>
+        <div class="kv"><span class="muted">Errors · p95</span><span class="d-err">0.31% · 238 ms</span></div>
+        <div class="d-note t-orange" style="margin-top: 4px">⚠︎ pod-7 readiness probe slow (1.8s)</div>
+        <div style="margin-top: 7px"><span class="mini t-orange d-act" data-act="restart">⟳ Restart pod-7</span></div>
+      </div>
+    </div>
+    <div class="item" data-id="dev-eu">
+      <div class="r" data-row="dev-eu" style="animation-delay: 520ms"><span class="c1"><span class="ind" style="--halo: rgba(255,59,48,0.4)"><span class="dot" style="background-color: #ff3b30"></span></span>dev-eu</span><span class="c2"><code>#1830</code></span><span class="c3"><b class="up t-red">down</b></span><span class="c4">›</span></div>
+      <div class="det" hidden="">
+        <div class="row between"><span class="muted">Last 30 days</span><b class="d-up">91.40% uptime</b></div>
+        <div class="ub"><div style="animation-delay: 0.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 9.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 19.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 29.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 38.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 48.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 58.3ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 68.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 77.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 87.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 97.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 106.9ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 116.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 126.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 136.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 145.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 155.5ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 165.2ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 175.0ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 184.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 194.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 204.1ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 213.8ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 223.6ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 233.3ms; height: 13px; background-color: #ff9500;"></div><div style="animation-delay: 243.0ms; height: 13px; background-color: #ff9500;"></div><div style="animation-delay: 252.7ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 262.4ms; height: 22px; background-color: #34c759;"></div><div style="animation-delay: 272.2ms; height: 7px; background-color: #ff3b30;"></div><div style="animation-delay: 281.9ms; height: 7px; background-color: #ff3b30;"></div></div>
+        <div class="kv"><span class="muted">Region</span><span class="d-region">eu-central-1</span></div>
+        <div class="kv"><span class="muted">Pods ready</span><span class="d-pods t-red">0/3</span></div>
+        <div class="kv"><span class="muted">Last deploy</span><span class="d-deploy">#1830 · 6 days ago · Priya</span></div>
+        <div class="kv"><span class="muted">Errors · p95</span><span class="d-err">— · —</span></div>
+        <div class="d-note t-red" style="margin-top: 4px">⚠︎ Health check failed: connection refused</div>
+        <div style="margin-top: 7px"><span class="mini t-red d-act" data-act="restart">⟳ Restart pods</span></div>
+      </div>
+    </div>
+    <div class="r muted" id="empty" hidden="">Nothing in this state 🎉</div>
+  </div>
+  <div class="split">
+    <div class="donut"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#8e8e93" stroke-opacity="0.2" stroke-width="10"></circle><path id="arc-stable" fill="none" stroke="#5856d6" stroke-width="10" d="M32.00 6.00 A26 26 0 1 1 15.97 11.53"></path><path id="arc-canary" fill="none" stroke="#ff9500" stroke-width="10" d="M15.97 11.53 A26 26 0 0 1 30.96 6.02"></path></svg><div id="donut-label">90/10</div></div>
+    <div class="grow small" style="line-height: 1.6">
+      <div><span style="color: #5856d6">●</span> Stable — <span id="stable-pct">90</span>% of traffic</div>
+      <div class="row"><span class="grow"><span style="color: #ff9500">●</span> Canary — <span id="canary-pct">10</span>% of traffic</span><span class="stp" data-w="-1">−</span><span class="stp" data-w="1">+</span></div>
+      <div class="muted">Error rate <span id="err-rate" class="">0.02%</span> · p95 latency <span id="p95">182</span> ms</div>
+    </div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 357.55
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 357.55
+    div 15 13 360 331.55
+      div 15 13 360 26.8
+        b 15 17.3 96 18.2
+        span 117 13 258 26.8
+          span 117 13 0 0
+          button 274 18 88 16.8
+      div 15 45.8 360 18.95
+        span 24 47.8 40 14.95
+          span 24 47.8 0 0
+        span 86 47.8 72 14.95
+          span 86 47.8 0 0
+        span 180 47.8 80 14.95
+          span 180 47.8 0 0
+        span 282 47.8 48 14.95
+          span 282 47.8 0 0
+      div 21 72.75 348 26
+        span 21 72.75 176 26
+        span 197 72.75 70 26
+        span 267 72.75 84 26
+        span 351 72.75 18 26
+      div 9 101.75 372 145
+        div 9 101.75 372 29
+          div 15 102.75 360 28
+            span 15 108.3 188 16.9
+              span 18 113.3 8 8
+                span 18 113.3 8 8
+            span 203 108.3 70 16.9
+              code 203 108.3 0 0
+            span 273 108.3 84 16.9
+              span 273 108.3 0 0
+            span 357 108.3 18 16.9
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+        div 9 130.75 372 29
+          div 15 131.75 360 28
+            span 15 137.3 188 16.9
+              span 18 142.3 8 8
+                span 18 142.3 8 8
+            span 203 137.3 70 16.9
+              code 203 137.3 0 0
+            span 273 137.3 84 16.9
+              span 273 137.3 0 0
+            span 357 137.3 18 16.9
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+        div 9 159.75 372 29
+          div 15 160.75 360 28
+            span 15 166.3 188 16.9
+              span 18 171.3 8 8
+                span 18 171.3 8 8
+            span 203 166.3 70 16.9
+              code 203 166.3 0 0
+            span 273 166.3 84 16.9
+              span 273 166.3 0 0
+            span 357 166.3 18 16.9
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+        div 9 188.75 372 29
+          div 15.0002 189.75 360 28
+            span 15.0002 195.3 188 16.9
+              span 18.0002 200.3 8 8
+                span 18.0002 200.3 8 8
+            span 203 195.3 70 16.9
+              code 203 195.3 0 0
+            span 273 195.3 84 16.9
+              b 273 195.3 0 0
+            span 357 195.3 18 16.9
+          div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              b 0 0 0 0
+            div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+              div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+              span 0 0 0 0
+            div 0 0 0 0
+            div 0 0 0 0
+              span 0 0 0 0
+        div 15 218.75 360 28
+      div 15 267.75 360 76.8
+        div 15 274.15 64 64
+          svg 15 274.15 64 64
+            circle 0 0 0 0
+            path 0 0 0 0
+            path 0 0 0 0
+          div 15 298.15 64 13
+        div 91 267.75 284 76.8
+          div 91 267.75 284 19.2
+            span 91 267.75 0 0
+            span 91 267.75 0 0
+          div 91 286.95 284 19.2
+            span 91 286.95 238 19.2
+              span 91 286.95 0 0
+              span 91 286.95 0 0
+            span 332 287.55 20 18
+            span 355 287.55 20 18
+          div 91 306.15 284 38.4
+            span 91 306.15 0 0
+            span 91 306.15 0 0
+
+== paint
+root 390x357.55 items=97
+  solid-fill bounds=(0,0,390,358) layer=(border=(0,0,390,358),radius=(14,14,14,14,14,14,14,14),clip=(0,0,390,358),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,390,358) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,390,358) root=0
+  borders bounds=(15,257,360,88) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f33),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(15,257,360,88) root=0
+  solid-fill bounds=(332,288,20,18) layer=(border=(332,288,20,18),radius=(6,6,6,6,6,6,6,6),clip=(332,288,20,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(355,288,20,18) layer=(border=(355,288,20,18),radius=(6,6,6,6,6,6,6,6),clip=(355,288,20,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  text bounds=(7,10,112,32) pos=(15,18,96,16) color=#000000ff text="Environments" font=f1 glyphs=12 advance=96
+  text bounds=(109,10,72,32) pos=(117,18,56,16) color=#6e6e73ff text="Checked" font=f2 glyphs=7 advance=56
+  text bounds=(173,10,24,32) pos=(181,18,8,16) color=#6e6e73ff text="2" font=f2 glyphs=1 advance=8
+  text bounds=(189,10,40,32) pos=(197,18,24,16) color=#6e6e73ff text="min" font=f2 glyphs=3 advance=24
+  text bounds=(221,10,40,32) pos=(229,18,24,16) color=#6e6e73ff text="ago" font=f2 glyphs=3 advance=24
+  solid-fill bounds=(261,13,114,27) layer=(border=(261,13,114,27),radius=(8,8,8,8,8,8,8,8),clip=(261,13,114,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(266,10,40,32) pos=(274,18,24,16) color=#000000ff text="↻" font=f1 glyphs=3 advance=24
+  text bounds=(298,10,72,32) pos=(306,18,56,16) color=#000000ff text="Refresh" font=f1 glyphs=7 advance=56
+  solid-fill bounds=(15,46,58,19) layer=(border=(15,46,58,19),radius=(9.475,9.475,9.475,9.475,9.475,9.475,9.475,9.475),clip=(15,46,58,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  text bounds=(16,40,40,32) pos=(24,48,24,16) color=#ffffffff text="All" font=f3 glyphs=3 advance=24
+  text bounds=(48,40,24,32) pos=(56,48,8,16) color=#ffffffff text="4" font=f3 glyphs=1 advance=8
+  solid-fill bounds=(77,46,90,19) layer=(border=(77,46,90,19),radius=(9.475,9.475,9.475,9.475,9.475,9.475,9.475,9.475),clip=(77,46,90,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(78,40,72,32) pos=(86,48,56,16) color=#000000ff text="Healthy" font=f3 glyphs=7 advance=56
+  text bounds=(142,40,24,32) pos=(150,48,8,16) color=#000000ff text="2" font=f3 glyphs=1 advance=8
+  solid-fill bounds=(171,46,98,19) layer=(border=(171,46,98,19),radius=(9.475,9.475,9.475,9.475,9.475,9.475,9.475,9.475),clip=(171,46,98,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(172,40,80,32) pos=(180,48,64,16) color=#000000ff text="Degraded" font=f3 glyphs=8 advance=64
+  text bounds=(244,40,24,32) pos=(252,48,8,16) color=#000000ff text="1" font=f3 glyphs=1 advance=8
+  solid-fill bounds=(273,46,66,19) layer=(border=(273,46,66,19),radius=(9.475,9.475,9.475,9.475,9.475,9.475,9.475,9.475),clip=(273,46,66,19),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(274,40,48,32) pos=(282,48,32,16) color=#000000ff text="Down" font=f3 glyphs=4 advance=32
+  text bounds=(314,40,24,32) pos=(322,48,8,16) color=#000000ff text="1" font=f3 glyphs=1 advance=8
+  text bounds=(13,64,104,32) pos=(21,72,88,16) color=#8e8e93ff text="ENVIRONMENT" font=f4 glyphs=11 advance=88
+  text bounds=(189,64,72,32) pos=(197,72,56,16) color=#8e8e93ff text="VERSION" font=f4 glyphs=7 advance=56
+  text bounds=(295,64,64,32) pos=(303,72,48,16) color=#8e8e93ff text="UPTIME" font=f4 glyphs=6 advance=48
+  text bounds=(303,77,56,32) pos=(311,85,40,16) color=#8e8e93ff text="(30D)" font=f4 glyphs=5 advance=40
+  text bounds=(345,64,32,32) pos=(353,72,16,16) color=#8e8e93ff text=" " font=f4 glyphs=2 advance=16
+  text bounds=(83,261,40,32) pos=(91,269,24,16) color=#5856d6ff text="●" font=f2 glyphs=3 advance=24
+  text bounds=(115,261,64,32) pos=(123,269,48,16) color=#000000ff text="Stable" font=f2 glyphs=6 advance=48
+  text bounds=(171,261,40,32) pos=(179,269,24,16) color=#000000ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(203,261,32,32) pos=(211,269,16,16) color=#000000ff text="90" font=f2 glyphs=2 advance=16
+  text bounds=(219,261,24,32) pos=(227,269,8,16) color=#000000ff text="%" font=f2 glyphs=1 advance=8
+  text bounds=(235,261,32,32) pos=(243,269,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(259,261,72,32) pos=(267,269,56,16) color=#000000ff text="traffic" font=f2 glyphs=7 advance=56
+  text bounds=(83,280,40,32) pos=(91,288,24,16) color=#ff9500ff text="●" font=f2 glyphs=3 advance=24
+  text bounds=(115,280,64,32) pos=(123,288,48,16) color=#000000ff text="Canary" font=f2 glyphs=6 advance=48
+  text bounds=(171,280,40,32) pos=(179,288,24,16) color=#000000ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(203,280,32,32) pos=(211,288,16,16) color=#000000ff text="10" font=f2 glyphs=2 advance=16
+  text bounds=(219,280,24,32) pos=(227,288,8,16) color=#000000ff text="%" font=f2 glyphs=1 advance=8
+  text bounds=(235,280,32,32) pos=(243,288,16,16) color=#000000ff text="of" font=f2 glyphs=2 advance=16
+  text bounds=(259,280,72,32) pos=(267,288,56,16) color=#000000ff text="traffic" font=f2 glyphs=7 advance=56
+  text bounds=(324,281,40,32) pos=(332,289,24,16) color=#000000ff text="−" font=f5 glyphs=3 advance=24
+  text bounds=(353,281,24,32) pos=(361,289,8,16) color=#000000ff text="+" font=f5 glyphs=1 advance=8
+  text bounds=(83,299,56,32) pos=(91,307,40,16) color=#6e6e73ff text="Error" font=f2 glyphs=5 advance=40
+  text bounds=(131,299,48,32) pos=(139,307,32,16) color=#6e6e73ff text="rate" font=f2 glyphs=4 advance=32
+  text bounds=(171,299,56,32) pos=(179,307,40,16) color=#6e6e73ff text="0.02%" font=f2 glyphs=5 advance=40
+  text bounds=(219,299,32,32) pos=(227,307,16,16) color=#6e6e73ff text="·" font=f2 glyphs=2 advance=16
+  text bounds=(243,299,40,32) pos=(251,307,24,16) color=#6e6e73ff text="p95" font=f2 glyphs=3 advance=24
+  text bounds=(275,299,72,32) pos=(283,307,56,16) color=#6e6e73ff text="latency" font=f2 glyphs=7 advance=56
+  text bounds=(339,299,40,32) pos=(347,307,24,16) color=#6e6e73ff text="182" font=f2 glyphs=3 advance=24
+  text bounds=(83,318,32,32) pos=(91,326,16,16) color=#6e6e73ff text="ms" font=f2 glyphs=2 advance=16
+  set-clip bounds=(9,101.75,372,145) pos=(9,101.75,372,145) radius=(0,0,0,0,0,0,0,0)
+  borders bounds=(9,102,372,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f24),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(9,102,372,29) root=0
+  solid-fill bounds=(18,113,8,8) layer=(border=(18,113,8,8),radius=(4,4,4,4,4,4,4,4),clip=(18,113,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(27,100,96,32) pos=(35,108,80,16) color=#000000ff text="production" font=f6 glyphs=10 advance=80
+  solid-fill bounds=(203,107,48,18) layer=(border=(203,107,48,18),radius=(4,4,4,4,4,4,4,4),clip=(203,107,48,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(199,100,56,32) pos=(207,108,40,16) color=#000000ff text="#1839" font=f7 glyphs=5 advance=40
+  text bounds=(301,100,64,32) pos=(309,108,48,16) color=#000000ff text="99.35%" font=f6 glyphs=6 advance=48
+  text bounds=(343,100,40,32) pos=(351,108,24,16) color=#8e8e93ff text="›" font=f6 glyphs=3 advance=24
+  borders bounds=(9,131,372,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f24),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(9,131,372,29) root=0
+  solid-fill bounds=(18,142,8,8) layer=(border=(18,142,8,8),radius=(4,4,4,4,4,4,4,4),clip=(18,142,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(27,129,72,32) pos=(35,137,56,16) color=#000000ff text="staging" font=f6 glyphs=7 advance=56
+  solid-fill bounds=(203,136,48,18) layer=(border=(203,136,48,18),radius=(4,4,4,4,4,4,4,4),clip=(203,136,48,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(199,129,56,32) pos=(207,137,40,16) color=#000000ff text="#1842" font=f7 glyphs=5 advance=40
+  text bounds=(301,129,64,32) pos=(309,137,48,16) color=#000000ff text="99.36%" font=f6 glyphs=6 advance=48
+  text bounds=(343,129,40,32) pos=(351,137,24,16) color=#8e8e93ff text="›" font=f6 glyphs=3 advance=24
+  borders bounds=(9,160,372,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f24),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(9,160,372,29) root=0
+  solid-fill bounds=(18,171,8,8) layer=(border=(18,171,8,8),radius=(4,4,4,4,4,4,4,4),clip=(18,171,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  text bounds=(27,158,64,32) pos=(35,166,48,16) color=#000000ff text="canary" font=f6 glyphs=6 advance=48
+  solid-fill bounds=(203,165,48,18) layer=(border=(203,165,48,18),radius=(4,4,4,4,4,4,4,4),clip=(203,165,48,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(199,158,56,32) pos=(207,166,40,16) color=#000000ff text="#1842" font=f7 glyphs=5 advance=40
+  text bounds=(301,158,64,32) pos=(309,166,48,16) color=#ff9500ff text="96.58%" font=f6 glyphs=6 advance=48
+  text bounds=(343,158,40,32) pos=(351,166,24,16) color=#8e8e93ff text="›" font=f6 glyphs=3 advance=24
+  borders bounds=(9,189,372,29) borders=(left=(0,0,#000000ff),top=(1,4,#7f7f7f24),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(0,0,0,0,0,0,0,0)) pos=(9,189,372,29) root=0
+  solid-fill bounds=(18,200,8,8) layer=(border=(18,200,8,8),radius=(4,4,4,4,4,4,4,4),clip=(18,200,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b30ff
+  text bounds=(27.0002,187,48,32) pos=(35.0002,195,32,16) color=#000000ff text="dev-" font=f6 glyphs=4 advance=32
+  text bounds=(59.0002,187,32,32) pos=(67.0002,195,16,16) color=#000000ff text="eu" font=f6 glyphs=2 advance=16
+  solid-fill bounds=(203,194,48,18) layer=(border=(203,194,48,18),radius=(4,4,4,4,4,4,4,4),clip=(203,194,48,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(199,187,56,32) pos=(207,195,40,16) color=#000000ff text="#1830" font=f7 glyphs=5 advance=40
+  text bounds=(317,187,48,32) pos=(325,195,32,16) color=#ff3b30ff text="down" font=f8 glyphs=4 advance=32
+  text bounds=(343,187,40,32) pos=(351,195,24,16) color=#8e8e93ff text="›" font=f6 glyphs=3 advance=24
+  borders bounds=(9,218,372,29) borders=(left=(0,0,#6e6e73ff),top=(1,4,#7f7f7f24),right=(0,0,#6e6e73ff),bottom=(0,0,#6e6e73ff),radius=(0,0,0,0,0,0,0,0)) pos=(9,218,372,29) root=0
+  text bounds=(7,216,72,32) pos=(15,224,56,16) color=#6e6e73ff text="Nothing" font=f6 glyphs=7 advance=56
+  text bounds=(71,216,32,32) pos=(79,224,16,16) color=#6e6e73ff text="in" font=f6 glyphs=2 advance=16
+  text bounds=(95,216,48,32) pos=(103,224,32,16) color=#6e6e73ff text="this" font=f6 glyphs=4 advance=32
+  text bounds=(135,216,56,32) pos=(143,224,40,16) color=#6e6e73ff text="state" font=f6 glyphs=5 advance=40
+  text bounds=(183,216,48,32) pos=(191,224,32,16) color=#6e6e73ff text="🎉" font=f6 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(15,274.15,64,64) pos=(15,274.15,64,64) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(15,274.15,64,64)
+    group opacity=1 matrix=(1,0,0,1,15,274.15) backface=0 bounds=(0,0,64,64) exact=0
+      path bounds=(-15,-15,94,94) ops=(0,3,3,3,3,4) points=(58,32,58,46.3594,46.3594,58,32,58,17.6406,58,6,46.3594,6,32,6,17.6406,17.6406,6,32,6,46.3594,6,58,17.6406,58,32) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#8e8e9333 stroke-width=10 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-15.0012,-15,94.0042,94.0036) ops=(0,3,3,3,3) points=(32,6,44.7006,5.99972,55.5427,15.1752,57.6427,27.701,59.7427,40.2268,52.4859,52.4367,40.4796,56.5786,28.4734,60.7204,15.2318,55.5821,9.16202,44.4258,3.0922,33.2695,5.97071,19.3607,15.97,11.53) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#5856d6ff stroke-width=10 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-5.03,-14.98,56.99,47.51) ops=(0,3) points=(15.97,11.53,20.2649,8.1662,25.509,6.23857,30.96,6.02) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ff9500ff stroke-width=10 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(19,289,56,32) pos=(27,297,40,16) color=#000000ff text="90/10" font=f9 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11.5,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=10,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f9 (family="system-ui,sans-serif",size=10,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

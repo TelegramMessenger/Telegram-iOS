@@ -1,0 +1,117 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top Programming Languages</title>
+<style></style>
+</head>
+<body>
+<h2>📊 Top 6 Programming Languages</h2>
+<p>Share of developers using each language (illustrative) · tap a bar</p>
+<svg id="chart" viewBox="0 0 372 250" role="img" aria-label="Bar chart of programming language popularity"><g class="grid"><line x1="76" x2="76" y1="6" y2="226"></line><line x1="116.57142857142857" x2="116.57142857142857" y1="6" y2="226"></line><line x1="157.14285714285714" x2="157.14285714285714" y1="6" y2="226"></line><line x1="197.71428571428572" x2="197.71428571428572" y1="6" y2="226"></line><line x1="238.28571428571428" x2="238.28571428571428" y1="6" y2="226"></line><line x1="278.8571428571429" x2="278.8571428571429" y1="6" y2="226"></line><line x1="319.42857142857144" x2="319.42857142857144" y1="6" y2="226"></line><line x1="360" x2="360" y1="6" y2="226"></line></g><g class="axis"><text x="76" y="242" text-anchor="middle">0%</text><text x="116.57142857142857" y="242" text-anchor="middle">10%</text><text x="157.14285714285714" y="242" text-anchor="middle">20%</text><text x="197.71428571428572" y="242" text-anchor="middle">30%</text><text x="238.28571428571428" y="242" text-anchor="middle">40%</text><text x="278.8571428571429" y="242" text-anchor="middle">50%</text><text x="319.42857142857144" y="242" text-anchor="middle">60%</text><text x="360" y="242" text-anchor="middle">70%</text><text x="68" y="28.333333333333332" text-anchor="end">JavaScript</text><text x="68" y="65" text-anchor="end">Python</text><text x="68" y="101.66666666666666" text-anchor="end">Java</text><text x="68" y="138.33333333333331" text-anchor="end">TypeScript</text><text x="68" y="174.99999999999997" text-anchor="end">C#</text><text x="68" y="211.66666666666663" text-anchor="end">Go</text></g><rect class="bar" x="76" y="12.6" width="251.5" height="23.5" rx="6" fill="#f7df1e" data-i="0"></rect><rect class="bar" x="76" y="49.3" width="206.9" height="23.5" rx="6" fill="#3776ab" data-i="1"></rect><rect class="bar" x="76" y="85.9" width="121.7" height="23.5" rx="6" fill="#e76f00" data-i="2"></rect><rect class="bar" x="76" y="122.6" width="154.2" height="23.5" rx="6" fill="#3178c6" data-i="3"></rect><rect class="bar" x="76" y="159.3" width="109.5" height="23.5" rx="6" fill="#68217a" data-i="4"></rect><rect class="bar" x="76" y="195.9" width="56.8" height="23.5" rx="6" fill="#00add8" data-i="5"></rect></svg>
+<div class="tip" id="tip"></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 338.768
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 310.768
+    h2 14 14 332 21.25
+    p 14 37.25 332 32.4
+    svg 14 79.65 332 223.118
+      g 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+      g 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+      rect 0 0 0 0
+      rect 0 0 0 0
+      rect 0 0 0 0
+      rect 0 0 0 0
+      rect 0 0 0 0
+      rect 0 0 0 0
+    div 14 308.768 332 16
+
+== paint
+root 360x338.768 items=47
+  solid-fill bounds=(0,0,360,339) layer=(border=(0,0,360,339),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,339),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  set-clip bounds=(14,79.65,332,223.118) pos=(14,79.65,332,223.118) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(14,79.65,332,223.118)
+    group opacity=1 matrix=(0.892473,0,0,0.892473,14,79.65) backface=0 bounds=(0,0,372,250) exact=0
+      path bounds=(73,3,6,226) ops=(0,1) points=(76,6,76,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(113.571,3,6,226) ops=(0,1) points=(116.571,6,116.571,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(154.143,3,6,226) ops=(0,1) points=(157.143,6,157.143,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(194.714,3,6,226) ops=(0,1) points=(197.714,6,197.714,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(235.286,3,6,226) ops=(0,1) points=(238.286,6,238.286,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(275.857,3,6,226) ops=(0,1) points=(278.857,6,278.857,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(316.429,3,6,226) ops=(0,1) points=(319.429,6,319.429,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(357,3,6,226) ops=(0,1) points=(360,6,360,226) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(60,222,32,32) pos=(68,230,16,16) color=#374151ff text="0%" font=f1 glyphs=2 advance=16
+      text bounds=(96.5714,222,40,32) pos=(104.571,230,24,16) color=#374151ff text="10%" font=f1 glyphs=3 advance=24
+      text bounds=(137.143,222,40,32) pos=(145.143,230,24,16) color=#374151ff text="20%" font=f1 glyphs=3 advance=24
+      text bounds=(177.714,222,40,32) pos=(185.714,230,24,16) color=#374151ff text="30%" font=f1 glyphs=3 advance=24
+      text bounds=(218.286,222,40,32) pos=(226.286,230,24,16) color=#374151ff text="40%" font=f1 glyphs=3 advance=24
+      text bounds=(258.857,222,40,32) pos=(266.857,230,24,16) color=#374151ff text="50%" font=f1 glyphs=3 advance=24
+      text bounds=(299.429,222,40,32) pos=(307.429,230,24,16) color=#374151ff text="60%" font=f1 glyphs=3 advance=24
+      text bounds=(340,222,40,32) pos=(348,230,24,16) color=#374151ff text="70%" font=f1 glyphs=3 advance=24
+      text bounds=(-20,8.33333,96,32) pos=(-12,16.3333,80,16) color=#374151ff text="JavaScript" font=f1 glyphs=10 advance=80
+      text bounds=(12,45,64,32) pos=(20,53,48,16) color=#374151ff text="Python" font=f1 glyphs=6 advance=48
+      text bounds=(28,81.6667,48,32) pos=(36,89.6667,32,16) color=#374151ff text="Java" font=f1 glyphs=4 advance=32
+      text bounds=(-20,118.333,96,32) pos=(-12,126.333,80,16) color=#374151ff text="TypeScript" font=f1 glyphs=10 advance=80
+      text bounds=(44,155,32,32) pos=(52,163,16,16) color=#374151ff text="C#" font=f1 glyphs=2 advance=16
+      text bounds=(44,191.667,32,32) pos=(52,199.667,16,16) color=#374151ff text="Go" font=f1 glyphs=2 advance=16
+      path bounds=(75,11.6,253.5,25.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(82,12.6,321.5,12.6,324.814,12.6,327.5,15.2863,327.5,18.6,327.5,30.1,327.5,33.4137,324.814,36.1,321.5,36.1,82,36.1,78.6863,36.1,76,33.4137,76,30.1,76,18.6,76,15.2863,78.6863,12.6,82,12.6) fill=1 fill-color=#f7df1eff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(75,48.3,208.9,25.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(82,49.3,276.9,49.3,280.214,49.3,282.9,51.9863,282.9,55.3,282.9,66.8,282.9,70.1137,280.214,72.8,276.9,72.8,82,72.8,78.6863,72.8,76,70.1137,76,66.8,76,55.3,76,51.9863,78.6863,49.3,82,49.3) fill=1 fill-color=#3776abff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(75,84.9,123.7,25.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(82,85.9,191.7,85.9,195.014,85.9,197.7,88.5863,197.7,91.9,197.7,103.4,197.7,106.714,195.014,109.4,191.7,109.4,82,109.4,78.6863,109.4,76,106.714,76,103.4,76,91.9,76,88.5863,78.6863,85.9,82,85.9) fill=1 fill-color=#e76f00ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(75,121.6,156.2,25.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(82,122.6,224.2,122.6,227.514,122.6,230.2,125.286,230.2,128.6,230.2,140.1,230.2,143.414,227.514,146.1,224.2,146.1,82,146.1,78.6863,146.1,76,143.414,76,140.1,76,128.6,76,125.286,78.6863,122.6,82,122.6) fill=1 fill-color=#3178c6ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(75,158.3,111.5,25.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(82,159.3,179.5,159.3,182.814,159.3,185.5,161.986,185.5,165.3,185.5,176.8,185.5,180.114,182.814,182.8,179.5,182.8,82,182.8,78.6863,182.8,76,180.114,76,176.8,76,165.3,76,161.986,78.6863,159.3,82,159.3) fill=1 fill-color=#68217aff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(75,194.9,58.8,25.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(82,195.9,126.8,195.9,130.114,195.9,132.8,198.586,132.8,201.9,132.8,213.4,132.8,216.714,130.114,219.4,126.8,219.4,82,219.4,78.6863,219.4,76,216.714,76,213.4,76,201.9,76,198.586,78.6863,195.9,82,195.9) fill=1 fill-color=#00add8ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(6,8,48,32) pos=(14,16,32,16) color=#111111ff text="📊" font=f2 glyphs=4 advance=32
+  text bounds=(46,8,40,32) pos=(54,16,24,16) color=#111111ff text="Top" font=f2 glyphs=3 advance=24
+  text bounds=(78,8,24,32) pos=(86,16,8,16) color=#111111ff text="6" font=f2 glyphs=1 advance=8
+  text bounds=(94,8,104,32) pos=(102,16,88,16) color=#111111ff text="Programming" font=f2 glyphs=11 advance=88
+  text bounds=(190,8,88,32) pos=(198,16,72,16) color=#111111ff text="Languages" font=f2 glyphs=9 advance=72
+  text bounds=(6,29,56,32) pos=(14,37,40,16) color=#6b7280ff text="Share" font=f3 glyphs=5 advance=40
+  text bounds=(54,29,32,32) pos=(62,37,16,16) color=#6b7280ff text="of" font=f3 glyphs=2 advance=16
+  text bounds=(78,29,96,32) pos=(86,37,80,16) color=#6b7280ff text="developers" font=f3 glyphs=10 advance=80
+  text bounds=(166,29,56,32) pos=(174,37,40,16) color=#6b7280ff text="using" font=f3 glyphs=5 advance=40
+  text bounds=(214,29,48,32) pos=(222,37,32,16) color=#6b7280ff text="each" font=f3 glyphs=4 advance=32
+  text bounds=(254,29,80,32) pos=(262,37,64,16) color=#6b7280ff text="language" font=f3 glyphs=8 advance=64
+  text bounds=(6,45,128,32) pos=(14,53,112,16) color=#6b7280ff text="(illustrative)" font=f3 glyphs=14 advance=112
+  text bounds=(126,45,32,32) pos=(134,53,16,16) color=#6b7280ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(150,45,40,32) pos=(158,53,24,16) color=#6b7280ff text="tap" font=f3 glyphs=3 advance=24
+  text bounds=(182,45,24,32) pos=(190,53,8,16) color=#6b7280ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(198,45,40,32) pos=(206,53,24,16) color=#6b7280ff text="bar" font=f3 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

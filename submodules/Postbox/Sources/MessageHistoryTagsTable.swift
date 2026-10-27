@@ -128,6 +128,38 @@ class MessageHistoryTagsTable: Table {
         return indices
     }
     
+    /// The indices carrying `tag` whose id lies in `idRange`, read from the part of the tag's index strictly
+    /// between `lower` and `upper` (nil: that end of the chat's index), in index order: nearest `upper` first
+    /// with `fromUpper`, else nearest `lower`. At most `limit` of them (`limit <= 0`: all). The index orders by
+    /// (date, id), so a message of `idRange` dated before `lower` or after `upper` is outside that part and is
+    /// not returned, whichever of them was imported. Only when `lower` does not sort below `upper` (crossed:
+    /// `lower` dated after `upper`) is the chat's whole index for the tag read instead.
+    func indices(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace, idRange: ClosedRange<MessageId.Id>, after lower: MessageIndex?, before upper: MessageIndex?, fromUpper: Bool, limit: Int) -> [MessageIndex] {
+        var lowerKey = lower.map { self.key(tag: tag, index: $0) } ?? self.lowerBound(tag: tag, peerId: peerId, namespace: namespace)
+        var upperKey = upper.map { self.key(tag: tag, index: $0) } ?? self.upperBound(tag: tag, peerId: peerId, namespace: namespace)
+        // Cost: this whole-index read, and a window an old-dated (imported) neighbour widens, are a keys-only
+        // scan of the tag's index on the Postbox queue until `limit` matches are found. Only chats with
+        // imported history out of order with its ids pay it, on each candidate search of a tag fill there.
+        if !(lowerKey < upperKey) {
+            lowerKey = self.lowerBound(tag: tag, peerId: peerId, namespace: namespace)
+            upperKey = self.upperBound(tag: tag, peerId: peerId, namespace: namespace)
+        }
+        var indices: [MessageIndex] = []
+        // The range bounds of `ValueBox.range` are exclusive. The limit counts matching ids only, so the
+        // statement itself runs without one.
+        self.valueBox.range(self.table, start: fromUpper ? upperKey : lowerKey, end: fromUpper ? lowerKey : upperKey, keys: { key in
+            let index = extractKey(key)
+            if idRange.contains(index.id.id) {
+                indices.append(index)
+                if limit > 0 && indices.count >= limit {
+                    return false
+                }
+            }
+            return true
+        }, limit: 0)
+        return indices
+    }
+
     func getMessageCountInRange(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
         precondition(lowerBound.id.namespace == namespace)
         precondition(upperBound.id.namespace == namespace)

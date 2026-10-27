@@ -551,9 +551,57 @@ namespace litehtml
             return m;
         }
 
+        // Telegram (VENDOR.md edit 58): the <use> instances being drawn on this thread, innermost last, each its target
+        // and the use. An instance inherits from its use (SVG 2 §5.6.3), so above a target the inheritance walk goes on
+        // at the use, not at the target's own parent. Thread-local: tiles are drawn in parallel.
+        thread_local std::vector<std::pair<const element*, element::ptr>> t_use_instances;
+
+        // Holds one instance on t_use_instances for its scope, so a throw while it is drawn cannot leave it there.
+        struct use_instance_scope
+        {
+            use_instance_scope(const element* target, const element::ptr& use) { t_use_instances.emplace_back(target, use); }
+            ~use_instance_scope() { t_use_instances.pop_back(); }
+            use_instance_scope(const use_instance_scope&)            = delete;
+            use_instance_scope& operator=(const use_instance_scope&) = delete;
+        };
+
+        element::ptr svg_inheritance_parent(const element::ptr& el)
+        {
+            for(auto it = t_use_instances.rbegin(); it != t_use_instances.rend(); ++it)
+            {
+                if(it->first == el.get())
+                    return it->second;
+            }
+            return el->parent();
+        }
+
+        // Edit 58: currentColor inside an instance is the colour along the instance's chain: the nearest element on it
+        // that declares color, else the use's own computed colour (inherited in the use's real context).
+        web_color svg_current_color(const element::ptr& el)
+        {
+            if(t_use_instances.empty())
+                return el->css().get_color();
+            for(element::ptr cur = el; cur; cur = svg_inheritance_parent(cur))
+            {
+                const auto* tag = dynamic_cast<const html_tag*>(cur.get());
+                if(tag && tag->has_own_property(_color_))
+                    return cur->css().get_color();
+                for(const auto& instance : t_use_instances)
+                {
+                    if(instance.second == cur)
+                        return cur->css().get_color();
+                }
+            }
+            return el->css().get_color();
+        }
+
         css_token_vector svg_property(const element::ptr& el, string_id name, bool inherited)
         {
+#if 0
             for(element::ptr cur = el; cur; cur = cur->parent())
+#else
+            for(element::ptr cur = el; cur; cur = svg_inheritance_parent(cur)) // Telegram (VENDOR.md edit 58)
+#endif
             {
                 if(const auto* tag = dynamic_cast<const html_tag*>(cur.get()))
                 {
@@ -605,7 +653,7 @@ namespace litehtml
                 }
                 if(ident == "currentcolor")
                 {
-                    out = el->css().get_color();
+                    out = svg_current_color(el); // Telegram (VENDOR.md edit 58)
                     return true;
                 }
                 web_color color;
@@ -1186,10 +1234,13 @@ namespace litehtml
                     m_container->begin_group(m_hdc, group);
                 }
                 m_use_stack.push_back(target.get());
-                if(viewport)
-                    draw_children(target, visibility, depth + 1);
-                else if(const element::ptr parent = target->parent())
-                    draw_children(parent, visibility, depth + 1, target);
+                {
+                    const use_instance_scope instance(target.get(), use); // edit 58
+                    if(viewport)
+                        draw_children(target, visibility, depth + 1);
+                    else if(const element::ptr parent = target->parent())
+                        draw_children(parent, visibility, depth + 1, target);
+                }
                 m_use_stack.pop_back();
                 if(grouped)
                     m_container->end_group(m_hdc);

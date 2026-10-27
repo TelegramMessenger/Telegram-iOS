@@ -2,15 +2,18 @@ import UIKit
 
 /// The widget runtimes of one bubble. A runtime lives as long as its bubble: the bubble node
 /// calls `beginPass` with its message's stable id, and a different id destroys everything.
-/// Within a message, a widget is keyed by its block's structural path plus its source, so an
-/// edited source gets a fresh runtime and two widget blocks get two. Main thread only.
+/// Within a message, a widget is keyed by its block's structural path plus its source and its message's context
+/// (widget-sandbox v0.2: fixed for a widget's life), so an edited source or another context gets a fresh runtime and two
+/// widget blocks get two. The bot's state is not in the key: a pass hands a new state to the running widget. Main
+/// thread only.
 public final class MessageWidgetRegistry {
     public struct Key: Hashable {
         public let path: [Int]
         public let source: String
+        public let context: MessageWidgetContext
     }
 
-    public typealias Factory = (_ source: String, _ theme: MessageWidgetInstance.Theme, _ stoppedLabel: String, _ maxMessageLength: Int, _ locale: String, _ storage: MessageWidgetStorage, _ startsStopped: Bool) -> MessageWidgetInstance?
+    public typealias Factory = (_ source: String, _ theme: MessageWidgetInstance.Theme, _ stoppedLabel: String, _ maxMessageLength: Int, _ locale: String, _ storage: MessageWidgetStorage, _ context: MessageWidgetContext, _ state: MessageWidgetState, _ startsStopped: Bool) -> MessageWidgetInstance?
 
     /// Widgets one bubble runs at most, in layout order; a block past them draws as code. Each widget is one runtime
     /// (a 64 MiB memory limit; the server bounds the source at 32 KB) plus its decoded images (at most 24 MiB alive) and
@@ -26,8 +29,16 @@ public final class MessageWidgetRegistry {
     /// The most a widget asked for in this pass may be tall (`MessageWidgetInstance.maximumHeight`): its bubble's fixed
     /// height, else the 600 pt bound. Handed over on every `size`, so an edit of the anchors reaches a running widget.
     public var maximumHeight: CGFloat = MessageWidgetBubbleSize.maximumHeight
+    /// The bubble's message's context (sdk-v1 §2.13, §2.14), set on every pass: part of a widget's key.
+    public var context = MessageWidgetContext()
+    /// The bot's state of the bubble's message (sdk-v1 §2.13), set on every pass: widgets made in it start with it, and
+    /// a running one gets it as a change (`MessageWidgetInstance.setState`).
+    public var state: MessageWidgetState = .empty
     public var onLayoutChange: (() -> Void)?
-    public var onBridge: ((MessageWidgetInstance.BridgeCall) -> Void)?
+    /// A bridge call and the widget that made it (to answer a request on).
+    public var onBridge: ((MessageWidgetInstance.BridgeCall, MessageWidgetInstance) -> Void)?
+    /// widget-sandbox v0.2 (W2): an instance's `wantsPublicDataPolling` changed.
+    public var onPublicDataPollingChange: ((Bool, MessageWidgetInstance) -> Void)?
     /// Where the widgets made from now on send their storage commits (SDK v1 §5.4); each keeps the sink it was made
     /// with.
     public var onStorageCommit: ((MessageWidgetInstance.StorageCommit) -> Void)?
@@ -46,8 +57,8 @@ public final class MessageWidgetRegistry {
     private var restartKeys: [Key: MessageWidgetRestartPolicy.Key] = [:]
 
     public init(factory: Factory? = nil, restartPolicy: MessageWidgetRestartPolicy = .shared) {
-        self.factory = factory ?? { source, theme, label, max, locale, storage, startsStopped in
-            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, startsStopped: startsStopped)
+        self.factory = factory ?? { source, theme, label, max, locale, storage, context, state, startsStopped in
+            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, context: context, state: state, startsStopped: startsStopped)
         }
         self.restartPolicy = restartPolicy
     }
@@ -87,7 +98,7 @@ public final class MessageWidgetRegistry {
         guard Thread.isMainThread, !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
-        let key = Key(path: path, source: source)
+        let key = self.key(path: path, source: source)
         if self.failedKeys.contains(key) {
             self.usedInPass.insert(key)
             return nil
@@ -100,10 +111,11 @@ public final class MessageWidgetRegistry {
         let instance: MessageWidgetInstance
         if let existing = self.instances[key] {
             instance = existing
+            existing.setState(self.state)
         } else {
             let restartKey = MessageWidgetRestartPolicy.Key(owner: self.ownerId ?? AnyHashable(0), source: source)
             let startsStopped = !self.restartPolicy.allowsBoot(restartKey)
-            guard let created = self.factory(source, self.theme, self.stoppedLabel, self.maxMessageLength, self.locale, self.storage, startsStopped) else {
+            guard let created = self.factory(source, self.theme, self.stoppedLabel, self.maxMessageLength, self.locale, self.storage, self.context, self.state, startsStopped) else {
                 self.failedKeys.insert(key)
                 self.usedInPass.insert(key)
                 return nil
@@ -111,8 +123,17 @@ public final class MessageWidgetRegistry {
             created.onLayoutChange = { [weak self] in
                 self?.onLayoutChange?()
             }
-            created.onBridge = { [weak self] call in
-                self?.onBridge?(call)
+            created.onBridge = { [weak self, weak created] call in
+                guard let created else {
+                    return
+                }
+                self?.onBridge?(call, created)
+            }
+            created.onPublicDataPollingChange = { [weak self, weak created] wants in
+                guard let created else {
+                    return
+                }
+                self?.onPublicDataPollingChange?(wants, created)
             }
             // The sink as it is now: it carries this message's key, and a commit the widget makes just before its bubble
             // goes is still delivered.
@@ -145,7 +166,7 @@ public final class MessageWidgetRegistry {
     /// The size of this block's widget laid out exactly `width` wide (`MessageWidgetInstance.fill`), for a bubble wider
     /// than the widget's own width; nil when the block has no running widget.
     public func fill(path: [Int], source: String, width: CGFloat) -> CGSize? {
-        guard Thread.isMainThread, let instance = self.instances[Key(path: path, source: source)] else {
+        guard Thread.isMainThread, let instance = self.instances[self.key(path: path, source: source)] else {
             return nil
         }
         return instance.fill(width: width)
@@ -162,21 +183,49 @@ public final class MessageWidgetRegistry {
     }
 
     public func view(path: [Int], source: String) -> UIView? {
-        return self.instances[Key(path: path, source: source)]?.view
+        return self.instances[self.key(path: path, source: source)]?.view
     }
 
     /// The height the widget at `path` last reported, nil until its first render (main thread). A bubble in auto height
     /// uses it, and its placeholder or cached height until then.
     public func reportedHeight(path: [Int], source: String) -> CGFloat? {
-        return self.instances[Key(path: path, source: source)]?.reportedHeight
+        return self.instances[self.key(path: path, source: source)]?.reportedHeight
+    }
+
+    /// The edge the widget at `path` asked to stay put when its height changes (sdk-v1 §5.6), nil without a widget.
+    public func resizeAnchor(path: [Int], source: String) -> MessageWidgetResizeAnchor? {
+        return self.instances[self.key(path: path, source: source)]?.resizeAnchor
+    }
+
+    /// The widget at `path` as its bubble's next update reads it (`MessageWidgetBubbleSize.resizeAnchor`): its report,
+    /// its edge and whether it failed to start (late, or found by a pass); nil without one.
+    public func runState(path: [Int], source: String) -> MessageWidgetRunState? {
+        let key = self.key(path: path, source: source)
+        if let instance = self.instances[key] {
+            return MessageWidgetRunState(reportedHeight: instance.reportedHeight, resizeAnchor: instance.resizeAnchor, failedToStart: instance.failedToStart)
+        }
+        if self.failedKeys.contains(key) {
+            return MessageWidgetRunState(reportedHeight: nil, resizeAnchor: .top, failedToStart: true)
+        }
+        return nil
     }
 
     public func isLive(path: [Int]) -> Bool {
         return self.instances.contains { $0.key.path == path && $0.value.deadReason == nil }
     }
 
+    /// widget-sandbox v0.2 (W2): whether the live widget at `path` wants its shared state polled (it watches on screen).
+    public func wantsPublicDataPolling(path: [Int]) -> Bool {
+        return self.instances.contains { $0.key.path == path && $0.value.deadReason == nil && $0.value.wantsPublicDataPolling }
+    }
+
     public var layoutVersions: [Key: Int] {
         return self.instances.mapValues { $0.layoutVersion }
+    }
+
+    /// The key of the block at `path` with `source` in this pass's context.
+    private func key(path: [Int], source: String) -> Key {
+        return Key(path: path, source: source, context: self.context)
     }
 
     public func setVisible(_ visible: Bool) {

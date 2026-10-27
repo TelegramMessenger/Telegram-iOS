@@ -21,15 +21,11 @@ func newsFeedMessages(engine: TelegramEngine, ids: Signal<[EngineMessage.Id], No
     return ids
     |> distinctUntilChanged
     |> mapToSignal { ids -> Signal<NewsFeedMessages, NoError> in
-        return engine.data.subscribe(EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Messages.Message.init)))
+        // One view for all the feed's messages, not one per message: the feed's own queue is the main queue, and a
+        // key per message made each load-more's subscribe grow with the feed's length.
+        return engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Messages(ids: Set(ids)))
         |> map { messages -> NewsFeedMessages in
-            var result: [EngineMessage.Id: EngineMessage] = [:]
-            for (id, message) in messages {
-                if let message {
-                    result[id] = message
-                }
-            }
-            return NewsFeedMessages(ids: ids, messages: result)
+            return NewsFeedMessages(ids: ids, messages: messages)
         }
     }
 }

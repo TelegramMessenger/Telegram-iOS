@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <iterator>
-#include <climits>
 #include <new>
 #include <memory>
 #include <set>
@@ -16,36 +16,6 @@
 #include "Sources/Support/Work.h"
 
 namespace wr::intl {
-
-// ───────────── the ICU cache
-
-IntlCache::~IntlCache() {
-    for (Entry& entry : m_entries) {
-        entry.close(entry.handle);
-    }
-}
-
-void* IntlCache::find(const std::string& key) {
-    for (auto it = m_entries.begin(); it != m_entries.end(); ++it) {
-        if (it->key == key) {
-            m_entries.splice(m_entries.begin(), m_entries, it);
-            return m_entries.front().handle;
-        }
-    }
-    return nullptr;
-}
-
-void IntlCache::insert(const std::string& key, void* handle, void (*close)(void*)) {
-    m_entries.push_front(Entry{key, handle, close});
-    while (m_entries.size() > kIntlCacheSize) {
-        m_entries.back().close(m_entries.back().handle);
-        m_entries.pop_back();
-    }
-}
-
-void IntlCache::chargeOpen(JSContext* ctx) {
-    charge(ctx, work::kIntlOpen);
-}
 
 IntlState& intlState(JSContext* ctx) {
     return HostState::of(ctx).intl();
@@ -137,104 +107,34 @@ bool isStructurallyValid(std::string_view tag) {
     return true;
 }
 
-/// The canonical form ICU gives a structurally valid tag, or nullopt.
+/// UTS 35's canonical case of a structurally valid tag, or nullopt: everything in lower case but a script (title case)
+/// and a region (upper case) of the language identifier, the subtags before the first singleton. Aliases are not
+/// replaced ("iw" stays "iw"): the host's glue reads the tag, and its Locale knows them.
 std::optional<std::string> canonicalTag(std::string_view tag) {
     if (tag.size() > kMaxLocaleTag || !isStructurallyValid(tag)) {
         return std::nullopt;
     }
-    const std::string input(tag);
-    char localeID[ULOC_FULLNAME_CAPACITY + 1] = {};
-    int32_t parsed = 0;
-    UErrorCode status = U_ZERO_ERROR;
-    uloc_forLanguageTag(input.c_str(), localeID, ULOC_FULLNAME_CAPACITY, &parsed, &status);
-    if (U_FAILURE(status) || status == U_STRING_NOT_TERMINATED_WARNING || size_t(parsed) != input.size()) {
-        return std::nullopt;
-    }
-    char out[ULOC_FULLNAME_CAPACITY + 1] = {};
-    status = U_ZERO_ERROR;
-    const int32_t length = uloc_toLanguageTag(localeID, out, ULOC_FULLNAME_CAPACITY, true, &status);
-    if (U_FAILURE(status) || status == U_STRING_NOT_TERMINATED_WARNING || length <= 0) {
-        return std::nullopt;
-    }
-    return std::string(out, size_t(length));
-}
-
-/// ICU's available locales as canonical tags, once per process.
-const std::set<std::string>& availableLocales() {
-    static const std::set<std::string> available = [] {
-        std::set<std::string> out;
-        UErrorCode status = U_ZERO_ERROR;
-        // With the legacy aliases: uloc_getAvailable lacks zh_TW and zh_HK, which then resolved to zh (Simplified).
-        std::unique_ptr<UEnumeration, void (*)(UEnumeration*)> all(
-            uloc_openAvailableByType(ULOC_AVAILABLE_WITH_LEGACY_ALIASES, &status), uenum_close);
-        int32_t idLength = 0;
-        while (U_SUCCESS(status) && all) {
-            const char* id = uenum_next(all.get(), &idLength, &status);
-            if (!id || U_FAILURE(status)) {
-                break;
-            }
-            char tag[ULOC_FULLNAME_CAPACITY + 1] = {};
-            UErrorCode tagStatus = U_ZERO_ERROR;
-            const int32_t length = uloc_toLanguageTag(id, tag, ULOC_FULLNAME_CAPACITY, false, &tagStatus);
-            if (U_SUCCESS(tagStatus) && tagStatus != U_STRING_NOT_TERMINATED_WARNING && length > 0) {
-                out.insert(std::string(tag, size_t(length)));
-            }
+    std::string out = lowered(tag);
+    size_t index = 0;
+    for (size_t start = 0; start < out.size();) {
+        size_t end = out.find('-', start);
+        if (end == std::string::npos) {
+            end = out.size();
         }
-        return out;
-    }();
-    return available;
-}
-
-/// The tag without its unicode extension sequences ("-u-…" up to the next singleton).
-std::string withoutUnicodeExtensions(const std::string& tag) {
-    std::string out;
-    size_t start = 0;
-    bool inUnicode = false;
-    for (size_t i = 0; i <= tag.size(); i++) {
-        if (i == tag.size() || tag[i] == '-') {
-            const std::string_view subtag(tag.data() + start, i - start);
-            if (subtag.size() == 1) {
-                inUnicode = (subtag[0] == 'u' || subtag[0] == 'U');
-            }
-            if (subtag == "x" || subtag == "X") {
-                out += tag.substr(start - (start ? 1 : 0));
-                return out;
-            }
-            if (!inUnicode) {
-                out += (out.empty() ? "" : "-");
-                out += subtag;
-            }
-            start = i + 1;
+        const size_t length = end - start;
+        if (index > 0 && length == 1) {
+            break;  // a singleton: extensions and private use stay in lower case
         }
+        if (index > 0 && length == 4 && isAlpha(out[start])) {
+            out[start] = char(std::toupper(uint8_t(out[start])));
+        } else if (index > 0 && length == 2) {
+            out[start] = char(std::toupper(uint8_t(out[start])));
+            out[start + 1] = char(std::toupper(uint8_t(out[start + 1])));
+        }
+        index++;
+        start = end + 1;
     }
     return out;
-}
-
-/// ECMA-402 BestAvailableLocale.
-std::optional<std::string> bestAvailable(std::string candidate) {
-    const std::set<std::string>& available = availableLocales();
-    for (;;) {
-        if (available.count(candidate)) {
-            return candidate;
-        }
-        size_t pos = candidate.rfind('-');
-        if (pos == std::string::npos) {
-            return std::nullopt;
-        }
-        if (pos >= 2 && candidate[pos - 2] == '-') {
-            pos -= 2;
-        }
-        candidate.resize(pos);
-    }
-}
-
-std::optional<std::string> lookup(const std::vector<std::string>& requested) {
-    for (const std::string& tag : requested) {
-        if (std::optional<std::string> found = bestAvailable(withoutUnicodeExtensions(tag))) {
-            return found;
-        }
-    }
-    return std::nullopt;
 }
 
 JSValue arrayOf(JSContext* ctx, const std::vector<std::string>& list) {
@@ -299,14 +199,131 @@ std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst loc
     return seen;
 }
 
-std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested) {
-    if (std::optional<std::string> found = lookup(requested)) {
-        return *found;
+namespace {
+
+// The keyword values this client sends to the glue (resolveLocale). Conservative on purpose: what Foundation formats
+// on every iOS this app runs on, not what the newest one accepts, since an unknown value can trap inside Foundation.
+
+/// The numbering systems with simple digit mappings of ECMA-402's first editions' table (today's lists more): numeric
+/// systems every iOS this app runs on formats.
+constexpr std::string_view kNumberingSystems[] = {"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru",
+                                                  "hanidec", "khmr", "knda", "laoo", "latn", "limb", "mlym", "mong",
+                                                  "mymr", "orya", "tamldec", "telu", "thai", "tibt"};
+/// CLDR's calendars that Foundation's Calendar.Identifier has on iOS 15 (no dangi before iOS 18, no islamic-rgsa).
+constexpr std::string_view kCalendars[] = {"buddhist", "chinese", "coptic", "ethioaa", "ethiopic", "gregory", "hebrew",
+                                           "indian", "islamic", "islamic-civil", "islamic-tbla", "islamic-umalqura",
+                                           "iso8601", "japanese", "persian", "roc"};
+constexpr std::string_view kHourCycles[] = {"h11", "h12", "h23", "h24"};
+/// CLDR's collations but the two ECMA-402 excludes (standard, search).
+constexpr std::string_view kCollations[] = {"big5han", "compat", "dict", "direct", "ducet", "emoji", "eor", "gb2312",
+                                            "phonebk", "phonetic", "pinyin", "reformed", "searchjl", "stroke", "trad",
+                                            "unihan", "zhuyin"};
+constexpr std::string_view kNumerics[] = {"true", "false"};
+constexpr std::string_view kCaseFirstValues[] = {"upper", "lower", "false"};
+
+template <size_t N>
+bool listed(const std::string_view (&table)[N], std::string_view value) {
+    return std::find(std::begin(table), std::end(table), value) != std::end(table);
+}
+
+/// Whether the keyword `key`-`value` ("true" for a key with no type) is one the constructor reads with a value sent.
+bool keptKeyword(std::string_view key, std::string_view value, RelevantKeys keys) {
+    const bool numbers = keys == RelevantKeys::NumberFormat || keys == RelevantKeys::DateTimeFormat ||
+                         keys == RelevantKeys::RelativeTimeFormat;
+    if (key == "nu") {
+        return numbers && listed(kNumberingSystems, value);
+    }
+    if (keys == RelevantKeys::DateTimeFormat) {
+        return (key == "ca" && listed(kCalendars, value)) || (key == "hc" && listed(kHourCycles, value));
+    }
+    if (keys == RelevantKeys::Collator) {
+        return (key == "co" && listed(kCollations, value)) || (key == "kn" && listed(kNumerics, value)) ||
+               (key == "kf" && listed(kCaseFirstValues, value));
+    }
+    return false;
+}
+
+/// `tag` (canonical, structurally valid) with its unicode extension reduced to the keywords keptKeyword keeps, sorted
+/// by key, a "true" type dropped (UTS 35's canonical form), and of a repeated key the first kept occurrence (UTS 35 takes
+/// the first occurrence; a dropped one leaves the key to a later one here, which is never less safe); the extensions in
+/// singleton order and private use last, as UTS 35 orders them. Other singletons (`-a-`…) stay: Foundation reads them
+/// as `@va=`, which spoils the glue's plural language key as `-u-` did, without a trap (follow-ups fix-wave review).
+std::string withRelevantKeywords(std::string_view tag, RelevantKeys keys) {
+    std::vector<std::string_view> subtags;
+    for (size_t start = 0, i = 0; i <= tag.size(); i++) {
+        if (i == tag.size() || tag[i] == '-') {
+            subtags.push_back(tag.substr(start, i - start));
+            start = i + 1;
+        }
+    }
+    std::string language;
+    std::vector<std::pair<char, std::string>> extensions;
+    std::vector<std::pair<std::string, std::string>> keywords;
+    std::string privateUse;
+    char singleton = 0;
+    std::string key, value;
+    auto endKeyword = [&]() {
+        if (key.empty()) {
+            return;
+        }
+        const std::string type = value.empty() ? "true" : value;
+        const bool repeated = std::any_of(keywords.begin(), keywords.end(), [&](const auto& k) { return k.first == key; });
+        if (!repeated && keptKeyword(key, type, keys)) {
+            keywords.emplace_back(key, type == "true" ? "" : type);
+        }
+        key.clear();
+        value.clear();
+    };
+    for (std::string_view subtag : subtags) {
+        if (singleton != 'x' && subtag.size() == 1) {
+            endKeyword();
+            singleton = subtag[0];
+            if (singleton == 'x') {
+                privateUse = "-x";
+            } else if (singleton != 'u') {
+                extensions.emplace_back(singleton, std::string());
+            }
+            continue;
+        }
+        if (singleton == 0) {
+            language += (language.empty() ? "" : "-") + std::string(subtag);
+        } else if (singleton == 'x') {
+            privateUse += "-" + std::string(subtag);
+        } else if (singleton != 'u') {
+            extensions.back().second += "-" + std::string(subtag);
+        } else if (subtag.size() == 2) {
+            endKeyword();
+            key = std::string(subtag);
+        } else if (!key.empty()) {
+            value += (value.empty() ? "" : "-") + std::string(subtag);
+        }
+        // A type before any key is an attribute: no constructor reads one.
+    }
+    endKeyword();
+    if (!keywords.empty()) {
+        std::sort(keywords.begin(), keywords.end());
+        std::string u;
+        for (const auto& [k, v] : keywords) {
+            u += "-" + k + (v.empty() ? "" : "-" + v);
+        }
+        extensions.emplace_back('u', u);
+    }
+    std::stable_sort(extensions.begin(), extensions.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::string out = language;
+    for (const auto& [s, text] : extensions) {
+        out += "-" + std::string(1, s) + text;
+    }
+    return out + privateUse;
+}
+
+} // namespace
+
+std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested, RelevantKeys keys) {
+    if (!requested.empty()) {
+        return withRelevantKeywords(requested.front(), keys);
     }
     if (std::optional<std::string> host = canonicalTag(HostState::of(ctx).locale())) {
-        if (std::optional<std::string> found = lookup({*host})) {
-            return *found;
-        }
+        return withRelevantKeywords(*host, keys);
     }
     return "en-US";
 }
@@ -315,16 +332,41 @@ JSValue supportedLocales(JSContext* ctx, JSValueConst locales, JSValueConst opti
     const std::vector<std::string> requested = canonicalizeLocaleList(ctx, locales);
     Value object = coerceOptionsToObject(ctx, options);
     getStringOption(ctx, object.get(), "localeMatcher", {"lookup", "best fit"});
-    std::vector<std::string> supported;
-    for (const std::string& tag : requested) {
-        if (bestAvailable(withoutUnicodeExtensions(tag))) {
-            supported.push_back(tag);
-        }
-    }
-    return arrayOf(ctx, supported);
+    return arrayOf(ctx, requested);
 }
 
 // ───────────── options
+
+void GivenOptions::addString(const char* name, std::string_view utf8) {
+    m_members += m_members.empty() ? "" : ",";
+    appendJSONString(m_members, name);
+    m_members += ":";
+    appendJSONString(m_members, utf8);
+}
+
+void GivenOptions::addNumber(JSContext* ctx, const char* name, double value) {
+    m_members += m_members.empty() ? "" : ",";
+    appendJSONString(m_members, name);
+    m_members += ":";
+    // A number option is finite after its range check; JS's own rendering of it, as JSON.stringify writes it.
+    Value text = Value::adopt(ctx, checked(ctx, JS_ToString(ctx, JS_NewFloat64(ctx, value))));
+    m_members += String::adopt(ctx, JS_DupValue(ctx, text.get())).utf8();
+}
+
+void GivenOptions::addBool(const char* name, bool value) {
+    m_members += m_members.empty() ? "" : ",";
+    appendJSONString(m_members, name);
+    m_members += value ? ":true" : ":false";
+}
+
+JSText GivenOptions::json() const {
+    JSText out(m_members.get_allocator());
+    out.reserve(m_members.size() + 2);
+    out += "{";
+    out += m_members;
+    out += "}";
+    return out;
+}
 
 Value coerceOptionsToObject(JSContext* ctx, JSValueConst options) {
     if (JS_IsUndefined(options)) {
@@ -334,7 +376,8 @@ Value coerceOptionsToObject(JSContext* ctx, JSValueConst options) {
 }
 
 std::optional<std::string> getStringOption(JSContext* ctx, JSValueConst options, const char* name,
-                                           std::initializer_list<const char*> allowed, size_t maxLength) {
+                                           std::initializer_list<const char*> allowed, GivenOptions* given,
+                                           size_t maxLength) {
     Value value = Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, options, name)));
     if (JS_IsUndefined(value.get())) {
         return std::nullopt;
@@ -350,22 +393,30 @@ std::optional<std::string> getStringOption(JSContext* ctx, JSValueConst options,
     if (string.length() > longest) {
         throw RangeError{std::string("Intl: the value of ") + name + " is out of range."};
     }
-    std::string utf8 = string.utf8();
+    std::string utf8 = string.utf8ForParse();
     if (allowed.size() && std::none_of(allowed.begin(), allowed.end(), [&](const char* a) { return utf8 == a; })) {
         throw RangeError{std::string("Intl: the value of ") + name + " is out of range."};
+    }
+    if (given) {
+        given->addString(name, utf8);
     }
     return utf8;
 }
 
-std::optional<bool> getBooleanOption(JSContext* ctx, JSValueConst options, const char* name) {
+std::optional<bool> getBooleanOption(JSContext* ctx, JSValueConst options, const char* name, GivenOptions* given) {
     Value value = Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, options, name)));
     if (JS_IsUndefined(value.get())) {
         return std::nullopt;
     }
-    return JS_ToBool(ctx, value.get()) != 0;
+    const bool b = JS_ToBool(ctx, value.get()) != 0;
+    if (given) {
+        given->addBool(name, b);
+    }
+    return b;
 }
 
-std::optional<int> getNumberOption(JSContext* ctx, JSValueConst options, const char* name, int min, int max) {
+std::optional<int> getNumberOption(JSContext* ctx, JSValueConst options, const char* name, int min, int max,
+                                   GivenOptions* given) {
     Value value = Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, options, name)));
     if (JS_IsUndefined(value.get())) {
         return std::nullopt;
@@ -377,7 +428,141 @@ std::optional<int> getNumberOption(JSContext* ctx, JSValueConst options, const c
     if (number != number || number < min || number > max) {
         throw RangeError{std::string("Intl: the value of ") + name + " is out of range."};
     }
+    if (given) {
+        given->addNumber(ctx, name, std::floor(number));
+    }
     return int(number);
+}
+
+// ───────────── requests
+
+void appendJSONString(JSText& out, std::string_view utf8) {
+    static const char kHex[] = "0123456789abcdef";
+    out += '"';
+    for (char c : utf8) {
+        const uint8_t byte = uint8_t(c);
+        if (c == '"' || c == '\\') {
+            out += '\\';
+            out += c;
+        } else if (byte < 0x20) {
+            out += "\\u00";
+            out += kHex[byte >> 4];
+            out += kHex[byte & 15];
+        } else {
+            out += c;
+        }
+    }
+    out += '"';
+}
+
+IntlRequest::IntlRequest(JSContext* ctx, const char* kind) : m_ctx(ctx), m_json(JSAllocator<char>(JS_GetRuntime(ctx))) {
+    m_json += "{\"kind\":";
+    appendJSONString(m_json, kind);
+    const std::string_view k(kind);
+    m_charge = k.rfind("date", 0) == 0 ? work::kIntlDateRequest + (k == "dateParts" ? work::kIntlDateParts : 0) : work::kIntlRequest;
+}
+
+void IntlRequest::name(const char* name) {
+    m_json += ',';
+    appendJSONString(m_json, name);
+    m_json += ':';
+}
+
+IntlRequest& IntlRequest::string(const char* name, std::string_view utf8) {
+    this->name(name);
+    appendJSONString(m_json, utf8);
+    return *this;
+}
+
+IntlRequest& IntlRequest::string(const char* name, const String& value) {
+    if (value.length() > kMaxIntlString) {
+        throw RangeError{"Intl: the string is too long."};
+    }
+    chargeScan(m_ctx, value.length());
+    return this->string(name, value.utf8ForParse());
+}
+
+IntlRequest& IntlRequest::number(const char* name, double value) {
+    this->name(name);
+    if (!std::isfinite(value)) {
+        m_json += "null";
+        return *this;
+    }
+    Value text = Value::adopt(m_ctx, checked(m_ctx, JS_ToString(m_ctx, JS_NewFloat64(m_ctx, value))));
+    m_json += String::adopt(m_ctx, JS_DupValue(m_ctx, text.get())).utf8();
+    return *this;
+}
+
+IntlRequest& IntlRequest::raw(const char* name, std::string_view json) {
+    this->name(name);
+    m_json += json;
+    return *this;
+}
+
+std::string IntlRequest::send() {
+    m_json += '}';
+    charge(m_ctx, m_charge + m_json.size() * work::kIntlByte);
+    std::string answer = Runtime::from(m_ctx).host().intl(std::string_view(m_json.data(), m_json.size()));
+    if (answer.size() > kMaxIntlAnswer) {
+        throw RangeError{"Intl: the result is too long."};
+    }
+    charge(m_ctx, answer.size() * work::kIntlByte);
+    return answer;
+}
+
+JSValue answerString(JSContext* ctx, std::string_view answer) {
+    return String::fromUTF8(ctx, answer).toJS(ctx);
+}
+
+Value answerJSON(JSContext* ctx, const std::string& answer, bool array) {
+    if (!answer.empty()) {
+        Value parsed = Value::adopt(ctx, JS_ParseJSON(ctx, answer.c_str(), answer.size(), "<intl>"));
+        if (JS_IsException(parsed.get())) {
+            // Not the widget's error: dropped, unless the widget is stopping.
+            if (Runtime::from(ctx).stopReason() != StopReason::None) {
+                throw Thrown{};
+            }
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        } else if (array ? JS_IsArray(parsed.get()) : JS_IsObject(parsed.get()) && !JS_IsArray(parsed.get())) {
+            return parsed;
+        }
+    }
+    return Value::adopt(ctx, checked(ctx, array ? JS_NewArray(ctx) : JS_NewObject(ctx)));
+}
+
+namespace {
+
+/// `object`'s own data property `name`, or nullopt.
+std::optional<Value> ownValue(JSContext* ctx, JSValueConst object, const char* name) {
+    if (!JS_IsObject(object)) {
+        return std::nullopt;
+    }
+    const Atom atom = Atom::fromUTF8(ctx, name);
+    JSPropertyDescriptor desc{};
+    const int found = JS_GetOwnProperty(ctx, &desc, object, atom.get());
+    check(ctx, found);
+    if (!found) {
+        return std::nullopt;
+    }
+    JS_FreeValue(ctx, desc.getter);
+    JS_FreeValue(ctx, desc.setter);
+    return Value::adopt(ctx, desc.value);
+}
+
+} // namespace
+
+JSValue mergedOptions(JSContext* ctx, JSValueConst answer, JSValueConst ours, std::initializer_list<const char*> keys) {
+    Value o = Value::adopt(ctx, checked(ctx, JS_NewObject(ctx)));
+    for (const char* key : keys) {
+        std::optional<Value> value = ownValue(ctx, answer, key);
+        if (!value) {
+            value = ownValue(ctx, ours, key);
+        }
+        if (value) {
+            check(ctx, JS_DefinePropertyValueStr(ctx, o.get(), key, value->release(), JS_PROP_C_W_E));
+        }
+    }
+    return o.release();
 }
 
 // ───────────── the classes
@@ -394,6 +579,39 @@ int optionIndex(const std::optional<std::string>& value, std::initializer_list<c
         index++;
     }
     return fallback;
+}
+
+const char* optionAt(std::initializer_list<const char*> allowed, size_t index) {
+    return *(allowed.begin() + std::ptrdiff_t(index));
+}
+
+void defineString(JSContext* ctx, JSValueConst object, const char* name, std::string_view value) {
+    check(ctx, JS_DefinePropertyValueStr(ctx, object, name, JS_NewStringLen(ctx, value.data(), value.size()), JS_PROP_C_W_E));
+}
+
+void defineInt(JSContext* ctx, JSValueConst object, const char* name, int value) {
+    check(ctx, JS_DefinePropertyValueStr(ctx, object, name, JS_NewInt32(ctx, value), JS_PROP_C_W_E));
+}
+
+void defineBool(JSContext* ctx, JSValueConst object, const char* name, bool value) {
+    check(ctx, JS_DefinePropertyValueStr(ctx, object, name, JS_NewBool(ctx, value), JS_PROP_C_W_E));
+}
+
+bool isUnicodeType(std::string_view type) {
+    size_t run = 0;
+    for (size_t i = 0; i <= type.size(); i++) {
+        if (i == type.size() || type[i] == '-') {
+            if (run < 3 || run > 8) {
+                return false;
+            }
+            run = 0;
+        } else if (std::isalnum(uint8_t(type[i]))) {
+            run++;
+        } else {
+            return false;
+        }
+    }
+    return true;
 }
 
 JSClassID registerIntlClass(JSContext* ctx, IntlClass which, const char* name, JSClassFinalizer* finalizer,
@@ -471,128 +689,6 @@ Text16 utf16Of(JSContext* ctx, const String& string) {
     return out;
 }
 
-bool icuAvailable() {
-    // The weak imports of ICU.h, every one: a null address is a function this iOS's libicucore lacks.
-    static const bool available = [] {
-        const void* const functions[] = {
-        reinterpret_cast<const void*>(&uloc_forLanguageTag),
-        reinterpret_cast<const void*>(&uloc_toLanguageTag),
-        reinterpret_cast<const void*>(&uloc_openAvailableByType),
-        reinterpret_cast<const void*>(&ufieldpositer_open),
-        reinterpret_cast<const void*>(&ufieldpositer_close),
-        reinterpret_cast<const void*>(&ufieldpositer_next),
-        reinterpret_cast<const void*>(&unumf_openForSkeletonAndLocale),
-        reinterpret_cast<const void*>(&unumf_close),
-        reinterpret_cast<const void*>(&unumf_openResult),
-        reinterpret_cast<const void*>(&unumf_closeResult),
-        reinterpret_cast<const void*>(&unumf_formatDouble),
-        reinterpret_cast<const void*>(&unumf_formatDecimal),
-        reinterpret_cast<const void*>(&unumf_resultToString),
-        reinterpret_cast<const void*>(&unumf_resultGetAllFieldPositions),
-        reinterpret_cast<const void*>(&ucurr_getDefaultFractionDigits),
-        reinterpret_cast<const void*>(&unumsys_open),
-        reinterpret_cast<const void*>(&unumsys_openByName),
-        reinterpret_cast<const void*>(&unumsys_close),
-        reinterpret_cast<const void*>(&unumsys_getName),
-        reinterpret_cast<const void*>(&unumsys_isAlgorithmic),
-        reinterpret_cast<const void*>(&uloc_setKeywordValue),
-        reinterpret_cast<const void*>(&uenum_close),
-        reinterpret_cast<const void*>(&uenum_next),
-        reinterpret_cast<const void*>(&ucal_openTimeZones),
-        reinterpret_cast<const void*>(&ucal_getCanonicalTimeZoneID),
-        reinterpret_cast<const void*>(&ucal_getType),
-        reinterpret_cast<const void*>(&udat_open),
-        reinterpret_cast<const void*>(&udat_close),
-        reinterpret_cast<const void*>(&udat_format),
-        reinterpret_cast<const void*>(&udat_formatForFields),
-        reinterpret_cast<const void*>(&udat_toPattern),
-        reinterpret_cast<const void*>(&udat_getCalendar),
-        reinterpret_cast<const void*>(&udatpg_open),
-        reinterpret_cast<const void*>(&udatpg_close),
-        reinterpret_cast<const void*>(&udatpg_getBestPatternWithOptions),
-        reinterpret_cast<const void*>(&udatpg_getSkeleton),
-        reinterpret_cast<const void*>(&udatpg_getDefaultHourCycle),
-        reinterpret_cast<const void*>(&uplrules_openForType),
-        reinterpret_cast<const void*>(&uplrules_close),
-        reinterpret_cast<const void*>(&uplrules_selectFormatted),
-        reinterpret_cast<const void*>(&uplrules_getKeywords),
-        reinterpret_cast<const void*>(&ureldatefmt_open),
-        reinterpret_cast<const void*>(&ureldatefmt_close),
-        reinterpret_cast<const void*>(&ureldatefmt_formatNumeric),
-        reinterpret_cast<const void*>(&ureldatefmt_format),
-        reinterpret_cast<const void*>(&ulistfmt_openForType),
-        reinterpret_cast<const void*>(&ulistfmt_close),
-        reinterpret_cast<const void*>(&ulistfmt_format),
-        reinterpret_cast<const void*>(&ucol_open),
-        reinterpret_cast<const void*>(&ucol_close),
-        reinterpret_cast<const void*>(&ucol_strcoll),
-        reinterpret_cast<const void*>(&ucol_setAttribute),
-        reinterpret_cast<const void*>(&ucol_getAttribute),
-        };
-        return std::all_of(std::begin(functions), std::end(functions), [](const void* f) { return f != nullptr; });
-    }();
-    return available;
-}
-
-bool isSupportedNumberingSystem(const std::string& name) {
-    UErrorCode status = U_ZERO_ERROR;
-    std::unique_ptr<UNumberingSystem, void (*)(UNumberingSystem*)> numbering(unumsys_openByName(name.c_str(), &status),
-                                                                         unumsys_close);
-    return U_SUCCESS(status) && numbering && !unumsys_isAlgorithmic(numbering.get());
-}
-
-std::string toICULocale(const std::string& tag) {
-    char id[ULOC_FULLNAME_CAPACITY + 1] = {};
-    int32_t parsed = 0;
-    UErrorCode status = U_ZERO_ERROR;
-    uloc_forLanguageTag(tag.c_str(), id, ULOC_FULLNAME_CAPACITY, &parsed, &status);
-    return U_SUCCESS(status) && status != U_STRING_NOT_TERMINATED_WARNING ? std::string(id) : std::string("en_US");
-}
-
-FieldIterator openFieldIterator() {
-    UErrorCode status = U_ZERO_ERROR;
-    FieldIterator fields(ufieldpositer_open(&status), ufieldpositer_close);
-    if (U_FAILURE(status) || !fields) {
-        throw RangeError{"Intl: ICU failed."};
-    }
-    return fields;
-}
-
-JSValue partsFromFields(JSContext* ctx, const Text16& text, UFieldPositionIterator* fields, PartType type,
-                        const void* context) {
-    Vector<int8_t> fieldAt{JSAllocator<int8_t>(JS_GetRuntime(ctx))};
-    Vector<int32_t> spanAt{JSAllocator<int32_t>(JS_GetRuntime(ctx))};
-    fieldAt.assign(text.size(), -1);
-    spanAt.assign(text.size(), INT32_MAX);
-    int32_t begin = 0, end = 0;
-    for (int32_t field; (field = ufieldpositer_next(fields, &begin, &end)) >= 0;) {
-        charge(ctx, work::kNodeVisit);
-        for (int32_t i = std::max(begin, 0); i < end && size_t(i) < text.size(); i++) {
-            if (end - begin < spanAt[size_t(i)]) {
-                fieldAt[size_t(i)] = int8_t(field);
-                spanAt[size_t(i)] = end - begin;
-            }
-        }
-    }
-    Value parts = Value::adopt(ctx, checked(ctx, JS_NewArray(ctx)));
-    uint32_t count = 0;
-    for (size_t start = 0; start < text.size();) {
-        size_t stop = start + 1;
-        while (stop < text.size() && fieldAt[stop] == fieldAt[start]) {
-            stop++;
-        }
-        const std::u16string_view value(text.data() + start, stop - start);
-        Value part = Value::adopt(ctx, checked(ctx, JS_NewObject(ctx)));
-        check(ctx, JS_DefinePropertyValueStr(ctx, part.get(), "type", JS_NewString(ctx, type(fieldAt[start], value, context)),
-                                             JS_PROP_C_W_E));
-        check(ctx, JS_DefinePropertyValueStr(ctx, part.get(), "value", String::fromUTF16(ctx, value.data(), value.size()).toJS(ctx),
-                                             JS_PROP_C_W_E));
-        check(ctx, JS_DefinePropertyValueUint32(ctx, parts.get(), count++, part.release(), JS_PROP_C_W_E));
-        start = stop;
-    }
-    return parts.release();
-}
-
 // ───────────── Intl
 
 namespace {
@@ -624,10 +720,6 @@ JSValue intlObject(JSContext* ctx) {
 }
 
 void installIntl(JSContext* ctx) {
-    if (!icuAvailable()) {
-        // An ICU without what Intl calls: no Intl and the engine's own toLocaleString, rather than a failed launch.
-        return;
-    }
     installNumberOverrides(ctx);
     installDateOverrides(ctx);
     installStringOverrides(ctx);

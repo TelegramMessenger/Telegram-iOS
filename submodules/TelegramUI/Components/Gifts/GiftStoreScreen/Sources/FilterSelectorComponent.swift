@@ -162,7 +162,7 @@ public final class FilterSelectorComponent: Component {
                         isSelected: itemId == component.selectedItemId,
                         action: { [weak itemView] in
                             if let view = itemView?.title.view {
-                                item.action(view)
+                                item.action((view as? ItemComponent.View)?.menuSourceView ?? view)
                             }
                         }
                     )),
@@ -307,8 +307,14 @@ private final class ItemComponent: Component {
         
         private let playOnce = ActionSlot<Void>()
         
+        /// The source for the menu this chip opens: its glass, which morphs into the menu.
+        var menuSourceView: UIView {
+            return self.backgroundView
+        }
+        
         override init(frame: CGRect) {
             self.backgroundView = GlassBackgroundView()
+            self.backgroundView.morphsIntoContextMenu = true
             
             super.init(frame: frame)
             

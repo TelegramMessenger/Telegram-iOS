@@ -6,9 +6,9 @@ import UIKit.UIGestureRecognizerSubclass
 /// so it can't do this — and to resume a bounce when a tap lifts without a drag. Pan behaviour is
 /// otherwise unchanged (we always call `super`).
 ///
-/// Trackpad (indirect) scroll sends no `UITouch`, so the touch-down catch above doesn't fire for it;
-/// the scroll view catches a trackpad finger-down via the public `UIGestureRecognizerDelegate`
-/// `gestureRecognizer(_:shouldReceive:)` (UIEvent) callback instead.
+/// Indirect scroll (trackpad two-finger, mouse wheel) sends no `UITouch`, so the touch-down catch above
+/// doesn't fire for it; the scroll view catches at the start of an indirect scroll via the public
+/// `UIGestureRecognizerDelegate` `gestureRecognizer(_:shouldReceive:)` (UIEvent) callback instead.
 final class PhysicsPanGestureRecognizer: UIPanGestureRecognizer {
     /// Fired the instant a finger lands (before the pan recognizes a drag), carrying the touch
     /// event's timestamp — the analogue of `-[UIScrollView _beginTrackingWithEvent:]` reading
@@ -17,8 +17,8 @@ final class PhysicsPanGestureRecognizer: UIPanGestureRecognizer {
     /// Fired when a finger lifts / the touch is cancelled.
     var onTouchUp: (() -> Void)?
 
-    /// `true` while the current gesture has delivered no `UITouch` — i.e. a trackpad / indirect
-    /// continuous scroll (which fires no `touchesBegan`). The scroll view uses it to pick the looser
+    /// `true` while the current gesture has delivered no `UITouch` — i.e. an indirect scroll, trackpad
+    /// or mouse wheel (which fires no `touchesBegan`). The scroll view uses it to pick the looser
     /// trackpad overscroll rubber-band coefficient. Assumed `true` at gesture start and cleared by the
     /// first real touch; `reset()` restores it between gestures.
     private(set) var isIndirectScroll = true
@@ -38,7 +38,9 @@ final class PhysicsPanGestureRecognizer: UIPanGestureRecognizer {
     override init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         if #available(iOS 13.4, *) {
-            allowedScrollTypesMask = .continuous   // recognize trackpad two-finger (continuous) indirect scroll
+            // Indirect scroll: trackpad two-finger (.continuous) and mouse wheel (.discrete). Without
+            // .discrete a wheel never reaches the pan, and the chat history does not scroll on iPad.
+            allowedScrollTypesMask = .all
         }
     }
 

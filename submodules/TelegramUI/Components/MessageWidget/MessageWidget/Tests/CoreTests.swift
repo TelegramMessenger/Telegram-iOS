@@ -3,12 +3,12 @@ import XCTest
 
 /// Spec 2026-10-15 D2/D4: the core runs one task at a time and leaves what main needs in the task's snapshot.
 class CoreTests: MessageWidgetTestCase {
-    private func makeCore(_ source: String) -> MessageWidgetCore {
+    private func makeCore(_ source: String, scale: CGFloat = 1.0) -> MessageWidgetCore {
         let timers = MessageWidgetTimers()
         timers.fire = { [unowned self] _, body in
             self.onWorker(body)
         }
-        return MessageWidgetCore(source: source, stoppedLabel: "Widget stopped", maxMessageLength: 4096, timers: timers, scale: 1.0)
+        return MessageWidgetCore(source: source, stoppedLabel: "Widget stopped", maxMessageLength: 4096, timers: timers, scale: scale)
     }
 
     private func task(_ core: MessageWidgetCore, _ kind: WidgetSnapshot.Kind, _ body: @escaping () -> Void) -> WidgetSnapshot {
@@ -21,6 +21,21 @@ class CoreTests: MessageWidgetTestCase {
         return self.task(core, .boot) {
             core.boot(width: 300.0, theme: .light, visible: true, budgets: nil)
         }
+    }
+
+    /// A tile that cannot be drawn though the widget has published (its bitmap past the renderer's pixel cap here, a
+    /// refused allocation on a device) keeps the last frame up, as the drawer always has, and says so in the diagnostics.
+    func testATileThatCannotBeDrawnIsADiagnostic() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div style='height:40px;background:#f00'></div></body>", scale: 40.0)
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let draw = self.task(core, .draw) {
+            core.draw(request: 1)
+        }
+        XCTAssertEqual(draw.frame?.tiles.count, 0)
+        XCTAssertTrue(draw.diagnostics.contains { $0.kind == "tile-draw-failed" }, "\(draw.diagnostics)")
     }
 
     func testABootPublishesItsSizeTilesAndState() throws {
@@ -71,6 +86,102 @@ class CoreTests: MessageWidgetTestCase {
         }
         XCTAssertEqual(click.bridgeCalls, [], "a click outside a tap sends nothing")
         XCTAssertTrue(click.diagnostics.contains { $0.kind == "activation-blocked" })
+    }
+
+    /// A press the view retracts (action 4: it started one for the bubble's question, and a pointer's touch pressed there
+    /// instead) ends for the widget as a cancel, but the double click it came between goes on.
+    func testARetractedPressKeepsADoubleClick() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div id=d style='height:40px'></div><script>window.log = []; for (const t of ['click', 'dblclick', 'pointercancel']) document.getElementById('d').addEventListener(t, e => log.push(t + ':' + e.detail))</script></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let point = CGPoint(x: 20.0, y: 20.0)
+        var log: String?
+        _ = self.task(core, .touch) {
+            core.touch(action: 0, at: point, pointer: 1, primary: true, mouse: true)
+            core.touch(action: 2, at: point, pointer: 1, primary: true, mouse: true)
+            core.touch(action: 0, at: point, pointer: 2, primary: true)
+            core.touch(action: 4, at: point, pointer: 2, primary: true)
+            core.touch(action: 0, at: point, pointer: 3, primary: true, mouse: true)
+            core.touch(action: 2, at: point, pointer: 3, primary: true, mouse: true)
+        }
+        _ = self.task(core, .event) {
+            log = core.evaluate("log.join(' ')")
+        }
+        XCTAssertEqual(log, "click:1 pointercancel:0 click:2 dblclick:2")
+    }
+
+    /// Multitouch (design §5.1): every finger's down answers what its press is to the widget, not only the primary's.
+    func testANonPrimaryDownAnswers() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><button id=b style='display:block;width:200px;height:40px'>b</button></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        var press: MessageWidgetPress = .none
+        _ = self.task(core, .touch) {
+            press = core.touch(action: 0, at: CGPoint(x: 20.0, y: 20.0), pointer: 2, primary: false)
+            core.touch(action: 3, at: CGPoint(x: 20.0, y: 20.0), pointer: 2, primary: false)
+        }
+        XCTAssertTrue(press.takesTaps)
+    }
+
+    /// SDK v1 §5.5 (v0.1.2): touch-action: none claims the press's holds for the widget (it gets contextmenu, and the
+    /// bubble opens no menu); pan-y and a button do not.
+    func testANoneElementClaimsHolds() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div style='touch-action:none;height:40px'></div>"
+            + "<div style='touch-action:pan-y;height:40px'></div><button style='display:block;width:200px;height:40px'>b</button></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let holds = [20.0, 60.0, 100.0].map { y -> Bool in
+            var press: MessageWidgetPress = .none
+            _ = self.task(core, .touch) {
+                press = core.touch(action: 0, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true)
+                core.touch(action: 3, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true)
+            }
+            return press.hold
+        }
+        XCTAssertEqual(holds, [true, false, false])
+    }
+
+    /// An iPad pointer presses as the policy's mouse: its holds and sideways drags are the widget's whatever the
+    /// touch-action (a pointer has no hold menu; a vertical drag still scrolls the chat). A secondary click claims holds
+    /// only where touch-action: none does (the widget's contextmenu); elsewhere it is the chat's menu.
+    func testAPointerPressClaimsHoldsAndSidewaysDrags() throws {
+        let core = self.makeCore("<!doctype html><body style='margin:0'><div style='height:40px'></div>"
+            + "<div style='touch-action:none;height:40px'></div></body>")
+        defer {
+            self.onWorker { core.teardown() }
+        }
+        _ = self.boot(core)
+        let presses = [(20.0, 0), (20.0, 2), (60.0, 2)].map { (y, button) -> MessageWidgetPress in
+            var press: MessageWidgetPress = .none
+            _ = self.task(core, .touch) {
+                press = core.touch(action: 0, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true, mouse: true, button: button)
+                core.touch(action: 3, at: CGPoint(x: 50.0, y: y), pointer: 1, primary: true, mouse: true, button: button)
+            }
+            return press
+        }
+        XCTAssertEqual(presses.map(\.claim), [[.horizontal], [.horizontal], [.horizontal]])
+        XCTAssertEqual(presses.map(\.hold), [true, false, true])
+    }
+
+    /// widget-sandbox v0.1.3 (sdk-v1 §5.6): a task's snapshot carries the widget's resize anchor beside its size, top
+    /// until the widget sets one.
+    func testABootThatSetsBottomReportsIt() throws {
+        let core = self.makeCore("<!doctype html><body><p>up</p><script>TelegramWidget.setResizeAnchor('bottom')</script></body>")
+        let other = self.makeCore("<!doctype html><body><p>down</p></body>")
+        defer {
+            self.onWorker {
+                core.teardown()
+                other.teardown()
+            }
+        }
+        XCTAssertEqual(self.boot(core).resizeAnchor, .bottom)
+        XCTAssertEqual(self.boot(other).resizeAnchor, .top)
     }
 
     func testAStoppedWidgetIsFrozenWithItsReason() throws {

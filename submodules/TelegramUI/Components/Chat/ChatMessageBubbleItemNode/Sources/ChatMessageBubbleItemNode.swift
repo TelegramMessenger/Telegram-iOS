@@ -785,6 +785,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     private var highlightedState: HighlightedState?
     
+    private weak var activationProgressMosaicNode: ChatMessageMediaBubbleContentNode?
+    
     private var backgroundFrameTransition: (CGRect, CGRect)?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
@@ -877,6 +879,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             guard let strongSelf = self else {
                 return .none
             }
+            strongSelf.updateMainContainerActivationTarget(mosaicNode: nil)
             if !strongSelf.backgroundNode.frame.contains(location) {
                 return .none
             }
@@ -898,6 +901,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         if openContextMenu.disableDefaultPressAnimation {
                             return .customActivationProcess
                         } else {
+                            if !openContextMenu.selectAll {
+                                strongSelf.updateMainContainerActivationTarget(mosaicNode: strongSelf.mosaicContentNode(at: location, message: openContextMenu.tapMessage))
+                            }
                             return .default
                         }
                     } else {
@@ -1431,18 +1437,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         recognizer.secondaryTap = { [weak self] point, recognizer in
-            guard let strongSelf = self, let item = strongSelf.item else {
-                return
-            }
-
-            if let action = strongSelf.gestureRecognized(gesture: .secondaryTap, location: point, recognizer: recognizer) {
-                switch action {
-                case .action, .optionalAction:
-                    break
-                case let .openContextMenu(openContextMenu):
-                    item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, strongSelf, openContextMenu.subFrame, nil, point)
-                }
-            }
+            self?.secondaryTapped(at: point, recognizer: recognizer)
         }
         recognizer.highlight = { [weak self] point in
             if let strongSelf = self, strongSelf.selectionNode == nil {
@@ -1482,9 +1477,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
             self.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         }
-        replyRecognizer.shouldBegin = { [weak self] in
+        replyRecognizer.shouldBegin = { [weak self, weak replyRecognizer] in
             if let strongSelf = self, let item = strongSelf.item {
                 if strongSelf.selectionNode != nil {
+                    return false
+                }
+                // A drag the content claims for itself (a message widget's touch-action) is not a swipe.
+                if let location = replyRecognizer?.location(in: strongSelf.view), strongSelf.contentNodes.contains(where: { $0.claimsHorizontalDrag(at: strongSelf.view.convert(location, to: $0.view)) }) {
                     return false
                 }
                 for media in item.content.firstMessage.media {
@@ -2025,6 +2024,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if isUnsupportedContent {
             needsShareButton = false
             needsSummarizeButton = false
+            allowFullWidth = true
+        }
+
+        // A widget message (messageMediaWidget) is an interactive surface of its own: no share button beside it (it is
+        // shared from its menu), and it may take the full width, as a channel post does (a widget of width 0 is as wide
+        // as its bubble).
+        if item.message.media.contains(where: { $0 is TelegramMediaWidget }) {
+            needsShareButton = false
             allowFullWidth = true
         }
 
@@ -5132,6 +5139,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         
                         strongSelf.internalUpdateLayout()
                     }
+                    contentNode.secondaryTap = { [weak strongSelf, weak contentNode] point in
+                        guard let strongSelf, let contentNode else {
+                            return
+                        }
+                        strongSelf.secondaryTapped(at: strongSelf.view.convert(point, from: contentNode.view), recognizer: nil)
+                    }
                     contentNode.requestFullUpdate = { [weak strongSelf] customTransition in
                         guard let strongSelf, let item = strongSelf.item else {
                             return
@@ -5759,7 +5772,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         let previousContextContentFrame = strongSelf.mainContextSourceNode.contentRect
         strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-        strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
+        strongSelf.updateMainContainerActivationTarget(mosaicNode: strongSelf.activationProgressMosaicNode)
         
         if previousContextFrame.size != strongSelf.mainContextSourceNode.bounds.size || previousContextContentFrame != strongSelf.mainContextSourceNode.contentRect {
             strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size, animation)
@@ -7294,6 +7307,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     private var playedSwipeToReplyHaptic = false
+    /// A secondary click at `point`: the bubble's own recognizer's, or one a content node took itself
+    /// (`ChatMessageBubbleContentNode.secondaryTap`).
+    private func secondaryTapped(at point: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) {
+        guard let item = self.item else {
+            return
+        }
+        if let action = self.gestureRecognized(gesture: .secondaryTap, location: point, recognizer: recognizer) {
+            switch action {
+            case .action, .optionalAction:
+                break
+            case let .openContextMenu(openContextMenu):
+                item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, point)
+            }
+        }
+    }
+
     @objc private func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
         var leftOffset: CGFloat = 0.0
@@ -7502,6 +7531,37 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
+    private func mosaicContentNode(at location: CGPoint, message: Message) -> ChatMessageMediaBubbleContentNode? {
+        guard let item = self.item, case .group = item.content else {
+            return nil
+        }
+        var mediaNodeCount = 0
+        var result: ChatMessageMediaBubbleContentNode?
+        for contentNode in self.contentNodes {
+            guard let mediaNode = contentNode as? ChatMessageMediaBubbleContentNode, mediaNode.supernode === self.clippingNode else {
+                continue
+            }
+            mediaNodeCount += 1
+            if mediaNode.item?.message.stableId == message.stableId, self.view.convert(mediaNode.bounds, from: mediaNode.view).contains(location) {
+                result = mediaNode
+            }
+        }
+        return mediaNodeCount > 1 ? result : nil
+    }
+    
+    private func updateMainContainerActivationTarget(mosaicNode: ChatMessageMediaBubbleContentNode?) {
+        self.activationProgressMosaicNode = mosaicNode
+        if let mosaicNode {
+            self.mainContainerNode.targetNodeForActivationProgress = mosaicNode
+            self.mainContainerNode.targetNodeForActivationProgressContentRect = nil
+            self.mainContainerNode.activationProgressScaleInset = 7.5
+        } else {
+            self.mainContainerNode.targetNodeForActivationProgress = self.mainContextSourceNode.contentNode
+            self.mainContainerNode.targetNodeForActivationProgressContentRect = self.mainContextSourceNode.contentRect
+            self.mainContainerNode.activationProgressScaleInset = 15.0
+        }
+    }
+    
     override public func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         if self.contentContainers.count > 1 {
             return self.contentContainers.first(where: { $0.contentMessageStableId == stableId })?.sourceNode ?? self.mainContextSourceNode
@@ -7520,6 +7580,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview || !self.disablesComments
     }
     
+    override public var resizeAnchor: ListViewItemResizeAnchor? {
+        return self.contentNodes.lazy.compactMap(\.resizeAnchor).first
+    }
+
     override public func openMessageContextMenu() {
         guard let item = self.item else {
             return

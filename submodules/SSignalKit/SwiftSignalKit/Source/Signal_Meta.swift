@@ -4,6 +4,7 @@ private final class SignalQueueState<T, E>: Disposable {
     var lock = pthread_mutex_t()
     var executingSignal = false
     var terminated = false
+    private var disposed = false
     
     var disposable: Disposable = EmptyDisposable
     let currentDisposable = MetaDisposable()
@@ -32,6 +33,10 @@ private final class SignalQueueState<T, E>: Disposable {
     func enqueueSignal(_ signal: Signal<T, E>) {
         var startSignal = false
         pthread_mutex_lock(&self.lock)
+        if self.disposed {
+            pthread_mutex_unlock(&self.lock)
+            return
+        }
         if self.queueMode && self.executingSignal {
             if self.throttleMode {
                 self.queuedSignals.removeAll()
@@ -44,7 +49,9 @@ private final class SignalQueueState<T, E>: Disposable {
         pthread_mutex_unlock(&self.lock)
         
         if startSignal {
-            let disposable = signal.start(next: { next in
+            let disposable = MetaDisposable()
+            self.currentDisposable.set(disposable)
+            disposable.set(signal.start(next: { next in
                 assert(self.subscriber != nil)
                 self.subscriber?.putNext(next)
             }, error: { error in
@@ -52,8 +59,7 @@ private final class SignalQueueState<T, E>: Disposable {
                 self.subscriber?.putError(error)
             }, completed: {
                 self.headCompleted()
-            })
-            self.currentDisposable.set(disposable)
+            }))
         }
     }
     
@@ -65,6 +71,10 @@ private final class SignalQueueState<T, E>: Disposable {
             
             var terminated = false
             pthread_mutex_lock(&self.lock)
+            if self.disposed {
+                pthread_mutex_unlock(&self.lock)
+                return
+            }
             self.executingSignal = false
             if self.queueMode {
                 if self.queuedSignals.count != 0 {
@@ -82,7 +92,9 @@ private final class SignalQueueState<T, E>: Disposable {
             if terminated {
                 self.subscriber?.putCompletion()
             } else if nextSignal != nil {
-                let disposable = nextSignal.start(next: { next in
+                let disposable = MetaDisposable()
+                self.currentDisposable.set(disposable)
+                disposable.set(nextSignal.start(next: { next in
                     assert(self.subscriber != nil)
                     self.subscriber?.putNext(next)
                 }, error: { error in
@@ -92,9 +104,7 @@ private final class SignalQueueState<T, E>: Disposable {
                     if leftFunction.swap(true) == true {
                         self.headCompleted()
                     }
-                })
-                
-                currentDisposable.set(disposable)
+                }))
             }
             
             if leftFunction.swap(true) == false {
@@ -106,6 +116,10 @@ private final class SignalQueueState<T, E>: Disposable {
     func beginCompletion() {
         var executingSignal = false
         pthread_mutex_lock(&self.lock)
+        if self.disposed {
+            pthread_mutex_unlock(&self.lock)
+            return
+        }
         executingSignal = self.executingSignal
         self.terminated = true
         pthread_mutex_unlock(&self.lock)
@@ -116,8 +130,15 @@ private final class SignalQueueState<T, E>: Disposable {
     }
     
     func dispose() {
-        self.currentDisposable.dispose()
-        self.disposable.dispose()
+        pthread_mutex_lock(&self.lock)
+        self.disposed = true
+        let queuedSignals = self.queuedSignals
+        self.queuedSignals.removeAll()
+        pthread_mutex_unlock(&self.lock)
+        withExtendedLifetime(queuedSignals) {
+            self.currentDisposable.dispose()
+            self.disposable.dispose()
+        }
     }
 }
 

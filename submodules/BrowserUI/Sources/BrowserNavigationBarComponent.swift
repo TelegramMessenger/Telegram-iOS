@@ -109,6 +109,22 @@ final class BrowserNavigationBarComponent: Component {
         return true
     }
     
+    /// The source for a context menu a right item opens: the glass pill the item is in, which morphs into the menu
+    /// whole, as a navigation-bar pill does.
+    static func menuSourceView(itemView: UIView) -> UIView {
+        var current = itemView.superview
+        while let view = current {
+            if let bar = view as? View {
+                if let background = bar.rightItemsBackground, itemView.isDescendant(of: background) {
+                    return background
+                }
+                break
+            }
+            current = view.superview
+        }
+        return itemView
+    }
+    
     final class View: UIView {
         private var edgeEffectView = EdgeEffectView()
         private let containerView = GlassBackgroundContainerView()
@@ -116,7 +132,7 @@ final class BrowserNavigationBarComponent: Component {
         private var leftItemsBackground: GlassBackgroundView?
         private var leftItems: [AnyHashable: ComponentView<Empty>] = [:]
         
-        private var rightItemsBackground: GlassBackgroundView?
+        fileprivate var rightItemsBackground: GlassBackgroundView?
         private var rightItems: [AnyHashable: ComponentView<Empty>] = [:]
        
         private var centerItems: [AnyHashable: ComponentView<BrowserNavigationBarEnvironment>] = [:]
@@ -187,6 +203,7 @@ final class BrowserNavigationBarComponent: Component {
                 } else {
                     rightItemsBackgroundTransition = .immediate
                     rightItemsBackground = GlassBackgroundView()
+                    rightItemsBackground!.morphsIntoContextMenu = true
                     self.containerView.contentView.addSubview(rightItemsBackground!)
                     self.rightItemsBackground = rightItemsBackground
                     

@@ -60,6 +60,7 @@ final class NetworkStatsContext {
         }
         
         func add(downloadEvents: [DownloadEvent]) {
+            guard AppLogEventCollection.allowsLegacyEvents else { return }
             for event in downloadEvents {
                 if event.networkDuration == 0.0 {
                     continue

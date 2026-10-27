@@ -21,8 +21,9 @@ enum class PseudoElement : uint8_t { None, Before, After };
 const std::vector<std::string>& computedPropertyNames();
 
 /// The resolved value of `name` (lower-cased, or a custom property as written) for `element`, or for its
-/// pseudo-element: a missing pseudo-element reads its host's inherited values, with `content: none`.
-std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo);
+/// pseudo-element: a missing pseudo-element reads its host's inherited values, with `content: none`. Charges nothing:
+/// `work`, when given, gains the units of what the read walked and scanned beyond the value it returns.
+std::string computedValue(litehtml::element& element, std::string_view name, PseudoElement pseudo, uint64_t* work = nullptr);
 
 /// `::before` / `:before` and the like (ASCII case-insensitive), or None for anything else, empty included.
 PseudoElement pseudoElementNamed(std::string_view name);

@@ -47,6 +47,26 @@ final class WidgetHarnessUITests: XCTestCase {
         self.add(attachment)
     }
 
+    /// widget-sandbox v0.2 (sdk-v1 §5.11): a real tap on the network marker shows its explanation, and the widget under
+    /// the marker's corner sees no press at all (its log's last field counts pointerdown and pointercancel).
+    func testATapOnTheNetworkMarkerExplainsItAndPressesNothing() throws {
+        let path = "fixture/widget-state.html"
+        let app = self.launch(["-widget-set", "fixture", "-widget-posts", path, "-widget-caption", "off", "-harness-can-query", "on"])
+        let ready = self.waitForReadout(app) { $0.contains(path) && $0.contains(" widget") && $0.contains("+marker@") && $0.contains("log \(path) ") }
+        let line = try XCTUnwrap(ready.split(separator: "\n").first { $0.hasPrefix("bubble ") && $0.contains(path) }, ready)
+        let at = try XCTUnwrap(line.split(separator: " ").first { $0.hasPrefix("+marker@") }, ready)
+        let numbers = at.dropFirst("+marker@".count).split(separator: ",").compactMap { Double($0) }
+        XCTAssertEqual(numbers.count, 2, ready)
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: numbers[0], dy: numbers[1])).press(forDuration: 0.1)
+        let after = self.waitForReadout(app, timeout: 5.0) { $0.contains("tooltip ") }
+        self.attachScreenshot(app, "after a tap on the network marker")
+        XCTAssertTrue(after.contains("tooltip Taps on this widget can send data to the bot."), after)
+        XCTAssertFalse(after.contains("(not shown)"), after)
+        let log = try XCTUnwrap(after.split(separator: "\n").first { $0.hasPrefix("log \(path) ") }, after)
+        XCTAssertTrue(log.hasSuffix("|0"), "the widget under the marker was pressed: \(log)")
+        XCTAssertFalse(after.contains("contextMenu"), after)
+    }
+
     func testATapOnAWidgetButtonOpensTheLinkPrompt() throws {
         let app = self.launch(["-widget-set", "fixture", "-widget-post", "open-link"])
         let ready = self.waitForReadout(app) { $0.contains("open-link.html") && $0.contains(" widget") }
@@ -57,17 +77,16 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertFalse(after.contains("(not concealed)"), after)
     }
 
-    /// A long press on something the widget handles is the widget's, as on a message button (the user, 2026-10-22; sdk-v1
-    /// §5.5 gives every long press to the bubble): no context menu, and lifting the finger clicks.
-    func testALongPressOnAButtonIsTheWidgets() throws {
-        let app = self.launch(["-widget-set", "fixture", "-widget-post", "open-link"])
-        let ready = self.waitForReadout(app) { $0.contains("open-link.html") && $0.contains(" widget") }
-        let point = try XCTUnwrap(self.centre(of: "open-link", in: ready), ready)
-        app.coordinate(withNormalizedOffset: .zero).withOffset(point).press(forDuration: 1.2)
-        let after = self.waitForReadout(app, timeout: 5.0) { $0.contains("openLink") }
-        self.attachScreenshot(app, "after the long press")
-        XCTAssertTrue(after.contains("openLink https://example.org/harness"), after)
-        XCTAssertFalse(after.contains("contextMenu"), after)
+    /// widget-sandbox v0.1.2: a hold is by touch-action, not by what the widget handles. On a button with touch-action:
+    /// auto it is the bubble's menu, the widget's touch ends with a pointercancel, and lifting the finger clicks nothing.
+    func testALongPressOnAnAutoButtonOpensTheMenu() throws {
+        let fixture = try self.launchDoubleTap()
+        fixture.button.press(forDuration: 1.2)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+        self.attachScreenshot(fixture.app, "after the long press on #button")
+        XCTAssertTrue(after.contains("contextMenu fixture/double-tap.html"), after)
+        XCTAssertEqual(self.pointerLog("double-tap", in: after), "pointercancel:button", after)
+        XCTAssertFalse(after.contains("openLink"), after)
     }
 
     /// A bubble line's size (`<w>x<h>`) and centre for `path`.
@@ -155,16 +174,16 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertTrue(after.split(separator: "\n").contains("back"), after)
     }
 
-    /// sdk-v1 §5.5: touch-action: none claims both axes. A vertical drag is the widget's (its first pointermove grows it)
-    /// and the list holds still.
-    func testAClaimedVerticalDragHoldsTheList() throws {
+    /// A vertical drag is never a widget's (the user, 2026-10-23: "widgets should not be able to prevent vertical
+    /// scrolling, ever"): on a part with touch-action: none the list scrolls.
+    func testAClaimedVerticalDragScrollsTheChat() throws {
         let fixture = try self.launchDrag()
-        fixture.claim.press(forDuration: 0.05, thenDragTo: fixture.claim.withOffset(CGVector(dx: 0.0, dy: 150.0)))
-        let after = self.waitForDragFixtureToGrow(fixture.app, from: fixture.ready)
+        fixture.claim.press(forDuration: 0.05, thenDragTo: fixture.claim.withOffset(CGVector(dx: 0.0, dy: 200.0)))
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            (self.listMovement(from: fixture.ready, to: value) ?? 1000.0) > 50.0
+        }
         self.attachScreenshot(fixture.app, "after a vertical drag on #claim")
-        XCTAssertNotEqual(self.bubble("touch-drag.html", in: after)?.size, self.bubble("touch-drag.html", in: fixture.ready)?.size, after)
-        let movement = try XCTUnwrap(self.listMovement(from: fixture.ready, to: after), after)
-        XCTAssertLessThan(movement, 30.0, after)
+        XCTAssertGreaterThan(self.listMovement(from: fixture.ready, to: after) ?? 1000.0, 50.0, after)
         XCTAssertFalse(after.contains("contextMenu"), after)
     }
 
@@ -215,13 +234,94 @@ final class WidgetHarnessUITests: XCTestCase {
         XCTAssertGreaterThan(self.listMovement(from: settled, to: after) ?? 1000.0, 50.0, after)
     }
 
-    /// A part that claims drags is one the widget handles: holding it before dragging opens no menu.
-    func testALongPressOnAClaimedPartIsTheWidgets() throws {
+    /// widget-sandbox v0.1.2: touch-action: none claims the press's hold too: no menu, and the widget gets contextmenu.
+    func testALongPressOnNoneIsTheWidgets() throws {
         let fixture = try self.launchDrag()
         fixture.claim.press(forDuration: 1.2)
-        Thread.sleep(forTimeInterval: 1.0)
-        let after = self.readout(fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("touch-drag", in: $0).contains("contextmenu") }
+        Thread.sleep(forTimeInterval: 0.5)
+        let settled = self.readout(fixture.app)
+        XCTAssertEqual(self.pointerLog("touch-drag", in: settled), "contextmenu:claim", after)
+        XCTAssertFalse(settled.contains("contextMenu"), settled)
+    }
+
+    /// widget-sandbox v0.1.3 (G2): a vertical drag is the chat's even after a hold the widget won: #claim held 0.7 s (its
+    /// contextmenu), then dragged down, scrolls the list and ends the widget's touch.
+    func testAHoldThenAVerticalDragOnNoneScrollsTheChat() throws {
+        let fixture = try self.launchDrag()
+        let widget = try XCTUnwrap(self.bubble("touch-drag.html", in: fixture.ready), fixture.ready)
+        let size = widget.size.split(separator: "x").compactMap { Double($0) }
+        let top = widget.centre.dy - (size.count == 2 ? size[1] : 300.0) / 2.0
+        let claim = CGPoint(x: widget.centre.dx, y: top + 150.0)
+        // The synthesizer moves a finger along its path between offsets: a point at 0.7 s where it went down holds it still.
+        let moves = [(claim, 0.7)] + (1 ... 10).map { step in (CGPoint(x: claim.x, y: claim.y + 20.0 * Double(step)), 0.7 + 0.03 * Double(step)) }
+        try performFingers([Finger(at: claim, down: 0.0, moves: moves, up: 1.2)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("touch-drag", in: $0).contains("pointercancel") }
+        self.attachScreenshot(fixture.app, "after a hold then a vertical drag on #claim")
+        XCTAssertGreaterThan(self.listMovement(from: fixture.ready, to: after) ?? 1000.0, 50.0, after)
+        XCTAssertEqual(self.pointerLog("touch-drag", in: after), "contextmenu:claim pointercancel:claim", after)
         XCTAssertFalse(after.contains("contextMenu"), after)
+    }
+
+    /// widget-sandbox v0.1.2: touch-action: pan-y claims horizontal drags only, so a hold on it is the bubble's menu.
+    func testALongPressOnPanYOpensTheMenu() throws {
+        let fixture = try self.launchDrag()
+        fixture.pany.press(forDuration: 1.2)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+        XCTAssertTrue(after.contains("contextMenu fixture/touch-drag.html"), after)
+        XCTAssertEqual(self.pointerLog("touch-drag", in: after), "pointercancel:pany", after)
+    }
+
+    /// A hold on pan-y after the finger drifted 7 pt sideways (past the 4 pt that begins the widget's claimed drag, within
+    /// the policy's 10 px slop) is still the bubble's menu: the widget's recognizer spares the menu's long press until a
+    /// drag passes the slop.
+    func testAHoldOnPanYAfterASmallSidewaysDriftOpensTheMenu() throws {
+        let fixture = try self.launchDrag()
+        let widget = try XCTUnwrap(self.bubble("touch-drag.html", in: fixture.ready), fixture.ready)
+        let size = widget.size.split(separator: "x").compactMap { Double($0) }
+        let top = widget.centre.dy - (size.count == 2 ? size[1] : 300.0) / 2.0
+        let from = CGPoint(x: widget.centre.dx, y: top + 250.0)
+        // 7 pt to the right over 0.2 s, then still: the synthesizer moves a finger along its path between points, so a
+        // last point at the same place holds it there.
+        let moves = (1 ... 7).map { step in (CGPoint(x: from.x + Double(step), y: from.y), 0.05 + 0.03 * Double(step)) } + [(CGPoint(x: from.x + 7.0, y: from.y), 1.4)]
+        try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 1.5)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+        self.attachScreenshot(fixture.app, "after a hold on #pany that drifted 7 pt")
+        XCTAssertTrue(after.contains("contextMenu fixture/touch-drag.html"), after)
+        XCTAssertEqual(self.pointerLog("touch-drag", in: after), "pointercancel:pany", after)
+    }
+
+    /// widget-sandbox v0.1.2: a press in the widget's leading 20 pt claims nothing, whatever its touch-action, so a
+    /// rightward drag from there on #claim is the chat's back swipe (the policy's own check for the strip).
+    func testADragFromTheLeadingStripSwipesBack() throws {
+        let fixture = try self.launchDrag()
+        let widget = try XCTUnwrap(self.bubble("touch-drag.html", in: fixture.ready), fixture.ready)
+        let width = widget.size.split(separator: "x").first.flatMap { Double($0) } ?? 300.0
+        let strip = fixture.claim.withOffset(CGVector(dx: -width / 2.0 + 10.0, dy: 0.0))
+        strip.press(forDuration: 0.05, thenDragTo: strip.withOffset(CGVector(dx: 160.0, dy: 0.0)))
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.split(separator: "\n").contains("back") }
+        self.attachScreenshot(fixture.app, "after a drag from #claim's leading strip")
+        XCTAssertTrue(after.split(separator: "\n").contains("back"), after)
+    }
+
+    /// Review Focus 1: a widget that is touch-action: none all over keeps every hold on it, but its caption is the
+    /// bubble's: a hold there opens the menu.
+    func testAHoldOnTheCaptionOpensTheMenu() throws {
+        let app = self.launch(["-widget-set", "fixture", "-widget-post", "hold-none"])
+        let ready = self.waitForReadout(app) { $0.contains("hold-none.html") && $0.contains(" widget") && !$0.contains("x160 ") }
+        let widget = try XCTUnwrap(self.bubble("hold-none.html", in: ready), ready)
+        let size = widget.size.split(separator: "x").compactMap { Double($0) }
+        let height = size.count == 2 ? size[1] : 120.0
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(widget.centre).press(forDuration: 1.2)
+        let held = self.waitForReadout(app, timeout: 5.0) { self.pointerLog("hold-none", in: $0).contains("contextmenu") }
+        XCTAssertEqual(self.pointerLog("hold-none", in: held), "contextmenu:surface", held)
+        XCTAssertFalse(held.contains("contextMenu"), held)
+        // The caption ("fixture/hold-none.html") is the text under the widget.
+        origin.withOffset(CGVector(dx: widget.centre.dx - 60.0, dy: widget.centre.dy + height / 2.0 + 14.0)).press(forDuration: 1.2)
+        let after = self.waitForReadout(app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+        self.attachScreenshot(app, "after the hold on the caption")
+        XCTAssertTrue(after.contains("contextMenu fixture/hold-none.html"), after)
     }
 
     /// The double-tap fixture laid out with its widget running: #button is its top 100 pt, #empty the next 100 pt.
@@ -236,14 +336,18 @@ final class WidgetHarnessUITests: XCTestCase {
                 origin.withOffset(CGVector(dx: widget.centre.dx, dy: top + 150.0)))
     }
 
-    /// sdk-v1 §5.5: a double tap on a part of a widget that handles nothing is the bubble's quick reaction.
-    func testADoubleTapOnAnEmptyPartIsTheBubblesReaction() throws {
+    /// widget-sandbox v0.1.2: a double tap over the widget is always the widget's, on a part that handles nothing too:
+    /// two clicks then a dblclick, and no quick reaction.
+    func testADoubleTapOnTheWidgetIsItsOwn() throws {
         let fixture = try self.launchDoubleTap()
         fixture.empty.doubleTap()
-        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("reaction fixture/double-tap.html") }
-        self.attachScreenshot(fixture.app, "after the double tap")
-        XCTAssertTrue(after.contains("reaction fixture/double-tap.html"), after)
-        XCTAssertFalse(after.contains("openLink"), after)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("double-tap", in: $0).contains("dblclick") }
+        Thread.sleep(forTimeInterval: 0.5)
+        let settled = self.readout(fixture.app)
+        self.attachScreenshot(fixture.app, "after the double tap on #empty")
+        XCTAssertEqual(self.pointerLog("double-tap", in: settled), "click:empty click:empty dblclick:empty", after)
+        XCTAssertFalse(settled.contains("reaction"), settled)
+        XCTAssertFalse(settled.contains("openLink"), settled)
     }
 
     /// Where the widget handles nothing, a long press is the bubble's context menu, and lifting the finger after it opened
@@ -258,7 +362,7 @@ final class WidgetHarnessUITests: XCTestCase {
     }
 
     /// On something the widget handles each tap is the widget's at once, as on a message button: a double tap there is
-    /// two taps and no reaction.
+    /// two taps (then a dblclick) and no reaction.
     func testADoubleTapOnAButtonIsTwoTaps() throws {
         let fixture = try self.launchDoubleTap()
         fixture.button.doubleTap()
@@ -268,6 +372,7 @@ final class WidgetHarnessUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 0.5)
         let settled = self.readout(fixture.app)
         XCTAssertEqual(settled.split(separator: "\n").filter { $0.hasPrefix("openLink https://example.org/tap") }.count, 2, after)
+        XCTAssertEqual(self.pointerLog("double-tap", in: settled), "click:button click:button dblclick:button", settled)
         XCTAssertFalse(settled.contains("reaction"), settled)
     }
 
@@ -465,5 +570,368 @@ final class WidgetHarnessUITests: XCTestCase {
             XCTAssertTrue(value.contains("bubble 0 "), value)
             app.terminate()
         }
+    }
+
+    // MARK: resize anchors (widget-sandbox v0.1.3, corpus/resize)
+
+    /// corpus/resize's delivery FAQ (the default anchor, top), the newest post of a chat taller than the screen: a tap on
+    /// its first question opens the answer below it, and the question stays under the finger, at the chat's bottom too
+    /// (the bubble's top stays; the user's decision 1).
+    func testTheFaqsQuestionStaysUnderTheFinger() throws {
+        let faq = "resize/1-default/01-faq.html"
+        let app = self.launch(["-widget-set", "corpus", "-widget-posts", "resize/3-grows-down/03-show-more.html,resize/2-grows-up/02-support-thread.html," + faq])
+        self.waitForReadout(app) { $0.contains(faq) && $0.contains(" widget") && !$0.contains("x160 ") }
+        self.pumpReadout(app, for: 1.0)
+        let before = try XCTUnwrap(self.bubble(faq, in: self.readout(app)), self.readout(app))
+        let size = before.size.split(separator: "x").compactMap { Double($0) }
+        let height = size.last ?? 0.0
+        let top = before.centre.dy - height / 2.0
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: before.centre.dx, dy: top + 132.0)).tap()
+        let grown = self.waitForReadout(app, timeout: 5.0) { value in
+            (self.bubble(faq, in: value)?.size.split(separator: "x").compactMap { Double($0) }.last ?? 0.0) > height + 20.0
+        }
+        self.pumpReadout(app, for: 1.0)
+        let after = try XCTUnwrap(self.bubble(faq, in: self.readout(app)), grown)
+        self.attachScreenshot(app, "after opening the FAQ's first answer")
+        let afterHeight = after.size.split(separator: "x").compactMap { Double($0) }.last ?? 0.0
+        XCTAssertGreaterThan(afterHeight, height + 20.0, self.readout(app))
+        XCTAssertEqual(after.centre.dy - afterHeight / 2.0, top, accuracy: 1.0, "before \(before), after \(after)")
+    }
+
+    /// A widget's height change during a fling leaves the fling alone: the list's own placement keeps what is on the
+    /// screen-bottom side of the bubble, where a scroll target keeping its anchored edge would end the momentum (the
+    /// rest of the fling jumped to its destination). The swipe starts on a 300 pt post: `toggle-top` changes height
+    /// every 50 ms from that pointerdown while on screen, `touch-drag` stays still; the momentum after the lift (the
+    /// readout's `scrollEnded`) must be as long past the one as past the other.
+    func testAFlingPastAResizingWidgetKeepsItsMomentum() throws {
+        func momentum(swipingOn post: String) throws -> Double {
+            let posts = ["fixture/text.html", "fixture/tall-box.html", "fixture/multitouch.html", post, "fixture/storage-counter.html", "fixture/hold-none.html", "fixture/double-tap.html", "fixture/open-link.html"]
+            let app = self.launch(["-widget-set", "fixture", "-widget-posts", posts.joined(separator: ","), "-widget-caption", "off"])
+            let ready = self.waitForReadout(app) { $0.contains("open-link.html") && $0.contains(" widget") && $0.contains(post) }
+            self.pumpReadout(app, for: 1.0)
+            let centre = try XCTUnwrap(self.centre(of: post, in: self.readout(app)), ready)
+            // 300 pt down at 2000 pt/s, from the post's top part: a fling to the chat's top.
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let from = origin.withOffset(CGVector(dx: centre.dx, dy: centre.dy - 100.0))
+            from.press(forDuration: 0.01, thenDragTo: from.withOffset(CGVector(dx: 0.0, dy: 300.0)), withVelocity: XCUIGestureVelocity(rawValue: 2000.0), thenHoldForDuration: 0.0)
+            let after = self.waitForReadout(app, timeout: 10.0) { $0.contains("scrollEnded ") }
+            self.attachScreenshot(app, "after the fling from \(post)")
+            let line = try XCTUnwrap(after.split(separator: "\n").last(where: { $0.hasPrefix("scrollEnded ") }), after)
+            return try XCTUnwrap(Double(line.dropFirst("scrollEnded ".count)), after)
+        }
+        let still = try momentum(swipingOn: "fixture/touch-drag.html")
+        XCTAssertGreaterThan(still, 0.3, "the swipe does not fling")
+        let resizing = try momentum(swipingOn: "fixture/resize/toggle-top.html")
+        XCTAssertGreaterThan(resizing, still * 0.75, "the fling's momentum ended early: \(resizing) s against \(still) s")
+    }
+
+    // MARK: conformance through the real bubble (CLIENTS.md: press and drag performed as a person would)
+
+    /// The readout's `conformance <path> <json>` line for `path`: the widget's `data-conformance`.
+    private func conformance(_ path: String, in readout: String) -> [String: Any]? {
+        guard let line = readout.split(separator: "\n").first(where: { $0.hasPrefix("conformance \(path) ") }) else {
+            return nil
+        }
+        let json = line.dropFirst("conformance \(path) ".count)
+        return (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
+    }
+
+    /// widget-sandbox v0.2.2's auto/23-gestures-a, its actions performed on the real bubble (a Tier 1 run injects below
+    /// it, so the checks only the bubble can satisfy fail there): holds of 700 ms on #none and #auto, double taps on
+    /// #nonedbl and #autodbl, then Finish. Every check passes.
+    func testAuto23aThroughTheRealBubble() throws {
+        try self.runAuto23("auto/23-gestures-a.html") { app, at, _ in
+            try at("none").press(forDuration: 0.7)
+            try at("auto").press(forDuration: 0.7)
+            // The hold on #auto opened the menu; the next touches wait for it to end.
+            self.waitForReadout(app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+            try at("nonedbl").doubleTap()
+            try at("autodbl").doubleTap()
+        }
+    }
+
+    /// widget-sandbox v0.2.2's auto/23-gestures-b on the real bubble: vertical drags of +60 px in 10 steps on #vnone and
+    /// #vpanx (the chat's scroll), drags of +120 px in 10 steps from the pad's leading strip (#edge) and from 60 px in
+    /// (#mid), then Finish. Every check passes.
+    func testAuto23bThroughTheRealBubble() throws {
+        try self.runAuto23("auto/23-gestures-b.html") { app, _, locate in
+            for name in ["vnone", "vpanx"] {
+                let from = try locate(name)
+                let moves = (1 ... 10).map { step in (CGPoint(x: from.x, y: from.y + 6.0 * Double(step)), 0.05 + 0.03 * Double(step)) }
+                try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 0.45)], in: app)
+            }
+            for name in ["edge", "mid"] {
+                let from = try locate(name)
+                let moves = (1 ... 10).map { step in (CGPoint(x: from.x + 12.0 * Double(step), y: from.y), 0.05 + 0.03 * Double(step)) }
+                try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 0.45)], in: app)
+            }
+        }
+    }
+
+    /// One half of auto/23-gestures through the real bubble: `perform` acts, then Finish, then every check must pass.
+    /// Each action aims at the latest readout (CLIENTS.md step 6): the widget lists its open checks, so it changes height
+    /// as they pass, and the chat scrolls. No caption (the 600 pt widget's long one put its first probes under the
+    /// status bar) and auto/22 above it, so the chat is taller than the screen and can scroll.
+    private func runAuto23(_ path: String, perform: (XCUIApplication, (String) throws -> XCUICoordinate, (String) throws -> CGPoint) throws -> Void) throws {
+        let app = self.launch(["-widget-set", "conformance", "-widget-posts", "auto/22-ua-defaults.html," + path, "-widget-caption", "off"])
+        let ready = self.waitForReadout(app) { value in
+            (self.conformance(path, in: value)?["status"] as? String) == "awaiting" && value.contains(" widget") && !value.contains("x160 ")
+        }
+        XCTAssertNotNil(self.conformance(path, in: ready), ready)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        // Where `name`'s centre is now, in the app's coordinates.
+        let locate = { (name: String) throws -> CGPoint in
+            self.pumpReadout(app, for: 0.4)
+            let now = self.readout(app)
+            let widget = try XCTUnwrap(self.bubble(path, in: now), now)
+            let size = widget.size.split(separator: "x").compactMap { Double($0) }
+            let rect = try XCTUnwrap((self.conformance(path, in: now)?["targets"] as? [String: [Double]])?[name], "\(name) not published: \(now)")
+            let left = widget.centre.dx - (size.first ?? 0.0) / 2.0
+            let top = widget.centre.dy - (size.last ?? 0.0) / 2.0
+            return CGPoint(x: left + rect[0] + rect[2] / 2.0, y: top + rect[1] + rect[3] / 2.0)
+        }
+        let at = { (name: String) throws -> XCUICoordinate in
+            let p = try locate(name)
+            return origin.withOffset(CGVector(dx: p.x, dy: p.y))
+        }
+        try perform(app, at, locate)
+        try at("finish").tap()
+        let after = self.waitForReadout(app, timeout: 25.0) { (self.conformance(path, in: $0)?["status"] as? String) == "done" }
+        self.attachScreenshot(app, "after \(path)")
+        let checks = try XCTUnwrap(self.conformance(path, in: after)?["checks"] as? [[Any]], after)
+        XCTAssertFalse(checks.isEmpty, after)
+        for check in checks {
+            XCTAssertEqual(check.count > 2 ? check[2] as? String : nil, "pass", "\(check)")
+        }
+    }
+
+    // MARK: multitouch (fixture/multitouch.html, `performFingers`)
+
+    /// The multitouch fixture laid out with its widget running: #left and #right side by side at its top, 140 × 100 pt
+    /// each, #pad under them, 280 × 100 pt; points in the app's (the screen's) coordinates.
+    private struct MultitouchFixture {
+        let app: XCUIApplication
+        let ready: String
+        let area: CGRect
+        var left: CGPoint { CGPoint(x: self.area.minX + 70.0, y: self.area.minY + 50.0) }
+        var right: CGPoint { CGPoint(x: self.area.minX + 210.0, y: self.area.minY + 50.0) }
+        var pad: CGPoint { CGPoint(x: self.area.minX + 140.0, y: self.area.minY + 150.0) }
+    }
+
+    private func launchMultitouch() throws -> MultitouchFixture {
+        let app = self.launch(["-widget-set", "fixture", "-widget-post", "multitouch"])
+        let ready = self.waitForReadout(app) { $0.contains("multitouch.html") && $0.contains(" widget") && !$0.contains("x160 ") }
+        let widget = try XCTUnwrap(self.bubble("multitouch.html", in: ready), ready)
+        let size = widget.size.split(separator: "x").compactMap { Double($0) }
+        XCTAssertEqual(size.count, 2, ready)
+        let width = size.first ?? 0.0
+        let height = size.last ?? 0.0
+        let area = CGRect(x: widget.centre.dx - width / 2.0, y: widget.centre.dy - height / 2.0, width: width, height: height)
+        return MultitouchFixture(app: app, ready: ready, area: area)
+    }
+
+    /// The widget's pointer log (the readout's `log <path> <value>` line), "" before it logged anything.
+    private func pointerLog(_ path: String, in readout: String) -> String {
+        guard let line = readout.split(separator: "\n").first(where: { $0.hasPrefix("log ") && $0.contains(path) }) else {
+            return ""
+        }
+        return line.split(separator: " ", maxSplits: 2).dropFirst(2).first.map(String.init) ?? ""
+    }
+
+    /// The harness channel itself: one synthesized finger on a button reaches the widget, and its log reaches the readout.
+    func testTheMultitouchFixtureLogsAFinger() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 0.2)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0) == "down:left:a:P up:left:a:P" }
+        self.attachScreenshot(fixture.app, "one finger on #left")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+    }
+
+    private func hasEvent(_ event: String, in readout: String) -> Bool {
+        return readout.split(separator: "\n").contains { $0.hasPrefix(event + " ") }
+    }
+
+    /// Multitouch (design §2): each finger on a widget is its own pointer, the first the primary; the chat neither opens
+    /// the menu, reacts nor swipes to reply.
+    /// Both fingers go down together (a finger that starts later in a record gets a second press from the synthesizer:
+    /// see `performFingers`), so which is primary is UIKit's order: exactly one is, and #right lifts first while #left
+    /// stays pressed.
+    func testTwoFingersOnTwoButtonsAreTwoPointers() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 0.9), Finger(at: fixture.right, down: 0.0, up: 0.6)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).split(separator: " ").count == 4 }
+        self.attachScreenshot(fixture.app, "two fingers on #left and #right")
+        let entries = self.pointerLog("multitouch", in: after).split(separator: " ").map(String.init)
+        XCTAssertEqual(entries.count, 4, after)
+        XCTAssertEqual(Set(entries.prefix(2).map { $0.split(separator: ":")[1] }), ["left", "right"], after)
+        XCTAssertEqual(entries.suffix(2).map { $0.split(separator: ":").prefix(2).joined(separator: ":") }, ["up:right", "up:left"], after)
+        XCTAssertEqual(entries.filter { $0.hasSuffix(":P") }.count, 2, "one finger, down and up, is primary: \(after)")
+        XCTAssertEqual(Set(entries.map { $0.split(separator: ":")[2] }).count, 2, after)
+        for event in ["contextMenu", "reaction", "reply"] {
+            XCTAssertFalse(self.hasEvent(event, in: after), after)
+        }
+    }
+
+    /// Each finger's moves are its own pointer's: two fingers dragging sideways on #left and #right each log a move, one
+    /// of them primary (vertically they would scroll the chat).
+    func testTwoFingersDraggingMoveAsTwoPointers() throws {
+        let fixture = try self.launchMultitouch()
+        let left = fixture.left
+        let right = fixture.right
+        try performFingers([Finger(at: left, down: 0.0, moves: [(CGPoint(x: left.x + 30.0, y: left.y), 0.3)], up: 0.8),
+                            Finger(at: right, down: 0.0, moves: [(CGPoint(x: right.x + 30.0, y: right.y), 0.4)], up: 0.8)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            let log = self.pointerLog("multitouch", in: value)
+            return log.contains("up:left:") && log.contains("up:right:")
+        }
+        self.attachScreenshot(fixture.app, "after dragging on #left and #right")
+        let moves = self.pointerLog("multitouch", in: after).split(separator: " ").map(String.init).filter { $0.hasPrefix("move:") }
+        XCTAssertEqual(Set(moves.map { String($0.split(separator: ":")[1]) }), ["left", "right"], after)
+        XCTAssertEqual(Set(moves.map { String($0.split(separator: ":")[2]) }).count, 2, after)
+        XCTAssertEqual(moves.filter { $0.hasSuffix(":P") }.count, 1, after)
+    }
+
+    /// A first finger on a part the widget does not handle, then a second on a button: the chat lets go of the long press
+    /// it was waiting on, and both fingers are the widget's.
+    func testASecondFingerOnAButtonTakesTheHoldFromTheMenu() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.pad, down: 0.0, up: 1.5), Finger(at: fixture.left, down: 0.2, up: 1.5)], in: fixture.app)
+        // The synthesizer presses a finger that starts later a second time after its lift (`performFingers`): read the
+        // log up to there.
+        let expected = "down:left:a:S up:left:a:S"
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).hasPrefix(expected) }
+        self.attachScreenshot(fixture.app, "after holding #pad and #left")
+        XCTAssertTrue(self.pointerLog("multitouch", in: after).hasPrefix(expected), after)
+        XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
+    }
+
+    /// A finger that slides sideways off its button, past the widget's edge, stays the widget's: its up arrives, never a
+    /// cancel, and the bubble does not swipe to reply.
+    func testAFingerSlidingOffTheWidgetStaysItsOwn() throws {
+        let fixture = try self.launchMultitouch()
+        let left = fixture.left
+        let moves = [0.45, 0.6, 0.8].enumerated().map { index, time in
+            (CGPoint(x: left.x - 30.0 * Double(index + 1), y: left.y), time)
+        }
+        try performFingers([Finger(at: fixture.right, down: 0.0, up: 1.0), Finger(at: left, down: 0.0, moves: moves, up: 1.0)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            let log = self.pointerLog("multitouch", in: value)
+            return log.contains("up:left:") && log.contains("up:right:")
+        }
+        self.attachScreenshot(fixture.app, "after sliding off #left")
+        let log = self.pointerLog("multitouch", in: after)
+        XCTAssertTrue(log.contains("up:left:") && log.contains("up:right:"), after)
+        XCTAssertFalse(log.contains("cancel"), after)
+        XCTAssertFalse(self.hasEvent("reply", in: after), after)
+    }
+
+    /// The list began a drag (the readout's `listDrag` event): the chat scrolls.
+    private func listDragged(_ readout: String) -> Bool {
+        return readout.split(separator: "\n").contains("listDrag")
+    }
+
+    /// With two fingers on buttons (the widget took the touches), one dragging vertically still scrolls the chat (a
+    /// vertical scroll is never a widget's to stop), and the scroll ends both presses.
+    func testTwoFingersOnButtonsLetTheChatScroll() throws {
+        let fixture = try self.launchMultitouch()
+        let right = fixture.right
+        let moves = (1 ... 8).map { step in (CGPoint(x: right.x, y: right.y + 25.0 * Double(step)), 0.3 + 0.08 * Double(step)) }
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: right, down: 0.0, moves: moves, up: 1.3)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { value in
+            let log = self.pointerLog("multitouch", in: value)
+            return self.listDragged(value) && log.contains("cancel:left") && log.contains("cancel:right")
+        }
+        self.attachScreenshot(fixture.app, "after a vertical drag with two fingers on buttons")
+        XCTAssertTrue(self.listDragged(after), after)
+        let log = self.pointerLog("multitouch", in: after)
+        XCTAssertTrue(log.contains("cancel:left") && log.contains("cancel:right"), after)
+    }
+
+    /// While the chat drags, a finger that lands on the widget does nothing (the user, 2026-10-23: "The second finger
+    /// can't interact with widgets ... in the chat while the first one scrolls"). The second finger lands early in the
+    /// drag, while #left is still under it (one post: the list rubber-bands).
+    func testAFingerOnTheWidgetWhileTheListScrollsDoesNothing() throws {
+        let fixture = try self.launchMultitouch()
+        let pad = fixture.pad
+        let moves = (1 ... 10).map { step in (CGPoint(x: pad.x, y: pad.y + 20.0 * Double(step)), 0.1 * Double(step)) }
+        try performFingers([Finger(at: pad, down: 0.0, moves: moves, up: 1.0), Finger(at: fixture.left, down: 0.15, up: 0.3)], in: fixture.app)
+        self.pumpReadout(fixture.app, for: 1.0)
+        let after = self.readout(fixture.app)
+        self.attachScreenshot(fixture.app, "after the drag")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "", after)
+    }
+
+    /// Lets the readout catch up for `seconds`.
+    private func pumpReadout(_ app: XCUIApplication, for seconds: TimeInterval) {
+        _ = self.waitForReadout(app, timeout: seconds) { _ in false }
+    }
+
+    // MARK: the chat's lock while a widget control is held (the user, 2026-10-23)
+
+    /// A point on the bubble's caption, under the widget.
+    private func caption(_ fixture: MultitouchFixture) -> CGPoint {
+        return CGPoint(x: fixture.area.minX + 30.0, y: fixture.area.maxY + 14.0)
+    }
+
+    /// While #left is held, a long press on the caption opens no menu, and #left is never cancelled.
+    func testAHeldButtonKeepsTheCaptionsLongPressFromTheMenu() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 2.0), Finger(at: self.caption(fixture), down: 0.3, up: 1.5)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).contains("left:a:P") && self.pointerLog("multitouch", in: $0).contains("up:left") }
+        self.attachScreenshot(fixture.app, "after holding #left and the caption")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+        XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
+    }
+
+    /// A held button that drags (a claimed drag fails what is above it) still keeps the lock.
+    func testAHeldButtonThatDragsStillLocksTheChat() throws {
+        let fixture = try self.launchMultitouch()
+        let left = fixture.left
+        try performFingers([Finger(at: left, down: 0.0, moves: [(CGPoint(x: left.x + 20.0, y: left.y), 0.15)], up: 2.0),
+                            Finger(at: self.caption(fixture), down: 0.4, up: 1.6)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { self.pointerLog("multitouch", in: $0).contains("up:left") }
+        self.attachScreenshot(fixture.app, "after dragging #left and holding the caption")
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P move:left:a:P up:left:a:P", after)
+        XCTAssertFalse(self.hasEvent("contextMenu", in: after), after)
+    }
+
+    /// While #left is held, a vertical drag elsewhere in the chat still scrolls it (the lock never stops a vertical
+    /// scroll), and the scroll ends #left's press.
+    func testAHeldButtonLetsTheChatScroll() throws {
+        let fixture = try self.launchMultitouch()
+        let start = CGPoint(x: fixture.area.midX, y: fixture.area.minY - 100.0)
+        let moves = (1 ... 9).map { step in (CGPoint(x: start.x, y: start.y + 20.0 * Double(step)), 0.3 + 0.1 * Double(step)) }
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: start, down: 0.3, moves: moves, up: 1.3)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("up:left") || $0.contains("cancel:left") }
+        self.attachScreenshot(fixture.app, "after a drag while #left is held")
+        XCTAssertTrue(self.listDragged(after), after)
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P cancel:left:a:P", after)
+    }
+
+    /// While #left is held, a swipe from the screen's left edge does not go back.
+    func testAHeldButtonKeepsTheBackSwipeOff() throws {
+        let fixture = try self.launchMultitouch()
+        let start = CGPoint(x: 2.0, y: fixture.area.minY - 100.0)
+        let moves = (1 ... 6).map { step in (CGPoint(x: start.x + 25.0 * Double(step), y: start.y), 0.3 + 0.1 * Double(step)) }
+        try performFingers([Finger(at: fixture.left, down: 0.0, up: 1.5), Finger(at: start, down: 0.3, moves: moves, up: 1.0)], in: fixture.app)
+        let after = self.waitForReadout(fixture.app, timeout: 5.0) { $0.contains("up:left") || $0.contains("cancel:left") }
+        self.attachScreenshot(fixture.app, "after an edge swipe while #left is held")
+        XCTAssertFalse(self.hasEvent("back", in: after) || after.split(separator: "\n").contains("back"), after)
+        XCTAssertEqual(self.pointerLog("multitouch", in: after), "down:left:a:P up:left:a:P", after)
+    }
+
+    /// A finger resting on a part the widget does not handle, then one on a button: the bubble's context gesture, failed
+    /// when the chat steps back, ends its press rather than holding the bubble shrunk until every finger lifts (its
+    /// timer and animation outlive being failed from outside). The readout's `pressed <path> <seconds>` events say how
+    /// long each press lasted (a query does not return while the fingers play).
+    func testASecondFingerOnAButtonLeavesTheBubbleUnpressed() throws {
+        let fixture = try self.launchMultitouch()
+        try performFingers([Finger(at: fixture.pad, down: 0.0, up: 3.0), Finger(at: fixture.left, down: 0.2, up: 3.0)], in: fixture.app)
+        self.pumpReadout(fixture.app, for: 1.0)
+        let after = self.readout(fixture.app)
+        self.attachScreenshot(fixture.app, "after the two-finger hold")
+        XCTAssertTrue(self.pointerLog("multitouch", in: after).hasPrefix("down:left:a:S up:left:a:S"), after)
+        let presses = after.split(separator: "\n").filter { $0.hasPrefix("pressed fixture/multitouch.html ") }.compactMap { Double($0.split(separator: " ").last ?? "") }
+        XCTAssertTrue(presses.allSatisfy { $0 < 1.0 }, after)
     }
 }

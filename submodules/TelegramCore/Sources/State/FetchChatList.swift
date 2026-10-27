@@ -226,6 +226,9 @@ struct FetchedChatList {
     var pollVoteTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
     var channelStates: [PeerId: Int32]
     var storeMessages: [StoreMessage]
+    /// The top message of every fetched dialog whose `top_message` is not 0: the page's own, the pinned ones and,
+    /// on a `.general` page, the archived ones fetched from the folders it references. Read only by the account
+    /// reset's ghost-tail rule (`storedCloudMessagesAboveTopMessages`).
     var topMessageIds: [PeerId: MessageId]
     
     var lowerNonPinnedIndex: MessageIndex?
@@ -385,6 +388,9 @@ func fetchChatList(accountPeerId: PeerId, postbox: Postbox, network: Network, lo
                         pollVoteTagSummaries.merge(folderChats.pollVoteTagSummaries, uniquingKeysWith: { _, updated in updated })
                         channelStates.merge(folderChats.channelStates, uniquingKeysWith: { _, updated in updated })
                         storeMessages.append(contentsOf: folderChats.storeMessages)
+                        // The archived dialogs are listed only in `peerGroupIds`; with their tops merged, the
+                        // ghost-tail rule knows the top of one whose top message the page does not carry.
+                        topMessageIds.merge(folderChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
                     }
                     
                     var pinnedItemIds: [PeerId]?

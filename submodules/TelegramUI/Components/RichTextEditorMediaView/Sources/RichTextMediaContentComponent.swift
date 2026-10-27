@@ -123,6 +123,7 @@ public final class RichTextMediaContentComponent: Component {
             self.addSubview(self.imageNode.view)
             
             self.moreButtonBackground.isUserInteractionEnabled = false
+            self.moreButtonBackground.morphsIntoContextMenu = true
             self.moreButton.addSubview(self.moreButtonBackground)
             self.moreButtonBackgroundContainer.contentView.addSubview(self.moreButton)
             self.addSubview(self.moreButtonBackgroundContainer)
@@ -224,8 +225,9 @@ public final class RichTextMediaContentComponent: Component {
         }
 
         @objc private func moreButtonPressed() {
-            self.component?.onControlTapped?(.more, self.moreButtonBackgroundContainer,
-                                             self.moreButtonBackgroundContainer.bounds)
+            // The button's glass is the menu's anchor: the menu morphs out of it.
+            self.component?.onControlTapped?(.more, self.moreButtonBackground,
+                                             self.moreButtonBackground.bounds)
         }
         
         func update(component: RichTextMediaContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {

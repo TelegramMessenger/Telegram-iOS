@@ -22,9 +22,10 @@ namespace wr::animation {
 /// At most this many entries of an `animation` or `transition` list are read.
 inline constexpr size_t kMaxCSSListEntries = 64;
 
-/// The properties a transition can watch: litehtml keeps their declarations (style.cpp's raw_declaration_names, less
-/// the animation and transition properties themselves and the discrete `pointer-events`). A transition on any other
-/// property never starts (V5f Ruling).
+/// The properties a transition can watch: the animatable ones whose declarations litehtml keeps (style.cpp's
+/// raw_declaration_names holds them, and others no transition watches: the animation and transition properties
+/// themselves, the discrete `pointer-events`, and the copies getComputedStyle reads, twidget edits 30.1, 45 and 51).
+/// A transition on any other property never starts (V5f Ruling).
 inline constexpr std::string_view kWatchedProperties[] = {
     "transform", "opacity", "color", "background-color", "background", "width", "height", "top", "left", "right",
     "bottom", "box-shadow", "border-color", "max-height", "stroke-dashoffset", "fill", "stroke", "translate", "scale",

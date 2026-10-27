@@ -297,4 +297,61 @@ final class WalletCardStickersTests: XCTestCase {
         XCTAssertNil(schedule.takeDue(walletAddress: "a", now: 40, requestInFlight: false))
     }
 
+    private func duplicateServerCard() -> WalletCard {
+        let coordinates = MediaArea.Coordinates(x: 50, y: 50, width: 20, height: 30, rotation: 0, cornerRadius: nil)
+        let nft = self.nft("one")
+        return WalletCard(address: "wallet", balance: 50, stickers: [
+            WalletCard.Sticker(coordinates: coordinates, nft: nft),
+            WalletCard.Sticker(coordinates: .init(x: 20, y: 40, width: 20, height: 30, rotation: 0, cornerRadius: nil), nft: nft)
+        ], backgroundNft: nil)
+    }
+
+    func testServerCardStickersSurviveStoredStateRoundTrip() throws {
+        let card = self.duplicateServerCard()
+        let unvalidated = card.stickers.compactMap { WalletContext.CardSticker(serverSticker: $0) }
+        var state = WalletStoredState()
+        state.walletAddress = "wallet"
+        state.cardStickersByWallet = ["wallet": unvalidated]
+        // Decoding validates stickers, so a server card stored as received comes back different.
+        XCTAssertNotEqual(try XCTUnwrap(EnginePreferencesEntry(state)).get(WalletStoredState.self), state)
+
+        state.cardStickersByWallet = ["wallet": walletCardStickers(serverCard: card)]
+        XCTAssertEqual(state.cardStickersByWallet["wallet"]?.count, 1)
+        XCTAssertEqual(try XCTUnwrap(EnginePreferencesEntry(state)).get(WalletStoredState.self), state)
+    }
+
+    func testCacheThatDecodingNormalizesDoesNotFailTransferPersistence() throws {
+        let pending = WalletContext.PendingTransfer(id: "transfer", recipient: "recipient", amount: 1_000_000_000,
+            comment: nil, createdAt: 1, status: .broadcasting, isPreparing: true)
+        var state = WalletStoredState()
+        state.walletAddress = "wallet"
+        state.pendingTransfers = [pending]
+        state.cardStickersByWallet = ["wallet": self.duplicateServerCard().stickers.compactMap {
+            WalletContext.CardSticker(serverSticker: $0)
+        }]
+        XCTAssertTrue(walletStoredStateEntryKeepsJournals(try XCTUnwrap(EnginePreferencesEntry(state)), of: state))
+
+        var other = state
+        other.pendingTransfers = []
+        XCTAssertFalse(walletStoredStateEntryKeepsJournals(try XCTUnwrap(EnginePreferencesEntry(other)), of: state))
+    }
+
+    func testNonFiniteCacheValuesDoNotFailTransferPersistence() throws {
+        let pending = WalletContext.PendingTransfer(id: "transfer", recipient: "recipient", amount: 1_000_000_000,
+            comment: nil, createdAt: 1, status: .broadcasting, isPreparing: true)
+        var state = WalletStoredState()
+        state.walletAddress = "wallet"
+        state.pendingTransfers = [pending]
+        state.fiatRates = [.usd: WalletContext.FiatRate(unitsPerUsd: .infinity, unitsPerGram: -.infinity)]
+        state.serverCardsByWallet = ["wallet": WalletCard(address: "wallet", balance: 50, stickers: [
+            WalletCard.Sticker(coordinates: .init(x: .nan, y: 50, width: 20, height: 30, rotation: 0, cornerRadius: nil), nft: self.nft())
+        ], backgroundNft: nil)]
+        let entry = try XCTUnwrap(EnginePreferencesEntry(state))
+        XCTAssertTrue(walletStoredStateEntryKeepsJournals(entry, of: state))
+        let restored = try XCTUnwrap(entry.get(WalletStoredState.self))
+        XCTAssertEqual(restored.fiatRates?[.usd]?.unitsPerUsd, .infinity)
+        XCTAssertEqual(restored.fiatRates?[.usd]?.unitsPerGram, -.infinity)
+        XCTAssertTrue(restored.serverCardsByWallet["wallet"]?.stickers.first?.coordinates.x.isNaN == true)
+    }
+
 }

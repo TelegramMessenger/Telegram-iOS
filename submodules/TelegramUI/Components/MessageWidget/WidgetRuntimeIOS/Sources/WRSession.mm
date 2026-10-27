@@ -15,6 +15,7 @@
 
 #include "CoreTextRenderHost.h"
 #include "LayerTreePainter.h"
+#include "third-party/twidget/LiteHTML/LHHostSupport.h"
 #include "Generated/Bindings.h"
 #include "Sources/DOM/DOM.h"
 #include "Sources/Host/Boot.h"
@@ -113,7 +114,6 @@ public:
     explicit WRProductionHost(WRSession* session) : m_session(session) {}
     double monotonicNow() override { return CACurrentMediaTime() * 1000; }
     double wallClockNow() override { return [NSDate date].timeIntervalSince1970 * 1000; }
-    std::string defaultTimeZone() override { return std::string([NSTimeZone localTimeZone].name.UTF8String ?: "UTC"); }
     void log(wr::LogLevel level, std::string_view line) override;
     void diagnostic(std::string_view kind, std::string_view detail) override;
     void bridgeCall(std::string_view method, std::string_view argsJson) override;
@@ -121,12 +121,17 @@ public:
         return area == "session" ? m_sessionPreload : area == "local" ? m_localPreload : std::vector<std::pair<std::string, std::string>>{};
     }
     void storageCommit(std::string_view area, const std::vector<std::pair<std::string, std::string>>& entries) override;
+    std::string intl(std::string_view requestJson) override;
     /// The client's stored areas (setStoragePreloadLocal:session:), read once at the widget's first touch of each.
     std::vector<std::pair<std::string, std::string>> m_localPreload;
     std::vector<std::pair<std::string, std::string>> m_sessionPreload;
     __weak WRSession* m_session;
     __weak id<WRSessionDelegate> delegate;
 };
+
+@interface WREffectStore ()
+- (LHEffectStore*)store;
+@end
 
 @interface WRTree () {
 @public
@@ -153,6 +158,27 @@ public:
 
 @end
 
+@implementation WREffectStore {
+    std::unique_ptr<LHEffectStore> _store;
+}
+
+- (instancetype)init {
+    if ((self = [super init])) {
+        _store = std::make_unique<LHEffectStore>();
+    }
+    return self;
+}
+
+- (NSUInteger)made {
+    return _store->made();
+}
+
+- (LHEffectStore*)store {
+    return _store.get();
+}
+
+@end
+
 @implementation WRTree
 
 - (instancetype)initWithTree:(std::shared_ptr<const wr::LayerTree>)tree {
@@ -171,12 +197,27 @@ public:
     return uint32_t(color.red) << 24 | uint32_t(color.green) << 16 | uint32_t(color.blue) << 8 | uint32_t(color.alpha);
 }
 
-- (CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale {
+- (CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale effects:(WREffectStore*)effects {
     try {
-        return wr::ios::LayerTreePainter::copyImage(*_tree, rect, scale);
+        return wr::ios::LayerTreePainter::copyImage(*_tree, rect, scale, [effects store]);
     } catch (...) {
         return nullptr;
     }
+}
+
+@end
+
+@implementation WRWidgetViewer
+
+- (instancetype)initWithId:(int64_t)userId firstName:(NSString*)firstName lastName:(NSString*)lastName username:(NSString*)username isPremium:(BOOL)isPremium {
+    if (self = [super init]) {
+        _userId = userId;
+        _firstName = [firstName copy];
+        _lastName = [lastName copy];
+        _username = [username copy];
+        _isPremium = isPremium;
+    }
+    return self;
 }
 
 @end
@@ -493,6 +534,24 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
+- (void)setReducedMotion:(BOOL)reduced {
+    WR_GUARD(, {
+        if (_runtime) {
+            JSContext* ctx = _runtime->context();
+            if (!_booted) {
+                // The first build's option: nothing is built yet to flush, nor listening to report to.
+                if (wr::RenderTree* render = wr::HostState::of(ctx).render()) {
+                    render->setReducedMotion(ctx, reduced);
+                }
+            } else {
+                wr::HostState::of(ctx).setReducedMotion(ctx, reduced);
+                wr::HostState::of(ctx).flushRender(ctx);
+                [self noteTree];
+            }
+        }
+    });
+}
+
 - (void)setDark:(BOOL)dark
      themeParams:(NSDictionary<NSString*, NSString*>*)themeParams
     buttonTokens:(NSDictionary<NSString*, id>*)tokens
@@ -523,6 +582,88 @@ static WRStepResult stepOf(wr::StepResult result) {
     });
 }
 
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(NSString*)chatType viewer:(WRWidgetViewer*)viewer preview:(BOOL)preview {
+    WR_GUARD(, {
+        if (_runtime) {
+            twidget::WidgetContext context;
+            context.isCopy = isCopy;
+            context.canQuery = canQuery;
+            context.backgroundQuery = backgroundQuery;
+            context.chatType = chatType.UTF8String ?: "";
+            context.preview = preview;
+            if (viewer) {
+                twidget::WidgetViewer checked;
+                checked.id = viewer.userId;
+                if (viewer.firstName) {
+                    checked.firstName = std::string(viewer.firstName.UTF8String ?: "");
+                }
+                if (viewer.lastName) {
+                    checked.lastName = std::string(viewer.lastName.UTF8String ?: "");
+                }
+                if (viewer.username) {
+                    checked.username = std::string(viewer.username.UTF8String ?: "");
+                }
+                checked.isPremium = viewer.isPremium;
+                context.viewer = checked;
+            }
+            JSContext* ctx = _runtime->context();
+            wr::HostState::of(ctx).setContext(ctx, context);
+        }
+    });
+}
+
+/// The server's bytes as the policy reads them (it decides what is text); none for nil.
+static std::optional<std::string> bytesOf(NSData* data) {
+    if (!data) {
+        return std::nullopt;
+    }
+    return std::string(static_cast<const char*>(data.bytes), data.length);
+}
+
+- (void)setChatData:(NSData*)chatData publicData:(NSData*)publicData {
+    WR_GUARD(, {
+        if (_runtime) {
+            twidget::WidgetData data;
+            data.chatData = bytesOf(chatData);
+            data.publicData = bytesOf(publicData);
+            JSContext* ctx = _runtime->context();
+            if (_booted) {
+                wr::HostState::of(ctx).setData(ctx, data);
+                // Queuing the task can latch a memory stop, which drops the runtime as a step's does.
+                [self noteTree];
+            } else {
+                wr::HostState::of(ctx).setInitialData(ctx, data);
+            }
+        }
+    });
+}
+
+- (void)completeRequest:(int64_t)requestId result:(NSData*)result failure:(WRRequestFailure)failure {
+    WR_GUARD(, {
+        if (_runtime) {
+            twidget::WidgetRequestOutcome outcome;
+            switch (failure) {
+            case WRRequestFailureNone:
+                outcome.failure = twidget::WidgetRequestFailure::None;
+                outcome.answer.result = bytesOf(result);
+                break;
+            case WRRequestFailureTimeout:
+                outcome.failure = twidget::WidgetRequestFailure::Timeout;
+                break;
+            case WRRequestFailureRateLimited:
+                outcome.failure = twidget::WidgetRequestFailure::RateLimited;
+                break;
+            case WRRequestFailureFailed:
+                outcome.failure = twidget::WidgetRequestFailure::Failed;
+                break;
+            }
+            JSContext* ctx = _runtime->context();
+            wr::HostState::of(ctx).completeRequest(ctx, requestId, outcome);
+            [self noteTree];
+        }
+    });
+}
+
 - (void)setVisible:(BOOL)visible {
     WR_GUARD(, {
         if (_runtime) {
@@ -533,13 +674,19 @@ static WRStepResult stepOf(wr::StepResult result) {
 }
 
 - (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary {
+    [self pointer:phase at:point pointerId:pointerId primary:primary mouse:NO button:0];
+}
+
+- (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary mouse:(BOOL)mouse button:(NSInteger)button {
     WR_GUARD(, {
         if (_runtime) {
             static const wr::PointerPhase kPhases[] = {wr::PointerPhase::Down, wr::PointerPhase::Move,
-                                                       wr::PointerPhase::Up, wr::PointerPhase::Cancel};
+                                                       wr::PointerPhase::Up, wr::PointerPhase::Cancel,
+                                                       wr::PointerPhase::Retract};
             JSContext* ctx = _runtime->context();
-            wr::HostState::of(ctx).pointer(ctx, kPhases[std::clamp<NSInteger>(phase, 0, 3)], point.x, point.y,
-                                           pointerId, primary);
+            wr::HostState::of(ctx).pointer(ctx, kPhases[std::clamp<NSInteger>(phase, 0, 4)], point.x, point.y,
+                                           pointerId, primary, mouse ? twidget::PointerKind::Mouse : twidget::PointerKind::Touch,
+                                           int16_t(std::clamp<NSInteger>(button, 0, 4)));
             // Queuing the task can latch a memory stop, which drops the runtime as a step's does.
             [self noteTree];
         }
@@ -552,7 +699,7 @@ static WRStepResult stepOf(wr::StepResult result) {
         return 0;
     }
     const wr::GestureClaim claim = wr::HostState::of(_runtime->context()).gestureClaim();
-    return (claim.x ? WRGestureAxesHorizontal : 0) | (claim.y ? WRGestureAxesVertical : 0);
+    return (claim.x ? WRGestureAxesHorizontal : 0) | (claim.y ? WRGestureAxesVertical : 0) | (claim.hold ? WRGestureAxesHold : 0);
 }
 
 - (BOOL)pressTakesTaps {
@@ -561,6 +708,14 @@ static WRStepResult stepOf(wr::StepResult result) {
         return NO;
     }
     return wr::HostState::of(_runtime->context()).pressTakesTaps();
+}
+
+- (WRResizeAnchor)resizeAnchor {
+    std::lock_guard<std::recursive_mutex> guard(_lock);
+    if (_failed || !_runtime) {
+        return WRResizeAnchorTop;
+    }
+    return wr::HostState::of(_runtime->context()).resizeAnchor() == wr::ResizeAnchor::Bottom ? WRResizeAnchorBottom : WRResizeAnchorTop;
 }
 
 - (WRStopReason)stopReason {
@@ -771,6 +926,17 @@ void WRProductionHost::diagnostic(std::string_view kind, std::string_view detail
 void WRProductionHost::bridgeCall(std::string_view method, std::string_view argsJson) {
     WRSession* session = m_session;
     [delegate session:session bridge:text(method) args:text(argsJson)];
+}
+
+std::string WRProductionHost::intl(std::string_view requestJson) {
+    WRSession* session = m_session;
+    id<WRSessionDelegate> d = delegate;
+    if (![d respondsToSelector:@selector(session:intl:)]) {
+        return {};
+    }
+    // By length: a list item's U+0000 is in the answer too.
+    NSData* answer = [[d session:session intl:text(requestJson)] dataUsingEncoding:NSUTF8StringEncoding];
+    return answer ? std::string(static_cast<const char*>(answer.bytes), answer.length) : std::string();
 }
 
 void WRProductionHost::storageCommit(std::string_view area, const std::vector<std::pair<std::string, std::string>>& entries) {

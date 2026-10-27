@@ -1555,6 +1555,8 @@ struct ChatListViewState {
         
         var sampledHoleChatListIndices = Set<ChatListIndex>()
         
+        var globalNotificationSettings: PostboxGlobalNotificationSettings?
+        
         let directions = [combinedSpacesAndIndicesByDirection.lowerOrAtAnchor, combinedSpacesAndIndicesByDirection.higherThanAnchor]
         for directionIndex in 0 ..< directions.count {
             outer: for i in 0 ..< directions[directionIndex].count {
@@ -1623,7 +1625,14 @@ struct ChatListViewState {
                     
                     let isRemovedFromTotalUnreadCount: Bool
                     if let peer = renderedPeer.peers[notificationsPeerId] {
-                        isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: postbox.getGlobalNotificationSettings(transaction: currentTransaction), peer: peer, peerSettings: notificationSettings)
+                        let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
+                        if let current = globalNotificationSettings {
+                            globalNotificationSettingsValue = current
+                        } else {
+                            globalNotificationSettingsValue = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
+                            globalNotificationSettings = globalNotificationSettingsValue
+                        }
+                        isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: notificationSettings)
                     } else {
                         isRemovedFromTotalUnreadCount = false
                     }

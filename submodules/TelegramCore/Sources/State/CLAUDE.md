@@ -2,19 +2,78 @@
 
 Opening a post's comments (one round trip) is `../TelegramEngine/Messages/CLAUDE.md`.
 
+## Account state sync (`AccountStateManager`, `Sync/`)
+
+`AccountStateManager` and `Sync/` keep an account's Postbox in step with the server: pushed updates,
+`updates.getDifference`, channel difference and the `differenceTooLong` reset, run as one queue of operations
+(`StateOperationQueue`) on the manager's queue (the asynchronous channel resets and the notification extension's polls
+run beside it) and replayed in one Postbox transaction each. The map (file layout, paths, invariants with what pins
+each, cost model, open issues) is `docs/state-sync.md`; a change to state sync updates it in the same commit.
+`docs/state-sync-audit-2026-10.md` is a dated record (issue ids and their reasoning).
+
+None of these shows up as a build error:
+
+- **Never give up** (owner rule: "we never abandon syncing or message history loading"): retry with backoff, never a
+  terminal give-up arm, logout aside; only a definite server answer ends a retry. The map's invariant 12 lists those
+  answers and today's open exceptions (the resolve stages, `resetChannels` (C6), the read-state validation). **The
+  notification extension never resets the account** (it reports `differenceTooLong` as done; the app resets).
+- **`Queue.async` and `deliverOn` run inline when already on the target queue**, and ordering depends on it (a
+  `differenceSlice` continuation runs before update groups pushed mid-poll). Never turn an inline call into a real
+  dispatch, or a real dispatch into an inline call; an always-on-queue hop becomes a direct call only with
+  `assert(queue.isCurrent())`.
+- **Keep the container types whose iteration order decides an order:** channel recovery's (`polls`, `gaps`,
+  `channelIds`, `channelsToPollExplicitely`, `pollChannelSignals`), interpretation's `updatesByChannel` and the
+  replay's `StateAdvance` (the map's invariant 27).
+- `isUpdating` goes false only in `finishPollCycle`; a replay is one synchronous call inside its caller's
+  transaction. `Sync/` has no `[weak]`/`[unowned]` capture list (grep it); a new one must avoid the Swift 6.4 shape
+  (root `CLAUDE.md`, "Swift 6.4: `[weak]` in a local closure…").
+- **A history fill of a private chat or basic group confirms first.** Stored messages in the filled range that the
+  answer left out are asked about with `messages.getMessages` (200 at a time) before anything is stored; the missing
+  ones (`messageEmpty`, or left out of the answer: a left-out message is considered deleted) are deleted as received
+  deletions, except one written again meanwhile, which stays under a hole of its own; the hole closes only up to the
+  last confirmed one, so a cleared or partly deleted history empties over a few rounds. Until it answers nothing is
+  written. Other fills follow the rules
+  below (most store first). A history fill and its follow-up store no message deleted in the last few minutes, and no
+  answer older than that record (`RecentlyDeletedMessages`, `FetchedAnswerAge`); the forum-topic resolution's own
+  topic messages are not filtered yet. A debug reset that removes a chat's messages only locally forgets them
+  (`Transaction.forgetRecentlyDeletedMessages`), or the next fills would leave them out. An answer message edited
+  after the request went out is stored as that edit, stored or not before (`RecentlyEditedMessages`,
+  `fetchedMessagesWithRecentEdits`, applied wherever the deletion filter is).
+- **The `differenceTooLong` reset** deletes every stored message above a fetched dialog's top message without asking;
+  the chat-list fill leaves them, a private chat's or basic group's under a hole for its next history fill to confirm
+  (after a reset, a chat beyond its first page keeps a message deleted during the gap otherwise). A cleared chat is not
+  listed with `top_message` 0: the server keeps its old top id as
+  a `messageActionHistoryClear` service message, so the history fill's confirmation empties it.
+- `updates.getDifference` carries `pts_total_limit` from the app-config key `pts_total_limit` (default 10000; 0 or less
+  sends none, the server's off switch). Debug Settings ▸ "Difference limit" overrides it in DEBUG builds.
+- **Behaviour is pinned by `Tests/StateSync`** in `//submodules/TelegramCore:TelegramCoreTests`: the real
+  `AccountStateManager` over a temp Postbox and a `ScriptedServer` fake `NetworkEngine` (via `Network.makeForTesting`),
+  with characterization tests named by the audit's ids; no login needed, `STATE_SYNC_LOG=1` shows TelegramCore's log. A
+  test whose Postbox is still retained 5 s after `close()` fails (answer what it holds, or set
+  `retainedPostboxAtCloseReason` when it leaves work in flight on purpose); a stall is a regression. One run is
+  `bash docs/superpowers/plans/2026-10-14-state-sync-foundation/run-make.sh test`. A change that moves pinned behaviour
+  flips that test in its own commit; an ordering change passes 20 consecutive runs
+  (`bash docs/superpowers/plans/2026-10-14-state-sync-foundation/run-loop.sh 1 20 <outdir>`). The truth server
+  (`Tests/StateSync/TruthServer`) runs random sessions against a model of the server and compares the app's Postbox
+  with it; a change to sync runs seeds 1–5000
+  (`docs/superpowers/plans/2026-10-25-state-sync-truth-server/run-truth.sh`) and compares with the last run
+  (`docs/state-sync.md`, "Changing state sync safely").
+
 ## Opening a channel at a post (history fill and the poll gate)
 
 The Postbox `MessageHistoryView` issues no request; every round trip before the chat shows messages comes from
 TelegramCore around it. Four rules keep the critical path at one `messages.getHistory`:
 
 - **A history fill stores before it resolves.** `fetchMessageHistoryHole` stores the messages and closes the hole in
-  its first transaction; reply targets, custom emoji files and stories follow, and the follow-up rewrites the messages
+  its first transaction (a private chat or basic group confirms the stored messages the answer left out first, above);
+  reply targets, custom emoji files and stories follow, and the follow-up rewrites the messages
   that waited for them from their current rows, so a view (which watches its own chat only) re-renders them. Forums and
   monoforums store first too when their topics are known (below).
 - **The around fill learns the top from the server.** `offset_id_offset` is the 1-based position of the anchor from
   the newest message and the server does not fill downward, so the hole closes to the top exactly when the newer ids
   returned number one less than it (`aroundHoleFillRange`, `AroundHoleFillRangeTests`). `inexact` vetoes it; the bottom
-  is never inferred.
+  is never inferred. It asks with `min_id` 0: the fill closes over its anchor, and `min_id` (exclusive) 1 left a chat
+  opened at message 1 without it.
 - **Plain channels request no forum topics.** Every channel post is stored with `threadId = 1`; `resolveForumThreads`
   skips peers that are neither forum nor monoforum (`peerCanHaveForumThreads`).
 - **An unjoined channel's view does not wait for the poll.** `wrappedMessageHistorySignal` still resets the read state

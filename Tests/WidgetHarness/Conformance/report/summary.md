@@ -1,14 +1,14 @@
 # Conformance results
 
-Generated 2026-10-22 05:00 UTC by `packages/conformance/tools/report.mjs` (profile 1; ios telegram-native — iOS 26.5, iPhone18,3 simulator @ e9654cab; policy strict, features webAnimations).
+Generated 2026-10-27 10:10 UTC by `packages/conformance/tools/report.mjs` (profile 1; ios telegram-native — iOS 26.5, iPhone18,3 simulator @ 88285a3b; policy strict, features webAnimations).
 
 Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail, ⏳ expected to fail (not implemented yet: D23, the profile in the validator, …), ❗ passes although expected to fail, – not applicable here, · not tested. For **out** features "pass" means *neutralised as the profile says*. The native columns are a plain browser engine without the pipeline: a reference for the tests, not an expectation.
 
 ## Totals
 
-| Renderer | in (174) ✅ / ◐ / ❌ / ⏳ | out (81) neutralised ✅ / not yet ⏳ / ❌ | auto runs loaded | errors |
+| Renderer | in (188) ✅ / ◐ / ❌ / ⏳ | out (79) neutralised ✅ / not yet ⏳ / ❌ | auto runs loaded | errors |
 |---|---|---|---|---|
-| ios telegram-native | 162 / 1 / 0 / 0 | 75 / 0 / 0 | 41 / 41 | 0 |
+| ios telegram-native | 171 / 2 / 0 / 0 | 75 / 0 / 0 | 53 / 53 | 0 |
 
 ## In the profile
 
@@ -155,6 +155,13 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `tw.theme-params` | ✅ | ✅ |
 | `tw.events` | ✅ | – |
 | `tw.is-active` | ✅ | – |
+| `tw.resize-anchor` | ✅ | – |
+| `tw.bot-data` | ✅ | – |
+| `tw.context` | ✅ | – |
+| `tw.request` | ✅ | – |
+| `tw.copy-text` | ✅ | – |
+| `tw.watch-public-data` | ✅ | – |
+| `tw.preview` | ✅ | – |
 | `tw.open-link` | ✅ | – |
 | `tw.open-telegram-link` | ✅ | – |
 | `tw.haptic` | ✅ | – |
@@ -164,6 +171,8 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `input.mouse-compat` | ✅ | ✅ |
 | `input.drag` | ✅ | ✅ |
 | `input.hover-events` | – | ✅ |
+| `input.dblclick` | ✅ | ✅ |
+| `input.long-press` | ✅ | ✅ |
 | `input.user-activation` | ✅ | · |
 | `input.prevent-default` | ✅ | ✅ |
 | `limit.text-node` | ✅ | ✅ |
@@ -175,17 +184,22 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `limit.storage` | ✅ | – |
 | `limit.url-length` | ✅ | – |
 | `limit.event-handlers` | ✅ | – |
-| `limit.haptic-rate` | ✅ | · |
+| `limit.haptic-rate` | ✅ | – |
 | `limit.html-size` | · | · |
 | `behaviour.theme-switch` | ✅ | – |
 | `behaviour.offscreen-pause` | ✅ | – |
 | `behaviour.auto-height` | ✅ | · |
 | `behaviour.no-selection` | ✅ | · |
 | `behaviour.restart` | · | · |
-| `behaviour.gesture-claim` | · | · |
+| `behaviour.gesture-claim` | ◐ | ✅ |
 | `behaviour.storage-persist` | · | · |
 | `behaviour.storage-forward` | · | · |
 | `behaviour.message-edit` | · | · |
+| `behaviour.resize-anchor` | · | · |
+| `behaviour.data-edit` | · | · |
+| `behaviour.forward-copy` | · | · |
+| `behaviour.preview` | · | · |
+| `behaviour.network-marker` | · | · |
 | `behaviour.size-hint` | · | · |
 | `behaviour.policy-strict` | ✅ | ✅ |
 
@@ -268,8 +282,6 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 | `js.fullscreen` | ✅ | – |
 | `tw.send-message` | ✅ | – |
 | `input.touch-events` | – | – |
-| `input.dblclick` | – | ❌ |
-| `input.long-press` | – | ❌ |
 | `input.keyboard` | – | ❌ |
 | `input.key-activation` | – | ❌ |
 | `input.key-gesture` | ✅ | · |
@@ -280,6 +292,7 @@ Verdict per catalogue ID over the automatic set: ✅ pass, ◐ partly, ❌ fail,
 ## ios telegram-native: in-profile failures
 
 - `css.background.basic`: 05-colour-backgrounds-b: background (diff 71.7 % of ink (max 5 %))
+- `behaviour.gesture-claim`: 23-gestures-a: a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's) (touch: pointerup); 23-gestures-b: a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's) (touch: pointerup after 9 moves); 23-gestures-b: a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel (touch: pointerup after 9 moves); 23-gestures-b: a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's) (touch: pointerup)
 
 ## Visual set
 
@@ -322,5 +335,14 @@ For people (the test channel): judged by eye. Runners only check that each widge
 | visual/sdk/13-max-height | ✅ |
 | visual/sdk/14-theme-palette | ✅ |
 | visual/sdk/15-storage-forward | ✅ |
-| visual/sdk/16-bot-edit | ✅ |
+| visual/sdk/16-state-edit | ✅ |
 | visual/sdk/17-size-hint | ✅ |
+| visual/sdk/18-resize-anchor | ✅ |
+| visual/sdk/19-request-tap | ✅ |
+| visual/sdk/20-forward-requests | ✅ |
+| visual/sdk/21-network-marker | ✅ |
+| visual/sdk/22-copy-text | ✅ |
+| visual/sdk/23-preview | ✅ |
+| visual/sdk/24-watch-public-data | ✅ |
+| visual/sdk/25-group-chat-state | ✅ |
+| visual/sdk/26-haptics-no-touch | ✅ |

@@ -28,6 +28,9 @@
 #t-sc{transform:scale(2);transform-origin:0 0}
 #t-tr{translate:10px 5px}
 #t-3d{transform:rotateY(60deg)}
+#t-txp{transform:translateX(150%)}
+#t-txc{transform:translateX(calc(100% + 10px))}
+#t-txm{transform:translateX(calc(50% - 1 * (100% + 10px) + 50px))}
 .p{position:relative;height:44px;width:200px}
 .pp{position:absolute;width:40px;height:20px;top:0}
 </style>
@@ -46,11 +49,13 @@
 <div class="conf-probes">
   <div class="p"><div class="pp" id="t-tx" style="left:0;width:20px;height:10px;background:#c33"></div><div class="pp" id="t-rot" style="left:60px;width:40px;height:20px;background:#36c"></div><div class="pp" id="t-sc" style="left:110px;width:10px;height:10px;background:#3a3"></div><div class="pp" id="t-tr" style="left:150px;width:10px;height:10px;background:#e83"></div></div>
   <div class="p"><div class="pp" id="t-3d" style="left:0;background:#e83"></div><div id="flt" style="position:absolute;left:160px;width:10px;height:10px;filter:blur(2px) brightness(1.5) drop-shadow(1px 1px 0 red)"></div></div>
+  <div class="p"><div class="pp" id="t-txp" style="left:0;width:20px;height:8px;background:#c33"></div><div class="pp" id="t-txc" style="left:0;top:11px;width:20px;height:8px;background:#36c"></div><div class="pp" id="t-txm" style="left:0;top:22px;width:20px;height:8px;background:#3a3"></div><div class="pp" id="t-txj" style="left:0;top:33px;width:20px;height:8px;background:#e83"></div></div>
 </div>
 <div id="conf-list"></div>
 <script>
 var R = T.rect;
 var rel = function (sel) { var r = R(sel), p = R(document.querySelector(sel).parentNode); return { x: r.x - p.x, y: r.y - p.y, w: r.w, h: r.h }; };
+document.getElementById('t-txj').style.transform = 'translateX(calc(100% + 10px))';
 T.step(function () {
   T.near('css.transform.2d', 'translateX(30px) moves the box', rel('#t-tx').x, 30, 0.5);
   var rot = rel('#t-rot');
@@ -60,6 +65,10 @@ T.step(function () {
   var tr = rel('#t-tr');
   T.ok('css.transform.2d', 'the translate property', Math.abs(tr.x - 160) < 0.5 && Math.abs(tr.y - 5) < 0.5, tr.x + ',' + tr.y);
   T.near('css.transform.3d', 'rotateY(60deg) is dropped: the box keeps its width', rel('#t-3d').w, 40, 0.5);
+  T.near('css.transform.2d', 'translateX(150%) is a share of the box\'s own width', rel('#t-txp').x, 30, 0.5);
+  T.near('css.value.math', 'calc(% + px) inside translateX()', rel('#t-txc').x, 30, 0.5);
+  T.near('css.value.math', 'calc() with * and nested parentheses inside translateX()', rel('#t-txm').x, 30, 0.5);
+  T.near('css.transform.2d', 'a transform set from script (style.transform, calc())', rel('#t-txj').x, 30, 0.5);
   T.ok('css.filter.blur-brightness-drop-shadow', 'filter functions are kept', /blur\(2px\)/.test(T.cs('#flt', 'filter')) && /brightness/.test(T.cs('#flt', 'filter')) && /drop-shadow/.test(T.cs('#flt', 'filter')), T.cs('#flt', 'filter'));
 });
 T.run();

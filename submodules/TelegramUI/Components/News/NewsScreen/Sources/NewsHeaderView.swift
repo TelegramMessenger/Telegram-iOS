@@ -216,7 +216,10 @@ final class NewsHeaderView: UIView, NavigationBarComponentTransitionSource {
                             id: "more",
                             content: .more,
                             action: { [weak self] sourceView in
-                                self?.openMoreMenu?(sourceView)
+                                guard let self else {
+                                    return
+                                }
+                                self.openMoreMenu?(self.headerComponentView?.navigationButtonContextContainer(sourceView: sourceView) ?? sourceView)
                             }
                         )
                     ],

@@ -1080,7 +1080,41 @@ public extension ContainedViewLayoutTransition {
             })
         }
     }
-    
+
+    func updateAlpha(view: UIView, alpha: CGFloat, beginWithCurrentState: Bool = false, force: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if view.layer.opacity == Float(alpha) && !force {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+
+        switch self {
+        case .immediate:
+            view.alpha = alpha
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousAlpha: Float
+            if beginWithCurrentState, let presentation = view.layer.presentation() {
+                previousAlpha = presentation.opacity
+            } else {
+                previousAlpha = view.layer.opacity
+            }
+            if alpha == 0.0 {
+                view.layer.opacity = Float(alpha)
+            } else {
+                view.alpha = alpha
+            }
+            view.layer.animateAlpha(from: CGFloat(previousAlpha), to: alpha, duration: duration, delay: delay, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+
     func updateAlpha(layer: CALayer, alpha: CGFloat, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if layer.opacity.isEqual(to: Float(alpha)) {
             if let completion = completion {

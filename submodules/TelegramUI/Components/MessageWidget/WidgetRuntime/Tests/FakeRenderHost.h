@@ -70,7 +70,7 @@ public:
                                                    litehtml::font_metrics& metrics) override;
     /// 8 px per UTF-8 byte.
     double textWidth(const wr::HostFont& font, std::string_view utf8) override;
-    /// nullptr: litehtml's own breaking, as the test container's.
+    /// Breaks between code points, never inside one, at 8 px per byte.
     std::shared_ptr<litehtml::text_breaker> createTextBreaker(const wr::HostFont& font, const std::string& utf8) override;
     /// One glyph per byte (the byte's value), each 8 px.
     wr::ShapedText shape(const wr::HostFont& font, std::string_view utf8) override;

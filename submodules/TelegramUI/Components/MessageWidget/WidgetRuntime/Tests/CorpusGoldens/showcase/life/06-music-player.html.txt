@@ -1,0 +1,372 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card playing" id="card">
+  <div class="top"><div class="art"></div><div class="info"><div class="t" id="title">Nightswim</div><div class="a" id="artist">Mara Vos feat. Kito</div><span class="al">Nightswim · 2026</span><br><button class="like" id="like" aria-label="like"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.4 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"></path></svg></button></div></div>
+  <div class="wave" id="wave"><svg viewBox="0 0 356 44" preserveAspectRatio="none" id="bars"><rect x="0.0" y="15.5" width="3" height="13.0" rx="1.5" class="on"></rect><rect x="4.9" y="11.7" width="3" height="20.5" rx="1.5" class="on"></rect><rect x="9.9" y="9.5" width="3" height="25.1" rx="1.5" class="on"></rect><rect x="14.8" y="10.9" width="3" height="22.2" rx="1.5" class="on"></rect><rect x="19.8" y="6.5" width="3" height="31.0" rx="1.5" class="on"></rect><rect x="24.7" y="8.2" width="3" height="27.6" rx="1.5" class="on"></rect><rect x="29.7" y="9.5" width="3" height="24.9" rx="1.5" class="on"></rect><rect x="34.6" y="8.0" width="3" height="28.0" rx="1.5" class="on"></rect><rect x="39.6" y="6.9" width="3" height="30.1" rx="1.5" class="on"></rect><rect x="44.5" y="3.6" width="3" height="36.9" rx="1.5" class="on"></rect><rect x="49.4" y="8.3" width="3" height="27.5" rx="1.5" class="on"></rect><rect x="54.4" y="7.4" width="3" height="29.2" rx="1.5" class="on"></rect><rect x="59.3" y="10.1" width="3" height="23.7" rx="1.5" class="on"></rect><rect x="64.3" y="11.7" width="3" height="20.7" rx="1.5" class="on"></rect><rect x="69.2" y="15.1" width="3" height="13.7" rx="1.5" class="on"></rect><rect x="74.2" y="16.8" width="3" height="10.4" rx="1.5" class="on"></rect><rect x="79.1" y="13.8" width="3" height="16.4" rx="1.5" class="on"></rect><rect x="84.1" y="11.1" width="3" height="21.8" rx="1.5" class="on"></rect><rect x="89.0" y="9.9" width="3" height="24.1" rx="1.5" class="on"></rect><rect x="93.9" y="11.5" width="3" height="21.0" rx="1.5"></rect><rect x="98.9" y="5.1" width="3" height="33.7" rx="1.5"></rect><rect x="103.8" y="5.6" width="3" height="32.8" rx="1.5"></rect><rect x="108.8" y="3.1" width="3" height="37.9" rx="1.5"></rect><rect x="113.7" y="8.1" width="3" height="27.8" rx="1.5"></rect><rect x="118.7" y="3.7" width="3" height="36.6" rx="1.5"></rect><rect x="123.6" y="7.7" width="3" height="28.7" rx="1.5"></rect><rect x="128.6" y="7.7" width="3" height="28.6" rx="1.5"></rect><rect x="133.5" y="11.7" width="3" height="20.6" rx="1.5"></rect><rect x="138.4" y="10.8" width="3" height="22.4" rx="1.5"></rect><rect x="143.4" y="13.6" width="3" height="16.9" rx="1.5"></rect><rect x="148.3" y="15.7" width="3" height="12.7" rx="1.5"></rect><rect x="153.3" y="16.2" width="3" height="11.6" rx="1.5"></rect><rect x="158.2" y="13.2" width="3" height="17.6" rx="1.5"></rect><rect x="163.2" y="12.7" width="3" height="18.5" rx="1.5"></rect><rect x="168.1" y="11.0" width="3" height="22.0" rx="1.5"></rect><rect x="173.1" y="8.6" width="3" height="26.8" rx="1.5"></rect><rect x="178.0" y="5.6" width="3" height="32.8" rx="1.5"></rect><rect x="182.9" y="3.5" width="3" height="36.9" rx="1.5"></rect><rect x="187.9" y="3.5" width="3" height="37.1" rx="1.5"></rect><rect x="192.8" y="5.3" width="3" height="33.5" rx="1.5"></rect><rect x="197.8" y="8.0" width="3" height="28.0" rx="1.5"></rect><rect x="202.7" y="6.8" width="3" height="30.5" rx="1.5"></rect><rect x="207.7" y="8.2" width="3" height="27.6" rx="1.5"></rect><rect x="212.6" y="9.4" width="3" height="25.1" rx="1.5"></rect><rect x="217.6" y="10.8" width="3" height="22.4" rx="1.5"></rect><rect x="222.5" y="14.8" width="3" height="14.4" rx="1.5"></rect><rect x="227.4" y="16.3" width="3" height="11.3" rx="1.5"></rect><rect x="232.4" y="15.1" width="3" height="13.7" rx="1.5"></rect><rect x="237.3" y="13.3" width="3" height="17.4" rx="1.5"></rect><rect x="242.3" y="13.0" width="3" height="17.9" rx="1.5"></rect><rect x="247.2" y="11.9" width="3" height="20.3" rx="1.5"></rect><rect x="252.2" y="8.5" width="3" height="27.0" rx="1.5"></rect><rect x="257.1" y="3.6" width="3" height="36.8" rx="1.5"></rect><rect x="262.1" y="6.1" width="3" height="31.8" rx="1.5"></rect><rect x="267.0" y="5.4" width="3" height="33.1" rx="1.5"></rect><rect x="271.9" y="6.1" width="3" height="31.8" rx="1.5"></rect><rect x="276.9" y="3.0" width="3" height="37.9" rx="1.5"></rect><rect x="281.8" y="6.7" width="3" height="30.6" rx="1.5"></rect><rect x="286.8" y="8.5" width="3" height="27.0" rx="1.5"></rect><rect x="291.7" y="8.7" width="3" height="26.6" rx="1.5"></rect><rect x="296.7" y="12.0" width="3" height="20.0" rx="1.5"></rect><rect x="301.6" y="14.3" width="3" height="15.4" rx="1.5"></rect><rect x="306.6" y="16.9" width="3" height="10.1" rx="1.5"></rect><rect x="311.5" y="14.4" width="3" height="15.2" rx="1.5"></rect><rect x="316.4" y="11.9" width="3" height="20.2" rx="1.5"></rect><rect x="321.4" y="11.7" width="3" height="20.6" rx="1.5"></rect><rect x="326.3" y="11.2" width="3" height="21.5" rx="1.5"></rect><rect x="331.3" y="9.4" width="3" height="25.1" rx="1.5"></rect><rect x="336.2" y="3.5" width="3" height="37.0" rx="1.5"></rect><rect x="341.2" y="4.9" width="3" height="34.2" rx="1.5"></rect><rect x="346.1" y="6.2" width="3" height="31.7" rx="1.5"></rect><rect x="351.1" y="2.4" width="3" height="39.2" rx="1.5"></rect></svg></div>
+  <div class="time"><span id="cur">1:02</span><span id="dur">−3:01</span></div>
+  <div class="ctl">
+    <button class="sm" id="shuf" aria-label="shuffle"><svg viewBox="0 0 24 24"><path d="M17 3l4 4-4 4V8h-2.6a3 3 0 0 0-2.4 1.2L7.6 15A5 5 0 0 1 3.6 17H2v-2h1.6a3 3 0 0 0 2.4-1.2L10.4 8A5 5 0 0 1 14.4 6H17V3zM2 6h1.6c1 0 2 .3 2.8.9l-1.3 1.7A3 3 0 0 0 3.6 8H2V6zm15 10h-2.6c-.6 0-1.2-.2-1.7-.5l1.3-1.7c.1.1.3.2.4.2H17v-3l4 4-4 4v-3z"></path></svg></button>
+    <button id="prev" aria-label="previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"></path></svg></button>
+    <button class="pp" id="pp" aria-label="play"><svg viewBox="0 0 24 24" id="ppIcon"><path d="M6 5h4v14H6zm8 0h4v14h-4z"></path></svg></button>
+    <button id="next" aria-label="next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"></path></svg></button>
+    <button class="sm" id="rep" aria-label="repeat"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"></path></svg></button>
+  </div>
+  <div class="list" id="list"><div class="tr" data-i="0" role="button"><span class="n">1</span><span class="eq"><i></i><i></i><i></i></span><span class="tt"><b>Low Tide</b><span>Mara Vos</span></span><span class="d">3:34</span></div><div class="tr" data-i="1" role="button"><span class="n">2</span><span class="eq"><i></i><i></i><i></i></span><span class="tt"><b>Glass Houses</b><span>Mara Vos</span></span><span class="d">3:07</span></div><div class="tr cur" data-i="2" role="button"><span class="n">3</span><span class="eq"><i></i><i></i><i></i></span><span class="tt"><b>Nightswim</b><span>Mara Vos feat. Kito</span></span><span class="d">4:03</span></div><div class="tr" data-i="3" role="button"><span class="n">4</span><span class="eq"><i></i><i></i><i></i></span><span class="tt"><b>Sodium Lights</b><span>Mara Vos</span></span><span class="d">3:21</span></div><div class="tr" data-i="4" role="button"><span class="n">5</span><span class="eq"><i></i><i></i><i></i></span><span class="tt"><b>Harbour</b><span>Mara Vos</span></span><span class="d">4:28</span></div></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 568.1
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 568.1
+    div 0 0 360 568.1
+      div 18 18 324 110
+        div 18 18 110 110
+          -tag-before 51 51 44 44
+          -tag-after 68.6 68.6 8.8 8.8
+        div 144 21.325 198 103.35
+          div 144 21.325 198 22.95
+          div 144 46.275 198 17.55
+          span 152 74.825 136 14.85
+          br 296 63.825 0 0
+          button 144 102.675 22 22
+            svg 144 102.675 22 22
+              path 0 0 0 0
+      div 18 144 324 44
+        svg 18 144 324 44
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+          rect 0 0 0 0
+      div 18 192 324 14.85
+        span 18 192 32 14.85
+        span 286 192 56 14.85
+      div 0 216.85 360 58
+        button 61 235.85 20 20
+          svg 61 235.85 20 20
+            path 0 0 0 0
+        button 103 232.85 26 26
+          svg 103 232.85 26 26
+            path 0 0 0 0
+        button 151 216.85 58 58
+          svg 167 232.85 26 26
+            path 0 0 0 0
+        button 231 232.85 26 26
+          svg 231 232.85 26 26
+            path 0 0 0 0
+        button 279 235.85 20 20
+          svg 279 235.85 20 20
+            path 0 0 0 0
+      div 10 295.85 340 262.25
+        div 18 303.85 324 36.45
+          span 18 313.975 18 16.2
+          span 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+          span 48 303.85 250 36.45
+            b 48 303.85 250 17.55
+            span 48 321.4 0 0
+          span 310 313.975 32 16.2
+        div 18 356.3 324 36.45
+          span 18 366.425 18 16.2
+          span 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+          span 48 356.3 250 36.45
+            b 48 356.3 250 17.55
+            span 48 373.85 0 0
+          span 310 366.425 32 16.2
+        div 18 408.75 324 36.45
+          span 0 0 0 0
+          span 18 419.975 18 14
+            i 20.5 428.323 3 5.65186
+            i 25.5 421.79 3 12.1852
+            i 30.5 424.562 3 9.41263
+          span 48 408.75 250 36.45
+            b 48 408.75 250 17.55
+            span 48 426.3 0 0
+          span 310 418.875 32 16.2
+        div 18 461.2 324 36.45
+          span 18 471.325 18 16.2
+          span 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+          span 48 461.2 250 36.45
+            b 48 461.2 250 17.55
+            span 48 478.75 0 0
+          span 310 471.325 32 16.2
+        div 18 513.65 324 36.45
+          span 18 523.775 18 16.2
+          span 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+            i 0 0 0 0
+          span 48 513.65 250 36.45
+            b 48 513.65 250 17.55
+            span 48 531.2 0 0
+          span 310 523.775 32 16.2
+
+== paint
+root 360x568.1 items=162
+  solid-fill bounds=(0,0,360,568) layer=(border=(0,0,360,568),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,568),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,568.1) pos=(0,0,360,568.1) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(18,144,324,44) pos=(18,144,324,44) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(18,144,324,44)
+    group opacity=1 matrix=(0.910112,0,0,1,18,144) backface=0 bounds=(0,0,356,44) exact=0
+      path bounds=(-1,14.5,5,15) ops=(0,1,3,1,3,1,3,1,3,4) points=(1.5,15.5,1.5,15.5,2.32843,15.5,3,16.1716,3,17,3,27,3,27.8284,2.32843,28.5,1.5,28.5,1.5,28.5,0.671573,28.5,0,27.8284,0,27,0,17,0,16.1716,0.671573,15.5,1.5,15.5) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(3.9,10.7,5,22.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(6.4,11.7,6.4,11.7,7.22843,11.7,7.9,12.3716,7.9,13.2,7.9,30.7,7.9,31.5284,7.22843,32.2,6.4,32.2,6.4,32.2,5.57157,32.2,4.9,31.5284,4.9,30.7,4.9,13.2,4.9,12.3716,5.57157,11.7,6.4,11.7) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(8.9,8.5,5,27.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(11.4,9.5,11.4,9.5,12.2284,9.5,12.9,10.1716,12.9,11,12.9,33.1,12.9,33.9284,12.2284,34.6,11.4,34.6,11.4,34.6,10.5716,34.6,9.9,33.9284,9.9,33.1,9.9,11,9.9,10.1716,10.5716,9.5,11.4,9.5) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(13.8,9.9,5,24.2) ops=(0,1,3,1,3,1,3,1,3,4) points=(16.3,10.9,16.3,10.9,17.1284,10.9,17.8,11.5716,17.8,12.4,17.8,31.6,17.8,32.4284,17.1284,33.1,16.3,33.1,16.3,33.1,15.4716,33.1,14.8,32.4284,14.8,31.6,14.8,12.4,14.8,11.5716,15.4716,10.9,16.3,10.9) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(18.8,5.5,5,33) ops=(0,1,3,1,3,1,3,1,3,4) points=(21.3,6.5,21.3,6.5,22.1284,6.5,22.8,7.17157,22.8,8,22.8,36,22.8,36.8284,22.1284,37.5,21.3,37.5,21.3,37.5,20.4716,37.5,19.8,36.8284,19.8,36,19.8,8,19.8,7.17157,20.4716,6.5,21.3,6.5) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(23.7,7.2,5,29.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(26.2,8.2,26.2,8.2,27.0284,8.2,27.7,8.87157,27.7,9.7,27.7,34.3,27.7,35.1284,27.0284,35.8,26.2,35.8,26.2,35.8,25.3716,35.8,24.7,35.1284,24.7,34.3,24.7,9.7,24.7,8.87157,25.3716,8.2,26.2,8.2) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(28.7,8.5,5,26.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(31.2,9.5,31.2,9.5,32.0284,9.5,32.7,10.1716,32.7,11,32.7,32.9,32.7,33.7284,32.0284,34.4,31.2,34.4,31.2,34.4,30.3716,34.4,29.7,33.7284,29.7,32.9,29.7,11,29.7,10.1716,30.3716,9.5,31.2,9.5) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(33.6,7,5,30) ops=(0,1,3,1,3,1,3,1,3,4) points=(36.1,8,36.1,8,36.9284,8,37.6,8.67157,37.6,9.5,37.6,34.5,37.6,35.3284,36.9284,36,36.1,36,36.1,36,35.2716,36,34.6,35.3284,34.6,34.5,34.6,9.5,34.6,8.67157,35.2716,8,36.1,8) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(38.6,5.9,5,32.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(41.1,6.9,41.1,6.9,41.9284,6.9,42.6,7.57157,42.6,8.4,42.6,35.5,42.6,36.3284,41.9284,37,41.1,37,41.1,37,40.2716,37,39.6,36.3284,39.6,35.5,39.6,8.4,39.6,7.57157,40.2716,6.9,41.1,6.9) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(43.5,2.6,5,38.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(46,3.6,46,3.6,46.8284,3.6,47.5,4.27157,47.5,5.1,47.5,39,47.5,39.8284,46.8284,40.5,46,40.5,46,40.5,45.1716,40.5,44.5,39.8284,44.5,39,44.5,5.1,44.5,4.27157,45.1716,3.6,46,3.6) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(48.4,7.3,5,29.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(50.9,8.3,50.9,8.3,51.7284,8.3,52.4,8.97157,52.4,9.8,52.4,34.3,52.4,35.1284,51.7284,35.8,50.9,35.8,50.9,35.8,50.0716,35.8,49.4,35.1284,49.4,34.3,49.4,9.8,49.4,8.97157,50.0716,8.3,50.9,8.3) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(53.4,6.4,5,31.2) ops=(0,1,3,1,3,1,3,1,3,4) points=(55.9,7.4,55.9,7.4,56.7284,7.4,57.4,8.07157,57.4,8.9,57.4,35.1,57.4,35.9284,56.7284,36.6,55.9,36.6,55.9,36.6,55.0716,36.6,54.4,35.9284,54.4,35.1,54.4,8.9,54.4,8.07157,55.0716,7.4,55.9,7.4) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(58.3,9.1,5,25.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(60.8,10.1,60.8,10.1,61.6284,10.1,62.3,10.7716,62.3,11.6,62.3,32.3,62.3,33.1284,61.6284,33.8,60.8,33.8,60.8,33.8,59.9716,33.8,59.3,33.1284,59.3,32.3,59.3,11.6,59.3,10.7716,59.9716,10.1,60.8,10.1) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(63.3,10.7,5,22.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(65.8,11.7,65.8,11.7,66.6284,11.7,67.3,12.3716,67.3,13.2,67.3,30.9,67.3,31.7284,66.6284,32.4,65.8,32.4,65.8,32.4,64.9716,32.4,64.3,31.7284,64.3,30.9,64.3,13.2,64.3,12.3716,64.9716,11.7,65.8,11.7) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(68.2,14.1,5,15.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(70.7,15.1,70.7,15.1,71.5284,15.1,72.2,15.7716,72.2,16.6,72.2,27.3,72.2,28.1284,71.5284,28.8,70.7,28.8,70.7,28.8,69.8716,28.8,69.2,28.1284,69.2,27.3,69.2,16.6,69.2,15.7716,69.8716,15.1,70.7,15.1) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(73.2,15.8,5,12.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(75.7,16.8,75.7,16.8,76.5284,16.8,77.2,17.4716,77.2,18.3,77.2,25.7,77.2,26.5284,76.5284,27.2,75.7,27.2,75.7,27.2,74.8716,27.2,74.2,26.5284,74.2,25.7,74.2,18.3,74.2,17.4716,74.8716,16.8,75.7,16.8) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(78.1,12.8,5,18.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(80.6,13.8,80.6,13.8,81.4284,13.8,82.1,14.4716,82.1,15.3,82.1,28.7,82.1,29.5284,81.4284,30.2,80.6,30.2,80.6,30.2,79.7716,30.2,79.1,29.5284,79.1,28.7,79.1,15.3,79.1,14.4716,79.7716,13.8,80.6,13.8) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(83.1,10.1,5,23.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(85.6,11.1,85.6,11.1,86.4284,11.1,87.1,11.7716,87.1,12.6,87.1,31.4,87.1,32.2284,86.4284,32.9,85.6,32.9,85.6,32.9,84.7716,32.9,84.1,32.2284,84.1,31.4,84.1,12.6,84.1,11.7716,84.7716,11.1,85.6,11.1) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(88,8.9,5,26.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(90.5,9.9,90.5,9.9,91.3284,9.9,92,10.5716,92,11.4,92,32.5,92,33.3284,91.3284,34,90.5,34,90.5,34,89.6716,34,89,33.3284,89,32.5,89,11.4,89,10.5716,89.6716,9.9,90.5,9.9) fill=1 fill-color=#ff2d55ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(92.9,10.5,5,23) ops=(0,1,3,1,3,1,3,1,3,4) points=(95.4,11.5,95.4,11.5,96.2284,11.5,96.9,12.1716,96.9,13,96.9,31,96.9,31.8284,96.2284,32.5,95.4,32.5,95.4,32.5,94.5716,32.5,93.9,31.8284,93.9,31,93.9,13,93.9,12.1716,94.5716,11.5,95.4,11.5) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(97.9,4.1,5,35.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(100.4,5.1,100.4,5.1,101.228,5.1,101.9,5.77157,101.9,6.6,101.9,37.3,101.9,38.1284,101.228,38.8,100.4,38.8,100.4,38.8,99.5716,38.8,98.9,38.1284,98.9,37.3,98.9,6.6,98.9,5.77157,99.5716,5.1,100.4,5.1) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(102.8,4.6,5,34.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(105.3,5.6,105.3,5.6,106.128,5.6,106.8,6.27157,106.8,7.1,106.8,36.9,106.8,37.7284,106.128,38.4,105.3,38.4,105.3,38.4,104.472,38.4,103.8,37.7284,103.8,36.9,103.8,7.1,103.8,6.27157,104.472,5.6,105.3,5.6) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(107.8,2.1,5,39.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(110.3,3.1,110.3,3.1,111.128,3.1,111.8,3.77157,111.8,4.6,111.8,39.5,111.8,40.3284,111.128,41,110.3,41,110.3,41,109.472,41,108.8,40.3284,108.8,39.5,108.8,4.6,108.8,3.77157,109.472,3.1,110.3,3.1) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(112.7,7.1,5,29.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(115.2,8.1,115.2,8.1,116.028,8.1,116.7,8.77157,116.7,9.6,116.7,34.4,116.7,35.2284,116.028,35.9,115.2,35.9,115.2,35.9,114.372,35.9,113.7,35.2284,113.7,34.4,113.7,9.6,113.7,8.77157,114.372,8.1,115.2,8.1) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(117.7,2.7,5,38.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(120.2,3.7,120.2,3.7,121.028,3.7,121.7,4.37157,121.7,5.2,121.7,38.8,121.7,39.6284,121.028,40.3,120.2,40.3,120.2,40.3,119.372,40.3,118.7,39.6284,118.7,38.8,118.7,5.2,118.7,4.37157,119.372,3.7,120.2,3.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(122.6,6.7,5,30.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(125.1,7.7,125.1,7.7,125.928,7.7,126.6,8.37157,126.6,9.2,126.6,34.9,126.6,35.7284,125.928,36.4,125.1,36.4,125.1,36.4,124.272,36.4,123.6,35.7284,123.6,34.9,123.6,9.2,123.6,8.37157,124.272,7.7,125.1,7.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(127.6,6.7,5,30.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(130.1,7.7,130.1,7.7,130.928,7.7,131.6,8.37157,131.6,9.2,131.6,34.8,131.6,35.6284,130.928,36.3,130.1,36.3,130.1,36.3,129.272,36.3,128.6,35.6284,128.6,34.8,128.6,9.2,128.6,8.37157,129.272,7.7,130.1,7.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(132.5,10.7,5,22.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(135,11.7,135,11.7,135.828,11.7,136.5,12.3716,136.5,13.2,136.5,30.8,136.5,31.6284,135.828,32.3,135,32.3,135,32.3,134.172,32.3,133.5,31.6284,133.5,30.8,133.5,13.2,133.5,12.3716,134.172,11.7,135,11.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(137.4,9.8,5,24.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(139.9,10.8,139.9,10.8,140.728,10.8,141.4,11.4716,141.4,12.3,141.4,31.7,141.4,32.5284,140.728,33.2,139.9,33.2,139.9,33.2,139.072,33.2,138.4,32.5284,138.4,31.7,138.4,12.3,138.4,11.4716,139.072,10.8,139.9,10.8) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(142.4,12.6,5,18.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(144.9,13.6,144.9,13.6,145.728,13.6,146.4,14.2716,146.4,15.1,146.4,29,146.4,29.8284,145.728,30.5,144.9,30.5,144.9,30.5,144.072,30.5,143.4,29.8284,143.4,29,143.4,15.1,143.4,14.2716,144.072,13.6,144.9,13.6) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(147.3,14.7,5,14.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(149.8,15.7,149.8,15.7,150.628,15.7,151.3,16.3716,151.3,17.2,151.3,26.9,151.3,27.7284,150.628,28.4,149.8,28.4,149.8,28.4,148.972,28.4,148.3,27.7284,148.3,26.9,148.3,17.2,148.3,16.3716,148.972,15.7,149.8,15.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(152.3,15.2,5,13.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(154.8,16.2,154.8,16.2,155.628,16.2,156.3,16.8716,156.3,17.7,156.3,26.3,156.3,27.1284,155.628,27.8,154.8,27.8,154.8,27.8,153.972,27.8,153.3,27.1284,153.3,26.3,153.3,17.7,153.3,16.8716,153.972,16.2,154.8,16.2) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(157.2,12.2,5,19.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(159.7,13.2,159.7,13.2,160.528,13.2,161.2,13.8716,161.2,14.7,161.2,29.3,161.2,30.1284,160.528,30.8,159.7,30.8,159.7,30.8,158.872,30.8,158.2,30.1284,158.2,29.3,158.2,14.7,158.2,13.8716,158.872,13.2,159.7,13.2) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(162.2,11.7,5,20.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(164.7,12.7,164.7,12.7,165.528,12.7,166.2,13.3716,166.2,14.2,166.2,29.7,166.2,30.5284,165.528,31.2,164.7,31.2,164.7,31.2,163.872,31.2,163.2,30.5284,163.2,29.7,163.2,14.2,163.2,13.3716,163.872,12.7,164.7,12.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(167.1,10,5,24) ops=(0,1,3,1,3,1,3,1,3,4) points=(169.6,11,169.6,11,170.428,11,171.1,11.6716,171.1,12.5,171.1,31.5,171.1,32.3284,170.428,33,169.6,33,169.6,33,168.772,33,168.1,32.3284,168.1,31.5,168.1,12.5,168.1,11.6716,168.772,11,169.6,11) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(172.1,7.6,5,28.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(174.6,8.6,174.6,8.6,175.428,8.6,176.1,9.27157,176.1,10.1,176.1,33.9,176.1,34.7284,175.428,35.4,174.6,35.4,174.6,35.4,173.772,35.4,173.1,34.7284,173.1,33.9,173.1,10.1,173.1,9.27157,173.772,8.6,174.6,8.6) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(177,4.6,5,34.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(179.5,5.6,179.5,5.6,180.328,5.6,181,6.27157,181,7.1,181,36.9,181,37.7284,180.328,38.4,179.5,38.4,179.5,38.4,178.672,38.4,178,37.7284,178,36.9,178,7.1,178,6.27157,178.672,5.6,179.5,5.6) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(181.9,2.5,5,38.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(184.4,3.5,184.4,3.5,185.228,3.5,185.9,4.17157,185.9,5,185.9,38.9,185.9,39.7284,185.228,40.4,184.4,40.4,184.4,40.4,183.572,40.4,182.9,39.7284,182.9,38.9,182.9,5,182.9,4.17157,183.572,3.5,184.4,3.5) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(186.9,2.5,5,39.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(189.4,3.5,189.4,3.5,190.228,3.5,190.9,4.17157,190.9,5,190.9,39.1,190.9,39.9284,190.228,40.6,189.4,40.6,189.4,40.6,188.572,40.6,187.9,39.9284,187.9,39.1,187.9,5,187.9,4.17157,188.572,3.5,189.4,3.5) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(191.8,4.3,5,35.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(194.3,5.3,194.3,5.3,195.128,5.3,195.8,5.97157,195.8,6.8,195.8,37.3,195.8,38.1284,195.128,38.8,194.3,38.8,194.3,38.8,193.472,38.8,192.8,38.1284,192.8,37.3,192.8,6.8,192.8,5.97157,193.472,5.3,194.3,5.3) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(196.8,7,5,30) ops=(0,1,3,1,3,1,3,1,3,4) points=(199.3,8,199.3,8,200.128,8,200.8,8.67157,200.8,9.5,200.8,34.5,200.8,35.3284,200.128,36,199.3,36,199.3,36,198.472,36,197.8,35.3284,197.8,34.5,197.8,9.5,197.8,8.67157,198.472,8,199.3,8) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(201.7,5.8,5,32.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(204.2,6.8,204.2,6.8,205.028,6.8,205.7,7.47157,205.7,8.3,205.7,35.8,205.7,36.6284,205.028,37.3,204.2,37.3,204.2,37.3,203.372,37.3,202.7,36.6284,202.7,35.8,202.7,8.3,202.7,7.47157,203.372,6.8,204.2,6.8) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(206.7,7.2,5,29.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(209.2,8.2,209.2,8.2,210.028,8.2,210.7,8.87157,210.7,9.7,210.7,34.3,210.7,35.1284,210.028,35.8,209.2,35.8,209.2,35.8,208.372,35.8,207.7,35.1284,207.7,34.3,207.7,9.7,207.7,8.87157,208.372,8.2,209.2,8.2) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(211.6,8.4,5,27.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(214.1,9.4,214.1,9.4,214.928,9.4,215.6,10.0716,215.6,10.9,215.6,33,215.6,33.8284,214.928,34.5,214.1,34.5,214.1,34.5,213.272,34.5,212.6,33.8284,212.6,33,212.6,10.9,212.6,10.0716,213.272,9.4,214.1,9.4) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(216.6,9.8,5,24.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(219.1,10.8,219.1,10.8,219.928,10.8,220.6,11.4716,220.6,12.3,220.6,31.7,220.6,32.5284,219.928,33.2,219.1,33.2,219.1,33.2,218.272,33.2,217.6,32.5284,217.6,31.7,217.6,12.3,217.6,11.4716,218.272,10.8,219.1,10.8) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(221.5,13.8,5,16.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(224,14.8,224,14.8,224.828,14.8,225.5,15.4716,225.5,16.3,225.5,27.7,225.5,28.5284,224.828,29.2,224,29.2,224,29.2,223.172,29.2,222.5,28.5284,222.5,27.7,222.5,16.3,222.5,15.4716,223.172,14.8,224,14.8) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(226.4,15.3,5,13.3) ops=(0,1,3,1,3,1,3,1,3,4) points=(228.9,16.3,228.9,16.3,229.728,16.3,230.4,16.9716,230.4,17.8,230.4,26.1,230.4,26.9284,229.728,27.6,228.9,27.6,228.9,27.6,228.072,27.6,227.4,26.9284,227.4,26.1,227.4,17.8,227.4,16.9716,228.072,16.3,228.9,16.3) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(231.4,14.1,5,15.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(233.9,15.1,233.9,15.1,234.728,15.1,235.4,15.7716,235.4,16.6,235.4,27.3,235.4,28.1284,234.728,28.8,233.9,28.8,233.9,28.8,233.072,28.8,232.4,28.1284,232.4,27.3,232.4,16.6,232.4,15.7716,233.072,15.1,233.9,15.1) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(236.3,12.3,5,19.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(238.8,13.3,238.8,13.3,239.628,13.3,240.3,13.9716,240.3,14.8,240.3,29.2,240.3,30.0284,239.628,30.7,238.8,30.7,238.8,30.7,237.972,30.7,237.3,30.0284,237.3,29.2,237.3,14.8,237.3,13.9716,237.972,13.3,238.8,13.3) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(241.3,12,5,19.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(243.8,13,243.8,13,244.628,13,245.3,13.6716,245.3,14.5,245.3,29.4,245.3,30.2284,244.628,30.9,243.8,30.9,243.8,30.9,242.972,30.9,242.3,30.2284,242.3,29.4,242.3,14.5,242.3,13.6716,242.972,13,243.8,13) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(246.2,10.9,5,22.3) ops=(0,1,3,1,3,1,3,1,3,4) points=(248.7,11.9,248.7,11.9,249.528,11.9,250.2,12.5716,250.2,13.4,250.2,30.7,250.2,31.5284,249.528,32.2,248.7,32.2,248.7,32.2,247.872,32.2,247.2,31.5284,247.2,30.7,247.2,13.4,247.2,12.5716,247.872,11.9,248.7,11.9) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(251.2,7.5,5,29) ops=(0,1,3,1,3,1,3,1,3,4) points=(253.7,8.5,253.7,8.5,254.528,8.5,255.2,9.17157,255.2,10,255.2,34,255.2,34.8284,254.528,35.5,253.7,35.5,253.7,35.5,252.872,35.5,252.2,34.8284,252.2,34,252.2,10,252.2,9.17157,252.872,8.5,253.7,8.5) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(256.1,2.6,5,38.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(258.6,3.6,258.6,3.6,259.428,3.6,260.1,4.27157,260.1,5.1,260.1,38.9,260.1,39.7284,259.428,40.4,258.6,40.4,258.6,40.4,257.772,40.4,257.1,39.7284,257.1,38.9,257.1,5.1,257.1,4.27157,257.772,3.6,258.6,3.6) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(261.1,5.1,5,33.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(263.6,6.1,263.6,6.1,264.428,6.1,265.1,6.77157,265.1,7.6,265.1,36.4,265.1,37.2284,264.428,37.9,263.6,37.9,263.6,37.9,262.772,37.9,262.1,37.2284,262.1,36.4,262.1,7.6,262.1,6.77157,262.772,6.1,263.6,6.1) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(266,4.4,5,35.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(268.5,5.4,268.5,5.4,269.328,5.4,270,6.07157,270,6.9,270,37,270,37.8284,269.328,38.5,268.5,38.5,268.5,38.5,267.672,38.5,267,37.8284,267,37,267,6.9,267,6.07157,267.672,5.4,268.5,5.4) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(270.9,5.1,5,33.8) ops=(0,1,3,1,3,1,3,1,3,4) points=(273.4,6.1,273.4,6.1,274.228,6.1,274.9,6.77157,274.9,7.6,274.9,36.4,274.9,37.2284,274.228,37.9,273.4,37.9,273.4,37.9,272.572,37.9,271.9,37.2284,271.9,36.4,271.9,7.6,271.9,6.77157,272.572,6.1,273.4,6.1) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(275.9,2,5,39.9) ops=(0,1,3,1,3,1,3,1,3,4) points=(278.4,3,278.4,3,279.228,3,279.9,3.67157,279.9,4.5,279.9,39.4,279.9,40.2284,279.228,40.9,278.4,40.9,278.4,40.9,277.572,40.9,276.9,40.2284,276.9,39.4,276.9,4.5,276.9,3.67157,277.572,3,278.4,3) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(280.8,5.7,5,32.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(283.3,6.7,283.3,6.7,284.128,6.7,284.8,7.37157,284.8,8.2,284.8,35.8,284.8,36.6284,284.128,37.3,283.3,37.3,283.3,37.3,282.472,37.3,281.8,36.6284,281.8,35.8,281.8,8.2,281.8,7.37157,282.472,6.7,283.3,6.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(285.8,7.5,5,29) ops=(0,1,3,1,3,1,3,1,3,4) points=(288.3,8.5,288.3,8.5,289.128,8.5,289.8,9.17157,289.8,10,289.8,34,289.8,34.8284,289.128,35.5,288.3,35.5,288.3,35.5,287.472,35.5,286.8,34.8284,286.8,34,286.8,10,286.8,9.17157,287.472,8.5,288.3,8.5) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(290.7,7.7,5,28.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(293.2,8.7,293.2,8.7,294.028,8.7,294.7,9.37157,294.7,10.2,294.7,33.8,294.7,34.6284,294.028,35.3,293.2,35.3,293.2,35.3,292.372,35.3,291.7,34.6284,291.7,33.8,291.7,10.2,291.7,9.37157,292.372,8.7,293.2,8.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(295.7,11,5,22) ops=(0,1,3,1,3,1,3,1,3,4) points=(298.2,12,298.2,12,299.028,12,299.7,12.6716,299.7,13.5,299.7,30.5,299.7,31.3284,299.028,32,298.2,32,298.2,32,297.372,32,296.7,31.3284,296.7,30.5,296.7,13.5,296.7,12.6716,297.372,12,298.2,12) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(300.6,13.3,5,17.4) ops=(0,1,3,1,3,1,3,1,3,4) points=(303.1,14.3,303.1,14.3,303.928,14.3,304.6,14.9716,304.6,15.8,304.6,28.2,304.6,29.0284,303.928,29.7,303.1,29.7,303.1,29.7,302.272,29.7,301.6,29.0284,301.6,28.2,301.6,15.8,301.6,14.9716,302.272,14.3,303.1,14.3) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(305.6,15.9,5,12.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(308.1,16.9,308.1,16.9,308.928,16.9,309.6,17.5716,309.6,18.4,309.6,25.5,309.6,26.3284,308.928,27,308.1,27,308.1,27,307.272,27,306.6,26.3284,306.6,25.5,306.6,18.4,306.6,17.5716,307.272,16.9,308.1,16.9) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(310.5,13.4,5,17.2) ops=(0,1,3,1,3,1,3,1,3,4) points=(313,14.4,313,14.4,313.828,14.4,314.5,15.0716,314.5,15.9,314.5,28.1,314.5,28.9284,313.828,29.6,313,29.6,313,29.6,312.172,29.6,311.5,28.9284,311.5,28.1,311.5,15.9,311.5,15.0716,312.172,14.4,313,14.4) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(315.4,10.9,5,22.2) ops=(0,1,3,1,3,1,3,1,3,4) points=(317.9,11.9,317.9,11.9,318.728,11.9,319.4,12.5716,319.4,13.4,319.4,30.6,319.4,31.4284,318.728,32.1,317.9,32.1,317.9,32.1,317.072,32.1,316.4,31.4284,316.4,30.6,316.4,13.4,316.4,12.5716,317.072,11.9,317.9,11.9) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(320.4,10.7,5,22.6) ops=(0,1,3,1,3,1,3,1,3,4) points=(322.9,11.7,322.9,11.7,323.728,11.7,324.4,12.3716,324.4,13.2,324.4,30.8,324.4,31.6284,323.728,32.3,322.9,32.3,322.9,32.3,322.072,32.3,321.4,31.6284,321.4,30.8,321.4,13.2,321.4,12.3716,322.072,11.7,322.9,11.7) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(325.3,10.2,5,23.5) ops=(0,1,3,1,3,1,3,1,3,4) points=(327.8,11.2,327.8,11.2,328.628,11.2,329.3,11.8716,329.3,12.7,329.3,31.2,329.3,32.0284,328.628,32.7,327.8,32.7,327.8,32.7,326.972,32.7,326.3,32.0284,326.3,31.2,326.3,12.7,326.3,11.8716,326.972,11.2,327.8,11.2) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(330.3,8.4,5,27.1) ops=(0,1,3,1,3,1,3,1,3,4) points=(332.8,9.4,332.8,9.4,333.628,9.4,334.3,10.0716,334.3,10.9,334.3,33,334.3,33.8284,333.628,34.5,332.8,34.5,332.8,34.5,331.972,34.5,331.3,33.8284,331.3,33,331.3,10.9,331.3,10.0716,331.972,9.4,332.8,9.4) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(335.2,2.5,5,39) ops=(0,1,3,1,3,1,3,1,3,4) points=(337.7,3.5,337.7,3.5,338.528,3.5,339.2,4.17157,339.2,5,339.2,39,339.2,39.8284,338.528,40.5,337.7,40.5,337.7,40.5,336.872,40.5,336.2,39.8284,336.2,39,336.2,5,336.2,4.17157,336.872,3.5,337.7,3.5) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(340.2,3.9,5,36.2) ops=(0,1,3,1,3,1,3,1,3,4) points=(342.7,4.9,342.7,4.9,343.528,4.9,344.2,5.57157,344.2,6.4,344.2,37.6,344.2,38.4284,343.528,39.1,342.7,39.1,342.7,39.1,341.872,39.1,341.2,38.4284,341.2,37.6,341.2,6.4,341.2,5.57157,341.872,4.9,342.7,4.9) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(345.1,5.2,5,33.7) ops=(0,1,3,1,3,1,3,1,3,4) points=(347.6,6.2,347.6,6.2,348.428,6.2,349.1,6.87157,349.1,7.7,349.1,36.4,349.1,37.2284,348.428,37.9,347.6,37.9,347.6,37.9,346.772,37.9,346.1,37.2284,346.1,36.4,346.1,7.7,346.1,6.87157,346.772,6.2,347.6,6.2) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(350.1,1.4,5,41.2) ops=(0,1,3,1,3,1,3,1,3,4) points=(352.6,2.4,352.6,2.4,353.428,2.4,354.1,3.07157,354.1,3.9,354.1,40.1,354.1,40.9284,353.428,41.6,352.6,41.6,352.6,41.6,351.772,41.6,351.1,40.9284,351.1,40.1,351.1,3.9,351.1,3.07157,351.772,2.4,352.6,2.4) fill=1 fill-color=#00000014 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(61,235.85,20,20) pos=(61,235.85,20,20) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(61,235.85,20,20)
+    group opacity=1 matrix=(0.833333,0,0,0.833333,61,235.85) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(1,2,21,18) ops=(0,1,1,1,1,3,1,3,1,1,1,3,1,3,1,1,4,0,1,3,1,3,1,1,4,0,1,3,1,3,1,1,1,1,1,4) points=(17,3,21,7,17,11,17,8,14.4,8,13.4557,8,12.5666,8.44458,12,9.2,7.6,15,6.65573,16.259,5.17379,17,3.6,17,2,17,2,15,3.6,15,4.54427,15,5.43344,14.5554,6,13.8,10.4,8,11.3443,6.74097,12.8262,6,14.4,6,17,6,17,3,2,6,3.6,6,4.6,6,5.6,6.3,6.4,6.9,5.1,8.6,4.66427,8.2666,4.14546,8.05908,3.6,8,2,8,2,6,17,16,14.4,16,13.8,16,13.2,15.8,12.7,15.5,14,13.8,14.1,13.9,14.3,14,14.4,14,17,14,17,11,21,15,17,19,17,16) fill=1 fill-color=#6e6e73ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(103,232.85,26,26) pos=(103,232.85,26,26) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(103,232.85,26,26)
+    group opacity=1 matrix=(1.08333,0,0,1.08333,103,232.85) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(5,5,14,14) ops=(0,1,1,1,4,0,1,1,4) points=(6,6,8,6,8,18,6,18,9.5,12,18,18,18,6) fill=1 fill-color=#0a0a0aff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  box-shadow bounds=(127,193,106,106) box=(151,217,58,58) radius=(8,8,8,8,8,8,8,8) shadow=(0,6,16,0,#00000033,0)
+  solid-fill bounds=(151,217,58,58) layer=(border=(151,217,58,58),radius=(8,8,8,8,8,8,8,8),clip=(151,217,58,58),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#0a0a0aff
+  set-clip bounds=(167,232.85,26,26) pos=(167,232.85,26,26) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(167,232.85,26,26)
+    group opacity=1 matrix=(1.08333,0,0,1.08333,167,232.85) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(5,4,14,16) ops=(0,1,1,1,4,0,1,1,1,4) points=(6,5,10,5,10,19,6,19,14,5,18,5,18,19,14,19) fill=1 fill-color=#ffffffff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(231,232.85,26,26) pos=(231,232.85,26,26) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(231,232.85,26,26)
+    group opacity=1 matrix=(1.08333,0,0,1.08333,231,232.85) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(5,5,14,14) ops=(0,1,1,1,4,0,1,1,4) points=(16,6,18,6,18,18,16,18,6,18,14.5,12,6,6) fill=1 fill-color=#0a0a0aff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(279,235.85,20,20) pos=(279,235.85,20,20) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(279,235.85,20,20)
+    group opacity=1 matrix=(0.833333,0,0,0.833333,279,235.85) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(2,1,20,22) ops=(0,1,1,1,1,1,1,1,1,1,4,0,1,1,1,1,1,1,1,1,1,4) points=(7,7,17,7,17,10,21,6,17,2,17,5,5,5,5,11,7,11,7,7,17,17,7,17,7,14,3,18,7,22,7,19,19,19,19,13,17,13,17,17) fill=1 fill-color=#6e6e73ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  borders bounds=(0,289,360,279) borders=(left=(0,0,#0a0a0aff),top=(1,4,#00000014),right=(0,0,#0a0a0aff),bottom=(0,0,#0a0a0aff),radius=(0,0,0,0,0,0,0,0)) pos=(0,289,360,279) root=0
+  solid-fill bounds=(10,401,340,52) layer=(border=(10,401,340,52),radius=(10,10,10,10,10,10,10,10),clip=(10,401,340,52),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  solid-fill bounds=(21,428,3,6) layer=(border=(21,428,3,6),radius=(1,1,1,1,1,1,1,1),clip=(21,428,3,6),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(26,422,3,12) layer=(border=(26,422,3,12),radius=(1,1,1,1,1,1,1,1),clip=(26,422,3,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  solid-fill bounds=(31,425,3,9) layer=(border=(31,425,3,9),radius=(1,1,1,1,1,1,1,1),clip=(31,425,3,9),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff2d55ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,568.1) pos=(0,0,360,568.1) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(144,21.325,198,22.95) pos=(144,21.325,198,22.95) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(136,16,88,32) pos=(144,24,72,16) color=#0a0a0aff text="Nightswim" font=f1 glyphs=9 advance=72
+  del-clip bounds=(0,0,0,0)
+  text bounds=(136,38,48,32) pos=(144,46,32,16) color=#6e6e73ff text="Mara" font=f2 glyphs=4 advance=32
+  text bounds=(176,38,40,32) pos=(184,46,24,16) color=#6e6e73ff text="Vos" font=f2 glyphs=3 advance=24
+  text bounds=(208,38,56,32) pos=(216,46,40,16) color=#6e6e73ff text="feat." font=f2 glyphs=5 advance=40
+  text bounds=(256,38,48,32) pos=(264,46,32,16) color=#6e6e73ff text="Kito" font=f2 glyphs=4 advance=32
+  solid-fill bounds=(144,72,152,21) layer=(border=(144,72,152,21),radius=(6,6,6,6,6,6,6,6),clip=(144,72,152,21),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  text bounds=(144,67,88,32) pos=(152,75,72,16) color=#6e6e73ff text="Nightswim" font=f3 glyphs=9 advance=72
+  text bounds=(224,67,32,32) pos=(232,75,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(248,67,48,32) pos=(256,75,32,16) color=#6e6e73ff text="2026" font=f3 glyphs=4 advance=32
+  set-clip bounds=(144,102.675,22,22) pos=(144,102.675,22,22) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(144,102.675,22,22)
+    group opacity=1 matrix=(0.916667,0,0,0.916667,144,102.675) backface=0 bounds=(0,0,24,24) exact=0
+      path bounds=(-3.07875,-1.22875,30.1571,27.2288) ops=(0,3,3,3,3,3,3,4) points=(12,21,12,21,5,16.4,2.7,12,1.1536,9.43188,1.98188,6.0964,4.55,4.55,7.11813,3.0036,10.4536,3.83187,12,6.4,13.5466,3.83238,16.8817,3.00446,19.4496,4.5507,22.0174,6.09693,22.8458,9.43192,21.3,12,19,16.4,12,21,12,21) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#6e6e73ff stroke-width=2 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(10,184,48,32) pos=(18,192,32,16) color=#6e6e73ff text="1:02" font=f4 glyphs=4 advance=32
+  text bounds=(278,184,72,32) pos=(286,192,56,16) color=#6e6e73ff text="−3:01" font=f4 glyphs=7 advance=56
+  text bounds=(15,306,24,32) pos=(23,314,8,16) color=#6e6e73ff text="1" font=f5 glyphs=1 advance=8
+  set-clip bounds=(48,303.85,250,17.55) pos=(48,303.85,250,17.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(40,296,40,32) pos=(48,304,24,16) color=#0a0a0aff text="Low" font=f6 glyphs=3 advance=24
+  text bounds=(72,296,48,32) pos=(80,304,32,16) color=#0a0a0aff text="Tide" font=f6 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  text bounds=(40,314,48,32) pos=(48,322,32,16) color=#6e6e73ff text="Mara" font=f3 glyphs=4 advance=32
+  text bounds=(80,314,40,32) pos=(88,322,24,16) color=#6e6e73ff text="Vos" font=f3 glyphs=3 advance=24
+  text bounds=(302,306,48,32) pos=(310,314,32,16) color=#6e6e73ff text="3:34" font=f5 glyphs=4 advance=32
+  text bounds=(15,358,24,32) pos=(23,366,8,16) color=#6e6e73ff text="2" font=f5 glyphs=1 advance=8
+  set-clip bounds=(48,356.3,250,17.55) pos=(48,356.3,250,17.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(40,348,56,32) pos=(48,356,40,16) color=#0a0a0aff text="Glass" font=f6 glyphs=5 advance=40
+  text bounds=(88,348,64,32) pos=(96,356,48,16) color=#0a0a0aff text="Houses" font=f6 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(40,367,48,32) pos=(48,375,32,16) color=#6e6e73ff text="Mara" font=f3 glyphs=4 advance=32
+  text bounds=(80,367,40,32) pos=(88,375,24,16) color=#6e6e73ff text="Vos" font=f3 glyphs=3 advance=24
+  text bounds=(302,358,48,32) pos=(310,366,32,16) color=#6e6e73ff text="3:07" font=f5 glyphs=4 advance=32
+  set-clip bounds=(48,408.75,250,17.55) pos=(48,408.75,250,17.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(40,401,88,32) pos=(48,409,72,16) color=#ff2d55ff text="Nightswim" font=f6 glyphs=9 advance=72
+  del-clip bounds=(0,0,0,0)
+  text bounds=(40,419,48,32) pos=(48,427,32,16) color=#6e6e73ff text="Mara" font=f3 glyphs=4 advance=32
+  text bounds=(80,419,40,32) pos=(88,427,24,16) color=#6e6e73ff text="Vos" font=f3 glyphs=3 advance=24
+  text bounds=(112,419,56,32) pos=(120,427,40,16) color=#6e6e73ff text="feat." font=f3 glyphs=5 advance=40
+  text bounds=(160,419,48,32) pos=(168,427,32,16) color=#6e6e73ff text="Kito" font=f3 glyphs=4 advance=32
+  text bounds=(302,411,48,32) pos=(310,419,32,16) color=#6e6e73ff text="4:03" font=f5 glyphs=4 advance=32
+  text bounds=(15,463,24,32) pos=(23,471,8,16) color=#6e6e73ff text="4" font=f5 glyphs=1 advance=8
+  set-clip bounds=(48,461.2,250,17.55) pos=(48,461.2,250,17.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(40,453,64,32) pos=(48,461,48,16) color=#0a0a0aff text="Sodium" font=f6 glyphs=6 advance=48
+  text bounds=(96,453,64,32) pos=(104,461,48,16) color=#0a0a0aff text="Lights" font=f6 glyphs=6 advance=48
+  del-clip bounds=(0,0,0,0)
+  text bounds=(40,472,48,32) pos=(48,480,32,16) color=#6e6e73ff text="Mara" font=f3 glyphs=4 advance=32
+  text bounds=(80,472,40,32) pos=(88,480,24,16) color=#6e6e73ff text="Vos" font=f3 glyphs=3 advance=24
+  text bounds=(302,463,48,32) pos=(310,471,32,16) color=#6e6e73ff text="3:21" font=f5 glyphs=4 advance=32
+  text bounds=(15,516,24,32) pos=(23,524,8,16) color=#6e6e73ff text="5" font=f5 glyphs=1 advance=8
+  set-clip bounds=(48,513.65,250,17.55) pos=(48,513.65,250,17.55) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(40,506,72,32) pos=(48,514,56,16) color=#0a0a0aff text="Harbour" font=f6 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  text bounds=(40,524,48,32) pos=(48,532,32,16) color=#6e6e73ff text="Mara" font=f3 glyphs=4 advance=32
+  text bounds=(80,524,40,32) pos=(88,532,24,16) color=#6e6e73ff text="Vos" font=f3 glyphs=3 advance=24
+  text bounds=(302,516,48,32) pos=(310,524,32,16) color=#6e6e73ff text="4:28" font=f5 glyphs=4 advance=32
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,568.1) pos=(0,0,360,568.1) radius=(0,0,0,0,0,0,0,0)
+  group opacity=1 matrix=(0.0523359,0.99863,-0.99863,0.0523359,142.079,-3.72047) backface=0 bounds=(18,18,110,110) exact=0
+    box-shadow bounds=(-18,-18,182,182) box=(18,18,110,110) radius=(55,55,55,55,55,55,55,55) shadow=(0,10,24,0,#0000004d,0)
+    radial-gradient bounds=(18,18,110,110) layer=(border=(18,18,110,110),radius=(55,55,55,55,55,55,55,55),clip=(18,18,110,110),origin=(18,18,110,110),attachment=0,repeat=0,root=0) points=((0,#111111ff,-),(0.0192847,#111111ff,-),(0.0192847,#1c1c1eff,-),(0.0385695,#1c1c1eff,-),(0.0385695,#111111ff,-),(0.0578542,#111111ff,-),(0.0578542,#1c1c1eff,-),(0.0771389,#1c1c1eff,-),(0.0771389,#111111ff,-),(0.0964237,#111111ff,-),(0.0964237,#1c1c1eff,-),(0.115708,#1c1c1eff,-),(0.115708,#111111ff,-),(0.134993,#111111ff,-),(0.134993,#1c1c1eff,-),(0.154278,#1c1c1eff,-),(0.154278,#111111ff,-),(0.173563,#111111ff,-),(0.173563,#1c1c1eff,-),(0.192847,#1c1c1eff,-),(0.192847,#111111ff,-),(0.212132,#111111ff,-),(0.212132,#1c1c1eff,-),(0.231417,#1c1c1eff,-),(0.231417,#111111ff,-),(0.250702,#111111ff,-),(0.250702,#1c1c1eff,-),(0.269986,#1c1c1eff,-),(0.269986,#111111ff,-),(0.289271,#111111ff,-),(0.289271,#1c1c1eff,-),(0.308556,#1c1c1eff,-),(0.308556,#111111ff,-),(0.32784,#111111ff,-),(0.32784,#1c1c1eff,-),(0.347125,#1c1c1eff,-),(0.347125,#111111ff,-),(0.36641,#111111ff,-),(0.36641,#1c1c1eff,-),(0.385695,#1c1c1eff,-),(0.385695,#111111ff,-),(0.404979,#111111ff,-),(0.404979,#1c1c1eff,-),(0.424264,#1c1c1eff,-),(0.424264,#111111ff,-),(0.443549,#111111ff,-),(0.443549,#1c1c1eff,-),(0.462833,#1c1c1eff,-),(0.462833,#111111ff,-),(0.482118,#111111ff,-),(0.482118,#1c1c1eff,-),(0.501403,#1c1c1eff,-),(0.501403,#111111ff,-),(0.520688,#111111ff,-),(0.520688,#1c1c1eff,-),(0.539972,#1c1c1eff,-),(0.539972,#111111ff,-),(0.559257,#111111ff,-),(0.559257,#1c1c1eff,-),(0.578542,#1c1c1eff,-),(0.578542,#111111ff,-),(0.597827,#111111ff,-),(0.597827,#1c1c1eff,-),(0.617111,#1c1c1eff,-),(0.617111,#111111ff,-),(0.636396,#111111ff,-),(0.636396,#1c1c1eff,-),(0.655681,#1c1c1eff,-),(0.655681,#111111ff,-),(0.674966,#111111ff,-),(0.674966,#1c1c1eff,-),(0.69425,#1c1c1eff,-),(0.69425,#111111ff,-),(0.713535,#111111ff,-),(0.713535,#1c1c1eff,-),(0.73282,#1c1c1eff,-),(0.73282,#111111ff,-),(0.752104,#111111ff,-),(0.752104,#1c1c1eff,-),(0.771389,#1c1c1eff,-),(0.771389,#111111ff,-),(0.790674,#111111ff,-),(0.790674,#1c1c1eff,-),(0.809959,#1c1c1eff,-),(0.809959,#111111ff,-),(0.829243,#111111ff,-),(0.829243,#1c1c1eff,-),(0.848528,#1c1c1eff,-),(0.848528,#111111ff,-),(0.867813,#111111ff,-),(0.867813,#1c1c1eff,-),(0.887097,#1c1c1eff,-),(0.887097,#111111ff,-),(0.906382,#111111ff,-),(0.906382,#1c1c1eff,-),(0.925667,#1c1c1eff,-),(0.925667,#111111ff,-),(0.944952,#111111ff,-),(0.944952,#1c1c1eff,-),(0.964236,#1c1c1eff,-),(0.964236,#111111ff,-),(0.983521,#111111ff,-),(0.983521,#1c1c1eff,-),(1.00281,#1c1c1eff,-)) space=0 hue=0 position=(73,73) radius=(77.7817,77.7817)
+    conic-gradient bounds=(51,51,44,44) layer=(border=(51,51,44,44),radius=(22,22,22,22,22,22,22,22),clip=(51,51,44,44),origin=(51,51,44,44),attachment=0,repeat=0,root=0) points=((0,#ff2d55ff,-),(0.166667,#ff9500ff,-),(0.333333,#ffcc00ff,-),(0.5,#34c759ff,-),(0.666667,#007affff,-),(0.833333,#af52deff,-),(1,#ff2d55ff,-)) space=8 hue=1 position=(73,73) angle=180 radius=31.1127
+    solid-fill bounds=(69,69,8,8) layer=(border=(69,69,8,8),radius=(4.4,4.4,4.4,4.4,4.4,4.4,4.4,4.4),clip=(69,69,8,8),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=17,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

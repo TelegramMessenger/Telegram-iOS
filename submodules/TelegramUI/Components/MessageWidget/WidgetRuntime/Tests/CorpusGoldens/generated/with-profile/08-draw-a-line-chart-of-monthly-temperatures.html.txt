@@ -1,0 +1,203 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Berlin vs Madrid Temperatures</title>
+<style></style>
+</head>
+<body>
+<h2>🌡️ Monthly Average Temperatures</h2>
+<p>Berlin vs Madrid (°C) · tap a month</p>
+<svg id="chart" viewBox="0 0 400 240" role="img" aria-label="Line chart of monthly temperatures"><g class="grid"><line x1="34" x2="390" y1="212" y2="212"></line><line x1="34" x2="390" y1="183.14285714285714" y2="183.14285714285714"></line><line x1="34" x2="390" y1="154.28571428571428" y2="154.28571428571428"></line><line x1="34" x2="390" y1="125.42857142857143" y2="125.42857142857143"></line><line x1="34" x2="390" y1="96.57142857142857" y2="96.57142857142857"></line><line x1="34" x2="390" y1="67.71428571428572" y2="67.71428571428572"></line><line x1="34" x2="390" y1="38.85714285714286" y2="38.85714285714286"></line><line x1="34" x2="390" y1="10" y2="10"></line></g><g class="axis"><text x="28" y="215" text-anchor="end">-5°</text><text x="28" y="186.14285714285714" text-anchor="end">0°</text><text x="28" y="157.28571428571428" text-anchor="end">5°</text><text x="28" y="128.42857142857144" text-anchor="end">10°</text><text x="28" y="99.57142857142857" text-anchor="end">15°</text><text x="28" y="70.71428571428572" text-anchor="end">20°</text><text x="28" y="41.85714285714286" text-anchor="end">25°</text><text x="28" y="13" text-anchor="end">30°</text><text x="34" y="230" text-anchor="middle">Jan</text><text x="66.36363636363637" y="230" text-anchor="middle">Feb</text><text x="98.72727272727273" y="230" text-anchor="middle">Mar</text><text x="131.0909090909091" y="230" text-anchor="middle">Apr</text><text x="163.45454545454547" y="230" text-anchor="middle">May</text><text x="195.8181818181818" y="230" text-anchor="middle">Jun</text><text x="228.1818181818182" y="230" text-anchor="middle">Jul</text><text x="260.5454545454545" y="230" text-anchor="middle">Aug</text><text x="292.90909090909093" y="230" text-anchor="middle">Sep</text><text x="325.27272727272725" y="230" text-anchor="middle">Oct</text><text x="357.6363636363636" y="230" text-anchor="middle">Nov</text><text x="390" y="230" text-anchor="middle">Dec</text></g><path class="line" stroke="#2563eb" d="M34.0 180.3 L66.4 174.5 L98.7 154.3 L131.1 125.4 L163.5 96.6 L195.8 79.3 L228.2 67.7 L260.5 70.6 L292.9 96.6 L325.3 125.4 L357.6 154.3 L390.0 171.6"></path><circle cx="34" cy="180.25714285714287" r="3" fill="#2563eb"></circle><circle cx="66.36363636363637" cy="174.4857142857143" r="3" fill="#2563eb"></circle><circle cx="98.72727272727273" cy="154.28571428571428" r="3" fill="#2563eb"></circle><circle cx="131.0909090909091" cy="125.42857142857143" r="3" fill="#2563eb"></circle><circle cx="163.45454545454547" cy="96.57142857142857" r="3" fill="#2563eb"></circle><circle cx="195.8181818181818" cy="79.25714285714285" r="3" fill="#2563eb"></circle><circle cx="228.1818181818182" cy="67.71428571428572" r="3" fill="#2563eb"></circle><circle cx="260.5454545454545" cy="70.6" r="3" fill="#2563eb"></circle><circle cx="292.90909090909093" cy="96.57142857142857" r="3" fill="#2563eb"></circle><circle cx="325.27272727272725" cy="125.42857142857143" r="3" fill="#2563eb"></circle><circle cx="357.6363636363636" cy="154.28571428571428" r="3" fill="#2563eb"></circle><circle cx="390" cy="171.6" r="3" fill="#2563eb"></circle><path class="line" stroke="#dc2626" d="M34.0 148.5 L66.4 137.0 L98.7 119.7 L131.1 108.1 L163.5 85.0 L195.8 50.4 L228.2 33.1 L260.5 36.0 L292.9 61.9 L325.3 96.6 L357.6 128.3 L390.0 145.6"></path><circle cx="34" cy="148.5142857142857" r="3" fill="#dc2626"></circle><circle cx="66.36363636363637" cy="136.9714285714286" r="3" fill="#dc2626"></circle><circle cx="98.72727272727273" cy="119.65714285714286" r="3" fill="#dc2626"></circle><circle cx="131.0909090909091" cy="108.11428571428571" r="3" fill="#dc2626"></circle><circle cx="163.45454545454547" cy="85.02857142857142" r="3" fill="#dc2626"></circle><circle cx="195.8181818181818" cy="50.4" r="3" fill="#dc2626"></circle><circle cx="228.1818181818182" cy="33.08571428571429" r="3" fill="#dc2626"></circle><circle cx="260.5454545454545" cy="35.971428571428575" r="3" fill="#dc2626"></circle><circle cx="292.90909090909093" cy="61.94285714285714" r="3" fill="#dc2626"></circle><circle cx="325.27272727272725" cy="96.57142857142857" r="3" fill="#dc2626"></circle><circle cx="357.6363636363636" cy="128.31428571428572" r="3" fill="#dc2626"></circle><circle cx="390" cy="145.62857142857143" r="3" fill="#dc2626"></circle><g><rect x="19" y="10" width="30" height="202" fill="transparent" data-i="0"></rect><rect x="51.363636363636374" y="10" width="30" height="202" fill="transparent" data-i="1"></rect><rect x="83.72727272727273" y="10" width="30" height="202" fill="transparent" data-i="2"></rect><rect x="116.0909090909091" y="10" width="30" height="202" fill="transparent" data-i="3"></rect><rect x="148.45454545454547" y="10" width="30" height="202" fill="transparent" data-i="4"></rect><rect x="180.8181818181818" y="10" width="30" height="202" fill="transparent" data-i="5"></rect><rect x="213.1818181818182" y="10" width="30" height="202" fill="transparent" data-i="6"></rect><rect x="245.5454545454545" y="10" width="30" height="202" fill="transparent" data-i="7"></rect><rect x="277.90909090909093" y="10" width="30" height="202" fill="transparent" data-i="8"></rect><rect x="310.27272727272725" y="10" width="30" height="202" fill="transparent" data-i="9"></rect><rect x="342.6363636363636" y="10" width="30" height="202" fill="transparent" data-i="10"></rect><rect x="375" y="10" width="30" height="202" fill="transparent" data-i="11"></rect></g><line x1="0" x2="0" y1="10" y2="212" stroke="currentColor" stroke-dasharray="3 3" opacity="0"></line></svg>
+<div class="legend"><span class="b">Berlin</span><span class="m">Madrid</span></div>
+<div class="tip" id="tip"></div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 325.55
+  head 0 0 0 0
+    style 0 0 0 0
+  body 14 14 332 297.55
+    h2 14 14 332 21.25
+    p 14 37.25 332 17.55
+    svg 14 64.8 332 199.2
+      g 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+        line 0 0 0 0
+      g 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+        text 0 0 0 0
+      path 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      path 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      circle 0 0 0 0
+      g 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+        rect 0 0 0 0
+      line 0 0 0 0
+    div 14 270 332 17.55
+      span 106 270 66 17.55
+        -tag-before 106 277.5 12 3
+      span 188 270 66 17.55
+        -tag-before 188 277.5 12 3
+    div 14 293.55 332 18
+
+== paint
+root 360x325.55 items=86
+  solid-fill bounds=(0,0,360,326) layer=(border=(0,0,360,326),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,326),origin=(0,0,0,0),attachment=0,repeat=0,root=1) color=#ffffffff
+  set-clip bounds=(14,64.8,332,199.2) pos=(14,64.8,332,199.2) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(14,64.8,332,199.2)
+    group opacity=1 matrix=(0.83,0,0,0.83,14,64.8) backface=0 bounds=(0,0,400,240) exact=0
+      path bounds=(31,209,362,6) ops=(0,1) points=(34,212,390,212) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,180.143,362,6) ops=(0,1) points=(34,183.143,390,183.143) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,151.286,362,6) ops=(0,1) points=(34,154.286,390,154.286) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,122.429,362,6) ops=(0,1) points=(34,125.429,390,125.429) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,93.5714,362,6) ops=(0,1) points=(34,96.5714,390,96.5714) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,64.7143,362,6) ops=(0,1) points=(34,67.7143,390,67.7143) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,35.8571,362,6) ops=(0,1) points=(34,38.8571,390,38.8571) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(31,7,362,6) ops=(0,1) points=(34,10,390,10) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#e5e7ebff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      text bounds=(-12,195,48,32) pos=(-4,203,32,16) color=#666666ff text="-5°" font=f1 glyphs=4 advance=32
+      text bounds=(-4,166.143,40,32) pos=(4,174.143,24,16) color=#666666ff text="0°" font=f1 glyphs=3 advance=24
+      text bounds=(-4,137.286,40,32) pos=(4,145.286,24,16) color=#666666ff text="5°" font=f1 glyphs=3 advance=24
+      text bounds=(-12,108.429,48,32) pos=(-4,116.429,32,16) color=#666666ff text="10°" font=f1 glyphs=4 advance=32
+      text bounds=(-12,79.5714,48,32) pos=(-4,87.5714,32,16) color=#666666ff text="15°" font=f1 glyphs=4 advance=32
+      text bounds=(-12,50.7143,48,32) pos=(-4,58.7143,32,16) color=#666666ff text="20°" font=f1 glyphs=4 advance=32
+      text bounds=(-12,21.8571,48,32) pos=(-4,29.8571,32,16) color=#666666ff text="25°" font=f1 glyphs=4 advance=32
+      text bounds=(-12,-7,48,32) pos=(-4,1,32,16) color=#666666ff text="30°" font=f1 glyphs=4 advance=32
+      text bounds=(14,210,40,32) pos=(22,218,24,16) color=#666666ff text="Jan" font=f1 glyphs=3 advance=24
+      text bounds=(46.3636,210,40,32) pos=(54.3636,218,24,16) color=#666666ff text="Feb" font=f1 glyphs=3 advance=24
+      text bounds=(78.7273,210,40,32) pos=(86.7273,218,24,16) color=#666666ff text="Mar" font=f1 glyphs=3 advance=24
+      text bounds=(111.091,210,40,32) pos=(119.091,218,24,16) color=#666666ff text="Apr" font=f1 glyphs=3 advance=24
+      text bounds=(143.455,210,40,32) pos=(151.455,218,24,16) color=#666666ff text="May" font=f1 glyphs=3 advance=24
+      text bounds=(175.818,210,40,32) pos=(183.818,218,24,16) color=#666666ff text="Jun" font=f1 glyphs=3 advance=24
+      text bounds=(208.182,210,40,32) pos=(216.182,218,24,16) color=#666666ff text="Jul" font=f1 glyphs=3 advance=24
+      text bounds=(240.545,210,40,32) pos=(248.545,218,24,16) color=#666666ff text="Aug" font=f1 glyphs=3 advance=24
+      text bounds=(272.909,210,40,32) pos=(280.909,218,24,16) color=#666666ff text="Sep" font=f1 glyphs=3 advance=24
+      text bounds=(305.273,210,40,32) pos=(313.273,218,24,16) color=#666666ff text="Oct" font=f1 glyphs=3 advance=24
+      text bounds=(337.636,210,40,32) pos=(345.636,218,24,16) color=#666666ff text="Nov" font=f1 glyphs=3 advance=24
+      text bounds=(370,210,40,32) pos=(378,218,24,16) color=#666666ff text="Dec" font=f1 glyphs=3 advance=24
+      path bounds=(28,61.7,368,124.6) ops=(0,1,1,1,1,1,1,1,1,1,1,1) points=(34,180.3,66.4,174.5,98.7,154.3,131.1,125.4,163.5,96.6,195.8,79.3,228.2,67.7,260.5,70.6,292.9,96.6,325.3,125.4,357.6,154.3,390,171.6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#2563ebff stroke-width=2.5 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(30,176.257,8,8) ops=(0,3,3,3,3,4) points=(37,180.257,37,181.914,35.6569,183.257,34,183.257,32.3431,183.257,31,181.914,31,180.257,31,178.6,32.3431,177.257,34,177.257,35.6569,177.257,37,178.6,37,180.257) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(62.3636,170.486,8,8) ops=(0,3,3,3,3,4) points=(69.3636,174.486,69.3636,176.143,68.0205,177.486,66.3636,177.486,64.7068,177.486,63.3636,176.143,63.3636,174.486,63.3636,172.829,64.7068,171.486,66.3636,171.486,68.0205,171.486,69.3636,172.829,69.3636,174.486) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(94.7273,150.286,8,8) ops=(0,3,3,3,3,4) points=(101.727,154.286,101.727,155.943,100.384,157.286,98.7273,157.286,97.0704,157.286,95.7273,155.943,95.7273,154.286,95.7273,152.629,97.0704,151.286,98.7273,151.286,100.384,151.286,101.727,152.629,101.727,154.286) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(127.091,121.429,8,8) ops=(0,3,3,3,3,4) points=(134.091,125.429,134.091,127.085,132.748,128.429,131.091,128.429,129.434,128.429,128.091,127.085,128.091,125.429,128.091,123.772,129.434,122.429,131.091,122.429,132.748,122.429,134.091,123.772,134.091,125.429) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(159.455,92.5714,8,8) ops=(0,3,3,3,3,4) points=(166.455,96.5714,166.455,98.2283,165.111,99.5714,163.455,99.5714,161.798,99.5714,160.455,98.2283,160.455,96.5714,160.455,94.9146,161.798,93.5714,163.455,93.5714,165.111,93.5714,166.455,94.9146,166.455,96.5714) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(191.818,75.2571,8,8) ops=(0,3,3,3,3,4) points=(198.818,79.2571,198.818,80.914,197.475,82.2571,195.818,82.2571,194.161,82.2571,192.818,80.914,192.818,79.2571,192.818,77.6003,194.161,76.2571,195.818,76.2571,197.475,76.2571,198.818,77.6003,198.818,79.2571) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(224.182,63.7143,8,8) ops=(0,3,3,3,3,4) points=(231.182,67.7143,231.182,69.3711,229.839,70.7143,228.182,70.7143,226.525,70.7143,225.182,69.3711,225.182,67.7143,225.182,66.0574,226.525,64.7143,228.182,64.7143,229.839,64.7143,231.182,66.0574,231.182,67.7143) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(256.545,66.6,8,8) ops=(0,3,3,3,3,4) points=(263.545,70.6,263.545,72.2569,262.202,73.6,260.545,73.6,258.889,73.6,257.545,72.2569,257.545,70.6,257.545,68.9431,258.889,67.6,260.545,67.6,262.202,67.6,263.545,68.9431,263.545,70.6) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(288.909,92.5714,8,8) ops=(0,3,3,3,3,4) points=(295.909,96.5714,295.909,98.2283,294.566,99.5714,292.909,99.5714,291.252,99.5714,289.909,98.2283,289.909,96.5714,289.909,94.9146,291.252,93.5714,292.909,93.5714,294.566,93.5714,295.909,94.9146,295.909,96.5714) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(321.273,121.429,8,8) ops=(0,3,3,3,3,4) points=(328.273,125.429,328.273,127.085,326.93,128.429,325.273,128.429,323.616,128.429,322.273,127.085,322.273,125.429,322.273,123.772,323.616,122.429,325.273,122.429,326.93,122.429,328.273,123.772,328.273,125.429) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(353.636,150.286,8,8) ops=(0,3,3,3,3,4) points=(360.636,154.286,360.636,155.943,359.293,157.286,357.636,157.286,355.979,157.286,354.636,155.943,354.636,154.286,354.636,152.629,355.979,151.286,357.636,151.286,359.293,151.286,360.636,152.629,360.636,154.286) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(386,167.6,8,8) ops=(0,3,3,3,3,4) points=(393,171.6,393,173.257,391.657,174.6,390,174.6,388.343,174.6,387,173.257,387,171.6,387,169.943,388.343,168.6,390,168.6,391.657,168.6,393,169.943,393,171.6) fill=1 fill-color=#2563ebff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(28,27.1,368,127.4) ops=(0,1,1,1,1,1,1,1,1,1,1,1) points=(34,148.5,66.4,137,98.7,119.7,131.1,108.1,163.5,85,195.8,50.4,228.2,33.1,260.5,36,292.9,61.9,325.3,96.6,357.6,128.3,390,145.6) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#dc2626ff stroke-width=2.5 cap=0 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(30,144.514,8,8) ops=(0,3,3,3,3,4) points=(37,148.514,37,150.171,35.6569,151.514,34,151.514,32.3431,151.514,31,150.171,31,148.514,31,146.857,32.3431,145.514,34,145.514,35.6569,145.514,37,146.857,37,148.514) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(62.3636,132.971,8,8) ops=(0,3,3,3,3,4) points=(69.3636,136.971,69.3636,138.628,68.0205,139.971,66.3636,139.971,64.7068,139.971,63.3636,138.628,63.3636,136.971,63.3636,135.315,64.7068,133.971,66.3636,133.971,68.0205,133.971,69.3636,135.315,69.3636,136.971) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(94.7273,115.657,8,8) ops=(0,3,3,3,3,4) points=(101.727,119.657,101.727,121.314,100.384,122.657,98.7273,122.657,97.0704,122.657,95.7273,121.314,95.7273,119.657,95.7273,118,97.0704,116.657,98.7273,116.657,100.384,116.657,101.727,118,101.727,119.657) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(127.091,104.114,8,8) ops=(0,3,3,3,3,4) points=(134.091,108.114,134.091,109.771,132.748,111.114,131.091,111.114,129.434,111.114,128.091,109.771,128.091,108.114,128.091,106.457,129.434,105.114,131.091,105.114,132.748,105.114,134.091,106.457,134.091,108.114) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(159.455,81.0286,8,8) ops=(0,3,3,3,3,4) points=(166.455,85.0286,166.455,86.6854,165.111,88.0286,163.455,88.0286,161.798,88.0286,160.455,86.6854,160.455,85.0286,160.455,83.3717,161.798,82.0286,163.455,82.0286,165.111,82.0286,166.455,83.3717,166.455,85.0286) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(191.818,46.4,8,8) ops=(0,3,3,3,3,4) points=(198.818,50.4,198.818,52.0569,197.475,53.4,195.818,53.4,194.161,53.4,192.818,52.0569,192.818,50.4,192.818,48.7431,194.161,47.4,195.818,47.4,197.475,47.4,198.818,48.7431,198.818,50.4) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(224.182,29.0857,8,8) ops=(0,3,3,3,3,4) points=(231.182,33.0857,231.182,34.7426,229.839,36.0857,228.182,36.0857,226.525,36.0857,225.182,34.7426,225.182,33.0857,225.182,31.4289,226.525,30.0857,228.182,30.0857,229.839,30.0857,231.182,31.4289,231.182,33.0857) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(256.545,31.9714,8,8) ops=(0,3,3,3,3,4) points=(263.545,35.9714,263.545,37.6283,262.202,38.9714,260.545,38.9714,258.889,38.9714,257.545,37.6283,257.545,35.9714,257.545,34.3146,258.889,32.9714,260.545,32.9714,262.202,32.9714,263.545,34.3146,263.545,35.9714) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(288.909,57.9429,8,8) ops=(0,3,3,3,3,4) points=(295.909,61.9429,295.909,63.5997,294.566,64.9429,292.909,64.9429,291.252,64.9429,289.909,63.5997,289.909,61.9429,289.909,60.286,291.252,58.9429,292.909,58.9429,294.566,58.9429,295.909,60.286,295.909,61.9429) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(321.273,92.5714,8,8) ops=(0,3,3,3,3,4) points=(328.273,96.5714,328.273,98.2283,326.93,99.5714,325.273,99.5714,323.616,99.5714,322.273,98.2283,322.273,96.5714,322.273,94.9146,323.616,93.5714,325.273,93.5714,326.93,93.5714,328.273,94.9146,328.273,96.5714) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(353.636,124.314,8,8) ops=(0,3,3,3,3,4) points=(360.636,128.314,360.636,129.971,359.293,131.314,357.636,131.314,355.979,131.314,354.636,129.971,354.636,128.314,354.636,126.657,355.979,125.314,357.636,125.314,359.293,125.314,360.636,126.657,360.636,128.314) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(386,141.629,8,8) ops=(0,3,3,3,3,4) points=(393,145.629,393,147.285,391.657,148.629,390,148.629,388.343,148.629,387,147.285,387,145.629,387,143.972,388.343,142.629,390,142.629,391.657,142.629,393,143.972,393,145.629) fill=1 fill-color=#dc2626ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(18,9,32,204) ops=(0,1,1,1,4) points=(19,10,49,10,49,212,19,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(50.3636,9,32,204) ops=(0,1,1,1,4) points=(51.3636,10,81.3636,10,81.3636,212,51.3636,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(82.7273,9,32,204) ops=(0,1,1,1,4) points=(83.7273,10,113.727,10,113.727,212,83.7273,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(115.091,9,32,204) ops=(0,1,1,1,4) points=(116.091,10,146.091,10,146.091,212,116.091,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(147.455,9,32,204) ops=(0,1,1,1,4) points=(148.455,10,178.455,10,178.455,212,148.455,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(179.818,9,32,204) ops=(0,1,1,1,4) points=(180.818,10,210.818,10,210.818,212,180.818,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(212.182,9,32,204) ops=(0,1,1,1,4) points=(213.182,10,243.182,10,243.182,212,213.182,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(244.545,9,32,204) ops=(0,1,1,1,4) points=(245.545,10,275.545,10,275.545,212,245.545,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(276.909,9,32,204) ops=(0,1,1,1,4) points=(277.909,10,307.909,10,307.909,212,277.909,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(309.273,9,32,204) ops=(0,1,1,1,4) points=(310.273,10,340.273,10,340.273,212,310.273,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(341.636,9,32,204) ops=(0,1,1,1,4) points=(342.636,10,372.636,10,372.636,212,342.636,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(374,9,32,204) ops=(0,1,1,1,4) points=(375,10,405,10,405,212,375,212) fill=1 fill-color=#00000000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=0 matrix=(1,0,0,1,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+        path bounds=(-3,7,6,208) ops=(0,1) points=(0,10,0,212) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#111111ff stroke-width=1 cap=0 join=0 miter=4 dashes=(3,3) dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  text bounds=(6,8,72,32) pos=(14,16,56,16) color=#111111ff text="🌡️" font=f2 glyphs=7 advance=56
+  text bounds=(70,8,72,32) pos=(78,16,56,16) color=#111111ff text="Monthly" font=f2 glyphs=7 advance=56
+  text bounds=(134,8,72,32) pos=(142,16,56,16) color=#111111ff text="Average" font=f2 glyphs=7 advance=56
+  text bounds=(198,8,112,32) pos=(206,16,96,16) color=#111111ff text="Temperatures" font=f2 glyphs=12 advance=96
+  text bounds=(6,29,64,32) pos=(14,37,48,16) color=#666666ff text="Berlin" font=f3 glyphs=6 advance=48
+  text bounds=(62,29,32,32) pos=(70,37,16,16) color=#666666ff text="vs" font=f3 glyphs=2 advance=16
+  text bounds=(86,29,64,32) pos=(94,37,48,16) color=#666666ff text="Madrid" font=f3 glyphs=6 advance=48
+  text bounds=(142,29,56,32) pos=(150,37,40,16) color=#666666ff text="(°C)" font=f3 glyphs=5 advance=40
+  text bounds=(190,29,32,32) pos=(198,37,16,16) color=#666666ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(214,29,40,32) pos=(222,37,24,16) color=#666666ff text="tap" font=f3 glyphs=3 advance=24
+  text bounds=(246,29,24,32) pos=(254,37,8,16) color=#666666ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(262,29,56,32) pos=(270,37,40,16) color=#666666ff text="month" font=f3 glyphs=5 advance=40
+  solid-fill bounds=(106,278,12,3) layer=(border=(106,278,12,3),radius=(1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5),clip=(106,278,12,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2563ebff
+  text bounds=(116,262,64,32) pos=(124,270,48,16) color=#111111ff text="Berlin" font=f3 glyphs=6 advance=48
+  solid-fill bounds=(188,278,12,3) layer=(border=(188,278,12,3),radius=(1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5),clip=(188,278,12,3),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#dc2626ff
+  text bounds=(198,262,64,32) pos=(206,270,48,16) color=#111111ff text="Madrid" font=f3 glyphs=6 advance=48
+
+== fonts
+f1 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

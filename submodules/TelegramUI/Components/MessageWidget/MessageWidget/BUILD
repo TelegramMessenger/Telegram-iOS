@@ -10,6 +10,8 @@ swift_library(
     deps = [
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidgetRendering",
         "//submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS",
+        # Intl's locale data: widget-sandbox's iOS glue answers the runtime's `intl` requests.
+        "//third-party/widget-sandbox:WidgetSandboxIntl",
     ],
     visibility = ["//visibility:public"],
 )

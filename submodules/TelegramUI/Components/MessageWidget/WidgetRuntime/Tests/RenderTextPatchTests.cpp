@@ -15,6 +15,7 @@
 #include "Sources/Render/LayerTree.h"
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Support/Errors.h"
+#include "Sources/Render/LayerMirror.h"
 #include "Tests/RenderHarness.h"
 
 using wr_test::findText;
@@ -74,6 +75,46 @@ WR_TEST(testTextPatchMatchesRebuild) {
 }
 
 // Several Text nodes in one flush, adjacent ones in one parent among them.
+// twidget edit 16: the pieces are replaced in place wherever they sit, not only straight in a block's inline context: in
+// an inline element (a counter's <span>, a <b> in a sentence), and beside other children (an element, a ::before). So
+// litehtml keeps its render tree, the flush publishes operations, not a Reset, and the inline context's runs are what a
+// fresh walk records.
+WR_TEST(testTextInAnInlineElementKeepsTheTree) {
+    RenderEnv env("<!doctype html><style>#m::before{content:'> '}</style><body style='margin:0'>"
+                  "<p>count: <span id=s>0</span> and <b id=b>bold</b> words</p>"
+                  "<div id=d>left <i>it</i> right</div><p id=m>marked</p>"
+                  "<p><span id=g>grow</span> then <span style='opacity:.5'>faded</span> <b style='display:inline-block'>box</b></p>"
+                  "<p id=q>p <span style='opacity:.5'>x &amp; y</span></p></body>");
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t resets = env.render().treeRebuildResets();
+    const char* const edits[] = {
+        "document.getElementById('s').firstChild.data = '42'",
+        "document.getElementById('s').textContent = '1,337 and more'",
+        "document.getElementById('b').firstChild.data = 'much bolder words that wrap the line'",
+        "document.getElementById('d').firstChild.data = 'a longer left part'",
+        "document.getElementById('d').lastChild.data = ' right again'",
+        "document.getElementById('m').firstChild.data = 'marked again'",
+        "document.getElementById('s').textContent = '7'; document.getElementById('b').firstChild.data = 'b'",
+        // What follows in the line moves: a paint group and an inline-block after the text.
+        "document.getElementById('g').firstChild.data = 'grown a good deal longer'",
+        "document.getElementById('q').firstChild.data = '  spaced  out  '",
+        "document.getElementById('q').lastChild.firstChild.data = 'inside the group'",
+    };
+    for (const char* script : edits) {
+        const uint64_t patches = env.render().patchCount();
+        edit(env, script);
+        expectMatchesRebuild(env, script);
+        CHECK_EQ(env.render().patchCount(), patches + 1);
+        CHECK_EQ(env.render().treeRebuildResets(), resets);
+        // Text before an inline paint group in its line moves the group's run, which the mirror does not place: it
+        // publishes a new mirror (Reset), with the render tree kept.
+        if (std::string(script).find("'g'") == std::string::npos && std::string(script).find("'q'") == std::string::npos) {
+            CHECK(!env.render().layerOps().empty() && env.render().layerOps()[0].kind != wr::LayerOp::Reset);
+        }
+    }
+    CHECK_EQ(env.render().buildCount(), builds);
+}
+
 WR_TEST(testTextPatchBatches) {
     RenderEnv env(kPage);
     // An empty node first, then text after it; these are structure changes and rebuild.

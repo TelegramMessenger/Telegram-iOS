@@ -615,9 +615,12 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        `append_text` splits it (`split_text`'s words, one `el_space` per whitespace character; always new pieces, even
        at the same count), through `element::m_children` as `replace_children` does. It re-points `m_over_element`
        and `m_active_element` away from a replaced piece to the parent, tries `replace_text_renderers` (the render tree
-       is kept only when the parent's whole content is this one run inside an inline context; otherwise the session is
-       marked to rebuild the render tree at commit, which is always correct), and collects the new pieces for
-       `commit_patch`. `pieces` is assigned.
+       is kept when the run's renderers are a run among the children of the parent's render item, which is its inline
+       context or, for an inline element, its own item (a `<span>`'s pieces, which its inline context lays out), beside
+       other children or not; only that run is replaced, the original under `#if 0`; otherwise the session is marked to
+       rebuild the render tree at commit, which is always correct), and collects the new pieces for `commit_patch`.
+       `pieces` is assigned. WidgetRuntime's mirror then re-captures the inline context's runs (an inline element's
+       through `ItemInfo::runOf`), and publishes anew where a paint group in the line holds a run of its own.
     2. **`can_replace_text`** is the single predicate, so a caller can plan before it changes anything: false for a
        raw-text parent (`<style>`, `<script>`), a parent inside a `select`, `option`, `optgroup`, `datalist`,
        `textarea`, `button`, `input`, `progress`, `meter` or `svg` (their generated content or drawing reads the
@@ -633,14 +636,17 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     Pinned by `tests/external_test.cpp` (`:TwidgetExternalTests`), which did not compile before the edit (none of the
     three existed): `testReplaceTextMatchesFresh` (same piece count, more words wrapping, fewer words, whitespace only
     both ways, inside `pre`, `li`, `div`, and two replacements in one session; each patched document's placements,
-    height and draw calls equal a fresh build of the final text), `testReplaceTextBesideElements` (the render tree
-    rebuilt when the run is not all of its parent), `testReplaceTextRefusals` (`<style>`, a `select`'s `option`, a
+    height and draw calls equal a fresh build of the final text), `testReplaceTextBesideElements` (a run beside
+    elements equals a fresh build), `testReplaceTextRefusals` (`<style>`, a `select`'s `option`, a
     `button`, a run out of range or not text, and the cap with `pending_growth` and a session that replaces and grows;
     each refusal leaves the document and `pieces` as they were) and `testReplaceTextRepointsHover`. Mutation checks:
     keeping the tree when `replace_text_renderers` fails fails `testReplaceTextBesideElements`; restyling nothing at
-    commit fails `testReplaceTextMatchesFresh`.
-    **macOS effect:** none; the entry points have no caller in the Objective-C++ layer, and the new members are only
-    read by them.
+    commit fails `testReplaceTextMatchesFresh`. WidgetRuntime's `testTextInAnInlineElementKeepsTheTree` pins the
+    kept tree in a `<span>`, a `<b>`, beside an `<i>` and a `::before`, and the new mirror where a paint group follows.
+    **macOS effect:** the entry points have no caller in the Objective-C++ layer, and the new members are only read by
+    them; `replace_text_renderers` is also the template path's (a text hole), which since the amendment keeps the render
+    tree for a hole in an inline element or beside other children (`TwidgetRenderingTests`' random text runs equal a
+    fresh layout).
 
 17. **Attributes and inline style patched in place** (2026-10-18, M1c Task 8 and its fix round; both platforms, insertions
     plus two `#if 0`/`#else` pairs). The flush of edit 16 extends to an attribute change. Fork `document.h` gains
@@ -661,17 +667,25 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
        `style` whose old or new value holds `--`, `var(` or `counter`; and the two caps a fresh build enforces where a
        match or a layout makes things:
        - **pseudo-element content.** Matching again makes the element's `::before`/`::after` content, asking
-         `text_element_allowed()` for each word; a fresh build makes all of it in document order, with each element's old
-         and new content alive together, so near `max_text_elements` a patch and a rebuild cut at different words (bounds
-         on the pieces were tried and fell to function-name case and spacing, `ATTR(`, `attr (`, and to overlap with
-         other elements' rules). The rule is a flag instead: `pseudo_content_possible()`, computed once per document from
-         the selectors as litehtml parsed them (a pseudo-element `before`/`after` in the rightmost compound and a
-         `content` declaration that is not empty or `none`; a rule naming a tag counts only when the document has an
-         element with that tag, so the master sheet's `summary::before` and `details[open] > summary::before`, which
-         declare content, matter only in a document with a `<summary>`). A rule for an `lh-*` part (a form control's generated parts: `lh-range-thumb`, also reached as `input::-webkit-slider-thumb`) counts wherever the document has an `input`, `select` or `textarea`, since a patch can make the part. The answer is recomputed on the first query after each `commit_patch` (the walk of the tree is O(elements); WidgetRuntime charges the build's element count first). While it is true, `can_set_element_attributes`
-         and edit 16's `can_replace_text` refuse. `text_element_allowed` (under `#if 0`/`#else`) also counts logically in
-         a patch session (not the pieces the session replaced or forgot, kept alive in `m_patch_hold` until
-         `commit_patch`); with the flag set no patch runs, so this only guards text patches without pseudo content.
+         `text_element_allowed()` for each word; a build makes all of it after the text, in document order, so at
+         `max_text_elements` (or the pseudo-element cap) a patch and a rebuild cut at different words: the patch cuts the
+         element it matched again, a build the later element's content (bounds on the pieces were tried and fell to
+         function-name case and spacing, `ATTR(`, `attr (`, and to overlap with other elements' rules). So the cut is
+         found after the fact: `pseudo_content_possible()`, computed from the selectors as litehtml parsed them (a
+         pseudo-element `before`/`after` in the rightmost compound and a `content` declaration that is not empty or
+         `none`; a rule naming a tag counts only when the document has an element with that tag, so the master sheet's
+         `summary::before` and `details[open] > summary::before`, which declare content, matter only in a document with
+         a `<summary>`), says whether one can happen, and a patch that reaches a cap posts its limit (`text_limited()`,
+         `pseudo_limited()`), after which the caller must replace the patched document by a fresh build. While it is
+         true, `can_set_element_attributes` and edit 16's `can_replace_text` refuse once a cap has been reached (freed
+         pieces would go to later content in a fresh build). A rule for an `lh-*` part (a form control's generated parts:
+         `lh-range-thumb`, also reached as `input::-webkit-slider-thumb`), or a `*` rule, counts wherever the document has
+         an `input`, `select` or `textarea`, since a patch can make the part; such content refuses every patch
+         (`part_content_possible()`, bit 2 of the same answer), because a build counts the parts' content beyond what it
+         keeps and so near the cap cuts where a patch, which posts nothing, does not. The answer is recomputed on the
+         first query after each `commit_patch` (the walk of the tree is O(elements); WidgetRuntime charges the build's
+         element count first). `text_element_allowed` (under `#if 0`/`#else`) also counts logically in a patch session
+         (not the pieces the session replaced or forgot, kept alive in `m_patch_hold` until `commit_patch`).
        - **table cells.** A `colspan`/`rowspan` change that raises the cell product (clamped to 1000 each, as
          `table_grid::add_cell` reads them) is refused when `m_table_cells` plus the rise and the caller's
          `pending.cells` passes `max_table_cells`. This is defence in depth: `restyle_after_patch` rebuilds the render tree
@@ -698,13 +712,15 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `var(`, `counter`, table, textarea, button, an element outside the document, null and empty names) and
     `testSetAttributeFixRound` (`a:link span` both ways; href x, y, x, y keeps `:link`; one re-match for a map; the svg
     element, body's `style`, `viewBox`, `xlink:title`, `Fill`; five sheets with pseudo content (plain, `ATTR(`, `attr (`,
-    the overlap shape, `:after`) refused for attributes and for text at 0 to 5,004 filler words; sheets whose pseudo rules
-    make no content (`color` only, `content:none`, content on a real element, `::first-line`) still patch near the cap
-    and equal a fresh build, limits included; the master's `summary::before` refuses only in a document with a
-    `<summary>`; the table-cell cap, with `pending`). Mutation checks: keeping the generated parts
+    the overlap shape, `:after`) at 0 to 5,004 filler words: an attribute and then a text patch equal a fresh build
+    where no cap is reached, and both are refused once a build has reached one; sheets whose pseudo rules make no
+    content (`color` only, `content:none`, content on a real element, `::first-line`) patch near the cap and equal a
+    fresh build, limits included; the master's `summary::before` is pseudo content only in a document with a
+    `<summary>`, which patches; a `type` change to `range` and a text patch refused near the cap under an `lh-*` part
+    rule; the table-cell cap, with `pending`). Mutation checks: keeping the generated parts
     of an input, not resetting `:link`, keeping the tree always, dropping the scope check, dropping the epoch bump (only
-    the href round trip sees it), dropping `:link` from `collect_ancestor_names`, dropping the pseudo-content flag and the
-    cell refusal each fail their cases.
+    the href round trip sees it), dropping `:link` from `collect_ancestor_names`, dropping the refusal after a reached
+    cap, dropping the part-content refusal and the cell refusal each fail their cases.
     **macOS effect:** none; the entry points have no caller in the Objective-C++ layer, and the new members are only
     read by them. `text_element_allowed` counts as before outside a patch session (`m_patch_released` is 0).
 
@@ -860,8 +876,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     layout; drawing is unaffected, the placements of the rows and of the cells under them move with them, and so does hit
     testing by reading: `render_item::get_element_by_point` subtracts each level's `m_pos` before it descends
     (`render_item.cpp`, the `el_pos.x = x - el_pos.x` lines), so a point inside a captioned table's rows is matched against
-    the cells at a different offset than before. A cell's placement is still one caption height below where it is drawn
-    (rows and cells are each shifted); that is litehtml's, and it was left for WidgetRuntime's boxes (Task 10), which did not do it: OPEN, an M2 item (it mis-hits in `nodeAt` as well as in `borderBox`: a cell is drawn at y=41 while `get_placement` says y=81). Item 7: an element at
+    the cells at a different offset than before. Edit 59 stops shifting the rows themselves, so a cell's placement is
+    where it is drawn. Item 7: an element at
     `font-size: 0` on a kept render tree (Telegram-Mac's template-hole patches can restyle one) gets no line height, as
     a fresh one does; a fresh document is unchanged (the same holds for the iOS renderer's `LHDocument.mm` restyles, item
     7). Items 8 and 9: the gate is unset on macOS, and the bounds and creators have no caller there.
@@ -940,8 +956,10 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
          write: an item saves its box (position, size, padding, borders; an inline context also its inline content's
          boxes, inline boxes and fragments, which layout writes without `render()`; a table its parts' and rows') the first
          time the running layout writes it (`render()`'s entry, `forget_positions` before it zeroes them, a table's
-         `render()` for its rows), and `document::render` compares those, and only those, with what it leaves. The layout
-         cache's dirty roots bound what is written.
+         `render()` for its rows), and `document::render` compares those, and only those, with what it leaves, exactly
+         (`observed_change`'s `same`: not within litehtml's pixel epsilon, since a layout on a kept render tree can move
+         a box by less than 0.0001 px, and the mirror must hold what a fresh walk records; on macOS, which registers no
+         render observer, nothing changes). The layout cache's dirty roots bound what is written.
     Pinned by `tests/external_test.cpp`: `testWalkVisitsWhatDrawPaints` (for Task 4's fixture and a second one with
     floats, positioned items at -1 and 2, an inline-block and a table: a walk that paints every visit makes draw()'s calls
     in draw()'s order, one that paints none makes only the traversal's own calls, every paint call is a visit's, in visit
@@ -989,8 +1007,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     - **Inherited strings are bounded at one helper** (Ruling E50; `css_properties.cpp` `bound_inherited_string`). A value
       an element inherits as a `std::string` is copied into every descendant's computed style, which no charge on the
       declaring element bounds (16 KiB on `html` over 9,000 elements held +176 MB each). Every inherited string member of
-      `css_properties` (`cursor`, `list-style-image` and its base URL, `font-family`, `text-emphasis-style`,
-      `font-variant-numeric`) is passed through it after `get_property<std::string>(..., true, ...)`: an element that
+      `css_properties` (`cursor`, the base URL of `list-style-image`, `font-family`, `text-emphasis-style`,
+      `font-variant-numeric`; `list-style-image` itself is shared and charged instead, edit 60) is passed through it after `get_property<std::string>(..., true, ...)`: an element that
       declares a string itself (`html_tag::declares_value`: the stored value is a `std::string`, exactly what
       `get_property<std::string>` tests, so `inherit` and an unresolved or refused `var()` do not count) keeps it (it is
       charged), and the copy a descendant inherits is cut at 1 KiB (at a comma
@@ -1010,8 +1028,13 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
       property the author and user sheets declare (plus up to 64 `var()` uses of the largest custom property value) could
       reach the budget. The cached sum is reset when the sheets are parsed or added. W abandons a patch that passes the budget anyway (Ruling E51: `RenderTree.cpp` records `style_bytes_limited()` before
       mutating and throws `abandoned: the style budget was passed` after the selector-step check, for both the attribute and
-      the structure patch), because the estimate cannot see inline styles. It joins `attribute_change_allowed` (n = every
-      element), `structure_insertable` (n = 3 x the elements inserted), `structure_removable` (n = 0: a limit-cut document
+      the structure patch), because the estimate cannot see inline styles. It joins `attribute_change_allowed` (n = the
+      element and its subtree, what `restyle_after_patch` restyles: WidgetRuntime's `testPatchPastTheStyleBudgetMatchesRebuild`
+      patches a leaf's class near the budget and not the body's; only WidgetRuntime calls it, so macOS is unchanged. The
+      subtree is walked only when the whole document could pass the budget, and no further than it takes to know; each
+      element visited counts in `predicate_steps()`, which WidgetRuntime charges, twice, since `set_element_attributes`
+      asks again at the commit),
+      `structure_insertable` (n = 3 x the elements inserted), `structure_removable` (n = 0: a limit-cut document
       is never patched) and `retag_allowed` (n = every element; `class_change_allowed` and the template path go through
       it). A refusal makes the caller rebuild. The cumulative count only makes a patch refuse earlier; it never makes one
       diverge from a rebuild, which charges at most what the patch sequence did.
@@ -1117,8 +1140,9 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `apply_retag` treats it as it treats `class` rather than as any other attribute, which always rebuilds the render
     tree. It sets the two texts aside before comparing the rest, and keeps the tree when every property whose
     declaration differs between them (`changed_declarations`) is a `paint_only_property`: so `transform`, `opacity`,
-    colours and the rest of that list are restyled in place and republished as mirror operations, while a layout
-    property (`width`, `left`, …) still rebuilds. The changed properties feed the region as a changed rule's do, and
+    colours and the rest of that list are restyled in place and republished as mirror operations (and, since edit 63,
+    a box's geometry), while a property that shapes the render tree (`display`, `position`, …) still rebuilds. The
+    changed properties feed the region as a changed rule's do, and
     one of `paint_order_property`'s six (the list edit 20 tests a rule against, now one helper) tells the render
     observer that paint order may have changed. Pinned by `AnimationRenderTests` (`testAPaintOnlyFrameKeepsTheTree`:
     no tree rebuild on any frame, and on an in-flow block no Reset at all).
@@ -1187,7 +1211,13 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     - **31.5** `:empty` (`string_id.h` `_empty_`, `html_tag.cpp`): no children but `::before`/`::after`, a text piece of
       any data counting. A sheet using it sets `selector_scope()` bit 8 (`uses_empty`, `document.cpp`): insertion and
       removal were refused for any scope already, and `can_replace_children` and `update_structure` now refuse for
-      bit 8 too, since a change of an element's children changes how the element itself matches.
+      bit 8 too, since a change of an element's children changes how the element itself matches. Matched again in place
+      (`document::apply_retag` sets the element's children aside, so that matching makes only its `::before`/`::after`),
+      `:empty` reads the children set aside (`html_tag::set_children_for_matching`, cleared by a scope guard): an
+      attribute patch on an element with children never makes it `:empty`. Pinned by `testSetAttributeMatchesFresh` (a
+      `span` and a `p` with text under `span:empty` and `p:not(:empty)`; not setting the children fails both). **macOS
+      effect:** the template path (`update_document` → `apply_retag`) matched `:empty` on every element it re-matched;
+      it now reads the element's children there too.
 
 32. **Text properties litehtml lacked** (2026-10-22, fidelity plan, Task 5; string ids `_word_break_`,
     `_word_spacing_`, `_font_feature_settings_`, `_quotes_`).
@@ -1352,7 +1382,8 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
 47. **Bidi reordering of a line's items, phase 2 of right-to-left** (2026-10-22, fidelity plan, Task 13).
     - **47.1** `document_container::bidi_levels(runs, rtl, levels)`: a hook (default: false, the logical order kept)
       that answers each unit's embedding level from the line's text (UAX #9 up to rule I2). WidgetRuntime's container
-      answers from ICU's `ubidi`; the test container leaves it unset.
+      answers from its own UAX #9 (`Sources/Render/Bidi.cpp`: ICU's `ubidi` is not public API on iOS); the test
+      container leaves it unset.
     - **47.2** `line_box::reorder_bidi`, called after the first pass of `finish` (alignment and justification already
       laid out): a unit is one content item (a text piece, or an atomic inline as U+FFFC) with the inline start and
       continuation edges before it and the end edges after it; rule L2 reverses runs from the highest level down to the
@@ -1421,11 +1452,15 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     `grid-auto-columns`, `grid-auto-flow`, `font-feature-settings`, `font-variant-numeric`) join `raw_declaration_names`
     (`style.cpp`), as `touch-action` did (edit 30.1), so WidgetRuntime's getComputedStyle answers what the element
     declared, `var()` substituted, rather than the initial value. So do properties litehtml keeps in a form that
-    cannot tell an undeclared value from a declared one (`z-index`, whose auto reads 0; `justify-content` and
-    `align-content`, which default to flex-start and stretch where CSS's initial value is normal) or computes only on
-    flex or grid containers or flex items (`flex-direction`, `flex-wrap`, `align-items`, `row-gap`, `column-gap`,
-    `flex-shrink`, `flex-basis`). Insertions only; a raw copy exists only on an element that declares the property,
-    counted as its other declarations are.
+    cannot tell an undeclared value from a declared one (`justify-content` and `align-content`, which default to
+    flex-start and stretch where CSS's initial value is normal) or computes only on flex or grid containers or flex
+    items (`flex-direction`, `flex-wrap`, `align-items`, `row-gap`, `column-gap`, `flex-shrink`, `flex-basis`; since
+    edit 54 getComputedStyle reads litehtml's own parse of these, `flex-basis`'s copy telling a declared basis from the
+    `flex` shorthand's, and each copy stays the cascaded value a CSS animation's implicit keyframe starts from), and
+    properties whose spelling litehtml's value loses (`aspect-ratio`, kept as one float; `flex`, whose omitted basis it
+    stores as 0px where CSS writes 0%; `place-content`, whose `normal` and `stretch` it stores as the defaults). Insertions only; a raw copy exists only on an element that declares the property, counted as its other
+    declarations are. `z-index` is one too, for the cascaded value a CSS animation's implicit keyframe starts from
+    (getComputedStyle reads litehtml's own, edit 53).
 52. **Caret offsets for text selection** (2026-10-22, text-selection plan, Task 3). `LHContainer::caret_offsets` (and
     `LHHostContainer::caretOffsets`) reads back where `draw_text` puts each UTF-16 boundary of a text: the simple
     shaper's per-glyph xs and its width for printable ASCII (one glyph per byte), otherwise the cached `CTLine`'s caret
@@ -1435,6 +1470,149 @@ These eleven are the whole edit set as of 2026-10-14; edits 12 and 13 follow the
     (`CTLineGetOffsetForStringIndex`) costs the line's length each, which made a long run quadratic (final review C1:
     minutes at the text cap). WidgetRuntime's iOS host answers `RenderHost::caretOffsets` with it, so a selection's knobs sit where
     the glyphs are drawn on both paths. Additions only.
+53. **z-index as kept** (getComputedStyle). `css_properties::get_z_index_length()` returns the stored `css_length`, whose
+    predefined value is `auto`, so a read tells `auto` from `0` without a raw copy of the declaration; litehtml
+    validates the value itself (an integer or `auto`), so an invalid declaration never reads back. One accessor,
+    insertions only.
+54. **The element's own parsed values** (getComputedStyle). `html_tag::own_property(name)` returns the element's
+    cascaded `property_value` of `name` as litehtml parsed it. litehtml computes the flex longhands, `align-items`,
+    `justify-items` and `justify-self` only on the containers or items they lay out, and a gap's `normal` as 0, but it
+    parses them on every element, expanding `flex`, `flex-flow`, `gap` and `place-*` into their longhands in cascade
+    order: WidgetRuntime reads that parse where litehtml computed nothing. One accessor, insertions only.
+55. **The box alignment shorthands in the shorthand table** (`style.cpp` `shorthands`). `gap` (and its alias `grid-gap`),
+    `place-content`, `place-items` and `place-self` join `flex` and `flex-flow` there, so `inherit`, `initial`,
+    `unset` and `revert` on them reach their longhands (they were kept under the shorthand's own name, which nothing
+    reads), and `subst_vars` keeps a longhand written after one of them holding a `var()`, in layout as in
+    WidgetRuntime's getComputedStyle. Insertions only.
+
+56. **A translation's math functions** (`css_effects.cpp`). `parse_transform`'s translate functions and the `translate`
+    property hand a math function argument whole to `css_length::from_token`, whose tree (edit 48) holds one that mixes
+    a percentage with a length (`translateX(calc(100% + 10px))`, nested products, `min()`); the fold of one unit, which
+    every other transform argument still goes through, refused it and the whole transform was dropped. Layout and the
+    painter already evaluate a translation with `calc_percent` against the border box. Pinned by `fork_test.cpp`
+    ("Edit 56") and widget-sandbox v0.1.3's `auto/09-transforms-effects-a`.
+
+57. **A var() that never resolves unsets the property** (`style.cpp` `style::subst_vars`). A declaration whose `var()`
+    has no such custom property and no fallback (or is a cycle) is invalid at computed-value time: the property is
+    `unset` (edit 33's marker), a shorthand's longhands with it through `global_keyword_property`, while a longhand
+    written after the shorthand keeps its value. litehtml re-added the unparsable value, which dropped the declaration,
+    so an earlier longhand stood (`flex-grow: 3; flex: var(--nope)` grew 3; Chrome 0). Custom properties keep their
+    tokens: a `var()` reading one fails where it is read. The replaced call is under `#if 0`. Pinned by `fork_test.cpp`
+    ("Edit 57") and WidgetRuntime's `testAnUnresolvedVarIsInvalidAtComputedTime`.
+
+58. **A `<use>`'s instance inherits from the use** (`el_svg.cpp`, SVG 2 §5.6.3). The instance draws its target's own
+    elements (edit 38), whose inherited presentation properties came from where the target sits (a `<symbol>` in
+    `<defs>`), so `<use href="#star" fill="#e83">` drew a fill-less symbol's path black. While `draw_use` draws an
+    instance it holds the target and the use on a thread-local stack (`use_instance_scope`: tiles are drawn in parallel),
+    and `svg_property`'s inheritance walk goes from the target to the use (`svg_inheritance_parent`); `currentColor`
+    takes the nearest `color` declared along that chain, else the use's own computed colour (`svg_current_color`).
+    The replaced loop head is under `#if 0`. Pinned by `fork_test.cpp` ("Edit 58") and widget-sandbox's
+    `visual/09-svg-a` (the two stars, orange and purple).
+59. **A top caption moves a table's cells once** (`render_table.cpp` `render_item_table::_render`). Upstream moves each
+    row and each cell under it down by the captions' height. A cell's position is the table's (drawing adds it to the
+    table's own, `draw_children`), but placement and hit testing add the row's on the way down (`get_placement`,
+    `get_element_by_point`), so a cell under a 40 px caption drawn at y=40 was placed, and hit, at y=80. The row now
+    stays at the table's top, as in a table without a caption; its boxes come from its cells (`for_inline_boxes`), so
+    its background is drawn where it was. Pinned by `fork_test.cpp` ("Edit 59") and WidgetRuntime's
+    `testACaptionedTablesCellsAreWhereTheyAreDrawn` (boxes and hits against the same table under a 40 px block).
+60. **An image bullet set on a list reaches its items** (`css_properties.cpp` `computed_list_style_image`,
+    `charge_inherited_list_style_image`; `html_tag.cpp` `charge_inherited`, `refund_inherited`; `document.h`
+    `style_charge_bullet`, `style_budget_epoch`). Edit 21 dropped an inherited `list-style-image` over 1 KiB, so
+    `ul { list-style: url(data:…) }` lost its bullets when the URL was longer. `m_list_style_image` is now one
+    `shared_ptr<const std::string>`: an element that declares the URL makes it, the elements that inherit it share their
+    parent's, and the shared-style table and the class-swap cache copy a pointer. Only a list item reads the URL (it
+    hashes and copies it as it lays out and paints its marker, and only it calls `load_image`), so a list item that
+    inherits a URL over 1 KiB is charged its length to the style budget (`style_charge_bullet`), as is one that takes
+    such a style from the shared-style table. Bullets take at most half the budget, so the declarations keep the
+    rest: past it, an item falls back to its type and nothing latches or is reported. The element gives the charge back
+    before it is computed again (`compute_styles`), unless the budget restarted from zero in between
+    (`refresh_all_styles` counts its restarts). A class flip (`flip_class`, Telegram for macOS's template patches)
+    restores cached styles without computing them and so keeps the charges of each element's last compute; WidgetRuntime
+    never patches templates, and its attribute patches forget the flips (`set_element_attributes`).
+    `get_list_style_image` is defined in `css_properties.cpp`: its empty string, a static in a header's inline
+    function, was constant-initialized in read-only memory by a C++20 caller (WidgetRuntime) and then constructed at
+    run time by the fork's gnu++17 code, which crashed. Pinned by `external_test.cpp` (`testInheritedUrlsAreSharedAndCharged`:
+    one string, the charge per list item, the refund, a refresh, a template's class changes back and forth; 9,000 list
+    items stay under half the budget, 0.1 MB over a document without the rule) and WidgetRuntime's
+    `testAListsLongImageBulletReachesItsItems`.
+61. **A table's rows and row groups have a box** (`render_table.h`/`.cpp` `render_item_table::part_placement`, new). The
+    table keeps its cells in its grid and never `init()`s a row or a row group, so neither registers a render item with
+    its element and `getBoundingClientRect` had nothing to measure (0×0). `part_placement` gives a row's border box from
+    the grid, across the columns (the first's left to the last's right) over the row's top to bottom, and a group's over
+    its rows, placed as the cells are (a row's `get_placement`, then the top captions' height). WidgetRuntime's
+    `elementClientRects` asks the nearest table for an element of a row or row-group display that has no render item.
+    Pinned by `fork_test.cpp` ("Edit 61") and WidgetRuntime's `testATableRowsAndGroupsHaveTheirBoxes` (rows, a row a
+    cell spans into, a header group and a body group, under a caption).
+62. **An inline style change keeps the render tree when it changes only paint** (`document.cpp` `apply_retag` and
+    `changed_declarations`). A script that animates by writing `el.style.transform` on every frame changed the `style`
+    attribute, which `apply_retag` never called neutral, so every frame re-created the render tree. `apply_retag` now
+    sets the `style` texts aside as it does the animated declarations (edit 27; the old comparison under `#if 0`), and
+    their changed properties join the animated ones: the tree is kept when every one is a `paint_only_property`, with
+    their regions and paint order told as a changed rule's, and a property that shapes the tree still rebuilds it.
+    `changed_declarations` compares values without the whitespace around them, since CSSOM writes the whole attribute
+    again (`width: 40px;` for `width:40px`) the first time a script sets one property. Pinned by WidgetRuntime's
+    `testAPaintOnlyInlineStyleKeepsTheTree` (`transform`, `opacity` and `color` frames keep the tree from the first;
+    `display`, and `float` beside `transform`, rebuild it; each equal to a rebuild); comparing the style texts as before,
+    and comparing untrimmed values, each fail it. **macOS effect:** the template path (`update_document` →
+    `apply_retag`) keeps the render tree for a patch whose inline style changes only paint-only properties, where it
+    re-created it; the restyle and layout are the same code, but no macOS test covers it in this repo.
+63. **A change of a box's geometry alone keeps the render tree** (`document.cpp` `geometry_only_property`, read by
+    `apply_retag` beside `paint_only_property` for an inline style's, an animated declarations' and a changed rule's
+    properties when its new `geometry` argument is true, which only `set_element_attributes` passes; the two
+    `paint_only_property` tests it joins under `#if 0`, as is the old call). Creating and initialising render items reads
+    `display`, `position`, `float`, `list-style-type`, `white-space` and `flex-direction`; a box's size (`width`,
+    `height` and their `min-`/`max-`), margins, padding, offsets (`top` … `left`, `inset`), gaps and flex sizes
+    (`flex-grow`, `-shrink`, `-basis`) only layout reads, so a change of only those and paint-only properties keeps the
+    tree for a box that is not `display: inline` (an inline element's geometry is its line's, which a kept tree did not
+    lay out again: the padding of a `<span>` left the line as it was; it rebuilds): the restyle marks the box's layout dirty up to its relayout boundary (`compute_styles` → `mark_layout_dirty`),
+    the next `render()` lays it out again, and edit 20 reports every box that moved or resized, exactly. A progress bar
+    whose script sets `style.width` on every frame no longer re-creates the tree. Pinned by `external_test.cpp`
+    (a `padding` style patch keeps the tree and reports what it moved; `float` rebuilds) and WidgetRuntime's
+    `testAGeometryChangeKeepsTheTree` (widths, a relative box's `left`, margin and padding, `gap` and `flex-grow`, a
+    class whose rule sets `width` and `padding`, and a resize below the pixel epsilon kept; `display`, `position`, and
+    `width` beside `float` rebuilt; each equal to a rebuild). Comparing geometry within the epsilon fails the resize
+    below it; not testing `geometry_only_property` fails every kept step. **macOS effect:** none. The template path
+    (`update_document` → `apply_retag`) reuses the last layout whenever it keeps the tree, so a geometry change kept
+    there drew the old layout (`TwidgetRenderingTests`' random text-and-class and structure runs, and the rebuild memory
+    run, fail with it); it does not pass `geometry`.
+64. **A filter's and a backdrop's result: made only where it shows, and once for a host's paints** (`LHContainer.mm`
+    `draw_filtered`, `draw_backdrop`, `allow_backdrops`, `EffectKey`; `LHHostSupport.h` `LHEffectStore`,
+    `LHHostContainer::setEffectStore`, `allowBackdrops`). A filter's result draws inside its target and a backdrop's
+    inside its box, so a paint whose clip misses it (a tile of WidgetRuntime's painter) makes neither: the cull comes
+    after `FilterTargetFor` succeeds (its fallback paints the content unfiltered and unclipped) and, for a backdrop,
+    after `backdrop_allowed`. A host's paints can share an `LHEffectStore`: each result is made once per key (the
+    effect's owner and steps, the colour space, the target's rect rounded to a millionth of a pixel, its scales,
+    orientation and reduction) by the first paint to ask, and one asking meanwhile waits; the entry is marked ready on
+    every way out, a throw included. Past 32 MiB kept, a result is made where it is drawn and not kept. A backdrop's
+    source paint gets no store, so no making waits for one that may be waiting for it. A culled or shared filter's
+    inner backdrops are not drawn by every paint, so the host registers a paint's backdrops in tree order first
+    (`allow_backdrops`): every paint allows the same 8 (`kMaxBackdrops`), as drawing them all in order did. In the
+    widget harness's app, a 360 × 260 widget with a pulsing blurred glow, a backdrop counter and a rotating card drew a
+    frame (9 tiles at 3×) in 137 ms before and 81–87 ms after; without the card's box shadows, 117 ms and 17 ms. Pinned
+    by WidgetRuntimeIOS's `LayerTreePainterTests` (a filter and a backdrop across four tiles made once each; none for a
+    tile they miss; tiles drawn together wait for and share them, a backdrop inside a filter included; every tile
+    allows the same backdrops past the limit) and the widget harness's `WidgetHarnessEffectTests` (in the app process,
+    where Core Image paints: each tile painted through a draw's store equals it painted alone). Without
+    `allow_backdrops` a tile the filter misses allows 8 backdrops, not 6; without the culls a tile makes effects it
+    does not show. **macOS effect:** none visible: LHDocument sets no store, and the culls skip only work its clip
+    would discard.
+65. **A box shadow's blur past 24 device pixels: one low-resolution raster, through any transform** (`LHContainer.mm`
+    `draw_box_shadow`, `DrawDownsampled`, `DeviceScale`, `paint_box_shadow`'s `clip`). Such a shadow takes the
+    downsampled path first (it was the exact path's fallback): its raster spans the shadow's own ink and three of its
+    pixels more (so that an inset shadow has raster on both sides of the box's edge), is keyed by the shadow alone, with
+    no sub-pixel phase, and is not clipped to the box, whose edge the clip at full resolution draws, so scaling it up
+    darkens no ring along it (with the raster clipped, the parity test's largest difference was 112 levels).
+    `DrawDownsampled` takes any CTM: the raster is in user space, sized by the CTM's columns and drawn through it, so a
+    text shadow under a rotation is downsampled too. A smaller blur keeps the exact, sliced raster, which no longer
+    falls back to the downsampled one (it never succeeds there). `LH_EXACT_SHADOWS` draws a big blur at full resolution,
+    as before, for the parity test. A shadow that moves by fractions of a pixel or turns keeps one cache entry, where it
+    painted a full-resolution Core Graphics blur in every tile it reached, every frame: the widget harness's widget with
+    a rotating card under three 25–55 px shadows drew a frame in 81–87 ms before and 18 ms after. Pinned by
+    `ShadowRasterTests` (a moved and a turned shadow keep one raster; against `LH_EXACT_SHADOWS` at 2× and 3×, a plain
+    shadow still, moved and turned is within 2 levels, an inset, a spread, a rounded and a layered one within 8, in
+    their gradients, where CoreGraphics' blur is shaped slightly differently at 24 px than at its full radius); its
+    slice-parity and cache tests hold unchanged. **macOS effect:** LHDocument draws such shadows the same way, within 8
+    levels of before.
 
 ## The iOS font resolver
 

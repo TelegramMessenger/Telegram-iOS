@@ -55,6 +55,9 @@ func _internal_debugResetDiscussionCaches(account: Account, posts: [(username: S
                 })
 
                 transaction.clearHistory(groupId, threadId: nil, minTimestamp: nil, maxTimestamp: nil, namespaces: .all, forEachMedia: nil)
+                // The server still has every message cleared here: the record of recent deletions would keep the
+                // next fills from storing them again (RecentlyDeletedMessages.swift).
+                transaction.forgetRecentlyDeletedMessages(peerId: groupId)
                 transaction.addHole(peerId: groupId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                 for threadId in threadIds {
                     transaction.addHole(peerId: groupId, threadId: threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
@@ -62,6 +65,7 @@ func _internal_debugResetDiscussionCaches(account: Account, posts: [(username: S
                 if dropPosts {
                     // A hole where the post was, or the channel's history reads it as never having existed.
                     transaction.deleteMessages([postMessageId], forEachMedia: nil)
+                    transaction.forgetRecentlyDeletedMessages(peerId: channelId)
                     transaction.addHole(peerId: channelId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: postId ... postId)
                 }
 
@@ -111,6 +115,8 @@ func _internal_debugResetForumHistory(account: Account, usernames: [String]) -> 
                 })
                 
                 transaction.clearHistory(peerId, threadId: nil, minTimestamp: nil, maxTimestamp: nil, namespaces: .all, forEachMedia: nil)
+                // As above: the server still has these messages.
+                transaction.forgetRecentlyDeletedMessages(peerId: peerId)
                 transaction.addHole(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))
                 for threadId in threadIds {
                     transaction.addHole(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... (Int32.max - 1))

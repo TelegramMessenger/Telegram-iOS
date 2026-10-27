@@ -113,6 +113,13 @@ namespace litehtml
 
         {_flex_,            {_flex_grow_, _flex_shrink_, _flex_basis_}                                                },
         {_flex_flow_,       {_flex_direction_, _flex_wrap_}                                                           },
+        // Telegram (VENDOR.md edit 55): the box alignment shorthands, so a CSS-wide keyword reaches their longhands and
+        // a longhand written after one holding a var() stands once it is substituted.
+        {_gap_,             {_row_gap_, _column_gap_}                                                                 },
+        {_grid_gap_,        {_row_gap_, _column_gap_}                                                                 },
+        {_place_content_,   {_align_content_, _justify_content_}                                                      },
+        {_place_items_,     {_align_items_, _justify_items_}                                                          },
+        {_place_self_,      {_align_self_, _justify_self_}                                                            },
 
         {_text_decoration_,
          {_text_decoration_color_, _text_decoration_line_, _text_decoration_style_, _text_decoration_thickness_}      },
@@ -385,10 +392,19 @@ namespace litehtml
         "counter-increment", "counter-reset", "unicode-bidi", "color-scheme", "grid-template-areas", "grid-auto-columns",
         "grid-auto-flow", "font-feature-settings", "font-variant-numeric",
         // Telegram (VENDOR.md edit 51): litehtml keeps these, but its value cannot tell an undeclared one from a
-        // declared one (z-index auto reads 0, justify-content and align-content default to flex-start and stretch).
-        "z-index", "justify-content", "align-content",
+        // declared one (justify-content and align-content default to flex-start and stretch).
+        "justify-content", "align-content",
         // Telegram (VENDOR.md edit 51): litehtml computes these on flex or grid containers or flex items only.
         "flex-direction", "flex-wrap", "align-items", "row-gap", "column-gap", "flex-shrink", "flex-basis",
+        // Telegram (VENDOR.md edit 51): as written, which litehtml's value loses (a ratio stored as one float, a flex
+        // shorthand's omitted basis stored as 0px where CSS writes 0%).
+        "aspect-ratio", "flex",
+        // Telegram (VENDOR.md edit 51): as written, which litehtml's value loses (normal and stretch stored as the
+        // defaults, flex-start and stretch).
+        "place-content",
+        // Telegram (VENDOR.md edit 51): the cascaded value a CSS animation's implicit keyframe starts from
+        // (getComputedStyle reads litehtml's own, edit 53).
+        "z-index",
     };
 
     static const std::map<string_id, string_id>& raw_declaration_ids()
@@ -2824,7 +2840,13 @@ namespace litehtml
             {
                 auto& value = prop.second.get<css_token_vector>();
                 g_splice_refused = false; // Telegram (VENDOR.md edit 21)
+#if 0
                 subst_vars_(prop.first, value, el);
+#else
+                // Telegram (VENDOR.md edit 57): whether every var() resolved.
+                std::set<string_id> chain = {prop.first};
+                const bool resolved = resolve_vars(value, el, chain, 0);
+#endif
                 if(g_splice_refused)
                 {
                     // Telegram (VENDOR.md edit 21): past the budget the declaration is dropped, not substituted.
@@ -2832,6 +2854,30 @@ namespace litehtml
                     value.clear();
                     value.shrink_to_fit();
                     prop.second.m_has_var = false;
+                    continue;
+                }
+                // Telegram (VENDOR.md edit 57): a var() that never resolves (no such property and no fallback, or a
+                // cycle) makes the declaration invalid at computed-value time: the property is unset, a shorthand's
+                // longhands with it (re-adding the unparsable value dropped the declaration, so earlier longhands stood),
+                // and a longhand written after the shorthand still wins. Custom properties keep their tokens: a var()
+                // that reads one fails there.
+                if(!resolved && _s(prop.first).compare(0, 2, "--") != 0)
+                {
+                    std::vector<std::pair<string_id, property_value>> kept;
+                    for(auto longhand : at(shorthands, prop.first))
+                    {
+                        auto it = m_properties.find(longhand);
+                        if(it != m_properties.end() && it->second.m_order > prop.second.m_order &&
+                           (it->second.m_important || !prop.second.m_important))
+                        {
+                            kept.emplace_back(longhand, it->second);
+                        }
+                    }
+                    global_keyword_property(prop.first, property_value(unset(), prop.second.m_important));
+                    for(const auto& longhand : kept)
+                    {
+                        m_properties[longhand.first] = longhand.second;
+                    }
                     continue;
                 }
                 // Telegram (VENDOR.md edit 29.6): the container judges a declaration's value once var() is substituted

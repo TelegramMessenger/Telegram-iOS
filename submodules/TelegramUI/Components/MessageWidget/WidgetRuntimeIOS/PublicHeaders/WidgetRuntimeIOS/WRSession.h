@@ -29,13 +29,44 @@ typedef NS_ENUM(NSInteger, WRPointerPhase) {
     WRPointerPhaseMove,
     WRPointerPhaseUp,
     WRPointerPhaseCancel,
+    /// A press the host started before its touch arrived that no touch took up: a cancel to the widget, and a press that
+    /// never was to its double tap.
+    WRPointerPhaseRetract,
 };
 
 /// The drag axes a press takes for the widget (sdk-v1 §5.5).
 typedef NS_OPTIONS(NSUInteger, WRGestureAxes) {
     WRGestureAxesHorizontal = 1 << 0,
+    /// Never set since widget-sandbox v0.1.3 (G2: vertical drags are the chat's); kept as upstream keeps `y`.
     WRGestureAxesVertical = 1 << 1,
+    /// The press's hold (touch-action: none): no message menu, the widget's `contextmenu`.
+    WRGestureAxesHold = 1 << 2,
 };
+
+/// The edge of the widget's bubble that stays put when its height changes (sdk-v1 §5.6, widget-sandbox v0.1.3).
+typedef NS_ENUM(NSInteger, WRResizeAnchor) {
+    WRResizeAnchorTop,
+    WRResizeAnchorBottom,
+};
+
+/// A request the client could not complete (sdk-v1 §2.14): `None` is an answer.
+typedef NS_ENUM(NSInteger, WRRequestFailure) {
+    WRRequestFailureNone = 0,
+    WRRequestFailureTimeout,
+    WRRequestFailureRateLimited,
+    WRRequestFailureFailed,
+};
+
+/// The account looking at the widget (sdk-v1 §2.13, Mini Apps' WebAppUser), as the client passes it; the runtime checks
+/// each field.
+@interface WRWidgetViewer : NSObject
+- (instancetype)initWithId:(int64_t)userId firstName:(nullable NSString *)firstName lastName:(nullable NSString *)lastName username:(nullable NSString *)username isPremium:(BOOL)isPremium;
+@property (nonatomic, readonly) int64_t userId;
+@property (nonatomic, readonly, nullable) NSString *firstName;
+@property (nonatomic, readonly, nullable) NSString *lastName;
+@property (nonatomic, readonly, nullable) NSString *username;
+@property (nonatomic, readonly) BOOL isPremium;
+@end
 
 @class WRSession;
 
@@ -50,6 +81,17 @@ typedef NS_OPTIONS(NSUInteger, WRGestureAxes) {
 /// SDK v1 §3.2: the whole content of a storage area (`local` or `session`) a task changed, as [key, value] pairs in
 /// insertion order, at the end of that task. Not after the widget has stopped.
 - (void)session:(WRSession *)session storageCommit:(NSString *)area entries:(NSArray<NSArray<NSString *> *> *)entries;
+/// widget-sandbox's `intl` capability: a request as its shim sends one, the answer as its glue gives it (the app's
+/// delegate hands it to that glue, widget-sandbox's IntlBridge). All of Intl's locale data comes from here; without it
+/// every format is "". Charged before it is asked.
+- (NSString *)session:(WRSession *)session intl:(NSString *)requestJson;
+@end
+
+/// What the tiles of one draw share (twidget edit 64): each filter and backdrop result they show is made once, by the
+/// first tile to ask for it, and kept until the store goes. Pass one to every tile of a draw, then let it go.
+@interface WREffectStore : NSObject
+/// How many results it made.
+@property (nonatomic, readonly) NSUInteger made;
 @end
 
 /// A published layer tree: immutable, and readable on any thread. It outlives its session.
@@ -61,8 +103,8 @@ typedef NS_OPTIONS(NSUInteger, WRGestureAxes) {
 /// neither sets one. The tree paints it over the document only; a host view taller than the document paints it below.
 @property (nonatomic, readonly) uint32_t canvasColor;
 /// The tree's `rect` (CSS px) painted at `scale`: a premultiplied BGRA image of ceil(size × scale) pixels, at most
-/// 4096 a side; nil past that or for an empty rect.
-- (nullable CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale CF_RETURNS_RETAINED;
+/// 4096 a side; nil past that or for an empty rect. The tiles of one draw pass one `effects`.
+- (nullable CGImageRef)copyImageOfRect:(CGRect)rect scale:(CGFloat)scale effects:(nullable WREffectStore *)effects CF_RETURNS_RETAINED;
 @end
 
 /// One run of a selectable text: a drawn word, or part of one, in a layout box.
@@ -139,6 +181,9 @@ typedef struct {
 /// A width or theme change rebuilds and flushes now; a theme change also queues the TelegramWidget.onTheme callbacks.
 - (void)setWidth:(CGFloat)width;
 - (void)setDark:(BOOL)dark;
+/// The system's Reduce Motion (prefers-reduced-motion): the render tree rebuilds, and a task runs after which the media
+/// query lists whose answer flipped report a change. Before the boot it sets the first layout's.
+- (void)setReducedMotion:(BOOL)reduced;
 /// The scheme, the palette, the button and the text tokens at once: one theme change (one themeChanged) when anything
 /// differs, a text-size change alone included.
 - (void)setDark:(BOOL)dark
@@ -151,9 +196,21 @@ typedef struct {
 /// SDK v1 §2.9: the client's UI language as a BCP 47 tag, navigator.language; a malformed one is en-US. Set it before
 /// the boot.
 - (void)setLocale:(NSString *)locale;
+/// SDK v1 §2.13, §2.14 (widget-sandbox v0.2): the message's context, the server's flags as they are, the chat type
+/// ("private", "group", "supergroup", "channel", or nil) and the viewer; fixed for the widget's life. Set it before the
+/// boot.
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(nullable NSString *)chatType viewer:(nullable WRWidgetViewer *)viewer preview:(BOOL)preview;
+/// SDK v1 §2.13: the bot's state, as the server's bytes. Before the boot it is the state the widget starts with; after
+/// it, a change: the widget gets chatDataChanged and publicDataChanged for the values that changed, in a task.
+- (void)setChatData:(nullable NSData *)chatData publicData:(nullable NSData *)publicData;
+/// SDK v1 §2.14: the client's outcome for the widget's request `requestId` (its `request` bridge call), settled in a
+/// task; an answer's result is the server's bytes. An id the widget has no request out for is ignored.
+- (void)completeRequest:(int64_t)requestId result:(nullable NSData *)result failure:(WRRequestFailure)failure;
 - (void)setVisible:(BOOL)visible;
-/// One phase of a tap at `point` (CSS px), queued as a task.
+/// One phase of a tap at `point` (CSS px), queued as a task: a touch's.
 - (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary;
+/// The same for a mouse (`mouse`: an iPad pointer) pressing `button` (0 primary, 2 secondary), or a touch.
+- (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary mouse:(BOOL)mouse button:(NSInteger)button;
 /// sdk-v1 §5.5: the drags the last primary press takes for the widget (the touch-action of its target and the target's
 /// ancestors, or a canceled pointerdown or touchstart), once a step has run its down task; none without a runtime.
 @property (nonatomic, readonly) WRGestureAxes gestureClaim;
@@ -161,6 +218,9 @@ typedef struct {
 /// button, a checkbox, a label, a summary, or a drag claim), once a step has run its down task; NO without a runtime.
 /// The client takes a tap there at once and waits for a double tap anywhere else (sdk-v1 §5.5).
 @property (nonatomic, readonly) BOOL pressTakesTaps;
+/// The edge the widget asked to stay put when its height changes (`TelegramWidget.setResizeAnchor`), reported with the
+/// height; Top until it asks, and without a runtime.
+@property (nonatomic, readonly) WRResizeAnchor resizeAnchor;
 
 @property (nonatomic, readonly) WRStopReason stopReason;
 @property (nonatomic, readonly) uint64_t workUnits;
@@ -195,7 +255,8 @@ typedef struct {
 /// completion value as a string, or nil when there is no runtime or the script stopped it.
 - (nullable NSString *)evaluateForTesting:(NSString *)code;
 /// Tests only: the border box (CSS px) of the first element `selector` matches, at the current layout; CGRectNull when
-/// nothing matches, the selector does not parse, or the element has no box.
+/// nothing matches, the selector does not parse, or the element has no box. Public, as evaluateForTesting: is, because
+/// MessageWidget's test support reaches it through MessageWidgetCore across the module boundary.
 - (CGRect)borderBoxForTesting:(NSString *)selector;
 
 @end

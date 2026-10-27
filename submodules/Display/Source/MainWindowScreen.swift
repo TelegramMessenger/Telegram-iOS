@@ -1,6 +1,7 @@
 import UIKit
 
-private weak var registeredMainWindow: UIWindow?
+/// The window the app lays out in, once registered: what the system reports about the screen is read from it.
+weak var registeredMainWindow: UIWindow?
 
 /// Registers the window the app lays out in, so `mainWindowScreenBounds` can answer for the screen it is on.
 func registerMainWindowForScreenBounds(_ window: UIWindow) {

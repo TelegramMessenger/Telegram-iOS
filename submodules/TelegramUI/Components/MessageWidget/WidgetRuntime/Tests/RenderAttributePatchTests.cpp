@@ -413,11 +413,97 @@ WR_TEST(testHrefRoundTripKeepsLink) {
     CHECK(item && item->color.red == 0x99);
 }
 
+// twidget edit 62: a script's inline style change keeps litehtml's render tree when every property it changes is
+// paint-only (an rAF loop setting el.style.transform), as an animated frame's does (or geometry only, edit 63); a property
+// that shapes the tree still rebuilds it, alone or beside paint-only ones. Each flush equals a rebuild.
+WR_TEST(testAPaintOnlyInlineStyleKeepsTheTree) {
+    RenderEnv env("<!doctype html><body><div id=b style='width:40px;height:20px;background:#ccc'>b</div><p>after</p></body>");
+    const uint64_t builds = env.render().buildCount();
+    uint64_t resets = env.render().treeRebuildResets();
+    for (int i = 1; i <= 4; i++) {
+        const std::string n = std::to_string(i);
+        edit(env, "const b = document.getElementById('b'); b.style.transform = 'translateX(" + n + "0px)';"
+                  " b.style.opacity = '0." + n + "'; b.style.color = 'rgb(" + n + "0, 0, 0)'");
+        expectMatchesRebuild(env, ("paint-only " + n).c_str());
+        CHECK_EQ(env.render().treeRebuildResets(), resets);
+    }
+    edit(env, "document.getElementById('b').style.display = 'inline-block'");
+    expectMatchesRebuild(env, "display");
+    CHECK_EQ(env.render().treeRebuildResets(), ++resets);
+    edit(env, "const b = document.getElementById('b'); b.style.transform = 'none'; b.style.cssFloat = 'left'");
+    expectMatchesRebuild(env, "transform beside float");
+    CHECK_EQ(env.render().treeRebuildResets(), ++resets);
+    CHECK_EQ(env.render().buildCount(), builds);
+}
+
+// twidget edit 63: a change of a box's geometry alone (its size, margins, padding, offsets, gaps, flex sizes) keeps
+// litehtml's render tree, which only the layout reads them from; the restyle marks the box's layout dirty and the next
+// layout places it. A change that shapes the tree (display, position, float) still rebuilds it. Inline style and a class
+// rule alike; each flush equals a rebuild.
+WR_TEST(testAGeometryChangeKeepsTheTree) {
+    RenderEnv env("<!doctype html><style>.wide{width:200px;padding:6px} .gone{display:none} .abs{position:absolute}</style>"
+                  "<body><div id=bar style='width:10px;height:8px;background:#0a0'></div>"
+                  "<div id=box style='position:relative;left:0'>box <b>text</b></div><p id=p>after</p>"
+                  "<div id=flex style='display:flex;gap:2px'><span id=f1>a</span><span>b</span></div>"
+                  "<div style='display:flex;width:20px'><div id=a style='width:10px;flex:none'></div>"
+                  "<div style='flex:1;overflow:hidden;border-radius:2px;background:#ccc'>c</div></div>"
+                  "<p><span id=k>k</span> then <span style='opacity:.5'>faded</span> end</p></body>");
+    const uint64_t builds = env.render().buildCount();
+    uint64_t resets = env.render().treeRebuildResets();
+    auto kept = [&](const std::string& script, const char* what) {
+        edit(env, script);
+        expectMatchesRebuild(env, what);
+        if (env.render().treeRebuildResets() != resets) {
+            std::printf("  the render tree was rebuilt after: %s\n", what);
+        }
+        CHECK_EQ(env.render().treeRebuildResets(), resets);
+    };
+    auto rebuilt = [&](const std::string& script, const char* what) {
+        edit(env, script);
+        expectMatchesRebuild(env, what);
+        CHECK_EQ(env.render().treeRebuildResets(), ++resets);
+    };
+    for (int i = 1; i <= 3; i++) {
+        kept("document.getElementById('bar').style.width = '" + std::to_string(i * 50) + "px'", "a progress bar's width");
+        kept("document.getElementById('box').style.left = '" + std::to_string(i * 7) + "px'", "a relative box's left");
+    }
+    // A resize smaller than litehtml's pixel epsilon (0.0001 px) reaches the mirror too (twidget edit 20: exact
+    // comparison): the clipping sibling, which nothing restyles, narrows by that much, and so does its clip.
+    kept("document.getElementById('a').style.width = '10.00005px'", "a resize below the pixel epsilon");
+    kept("const p = document.getElementById('p'); p.style.marginTop = '12px'; p.style.paddingLeft = '9px'", "margin and padding");
+    kept("document.getElementById('flex').style.gap = '11px'; document.getElementById('f1').style.flexGrow = '1'", "gap and flex-grow");
+    kept("document.getElementById('p').className = 'wide'", "a class whose rule sets width and padding");
+    // An inline element's geometry is its line's: the tree is built again (the line is laid out anew), a paint group after
+    // it in the line included.
+    rebuilt("document.getElementById('k').style.paddingLeft = '20px'", "an inline element's padding before a paint group");
+    rebuilt("document.getElementById('p').className = 'gone'", "a class whose rule sets display");
+    rebuilt("document.getElementById('box').style.position = 'absolute'", "position");
+    rebuilt("document.getElementById('bar').style.width = '20px'; document.getElementById('bar').style.cssFloat = 'left'", "width beside float");
+    CHECK_EQ(env.render().buildCount(), builds);
+}
+
+// An element matched again in place keeps its children for :empty (twidget edit 31.5): a style or class change on a
+// span with text does not make `span:empty` match it, and a change on an empty one keeps the match.
+WR_TEST(testARematchKeepsTheChildrenForEmpty) {
+    RenderEnv env("<!doctype html><style>span:empty{padding:3px} p:not(:empty){margin:5px} .k{color:#c00}</style><body>"
+                  "<span id=s>s</span><span id=e></span><p id=p>p</p></body>");
+    const uint64_t builds = env.render().buildCount();
+    edit(env, "document.getElementById('s').style.fontSize = '20px'");
+    expectMatchesRebuild(env, "style on a span with text");
+    edit(env, "document.getElementById('s').className = 'k'");
+    expectMatchesRebuild(env, "class on a span with text");
+    edit(env, "document.getElementById('e').className = 'k'");
+    expectMatchesRebuild(env, "class on an empty span");
+    edit(env, "document.getElementById('p').className = 'k'");
+    expectMatchesRebuild(env, "class on a p with text");
+    CHECK_EQ(env.render().buildCount(), builds);
+    CHECK_EQ(env.render().patchCount(), uint64_t(4));
+}
+
 // I2: pseudo-element content is made again whenever an element is matched again, and a fresh build makes all of it in
-// document order with the old and new alive together, so near the text-piece cap a patch and a rebuild cut at different
-// words. While any ::before or ::after rule with content could match, no patch is made (attribute or text); the flush
-// rebuilds, and what it publishes and the limits it posts are a rebuild's.
-WR_TEST(testPseudoContentRebuilds) {
+// document order, so at the text-piece cap a patch and a rebuild cut at different words. Below the caps a page with
+// ::before or ::after content patches (attribute and text) and equals a rebuild, limits included.
+WR_TEST(testPseudoContentPatchesBelowTheCaps) {
     const char* const shapes[][2] = {
         {".x::before{content:\"a b c d\"} .y::before{content:\"e f g\"}", ""},
         {".x::before{content:ATTR(title)} .z::before{content:\"q\"}", ""},
@@ -426,17 +512,43 @@ WR_TEST(testPseudoContentRebuilds) {
          "<div class=k title=\"w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w w\">k</div>"},
     };
     for (const auto& shape : shapes) {
-        for (int words = 3900; words <= 5010; words += 111) {
+        for (int words = 0; words <= 4800; words += 1200) {
             RenderEnv env(wordsPage(words, shape[0], (std::string("<div id=d title=\"t t t\">t</div>") + shape[1]).c_str()));
             const uint64_t builds = env.render().buildCount();
-            CHECK(!flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "class onto pseudo content"));
-            CHECK_EQ(env.render().buildCount(), builds + 1);
-            // A text change does not patch either.
-            CHECK(!flushAgreesWithRebuild(env, "document.getElementById('d').firstChild.data = 'changed text'", "text"));
-            CHECK_EQ(env.render().patchCount(), uint64_t(0));
-            CHECK_EQ(env.render().buildCount(), builds + 2);   // one rebuild for each of the two flushes
+            CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "class onto pseudo content"));
+            CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').firstChild.data = 'changed text'", "text"));
+            CHECK_EQ(env.render().buildCount(), builds);
         }
     }
+    // The master sheet's summary::before declares content: a document with a <summary> patches too.
+    RenderEnv env("<!doctype html><body><details open><summary>s</summary><p id=p>t</p></details></body>");
+    CHECK(flushAgreesWithRebuild(env, "document.getElementById('p').className = 'x'", "summary"));
+    CHECK(flushAgreesWithRebuild(env, "document.getElementById('p').firstChild.data = 'text'", "summary text"));
+}
+
+// Content a class change makes crosses the text-piece cap. A build makes pseudo-element content after all text, in
+// document order, so it cuts the later element's content; the patch made the earlier one's last and cut that instead.
+// The flush abandons the patch and rebuilds; once a build has hit the cap, the next change is not patched (freed pieces
+// would go to later content). Every flush equals a rebuild, limits included.
+WR_TEST(testPseudoContentAtTheCapRebuilds) {
+    const char* const sheet = ".x::before{content:\"a b c d e f g h i j k l m n o p q r s t u v w x y z\"}"
+                              " .later::before{content:\"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z\"}";
+    int abandoned = 0;
+    for (int words = 4920; words <= 5000; words += 4) {
+        RenderEnv env(wordsPage(words, sheet, "<div id=d>t</div><div class=later>u</div>"));
+        if (!env.render().renderLimits().empty()) {
+            continue;
+        }
+        const uint64_t builds = env.render().buildCount();
+        const bool patched = flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "content past the cap");
+        if (!patched) {
+            CHECK_EQ(env.render().buildCount(), builds + 1);
+            CHECK_EQ(std::string(env.render().lastPatchRefusal()), std::string("abandoned: pseudo-element content at a cap"));
+            abandoned++;
+            CHECK(!flushAgreesWithRebuild(env, "document.getElementById('d').firstChild.data = 'u'", "text after the cap"));
+        }
+    }
+    CHECK(abandoned > 0);
 }
 
 // A control makes its lh-* parts when it is matched again. Profile 1 drops the <input> (V4 plan, Task 4), so its type
@@ -457,7 +569,7 @@ WR_TEST(testRangeThenTextNearTheCap) {
 }
 
 // Pseudo-element rules that make no content, and the master sheet's own (summary), do not stop patching.
-WR_TEST(testOnlyPseudoContentStopsPatching) {
+WR_TEST(testPseudoRulesWithoutContentPatch) {
     for (const char* sheet : {".x::before{color:#c00}", ".x::before{content:none}", ".x{color:#c00;content:\"abc\"}"}) {
         RenderEnv env(wordsPage(4000, sheet, "<div id=d>t</div>"));
         const uint64_t builds = env.render().buildCount();
@@ -465,22 +577,12 @@ WR_TEST(testOnlyPseudoContentStopsPatching) {
         CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').firstChild.data = 'text'", sheet));
         CHECK_EQ(env.render().buildCount(), builds);
     }
-    // No summary in the document: the master sheet's summary::before is not in play.
-    {
-        RenderEnv env("<!doctype html><body><div id=d>t</div></body>");
-        CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "no summary"));
-    }
-    // With one, it is: master rules declare content.
-    {
-        RenderEnv env("<!doctype html><body><details open><summary>s</summary><p id=p>t</p></details></body>");
-        CHECK(!flushAgreesWithRebuild(env, "document.getElementById('p').className = 'x'", "summary"));
-        CHECK(!flushAgreesWithRebuild(env, "document.getElementById('p').firstChild.data = 'text'", "summary text"));
-    }
 }
 
 // twidget edit 21: the style-byte budget. A document that has charged most of its budget keeps the rest for a rebuild: a
-// class patch whose restyle could pass the budget (every rule on every element) makes no patch, and what the flush
-// publishes is a rebuild's. The same document with small values patches.
+// class patch whose restyle could pass the budget (every rule on every element of the restyled subtree) makes no patch,
+// and what the flush publishes is a rebuild's; one whose subtree's restyle fits patches. The same document with small
+// values patches.
 WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
     auto page = [](size_t listBytes) {
         std::string elements;
@@ -506,9 +608,16 @@ WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
         for (const std::string& limit : env.render().renderLimits()) {
             CHECK(limit != "style-bytes");
         }
+        // A leaf's restyle (the element and its subtree) fits in what is left: it patches, the predicate having walked
+        // the leaf and its text twice (the plan's question and the commit's: predicate_steps, charged).
         const uint64_t builds = env.render().buildCount();
+        const uint64_t steps = env.render().document()->predicate_steps();
+        CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "a leaf's class near the style budget"));
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().document()->predicate_steps(), steps + 4);
+        // The body's restyle is every element's, which could pass it: no patch, the flush rebuilds.
         const uint64_t patches = env.render().patchCount();
-        CHECK(!flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "class near the style budget"));
+        CHECK(!flushAgreesWithRebuild(env, "document.body.className = 'x'", "the body's class near the style budget"));
         CHECK_EQ(env.render().patchCount(), patches);
         CHECK_EQ(env.render().buildCount(), builds + 1);
     }
@@ -518,6 +627,8 @@ WR_TEST(testPatchPastTheStyleBudgetMatchesRebuild) {
         const uint64_t builds = env.render().buildCount();
         CHECK(flushAgreesWithRebuild(env, "document.getElementById('d').className = 'x'", "class far from the style budget"));
         CHECK_EQ(env.render().buildCount(), builds);
+        // The whole document fits: nothing is walked.
+        CHECK_EQ(env.render().document()->predicate_steps(), uint64_t(0));
     }
 }
 

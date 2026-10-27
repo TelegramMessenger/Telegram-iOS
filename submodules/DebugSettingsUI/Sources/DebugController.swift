@@ -23,6 +23,9 @@ import WalletContext
 import CpuProfiler
 import CrashReporting
 import ContextUI
+import ImageObjectSeparation
+import ImageInpainting
+import FaceScanScreen
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -735,8 +738,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case coreListChatBackend(Bool)
     case springSendAnimation(Bool)
     case fakeWalletTransfers(Bool)
+    case chatMediaEditorLegacy(Bool)
     case insertWidgetConformanceSet
-    case insertWidgetCorpus
+    case insertWidgetGames
+    case mediaGridLegacy(Bool)
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
@@ -762,7 +767,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableNetworkExperiments(Bool)
     case rustMTProtoEngine(Bool)
     case networkEngineInfo(String)
+    case ptsTotalLimitOverride(Int32?)
     case restorePurchases(PresentationTheme)
+    case removeDownloadedModels
     case logTranslationRecognition(Bool)
     case resetTranslationStates
     case hostInfo(PresentationTheme, String)
@@ -782,7 +789,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logs.rawValue
-        case .resetAppHeader, .resetDatabase, .resetDatabaseAndCache, .clearTips, .resetNotifications, .fillLocalSavedMessageCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .optimizeDatabase, .restorePurchases:
+        case .resetAppHeader, .resetDatabase, .resetDatabaseAndCache, .clearTips, .resetNotifications, .fillLocalSavedMessageCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .optimizeDatabase, .restorePurchases, .removeDownloadedModels:
             return DebugControllerSection.resetApp.rawValue
         case .webViewInspection, .resetWebViewCache:
             return DebugControllerSection.web.rawValue
@@ -790,11 +797,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetCorpus:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
-        case .disableVideoAspectScaling, .enableNetworkFramework, .enableNetworkExperiments, .rustMTProtoEngine, .networkEngineInfo:
+        case .disableVideoAspectScaling, .enableNetworkFramework, .enableNetworkExperiments, .rustMTProtoEngine, .networkEngineInfo, .ptsTotalLimitOverride:
             return DebugControllerSection.videoExperiments2.rawValue
         case .versionInfo:
             return DebugControllerSection.appInfo.rawValue
@@ -907,6 +914,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 53
         case .restorePurchases:
             return 54
+        case .removeDownloadedModels:
+            return 113
         case .logTranslationRecognition:
             return 68
         case .resetTranslationStates:
@@ -949,10 +958,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .fakeWalletTransfers:
             // Appended right after `springSendAnimation`; see the ordering note above.
             return 74
+        case .chatMediaEditorLegacy:
+            return 75
         case .insertWidgetConformanceSet:
             return 76
-        case .insertWidgetCorpus:
-            return 77
+        case .insertWidgetGames:
+            return 78
+        case .mediaGridLegacy:
+            return 79
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -963,6 +976,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 107
         case .networkEngineInfo:
             return 108
+        case .ptsTotalLimitOverride:
+            // Appended right after `networkEngineInfo`, in the same section: the id must sort after 108 there
+            // (see `inputDecTextBackend`). 109 is `hostInfo`, 111 and 112 are taken.
+            return 110
         case .hostInfo:
             return 109
         case .versionInfo:
@@ -989,6 +1006,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .reindexCache: return 10
         case .optimizeDatabase: return 11
         case .restorePurchases: return 12
+        case .removeDownloadedModels: return 13
         default: return self.stableId
         }
     }
@@ -1327,6 +1345,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     WKWebsiteDataTypeServiceWorkerRegistrations
                 ], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
             })
+        case .removeDownloadedModels:
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Remove Downloaded Models", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                removeDownloadedCutoutModel()
+                removeDownloadedImageInpaintingModel()
+                removeDownloadedAgeVerificationModels()
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                arguments.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+            })
         case .optimizeDatabase:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1443,6 +1469,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .chatMediaEditorLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: legacy media editor", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.chatMediaEditorLegacy = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .mediaGridLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Media picker: legacy grid", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.mediaGridLegacy = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .springSendAnimation(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: spring send animation", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1463,19 +1509,23 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case .insertWidgetConformanceSet, .insertWidgetCorpus:
-            let isConformance: Bool
-            if case .insertWidgetConformanceSet = self {
-                isConformance = true
-            } else {
-                isConformance = false
+        case .insertWidgetConformanceSet, .insertWidgetGames:
+            let title: String
+            let posts: () -> [EngineLocalWidgetPost]
+            switch self {
+            case .insertWidgetConformanceSet:
+                title = "Insert widget conformance set"
+                posts = widgetConformanceDebugPosts
+            default:
+                title = "Insert widget games"
+                posts = widgetGamesDebugPosts
             }
-            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: isConformance ? "Insert widget conformance set" : "Insert widget corpus", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
                 // Local messages in Saved Messages (My Notes), in the order the test channel posts them; nothing is sent.
-                let posts = isConformance ? widgetConformanceDebugPosts() : widgetCorpusDebugPosts()
+                let posts = posts()
                 if posts.isEmpty {
                     return
                 }
@@ -1742,6 +1792,49 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case let .networkEngineInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .ptsTotalLimitOverride(value):
+            let label: String
+            if let value {
+                label = value >= 1 ? "\(value)" : "No limit"
+            } else {
+                label = "App config"
+            }
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: "Difference limit", label: label, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = [
+                    ActionSheetTextItem(title: "The pts total limit sent with updates.getDifference, from the next poll on (debug builds only). A small value makes a short offline gap answer differenceTooLong, so the account goes through a real reset.", parseMarkdown: false)
+                ]
+                let options: [(title: String, value: Int32?)] = [
+                    ("App config", nil),
+                    ("10", 10),
+                    ("100", 100),
+                    ("1000", 1000),
+                    ("No limit", 0)
+                ]
+                for option in options {
+                    items.append(ActionSheetButtonItem(title: option.title, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = updateStateSyncDebugSettings(engine: context.engine, { settings in
+                            var settings = settings
+                            settings.ptsTotalLimitOverride = option.value
+                            return settings
+                        }).start()
+                    }))
+                }
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                arguments.presentController(actionSheet, nil)
+            })
         case .restorePurchases:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Restore Purchases", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.context?.inAppPurchaseManager?.restorePurchases(completion: { state in
@@ -1895,7 +1988,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugControllerEntries(context: AccountContext?, sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, networkEngineSettings: NetworkEngineSettings, hasLegacyAppData: Bool, useBetaFeatures: Bool) -> [DebugControllerEntry] {
+private func debugControllerEntries(context: AccountContext?, sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, networkEngineSettings: NetworkEngineSettings, hasLegacyAppData: Bool, useBetaFeatures: Bool, stateSyncDebugSettings: StateSyncDebugSettings) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = [.versionInfo(presentationData.theme)]
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
@@ -1935,6 +2028,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
     entries.append(.optimizeDatabase(presentationData.theme))
     if isMainApp {
         entries.append(.restorePurchases(presentationData.theme))
+        entries.append(.removeDownloadedModels)
     }
 
     entries.append(.experimentsHeader(presentationData.theme))
@@ -2018,8 +2112,10 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         if let data = context?.currentAppConfiguration.with({ $0 }).data, let isDev = data["dev"] as? Double, isDev == 1.0 {
             entries.append(.fakeWalletTransfers(experimentalSettings.fakeWalletTransfers))
         }
+        entries.append(.chatMediaEditorLegacy(experimentalSettings.chatMediaEditorLegacy))
         entries.append(.insertWidgetConformanceSet)
-        entries.append(.insertWidgetCorpus)
+        entries.append(.insertWidgetGames)
+        entries.append(.mediaGridLegacy(experimentalSettings.mediaGridLegacy))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
@@ -2038,6 +2134,10 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
             // still declines (WEB proxy, DC address overrides) and mtproto_engine_rust_disabled
             // forces MtProtoKit.
             entries.append(.networkEngineInfo("Engine: \(context.account.network.engineKind.rawValue)"))
+            #if DEBUG
+            // TelegramCore honours the override only in DEBUG builds (`currentPtsTotalLimit`).
+            entries.append(.ptsTotalLimitOverride(stateSyncDebugSettings.ptsTotalLimitOverride))
+            #endif
         }
     }
 
@@ -2077,11 +2177,14 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let preferencesSignal: Signal<EnginePreferencesEntry?, NoError>
+    let preferencesSignal: Signal<(EnginePreferencesEntry?, EnginePreferencesEntry?), NoError>
     if let context = context {
-        preferencesSignal = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.networkSettings))
+        preferencesSignal = context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.networkSettings),
+            TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: PreferencesKeys.stateSyncDebugSettings)
+        )
     } else {
-        preferencesSignal = .single(nil)
+        preferencesSignal = .single((nil, nil))
     }
     
     let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings, SharedDataKeys.networkEngineSettings])), preferencesSignal)
@@ -2102,7 +2205,8 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         
         let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
-        let networkSettings: NetworkSettings? = preferences?.get(NetworkSettings.self)
+        let networkSettings: NetworkSettings? = preferences.0?.get(NetworkSettings.self)
+        let stateSyncDebugSettings: StateSyncDebugSettings = preferences.1?.get(StateSyncDebugSettings.self) ?? StateSyncDebugSettings.defaultSettings
         let networkEngineSettings: NetworkEngineSettings = sharedData.entries[SharedDataKeys.networkEngineSettings]?.get(NetworkEngineSettings.self) ?? NetworkEngineSettings.defaultSettings
         
         var leftNavigationButton: ItemListNavigationButton?
@@ -2118,7 +2222,7 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Debug Settings"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(context: context, sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, networkEngineSettings: networkEngineSettings, hasLegacyAppData: hasLegacyAppData, useBetaFeatures: useBetaFeatures), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(context: context, sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, networkEngineSettings: networkEngineSettings, hasLegacyAppData: hasLegacyAppData, useBetaFeatures: useBetaFeatures, stateSyncDebugSettings: stateSyncDebugSettings), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }

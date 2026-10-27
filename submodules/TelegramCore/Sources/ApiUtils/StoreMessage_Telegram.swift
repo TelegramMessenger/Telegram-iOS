@@ -687,8 +687,11 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 ), nil)
             }
         case let .messageMediaWidget(messageMediaWidgetData):
-            // The payload is the gzipped HTML; `makeData()` copies it out of the per-access `Buffer`.
-            return (TelegramMediaWidget(width: messageMediaWidgetData.width, height: messageMediaWidgetData.height, payload: messageMediaWidgetData.payload.makeData()), nil, nil, nil, nil, nil)
+            // The payload is the compressed HTML (`makeData()` copies it out of its per-access `Buffer`); the state is the
+            // bot's text, stored as its UTF-8, and the shared state's hash beside it. The server's flags pass as they are
+            // (widget-sandbox v0.2: the client derives none).
+            let flags = messageMediaWidgetData.flags
+            return (TelegramMediaWidget(width: messageMediaWidgetData.width, height: messageMediaWidgetData.height, payload: messageMediaWidgetData.payload.makeData(), isCopy: (flags & (1 << 0)) != 0, canQuery: (flags & (1 << 1)) != 0, backgroundQuery: (flags & (1 << 2)) != 0, chatData: messageMediaWidgetData.chatData.map { Data($0.utf8) }, publicData: messageMediaWidgetData.publicData.map { Data($0.utf8) }, publicDataHash: messageMediaWidgetData.publicDataHash, widgetId: messageMediaWidgetData.widgetId), nil, nil, nil, nil, nil)
         case .messageMediaUnsupported:
             return (TelegramMediaUnsupported(), nil, nil, nil, nil, nil)
         case .messageMediaEmpty:

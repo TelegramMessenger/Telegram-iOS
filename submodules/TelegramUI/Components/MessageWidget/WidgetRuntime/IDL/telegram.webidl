@@ -20,6 +20,22 @@ interface TelegramWidget {
   [SameObject] readonly attribute HapticFeedback HapticFeedback;
   undefined ready();
   undefined onTheme(TelegramThemeCallback callback);
+  // SDK v1 §2.12 (widget-sandbox v0.1.3): `edge` is `any` so that anything but exactly 'top' or 'bottom' is a TypeError.
+  undefined setResizeAnchor(optional any edge);
+  // SDK v1 §2.13 (widget-sandbox v0.2): the bot's state and where the widget is, as the host passed them. `viewer` is a
+  // frozen WebAppUser object or null.
+  readonly attribute DOMString? chatData;
+  readonly attribute DOMString? publicData;
+  readonly attribute boolean isForward;
+  readonly attribute DOMString? chatType;
+  readonly attribute any viewer;
+  readonly attribute boolean isPreview;
+  // SDK v1 §2.13–§2.15 (widget-sandbox v0.2): `data` and `text` are `any` so that anything but a string within its
+  // limits is a TypeError. request returns a promise.
+  any request(optional any data);
+  undefined copyText(optional any text);
+  undefined watchPublicData();
+  undefined unwatchPublicData();
 };
 
 // SDK v1 §2.6 (V2a plan, Task 6): Mini Apps' HapticFeedback; each method returns the object for chaining. `style` and

@@ -534,7 +534,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private var originalImage: UIImage?
     public private(set) var editedImage: UIImage?
     public private(set) var editedFullSizeImage: UIImage?
-    private var currentAdjustments: TGMediaEditAdjustments?
+    private var currentAdjustments: Any?
     
     func beginTransitionToEditor() {
         self.cropNode.isHidden = true

@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <variant>
+#include <vector>
 
 #include "CoreTextRenderHost.h"
 #include "Sources/Render/LayerTree.h"
@@ -187,7 +188,20 @@ private:
     bool m_stopped = false;
 };
 
-void paintWith(const LayerTree& tree, CGContextRef context, const PaintItem* stopAt, int depth);
+void paintWith(const LayerTree& tree, CGContextRef context, const PaintItem* stopAt, int depth, LHEffectStore* effects);
+
+// The tree's backdrops in paint order.
+void collectBackdrops(const Layer& layer, std::vector<const void*>& owners) {
+    for (const auto& entry : layer.entries) {
+        if (const PaintItem* item = std::get_if<PaintItem>(&entry)) {
+            if (item->kind == PaintItem::Kind::Backdrop) {
+                owners.push_back(item);
+            }
+            continue;
+        }
+        collectBackdrops(*std::get<std::unique_ptr<Layer>>(entry), owners);
+    }
+}
 
 // The source of the backdrop `owner`: the tree painted up to it, inside `rect`, at the filter target's scales.
 CGImageRef backdropSource(const LayerTree& tree, const void* owner, CGRect rect, CGFloat sx, CGFloat sy, bool flipped,
@@ -213,17 +227,23 @@ CGImageRef backdropSource(const LayerTree& tree, const void* owner, CGRect rect,
     CGContextTranslateCTM(ctx, -rect.origin.x, -rect.origin.y);
     CGContextSetAllowsFontSmoothing(ctx, false);
     CGContextSetShouldAntialias(ctx, true);
-    paintWith(tree, ctx, static_cast<const PaintItem*>(owner), depth + 1);
+    paintWith(tree, ctx, static_cast<const PaintItem*>(owner), depth + 1, nullptr);
     CGImageRef image = CGBitmapContextCreateImage(ctx);
     CGContextRelease(ctx);
     return image;
 }
 
-void paintWith(const LayerTree& tree, CGContextRef context, const PaintItem* stopAt, int depth) {
+// `effects` only for the paint of a tile: a backdrop's source, painted while its backdrop is made, makes its own, so that
+// no making waits for another that may be waiting for it.
+void paintWith(const LayerTree& tree, CGContextRef context, const PaintItem* stopAt, int depth, LHEffectStore* effects) {
     LHHostContainer host;
     host.setBackdropSource([&tree, depth](const void* owner, CGRect r, CGFloat sx, CGFloat sy, bool flipped) {
         return backdropSource(tree, owner, r, sx, sy, flipped, depth);
     });
+    host.setEffectStore(effects);
+    std::vector<const void*> backdrops;
+    collectBackdrops(tree.root(), backdrops);
+    host.allowBackdrops(backdrops);
     CGContextSaveGState(context);
     host.beginPaint(context);
     Walk walk(tree, host, stopAt);
@@ -234,15 +254,15 @@ void paintWith(const LayerTree& tree, CGContextRef context, const PaintItem* sto
 
 } // namespace
 
-void LayerTreePainter::paint(const LayerTree& tree, CGContextRef context, CGRect rect, CGFloat scale) {
+void LayerTreePainter::paint(const LayerTree& tree, CGContextRef context, CGRect rect, CGFloat scale, LHEffectStore* effects) {
     CGContextSaveGState(context);
     CGContextScaleCTM(context, scale, scale);
     CGContextTranslateCTM(context, -rect.origin.x, -rect.origin.y);
-    paintWith(tree, context, nullptr, 0);
+    paintWith(tree, context, nullptr, 0, effects);
     CGContextRestoreGState(context);
 }
 
-CGImageRef LayerTreePainter::copyImage(const LayerTree& tree, CGRect rect, CGFloat scale) {
+CGImageRef LayerTreePainter::copyImage(const LayerTree& tree, CGRect rect, CGFloat scale, LHEffectStore* effects) {
     const size_t pw = size_t(std::ceil(rect.size.width * scale));
     const size_t ph = size_t(std::ceil(rect.size.height * scale));
     if (pw == 0 || ph == 0 || pw > kMaxSide || ph > kMaxSide) {
@@ -257,7 +277,7 @@ CGImageRef LayerTreePainter::copyImage(const LayerTree& tree, CGRect rect, CGFlo
     CGContextScaleCTM(ctx, 1, -1);
     CGContextSetAllowsFontSmoothing(ctx, false);
     CGContextSetShouldAntialias(ctx, true);
-    LayerTreePainter::paint(tree, ctx, rect, scale);
+    LayerTreePainter::paint(tree, ctx, rect, scale, effects);
     CGImageRef image = CGBitmapContextCreateImage(ctx);
     CGContextRelease(ctx);
     return image;

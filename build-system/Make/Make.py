@@ -16,6 +16,7 @@ from BuildConfiguration import CodesigningSource, GitCodesigningSource, Director
 import RemoteBuild
 import TartBuild
 import GenerateProfiles
+import ICUImportCheck
 import PostboxImportCheck
 
 
@@ -656,6 +657,12 @@ def build(bazel, arguments):
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
     bazel_command_line.invoke_build()
+
+    # App Store review rejects a non-public libicucore function, and nothing before it does (ICUImportCheck.py).
+    # bazel-bin is this build's configuration now; a --target build makes no .ipa.
+    built_ipa_path = 'bazel-bin/Telegram/Telegram.ipa'
+    if os.path.exists(built_ipa_path) and ICUImportCheck.run([built_ipa_path]) != 0:
+        sys.exit(1)
 
     if arguments.outputBuildArtifactsPath is not None:
         artifacts_path = os.path.abspath(arguments.outputBuildArtifactsPath)

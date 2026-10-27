@@ -5,23 +5,23 @@
   "platform": "ios",
   "renderer": "telegram-native",
   "engine": "iOS 26.5, iPhone18,3 simulator",
-  "framework": "v0.1.1",
+  "framework": "v0.2.3",
   "policy": "strict",
   "features": [
    "webAnimations"
   ],
-  "date": "2026-10-22T04:59:55Z",
-  "commit": "e9654cab"
+  "date": "2026-10-27T10:10:24Z",
+  "commit": "88285a3b"
  },
  "summary": {
   "in": {
-   "pass": 162,
-   "partial": 1,
+   "pass": 171,
+   "partial": 2,
    "fail": 0,
    "xfail": 0,
    "xpass": 0,
    "skip": 1,
-   "untested": 10
+   "untested": 14
   },
   "candidate": {
    "pass": 0,
@@ -38,7 +38,7 @@
    "fail": 0,
    "xfail": 0,
    "xpass": 0,
-   "skip": 6,
+   "skip": 4,
    "untested": 0
   }
  },
@@ -496,7 +496,7 @@
      "kind": "check",
      "name": "caption sits above the rows",
      "status": "pass",
-     "detail": "228.0859935283661 / 247.47898864746094",
+     "detail": "228.0859935283661 / 228.08599853515625",
      "theme": "light",
      "width": 390
     },
@@ -623,7 +623,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 8
    },
    "evidence": [
     {
@@ -659,6 +659,33 @@
      "name": "GIF decodes (naturalWidth 1)",
      "status": "pass",
      "detail": "load, naturalWidth 1",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/02-attributes-images-b",
+     "kind": "check",
+     "name": "img.width is the rendered width (12, not the attribute's 30)",
+     "status": "pass",
+     "detail": "load, naturalWidth 2",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/02-attributes-images-b",
+     "kind": "check",
+     "name": "a broken image fires error and is complete, with no natural size",
+     "status": "pass",
+     "detail": "error, naturalWidth 0",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/02-attributes-images-b",
+     "kind": "check",
+     "name": "new Image() loads before it is inserted: naturalWidth, complete, width",
+     "status": "pass",
+     "detail": "naturalWidth 2, complete true, width 2",
      "theme": "light",
      "width": 390
     },
@@ -3387,7 +3414,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 7
    },
    "evidence": [
     {
@@ -3423,6 +3450,24 @@
      "name": "the translate property",
      "status": "pass",
      "detail": "160,5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "translateX(150%) is a share of the box's own width",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "a transform set from script (style.transform, calc())",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
      "theme": "light",
      "width": 390
     },
@@ -3810,7 +3855,7 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 5
+    "pass": 7
    },
    "evidence": [
     {
@@ -3855,6 +3900,24 @@
      "name": "calc() with var()",
      "status": "pass",
      "detail": "got 22, want 22 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "calc(% + px) inside translateX()",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/09-transforms-effects-a",
+     "kind": "check",
+     "name": "calc() with * and nested parentheses inside translateX()",
+     "status": "pass",
+     "detail": "got 30, want 30 ±0.5",
      "theme": "light",
      "width": 390
     }
@@ -5349,7 +5412,7 @@
      "kind": "check",
      "name": "document.timeline.currentTime is a number",
      "status": "pass",
-     "detail": "65.73037493228912",
+     "detail": "96.6682916879654",
      "theme": "light",
      "width": 390
     },
@@ -6393,7 +6456,7 @@
      "kind": "check",
      "name": "requestAnimationFrame: three frames with increasing timestamps",
      "status": "pass",
-     "detail": "33,50,66",
+     "detail": "5,22,38",
      "theme": "light",
      "width": 390
     }
@@ -7164,6 +7227,537 @@
     }
    ]
   },
+  "tw.resize-anchor": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 5
+   },
+   "evidence": [
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "typeof TelegramWidget.setResizeAnchor is \"function\"",
+     "status": "pass",
+     "detail": "function",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "setResizeAnchor('bottom') and ('top') return undefined and throw nothing",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "anything but exactly 'top' or 'bottom' throws TypeError",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "with 'bottom' the widget grows: three lines are 60 px",
+     "status": "pass",
+     "detail": "60 px",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/24-resize-anchor",
+     "kind": "check",
+     "name": "with 'top' it shrinks back to 0 px",
+     "status": "pass",
+     "detail": "0 px",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.bot-data": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 9
+   },
+   "evidence": [
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "chatData and publicData are text of 1–1024 bytes, or null",
+     "status": "pass",
+     "detail": "[null,null]",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "the state and the context fields are read-only",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "onEvent takes 'chatDataChanged' and 'publicDataChanged'",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-copy",
+     "kind": "check",
+     "name": "chatData is null, publicData \"conf-public\"",
+     "status": "pass",
+     "detail": "[null,\"conf-public\"]",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-group",
+     "kind": "check",
+     "name": "chatData is \"conf-chat\", publicData \"conf-public\"",
+     "status": "pass",
+     "detail": "[\"conf-chat\",\"conf-public\"]",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-live-copy",
+     "kind": "check",
+     "name": "chatData is null, publicData \"conf-public\"",
+     "status": "pass",
+     "detail": "[null,\"conf-public\"]",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-no-queries",
+     "kind": "check",
+     "name": "chatData is \"conf-chat\", publicData \"conf-public\"",
+     "status": "pass",
+     "detail": "[\"conf-chat\",\"conf-public\"]",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-preview",
+     "kind": "check",
+     "name": "chatData is \"conf-chat\", publicData \"conf-public\"",
+     "status": "pass",
+     "detail": "[\"conf-chat\",\"conf-public\"]",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-private",
+     "kind": "check",
+     "name": "chatData is \"conf-chat\", publicData \"conf-public\"",
+     "status": "pass",
+     "detail": "[\"conf-chat\",\"conf-public\"]",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.context": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 21
+   },
+   "evidence": [
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "isForward is a boolean; chatType is private, group, supergroup, channel or null",
+     "status": "pass",
+     "detail": "false / private",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "viewer is null or a frozen WebAppUser: id, first_name, last_name, username, is_premium",
+     "status": "pass",
+     "detail": "{\"id\":777000,\"first_name\":\"Conformance\",\"username\":\"conformance_runner\"}",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "a forward has no chatData and no chatType",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-copy",
+     "kind": "check",
+     "name": "isForward is true, isPreview false",
+     "status": "pass",
+     "detail": "true / false",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-copy",
+     "kind": "check",
+     "name": "chatType is ",
+     "status": "pass",
+     "detail": "null",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-copy",
+     "kind": "check",
+     "name": "viewer is null",
+     "status": "pass",
+     "detail": "null",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-group",
+     "kind": "check",
+     "name": "isForward is false, isPreview false",
+     "status": "pass",
+     "detail": "false / false",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-group",
+     "kind": "check",
+     "name": "chatType is group or supergroup",
+     "status": "pass",
+     "detail": "group",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-group",
+     "kind": "check",
+     "name": "viewer is the user (an id)",
+     "status": "pass",
+     "detail": "{\"id\":777000,\"first_name\":\"Conformance\",\"username\":\"conforma",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-live-copy",
+     "kind": "check",
+     "name": "isForward is true, isPreview false",
+     "status": "pass",
+     "detail": "true / false",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-live-copy",
+     "kind": "check",
+     "name": "chatType is ",
+     "status": "pass",
+     "detail": "null",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-live-copy",
+     "kind": "check",
+     "name": "viewer is the user (an id)",
+     "status": "pass",
+     "detail": "{\"id\":777000,\"first_name\":\"Conformance\",\"username\":\"conforma",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-no-queries",
+     "kind": "check",
+     "name": "isForward is false, isPreview false",
+     "status": "pass",
+     "detail": "false / false",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-no-queries",
+     "kind": "check",
+     "name": "chatType is private",
+     "status": "pass",
+     "detail": "private",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-no-queries",
+     "kind": "check",
+     "name": "viewer is null",
+     "status": "pass",
+     "detail": "null",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-preview",
+     "kind": "check",
+     "name": "isForward is false, isPreview true",
+     "status": "pass",
+     "detail": "false / true",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-preview",
+     "kind": "check",
+     "name": "chatType is ",
+     "status": "pass",
+     "detail": "null",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-preview",
+     "kind": "check",
+     "name": "viewer is null",
+     "status": "pass",
+     "detail": "null",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-private",
+     "kind": "check",
+     "name": "isForward is false, isPreview false",
+     "status": "pass",
+     "detail": "false / false",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-private",
+     "kind": "check",
+     "name": "chatType is private",
+     "status": "pass",
+     "detail": "private",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-private",
+     "kind": "check",
+     "name": "viewer is the user (an id)",
+     "status": "pass",
+     "detail": "{\"id\":777000,\"first_name\":\"Conformance\",\"username\":\"conforma",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.request": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 13
+   },
+   "evidence": [
+    {
+     "test": "auto/25-state-api-b",
+     "kind": "check",
+     "name": "a request without a tap settles: { result } (frozen) or a WidgetRequestError with its code",
+     "status": "pass",
+     "detail": "resolved {\"result\":\"ok\"}",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/25-state-api-b",
+     "kind": "check",
+     "name": "request throws TypeError at once for data that is not 1–64 bytes of text",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-copy",
+     "kind": "check",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-copy",
+     "kind": "check",
+     "name": "a request on a tap is refused with NOT_ALLOWED too",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-group",
+     "kind": "check",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-group",
+     "kind": "check",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "status": "pass",
+     "detail": "result \"ok\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-live-copy",
+     "kind": "check",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-live-copy",
+     "kind": "check",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "status": "pass",
+     "detail": "result \"ok\"",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-no-queries",
+     "kind": "check",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-no-queries",
+     "kind": "check",
+     "name": "a request on a tap is refused with NOT_ALLOWED too",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-preview",
+     "kind": "check",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "status": "pass",
+     "detail": "NOT_ALLOWED",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-private",
+     "kind": "check",
+     "name": "a request without a tap is not refused (background requests are allowed here)",
+     "status": "pass",
+     "detail": "resolved",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/26-context-private",
+     "kind": "check",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "status": "pass",
+     "detail": "result \"ok\"",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.copy-text": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 2
+   },
+   "evidence": [
+    {
+     "test": "auto/25-state-api-b",
+     "kind": "check",
+     "name": "copyText throws TypeError for anything but 1–256 characters of text",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/25-state-api-b",
+     "kind": "check",
+     "name": "copyText outside a tap returns undefined and throws nothing (the client drops it)",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.watch-public-data": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/25-state-api-b",
+     "kind": "check",
+     "name": "watchPublicData and unwatchPublicData return undefined and may be called again",
+     "status": "pass",
+     "detail": "",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
+  "tw.preview": {
+   "status": "in",
+   "verdict": "pass",
+   "counts": {
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/25-state-api-a",
+     "kind": "check",
+     "name": "isPreview is a boolean; a preview is no forward and has no chatType or viewer",
+     "status": "pass",
+     "detail": "false",
+     "theme": "light",
+     "width": 390
+    }
+   ]
+  },
   "tw.open-link": {
    "status": "in",
    "verdict": "pass",
@@ -7381,7 +7975,7 @@
     {
      "test": "auto/17-drag-hover",
      "kind": "check",
-     "name": "no touch events reach the widget on a touch client: pointer events only (profile 1: out)",
+     "name": "no touch events on a touch client, pointer events only",
      "status": "skip",
      "detail": "no touch input here",
      "theme": "light",
@@ -7401,23 +7995,23 @@
      "kind": "check",
      "name": "pointerdown → pointermove (buttons=1) → pointerup moves the knob",
      "status": "pass",
-     "detail": "10 moves, knob at 160, dx 160",
+     "detail": "12 moves, knob at 160, dx 160",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/17-drag-hover",
      "kind": "check",
-     "name": "setPointerCapture keeps moves coming past the element",
+     "name": "setPointerCapture keeps moves coming past the track",
      "status": "pass",
-     "detail": "9 moves past the track",
+     "detail": "11 moves past the track",
      "theme": "light",
      "width": 390
     },
     {
      "test": "auto/17-drag-hover",
      "kind": "check",
-     "name": "movementX adds up to the distance",
+     "name": "movementX sums to the distance",
      "status": "pass",
      "detail": "movementX 160 vs 160",
      "theme": "light",
@@ -7444,36 +8038,64 @@
    ]
   },
   "input.dblclick": {
-   "status": "out",
-   "verdict": "skip",
+   "status": "in",
+   "verdict": "pass",
    "counts": {
-    "skip": 1
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/16-sdk-taps-b",
      "kind": "check",
-     "name": "no dblclick reaches the widget (the double tap stays with the bubble)",
-     "status": "skip",
-     "detail": "input not deliverable on this renderer",
+     "name": "a double tap on touch-action: auto reaches the widget as dblclick (the reaction stays outside the widget)",
+     "status": "pass",
+     "detail": "1 events",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-a",
+     "kind": "check",
+     "name": "a double tap on touch-action: none: both clicks, then dblclick",
+     "status": "pass",
+     "detail": "2 clicks",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-a",
+     "kind": "check",
+     "name": "a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel",
+     "status": "pass",
+     "detail": "2 clicks",
      "theme": "light",
      "width": 390
     }
    ]
   },
   "input.long-press": {
-   "status": "out",
-   "verdict": "skip",
+   "status": "in",
+   "verdict": "pass",
    "counts": {
-    "skip": 1
+    "skip": 1,
+    "pass": 1
    },
    "evidence": [
     {
      "test": "auto/16-sdk-taps-b",
      "kind": "check",
-     "name": "no contextmenu event reaches the widget",
+     "name": "no contextmenu reaches the widget from touch-action: auto (the hold or right click is the message menu)",
      "status": "skip",
      "detail": "input not deliverable on this renderer",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-a",
+     "kind": "check",
+     "name": "a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger",
+     "status": "pass",
+     "detail": "touch, 1 contextmenu",
      "theme": "light",
      "width": 390
     }
@@ -7780,13 +8402,31 @@
    "status": "in",
    "verdict": "pass",
    "counts": {
-    "pass": 1
+    "pass": 3
    },
    "evidence": [
     {
      "test": "auto/16-sdk-taps-c",
      "kind": "host",
      "name": "a burst of 20 haptics reaches the client as 5",
+     "status": "pass",
+     "detail": "haptic ×5 (want 5)",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/27-haptics-no-touch",
+     "kind": "check",
+     "name": "haptics may be asked for without a touch: no exception (the client decides what plays)",
+     "status": "pass",
+     "detail": "11 asked",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/27-haptics-no-touch",
+     "kind": "host",
+     "name": "no touch: the 5 haptics of the first second reach the client, the ones at 1.2 s and 2.5 s do not",
      "status": "pass",
      "detail": "haptic ×5 (want 5)",
      "theme": "light",
@@ -7839,7 +8479,7 @@
      "kind": "check",
      "name": "visibilitychange: hidden, then visible again",
      "status": "pass",
-     "detail": "2.2 s hidden",
+     "detail": "2.9 s hidden",
      "theme": "light",
      "width": 390
     },
@@ -7848,7 +8488,7 @@
      "kind": "check",
      "name": "no animation frames while hidden",
      "status": "pass",
-     "detail": "0 frames in 2.2 s",
+     "detail": "0 frames in 2.9 s",
      "theme": "light",
      "width": 390
     },
@@ -7857,7 +8497,7 @@
      "kind": "check",
      "name": "timers run at most once per second while hidden",
      "status": "pass",
-     "detail": "3 ticks of a 50 ms interval in 2.2 s",
+     "detail": "3 ticks of a 50 ms interval in 2.9 s",
      "theme": "light",
      "width": 390
     }
@@ -7907,9 +8547,58 @@
   },
   "behaviour.gesture-claim": {
    "status": "in",
-   "verdict": "untested",
-   "counts": {},
-   "evidence": []
+   "verdict": "partial",
+   "counts": {
+    "fail": 4,
+    "pass": 1
+   },
+   "evidence": [
+    {
+     "test": "auto/23-gestures-a",
+     "kind": "check",
+     "name": "a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)",
+     "status": "fail",
+     "detail": "touch: pointerup",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-b",
+     "kind": "check",
+     "name": "a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)",
+     "status": "fail",
+     "detail": "touch: pointerup after 9 moves",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-b",
+     "kind": "check",
+     "name": "a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel",
+     "status": "fail",
+     "detail": "touch: pointerup after 9 moves",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-b",
+     "kind": "check",
+     "name": "a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)",
+     "status": "fail",
+     "detail": "touch: pointerup",
+     "theme": "light",
+     "width": 390
+    },
+    {
+     "test": "auto/23-gestures-b",
+     "kind": "check",
+     "name": "the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel",
+     "status": "pass",
+     "detail": "10 moves",
+     "theme": "light",
+     "width": 390
+    }
+   ]
   },
   "behaviour.storage-persist": {
    "status": "in",
@@ -7924,6 +8613,36 @@
    "evidence": []
   },
   "behaviour.message-edit": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "behaviour.resize-anchor": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "behaviour.data-edit": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "behaviour.forward-copy": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "behaviour.preview": {
+   "status": "in",
+   "verdict": "untested",
+   "counts": {},
+   "evidence": []
+  },
+  "behaviour.network-marker": {
    "status": "in",
    "verdict": "untested",
    "counts": {},
@@ -8053,7 +8772,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 6
+    "pass": 9
    },
    "stages": [
     {
@@ -8431,7 +9150,7 @@
    "harnessErrors": [],
    "skippedActions": [],
    "counts": {
-    "pass": 6
+    "pass": 10
    },
    "stages": [
     {
@@ -8934,14 +9653,13 @@
    "errors": [],
    "harnessErrors": [],
    "skippedActions": [
-    3,
     4,
     6,
     7
    ],
    "counts": {
-    "pass": 3,
-    "skip": 4
+    "pass": 4,
+    "skip": 3
    },
    "stages": [],
    "host": []
@@ -9106,6 +9824,219 @@
    },
    "stages": [],
    "host": []
+  },
+  {
+   "id": "auto/23-gestures-a",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 3,
+    "fail": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/23-gestures-b",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "fail": 3,
+    "pass": 1
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/24-resize-anchor",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 5
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/25-state-api-a",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 7
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/25-state-api-b",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 5
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/26-context-copy",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/26-context-group",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/26-context-live-copy",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/26-context-no-queries",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/26-context-preview",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 5
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/26-context-private",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 6
+   },
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "auto/27-haptics-no-touch",
+   "set": "auto",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": "done",
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {
+    "pass": 1
+   },
+   "stages": [],
+   "host": [
+    {
+     "id": "limit.haptic-rate",
+     "name": "no touch: the 5 haptics of the first second reach the client, the ones at 1.2 s and 2.5 s do not",
+     "status": "pass",
+     "detail": "haptic ×5 (want 5)"
+    }
+   ]
   },
   {
    "id": "visual/01-boxes",
@@ -9693,7 +10624,7 @@
    "host": []
   },
   {
-   "id": "visual/sdk/16-bot-edit",
+   "id": "visual/sdk/16-state-edit",
    "set": "visual",
    "theme": "light",
    "width": 390,
@@ -9709,6 +10640,141 @@
   },
   {
    "id": "visual/sdk/17-size-hint",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/18-resize-anchor",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/19-request-tap",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/20-forward-requests",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/21-network-marker",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/22-copy-text",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/23-preview",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/24-watch-public-data",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/25-group-chat-state",
+   "set": "visual",
+   "theme": "light",
+   "width": 390,
+   "loaded": true,
+   "dead": null,
+   "status": null,
+   "errors": [],
+   "harnessErrors": [],
+   "skippedActions": [],
+   "counts": {},
+   "stages": [],
+   "host": []
+  },
+  {
+   "id": "visual/sdk/26-haptics-no-touch",
    "set": "visual",
    "theme": "light",
    "width": 390,

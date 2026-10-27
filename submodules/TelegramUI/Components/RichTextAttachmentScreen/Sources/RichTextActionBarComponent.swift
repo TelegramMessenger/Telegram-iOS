@@ -99,9 +99,15 @@ class RichTextActionBarComponent: Component {
         
         private var component: RichTextActionBarComponent?
         
+        /// The source for a context menu an item opens: the bar's glass, which morphs into the menu whole.
+        var menuSourceView: UIView {
+            return self.backgroundView
+        }
+        
         override init(frame: CGRect) {
             self.backgroundContainer = GlassBackgroundContainerView()
             self.backgroundView = GlassBackgroundView()
+            self.backgroundView.morphsIntoContextMenu = true
             self.backgroundContainer.contentView.addSubview(self.backgroundView)
             
             self.scrollView = ScrollView()

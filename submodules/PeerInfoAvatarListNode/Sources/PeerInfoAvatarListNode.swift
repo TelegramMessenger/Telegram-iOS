@@ -885,6 +885,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let setByYouNode: ImmediateTextNode
     private let setByYouImageNode: ImageNode
     private var setByYouTapRecognizer: UITapGestureRecognizer?
+    public var setByYouBottomInset: CGFloat = 0.0
     
     public private(set) var galleryEntries: [AvatarGalleryEntry] = []
     private var items: [PeerInfoAvatarListItem] = []
@@ -1730,7 +1731,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 transition.updateAlpha(node: self.setByYouNode, alpha: 0.7)
                 self.setByYouNode.attributedText = NSAttributedString(string: photoTitle, font: Font.regular(12.0), textColor: UIColor.white)
                 let setByYouSize = self.setByYouNode.updateLayout(size)
-                self.setByYouNode.frame = CGRect(origin: CGPoint(x: size.width - setByYouSize.width - 14.0, y: size.height - setByYouSize.height - 40.0), size: setByYouSize)
+                self.setByYouNode.frame = CGRect(origin: CGPoint(x: size.width - setByYouSize.width - 14.0, y: size.height - self.setByYouBottomInset - setByYouSize.height - 40.0), size: setByYouSize)
                 self.setByYouNode.isUserInteractionEnabled = hasLink
             } else {
                 transition.updateAlpha(node: self.setByYouNode, alpha: 0.0)

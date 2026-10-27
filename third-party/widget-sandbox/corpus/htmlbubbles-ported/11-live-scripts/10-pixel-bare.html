@@ -5,6 +5,7 @@
   ported: classic widget, see corpus/htmlbubbles-ported/README.md
 -->
 <style>
+  [hidden] { display: none !important; }
   :root { color-scheme: light dark;
     --fg: light-dark(#000, #fff); --muted: light-dark(#6e6e73, #98989d);
     --card: light-dark(#fff, #1c1c1e); --border: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.14));
@@ -22,14 +23,14 @@
   button.primary { background-color: var(--blue); color: #fff; } button.primary:hover { background-color: var(--blue-h); }
   button:active { background-color: rgba(127,127,127,0.40); } button.primary:active { background-color: var(--blue-h); }
 
-  .sw { width: 300px; max-width: 100%; }
+  .sw { width: 100%; box-sizing: border-box; }
   .sw .ring { width: 128px; height: 128px; border-radius: 75px; margin: 12px auto 10px auto; padding: 11px; background-color: rgba(127,127,127,0.18); }
   .sw .face { width: 128px; height: 128px; border-radius: 64px; background-color: light-dark(#ffffff, #1c1c1e); text-align: center; }
   .sw .big { font-size: 28px; font-weight: 700; font-family: ui-monospace, monospace; padding-top: 30px; line-height: 32px; }
   .sw .cs { font-size: 15px; color: #8e8e93; font-family: ui-monospace, monospace; }
   .sw .now { font-size: 11px; font-family: ui-monospace, monospace; margin-top: 3px; }
-  .sw .btns { text-align: center; }
-  .sw .btns button { margin: 0 4px; width: 76px; }
+  .sw .btns { display: flex; justify-content: center; gap: 8px; }
+  .sw .btns button { flex: 1; min-width: 0; max-width: 104px; padding: 5px 10px; white-space: nowrap; }
   .sw .tabs { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
   .sw .tab { display: inline-block; padding: 2px 9px; margin-right: 3px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .sw .tab:hover { background-color: rgba(127,127,127,0.16); }
@@ -42,18 +43,9 @@
   .sw .bars { margin-top: 6px; }
   .sw .br { display: flex; align-items: center; height: 18px; font-size: 11px; font-family: ui-monospace, monospace; }
   .sw .br .n { width: 30px; } .sw .br .v { width: 64px; text-align: right; }
-  .sw .br .track { width: 178px; height: 10px; }
+  .sw .br .track { flex: 1; min-width: 0; height: 10px; }
   .sw .br .fill { height: 10px; border-radius: 3px; width: 2px; transition: width 400ms cubic-bezier(.33,1,.68,1); }
 
-  /* bubble transitions (transition('slide-up' | 'slide-left' | 'slide-right' | 'fade') in the original) */
-  .fx-fade { animation: tw-fade 220ms ease-out; }
-  .fx-slide-up { animation: tw-slide-up 260ms cubic-bezier(.33,1,.68,1); }
-  .fx-slide-left { animation: tw-slide-left 260ms cubic-bezier(.33,1,.68,1); }
-  .fx-slide-right { animation: tw-slide-right 260ms cubic-bezier(.33,1,.68,1); }
-  @keyframes tw-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes tw-slide-up { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
-  @keyframes tw-slide-left { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-  @keyframes tw-slide-right { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
 </style>
 <div class="card pad sw" id="root">
   <div class="row between"><b>⏱ Stopwatch</b><span class="badge" id="badge">ready</span></div>
@@ -87,11 +79,13 @@ function animate(duration, onFrame, easing) {
   const step = () => { const t = Math.min(1, (performance.now() - start) / Math.max(1, duration)); onFrame(easing(t), t); if (t < 1) requestAnimationFrame(step); };
   step();
 }
-function transition(kind) {
-  root.classList.remove('fx-fade', 'fx-slide-up', 'fx-slide-left', 'fx-slide-right');
-  requestAnimationFrame(() => root.classList.add('fx-' + kind));
+let panelAnimation = null;
+function transition(kind, target = list) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('fx-fade', 'fx-slide-up', 'fx-slide-left', 'fx-slide-right'); });
 
 function bestWorst() {
   let best = -1, worst = -1;
@@ -123,13 +117,17 @@ function paintFace() {
   right.textContent = running ? 'Stop' : ms ? 'Resume' : 'Start';
 }
 
+let lastList = "";
 function paintLaps(fresh) {
   const [best, worst] = bestWorst();
   left.textContent = running ? 'Lap' : 'Reset';
   tabs.hidden = !laps.length;
-  if (!laps.length) { list.innerHTML = ''; return; }
+  if (!laps.length) { lastList = ''; list.innerHTML = ''; return; }
   for (const t of tabs.querySelectorAll('.tab')) t.classList.toggle('on', t.dataset.view === view);
   lapinfo.textContent = `${laps.length} lap${laps.length > 1 ? 's' : ''}${best >= 0 ? ` · best ${full(laps[best].t)}` : ''}`;
+  const renderKey = view + '|' + laps.map(l => l.t + ':' + l.total).join(',');
+  if (lastList === renderKey && !fresh) return;
+  lastList = renderKey;
   if (view === 'laps') {
     const rows = laps.slice().reverse().slice(0, 5).map((l, k) => {
       const n = laps.length - k, i = n - 1;
@@ -144,10 +142,9 @@ function paintLaps(fresh) {
     const offset = laps.length - shown.length;
     list.innerHTML = `<div class="bars">${shown.map((l, k) => {
       const i = offset + k, c = i === best ? '#34c759' : i === worst ? '#ff3b30' : '#ff9500';
-      return `<div class="br"><span class="n muted">L${i + 1}</span><div class="track"><div class="fill" data-w="${Math.max(2, 178 * l.t / max).toFixed(1)}" style="background-color: ${c}; transition-delay: ${k * 35}ms"></div></div><span class="v">${full(l.t)}</span></div>`;
+      return `<div class="br"><span class="n muted">L${i + 1}</span><div class="track"><div class="fill" style="width: ${Math.max(2, 100 * l.t / max).toFixed(1)}%; background-color: ${c}"></div></div><span class="v">${full(l.t)}</span></div>`;
     }).join('')}</div>`;
     // Bars grow from 2px to their width, staggered (grow.k tween in the original).
-    requestAnimationFrame(() => { for (const f of list.querySelectorAll('.fill')) f.style.width = f.dataset.w + 'px'; });
   }
 }
 
@@ -161,7 +158,6 @@ function handleAction(name, value) {
     if (!looping) { looping = true; requestAnimationFrame(frame); }
     paintFace(); paintLaps();
   } else if (name === 'lap' && running) {
-    transition('slide-up');
     const total = elapsed();
     laps.push({ t: total - lapBase(), total });
     paintLaps(true);
@@ -172,7 +168,6 @@ function handleAction(name, value) {
     banked = 0; laps = []; view = 'laps';
     paintFace(); paintLaps();
   } else if (name === 'view' && value !== view) {
-    transition(value === 'chart' ? 'slide-left' : 'slide-right');
     view = value;
     paintLaps();
   }

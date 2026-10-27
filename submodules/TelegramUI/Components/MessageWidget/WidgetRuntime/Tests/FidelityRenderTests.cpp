@@ -166,6 +166,15 @@ WR_TEST(testListStyleTakesAnImage) {
     checkEval(env, "getComputedStyle(document.querySelector('li')).listStyleType", "disc");
 }
 
+/// D2: an image bullet set on the list reaches its items however long its URL (twidget edit 60): they share the list's
+/// copy, where an inherited URL over 1 KiB was dropped.
+WR_TEST(testAListsLongImageBulletReachesItsItems) {
+    const std::string url = std::string(kPng3x2) + "#" + std::string(2000, 'a');
+    RenderEnv env(page("ul{list-style:url(" + url + ") inside}", "<ul><li>a</li><li>b <b>c</b></li></ul>"));
+    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
+    CHECK(tree && imageMarkers(tree->root()) == 2);
+}
+
 /// html.attr.global: :lang() matches the language an element's own or an ancestor's lang attribute gives (Selectors 4:
 /// case-insensitive, a prefix up to a hyphen), never the container's default; a lang change re-matches as a rebuild.
 WR_TEST(testLangFollowsTheAttribute) {
@@ -265,6 +274,23 @@ WR_TEST(testWordBreakBreakAll) {
                        "<div id=wb>aaaaaaaaaaaaaaaaaaaa</div><div id=nb>aaaaaaaaaaaaaaaaaaaa</div>"));
     checkEval(env, "$('wb').getBoundingClientRect().height >= 31", "true");
     checkEval(env, "$('nb').getBoundingClientRect().height", "16");
+}
+
+/// The fake host breaks between code points, never inside one (CoreTextRenderHost between composed character
+/// sequences): a word of three-byte characters broken anywhere in a box narrower than one paints each whole, one per line.
+WR_TEST(testABreakAnywhereKeepsCharactersWhole) {
+    RenderEnv env(page("#wb{width:20px;font:16px/16px serif;word-break:break-all}", "<div id=wb>−−−</div>"));
+    std::shared_ptr<const wr::LayerTree> tree = env.render().layerTree();
+    CHECK(tree != nullptr);
+    if (!tree) {
+        return;
+    }
+    size_t pieces = 0;
+    for (const wr::TextItem* item : wr_test::textItems(*tree)) {
+        CHECK_EQ(item->text, std::string("−"));
+        pieces++;
+    }
+    CHECK_EQ(pieces, size_t(3));
 }
 
 /// Fidelity plan, Task 6 (css.value.keywords, html.el.structure): initial, unset and revert, through the profile.

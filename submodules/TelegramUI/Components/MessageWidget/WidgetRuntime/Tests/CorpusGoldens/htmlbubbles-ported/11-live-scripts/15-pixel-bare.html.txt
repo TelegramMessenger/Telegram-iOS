@@ -1,0 +1,61 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad" style="width: 330px; max-width: 100%">
+  <div class="row between"><b>🧨 Don't press</b><span class="small muted">pressed <span id="presses">0</span>×</span></div>
+  <p class="small muted" style="margin: 6px 0 8px 0">“Safe” counts up. “Hang” runs <code>for (;;) {}</code> inside the click handler.</p>
+  <button id="safe">Safe</button> <button class="primary" id="hang" style="background-color: #ff3b30">Hang</button>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 117.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 117.5
+    div 15 13 330 91.5
+      div 15 13 330 18.2
+        b 15 13 128 18.2
+        span 257 14.3 88 15.6
+          span 257 14.3 0 0
+      p 15 37.2 330 32.5
+        code 15 37.2 0 0
+      button 28 82.7 32 16.8
+      button 94 82.7 32 16.8
+
+== paint
+root 360x117.5 items=25
+  solid-fill bounds=(0,0,360,118) layer=(border=(0,0,360,118),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,118),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,118) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,118) root=0
+  text bounds=(7,6,48,32) pos=(15,14,32,16) color=#000000ff text="🧨" font=f1 glyphs=4 advance=32
+  text bounds=(47,6,56,32) pos=(55,14,40,16) color=#000000ff text="Don't" font=f1 glyphs=5 advance=40
+  text bounds=(95,6,56,32) pos=(103,14,40,16) color=#000000ff text="press" font=f1 glyphs=5 advance=40
+  text bounds=(249,6,72,32) pos=(257,14,56,16) color=#6e6e73ff text="pressed" font=f2 glyphs=7 advance=56
+  text bounds=(313,6,24,32) pos=(321,14,8,16) color=#6e6e73ff text="0" font=f2 glyphs=1 advance=8
+  text bounds=(321,6,32,32) pos=(329,14,16,16) color=#6e6e73ff text="×" font=f2 glyphs=2 advance=16
+  text bounds=(7,29,96,32) pos=(15,37,80,16) color=#6e6e73ff text="“Safe”" font=f2 glyphs=10 advance=80
+  text bounds=(95,29,64,32) pos=(103,37,48,16) color=#6e6e73ff text="counts" font=f2 glyphs=6 advance=48
+  text bounds=(151,29,40,32) pos=(159,37,24,16) color=#6e6e73ff text="up." font=f2 glyphs=3 advance=24
+  text bounds=(183,29,96,32) pos=(191,37,80,16) color=#6e6e73ff text="“Hang”" font=f2 glyphs=10 advance=80
+  text bounds=(271,29,48,32) pos=(279,37,32,16) color=#6e6e73ff text="runs" font=f2 glyphs=4 advance=32
+  solid-fill bounds=(15,52,96,18) layer=(border=(15,52,96,18),radius=(4,4,4,4,4,4,4,4),clip=(15,52,96,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(11,45,40,32) pos=(19,53,24,16) color=#6e6e73ff text="for" font=f3 glyphs=3 advance=24
+  text bounds=(43,45,48,32) pos=(51,53,32,16) color=#6e6e73ff text="(;;)" font=f3 glyphs=4 advance=32
+  text bounds=(83,45,32,32) pos=(91,53,16,16) color=#6e6e73ff text="{}" font=f3 glyphs=2 advance=16
+  text bounds=(111,45,64,32) pos=(119,53,48,16) color=#6e6e73ff text="inside" font=f2 glyphs=6 advance=48
+  text bounds=(167,45,40,32) pos=(175,53,24,16) color=#6e6e73ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(199,45,56,32) pos=(207,53,40,16) color=#6e6e73ff text="click" font=f2 glyphs=5 advance=40
+  text bounds=(247,45,80,32) pos=(255,53,64,16) color=#6e6e73ff text="handler." font=f2 glyphs=8 advance=64
+  solid-fill bounds=(15,78,58,27) layer=(border=(15,78,58,27),radius=(8,8,8,8,8,8,8,8),clip=(15,78,58,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(20,75,48,32) pos=(28,83,32,16) color=#000000ff text="Safe" font=f1 glyphs=4 advance=32
+  solid-fill bounds=(81,78,58,27) layer=(border=(81,78,58,27),radius=(8,8,8,8,8,8,8,8),clip=(81,78,58,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b30ff
+  text bounds=(86,75,48,32) pos=(94,83,32,16) color=#ffffffff text="Hang" font=f1 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

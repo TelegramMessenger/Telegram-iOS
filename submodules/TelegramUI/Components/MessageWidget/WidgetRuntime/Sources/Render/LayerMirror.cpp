@@ -38,6 +38,10 @@ struct LayerMirror::ItemInfo {
     LayerId clipper = 0;
     /// Its runs are split by a nested inline context (an inline table's cells).
     bool runsSplit = false;
+    /// An inline element in its line opens a context of its own (a paint group): that context's run moves with the text
+    /// before it, and nothing reports the move (an inline item has no box of its own), so re-capturing this inline
+    /// context's runs does not place it.
+    bool subContexts = false;
     /// Its own paint was visited more than once (litehtml's block pass enters an inline-flex or inline-grid, which
     /// then paints its own content again in its context): the mirror does not update what it paints.
     bool multi = false;
@@ -263,6 +267,14 @@ public:
         info.own = node.id;
         info.context = parent ? parent->node->id : 0;
         if (kind == litehtml::paint_context::group) {
+            // An inline element's paint group, in its inline context's line (ItemInfo::subContexts).
+            if (item->src_el()->is_inline() && !isInlineBox(*item)) {
+                if (const render_item* line = innermostInlineContext(); line && isInlineContext(line)) {
+                    if (auto at = m.m_items.find(line); at != m.m_items.end() && at->second) {
+                        at->second->subContexts = true;
+                    }
+                }
+            }
             frame.group = std::make_shared<MirrorGroup>();
             if (parent) {
                 info.pass = parent->pass;
@@ -1025,7 +1037,15 @@ private:
             }
         }
         for (const render_item* text : m.m_texts) {
-            m_runs.add(text);
+            // Replaced text (twidget edit 16) re-captures its inline context's runs: the context itself, or for an inline
+            // element's text the context it paints in (ItemInfo::runOf). An inline element that opens a context of its own
+            // (a paint group) has none, its run being that context's, which is not placed here.
+            const ItemInfo* found = info(text);
+            const render_item* context = isInlineContext(text) ? text : (found ? found->runOf : nullptr);
+            if (!found || !context) {
+                return lose();
+            }
+            m_runs.add(context);
         }
         for (const auto& [item, what] : m.m_geometry) {
             if (!info(item)) {
@@ -1468,7 +1488,9 @@ private:
         if (!found || !locked || found->runs.empty()) {
             return true;
         }
-        if (found->runsSplit || found->multi) {
+        // A line that changed (text, a restyle, a reflow) moves an inline paint group in it, whose run is its own
+        // context's: not placed by re-capturing this one's (ItemInfo::subContexts). A line that moved whole did not.
+        if (found->runsSplit || found->multi || (found->subContexts && !m_moving)) {
             return lose();
         }
         Walker walker(m, m_container, Walker::Mode::Runs);
@@ -1555,12 +1577,13 @@ private:
         std::vector<LayerId> framed;
         // Painting rounds a box to whole pixels and text to the snap grid, in document coordinates: content moved by a
         // fraction of a pixel is not what painting it at its new place gives (widget-sandbox v0.1.1's line height 1.35
-        // makes such moves common), so the subtree is then painted again.
+        // makes such moves common), so the subtree is then painted again. Any fraction: a move a hair off a whole number
+        // (twidget edit 20 reports it exactly) leaves content captured at the old place a hair off a fresh walk's.
         bool fractional = false;
         auto place = [&](LayerId id, const litehtml::pointF& origin) {
             const litehtml::pointF before = current(id).origin;
             const double dx = double(origin.x) - double(before.x), dy = double(origin.y) - double(before.y);
-            fractional = fractional || std::fabs(dx - std::round(dx)) > 1e-3 || std::fabs(dy - std::round(dy)) > 1e-3;
+            fractional = fractional || dx != std::round(dx) || dy != std::round(dy);
             frame(id, origin);
             framed.push_back(id);
         };
@@ -1600,6 +1623,11 @@ private:
             }
         }
         if (fractional) {
+            struct Moving {
+                bool& flag;
+                ~Moving() { flag = false; }
+            } moving{m_moving};
+            m_moving = true;
             for (const render_item* at : items) {
                 const ItemInfo* found = info(at);
                 if (!found) {
@@ -1873,6 +1901,8 @@ private:
     std::vector<LayerOp> m_ops;
     std::set<std::pair<int, LayerId>> m_emitted;
     std::unordered_set<const render_item*> m_runsDone;
+    /// Set while moved() paints a fractionally moved subtree again (recaptureRuns).
+    bool m_moving = false;
     Ordered<const render_item*> m_boxes, m_runs, m_movedSet, m_clipperSet, m_groupItems;
     Ordered<LayerId> m_groupNodes;
     std::vector<const render_item*> m_moved, m_clippers, m_paintOrder;

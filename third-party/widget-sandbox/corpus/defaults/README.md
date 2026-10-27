@@ -19,7 +19,7 @@ native; any CSS a widget adds wins over the layer.
 | `interactive/06-survey.html` | two rules (the result bars, in `--tg-theme-button-color`) | an answer per `<button>`, then the results; the vote kept in `localStorage` |
 
 Rules: no form controls (outside profile 1), no named fonts, no colours of
-their own where a theme variable fits, under 3800 bytes of gzip and 560 px of
+their own where a theme variable fits, under 3800 bytes compressed and 560 px of
 height at a 320 px wide bubble (all of them: 0.3–1.0 KB, 120–250 px).
 Every file carries an `idea:` line, which the test group's Defaults topic posts
 as its description (`scripts/conformance/publish-channel.ts`).

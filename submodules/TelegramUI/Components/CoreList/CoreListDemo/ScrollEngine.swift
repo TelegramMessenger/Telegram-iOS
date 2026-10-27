@@ -14,10 +14,10 @@ import UIKit
 /// while the content is moved by Core Animation, so the two run on different clocks. Composing against
 /// the trajectory's OWN vertices — rather than resampling it — is what keeps a composed animation in
 /// exact phase with the content's.
-struct ScrollFlight {
+public struct ScrollFlight {
     let trajectory: Trajectory
     /// Layer-local time at which the trajectory's `t = 0` plays.
-    let beginTime: CFTimeInterval
+    public let beginTime: CFTimeInterval
     /// Coordinate shift accrued since the trajectory was baked.
     ///
     /// The trajectory's own offsets are in the base it was baked in. Window rebalancing re-bases the
@@ -28,7 +28,7 @@ struct ScrollFlight {
     var coordinateShift: CGFloat = 0
 
     /// The flight's resting place in CURRENT list coordinates.
-    var settledOffset: CGFloat { trajectory.finalOffset + coordinateShift }
+    public var settledOffset: CGFloat { trajectory.finalOffset + coordinateShift }
 
     /// A trajectory sample's offset in CURRENT list coordinates.
     func offset(atSampleIndex index: Int) -> CGFloat {

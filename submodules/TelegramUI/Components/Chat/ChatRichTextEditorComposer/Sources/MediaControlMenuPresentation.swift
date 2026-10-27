@@ -34,8 +34,14 @@ private final class MediaControlMenuReferenceSource: ContextReferenceContentSour
     private let sourceView: UIView
     init(sourceView: UIView) { self.sourceView = sourceView }
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        // The outset spaces a menu that opens beside the control. A menu that morphs out of the control's glass takes
+        // its place instead, and an outset source would morph from a rectangle.
+        var insets = UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0)
+        if #available(iOS 26.0, *), self.sourceView.morphsIntoContextMenu {
+            insets = UIEdgeInsets()
+        }
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView,
             contentAreaInScreenSpace: mainWindowScreenBounds,
-            insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0), actionsPosition: .bottom)
+            insets: insets, actionsPosition: .bottom)
     }
 }

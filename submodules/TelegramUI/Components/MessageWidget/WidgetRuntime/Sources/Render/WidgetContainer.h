@@ -115,9 +115,9 @@ public:
     std::vector<float> caretOffsets(litehtml::uint_ptr hFont, std::string_view utf8) const;
     litehtml::pixel_t text_width(const char* text, litehtml::uint_ptr hFont) override;
     std::shared_ptr<litehtml::text_breaker> create_text_breaker(const std::string& text, litehtml::uint_ptr hFont) override;
-    /// twidget edit 47 (fidelity plan, Task 13): each unit's level from ICU's bidi algorithm over the line's text, a unit
-    /// at its first character. False without ubidi in this ICU. Laid out inside render(), which pre-charges its boxes;
-    /// the work is linear in the line's text.
+    /// twidget edit 47 (fidelity plan, Task 13): each unit's level from UAX #9 over the line's text (bidi::levels), a
+    /// unit at its first strong character. Laid out inside render(), which pre-charges its boxes; the work is linear in
+    /// the line's text.
     bool bidi_levels(const std::vector<std::string>& runs, bool rtl, std::vector<uint8_t>& levels) override;
     void transform_text(std::string& text, litehtml::text_transform tt) override;
     litehtml::pixel_t pt_to_px(float pt) const override;

@@ -23,7 +23,6 @@ import BundleIconComponent
 import EdgeEffect
 import MultilineTextComponent
 import GlassBackgroundComponent
-import Weather
 
 func getLocation(from message: EngineMessage) -> TelegramMediaMap? {
     if let poll = message.media.first(where: { $0 is TelegramMediaPoll } ) as? TelegramMediaPoll, let map = poll.attachedMedia as? TelegramMediaMap {
@@ -296,7 +295,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     private var enqueuedTransitions: [LocationViewTransaction] = []
     
     private var disposable: Disposable?
-    private let weatherDisposable = MetaDisposable()
     private var state: LocationViewState
     private let statePromise: Promise<LocationViewState>
     
@@ -821,15 +819,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         
         self.locationManager.manager.startUpdatingHeading()
         self.locationManager.manager.delegate = self
-
-        if !self.isPreview, let location = getLocation(from: subject) {
-            self.requestWeatherData(coordinate: location.coordinate)
-        }
     }
     
     deinit {
         self.disposable?.dispose()
-        self.weatherDisposable.dispose()
         self.travelDisposables.dispose()
         self.locationManager.manager.stopUpdatingHeading()
     }
@@ -866,20 +859,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     func updateState(_ f: (LocationViewState) -> LocationViewState) {
         self.state = f(self.state)
         self.statePromise.set(.single(self.state))
-    }
-
-    private func requestWeatherData(coordinate: CLLocationCoordinate2D) {
-        self.weatherDisposable.set((Weather.requestWeatherData(context: self.context, location: coordinate)
-        |> deliverOnMainQueue).start(next: { [weak self] weatherData in
-            guard let self else {
-                return
-            }
-            if let weatherData {
-                self.headerNode.updateWeatherData(context: self.context, emoji: weatherData.emoji, temperature: stringForTemperature(weatherData.temperature), animated: true)
-            } else {
-                self.headerNode.clearWeatherData(animated: true)
-            }
-        }))
     }
 
     func updateHeader(transition: ContainedViewLayoutTransition) {

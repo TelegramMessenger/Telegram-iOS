@@ -64,6 +64,8 @@ public final class AccountSwitchComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            // The account menu morphs out of the pill.
+            self.backgroundView.morphsIntoContextMenu = true
             self.addSubview(self.backgroundView)
             
             self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)

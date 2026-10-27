@@ -1,0 +1,74 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div style="display: flex; flex-wrap: wrap; font-size: 12px">
+  <div style="border: 3px solid #007aff; padding: 5px 9px; margin: 3px">solid</div>
+  <div style="border: 3px dotted #ff2d55; padding: 5px 9px; margin: 3px">dotted</div>
+  <div style="border: 3px dashed #34c759; padding: 5px 9px; margin: 3px">dashed</div>
+  <div style="border: 6px double #5856d6; padding: 5px 9px; margin: 3px">double</div>
+  <div style="border: 5px groove #8e8e93; padding: 5px 9px; margin: 3px">groove</div>
+  <div style="border: 5px ridge #8e8e93; padding: 5px 9px; margin: 3px">ridge</div>
+  <div style="border: 5px inset #8e8e93; padding: 5px 9px; margin: 3px">inset</div>
+  <div style="border: 5px outset #8e8e93; padding: 5px 9px; margin: 3px">outset</div>
+  <div style="border-style: solid; border-color: #ff3b30 #34c759 #007aff #ff9500; border-width: 1px 3px 5px 7px; padding: 5px 9px; margin: 3px">4 colors, 4 widths</div>
+  <div style="border: 2px solid #af52de; border-radius: 16px; padding: 5px 12px; margin: 3px">pill</div>
+  <div style="border: 3px solid #ff9500; border-radius: 50% / 30%; padding: 8px 16px; margin: 3px">elliptical</div>
+  <div style="border-left: 4px solid #34c759; border-radius: 6px; background-color: rgba(52,199,89,0.12); padding: 5px 9px; margin: 3px">callout</div>
+</div>
+</body></html>
+
+== layout
+html 0 0 360 166.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 166.4
+    div 0 0 360 166.4
+      div 15 11 40 21.6
+      div 85 11 48 21.6
+      div 163 11 48 21.6
+      div 244 14 48 15.6
+      div 17 56.6 48 15.6
+      div 99 56.6 40 15.6
+      div 173 56.6 40 15.6
+      div 247 56.6 48 15.6
+      div 19 94.2 144 15.6
+      div 195 95.2 32 17.6
+      div 22 136.8 80 15.6
+      div 140 130.8 56 27.6
+
+== paint
+root 360x166.4 items=28
+  borders bounds=(3,3,64,38) borders=(left=(3,4,#007affff),top=(3,4,#007affff),right=(3,4,#007affff),bottom=(3,4,#007affff),radius=(0,0,0,0,0,0,0,0)) pos=(3,3,64,38) root=0
+  borders bounds=(73,3,72,38) borders=(left=(3,2,#ff2d55ff),top=(3,2,#ff2d55ff),right=(3,2,#ff2d55ff),bottom=(3,2,#ff2d55ff),radius=(0,0,0,0,0,0,0,0)) pos=(73,3,72,38) root=0
+  borders bounds=(151,3,72,38) borders=(left=(3,3,#34c759ff),top=(3,3,#34c759ff),right=(3,3,#34c759ff),bottom=(3,3,#34c759ff),radius=(0,0,0,0,0,0,0,0)) pos=(151,3,72,38) root=0
+  borders bounds=(229,3,78,38) borders=(left=(6,5,#5856d6ff),top=(6,5,#5856d6ff),right=(6,5,#5856d6ff),bottom=(6,5,#5856d6ff),radius=(0,0,0,0,0,0,0,0)) pos=(229,3,78,38) root=0
+  borders bounds=(3,47,76,35) borders=(left=(5,6,#8e8e93ff),top=(5,6,#8e8e93ff),right=(5,6,#8e8e93ff),bottom=(5,6,#8e8e93ff),radius=(0,0,0,0,0,0,0,0)) pos=(3,47,76,35) root=0
+  borders bounds=(85,47,68,35) borders=(left=(5,7,#8e8e93ff),top=(5,7,#8e8e93ff),right=(5,7,#8e8e93ff),bottom=(5,7,#8e8e93ff),radius=(0,0,0,0,0,0,0,0)) pos=(85,47,68,35) root=0
+  borders bounds=(159,47,68,35) borders=(left=(5,8,#8e8e93ff),top=(5,8,#8e8e93ff),right=(5,8,#8e8e93ff),bottom=(5,8,#8e8e93ff),radius=(0,0,0,0,0,0,0,0)) pos=(159,47,68,35) root=0
+  borders bounds=(233,47,76,35) borders=(left=(5,9,#8e8e93ff),top=(5,9,#8e8e93ff),right=(5,9,#8e8e93ff),bottom=(5,9,#8e8e93ff),radius=(0,0,0,0,0,0,0,0)) pos=(233,47,76,35) root=0
+  borders bounds=(3,88,172,32) borders=(left=(7,4,#ff9500ff),top=(1,4,#ff3b30ff),right=(3,4,#34c759ff),bottom=(5,4,#007affff),radius=(0,0,0,0,0,0,0,0)) pos=(3,88,172,32) root=0
+  borders bounds=(181,88,60,32) borders=(left=(2,4,#af52deff),top=(2,4,#af52deff),right=(2,4,#af52deff),bottom=(2,4,#af52deff),radius=(16,16,16,16,16,16,16,16)) pos=(181,88,60,32) root=0
+  borders bounds=(3,126,118,37) borders=(left=(3,4,#ff9500ff),top=(3,4,#ff9500ff),right=(3,4,#ff9500ff),bottom=(3,4,#ff9500ff),radius=(59,11.1,59,11.1,59,11.1,59,11.1)) pos=(3,126,118,37) root=0
+  solid-fill bounds=(127,126,78,37) layer=(border=(127,126,78,37),radius=(6,6,6,6,6,6,6,6),clip=(127,126,78,37),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7591f
+  borders bounds=(127,126,78,37) borders=(left=(4,4,#34c759ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(0,0,#000000ff),radius=(6,6,6,6,6,6,6,6)) pos=(127,126,78,37) root=0
+  text bounds=(7,3,56,32) pos=(15,11,40,16) color=#000000ff text="solid" font=f1 glyphs=5 advance=40
+  text bounds=(77,3,64,32) pos=(85,11,48,16) color=#000000ff text="dotted" font=f1 glyphs=6 advance=48
+  text bounds=(155,3,64,32) pos=(163,11,48,16) color=#000000ff text="dashed" font=f1 glyphs=6 advance=48
+  text bounds=(236,6,64,32) pos=(244,14,48,16) color=#000000ff text="double" font=f1 glyphs=6 advance=48
+  text bounds=(9,49,64,32) pos=(17,57,48,16) color=#000000ff text="groove" font=f1 glyphs=6 advance=48
+  text bounds=(91,49,56,32) pos=(99,57,40,16) color=#000000ff text="ridge" font=f1 glyphs=5 advance=40
+  text bounds=(165,49,56,32) pos=(173,57,40,16) color=#000000ff text="inset" font=f1 glyphs=5 advance=40
+  text bounds=(239,49,64,32) pos=(247,57,48,16) color=#000000ff text="outset" font=f1 glyphs=6 advance=48
+  text bounds=(11,86,24,32) pos=(19,94,8,16) color=#000000ff text="4" font=f1 glyphs=1 advance=8
+  text bounds=(27,86,72,32) pos=(35,94,56,16) color=#000000ff text="colors," font=f1 glyphs=7 advance=56
+  text bounds=(91,86,24,32) pos=(99,94,8,16) color=#000000ff text="4" font=f1 glyphs=1 advance=8
+  text bounds=(107,86,64,32) pos=(115,94,48,16) color=#000000ff text="widths" font=f1 glyphs=6 advance=48
+  text bounds=(187,87,48,32) pos=(195,95,32,16) color=#000000ff text="pill" font=f1 glyphs=4 advance=32
+  text bounds=(14,129,96,32) pos=(22,137,80,16) color=#000000ff text="elliptical" font=f1 glyphs=10 advance=80
+  text bounds=(132,123,72,32) pos=(140,131,56,16) color=#000000ff text="callout" font=f1 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

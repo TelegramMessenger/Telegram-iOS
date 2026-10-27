@@ -8,6 +8,7 @@
 #include <litehtml.h>
 #include <litehtml/el_svg.h>
 #include <litehtml/render_item.h>
+#include <litehtml/render_table.h>
 
 namespace wr {
 
@@ -90,14 +91,6 @@ std::vector<RenderBox> elementClientRects(const litehtml::element& element) {
             if (mine.empty()) {
                 mine.push_back(RenderBox{double(p.x.value()), double(p.y.value()), 0, 0});
             }
-            if (ri->css().get_display() == litehtml::display_table_row) {
-                // Edit 6: a row's box is the union of its cells, one rect.
-                RenderBox all = mine.front();
-                for (const RenderBox& b : mine) {
-                    all = unite(all, b);
-                }
-                mine.assign(1, all);
-            }
             rects.insert(rects.end(), mine.begin(), mine.end());
             return;
         }
@@ -108,6 +101,25 @@ std::vector<RenderBox> elementClientRects(const litehtml::element& element) {
         rects.push_back(RenderBox{double(p.x.value()) - left, double(p.y.value()) - top,
                                   double(p.width.value()) + left + right, double(p.height.value()) + top + bottom});
     });
+    if (rects.empty()) {
+        // A table row or row group has no render item: its table's grid places it (twidget edit 61).
+        const litehtml::style_display display = element.css().get_display();
+        if (display == litehtml::display_table_row || display == litehtml::display_table_row_group ||
+            display == litehtml::display_table_header_group || display == litehtml::display_table_footer_group) {
+            for (auto el = element.parent(); el; el = el->parent()) {
+                const litehtml::style_display d = el->css().get_display();
+                if (d != litehtml::display_table && d != litehtml::display_inline_table) {
+                    continue;
+                }
+                const auto table = std::dynamic_pointer_cast<litehtml::render_item_table>(el->get_render_item());
+                litehtml::position box;
+                if (table && table->part_placement(&element, box)) {
+                    rects.push_back(boxOf(box));
+                }
+                break;
+            }
+        }
+    }
     return rects;
 }
 

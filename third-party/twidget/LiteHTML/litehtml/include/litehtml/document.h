@@ -219,6 +219,7 @@ namespace litehtml
         // Telegram (VENDOR.md edit 21): the style-byte budget. Charged while an author or user sheet is applied.
         size_t                                  m_style_bytes    = 0;
         bool                                    m_style_limited  = false;
+        uint32_t                                m_style_budget_epoch = 0; // Telegram (VENDOR.md edit 60)
         bool                                    m_style_charging = false;
         int                                     m_style_sheet    = 0;
         mutable long long                       m_style_rule_bytes = -1; // the payload of the largest value of each property in the author and user sheets
@@ -244,7 +245,9 @@ namespace litehtml
         // counts what a fresh build would; the count of the text pieces they hold.
         std::vector<std::shared_ptr<element>>   m_patch_hold;
         int                                     m_patch_released = 0;
+        // pseudo_content_possible (bit 1) and part_content_possible (bit 2); -1 until computed.
         mutable int                             m_pseudo_content = -1;
+        uint64_t                                m_predicate_steps = 0; // Telegram (VENDOR.md edit 21)
         uint64_t                                m_attribute_rematches = 0;
         // Telegram (VENDOR.md edit 18): the subtrees insert_subtree and replace_children linked in the session, which
         // commit_patch styles as update_structure styles a fresh subtree.
@@ -512,13 +515,17 @@ namespace litehtml
         // document: judged from the selectors as litehtml parsed them in the master, author and host sheets (a
         // pseudo-element in the rightmost compound plus a `content` declaration; a rule naming a tag counts only when the
         // document has an element with it). Matching an element again makes its pseudo-element content again, and a
-        // fresh build makes all of it in document order with the old of each alive beside the new, so near the text-piece
-        // cap a patch and a rebuild cut at different words: while this is true no patch is made (can_replace_text and
-        // can_set_element_attributes refuse). Computed on the first query after a finalize or a commit_patch (a patch can
-        // add elements: a form control makes its lh-* parts again), so it follows the tree as it is. The walk of the
-        // tree is O(elements); a caller that charges its work pays for it (WidgetRuntime charges the build's element
-        // count before asking).
+        // build makes all of it after the text, in document order, so at the text-piece cap a patch and a rebuild cut at
+        // different words: while this is true can_replace_text and can_set_element_attributes refuse once a cap has been
+        // reached, and a patch that reaches one posts the limit (the caller rebuilds). Computed on the first query after a
+        // finalize or a commit_patch (a patch can add elements: a form control makes its lh-* parts again), so it follows
+        // the tree as it is. The walk of the tree is O(elements); a caller that charges its work pays for it
+        // (WidgetRuntime charges the build's element count before asking).
         bool pseudo_content_possible() const;
+        // Telegram (VENDOR.md edit 17): whether such a rule could match a form control's lh-* parts (an lh-* or a `*`
+        // subject, with an input, select or textarea in the document). A build counts the parts' content beyond what it
+        // keeps, so near the cap it cuts where a patch does not: while this is true no patch is made at all.
+        bool part_content_possible() const;
         // Telegram (VENDOR.md edit 19, W Ruling E28): true when the sheets hold any ::before/::after rule (content or
         // not) and the pseudo-element cap is, or with `extra` more elements could be, reached; a patch refuses then, as a
         // rebuild hands the remaining budget out in document order. Coarse on purpose.
@@ -528,7 +535,26 @@ namespace litehtml
         // the container is told sanitizer_limit("style-bytes") once.
         static constexpr size_t max_style_bytes = 16u * 1024u * 1024u;
         size_t style_bytes_charged() const { return m_style_bytes; }
+        // Telegram (VENDOR.md edit 60): counts the budget's restarts from zero (refresh_all_styles), which no charge made
+        // before one survives.
+        uint32_t style_budget_epoch() const { return m_style_budget_epoch; }
+        // Telegram (VENDOR.md edit 60): charges a list item's inherited bullet URL, up to half the budget (the declarations
+        // keep the rest); false, charging nothing and latching nothing, past it or once the budget was passed.
+        bool   style_charge_bullet(size_t bytes, size_t& charged)
+        {
+            charged = 0;
+            if(m_style_limited || bytes > max_style_bytes / 2 || m_style_bytes + bytes > max_style_bytes / 2)
+                return false;
+            m_style_bytes += bytes;
+            charged = bytes;
+            return true;
+        }
         bool   style_bytes_limited() const { return m_style_limited; }
+        // Telegram (VENDOR.md edit 21): the elements can_set_element_attributes has visited so far (its subtree bound).
+        uint64_t predicate_steps() const { return m_predicate_steps; }
+        // Telegram (VENDOR.md edit 17): whether the text-piece cap and the pseudo-element cap have been reached.
+        bool   text_limited() const { return m_text_limited; }
+        bool   pseudo_limited() const { return m_pseudo_limited; }
         bool   style_charging() const { return m_style_charging; }
         void   set_style_charging(bool on) { m_style_charging = on; }
         // Charges `st` when an author or user sheet is being applied (answers true, charging nothing, otherwise); answers
@@ -721,7 +747,11 @@ namespace litehtml
                                      const std::unordered_set<const element*>& background_only = {});
         bool     retag_allowed(const std::shared_ptr<element>& el, std::string name, bool svg, string_map& attrs,
                                bool blocked);
-        bool     apply_retag(const std::shared_ptr<element>& el, const string_map& attrs, bool check, int* region = nullptr);
+        // Telegram (VENDOR.md edit 63): `geometry` lets a change of a box's geometry keep the tree too, for a caller that
+        // lays the document out again (set_element_attributes); the template path reuses the last layout when the tree
+        // is kept, so it does not.
+        bool     apply_retag(const std::shared_ptr<element>& el, const string_map& attrs, bool check, int* region = nullptr,
+                             bool geometry = false);
         void     forget_positions();
         bool     class_change_allowed(const html_hole& hole, const std::string& value, string_map& attrs);
         bool     retext_in_place(const std::vector<std::shared_ptr<element>>& current, const char* text,

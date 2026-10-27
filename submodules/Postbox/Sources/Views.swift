@@ -166,8 +166,9 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(count)
         case let .localMessageTag(tag):
             hasher.combine(tag)
-        case .messages:
+        case let .messages(ids):
             hasher.combine(10)
+            hasher.combine(ids)
         case .additionalChatListItems:
             hasher.combine(11)
         case let .cachedItem(id):

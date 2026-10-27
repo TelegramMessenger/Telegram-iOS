@@ -1232,7 +1232,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                 }
             }
             
-            let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: referenceView))
+            let source: ContextContentSource = .reference(BrowserReferenceContentSource(controller: controller, sourceView: BrowserNavigationBarComponent.menuSourceView(itemView: referenceView)))
             
             let items: Signal<ContextController.Items, NoError> = combineLatest(
                 queue: Queue.mainQueue(),

@@ -1,4 +1,6 @@
 #include <opus/opus_types.h>
+#include "../opusfile/opusfile.h"
+#import <CommonCrypto/CommonDigest.h>
 #include <ogg/ogg.h>
 
 #import "TGDataItem.h"
@@ -108,6 +110,12 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     int comment_padding;
     int serialno;
     opus_int32 lookahead;
+    opus_int16 _pcmBuffer[960];
+    int _pcmCount;
+    NSData *_pendingPacket;
+    TGDataItem *_appendTarget;
+    bool _finished;
+    bool _failed;
 }
 
 @property (nonatomic) ogg_sync_state syncState;
@@ -157,8 +165,11 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
 
 - (bool)beginWithDataItem:(TGDataItem *)dataItem
 {
+    if (dataItem == nil || _encoder != NULL) {
+        return false;
+    }
     _dataItem = dataItem;
-    
+
     inopt.channels = 1;
     inopt.rate = coding_rate=rate;
     inopt.gain = 0;
@@ -221,6 +232,7 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     
     min_bytes = max_frame_bytes = (1275 * 3 + 7) * header.nb_streams;
     _packet = malloc(max_frame_bytes);
+    if (_packet == NULL) { return false; }
     
     result = opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
     if (result != OPUS_OK)
@@ -345,286 +357,129 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     return true;
 }
 
-- (bool)parseExistingOpusFile:(NSData *)data
-{
-    ogg_sync_init(&_syncState);
-    
-    char *buffer = ogg_sync_buffer(&_syncState, (long)data.length);
-    memcpy(buffer, data.bytes, data.length);
-    ogg_sync_wrote(&_syncState, (long)data.length);
-    
-    ogg_stream_state tempStream;
-    ogg_page page;
-    ogg_packet packet;
-    bool headerParsed = false;
-    bool foundStream = false;
-    ogg_int64_t finalGranulePos = 0;
-    
-    while (ogg_sync_pageout(&_syncState, &page) == 1) {
-        if (!foundStream) {
-            serialno = ogg_page_serialno(&page);
-            if (ogg_stream_init(&tempStream, serialno) != 0) {
-                ogg_sync_clear(&_syncState);
-                return false;
-            }
-            foundStream = true;
-        }
-        
-        if (ogg_page_serialno(&page) == serialno) {
-            ogg_stream_pagein(&tempStream, &page);
-            
-            if (ogg_page_granulepos(&page) != -1) {
-                finalGranulePos = ogg_page_granulepos(&page);
-            }
-            
-            while (ogg_stream_packetout(&tempStream, &packet) == 1) {
-                if (!headerParsed && packet.packetno == 0) {
-                    if (![self parseOpusHeader:packet.packet length:packet.bytes]) {
-                        ogg_stream_clear(&tempStream);
-                        ogg_sync_clear(&_syncState);
-                        return false;
-                    }
-                    headerParsed = true;
-                }
-                
-                _packetId = (ogg_int32_t)packet.packetno;
-                if (packet.granulepos != -1) {
-                    enc_granulepos = packet.granulepos;
-                    last_granulepos = packet.granulepos;
-                    finalGranulePos = packet.granulepos;
-                }
-            }
-        }
-    }
-    
-    if (finalGranulePos > header.preskip) {
-         opus_int64 samples = finalGranulePos - header.preskip;
-         total_samples = (samples * rate) / 48000;
-     } else {
-         total_samples = 0;
-     }
-    
-    ogg_stream_clear(&tempStream);
-    ogg_sync_clear(&_syncState);
-    
-    if (!headerParsed) {
-        return false;
-    }
-    
-    return true;
-}
-
-- (bool)parseOpusHeader:(unsigned char *)data length:(long)length
-{
-    if (length < 19) {
-        NSLog(@"Opus header too short");
-        return false;
-    }
-    
-    if (memcmp(data, "OpusHead", 8) != 0) {
-        NSLog(@"Invalid Opus header signature");
-        return false;
-    }
-    
-    header.channels = data[9];
-    header.preskip = data[10] | (data[11] << 8);
-    header.input_sample_rate = data[12] | (data[13] << 8) | (data[14] << 16) | (data[15] << 24);
-    header.gain = (signed short)(data[16] | (data[17] << 8));
-    header.channel_mapping = data[18];
-    
-    if (header.channels == 0) {
-        return false;
-    }
-    
-    rate = header.input_sample_rate;
-    coding_rate = rate;
-    
-    if (rate > 24000)
-        coding_rate = 48000;
-    else if (rate > 16000)
-        coding_rate = 24000;
-    else if (rate > 12000)
-        coding_rate = 16000;
-    else if (rate > 8000)
-        coding_rate = 12000;
-    else
-        coding_rate = 8000;
-    
-    header.nb_streams = 1;
-    
-    return true;
-}
-
-- (bool)initializeEncoderForAppend
-{
-    bytes_written = _dataItem.data.length;
-    
-    inopt.channels = header.channels;
-    inopt.rate = rate;
-    inopt.gain = header.gain;
-    inopt.samplesize = 16;
-    inopt.endianness = 0;
-    inopt.rawmode = 0;
-    inopt.ignorelength = 0;
-    inopt.copy_comments = 0;
-    
-    int result = OPUS_OK;
-    _encoder = opus_encoder_create(coding_rate, header.channels, OPUS_APPLICATION_AUDIO, &result);
-    if (result != OPUS_OK) {
-        NSLog(@"Error cannot create encoder: %s", opus_strerror(result));
-        return false;
-    }
-    
-    bitrate = 30 * 1024;
-    frame_size = 960;
-    
-    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
-    
-#ifdef OPUS_SET_LSB_DEPTH
-    opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(16));
-#endif
-    
-    opus_encoder_ctl(_encoder, OPUS_GET_LOOKAHEAD(&lookahead));
-    
-    if (ogg_stream_init(&os, serialno) == -1) {
-        NSLog(@"Error: stream init failed");
-        return false;
-    }
-    
-    max_frame_bytes = (1275 * 3 + 7) * header.nb_streams;
-    _packet = malloc(max_frame_bytes);
-        
-    return true;
-}
-
-
 - (bool)beginAppendWithDataItem:(TGDataItem *)dataItem
 {
-    if (dataItem.data.length == 0) {
-        return [self beginWithDataItem:dataItem];
-    }
-    
-    _dataItem = dataItem;
-    
-    if (![self parseExistingOpusFile:_dataItem.data]) {
+    if (dataItem == nil || _encoder != NULL) {
         return false;
     }
-    
-    return [self initializeEncoderForAppend];
+    NSData *source = [dataItem.data copy];
+    if (source.length == 0) {
+        return [self beginWithDataItem:dataItem];
+    }
+    int error = 0;
+    OggOpusFile *reader = op_open_memory(source.bytes, source.length, &error);
+    if (reader == NULL || error != 0) {
+        if (reader != NULL) { op_free(reader); }
+        return false;
+    }
+    for (int i = 0; i < op_link_count(reader); i++) {
+        if (op_channel_count(reader, i) != 1) {
+            op_free(reader);
+            return false;
+        }
+    }
+    TGDataItem *prepared = [[TGDataItem alloc] init];
+    if (![self beginWithDataItem:prepared]) {
+        op_free(reader);
+        return false;
+    }
+    opus_int16 samples[960];
+    bool succeeded = true;
+    while (true) {
+        int count = op_read(reader, samples, 960, NULL);
+        if (count == 0) { break; }
+        if (count < 0 || ![self writeFrame:(uint8_t *)samples frameByteCount:count * sizeof(opus_int16)]) {
+            succeeded = false;
+            break;
+        }
+    }
+    op_free(reader);
+    if (!succeeded || ![self submitPendingPacket:false granule:enc_granulepos] || ![self flushPages]) {
+        _failed = true;
+        return false;
+    }
+    _appendTarget = dataItem;
+    return true;
+}
+
+- (bool)submitPendingPacket:(bool)finished granule:(ogg_int64_t)granule
+{
+    if (_pendingPacket == nil) { return true; }
+    op.packet = (unsigned char *)_pendingPacket.bytes;
+    op.bytes = _pendingPacket.length;
+    op.b_o_s = 0;
+    op.e_o_s = finished;
+    op.granulepos = granule;
+    op.packetno = 2 + ++_packetId;
+    if (ogg_stream_packetin(&os, &op) != 0) {
+        return false;
+    }
+    _pendingPacket = nil;
+    if (granule - last_granulepos >= max_ogg_delay) {
+        return [self flushPages];
+    }
+    while (ogg_stream_pageout_fill(&os, &og, 255 * 255)) {
+        int written = writeOggPage(&og, _dataItem);
+        if (written != og.header_len + og.body_len) { return false; }
+        bytes_written += written;
+        pages_out++;
+        last_granulepos = ogg_page_granulepos(&og);
+    }
+    return true;
+}
+
+- (bool)encodeBufferedFrame
+{
+    if (![self submitPendingPacket:false granule:enc_granulepos]) { return false; }
+    int count = opus_encode(_encoder, _pcmBuffer, frame_size, _packet, max_frame_bytes);
+    if (count < 0) { return false; }
+    _pendingPacket = [NSData dataWithBytes:_packet length:count];
+    nb_encoded += frame_size;
+    enc_granulepos += frame_size * 48000 / coding_rate;
+    total_bytes += count;
+    _pcmCount = 0;
+    return true;
 }
 
 - (bool)writeFrame:(uint8_t *)framePcmBytes frameByteCount:(NSUInteger)frameByteCount
 {
-    // Main encoding loop (one frame per iteration)
-    nb_samples = -1;
-
-    int cur_frame_size = frame_size;
-    _packetId++;
-    
-    if (nb_samples < 0)
-    {
-        nb_samples = (opus_int32)(frameByteCount / 2);
-        total_samples += nb_samples;
-        if (nb_samples < frame_size)
-            op.e_o_s = 1;
-        else
-            op.e_o_s = 0;
+    if (_encoder == NULL || _packet == NULL || _failed || (framePcmBytes == NULL && frameByteCount != 0) || frameByteCount % sizeof(opus_int16) != 0 || frameByteCount > sizeof(_pcmBuffer)) {
+        return false;
     }
-    op.e_o_s |= eos;
-    
-    int nbBytes = 0;
-    
-    if (nb_samples != 0)
-    {
-        uint8_t *paddedFrameBytes = framePcmBytes;
-        bool freePaddedFrameBytes = false;
-        
-        if (nb_samples < cur_frame_size)
-        {
-            paddedFrameBytes = malloc(cur_frame_size * 2);
-            freePaddedFrameBytes = true;
-            
-            memcpy(paddedFrameBytes, framePcmBytes, frameByteCount);
-            memset(paddedFrameBytes + nb_samples * 2, 0, cur_frame_size * 2 - nb_samples * 2);
+    if (_finished) { return framePcmBytes == NULL && frameByteCount == 0; }
+    if (_appendTarget != nil) {
+        if (![_appendTarget replaceData:_dataItem.data]) { return false; }
+        _dataItem = _appendTarget;
+        _appendTarget = nil;
+    }
+    if (framePcmBytes == NULL) {
+        ogg_int64_t finalGranule = total_samples * 48000 / rate + header.preskip;
+        while (enc_granulepos < finalGranule || _pcmCount > 0) {
+            memset(_pcmBuffer + _pcmCount, 0, (frame_size - _pcmCount) * sizeof(opus_int16));
+            if (![self encodeBufferedFrame]) { _failed = true; return false; }
         }
-        
-        // Encode current frame
-        nbBytes = opus_encode(_encoder, (opus_int16 *)paddedFrameBytes, cur_frame_size, _packet, max_frame_bytes / 10);
-        if (freePaddedFrameBytes)
-        {
-            free(paddedFrameBytes);
-            paddedFrameBytes = NULL;
-        }
-        
-        if (nbBytes < 0)
-        {
-            NSLog(@"Encoding failed: %s. Aborting.", opus_strerror(nbBytes));
+        if (![self submitPendingPacket:true granule:finalGranule] || ![self flushPages]) {
+            _failed = true;
             return false;
         }
-        
-        nb_encoded += cur_frame_size;
-        enc_granulepos += cur_frame_size * 48000 / coding_rate;
-        total_bytes += nbBytes;
-        size_segments = (nbBytes + 255) / 255;
-        peak_bytes = MAX(nbBytes, peak_bytes);
-        min_bytes = MIN(nbBytes, min_bytes);
+        _finished = true;
+        return true;
     }
-    
-    // Flush early if adding this packet would make us end up with a continued page which we wouldn't have otherwise
-    while ((((size_segments<=255)&&(last_segments+size_segments>255)) ||
-            (enc_granulepos-last_granulepos>max_ogg_delay)) &&
-           ogg_stream_flush_fill(&os, &og, 255 * 255))
-    {
-        if (ogg_page_packets(&og) != 0)
-            last_granulepos = ogg_page_granulepos(&og);
-        
-        last_segments -= og.header[26];
-        int writtenPageBytes = writeOggPage(&og, _dataItem);
-        if (writtenPageBytes != og.header_len + og.body_len)
-        {
-            NSLog(@"Error: failed writing data to output stream");
+    int count = (int)(frameByteCount / sizeof(opus_int16));
+    if (total_samples > INT64_MAX / 48000 - count) { return false; }
+    total_samples += count;
+    opus_int16 *samples = (opus_int16 *)framePcmBytes;
+    while (count > 0) {
+        int copied = MIN(count, frame_size - _pcmCount);
+        memcpy(_pcmBuffer + _pcmCount, samples, copied * sizeof(opus_int16));
+        _pcmCount += copied;
+        samples += copied;
+        count -= copied;
+        if (_pcmCount == frame_size && ![self encodeBufferedFrame]) {
+            _failed = true;
             return false;
         }
-        bytes_written += writtenPageBytes;
-        pages_out++;
     }
-    
-    if (framePcmBytes != NULL) {
-        op.packet = (unsigned char *)_packet;
-        op.bytes = nbBytes;
-        op.b_o_s = 0;
-        op.granulepos = enc_granulepos;
-    
-        if (op.e_o_s)
-        {
-            /* We compute the final GP as ceil(len*48k/input_rate). When a resampling
-             decoder does the matching floor(len*input/48k) conversion the length will
-             be exactly the same as the input.
-             */
-            op.granulepos = ((total_samples * 48000 + rate - 1) / rate) + header.preskip;
-        }
-        op.packetno = 2 + _packetId;
-        ogg_stream_packetin(&os, &op);
-        last_segments += size_segments;
-    }
-    
-    // If the stream is over or we're sure that the delayed flush will fire, go ahead and flush now to avoid adding delay
-    while ((op.e_o_s || (enc_granulepos + (frame_size * 48000 / coding_rate) - last_granulepos > max_ogg_delay) ||
-            (last_segments >= 255)) ? ogg_stream_flush_fill(&os, &og, 255 * 255) : ogg_stream_pageout_fill(&os, &og, 255 * 255))
-    {
-        if (ogg_page_packets(&og) != 0)
-            last_granulepos = ogg_page_granulepos(&og);
-        last_segments -= og.header[26];
-        int writtenPageBytes = writeOggPage(&og, _dataItem);
-        if (writtenPageBytes != og.header_len + og.body_len)
-        {
-            NSLog(@"Error: failed writing data to output stream");
-            return false;
-        }
-        bytes_written += writtenPageBytes;
-        pages_out++;
-    }
-    
     return true;
 }
 
@@ -640,16 +495,20 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
 
 - (NSDictionary *)pause
 {
-    [self flushPages];
+    if (_encoder == NULL || _failed || ![self submitPendingPacket:false granule:enc_granulepos] || ![self flushPages]) {
+        return @{};
+    }
     return [self saveState];
 }
 
 - (bool)resumeWithDataItem:(TGDataItem *)dataItem encoderState:(NSDictionary *)state
 {
+    if (state[@"encoderData"] == nil && state[@"opusVersion"] == nil && [state[@"bytes_written"] isKindOfClass:[NSNumber class]] &&
+        [state[@"bytes_written"] unsignedLongLongValue] == dataItem.data.length && dataItem.data.length > 0) {
+        return [self beginAppendWithDataItem:dataItem];
+    }
     if (![self restoreState:state withDataItem:dataItem])
         return false;
-    
-    _packetId++;
     
     return true;
 }
@@ -661,7 +520,6 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
         if (ogg_page_packets(&og) != 0)
             last_granulepos = ogg_page_granulepos(&og);
         
-        last_segments -= og.header[26];
         int writtenPageBytes = writeOggPage(&og, _dataItem);
         if (writtenPageBytes != og.header_len + og.body_len)
         {
@@ -705,69 +563,131 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
         @"preskip": @(header.preskip)
     };
     [state setObject:headerDict forKey:@"header"];
+    NSData *encoderData = [NSData dataWithBytes:_encoder length:opus_encoder_get_size(header.channels)];
+    state[@"encoderData"] = [encoderData base64EncodedStringWithOptions:0];
+    state[@"encoderDigest"] = [self digest:encoderData];
+    state[@"opusVersion"] = [NSString stringWithUTF8String:opus_get_version_string()];
+    state[@"wordSize"] = @(sizeof(void *));
+    state[@"architecture"] = [self stateArchitecture];
+    state[@"pageno"] = @(os.pageno);
+    state[@"bos"] = @(os.b_o_s);
+    state[@"pcmData"] = [[NSData dataWithBytes:_pcmBuffer length:_pcmCount * sizeof(opus_int16)] base64EncodedStringWithOptions:0];
+    state[@"finished"] = @(_finished);
+    state[@"dataDigest"] = [self digest:_appendTarget != nil ? _appendTarget.data : _dataItem.data];
+    if (_appendTarget != nil) {
+        state[@"pendingReplacement"] = [_dataItem.data base64EncodedStringWithOptions:0];
+        state[@"pendingReplacementDigest"] = [self digest:_dataItem.data];
+    }
     
     return state;
 }
 
+- (NSString *)stateArchitecture
+{
+#if defined(__arm64__)
+    return @"arm64";
+#elif defined(__x86_64__)
+    return @"x86_64";
+#else
+    return @"unsupported";
+#endif
+}
+
+- (NSString *)digest:(NSData *)data
+{
+    CC_SHA256_CTX context;
+    CC_SHA256_Init(&context);
+    const uint8_t *bytes = data.bytes;
+    NSUInteger remaining = data.length;
+    while (remaining > 0) {
+        CC_LONG count = (CC_LONG)MIN(remaining, UINT32_MAX);
+        CC_SHA256_Update(&context, bytes, count);
+        bytes += count;
+        remaining -= count;
+    }
+    uint8_t digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256_Final(digest, &context);
+    return [[NSData dataWithBytes:digest length:sizeof(digest)] base64EncodedStringWithOptions:0];
+}
+
 - (bool)restoreState:(NSDictionary *)state withDataItem:(TGDataItem *)dataItem
 {
-    if (state == nil || dataItem == nil)
+    if (state == nil || dataItem == nil || ![state[@"encoderData"] isKindOfClass:[NSString class]] || ![state[@"pcmData"] isKindOfClass:[NSString class]]) { return false; }
+    NSDictionary *headerDict = state[@"header"];
+    if (![headerDict isKindOfClass:[NSDictionary class]]) { return false; }
+    for (NSString *key in @[@"rate", @"coding_rate", @"frame_size", @"wordSize", @"finished", @"total_samples", @"enc_granulepos", @"last_granulepos", @"nb_encoded", @"packetId", @"pageno", @"bos", @"bytes_written", @"pages_out", @"total_bytes", @"serialno", @"bitrate", @"with_cvbr", @"lookahead"]) {
+        if (![state[key] isKindOfClass:[NSNumber class]]) { return false; }
+    }
+    for (NSString *key in @[@"channels", @"channel_mapping", @"input_sample_rate", @"gain", @"nb_streams", @"preskip"]) {
+        if (![headerDict[key] isKindOfClass:[NSNumber class]]) { return false; }
+    }
+    NSData *encoderData = [[NSData alloc] initWithBase64EncodedString:state[@"encoderData"] options:0];
+    NSData *pcmData = [[NSData alloc] initWithBase64EncodedString:state[@"pcmData"] options:0];
+    if ([headerDict[@"channels"] intValue] != 1 || [state[@"rate"] intValue] != 48000 || [state[@"coding_rate"] intValue] != 48000 || [state[@"frame_size"] intValue] != 960 ||
+        encoderData.length != opus_encoder_get_size(1) || pcmData == nil || pcmData.length >= sizeof(_pcmBuffer) || pcmData.length % sizeof(opus_int16) != 0 ||
+        ![state[@"encoderDigest"] isEqual:[self digest:encoderData]] || ![state[@"dataDigest"] isEqual:[self digest:dataItem.data]] ||
+        ![state[@"opusVersion"] isEqual:[NSString stringWithUTF8String:opus_get_version_string()]] || [state[@"wordSize"] unsignedIntegerValue] != sizeof(void *) || [state[@"finished"] boolValue] ||
+        ![state[@"architecture"] isEqual:[self stateArchitecture]] || [[self stateArchitecture] isEqual:@"unsupported"] ||
+        [state[@"total_samples"] longLongValue] < 0 || [state[@"total_samples"] longLongValue] > INT64_MAX / 48000 || [state[@"enc_granulepos"] longLongValue] < 0) {
         return false;
-    
+    }
+    if ([state[@"nb_encoded"] longLongValue] != [state[@"enc_granulepos"] longLongValue] ||
+        [state[@"nb_encoded"] longLongValue] != [state[@"total_samples"] longLongValue] - (long long)(pcmData.length / sizeof(opus_int16)) ||
+        [state[@"nb_encoded"] longLongValue] % 960 != 0 || [state[@"packetId"] longLongValue] != [state[@"nb_encoded"] longLongValue] / 960 - 1 ||
+        [state[@"last_granulepos"] longLongValue] < 0 || [state[@"last_granulepos"] longLongValue] > [state[@"enc_granulepos"] longLongValue] ||
+        [state[@"pageno"] longLongValue] < 2 || [state[@"pageno"] longLongValue] > UINT32_MAX || [state[@"bos"] intValue] != 1 ||
+        [headerDict[@"channel_mapping"] intValue] != 0 || [headerDict[@"input_sample_rate"] intValue] != 48000 || [headerDict[@"nb_streams"] intValue] != 1 ||
+        [headerDict[@"preskip"] intValue] < 0 || [headerDict[@"preskip"] intValue] > UINT16_MAX) {
+        return false;
+    }
+    NSData *replacement = nil;
+    if (state[@"pendingReplacement"] != nil) {
+        if (![state[@"pendingReplacement"] isKindOfClass:[NSString class]]) { return false; }
+        replacement = [[NSData alloc] initWithBase64EncodedString:state[@"pendingReplacement"] options:0];
+        if (replacement == nil || ![state[@"pendingReplacementDigest"] isEqual:[self digest:replacement]]) { return false; }
+    }
     [self cleanup];
-    
-    _dataItem = dataItem;
-    
+    _pendingPacket = nil;
+    _appendTarget = replacement != nil ? dataItem : nil;
+    _dataItem = replacement != nil ? [[TGDataItem alloc] initWithData:replacement] : dataItem;
+    _finished = false;
+    _failed = false;
     _packetId = [state[@"packetId"] intValue];
     enc_granulepos = [state[@"enc_granulepos"] longLongValue];
     last_granulepos = [state[@"last_granulepos"] longLongValue];
-    last_segments = [state[@"last_segments"] intValue];
+    last_segments = 0;
     nb_encoded = [state[@"nb_encoded"] longLongValue];
     bytes_written = [state[@"bytes_written"] longLongValue];
     pages_out = [state[@"pages_out"] longLongValue];
     total_bytes = [state[@"total_bytes"] longLongValue];
     total_samples = [state[@"total_samples"] longLongValue];
     serialno = [state[@"serialno"] intValue];
-    
-    rate = [state[@"rate"] intValue];
-    coding_rate = [state[@"coding_rate"] intValue];
-    frame_size = [state[@"frame_size"] intValue];
+    rate = 48000;
+    coding_rate = 48000;
+    frame_size = 960;
     bitrate = [state[@"bitrate"] intValue];
     with_cvbr = [state[@"with_cvbr"] intValue];
     lookahead = [state[@"lookahead"] intValue];
-    
-    NSDictionary *headerDict = state[@"header"];
-    header.channels = [headerDict[@"channels"] intValue];
-    header.channel_mapping = [headerDict[@"channel_mapping"] intValue];
-    header.input_sample_rate = [headerDict[@"input_sample_rate"] intValue];
+    header.channels = 1;
+    header.channel_mapping = 0;
+    header.input_sample_rate = 48000;
     header.gain = [headerDict[@"gain"] intValue];
-    header.nb_streams = [headerDict[@"nb_streams"] intValue];
+    header.nb_streams = 1;
     header.preskip = [headerDict[@"preskip"] intValue];
-    
     int result = OPUS_OK;
-    _encoder = opus_encoder_create(coding_rate, header.channels, OPUS_APPLICATION_AUDIO, &result);
-    if (result != OPUS_OK)
-    {
-        NSLog(@"Error cannot create encoder: %s", opus_strerror(result));
-        return false;
-    }
-    
-    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(bitrate));
-    
-#ifdef OPUS_SET_LSB_DEPTH
-    opus_encoder_ctl(_encoder, OPUS_SET_LSB_DEPTH(16));
-#endif
-    
-    if (ogg_stream_init(&os, serialno) == -1)
-    {
-        NSLog(@"Error: stream init failed");
-        return false;
-    }
-    
-    min_bytes = max_frame_bytes = (1275 * 3 + 7) * header.nb_streams;
+    _encoder = opus_encoder_create(coding_rate, 1, OPUS_APPLICATION_AUDIO, &result);
+    if (_encoder == NULL || result != OPUS_OK) { return false; }
+    memcpy(_encoder, encoderData.bytes, encoderData.length);
+    if (ogg_stream_init(&os, serialno) != 0) { return false; }
+    os.pageno = [state[@"pageno"] longLongValue];
+    os.b_o_s = [state[@"bos"] intValue];
+    os.packetno = 3 + _packetId;
+    os.granulepos = enc_granulepos;
+    _pcmCount = (int)(pcmData.length / sizeof(opus_int16));
+    memcpy(_pcmBuffer, pcmData.bytes, pcmData.length);
+    min_bytes = max_frame_bytes = (1275 * 3 + 7);
     _packet = malloc(max_frame_bytes);
-    
-    return true;
+    return _packet != NULL;
 }
 
 @end

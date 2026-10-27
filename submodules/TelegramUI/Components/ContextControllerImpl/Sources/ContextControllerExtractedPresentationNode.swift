@@ -12,6 +12,7 @@ import AccountContext
 import ContextUI
 import ComponentFlow
 import ComponentDisplayAdapters
+import GlassBackgroundComponent
 
 private extension ContextControllerTakeViewInfo.ContainingItem {
     var contentRect: CGRect {
@@ -993,6 +994,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     var sourcePath = transitionInfo.sourcePath ?? ContextReferenceContentNode.sourcePath(for: referenceView)
                     if sourcePath == nil, let extractable = referenceView as? ContextExtractableContainer {
                         sourcePath = UIBezierPath(roundedRect: sourceRect, cornerRadius: extractable.normalState.cornerRadius)
+                    } else if sourcePath == nil, let glass = referenceView as? GlassBackgroundView, let outlinePath = glass.outlinePath {
+                        sourcePath = outlinePath
                     } else if sourcePath == nil, let mask = referenceView.layer.mask as? CAShapeLayer, let path = mask.path, CATransform3DIsAffine(mask.transform) {
                         var transform = CGAffineTransform(translationX: -mask.bounds.minX - mask.bounds.width * mask.anchorPoint.x, y: -mask.bounds.minY - mask.bounds.height * mask.anchorPoint.y)
                         transform = transform.concatenating(mask.affineTransform())

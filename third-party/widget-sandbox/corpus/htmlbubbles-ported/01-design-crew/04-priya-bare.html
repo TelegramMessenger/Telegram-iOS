@@ -5,6 +5,7 @@
   ported: classic widget, see corpus/htmlbubbles-ported/README.md
 -->
 <style>
+  [hidden] { display: none !important; }
   :root { color-scheme: light dark;
     --fg: light-dark(#000, #fff); --muted: light-dark(#6e6e73, #98989d);
     --card: light-dark(#fff, #1c1c1e); --border: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.14));
@@ -137,8 +138,10 @@ function tween(target, props, dur = 300, easing = ease.outCubic) {
 const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a.toFixed(3)})`; };
 const root = document.getElementById('root');
 let fxAlt = false;
-function fx(kind) {
-  root.className = 'card spr fx fx-' + kind + (fxAlt ? '' : ' alt');
+function fx(kind, target = document.getElementById('list')) {
+  for (const c of [...target.classList]) if (c === 'fx' || c === 'alt' || c.startsWith('fx-')) target.classList.remove(c);
+  target.classList.add('fx', 'fx-' + kind);
+  if (!fxAlt) target.classList.add('alt');
   fxAlt = !fxAlt;
 }
 
@@ -258,12 +261,11 @@ function cycle(id) {
   flashAlt = !flashAlt;
   tween(meter, { v: burned() }, 700, ease.outCubic);
   const now = burned() === TOTAL;
-  if (now !== was) fx(now ? 'pop' : 'fade');
+  if (now && !was) fx('pop', $('goal'));
   if (!match(t)) {
     sticky.add(t.id);
     clearTimeout(sweep);
     sweep = setTimeout(() => {
-      if (TASKS.some(x => sticky.has(x.id) && !match(x))) fx('slide-up');
       sticky.clear();
       drawRows();
     }, 900);
@@ -272,7 +274,6 @@ function cycle(id) {
 }
 function setFilter(value) {
   if (value === filter) return;
-  fx(FILTERS.indexOf(value) > FILTERS.indexOf(filter) ? 'slide-left' : 'slide-right');
   filter = value;
   sticky.clear(); clearTimeout(sweep);
   drawRows();
@@ -283,7 +284,6 @@ function stepDay(delta) {
   drawRows();
 }
 function reset() {
-  fx('fade');
   TASKS.forEach((t, i) => { t.s = START[i]; });
   sticky.clear(); clearTimeout(sweep);
   tween(meter, { v: burned() }, 700, ease.outCubic);

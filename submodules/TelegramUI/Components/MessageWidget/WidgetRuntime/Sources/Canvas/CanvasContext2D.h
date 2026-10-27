@@ -240,6 +240,9 @@ private:
 struct CanvasImageSource {
     std::shared_ptr<const HostImage> image;
     double width = 0, height = 0;
+    /// False for an image that is not fully decodable (no src, or pending until its load or error fires): HTML's
+    /// "bad" usability, for which drawImage draws nothing and createPattern returns null. A canvas is always usable.
+    bool usable = true;
 };
 CanvasImageSource canvasImageSource(JSContext* ctx, const Value& value, const char* member);
 

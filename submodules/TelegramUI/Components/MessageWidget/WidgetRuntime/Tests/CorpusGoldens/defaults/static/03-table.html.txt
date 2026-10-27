@@ -1,0 +1,105 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><title>Timetable</title>
+<style></style>
+</head><body><h3>Trains to the airport</h3>
+<table>
+  <caption>Today, from Central station</caption>
+  <thead><tr><th>Departs</th><th>Platform</th><th>Minutes</th></tr></thead>
+  <tbody>
+    <tr><td>14:05</td><td>3</td><td>24</td></tr>
+    <tr><td>14:20</td><td>5</td><td>31</td></tr>
+    <tr><td>14:35</td><td>3</td><td>24</td></tr>
+    <tr><td>14:50</td><td>4</td><td>27</td></tr>
+  </tbody>
+</table>
+<p><small>The 14:20 stops everywhere.</small></p>
+</body></html>
+
+== layout
+html 0 0 360 280.71
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 264.71
+    h3 12 8 336 22.5
+    table 12 40.1 214.422 202.76
+      caption 12 40.1 214.422 37.584
+      thead 0 0 0 0
+        tr 0 0 0 0
+          th 12 86.66 56.0094 21.6
+          th 87.2094 86.66 64.0031 21.6
+          th 170.413 86.66 56.0094 21.6
+      tbody 0 0 0 0
+        tr 0 0 0 0
+          td 12 118.86 56.0094 21.6
+          td 87.2094 118.86 64.0031 21.6
+          td 170.413 118.86 56.0094 21.6
+        tr 0 0 0 0
+          td 12 151.06 56.0094 21.6
+          td 87.2094 151.06 64.0031 21.6
+          td 170.413 151.06 56.0094 21.6
+        tr 0 0 0 0
+          td 12 183.26 56.0094 21.6
+          td 87.2094 183.26 64.0031 21.6
+          td 170.413 183.26 56.0094 21.6
+        tr 0 0 0 0
+          td 12 215.46 56.0094 21.6
+          td 87.2094 215.46 64.0031 21.6
+          td 170.413 215.46 56.0094 21.6
+    p 12 252.46 336 20.25
+      small 12 252.46 0 0
+
+== paint
+root 360x280.71 items=42
+  borders bounds=(12,82,66,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,82,66,32) root=0
+  borders bounds=(78,82,83,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(78,82,83,32) root=0
+  borders bounds=(161,82,65,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(161,82,65,32) root=0
+  borders bounds=(12,114,66,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,114,66,32) root=0
+  borders bounds=(78,114,83,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(78,114,83,32) root=0
+  borders bounds=(161,114,65,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(161,114,65,32) root=0
+  borders bounds=(12,146,66,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,146,66,32) root=0
+  borders bounds=(78,146,83,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(78,146,83,32) root=0
+  borders bounds=(161,146,65,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(161,146,65,32) root=0
+  borders bounds=(12,178,66,33) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,178,66,33) root=0
+  borders bounds=(78,178,83,33) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(78,178,83,33) root=0
+  borders bounds=(161,178,65,33) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(161,178,65,33) root=0
+  borders bounds=(12,211,66,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(12,211,66,32) root=0
+  borders bounds=(78,211,83,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(78,211,83,32) root=0
+  borders bounds=(161,211,65,32) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(161,211,65,32) root=0
+  text bounds=(4,3,64,32) pos=(12,11,48,16) color=#000000ff text="Trains" font=f1 glyphs=6 advance=48
+  text bounds=(60,3,32,32) pos=(68,11,16,16) color=#000000ff text="to" font=f1 glyphs=2 advance=16
+  text bounds=(84,3,40,32) pos=(92,11,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(116,3,72,32) pos=(124,11,56,16) color=#000000ff text="airport" font=f1 glyphs=7 advance=56
+  text bounds=(4,33,64,32) pos=(12,41,48,16) color=#707579ff text="Today," font=f2 glyphs=6 advance=48
+  text bounds=(60,33,48,32) pos=(68,41,32,16) color=#707579ff text="from" font=f2 glyphs=4 advance=32
+  text bounds=(100,33,72,32) pos=(108,41,56,16) color=#707579ff text="Central" font=f2 glyphs=7 advance=56
+  text bounds=(4,52,72,32) pos=(12,60,56,16) color=#707579ff text="station" font=f2 glyphs=7 advance=56
+  text bounds=(4,81,72,32) pos=(12,89,56,16) color=#000000ff text="Departs" font=f3 glyphs=7 advance=56
+  text bounds=(79.2094,81,80,32) pos=(87.2094,89,64,16) color=#000000ff text="Platform" font=f3 glyphs=8 advance=64
+  text bounds=(162.422,81,72,32) pos=(170.422,89,56,16) color=#000000ff text="Minutes" font=f3 glyphs=7 advance=56
+  text bounds=(4,113,56,32) pos=(12,121,40,16) color=#000000ff text="14:05" font=f4 glyphs=5 advance=40
+  text bounds=(79.2094,113,24,32) pos=(87.2094,121,8,16) color=#000000ff text="3" font=f4 glyphs=1 advance=8
+  text bounds=(202.422,113,32,32) pos=(210.422,121,16,16) color=#000000ff text="24" font=f4 glyphs=2 advance=16
+  text bounds=(4,145,56,32) pos=(12,153,40,16) color=#000000ff text="14:20" font=f4 glyphs=5 advance=40
+  text bounds=(79.2094,145,24,32) pos=(87.2094,153,8,16) color=#000000ff text="5" font=f4 glyphs=1 advance=8
+  text bounds=(202.422,145,32,32) pos=(210.422,153,16,16) color=#000000ff text="31" font=f4 glyphs=2 advance=16
+  text bounds=(4,177,56,32) pos=(12,185,40,16) color=#000000ff text="14:35" font=f4 glyphs=5 advance=40
+  text bounds=(79.2094,177,24,32) pos=(87.2094,185,8,16) color=#000000ff text="3" font=f4 glyphs=1 advance=8
+  text bounds=(202.422,177,32,32) pos=(210.422,185,16,16) color=#000000ff text="24" font=f4 glyphs=2 advance=16
+  text bounds=(4,209,56,32) pos=(12,217,40,16) color=#000000ff text="14:50" font=f4 glyphs=5 advance=40
+  text bounds=(79.2094,209,24,32) pos=(87.2094,217,8,16) color=#000000ff text="4" font=f4 glyphs=1 advance=8
+  text bounds=(202.422,209,32,32) pos=(210.422,217,16,16) color=#000000ff text="27" font=f4 glyphs=2 advance=16
+  text bounds=(4,246,40,32) pos=(12,254,24,16) color=#000000ff text="The" font=f5 glyphs=3 advance=24
+  text bounds=(36,246,56,32) pos=(44,254,40,16) color=#000000ff text="14:20" font=f5 glyphs=5 advance=40
+  text bounds=(84,246,56,32) pos=(92,254,40,16) color=#000000ff text="stops" font=f5 glyphs=5 advance=40
+  text bounds=(132,246,104,32) pos=(140,254,88,16) color=#000000ff text="everywhere." font=f5 glyphs=11 advance=88
+
+== fonts
+f1 (family="system-ui,sans-serif",size=18,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13.92,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=16,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=12.75,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

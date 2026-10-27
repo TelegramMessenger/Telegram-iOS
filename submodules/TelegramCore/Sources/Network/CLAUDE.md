@@ -37,3 +37,20 @@ None of this shows up as a build error:
   passes its full description, URL included, as short metadata, and a request's metadata keeps every argument (upload
   parts too), so nothing kept for counting may hold it. Error texts must be upper-case server constants (anything else
   becomes `OTHER`) and lose numbers and tokens; request sizes are rounded up to a power of two.
+
+## Media downloads (`FetchV2`)
+
+- **A file's parts come from its highest priority first** (`fetchV2PriorityRanges`, `fetchV2TakeNextPart`,
+  `FetchV2PrioritySelectionTests`). A range asked for at two priorities is only in the higher bucket, and a taken part
+  leaves every bucket, so no byte is fetched twice. A lower bucket of a file waits until the higher ones are empty: the
+  chat preload of a quality file (`.default`) waits behind the player streaming it (`.elevated`), for as long as the
+  player's buffer takes to fill. Parts in flight are never preempted. Across files the order is
+  `MultiplexedRequestManager`'s: `pushPriorityDownload`, then FIFO.
+- **`DownloadThroughputMeter`** (one per `Network`) takes every media part's bytes and engine send-to-receive time
+  (`requestWithAdditionalInfo`; a part without a duration is not recorded) and reports bits over the union of the
+  parts' intervals in the last 120 s, nil below 512 KB. It feeds no telemetry; `TelegramEngine.resources` exposes it
+  for the HLS player's first estimate. In debug builds with `-debugNetworkProfile`, `DebugNetworkShaper` reports a held
+  response's network time as the shaped link's, so the meter measures the simulated network.
+- **A refreshed file reference is not kept across fetches:** each fetch of a file starts from its caller's reference.
+  The refresh log line says "again in this process" when one resource is refreshed twice, the evidence for whether a
+  cache is worth building.

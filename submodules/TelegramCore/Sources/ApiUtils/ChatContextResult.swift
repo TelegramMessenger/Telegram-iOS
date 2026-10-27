@@ -16,6 +16,9 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
     case contact(media: TelegramMediaContact, replyMarkup: ReplyMarkupMessageAttribute?)
     case invoice(media: TelegramMediaInvoice, replyMarkup: ReplyMarkupMessageAttribute?)
     case webpage(text: String, entities: TextEntitiesMessageAttribute?, url: String, previewParameters: WebpagePreviewMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
+    /// A widget result (widget-sandbox v0.2, sdk-v1 §2.16): the widget with the result's state and no flags (a result is
+    /// not a message), and the message's text.
+    case widget(media: TelegramMediaWidget, caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
@@ -31,6 +34,15 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
             self = .invoice(media: decoder.decodeObjectForKey("i") as! TelegramMediaInvoice, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
         case 5:
             self = .webpage(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, url: decoder.decodeStringForKey("url", orElse: ""), previewParameters: decoder.decodeObjectForKey("prp") as? WebpagePreviewMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 6:
+            let caption = decoder.decodeStringForKey("c", orElse: "")
+            let entities = decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute
+            let replyMarkup = decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute
+            if let media = decoder.decodeObjectForKey("w") as? TelegramMediaWidget {
+                self = .widget(media: media, caption: caption, entities: entities, replyMarkup: replyMarkup)
+            } else {
+                self = .auto(caption: caption, entities: entities, replyMarkup: replyMarkup)
+            }
         default:
             self = .auto(caption: "", entities: nil, replyMarkup: nil)
         }
@@ -112,6 +124,20 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
                 encoder.encodeObject(previewParameters, forKey: "prp")
             } else {
                 encoder.encodeNil(forKey: "prp")
+            }
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        case let .widget(media, caption, entities, replyMarkup):
+            encoder.encodeInt32(6, forKey: "_v")
+            encoder.encodeObject(media, forKey: "w")
+            encoder.encodeString(caption, forKey: "c")
+            if let entities = entities {
+                encoder.encodeObject(entities, forKey: "e")
+            } else {
+                encoder.encodeNil(forKey: "e")
             }
             if let replyMarkup = replyMarkup {
                 encoder.encodeObject(replyMarkup, forKey: "m")
@@ -225,6 +251,24 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
                     return false
                 }
                 if lhsPreviewParameters != rhsPreviewParameters {
+                    return false
+                }
+                if lhsReplyMarkup != rhsReplyMarkup {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .widget(lhsMedia, lhsCaption, lhsEntities, lhsReplyMarkup):
+            if case let .widget(rhsMedia, rhsCaption, rhsEntities, rhsReplyMarkup) = rhs {
+                if !lhsMedia.isEqual(to: rhsMedia) {
+                    return false
+                }
+                if lhsCaption != rhsCaption {
+                    return false
+                }
+                if lhsEntities != rhsEntities {
                     return false
                 }
                 if lhsReplyMarkup != rhsReplyMarkup {
@@ -600,6 +644,20 @@ extension ChatContextResultMessage {
                     ),
                     replyMarkup: parsedReplyMarkup
                 )
+            case let .botInlineMessageWidget(botInlineMessageWidgetData):
+                // widget-sandbox v0.2 (sdk-v1 §2.16, tgw-format.md "Via the bot"): a result is not a message, so it has
+                // no is_copy / can_query / background_query; the state is the bot's text, kept as its UTF-8 as a
+                // message's widget keeps it (StoreMessage_Telegram), with the shared state's hash beside it.
+                let media = TelegramMediaWidget(width: botInlineMessageWidgetData.width, height: botInlineMessageWidgetData.height, payload: botInlineMessageWidgetData.payload.makeData(), chatData: botInlineMessageWidgetData.chatData.map { Data($0.utf8) }, publicData: botInlineMessageWidgetData.publicData.map { Data($0.utf8) }, publicDataHash: botInlineMessageWidgetData.publicDataHash, widgetId: botInlineMessageWidgetData.widgetId)
+                var parsedEntities: TextEntitiesMessageAttribute?
+                if let entities = botInlineMessageWidgetData.entities, !entities.isEmpty {
+                    parsedEntities = TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities))
+                }
+                var parsedReplyMarkup: ReplyMarkupMessageAttribute?
+                if let replyMarkup = botInlineMessageWidgetData.replyMarkup {
+                    parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
+                }
+                self = .widget(media: media, caption: botInlineMessageWidgetData.message, entities: parsedEntities, replyMarkup: parsedReplyMarkup)
         }
     }
 }

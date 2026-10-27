@@ -180,17 +180,20 @@ final class PageComponent<ChildEnvironment: Equatable>: CombinedComponent {
     private let title: String
     private let text: String
     private let textColor: UIColor
+    private let mediaSize: CGSize?
     
     init(
         content: AnyComponent<ChildEnvironment>,
         title: String,
         text: String,
-        textColor: UIColor
+        textColor: UIColor,
+        mediaSize: CGSize? = nil
     ) {
         self.content = content
         self.title = title
         self.text = text
         self.textColor = textColor
+        self.mediaSize = mediaSize
     }
     
     static func ==(lhs: PageComponent<ChildEnvironment>, rhs: PageComponent<ChildEnvironment>) -> Bool {
@@ -204,6 +207,9 @@ final class PageComponent<ChildEnvironment: Equatable>: CombinedComponent {
             return false
         }
         if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.mediaSize != rhs.mediaSize {
             return false
         }
         return true
@@ -230,7 +236,7 @@ final class PageComponent<ChildEnvironment: Equatable>: CombinedComponent {
                 environment: {
                     context.environment[ChildEnvironment.self]
                 },
-                availableSize: CGSize(width: availableSize.width, height: availableSize.width),
+                availableSize: component.mediaSize ?? CGSize(width: availableSize.width, height: availableSize.width),
                 transition: context.transition
             )
                         
@@ -275,7 +281,7 @@ final class PageComponent<ChildEnvironment: Equatable>: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: content.size.height + 60.0 + text.size.height / 2.0))
             )
             context.add(content
-                .position(CGPoint(x: content.size.width / 2.0, y: content.size.height / 2.0))
+                .position(CGPoint(x: (component.mediaSize != nil ? availableSize.width : content.size.width) / 2.0, y: content.size.height / 2.0))
             )
         
             return availableSize
@@ -303,22 +309,31 @@ final class DemoPagerComponent: Component {
     let items: [Item]
     let index: Int
     let nextAction: ActionSlot<Void>?
+    let cornerRadius: CGFloat
     let updated: (CGFloat, Int) -> Void
+    let interactionUpdated: ((Bool) -> Void)?
     
     public init(
         items: [Item],
         index: Int = 0,
         nextAction: ActionSlot<Void>? = nil,
+        cornerRadius: CGFloat = 10.0,
+        interactionUpdated: ((Bool) -> Void)? = nil,
         updated: @escaping (CGFloat, Int) -> Void
     ) {
         self.items = items
         self.index = index
         self.nextAction = nextAction
+        self.cornerRadius = cornerRadius
         self.updated = updated
+        self.interactionUpdated = interactionUpdated
     }
     
     public static func ==(lhs: DemoPagerComponent, rhs: DemoPagerComponent) -> Bool {
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.cornerRadius != rhs.cornerRadius {
             return false
         }
         return true
@@ -337,7 +352,6 @@ final class DemoPagerComponent: Component {
             self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.alwaysBounceHorizontal = false
             self.scrollView.bounces = false
-            self.scrollView.layer.cornerRadius = 10.0
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
             }
@@ -354,6 +368,26 @@ final class DemoPagerComponent: Component {
         }
         
         private var ignoreContentOffsetChange = false
+
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.component?.interactionUpdated?(true)
+        }
+
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate {
+                self.component?.interactionUpdated?(false)
+            }
+        }
+
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            self.component?.interactionUpdated?(false)
+        }
+
+        private var position: CGFloat {
+            let distance = self.scrollView.contentSize.width - self.scrollView.bounds.width
+            return distance > 0.0 ? max(0.0, min(1.0, self.scrollView.contentOffset.x / distance)) : 0.0
+        }
+
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             guard let component = self.component, !self.ignoreContentOffsetChange else {
                 return
@@ -361,26 +395,36 @@ final class DemoPagerComponent: Component {
 
             self.ignoreContentOffsetChange = true
             let _ = self.update(component: component, availableSize: self.bounds.size, transition: .immediate)
-            component.updated(self.scrollView.contentOffset.x / (self.scrollView.contentSize.width - self.scrollView.frame.width), component.items.count)
+            component.updated(self.position, component.items.count)
             self.ignoreContentOffsetChange = false
         }
         
         func update(component: DemoPagerComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            let previousIgnoreContentOffsetChange = self.ignoreContentOffsetChange
+            self.ignoreContentOffsetChange = true
+            defer {
+                self.ignoreContentOffsetChange = previousIgnoreContentOffsetChange
+            }
+            let firstTime = self.component == nil
+            self.component = component
+            self.scrollView.layer.cornerRadius = component.cornerRadius
             var validIds: [AnyHashable] = []
             
             component.nextAction?.connect { [weak self] in
-                if let self {
+                if let self, let component = self.component, component.items.count > 1 {
+                    component.interactionUpdated?(true)
                     var nextContentOffset = self.scrollView.contentOffset
                     nextContentOffset.x += self.scrollView.frame.width
                     if nextContentOffset.x >= self.scrollView.contentSize.width {
                         nextContentOffset.x = 0.0
                     }
                     self.scrollView.contentOffset = nextContentOffset
+                    component.interactionUpdated?(false)
                 }
             }
             
-            let firstTime = self.itemViews.isEmpty
-            
+            let previousWidth = self.scrollView.bounds.width
+            let previousIndex = previousWidth > 0.0 ? self.scrollView.contentOffset.x / previousWidth : CGFloat(component.index)
             let contentSize = CGSize(width: availableSize.width * CGFloat(component.items.count), height: availableSize.height)
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
@@ -390,15 +434,10 @@ final class DemoPagerComponent: Component {
                 self.scrollView.frame = scrollFrame
             }
             
-            if firstTime {
-                self.scrollView.contentOffset = CGPoint(x: CGFloat(component.index) * availableSize.width, y: 0.0)
-                var position: CGFloat
-                if self.scrollView.contentSize.width > self.scrollView.frame.width {
-                    position = self.scrollView.contentOffset.x / (self.scrollView.contentSize.width - self.scrollView.frame.width)
-                } else {
-                    position = 0.0
-                }
-                component.updated(position, component.items.count)
+            if firstTime || previousWidth != availableSize.width {
+                let index = max(0.0, min(CGFloat(max(0, component.items.count - 1)), firstTime ? CGFloat(component.index) : previousIndex))
+                self.scrollView.contentOffset = CGPoint(x: index * availableSize.width, y: 0.0)
+                component.updated(self.position, component.items.count)
             }
             let viewportCenter = self.scrollView.contentOffset.x + availableSize.width * 0.5
             
@@ -408,7 +447,7 @@ final class DemoPagerComponent: Component {
                 let isDisplaying = itemFrame.intersects(self.scrollView.bounds)
                                 
                 let centerDelta = itemFrame.midX - viewportCenter
-                let position = centerDelta / (availableSize.width * 0.75)
+                let position = availableSize.width > 0.0 ? centerDelta / (availableSize.width * 0.75) : 0.0
                 
                 i += 1
                 

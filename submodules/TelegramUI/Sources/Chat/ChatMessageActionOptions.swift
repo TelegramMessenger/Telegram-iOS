@@ -219,7 +219,8 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceView: 
                     if !message.text.isEmpty {
                         hasCaptions = true
                     }
-                } else if media is TelegramMediaDice {
+                } else if media is TelegramMediaDice || media is TelegramMediaWidget {
+                    // A widget, as a dice, is never forwarded without its sender (widget-sandbox v0.2, tgw-format.md).
                     isDice = true
                 } else if media is TelegramMediaImage || media is TelegramMediaFile {
                     if !message.text.isEmpty {

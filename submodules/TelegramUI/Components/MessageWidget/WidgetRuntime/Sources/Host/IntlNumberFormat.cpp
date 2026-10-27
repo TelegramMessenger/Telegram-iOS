@@ -1,6 +1,6 @@
 // Intl.NumberFormat (V5b plan, Task 2; ECMA-402 §15) and Number/BigInt.prototype.toLocaleString: the options read in
-// ECMA-402's order into a NumberFormatRecord, an ICU number skeleton made from it, and an ICU formatter for that
-// skeleton taken from the runtime's IntlCache at format time.
+// ECMA-402's order into a NumberFormatRecord and the ones given kept, then the host's `number`, `numberParts` and
+// `numberOptions` requests (Sources/Host/Intl.h).
 #include <algorithm>
 #include <cctype>
 #include <climits>
@@ -27,8 +27,6 @@ const std::initializer_list<const char*> kGroupings = {"min2", "auto", "always"}
 const std::initializer_list<const char*> kSignDisplays = {"auto", "never", "always", "exceptZero", "negative"};
 const std::initializer_list<const char*> kRoundingModes = {"ceil",     "floor",      "expand",    "trunc",   "halfCeil",
                                                            "halfFloor", "halfExpand", "halfTrunc", "halfEven"};
-const char* const kICURoundingModes[] = {"ceiling",    "floor",   "up",        "down",     "half-ceiling",
-                                         "half-floor", "half-up", "half-down", "half-even"};
 const std::initializer_list<const char*> kRoundingPriorities = {"auto", "morePrecision", "lessPrecision"};
 const std::initializer_list<const char*> kTrailingZeroDisplays = {"auto", "stripIfInteger"};
 const int kRoundingIncrements[] = {1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000};
@@ -47,11 +45,10 @@ const char* const kSanctionedUnits[] = {
     "week",       "yard",       "year",
 };
 
-/// Intl.NumberFormat's resolved options: the payload's record, fixed-size.
+/// Intl.NumberFormat's options as ECMA-402 resolves them without locale data: resolvedOptions' answer where the host's
+/// has none. Fixed-size.
 struct NumberFormatRecord {
-    char locale[kMaxLocaleTag + 1] = {};
-    char icuLocale[ULOC_FULLNAME_CAPACITY + 1] = {};
-    char numberingSystem[16] = {};
+    char numberingSystem[16] = "latn";
     uint8_t style = Decimal;
     char currency[4] = {};
     uint8_t currencyDisplay = 1;
@@ -66,7 +63,8 @@ struct NumberFormatRecord {
 };
 
 struct NumberFormatObject : IntlObjectBase {
-    explicit NumberFormatObject(const NumberFormatRecord& record) : record(record) {}
+    NumberFormatObject(std::string_view locale, JSText opts, const NumberFormatRecord& record)
+        : IntlObjectBase(locale, std::move(opts)), record(record) {}
     NumberFormatRecord record;
 };
 
@@ -95,26 +93,9 @@ bool isWellFormedCurrency(std::string_view code) {
            });
 }
 
-/// UTS 35's numbering-system type: (3*8alphanum) *("-" (3*8alphanum)).
-bool isNumberingSystemType(std::string_view type) {
-    size_t run = 0;
-    for (size_t i = 0; i <= type.size(); i++) {
-        if (i == type.size() || type[i] == '-') {
-            if (run < 3 || run > 8) {
-                return false;
-            }
-            run = 0;
-        } else if (std::isalnum(uint8_t(type[i]))) {
-            run++;
-        } else {
-            return false;
-        }
-    }
-    return true;
-}
-
-/// ECMA-402 DefaultNumberOption over a value already read: nullopt for undefined.
-std::optional<int> defaultNumberOption(JSContext* ctx, const Value& value, int min, int max, const char* name) {
+/// ECMA-402 DefaultNumberOption over a value already read: nullopt for undefined; a defined one added to `given`.
+std::optional<int> defaultNumberOption(JSContext* ctx, const Value& value, int min, int max, const char* name,
+                                       GivenOptions* given) {
     if (JS_IsUndefined(value.get())) {
         return std::nullopt;
     }
@@ -125,6 +106,9 @@ std::optional<int> defaultNumberOption(JSContext* ctx, const Value& value, int m
     if (number != number || number < min || number > max) {
         throw RangeError{std::string("Intl: the value of ") + name + " is out of range."};
     }
+    if (given) {
+        given->addNumber(ctx, name, std::floor(number));
+    }
     return int(number);
 }
 
@@ -132,42 +116,29 @@ Value getRaw(JSContext* ctx, JSValueConst options, const char* name) {
     return Value::adopt(ctx, checked(ctx, JS_GetPropertyStr(ctx, options, name)));
 }
 
-std::string defaultNumberingSystem(const char* icuLocale) {
-    UErrorCode status = U_ZERO_ERROR;
-    std::unique_ptr<UNumberingSystem, void (*)(UNumberingSystem*)> numbering(unumsys_open(icuLocale, &status), unumsys_close);
-    if (U_FAILURE(status) || !numbering) {
-        return "latn";
-    }
-    return unumsys_getName(numbering.get());
-}
-
-int currencyDigits(const char* currency) {
-    char16_t code[4] = {char16_t(currency[0]), char16_t(currency[1]), char16_t(currency[2]), 0};
-    UErrorCode status = U_ZERO_ERROR;
-    const int32_t digits = ucurr_getDefaultFractionDigits(code, &status);
-    return U_SUCCESS(status) && digits >= 0 ? int(digits) : 2;
-}
+/// What InitializeNumberFormat makes: the locale the requests name, the options given, and the record.
+struct NumberFormatSetup {
+    std::string locale;
+    JSText opts;
+    NumberFormatRecord record;
+};
 
 /// ECMA-402 InitializeNumberFormat, every option in its order.
-NumberFormatRecord initializeNumberFormat(JSContext* ctx, JSValueConst locales, JSValueConst options) {
+NumberFormatSetup initializeNumberFormat(JSContext* ctx, JSValueConst locales, JSValueConst options) {
     NumberFormatRecord r;
+    GivenOptions given(ctx);
     const std::vector<std::string> requested = canonicalizeLocaleList(ctx, locales);
     Value object = coerceOptionsToObject(ctx, options);
     JSValueConst o = object.get();
     getStringOption(ctx, o, "localeMatcher", {"lookup", "best fit"});
-    std::optional<std::string> numberingSystem = getStringOption(ctx, o, "numberingSystem", {});
-    if (numberingSystem && !isNumberingSystemType(*numberingSystem)) {
+    std::optional<std::string> numberingSystem = getStringOption(ctx, o, "numberingSystem", {}, &given);
+    if (numberingSystem && !isUnicodeType(*numberingSystem)) {
         throw RangeError{"Intl: the value of numberingSystem is out of range."};
     }
-    const std::string locale = resolveLocale(ctx, requested);
-    copyInto(r.locale, locale);
-    copyInto(r.icuLocale, toICULocale(locale));
-    copyInto(r.numberingSystem, numberingSystem && isSupportedNumberingSystem(*numberingSystem)
-                                    ? *numberingSystem
-                                    : defaultNumberingSystem(r.icuLocale));
+    const std::string locale = resolveLocale(ctx, requested, RelevantKeys::NumberFormat);
     // SetNumberFormatUnitOptions.
-    r.style = uint8_t(optionIndex(getStringOption(ctx, o, "style", kStyles), kStyles, Decimal));
-    std::optional<std::string> currency = getStringOption(ctx, o, "currency", {});
+    r.style = uint8_t(optionIndex(getStringOption(ctx, o, "style", kStyles, &given), kStyles, Decimal));
+    std::optional<std::string> currency = getStringOption(ctx, o, "currency", {}, &given);
     if (!currency) {
         if (r.style == Currency) {
             throw TypeError{"Intl.NumberFormat: the currency style needs a currency."};
@@ -175,9 +146,10 @@ NumberFormatRecord initializeNumberFormat(JSContext* ctx, JSValueConst locales, 
     } else if (!isWellFormedCurrency(*currency)) {
         throw RangeError{"Intl.NumberFormat: the currency code is not well formed."};
     }
-    const uint8_t currencyDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "currencyDisplay", kCurrencyDisplays), kCurrencyDisplays, 1));
-    const uint8_t currencySign = uint8_t(optionIndex(getStringOption(ctx, o, "currencySign", kCurrencySigns), kCurrencySigns, 0));
-    std::optional<std::string> unit = getStringOption(ctx, o, "unit", {});
+    const uint8_t currencyDisplay =
+        uint8_t(optionIndex(getStringOption(ctx, o, "currencyDisplay", kCurrencyDisplays, &given), kCurrencyDisplays, 1));
+    const uint8_t currencySign = uint8_t(optionIndex(getStringOption(ctx, o, "currencySign", kCurrencySigns, &given), kCurrencySigns, 0));
+    std::optional<std::string> unit = getStringOption(ctx, o, "unit", {}, &given);
     if (!unit) {
         if (r.style == Unit) {
             throw TypeError{"Intl.NumberFormat: the unit style needs a unit."};
@@ -185,29 +157,31 @@ NumberFormatRecord initializeNumberFormat(JSContext* ctx, JSValueConst locales, 
     } else if (!isWellFormedUnit(*unit)) {
         throw RangeError{"Intl.NumberFormat: the unit is not well formed."};
     }
-    const uint8_t unitDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "unitDisplay", kUnitDisplays), kUnitDisplays, 0));
+    const uint8_t unitDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "unitDisplay", kUnitDisplays, &given), kUnitDisplays, 0));
     if (r.style == Currency) {
         std::string upper = *currency;
         for (char& c : upper) {
             c = char(std::toupper(uint8_t(c)));
         }
-        copyInto(r.currency, upper);
+        std::copy(upper.begin(), upper.end(), r.currency);
         r.currencyDisplay = currencyDisplay;
         r.currencySign = currencySign;
     }
-    if (r.style == Unit) {
-        copyInto(r.unit, *unit);
+    if (r.style == Unit && unit->size() < sizeof(r.unit)) {
+        std::copy(unit->begin(), unit->end(), r.unit);
         r.unitDisplay = unitDisplay;
     }
+    // A currency's own digits are the host's (resolvedOptions takes them from its answer); here ISO 4217's usual two,
+    // which only ECMA-402's checks of the digit options read.
     int mnfdDefault = 0, mxfdDefault = 3;
     if (r.style == Currency) {
-        mnfdDefault = mxfdDefault = currencyDigits(r.currency);
+        mnfdDefault = mxfdDefault = 2;
     } else if (r.style == Percent) {
         mxfdDefault = 0;
     }
-    r.notation = Notation(optionIndex(getStringOption(ctx, o, "notation", kNotations), kNotations, 0));
-    readDigitOptions(ctx, o, mnfdDefault, mxfdDefault, r.notation, r.digits);
-    r.compactDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "compactDisplay", kCompactDisplays), kCompactDisplays, 0));
+    r.notation = Notation(optionIndex(getStringOption(ctx, o, "notation", kNotations, &given), kNotations, 0));
+    readDigitOptions(ctx, o, mnfdDefault, mxfdDefault, r.notation, r.digits, &given);
+    r.compactDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "compactDisplay", kCompactDisplays, &given), kCompactDisplays, 0));
     // GetBooleanOrStringNumberFormatOption(options, "useGrouping", « "min2", "auto", "always", "true", "false" », …).
     const int8_t defaultGrouping = r.notation == Notation::Compact ? Min2 : Auto;
     Value grouping = getRaw(ctx, o, "useGrouping");
@@ -215,8 +189,10 @@ NumberFormatRecord initializeNumberFormat(JSContext* ctx, JSValueConst locales, 
         r.useGrouping = defaultGrouping;
     } else if (JS_IsBool(grouping.get()) && JS_ToBool(ctx, grouping.get())) {
         r.useGrouping = Always;
+        given.addBool("useGrouping", true);
     } else if (!JS_ToBool(ctx, grouping.get())) {
         r.useGrouping = GroupingOff;
+        given.addBool("useGrouping", false);
     } else {
         const String text = String::fromJS(ctx, grouping.get());
         if (text.equalsASCII("true") || text.equalsASCII("false")) {
@@ -230,127 +206,10 @@ NumberFormatRecord initializeNumberFormat(JSContext* ctx, JSValueConst locales, 
         } else {
             throw RangeError{"Intl: the value of useGrouping is out of range."};
         }
+        given.addString("useGrouping", text.utf8());
     }
-    r.signDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "signDisplay", kSignDisplays), kSignDisplays, 0));
-    return r;
-}
-
-std::u16string toU16(std::string_view ascii) {
-    return std::u16string(ascii.begin(), ascii.end());
-}
-
-std::string fractionStem(int min, int max) {
-    if (max == 0) {
-        return "precision-integer";
-    }
-    return "." + std::string(size_t(min), '0') + std::string(size_t(max - min), '#');
-}
-
-std::string significantStem(int min, int max) {
-    return std::string(size_t(min), '@') + std::string(size_t(max - min), '#');
-}
-
-/// `increment` / 10^digits with exactly `digits` fraction digits.
-std::string incrementStem(int increment, int digits) {
-    std::string s = std::to_string(increment);
-    if (digits == 0) {
-        return s;
-    }
-    if (s.size() <= size_t(digits)) {
-        s.insert(0, size_t(digits) + 1 - s.size(), '0');
-    }
-    s.insert(s.size() - size_t(digits), ".");
-    return s;
-}
-
-std::u16string skeleton(const NumberFormatRecord& r) {
-    std::string s = std::string("numbering-system/") + r.numberingSystem;
-    if (r.style == Percent) {
-        s += " percent scale/100";
-    } else if (r.style == Currency) {
-        s += std::string(" currency/") + r.currency;
-        const char* const widths[] = {" unit-width-iso-code", " unit-width-short", " unit-width-narrow", " unit-width-full-name"};
-        s += widths[r.currencyDisplay];
-    } else if (r.style == Unit) {
-        s += std::string(" unit/") + r.unit;
-        const char* const widths[] = {" unit-width-short", " unit-width-narrow", " unit-width-full-name"};
-        s += widths[r.unitDisplay];
-    }
-    switch (r.notation) {
-    case Notation::Scientific:
-        s += " scientific";
-        break;
-    case Notation::Engineering:
-        s += " engineering";
-        break;
-    case Notation::Compact:
-        s += r.compactDisplay ? " compact-long" : " compact-short";
-        break;
-    case Notation::Standard:
-        break;
-    }
-    const DigitOptions& d = r.digits;
-    // Compact notation with no digit options rounds as ICU's compact notation does by default (ECMA-402's
-    // morePrecision of 0 fraction and 2 significant digits).
-    const bool compactDefault = r.notation == Notation::Compact && d.roundingType == RoundingType::MorePrecision &&
-                                d.minimumFractionDigits == 0 && d.maximumFractionDigits == 0 &&
-                                d.minimumSignificantDigits == 1 && d.maximumSignificantDigits == 2;
-    if (compactDefault) {
-        if (d.minimumIntegerDigits > 1) {
-            s += " integer-width/*" + std::string(size_t(d.minimumIntegerDigits), '0');
-        }
-        s += std::string(" rounding-mode-") + kICURoundingModes[d.roundingMode];
-    } else {
-        const std::u16string digits = digitsSkeleton(d);
-        s += " " + std::string(digits.begin(), digits.end());
-    }
-    switch (r.useGrouping) {
-    case GroupingOff:
-        s += " group-off";
-        break;
-    case Min2:
-        s += " group-min2";
-        break;
-    case Always:
-        s += " group-on-aligned";
-        break;
-    default:
-        break;
-    }
-    const bool accounting = r.style == Currency && r.currencySign == 1;
-    const char* const standardSigns[] = {"", " sign-never", " sign-always", " sign-except-zero", " sign-negative"};
-    const char* const accountingSigns[] = {" sign-accounting", " sign-never", " sign-accounting-always",
-                                           " sign-accounting-except-zero", " sign-accounting-negative"};
-    s += accounting ? accountingSigns[r.signDisplay] : standardSigns[r.signDisplay];
-    return toU16(s);
-}
-
-void closeFormatter(UNumberFormatter* f) {
-    unumf_close(f);
-}
-
-/// The ICU formatter for `r`, from the cache. Throws RangeError when ICU refuses the skeleton.
-UNumberFormatter* formatterFor(JSContext* ctx, const NumberFormatRecord& r) {
-    const std::u16string sk = skeleton(r);
-    const std::string key = std::string("nf\x1f") + r.icuLocale + "\x1f" + std::string(sk.begin(), sk.end());
-    UNumberFormatter* f = intlState(ctx).cache.get<UNumberFormatter>(
-        ctx, key,
-        [&]() -> UNumberFormatter* {
-            UErrorCode status = U_ZERO_ERROR;
-            UNumberFormatter* made = unumf_openForSkeletonAndLocale(sk.data(), int32_t(sk.size()), r.icuLocale, &status);
-            if (U_FAILURE(status)) {
-                if (made) {
-                    unumf_close(made);
-                }
-                return nullptr;
-            }
-            return made;
-        },
-        closeFormatter);
-    if (!f) {
-        throw RangeError{"Intl.NumberFormat: ICU refused the format."};
-    }
-    return f;
+    r.signDisplay = uint8_t(optionIndex(getStringOption(ctx, o, "signDisplay", kSignDisplays, &given), kSignDisplays, 0));
+    return NumberFormatSetup{locale, given.json(), r};
 }
 
 /// ECMA-402 ToIntlMathematicalValue, for a Number or a BigInt (anything else goes through ToNumber: Ruling).
@@ -387,94 +246,66 @@ Numeric toIntlMathematicalValue(JSContext* ctx, JSValueConst x) {
     return n;
 }
 
-using Result = std::unique_ptr<UFormattedNumber, void (*)(UFormattedNumber*)>;
-
-/// Formats `n` with `f` into a new result. Throws RangeError when ICU fails.
-Result formatted(UNumberFormatter* f, const Numeric& n) {
-    UErrorCode status = U_ZERO_ERROR;
-    Result result(unumf_openResult(&status), unumf_closeResult);
-    if (U_FAILURE(status) || !result) {
-        throw RangeError{"Intl.NumberFormat: ICU failed."};
-    }
-    if (n.isBigInt) {
-        unumf_formatDecimal(f, n.digits.data(), int32_t(n.digits.size()), result.get(), &status);
-    } else {
-        unumf_formatDouble(f, n.value, result.get(), &status);
-    }
-    if (U_FAILURE(status)) {
-        throw RangeError{std::string("Intl.NumberFormat: ICU failed: ") + u_errorName(status)};
-    }
-    return result;
-}
-
-Text16 resultText(JSContext* ctx, const Result& result) {
-    return icuText(ctx, [&](char16_t* buffer, int32_t capacity, UErrorCode* status) {
-        return unumf_resultToString(result.get(), buffer, capacity, status);
-    });
-}
-
-/// The ECMA-402 part type of ICU number field `field` covering `text`.
-const char* partType(int field, std::u16string_view text, const void* context) {
-    const Numeric& n = *static_cast<const Numeric*>(context);
-    switch (field) {
-    case UNUM_INTEGER_FIELD:
-        if (!n.isBigInt && n.value != n.value) {
-            return "nan";
+/// The host's answer to `kind` for `nf` and `n`: a BigInt as its digits, a JSON number the glue reads as the shim's
+/// Number(value).
+std::string ask(JSContext* ctx, const char* kind, const NumberFormatObject& nf, const Numeric* n) {
+    IntlRequest request(ctx, kind);
+    request.string("locale", nf.locale).raw("opts", std::string_view(nf.opts.data(), nf.opts.size()));
+    if (n) {
+        if (n->isBigInt) {
+            request.raw("value", n->digits);
+        } else {
+            request.number("value", n->value);
         }
-        if (!n.isBigInt && (n.value == HUGE_VAL || n.value == -HUGE_VAL)) {
-            return "infinity";
-        }
-        return "integer";
-    case UNUM_FRACTION_FIELD:
-        return "fraction";
-    case UNUM_DECIMAL_SEPARATOR_FIELD:
-        return "decimal";
-    case UNUM_EXPONENT_SYMBOL_FIELD:
-        return "exponentSeparator";
-    case UNUM_EXPONENT_SIGN_FIELD:
-        return "exponentMinusSign";
-    case UNUM_EXPONENT_FIELD:
-        return "exponentInteger";
-    case UNUM_GROUPING_SEPARATOR_FIELD:
-        return "group";
-    case UNUM_CURRENCY_FIELD:
-        return "currency";
-    case UNUM_PERCENT_FIELD:
-        return "percentSign";
-    case UNUM_SIGN_FIELD:
-        return text.find(u'+') != std::u16string_view::npos ? "plusSign" : "minusSign";
-    case UNUM_MEASURE_UNIT_FIELD:
-        return "unit";
-    case UNUM_COMPACT_FIELD:
-        return "compact";
-    case UNUM_APPROXIMATELY_SIGN_FIELD:
-        return "approximatelySign";
-    default:
-        if (!n.isBigInt && n.value != n.value) {
-            return "nan";
-        }
-        return "literal";
     }
+    return request.send();
 }
 
-JSValue formatNumeric(JSContext* ctx, const NumberFormatRecord& r, const Numeric& n) {
-    UNumberFormatter* f = formatterFor(ctx, r);
-    Result result = formatted(f, n);
-    const Text16 text = resultText(ctx, result);
-    return String::fromUTF16(ctx, text.data(), text.size()).toJS(ctx);
+/// NaN and the infinities, which a request cannot carry (JSON has no such number; the shim's null formats as 0):
+/// ECMA-402's symbols, the sign where signDisplay puts it.
+struct NonFinite {
+    const char* sign;
+    const char* type;
+    const char* text;
+};
+
+std::optional<NonFinite> nonFinite(const NumberFormatRecord& r, const Numeric& n) {
+    if (n.isBigInt || std::isfinite(n.value)) {
+        return std::nullopt;
+    }
+    if (n.value != n.value) {
+        return NonFinite{"", "nan", "NaN"};
+    }
+    const bool negative = n.value < 0;
+    // kSignDisplays: auto, never, always, exceptZero, negative.
+    const char* sign = r.signDisplay == 1 ? "" : negative ? "-" : (r.signDisplay == 2 || r.signDisplay == 3) ? "+" : "";
+    return NonFinite{sign, "infinity", "∞"};
 }
 
-JSValue formatNumericToParts(JSContext* ctx, const NumberFormatRecord& r, const Numeric& n) {
-    UNumberFormatter* f = formatterFor(ctx, r);
-    Result result = formatted(f, n);
-    const Text16 text = resultText(ctx, result);
-    FieldIterator fields = openFieldIterator();
-    UErrorCode status = U_ZERO_ERROR;
-    unumf_resultGetAllFieldPositions(result.get(), fields.get(), &status);
-    if (U_FAILURE(status)) {
-        throw RangeError{std::string("Intl.NumberFormat: ICU failed: ") + u_errorName(status)};
+JSValue formatNumeric(JSContext* ctx, const NumberFormatObject& nf, const Numeric& n) {
+    if (std::optional<NonFinite> special = nonFinite(nf.record, n)) {
+        return answerString(ctx, std::string(special->sign) + special->text);
     }
-    return partsFromFields(ctx, text, fields.get(), partType, &n);
+    return answerString(ctx, ask(ctx, "number", nf, &n));
+}
+
+JSValue formatNumericToParts(JSContext* ctx, const NumberFormatObject& nf, const Numeric& n) {
+    if (std::optional<NonFinite> special = nonFinite(nf.record, n)) {
+        Value parts = Value::adopt(ctx, checked(ctx, JS_NewArray(ctx)));
+        uint32_t count = 0;
+        auto add = [&](const char* type, const char* value) {
+            Value part = Value::adopt(ctx, checked(ctx, JS_NewObject(ctx)));
+            defineString(ctx, part.get(), "type", type);
+            defineString(ctx, part.get(), "value", value);
+            check(ctx, JS_DefinePropertyValueUint32(ctx, parts.get(), count++, part.release(), JS_PROP_C_W_E));
+        };
+        if (*special->sign) {
+            add(*special->sign == '-' ? "minusSign" : "plusSign", special->sign);
+        }
+        add(special->type, special->text);
+        return parts.release();
+    }
+    return answerJSON(ctx, ask(ctx, "numberParts", nf, &n), true).release();
 }
 
 JSClassID numberFormatClass(JSContext* ctx) {
@@ -485,7 +316,7 @@ JSValue boundFormat(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
     return glue(ctx, [&]() -> JSValue {
         NumberFormatObject& nf = intlReceiver<NumberFormatObject>(ctx, data[0], numberFormatClass(ctx), "format");
         const Numeric n = toIntlMathematicalValue(ctx, argc > 0 ? argv[0] : JS_UNDEFINED);
-        return formatNumeric(ctx, nf.record, n);
+        return formatNumeric(ctx, nf, n);
     });
 }
 
@@ -505,51 +336,49 @@ JSValue formatToParts(JSContext* ctx, JSValueConst thisVal, int argc, JSValueCon
         NumberFormatObject& nf = intlReceiver<NumberFormatObject>(ctx, thisVal, numberFormatClass(ctx),
                                                                   "Intl.NumberFormat.prototype.formatToParts");
         const Numeric n = toIntlMathematicalValue(ctx, argc > 0 ? argv[0] : JS_UNDEFINED);
-        return formatNumericToParts(ctx, nf.record, n);
+        return formatNumericToParts(ctx, nf, n);
     });
-}
-
-void defineString(JSContext* ctx, JSValueConst object, const char* name, std::string_view value) {
-    check(ctx, JS_DefinePropertyValueStr(ctx, object, name, JS_NewStringLen(ctx, value.data(), value.size()), JS_PROP_C_W_E));
-}
-void defineInt(JSContext* ctx, JSValueConst object, const char* name, int value) {
-    check(ctx, JS_DefinePropertyValueStr(ctx, object, name, JS_NewInt32(ctx, value), JS_PROP_C_W_E));
-}
-const char* at(std::initializer_list<const char*> list, size_t index) {
-    return *(list.begin() + std::ptrdiff_t(index));
 }
 
 JSValue resolvedOptions(JSContext* ctx, JSValueConst thisVal, int, JSValueConst*) {
     return glue(ctx, [&]() -> JSValue {
-        const NumberFormatRecord& r = intlReceiver<NumberFormatObject>(ctx, thisVal, numberFormatClass(ctx),
-                                                                       "Intl.NumberFormat.prototype.resolvedOptions")
-                                          .record;
+        const NumberFormatObject& nf = intlReceiver<NumberFormatObject>(ctx, thisVal, numberFormatClass(ctx),
+                                                                        "Intl.NumberFormat.prototype.resolvedOptions");
+        const NumberFormatRecord& r = nf.record;
         Value o = Value::adopt(ctx, checked(ctx, JS_NewObject(ctx)));
-        defineString(ctx, o.get(), "locale", r.locale);
+        defineString(ctx, o.get(), "locale", nf.locale);
         defineString(ctx, o.get(), "numberingSystem", r.numberingSystem);
-        defineString(ctx, o.get(), "style", at(kStyles, r.style));
+        defineString(ctx, o.get(), "style", optionAt(kStyles, r.style));
         if (r.style == Currency) {
             defineString(ctx, o.get(), "currency", r.currency);
-            defineString(ctx, o.get(), "currencyDisplay", at(kCurrencyDisplays, r.currencyDisplay));
-            defineString(ctx, o.get(), "currencySign", at(kCurrencySigns, r.currencySign));
+            defineString(ctx, o.get(), "currencyDisplay", optionAt(kCurrencyDisplays, r.currencyDisplay));
+            defineString(ctx, o.get(), "currencySign", optionAt(kCurrencySigns, r.currencySign));
         }
         if (r.style == Unit) {
             defineString(ctx, o.get(), "unit", r.unit);
-            defineString(ctx, o.get(), "unitDisplay", at(kUnitDisplays, r.unitDisplay));
+            defineString(ctx, o.get(), "unitDisplay", optionAt(kUnitDisplays, r.unitDisplay));
         }
         defineDigitCounts(ctx, o.get(), r.digits);
         if (r.useGrouping == GroupingOff) {
-            check(ctx, JS_DefinePropertyValueStr(ctx, o.get(), "useGrouping", JS_FALSE, JS_PROP_C_W_E));
+            defineBool(ctx, o.get(), "useGrouping", false);
         } else {
-            defineString(ctx, o.get(), "useGrouping", at(kGroupings, size_t(r.useGrouping)));
+            defineString(ctx, o.get(), "useGrouping", optionAt(kGroupings, size_t(r.useGrouping)));
         }
-        defineString(ctx, o.get(), "notation", at(kNotations, size_t(r.notation)));
+        defineString(ctx, o.get(), "notation", optionAt(kNotations, size_t(r.notation)));
         if (r.notation == Notation::Compact) {
-            defineString(ctx, o.get(), "compactDisplay", at(kCompactDisplays, r.compactDisplay));
+            defineString(ctx, o.get(), "compactDisplay", optionAt(kCompactDisplays, r.compactDisplay));
         }
-        defineString(ctx, o.get(), "signDisplay", at(kSignDisplays, r.signDisplay));
+        defineString(ctx, o.get(), "signDisplay", optionAt(kSignDisplays, r.signDisplay));
         defineRoundingOptions(ctx, o.get(), r.digits);
-        return o.release();
+        // What needs locale data (the locale the glue formats in, its numbering system, a currency's digits) is the
+        // host's; the rest is ours.
+        Value answer = answerJSON(ctx, ask(ctx, "numberOptions", nf, nullptr), false);
+        return mergedOptions(ctx, answer.get(), o.get(),
+                             {"locale", "numberingSystem", "style", "currency", "currencyDisplay", "currencySign", "unit",
+                              "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits", "maximumFractionDigits",
+                              "minimumSignificantDigits", "maximumSignificantDigits", "useGrouping", "notation",
+                              "compactDisplay", "signDisplay", "roundingIncrement", "roundingMode", "roundingPriority",
+                              "trailingZeroDisplay"});
     });
 }
 
@@ -557,9 +386,8 @@ JSValue construct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst
     return glue(ctx, [&]() -> JSValue {
         const JSClassID id = numberFormatClass(ctx);
         Value proto = prototypeFromConstructor(ctx, newTarget, id);
-        const NumberFormatRecord record = initializeNumberFormat(ctx, argc > 0 ? argv[0] : JS_UNDEFINED,
-                                                                 argc > 1 ? argv[1] : JS_UNDEFINED);
-        return createIntlObject<NumberFormatObject>(ctx, proto.get(), id, record).release();
+        NumberFormatSetup setup = initializeNumberFormat(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, argc > 1 ? argv[1] : JS_UNDEFINED);
+        return createIntlObject<NumberFormatObject>(ctx, proto.get(), id, setup.locale, std::move(setup.opts), setup.record).release();
     });
 }
 
@@ -581,19 +409,21 @@ JSValue toLocaleString(JSContext* ctx, JSValueConst thisVal, int argc, JSValueCo
 
 } // namespace
 
-void readDigitOptions(JSContext* ctx, JSValueConst o, int mnfdDefault, int mxfdDefault, Notation notation, DigitOptions& out) {
-    out.minimumIntegerDigits = getNumberOption(ctx, o, "minimumIntegerDigits", 1, 21).value_or(1);
+void readDigitOptions(JSContext* ctx, JSValueConst o, int mnfdDefault, int mxfdDefault, Notation notation, DigitOptions& out,
+                      GivenOptions* given) {
+    out.minimumIntegerDigits = getNumberOption(ctx, o, "minimumIntegerDigits", 1, 21, given).value_or(1);
     Value mnfd = getRaw(ctx, o, "minimumFractionDigits");
     Value mxfd = getRaw(ctx, o, "maximumFractionDigits");
     Value mnsd = getRaw(ctx, o, "minimumSignificantDigits");
     Value mxsd = getRaw(ctx, o, "maximumSignificantDigits");
-    const int increment = getNumberOption(ctx, o, "roundingIncrement", 1, 5000).value_or(1);
+    const int increment = getNumberOption(ctx, o, "roundingIncrement", 1, 5000, given).value_or(1);
     if (std::find(std::begin(kRoundingIncrements), std::end(kRoundingIncrements), increment) == std::end(kRoundingIncrements)) {
         throw RangeError{"Intl: the value of roundingIncrement is out of range."};
     }
-    out.roundingMode = uint8_t(optionIndex(getStringOption(ctx, o, "roundingMode", kRoundingModes), kRoundingModes, 6));
-    const int priority = optionIndex(getStringOption(ctx, o, "roundingPriority", kRoundingPriorities), kRoundingPriorities, 0);
-    out.stripIfInteger = optionIndex(getStringOption(ctx, o, "trailingZeroDisplay", kTrailingZeroDisplays), kTrailingZeroDisplays, 0) == 1;
+    out.roundingMode = uint8_t(optionIndex(getStringOption(ctx, o, "roundingMode", kRoundingModes, given), kRoundingModes, 6));
+    const int priority = optionIndex(getStringOption(ctx, o, "roundingPriority", kRoundingPriorities, given), kRoundingPriorities, 0);
+    out.stripIfInteger =
+        optionIndex(getStringOption(ctx, o, "trailingZeroDisplay", kTrailingZeroDisplays, given), kTrailingZeroDisplays, 0) == 1;
     if (increment != 1) {
         mxfdDefault = mnfdDefault;
     }
@@ -609,9 +439,9 @@ void readDigitOptions(JSContext* ctx, JSValueConst o, int mnfdDefault, int mxfdD
     }
     if (needSd) {
         if (hasSd) {
-            out.minimumSignificantDigits = defaultNumberOption(ctx, mnsd, 1, 21, "minimumSignificantDigits").value_or(1);
+            out.minimumSignificantDigits = defaultNumberOption(ctx, mnsd, 1, 21, "minimumSignificantDigits", given).value_or(1);
             out.maximumSignificantDigits =
-                defaultNumberOption(ctx, mxsd, out.minimumSignificantDigits, 21, "maximumSignificantDigits").value_or(21);
+                defaultNumberOption(ctx, mxsd, out.minimumSignificantDigits, 21, "maximumSignificantDigits", given).value_or(21);
         } else {
             out.minimumSignificantDigits = 1;
             out.maximumSignificantDigits = 21;
@@ -619,8 +449,8 @@ void readDigitOptions(JSContext* ctx, JSValueConst o, int mnfdDefault, int mxfdD
     }
     if (needFd) {
         if (hasFd) {
-            std::optional<int> min = defaultNumberOption(ctx, mnfd, 0, 100, "minimumFractionDigits");
-            std::optional<int> max = defaultNumberOption(ctx, mxfd, 0, 100, "maximumFractionDigits");
+            std::optional<int> min = defaultNumberOption(ctx, mnfd, 0, 100, "minimumFractionDigits", given);
+            std::optional<int> max = defaultNumberOption(ctx, mxfd, 0, 100, "maximumFractionDigits", given);
             if (!min) {
                 min = std::min(mnfdDefault, *max);
             } else if (!max) {
@@ -659,37 +489,6 @@ void readDigitOptions(JSContext* ctx, JSValueConst o, int mnfdDefault, int mxfdD
     }
 }
 
-std::u16string digitsSkeleton(const DigitOptions& d) {
-    std::string s;
-    if (d.minimumIntegerDigits > 1) {
-        s += "integer-width/*" + std::string(size_t(d.minimumIntegerDigits), '0') + " ";
-    }
-    std::string precision;
-    if (d.roundingIncrement != 1) {
-        precision = "precision-increment/" + incrementStem(d.roundingIncrement, d.maximumFractionDigits);
-    } else {
-        switch (d.roundingType) {
-        case RoundingType::FractionDigits:
-            precision = fractionStem(d.minimumFractionDigits, d.maximumFractionDigits);
-            break;
-        case RoundingType::SignificantDigits:
-            precision = significantStem(d.minimumSignificantDigits, d.maximumSignificantDigits);
-            break;
-        case RoundingType::MorePrecision:
-        case RoundingType::LessPrecision:
-            precision = fractionStem(d.minimumFractionDigits, d.maximumFractionDigits) + "/" +
-                        significantStem(d.minimumSignificantDigits, d.maximumSignificantDigits) +
-                        (d.roundingType == RoundingType::MorePrecision ? "r" : "s");
-            break;
-        }
-    }
-    if (d.stripIfInteger) {
-        precision += "/w";
-    }
-    s += precision + " rounding-mode-" + kICURoundingModes[d.roundingMode];
-    return toU16(s);
-}
-
 void defineDigitCounts(JSContext* ctx, JSValueConst o, const DigitOptions& d) {
     defineInt(ctx, o, "minimumIntegerDigits", d.minimumIntegerDigits);
     if (d.roundingType != RoundingType::SignificantDigits) {
@@ -704,15 +503,16 @@ void defineDigitCounts(JSContext* ctx, JSValueConst o, const DigitOptions& d) {
 
 void defineRoundingOptions(JSContext* ctx, JSValueConst o, const DigitOptions& d) {
     defineInt(ctx, o, "roundingIncrement", d.roundingIncrement);
-    defineString(ctx, o, "roundingMode", at(kRoundingModes, d.roundingMode));
-    defineString(ctx, o, "roundingPriority", at(kRoundingPriorities, d.computedRoundingPriority));
-    defineString(ctx, o, "trailingZeroDisplay", at(kTrailingZeroDisplays, d.stripIfInteger ? 1 : 0));
+    defineString(ctx, o, "roundingMode", optionAt(kRoundingModes, d.roundingMode));
+    defineString(ctx, o, "roundingPriority", optionAt(kRoundingPriorities, d.computedRoundingPriority));
+    defineString(ctx, o, "trailingZeroDisplay", optionAt(kTrailingZeroDisplays, d.stripIfInteger ? 1 : 0));
 }
 
 JSValue formatNumberToLocaleString(JSContext* ctx, JSValueConst x, JSValueConst locales, JSValueConst options) {
-    const NumberFormatRecord record = initializeNumberFormat(ctx, locales, options);
+    NumberFormatSetup setup = initializeNumberFormat(ctx, locales, options);
     const Numeric n = toIntlMathematicalValue(ctx, x);
-    return formatNumeric(ctx, record, n);
+    const NumberFormatObject nf(setup.locale, std::move(setup.opts), setup.record);
+    return formatNumeric(ctx, nf, n);
 }
 
 void defineNumberFormat(JSContext* ctx, JSValueConst intl) {

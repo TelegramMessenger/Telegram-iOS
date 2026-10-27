@@ -8,15 +8,23 @@ screen. The screen-by-screen audit that applied these rules is recorded in
 
 Most of what the system reserves on the Duo is not an edge but a **block in one corner** (the status corner:
 clock, connectivity, camera). UIKit widens that block into a full-edge `safeAreaInsets` inset. The app keeps
-honouring `safeInsets` unchanged and additionally reads the blocks from `ContainerViewLayout.reservedCorners`
-(a per-posture table, `iPhoneDuoReservedCorners` in `Display/Source/ReservedArea.swift`; the system's own
-regions are transitional for up to 0.6s after every rotation and fold, so they are not read live).
+honouring `safeInsets` and additionally reads the blocks from `ContainerViewLayout.reservedCorners`.
+
+Both come from the system (`reservedRegions(kind: .occlusion)`, `safeAreaInsets`) whenever its report fits the
+window's posture: a block that fills the posture's corner and is exactly as thick as the system's inset on the
+posture's edge, with no inset on the other edges (`iPhoneDuoReservedArea` in `Display/Source/ReservedArea.swift`).
+For up to 0.65s after every rotation and fold the report is transitional (the previous posture's block or insets, a
+stray block, none), and some of it fits the new posture (folded landscape's block in folded portrait's corner), so the
+report is not taken for 0.7s after a size change and is read again then. A per-posture table
+(`iPhoneDuoReservedCorners`, `iPhoneDuoSafeInsets`) names the posture and stands in meanwhile with the sizes the
+simulator settled on. The sizes below are the simulator's (iOS 27.1); code reads them from the layout, never as
+constants.
 
 | id | posture | window | safe insets (t,l,b,r) | corner block | derived |
 |----|---------|--------|-----------------------|--------------|---------|
 | FP | folded cover, portrait | 466x678 | 0,0,0,84 | top-right 84x170 | right strip x 382..466, y 170..678 |
 | FL | folded, landscape-left | 678x466 | 0,0,0,84 | bottom-right 84x82 | right strip x 594..678, y 0..384 |
-| FR | folded, landscape-right | 678x466 | 0,84,0,0 | top-left 84x84 | left strip x 0..84, y 84..466 |
+| FR | folded, landscape-right | 678x466 | 0,84,0,0 | top-left 84x82 (table: 84x84) | left strip x 0..84, y 82..466 |
 | UP | unfolded, portrait | 669x951 | 82,0,0,0 | top-right 134x82 "status island" | no strip |
 | UL | unfolded, landscape | 951x669 | 0,0,0,84 | top-right 84x120 | right strip; width class **regular** although it is a phone |
 
@@ -43,9 +51,10 @@ regions are transitional for up to 0.6s after every rotation and fold, so they a
 - `layout.sideColumnNavigationButtonFrame`, `ViewController.placesNavigationButtonInSideColumn`: where a screen's
   own back/close button goes in the strip.
 - Unfolded portrait island: `layout.topBarStatusIsland`, `layout.navigationBarStatusBarHeight` (compact 16 for a
-  top bar), `layout.navigationBarTrailingButtonsInset` (134), `statusIslandTrailingShift(rowMinY:rowHeight:islandHeight:inset:)`
-  for a control in a row that rises and falls with a sheet. Component environments carry `statusBarHeight` (compact),
-  `fullStatusBarHeight`, `navigationBarTrailingButtonsInset` and `reservedCorners`; a screen that builds an
+  top bar), `layout.navigationBarTrailingButtonsInset` (the island's width, 134 on the simulator),
+  `statusIslandTrailingShift(rowMinY:rowHeight:islandHeight:inset:)` for a control in a row that rises and falls
+  with a sheet. Component environments carry `statusBarHeight` (compact), `fullStatusBarHeight`,
+  `navigationBarTrailingButtonsInset` and `reservedCorners`; a screen that builds an
   `Environment` by hand must pass them all (the defaults are 0 / `.none`).
 - Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetContentBandInsets`
   (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
@@ -85,15 +94,19 @@ These are the user's decisions; a screen that follows them is correct, one that 
      chat's input panel does;
    - anything beside the **side tab bar**, which sits in the strip at the bottom of the root screens;
    - a **caption that can be dragged up** (gallery footers: `GalleryFooterContentNode.screenSideInsets`);
+   - everything at the bottom of the **story camera and story editor** (and their tool panels): laid out as on a phone
+     whose screen is the 9:16 viewfinder's band (`storyControlsBandLayout`), the editor's bar on the camera's bottom row.
+   - the **chat camera** on the folded screen follows the system Camera instead: centred on the screen, the photo preview
+     filling it and the video one 9:16 in the middle, side buttons mirrored on both edges (`CameraScreenChatScreenLayout`).
    - the **login flow's bottom button** on the folded screen (with the divider and Sign in with Apple beside it, and the
      actions in the password-recovery button rows): it keeps to the content band so the title, the fields and the
      button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
      of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
      rule 2's exception.
-4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by 134,
-   the title stays centred. Editors, camera, stories and full-screen live stream keep their top row on the island's
-   clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island; sheets that rise with
-   scrolling slide their top-right control clear by the row's current position.
+4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
+   island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
+   row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;
+   sheets that rise with scrolling slide their top-right control clear by the row's current position.
 5. **Full-screen viewers** (browser documents, full-screen mini apps) fill the screen beside the island.
 6. **Per-corner radii** follow the screen: sheets' bottom corners, inner clips inside them, and in-progress
    navigation transitions (and the story camera sliding the chat list aside) use `screenCornerRadii`, not one uniform
@@ -118,6 +131,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
 
 - Symmetric left inset: `X + safeInsets.left` used for both sides, or `right: safeInsets.left`.
 - Band-sized but screen-centred: width `W - L - R` placed at `(W - w) / 2`, 42pt toward the strip.
+- A presenting context's side insets counted on top of `safeInsets`: a chat hands its presentation context (toasts,
+  tooltips) its history list's insets, whose left and right hold the safe insets swapped, so `intrinsicInsets.left` is
+  FP's 84pt strip. Counting it on both sides again left the undo toast no width for its text (one letter per line);
+  `undoOverlayHorizontalLayout` takes the strip (the side safe insets' difference) out of it.
 - Trailing control at `W - safeInsets.left - N`.
 - Side insets ignored in a full-screen surface: controls under a corner block.
 - Two status heights mixed in unfolded portrait (compact for one part, full for the other).
@@ -152,5 +169,6 @@ other device stays byte-identical; the band helpers above are built that way.
 - Screens no link reaches: a temporary Darwin-notification hook that pushes the screen (marked for removal and
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
-  (side tab bar and its edit toolbar per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
+  (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
+  widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
   flow's content and bottom-button bands per posture).

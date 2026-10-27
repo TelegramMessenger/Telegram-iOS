@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 #include "Sources/Canvas/CanvasOps.h"
 #include "Sources/Render/WidgetContainer.h"
@@ -101,25 +102,41 @@ double FakeRenderHost::textWidth(const wr::HostFont&, std::string_view utf8) {
 
 namespace {
 
-/// Breaks anywhere between bytes, each 8 px wide as textWidth measures them (fidelity plan, Task 5: word-break and
-/// overflow-wrap: anywhere reach the breaker); at least one byte per line, so a fit always advances.
+/// Breaks between code points, never inside one (CoreTextRenderHost's breaker breaks between composed character
+/// sequences, coarser still); each byte 8 px wide as textWidth measures it (fidelity plan, Task 5: word-break and
+/// overflow-wrap: anywhere reach the breaker). At least one code point per line, so a fit always advances.
 class FakeTextBreaker final : public litehtml::text_breaker {
 public:
-    explicit FakeTextBreaker(size_t length) : m_length(length) {}
-    size_t fit(size_t start, litehtml::pixel_t width) override {
-        const size_t count = std::max<size_t>(1, size_t(std::max(0.0f, float(width)) / 8.0f));
-        return std::min(m_length, start + count);
+    explicit FakeTextBreaker(const std::string& text) {
+        for (size_t at = 0; at < text.size();) {
+            const uint8_t lead = uint8_t(text[at]);
+            const size_t bytes = std::min(text.size() - at, size_t(lead < 0xC0 ? 1 : lead < 0xE0 ? 2 : lead < 0xF0 ? 3 : 4));
+            m_widest = std::max(m_widest, bytes);
+            at += bytes;
+            m_ends.push_back(at);
+        }
     }
-    litehtml::pixel_t minimum_width() override { return litehtml::pixel_t(m_length > 0 ? 8.0f : 0.0f); }
+    size_t fit(size_t start, litehtml::pixel_t width) override {
+        const size_t room = size_t(std::max(0.0f, float(width)) / 8.0f);
+        const auto first = std::upper_bound(m_ends.begin(), m_ends.end(), start);
+        if (first == m_ends.end()) {
+            return start;
+        }
+        const auto past = std::upper_bound(first, m_ends.end(), start + room);
+        return past == first ? *first : *(past - 1);
+    }
+    litehtml::pixel_t minimum_width() override { return litehtml::pixel_t(8.0f * float(m_widest)); }
 
 private:
-    size_t m_length;
+    /// Where each code point ends, in bytes.
+    std::vector<size_t> m_ends;
+    size_t m_widest = 0;
 };
 
 } // namespace
 
 std::shared_ptr<litehtml::text_breaker> FakeRenderHost::createTextBreaker(const wr::HostFont&, const std::string& text) {
-    return std::make_shared<FakeTextBreaker>(text.size());
+    return std::make_shared<FakeTextBreaker>(text);
 }
 
 wr::ShapedText FakeRenderHost::shape(const wr::HostFont&, std::string_view utf8) {

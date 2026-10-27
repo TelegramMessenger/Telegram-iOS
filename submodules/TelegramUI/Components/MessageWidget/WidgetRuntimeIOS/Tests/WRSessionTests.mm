@@ -62,7 +62,7 @@ double now() {
 
 // The colour (RGBA) at a CSS px point of a tree painted at 2×.
 std::vector<uint8_t> colourAt(WRTree* tree, CGFloat x, CGFloat y) {
-    CGImageRef image = [tree copyImageOfRect:CGRectMake(x, y, 1, 1) scale:2];
+    CGImageRef image = [tree copyImageOfRect:CGRectMake(x, y, 1, 1) scale:2 effects:nil];
     std::vector<uint8_t> pixel(4 * 4, 0);
     if (!image) {
         return pixel;
@@ -216,7 +216,30 @@ void drain(WRSession* session) {
     XCTAssertTrue([delegate.bridgeCalls containsObject:@"openLink [\"https://example.org/tapped\"]"]);
 }
 
-/// sdk-v1 §5.5: a press reports the drag axes the widget takes and whether it takes taps, once its down task has run.
+/// widget-sandbox v0.2 (W2 plan, Task 2): a request's answer that comes back from the network after the runtime
+/// stopped is ignored: no exception, no bridge call, and the stop stays.
+- (void)testACompletionAfterTheSessionStoppedIsIgnored {
+    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
+    WRSession* session = [self sessionWith:delegate];
+    [session setContextCopy:NO canQuery:YES backgroundQuery:NO chatType:@"private" viewer:nil preview:NO];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head><style>body{margin:0;padding:0} button{position:"
+                                            "absolute;left:0;top:0;width:100px;height:40px}</style></head><body><button "
+                                            "onclick=\"TelegramWidget.request('ping').then(r => TelegramWidget.openLink("
+                                            "'https://example.org/answered'))\">b</button></body></html>"]);
+    [session pointer:WRPointerPhaseDown at:CGPointMake(50, 20) pointerId:1 primary:YES];
+    [session pointer:WRPointerPhaseUp at:CGPointMake(50, 20) pointerId:1 primary:YES];
+    drain(session);
+    XCTAssertTrue([delegate.bridgeCalls containsObject:@"request [\"1\",\"ping\"]"], @"%@", delegate.bridgeCalls);
+    [session stopForTesting:WRStopReasonInternal];
+    NSUInteger calls = delegate.bridgeCalls.count;
+    XCTAssertNoThrow([session completeRequest:1 result:[@"pong" dataUsingEncoding:NSUTF8StringEncoding] failure:WRRequestFailureNone]);
+    drain(session);
+    XCTAssertEqual(delegate.bridgeCalls.count, calls);
+    XCTAssertEqual(session.stopReason, WRStopReasonInternal);
+}
+
+/// sdk-v1 §5.5: a press reports the drag axes and the hold the widget takes (touch-action: none claims the hold too,
+/// widget-sandbox v0.1.2; never the vertical axis, v0.1.3) and whether it takes taps, once its down task has run.
 - (void)testAPressReportsItsGestureClaim {
     WRRecordingDelegate* delegate = [WRRecordingDelegate new];
     WRSession* session = [self sessionWith:delegate];
@@ -229,7 +252,7 @@ void drain(WRSession* session) {
     XCTAssertEqual(session.gestureClaim, (WRGestureAxes)0);
     XCTAssertFalse(session.pressTakesTaps);
     const CGFloat xs[] = {20, 70, 120, 170};
-    const WRGestureAxes expected[] = {0, WRGestureAxesHorizontal, WRGestureAxesHorizontal | WRGestureAxesVertical, 0};
+    const WRGestureAxes expected[] = {0, WRGestureAxesHorizontal, WRGestureAxesHorizontal | WRGestureAxesHold, 0};
     const BOOL takesTaps[] = {NO, YES, YES, YES};
     for (int i = 0; i < 4; i++) {
         [session pointer:WRPointerPhaseDown at:CGPointMake(xs[i], 20) pointerId:1 primary:YES];
@@ -239,6 +262,20 @@ void drain(WRSession* session) {
         [session pointer:WRPointerPhaseUp at:CGPointMake(xs[i], 20) pointerId:1 primary:YES];
         drain(session);
     }
+}
+
+/// widget-sandbox v0.1.3 (sdk-v1 §2.12): the session reports the widget's resize anchor with its height, `top` until the
+/// widget sets one.
+- (void)testTheSessionReportsTheAnchor {
+    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
+    WRSession* plain = [self sessionWith:delegate];
+    XCTAssertTrue([plain bootWithSource:@"<!doctype html><html><body><p>top</p></body></html>"]);
+    XCTAssertEqual(plain.resizeAnchor, WRResizeAnchorTop);
+    WRSession* session = [self sessionWith:delegate];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><body><p>up</p><script>TelegramWidget.setResizeAnchor('bottom');"
+                                            "</script></body></html>"]);
+    drain(session);
+    XCTAssertEqual(session.resizeAnchor, WRResizeAnchorBottom);
 }
 
 static std::vector<WRSelectableRun> runsOf(WRSelectableText* text) {
@@ -417,7 +454,7 @@ static WRSelectableText* selectable(WRSession* session, NSString* body) {
     // The runtime is gone, not only stopped: a stopped one would still answer.
     XCTAssertNil([session evaluateForTesting:@"1"]);
     XCTAssertEqual([session runNextTaskAt:now()], WRStepResultStopped);
-    CGImageRef image = [[session tree] copyImageOfRect:CGRectMake(0, 0, 100, 20) scale:2];
+    CGImageRef image = [[session tree] copyImageOfRect:CGRectMake(0, 0, 100, 20) scale:2 effects:nil];
     XCTAssertTrue(image != nullptr);
     CGImageRelease(image);
 }

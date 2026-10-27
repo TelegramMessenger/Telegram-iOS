@@ -113,8 +113,8 @@ struct RenderOptions {
     /// pixels while it paints (pixel_snap_scale, which LHDocument sets from the CTM at draw time); the runtime paints
     /// once, into the tree, so it snaps at the scale the app draws at. 1 keeps whole CSS pixels.
     double pixelSnapScale = 1;
-    /// prefers-reduced-motion (V4 plan, Task 3b; twidget edit 29.5): reduce when true. No host feeds it yet (plan OP6):
-    /// the default is no preference.
+    /// prefers-reduced-motion (twidget edit 29.5): reduce when true, the system's Reduce Motion (HostState::setReducedMotion,
+    /// WRSession's setReducedMotion:); no preference until the host says.
     bool reducedMotion = false;
 };
 

@@ -160,8 +160,9 @@ namespace litehtml
     {
         if(!parent || !text || !m_finalized || !m_root || is_raw_text_parent(*parent))
             return false;
-        // Telegram (VENDOR.md edit 17): pseudo-element content makes a patch and a rebuild cut at different words.
-        if(pseudo_content_possible())
+        // Telegram (VENDOR.md edit 17): with pseudo-element content, a cap reached means freed pieces would go to later
+        // content in a fresh build; a form control's parts' content refuses always (part_content_possible).
+        if(pseudo_content_possible() && (m_text_limited || m_pseudo_limited || part_content_possible()))
             return false;
         for(element::ptr el = parent; el; el = el->parent())
         {
@@ -414,6 +415,12 @@ namespace litehtml
         m_patch_hold.push_back(root);
     }
 
+    bool document::part_content_possible() const
+    {
+        pseudo_content_possible();
+        return (m_pseudo_content & 2) != 0;
+    }
+
     bool document::pseudo_content_possible() const
     {
         if(m_pseudo_content >= 0)
@@ -463,12 +470,17 @@ namespace litehtml
                     continue;
                 if(sel->m_right.m_tag == star_id || has_tag(sel->m_right.m_tag))
                 {
-                    m_pseudo_content = 1;
-                    return true;
+                    m_pseudo_content |= 1;
+                    // A form control's parts: an lh-* subject (has_tag answered for the controls), or `*` with a control.
+                    if(sel->m_right.m_tag == star_id ? has_tag(_input_) || has_tag(_select_) || has_tag(_textarea_)
+                                                     : _s(sel->m_right.m_tag).compare(0, 3, "lh-") == 0)
+                        m_pseudo_content |= 2;
+                    if(m_pseudo_content == 3)
+                        return true;
                 }
             }
         }
-        return false;
+        return m_pseudo_content != 0;
     }
 
     // Telegram (VENDOR.md edit 19, W Ruling E28).
@@ -561,6 +573,7 @@ namespace litehtml
         }
         m_style_bytes   = 0;
         m_style_limited = false;
+        m_style_budget_epoch++; // Telegram (VENDOR.md edit 60)
         root->refresh_clear_styles();
         root->refresh_replay_styles(0);
         root->parse_attributes();
@@ -626,9 +639,24 @@ namespace litehtml
         // Telegram (VENDOR.md edit 19, W Ruling E28): a change can add up to two pseudo-elements to every element.
         if(pseudo_cap_in_play(2LL * m_build_elements))
             return false;
-        // Telegram (VENDOR.md edit 21): a change restyles at most every element, each with every rule.
+        // Telegram (VENDOR.md edit 21): a change restyles the element and its subtree (restyle_after_patch), each with
+        // every rule. What passes the budget anyway is abandoned by the caller (Ruling E51), so this only spares the work.
+        // The subtree is walked only when the whole document could pass it, and no further than it takes to know; each
+        // element visited is a step (predicate_steps), which the caller charges.
         if(style_budget_in_play(m_build_elements))
-            return false;
+        {
+            long long restyled = 0;
+            for(std::vector<const element*> pending{el.get()}; !pending.empty();)
+            {
+                const element* next = pending.back();
+                pending.pop_back();
+                m_predicate_steps++;
+                if(style_budget_in_play(++restyled))
+                    return false;
+                for(const auto& child : next->children())
+                    pending.push_back(child.get());
+            }
+        }
         auto unsafe_style = [](std::string_view value) {
             return value.find("counter") != std::string_view::npos || value.find("var(") != std::string_view::npos ||
                    value.find("--") != std::string_view::npos;
@@ -716,8 +744,10 @@ namespace litehtml
         }
         if(!attribute_change_allowed(el, attrs))
             return false;
-        // The caps a fresh build enforces where a match or a layout makes pieces and cells.
-        if(pseudo_content_possible())
+        // The caps a fresh build enforces where a match or a layout makes pieces and cells: with pseudo-element content, a
+        // cap reached means freed pieces would go to later content in a fresh build; a form control's parts' content
+        // refuses always (part_content_possible).
+        if(pseudo_content_possible() && (m_text_limited || m_pseudo_limited || part_content_possible()))
             return false;
         attribute_growth bound;
         auto             tag = std::static_pointer_cast<html_tag>(el);
@@ -785,7 +815,12 @@ namespace litehtml
             if(child->tag() == __tag_before_ || child->tag() == __tag_after_)
                 release_pieces(child);
         }
+#if 0
         const bool neutral = apply_retag(el, attrs, kind == 1);
+#else
+        // Telegram (VENDOR.md edit 63): the caller lays the document out again after every commit_patch.
+        const bool neutral = apply_retag(el, attrs, kind == 1, nullptr, true);
+#endif
         m_attribute_rematches++;
         m_patch_keep_tree = m_patch_keep_tree && neutral;
         tag->forget_flips();

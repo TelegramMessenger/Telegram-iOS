@@ -482,6 +482,10 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
         }
         let inputTodo = Api.InputMedia.inputMediaTodo(.init(todo: .todoList(.init(flags: flags, title: .textWithEntities(.init(text: todo.text, entities: apiEntitiesFromMessageTextEntities(todo.textEntities, associatedPeers: SimpleDictionary()))), list: todo.items.map { $0.apiItem }))))
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputTodo, text), reuploadInfo: nil, cacheReferenceKey: nil)))
+    } else if let widget = media as? TelegramMediaWidget, let html = widget.html() {
+        // The 2026-10-27 schema: the states are TL strings (the widget keeps their UTF-8), public_data flags.2, chat_data flags.3.
+        let inputWidget = Api.InputMedia.inputMediaWidget(.init(flags: (widget.publicData == nil ? 0 : 1 << 2) | (widget.chatData == nil ? 0 : 1 << 3), width: widget.width, height: widget.height, html: html, publicData: widget.publicData.map { String(decoding: $0, as: UTF8.self) }, chatData: widget.chatData.map { String(decoding: $0, as: UTF8.self) }))
+        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputWidget, text), reuploadInfo: nil, cacheReferenceKey: nil)))
     } else if let dice = media as? TelegramMediaDice {
         if let tonAmount = dice.tonAmount {
             let seedBytes = malloc(32)!

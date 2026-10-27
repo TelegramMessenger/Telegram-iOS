@@ -19,8 +19,8 @@ Since V4 (2026-10-21) profile 1 is enforced on the renderer's copy of the docume
 enforcement (V4)", below, which replaces M1c's "there is no validator"; "Divergences from widget-sandbox v0.1.0" lists
 where it differs from the reference on purpose.
 The old runtime (widget-sandbox's JavaScript shim and trusted validator, `MessageWidgetEngine`, `WidgetDOM` and the
-ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14). Until M2 to M4, a widget that needs what is not
-built yet renders or behaves less well than it did: "What regresses until M2 to M4", below. M1a built:
+ops-fed `MessageWidgetRenderer`) is deleted from the app (spec D14); what the corpus still trips on is below. M1a
+built:
 - the QuickJS fork changes for engine built-in interfaces (changes 3–5);
 - the WebIDL binding generator;
 - the core DOM (nodes, tree algorithms, attributes, collections);
@@ -89,7 +89,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
 | `…/WidgetRuntime/Sources/Host/TelegramWidget.*`, `IDL/telegram.webidl` | The SDK (V2a, widget-sandbox v0.1.0 sdk-v1.md): `TelegramWidget` v1, `HapticFeedback`, `navigator` (`language`, the clipboard and sharing refused) |
 | `…/WidgetRuntime/Sources/Host/{Links,ThemeParams,Storage,Inert}.*` | V2a: the link rules and routes, the theme palette, Web Storage, and the network and dialog APIs that do nothing |
 | `…/WidgetRuntime/Sources/Host/{Crypto,Base64,Encoding,StructuredClone,URL,URLParser,Abort,Blob,Sequences}.*`, `IDL/builtins.webidl` | V5a: the built-ins, each against its own standard |
-| `…/WidgetRuntime/Sources/Host/{ICU.h,Intl.h,IntlCore.cpp,IntlNumberFormat.cpp,IntlDateTimeFormat.cpp,IntlText.cpp}` | V5b: Intl over the system ICU, and ICU's declarations |
+| `…/WidgetRuntime/Sources/Host/{Intl.h,IntlCore.cpp,IntlNumberFormat.cpp,IntlDateTimeFormat.cpp,IntlText.cpp}`, `third-party/widget-sandbox/ios/` | V5b: Intl over widget-sandbox's `intl` capability (`Host::intl`), answered in the app by widget-sandbox's iOS glue |
+| `…/WidgetRuntime/Sources/Host/ICU.h`, `…/Sources/Render/Bidi.{h,cpp}` | The system ICU's public part (character properties, case mapping, IDNA) and UAX #9 over it |
 | `…/WidgetRuntime/Sources/Canvas/`, `…/WidgetRuntimeIOS/Sources/CanvasBitmap.{h,mm}` | V5d: Canvas 2D (the interpreter, the context and its objects, the canvas and img elements) and the iOS bitmap |
 | `…/WidgetRuntime/Sources/Animation/`, `IDL/web-animations.webidl`, `Sources/Support/Promises.*`, `third-party/wpt/web-animations` | V5e: Web Animations (the objects, easing, interpolation and timing, the per-runtime `AnimationState` with the update step and the sampler) and its WPT; `Sources/Animation/PROVENANCE.md` lists what is ported from where |
 | `…/WidgetRuntime/Sources/Animation/CSS*.{h,cpp}`, `IDL/css-animations.webidl`, `third-party/wpt/css/css-{animations,transitions}` | V5f: CSS animations and transitions (the `@keyframes` and declaration parsers, `CSSAnimation`/`CSSTransition`, the style-change step and the events) and the event interfaces' WPT |
@@ -133,21 +134,38 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   `wr_test::normalized` drops empty clip pairs and lone `del_clip`s.
 - **Taps and events (M1d).** The host's pointer phases (`HostState::pointer`) are hit-tested on the runtime's own
   layout and dispatched as touch browsers dispatch a tap, each phase one trusted task (spec §5 has the order and the
-  click rule). A click runs the activation behaviour and the default actions: a checkbox or radio toggles before its
+  click rule). Each finger is its own pointer with a press of its own, up to `kMaxPointers` (5; a down past them, or
+  for a pointer already down, is dropped with its later phases): its target, capture, canceled defaults and press
+  number, so lifting one disturbs no other; only the primary pointer clicks. A click runs the activation behaviour and the default actions: a checkbox or radio toggles before its
   listeners and reverts when the click is canceled, a label clicks its control, a summary toggles its details, a
   submit is canceled, and a link follows its `href` by SDK v1's route (below). Focus, `:hover` and
-  `:active` live in `UserActions`; a change to them rebuilds the render tree, and only when the build's `<style>` text
-  names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild. A primary press also decides
-  its gesture claim (sdk-v1 §5.5; `TapState::claim`, read by the host through `WRSession.gestureClaim` once the down
-  task has run): the axes the computed touch-action of the target and its ancestors below `<html>` forbids panning on,
-  read from the layout the press was hit-tested on before its handlers run, or both when the widget cancels the
-  press's `pointerdown` or `touchstart` (the reference learns that from the previous press; ours dispatches before it
-  answers). It answers too whether the press lands on something the widget handles (`TapState::takesTaps`,
-  `WRSession.pressTakesTaps`): a listener for a press's events on the event's path, an element with activation
-  behaviour outside a disabled control, or a drag claim; the client gives the widget the tap and the long press there,
-  as on a message button, and the double tap and the long press (the reaction and the menu) to the bubble anywhere
-  else. The client's side is the message widgets guide's (`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`)
-  "Touches" and "Drags are decided per press".
+  `:active` live in `UserActions` (`:active` one entry per press, removed by that press's end or by its element leaving
+  the document, so a second finger on an element holds it after the first lifts, even when the element left and came
+  back between their downs; `:hover` the primary pointer's); a change to them rebuilds the render tree, and only when the build's
+  `<style>` text names `:hover`, `:active` or `:focus`, so a patched document still equals a rebuild.
+- **Who gets a press (widget-sandbox's shared gesture policy, v0.1.2 and v0.1.3).** The policy's C++ copy is vendored
+  (`third-party/widget-sandbox/gesture/`, the `GesturePolicy` library, its fixture run by the host `GesturePolicyTests`),
+  and `TapState` runs it rather than restating it. Every press decides its claim at its down task (sdk-v1 §5.5;
+  `TapState::claim`, read by the host through `WRSession.gestureClaim`): `claimOf` over the computed touch-action of
+  the target and its ancestors up to `<html>`, read from the layout the press was hit-tested on before its handlers
+  run (`none` anywhere: `x` and `hold`; a value without a horizontal pan `x`; never `y`, v0.1.3's G2), `x` but never
+  `hold` when the widget cancels the press's `pointerdown` or `touchstart` (the reference learns that from the previous
+  press; ours dispatches before it answers), and nothing for a touch starting in the leading 20 px. A vertical move
+  past the slop is the chat's even after a hold the widget won (the arbiter's).
+  The primary pointer's press feeds a `GestureArbiter`, so the thresholds are the policy's (slop 10 px, hold 500 ms,
+  double tap 300 ms / 40 px): a press still within the slop at 500 ms is held and makes no click at its up, and on a
+  `hold` claim it gets a cancelable `contextmenu` at its target then (a press-scoped task on the loop's own clock,
+  `EventLoop::queueTaskAt`; button 0 and buttons 1 from a finger); the second tap of a double tap dispatches `dblclick`
+  after its click, on every element, only when that click was dispatched. A mouse press (`PointerKind::Mouse`, an iPad
+  pointer) carries `pointerType: 'mouse'` and its button, with `mousedown`/`mousemove`/`mouseup` of its own, goes to
+  its hit target unless captured, has no edge strip and no hold; its secondary button gets `contextmenu` at its down on
+  a `hold` claim. The client takes `x` and `hold`: a vertical drag always scrolls the chat (the message widgets guide,
+  "The chat always scrolls"). The press also answers whether it lands on something the widget handles
+  (`TapState::takesTaps`, `WRSession.pressTakesTaps`): a listener for a press's events on the event's path, an element
+  with activation behaviour outside a disabled control, or a drag claim; the client then recognizes the touch for the
+  widget at its end. The client's side is the message widgets guide's
+  (`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`) "Touches", "iPad pointers" and "Drags are decided per
+  press".
 - **The SDK (V2a, widget-sandbox v0.1.0 `docs/sdk-v1.md`).** `window.TelegramWidget` (unforgeable) is SDK v1, and the
   runtime applies its policy itself; the app's core only passes the calls on. Calls reach `wr::Host::bridgeCall` as a
   method and a JSON array of strings: `ready`, `openLink`, `openTelegramLink` and `haptic`.
@@ -156,6 +174,12 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     handlers per type, a handler added once, unknown types and non-functions ignored; `this` is the widget), and the
     deprecated `onTheme`, whose 16 callbacks are a list of their own, called at once and after `themeChanged`'s with
     the scheme. `activated`/`deactivated` fire after `visibilitychange`. `sendMessage` and `on` are gone.
+  - *Resize anchor* (widget-sandbox v0.1.3, sdk-v1 §2.12, §5.6): `setResizeAnchor(edge)` takes exactly `'top'` or
+    `'bottom'` (the vendored SDK policy's `checkResizeAnchor`, `third-party/widget-sandbox/gesture/sdk_policy.cpp`, its
+    fixture run by the host `SdkPolicyTests`; only a 16-byte prefix of the string is converted), anything else is a
+    `TypeError`; it needs no tap, posts nothing to the bridge, and sets `HostState::resizeAnchor` (top until set), which
+    the host reads with the height (`WRSession.resizeAnchor`). The client's side is the message widgets guide's "Which
+    edge stays put".
   - *Theme* (`ThemeParams.cpp`, sdk-v1 §2.3): `themeParams` has every Mini Apps key as lowercase `#rrggbb`, the host's
     palette (`HostState::setThemeParams`, checked as the reference's `checkThemeParams`) over `DEFAULT_THEME_PARAMS`
     for the scheme; one frozen object until the next change. The root gets `--tg-theme-<key>` and `--tg-color-scheme`
@@ -183,10 +207,16 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     confirmation appeared and when it goes, drops a widget link that comes while one is up. It holds the confirmation
     weakly, so one that was never presented (its chat had left the window) or went by a path that does not report it
     stops blocking once released.
-  - *Haptics* (§2.6): `HapticFeedback`'s three methods return it, throw `TypeError` for an unknown style or type, and
-    post `haptic` only while the widget is visible and the reference's bucket (5, refilled at 10 per second, on the
-    step's clock) has a token; a drop is reported as `haptic-limit` at most once a second. The bubble plays them as
-    Mini Apps do.
+  - *Haptics* (§2.6): `HapticFeedback`'s three methods return it and throw `TypeError` for an unknown style or type.
+    A call posts `haptic` only when the vendored SDK policy's `HapticGate` admits it (`HostState::admitHaptic`, on the
+    step's clock). It needs:
+    - a visible widget;
+    - a token in the bucket (5, refilled at 10 per second);
+    - since widget-sandbox v0.2.2, a touch: while the primary press is down and for 5 s after it is lifted. Outside a
+      touch, the first call opens a 1 s series; the next series waits for a touch or 10 s.
+
+    The press and release are `TapState`'s primary down, up and cancel (`hapticPressed` / `hapticReleased`). A drop is
+    reported as `haptic-limit` at most once a second. The bubble plays them as Mini Apps do.
   - *Storage* (`Storage.cpp`, §2.8): `localStorage` and `sessionStorage` over `Host::storageArea`, 16,384 bytes of
     UTF-8 keys and values per area, committed through `Host::storageCommit` at the end of the step that changed them,
     after its rendering update (a media query's change listener or a ResizeObserver callback may write). A stored area
@@ -299,7 +329,7 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `Math.random` from the runtime's seed.
   - A virtual host clock therefore makes a run deterministic. The WPT runner and the corpus boot both use one.
     Local-time `Date` output (`toString`, `getHours`, `getTimezoneOffset`) still reads the process time zone, so a
-    deterministic run also pins `TZ`; M1e's corpus goldens must.
+    deterministic run also pins `TZ`, as the corpus goldens do.
 
 ### M1c's invariants (rendering)
 
@@ -321,6 +351,16 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   - **images:** `css::policy::imageSourceKept` (PNG, JPEG, GIF or WebP `data:` URLs) in layout and in
     `HTMLImageElement::state` alike; a refused `<img src>`, the empty one included, renders the 48 px placeholder
     (`WidgetContainer::kPlaceholderURL`, `placeholderSVG`) with `data-tg-placeholder`, and the element loads at 48 × 48.
+    Since widget-sandbox v0.2.3 the element's state is a browser's. It is pending from a `src` change until its load or
+    error fires from a task (`imageSourceChanged`, a source generation so a newer `src` replaces the pending event; the
+    parsed images' at the window's load, those a script took out of the document included, from the list
+    `CanvasState` keeps of them; one of a template's contents on its adoption into the document): not complete, no
+    natural size, drawn as nothing on a canvas, `null` from `createPattern` (`CanvasImageSource::usable`). `width` and
+    `height` are the rendered content size while it is being rendered (`renderedContentSize`,
+    `RenderTree::beingRendered`, whose ancestor walk is charged), else the attribute, else the natural size. While
+    pending, a dimension the CSS leaves auto is 0: the render tree already knows the decoded size, a browser does not.
+    At the window's load an image whose `src` changed meanwhile is left to its own task, so it fires once. V5d had made a `data:` image complete with
+    its size at once.
   A hook is a pure function of its text and posts no diagnostic. The full record, with the strict budgets and the DOM
   side, is "Profile enforcement (V4)".
 - **The container is the only way out.** litehtml has no I/O of its own: every load is a container callback
@@ -413,8 +453,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   starts the count again.
 - **matchMedia** (V3b, `DOM/MediaQueries.cpp`): a query is evaluated by litehtml's own media query parser against the
   container's media features (`RenderTree::matchesMedia`), exactly what `@media` sees, so the two agree:
-  `prefers-color-scheme` follows the theme, `hover`, `pointer` and `prefers-reduced-motion` are unknown features and
-  never match, `print` never applies. After every task's and frame's microtasks the loop reports changes
+  `prefers-color-scheme` follows the theme and `prefers-reduced-motion` the system's Reduce Motion
+  (`HostState::setReducedMotion`), `hover` and `pointer` are unknown features and never match, `print` never applies. After every task's and frame's microtasks the loop reports changes
   (`Window::reportMediaChanges`): a list with a change listener whose answer flipped gets a `MediaQueryListEvent`. Such
   a list is held by the window (`EventTarget::listenersChanged`); one without listeners is not tracked and, when it
   gains one, takes its previous answer from the media features the last report kept. A media keyword is looked up
@@ -500,7 +540,9 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     shaped advances, never through the layout's measure, which on iOS keeps every text it sees in a process-wide cache.
   - Drawing: litehtml lays a `<canvas>` out as an image, with a `twcanvas:<serial>:<w>:<h>` source the builder gives it
     (its width and height are its intrinsic size, not dimension properties); the container draws the bitmap's current
-    snapshot there, a copy-on-write `HostImage`. A paint of a rendered canvas republishes it, today as a full rebuild.
+    snapshot there, a copy-on-write `HostImage`. A paint of a rendered canvas republishes its box alone
+    (`RenderTree::canvasPainted`): the mirror captures it again (`Content`) with the current snapshot, beside the
+    flush's patch or with none, and nothing is laid out or rebuilt for it.
   - The context keeps two states: the interpreter's (what draws) and what the IDL reads back, saved and restored
     together. Profile 1's out features are API-visible and inert: `createConicGradient`/`createPattern` paint nothing,
     `globalCompositeOperation`, shadows, `filter` and the text-rendering attributes read back and never apply,
@@ -549,7 +591,9 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     (`collectRenderChanges`), and one is journaled only when its declarations' text changed: a seek is visible in the
     same task, and a paused or filling animation costs no relayout per frame. A change of only paint-only properties
     (`transform`, `opacity`, colours, `filter`, `visibility`, …) keeps litehtml's render tree and republishes as mirror
-    operations, as a class change does; a layout property (`width`, `left`, …) rebuilds it. The mirror still publishes
+    operations, as a class change does, and so does one of a box's geometry (`width`, `left`, margins, padding:
+    twidget edit 63); a property that shapes the render tree (`display`, `position`, `float`, …) rebuilds it, as it does
+    in an inline style or a class's rules. The mirror still publishes
     its own `Reset` when a positioned element becomes or stops being a paint group (an animation's first and last
     frames): it places a new group only for an in-flow block. A property's underlying value is what the animations
     below give, else the element's inline declaration, else the reference renderer's initial table (`opacity` 1,
@@ -613,34 +657,71 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   - *Not in V5f:* the reversing shortening factor (a transition reversed mid-way takes its full duration back),
     `transition-behavior: allow-discrete`, `@starting-style`, animations of `::before`/`::after`, computed values, and a
     transition on an element a rebuild restyled before anything tracked it (it has no before-change style).
-- **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over the system ICU, `libicucore`: `NumberFormat`,
+- **Intl** (V5b, ECMA-402 2024, `Sources/Host/Intl*.cpp`) over widget-sandbox's `intl` capability: `NumberFormat`,
   `DateTimeFormat`, `PluralRules`, `RelativeTimeFormat`, `ListFormat`, `Collator` and `getCanonicalLocales`, with
   `formatToParts` for the first two and `resolvedOptions` and `supportedLocalesOf` for all six; `Number`/`BigInt`/
   `Date.prototype.toLocale*String` and `String.prototype.localeCompare` go through the same code, and
   `toLocaleUpperCase`/`toLocaleLowerCase` are ECMA-402's TransformCase (v0.1.1): in a language with case rules of its
-  own (az, el, hy, lt, tr) ICU's mapping, charged `work::kCaseMapEightUnits` per eight units on top of the copy, with
-  no length limit but the engine's; in any other the engine's own mapping, kept at install. The classes are
-  hand-built QuickJS classes, not WebIDL ones (an ECMA-402 object is not a WebIDL object: `NumberFormat`,
-  `DateTimeFormat` and `Collator` construct when called as functions, `format` and `compare` are accessors returning a
-  cached bound function, the class string is `"Intl.NumberFormat"`), allocated per runtime. `Intl` is a lazy global (a
-  third host auto-init tag, `Runtime::defineLazyGlobal`); the prototype overrides are installed at startup and reach
-  the runtime's own `Intl` object, never `globalThis.Intl`, and read `this` through the engine's `valueOf`/`getTime`
-  taken at startup (`Runtime::intrinsic`). A constructor reads every option in ECMA-402's order into a fixed-size
-  record (its js_malloc'd payload); ICU objects live only in the runtime's `IntlCache` (32 handles, least recently used
-  evicted), taken when a value is formatted, after every argument is converted, so no ICU handle or buffer is held
-  while script runs. A number is formatted through an ICU number skeleton made from the record, a date through a
-  pattern ICU's pattern generator made at construction (an explicit hour cycle rewrites its hour letters, a requested
-  era its era field: Apple's CLDR answers a short era narrow, "A" for "AD"), and the resolved date fields are read back
-  from that pattern. **Parity with V8** is measured on widget-sandbox v0.1.1's fixture (`fixtures/intl-cases.json`,
-  166 requests with V8's answers): `:WidgetRuntimeIntlCasesTests` on the host's ICU and `WRIntlCasesTests` on iOS's run
-  each as a widget would (`Tests/IntlCases.js`); 165 answer as V8 on both, and the one that does not is in
-  `Tests/intl-cases-expected-failures.txt` with its reason (Apple's CLDR joins a medium date and a time with " at ",
-  as Safari does). The list only shrinks, and a case off the list fails. The default locale is the host's (`HostState::locale`, the
-  app's language), resolved like a request; the default time zone is `Host::defaultTimeZone()` (the device's on iOS,
-  UTC in the test hosts). The declarations are our own (`ICU.h`): the SDK ships only a few of ICU's headers, so the
-  functions and enums are copied by hand from ICU 78.1's, every one `@stable` at ICU 69 or older, iOS 15.0's
-  library, which is the floor. ICU loading its own locale data is the system library's I/O, like Core Text's fonts;
-  nothing in the runtime opens a file.
+  own (az, el, hy, lt, tr) the system ICU's mapping (`u_strToUpper`, public), charged `work::kCaseMapEightUnits` per
+  eight units on top of the copy, with no length limit but the engine's; in any other the engine's own mapping, kept
+  at install. The classes are hand-built QuickJS classes, not WebIDL ones (an ECMA-402 object is not a WebIDL object:
+  `NumberFormat`, `DateTimeFormat` and `Collator` construct when called as functions, `format` and `compare` are
+  accessors returning a cached bound function, the class string is `"Intl.NumberFormat"`), allocated per runtime.
+  `Intl` is a lazy global (a third host auto-init tag, `Runtime::defineLazyGlobal`); the prototype overrides are
+  installed at startup and reach the runtime's own `Intl` object, never `globalThis.Intl`, and read `this` through the
+  engine's `valueOf`/`getTime` taken at startup (`Runtime::intrinsic`).
+  - **No locale data here.** ICU's formatting API is not public on iOS: App Store review rejects an app importing
+    `libicucore`'s `unumf_*`, `udat_*`, `ucol_*`, … (only what the SDK's `unicode/*.h` declare may be called;
+    `build-system/Make/ICUImportCheck.py` fails the build on anything else). So a constructor reads every option in
+    ECMA-402's order, refusing what ECMA-402 refuses, and keeps the ones the widget gave (`GivenOptions`, JSON in the JS
+    heap); everything that needs locale data is `Host::intl`, the request widget-sandbox's shim sends for the same call
+    (`{"kind":"number","locale":…,"opts":{…},"value":…}`; a date format's options with ToDateTimeOptions' defaults
+    added as the shim adds them, because its glue formats only the fields it is given) and its glue's answer back: the
+    text, or JSON for `numberParts`/`dateParts` and `numberOptions`/`dateOptions`. A request is written in native code
+    (`IntlRequest`), never through `JSON.stringify`, which would run a widget's `toJSON`, after every argument is
+    converted, so nothing is held while script runs. Charged before the host is asked: `work::kIntlRequest`
+    (`kIntlDateRequest` for a date's kinds, which may make a `DateFormatter` each, and `kIntlDateParts` more for
+    `dateParts`), and `work::kIntlByte` per byte of the request and of the answer, `work::kIntlListItem` per list item
+    (LimitsTests' `testAnIntlRequestLoopCostsNoMorePerUnitThanJS` holds them through the app, the glue's formatter
+    cache defeated). NaN and the infinities, which JSON
+    cannot carry, are formatted here.
+  - **The app's host is widget-sandbox's own iOS glue** (`third-party/widget-sandbox/ios/`, upstream's `IntlBridge` and
+    CLDR plural rules, vendored unedited): Foundation's `NumberFormatter`, `DateFormatter` (from templates; parts by
+    formatting each pattern field alone), `RelativeDateTimeFormatter`, `ListFormatStyle` and `String.compare`.
+    `MessageWidgetCore`'s session delegate hands it each request (`WRSessionDelegate session:intl:`); a session without
+    one has no locale data and formats "".
+  - **The locale** a request names is the first requested tag (UTS 35's case), else the host's (`HostState::locale`,
+    the app's language), **with the unicode extension keywords its constructor reads** (ECMA-402 ResolveLocale,
+    `intl::RelevantKeys`):
+    - NumberFormat and RelativeTimeFormat `nu`; DateTimeFormat `ca`, `hc`, `nu`; Collator `co`, `kf`, `kn`;
+    - each value from a conservative table: ECMA-402's 22 numbering systems with simple digit mappings, the calendars
+      Foundation has on iOS 15, the hour cycles, CLDR's collations;
+    - sorted by key, attributes dropped, other extensions and private use kept.
+
+    Upstream's shim sends the tag whole, but in its glue an unknown numbering system makes `RelativeDateTimeFormatter`
+    trap (the app's crash), and an extension breaks the plural rules' language key (widget-sandbox VENDOR.md). The
+    glue applies what is kept on iOS 16 and later and drops it before. `WRIntlExtensionTests` runs every call a widget
+    can make with every CLDR numbering system and calendar on iOS. Until widget-sandbox v0.2.2 any extension took the
+    app down:
+    the glue built its `Locale` with `Locale(identifier:)`, and Foundation's identifier parsing drops a numbering
+    system's 4-letter value: `ar-EG-u-nu-arab` becomes `ar_EG@numbers=yes`, and `fa-u-nu-arab`, `hi-IN-u-nu-deva` and
+    `en-u-nu-latn-ca-gregory` go the same way (`canonicalIdentifier(from:)` and `identifier(.icu, from:)` too).
+    Formatters for such a locale are broken: `DateFormatter.dateFormat` and the `NumberFormatter` symbols are nil,
+    which that glue force-unwrapped, and `RelativeDateTimeFormatter.localizedString(from:)` traps inside Foundation.
+    Tags without a unicode extension are safe (`testTheExtremesAreAnswered`; a fuzz of 1,500 random tags across every
+    request kind). `Locale(components: Locale.Components(identifier:))` (iOS 16+) parses such tags and formats with
+    the extension applied (digits, calendar, hour cycle); v0.2.3's glue builds its locale that way
+    (`IntlBridge.bcp47Locale`; before iOS 16 it drops the extension), so an extension no longer traps. With no list of available locales, every structurally valid tag is one, as in the shim, and
+    `supportedLocalesOf` answers the canonical requested tags. `resolvedOptions` takes what needs
+    locale data from the glue's answer where it has one (the locale it formats in, a currency's digits, a date's fields
+    and time zone) and the rest from ECMA-402's resolution of the options here; PluralRules' `pluralCategories` are the
+    categories the glue's rules give a set of samples.
+  - **Parity with V8** is measured on widget-sandbox v0.1.1's fixture (`fixtures/intl-cases.json`, 166 requests with
+    V8's answers) three ways: `//third-party/widget-sandbox:WidgetSandboxIntlTests` runs the glue alone on the host's
+    Foundation (as upstream's `testSharedFixtureMatchesV8`); `:WidgetRuntimeIntlCasesTests` runs each case as a widget
+    would (`Tests/IntlCases.js`) over a host that answers only the fixture's requests, so every case passes only when the
+    runtime sends exactly the shim's request; `WRIntlCasesTests` runs them end to end on iOS, the glue answering, against
+    the `ios` lines of `Tests/intl-cases-expected-failures.txt` (each with its reason; the list only shrinks).
 - **getComputedStyle** (V3, `Render/ComputedStyle.cpp`): `CSSStyleDeclaration` in a read-only computed mode (every
   write throws `NoModificationAllowedError`, `cssText` is ""), each read a layout query that serializes what litehtml
   computed: keywords from litehtml's own tables, colors `rgb()`/`rgba()`, lengths in px (width, height, padding and
@@ -648,10 +729,38 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   the used ones), `transform` as one 2D `matrix()`, `::before`/`::after` from the pseudo-element litehtml made (a
   missing one reads its host's values with `content: none`). Custom properties are looked up with `_find_id`, which
   never adds the name to litehtml's process-wide id table (twidget edit 23;
-  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). Not modeled, so constant: `direction` (ltr). Not modeled but
-  read back from the element's own declaration, else `auto` (not inherited): `touch-action` (twidget edit 30.1) and
-  `user-select` (edit 45; `-webkit-user-select` is the same property, the later declaration winning). Known differences from browsers: `text-decoration-line` is merged with the
-  parent's (litehtml's), `background-image` other than `none`, `background-size`/`-position` and `filter` read "".
+  `testAnUnknownCustomPropertyDoesNotGrowTheIdTable`). **Every property profile 1 marks as in answers**
+  (`ProfileSurfaceTests.testEveryInProfilePropertyComputes`, the families expanded, on an unstyled and a positioned
+  element; computed-style plan, 2026-10-22): exactly from litehtml's getters where litehtml stores the property (the
+  offsets as CSSOM resolves them, an absolute element's auto ones from its margin edge to its containing block's
+  padding edge; the flex and box alignment properties on the containers and items litehtml computes them for, a
+  container's `justify-content` and `align-content` as they lay it out; `z-index` as litehtml validated it (twidget
+  edit 53); min/max sizes, the text properties, radii, `transform-origin` and `transform`'s percentages against the
+  border box, as litehtml draws them; the grid tracks from the tokens litehtml lays a grid out from, as written; the
+  SVG dashes as the painter reads them, presentation attributes included, …). Where litehtml computes none (the flex
+  and box alignment longhands outside those containers and items) and for the gaps everywhere (litehtml computes an
+  undeclared gap as 0), a longhand reads litehtml's own parse of the element's declarations (edit 54), which expands
+  `flex`, `flex-flow`, `gap` and `place-*` into their longhands in cascade order: `flex: 2` on a block reads
+  `flex-grow` 2; an invalid declaration is dropped, so an earlier one stands, else the initial value; `inherit` reads
+  the nearest ancestor that does not inherit it too, the walk charged a node visit per ancestor. Of
+  `justify-content` and `align-content` at litehtml's default (flex-start, stretch), the raw declaration that wrote
+  the parse tells the spelling (`normal`, `stretch`, or the default's own keyword), `!important` deciding between the
+  longhand and `place-content` as the cascade does; so does the `flex` that wrote a flex basis, for its omitted
+  basis's `0%`. `gap` and `place-*` expand as shorthands for CSS-wide keywords and `var()` too (twidget edit 55). The `animation-*` and
+  `transition-*` longhands read what the runtime runs (`animationSpecs`, `transitionSpecs`): the element's own
+  declaration, else its shorthand's entries, times in seconds. Otherwise a property reads the element's own
+  declaration as written, `var()` substituted (twidget edits 45, 51 keep the raw declarations), an inherited property
+  from the nearest ancestor that declares it, else the property's initial value; a declaration whose `var()` never
+  resolved reads as unset, a shorthand's longhands too (in layout as well: twidget edit 57). Edit 51's copies add 360,096 bytes (3.0%, 1.5 KB a document) to the 11.9 MB of style
+  bytes the corpus's 243 documents charge (`testCorpusRenders` prints the total; the heaviest document charges
+  981,904 bytes of its 16 MiB budget). The positional shorthands are serialized from their longhands, the complex ones
+  canonically ("What still differs", below). A read is charged its serialization's length plus a node visit per
+  element its walks pass (an inherited declaration's ancestors, an absolute element's containing block) and a scan of
+  the lists it splits and of the raw declarations it spells from (a raw copy is kept before litehtml validates it, so
+  its length is the author's).
+  `touch-action` and `user-select` read the element's own declaration, else `auto` (not inherited). Known differences
+  from browsers: `text-decoration-line` is merged with the parent's (litehtml's), and a gradient `background-image`
+  reads `none`.
 - **Only the size is critical** (the user, 2026-10-19). Main waits for a task's snapshot within the turn's allowance
   (1,000,000 units, 20 ms), and that snapshot carries the size and no tiles; drawing is never waited for. A size change
   can show the old tiles for a frame before the new ones land. A tile that fails to draw keeps the last frame, with no
@@ -661,7 +770,8 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   `mousedown`, `mouseup` and `click` dispatch and the click's activation behaviour runs, the microtask checkpoint after
   each of their listeners included (the reference drains a task's promise jobs inside it, with the gesture, so an
   `async` click handler keeps the press after an `await`); never in a touch event's listener, a timer, a frame, or a
-  job of a later task. One link call consumes the press. The app's core passes `openLink`, `openTelegramLink` and `haptic` on, refuses a URL
+  job of a later task. One link call consumes the press; each finger's press is consumed on its own, and forgotten
+  after its last event (`HostState::endPress`), since fingers lift in any order. The app's core passes `openLink`, `openTelegramLink` and `haptic` on, refuses a URL
   over 4,096 bytes (`bridge-refused`) and ignores any other method (`bridge-ignored`); `ready` does nothing in the app.
 - **A core task is bounded.** Each step gets the task's budget, 28,000,000 units; one drain runs at most 256 steps and
   stops once it has spent a task's budget, so a core task spends at most about two. A width or theme change is a step
@@ -680,6 +790,54 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   display: none } body { display: block }`); an author's rules win over both whatever their specificity, as the spec's
   `:where()` makes them, and in the master the layer is an origin above litehtml's own rules that `revert` skips
   (twidget edit 41).
+
+## The widget's state and requests (widget-sandbox v0.2)
+
+The v0.2 design: `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`. Every rule comes from the vendored
+SDK policy (`third-party/widget-sandbox/gesture/twidget/sdk_policy.h`, `twidget::sdk`), as `checkResizeAnchor` already
+did. The order of the checks is upstream's glue's (`packages/ios` `SandboxEngine.bridgeCall`).
+
+**The context and the state** (`HostState`):
+- **Fixed for the runtime's life:** `setContext` is called before the boot's scripts and stripped as the glue strips:
+  - a preview's flags are ignored;
+  - a copy and a preview have no chat type;
+  - the viewer is there only with `canQuery`, its fields checked by `checkViewer`.
+- **The state:** `setInitialData` and `setData` take the bot's two strings as bytes. `checkWidgetData` decides what is
+  text. `data-rejected` is one report naming the rejected fields; a copy's `chatData` is dropped silently.
+- **A change:** `setData` queues the task that puts the new values in place and runs `chatDataChanged`, then
+  `publicDataChanged` (`TelegramWidget::Event`), each only for a value that changed. Nothing restarts.
+- **What the widget reads:** `TelegramWidget` answers the members from `HostState`. `viewer` is one frozen object per
+  context generation.
+
+**Requests:**
+- **Every call gets an id** (1 … `MAX_REQUEST_ID`) and a promise in `TelegramWidget::m_requests`. The list is traced
+  like the handler lists: `HostState` holds no JS values.
+- **The order of the checks:**
+  1. a `data` that is not 1–64 bytes of well-formed UTF-8 is a TypeError at once;
+  2. a preview refuses;
+  3. the `RequestGate` decides, on the step's clock (`EventLoop::currentTime`), with `gesture` being an unconsumed press
+     on the visible widget (`activationAvailable`);
+  4. a `Foreground` verdict consumes the press.
+- **Out to the host:** an admitted request is the bridge call `request ["<id>", "<data>"]`.
+- **Every outcome settles in a task of its own, never inside the call:**
+  - a refusal through `queueRequestRefusal`;
+  - the client's outcome through `HostState::completeRequest` → `TelegramWidget::settleRequest`. This frees the gate
+    first, checks the answer (`checkRequestAnswer`, else `INVALID_ANSWER` and `answer-rejected`), and resolves
+    `{result}` frozen.
+  - A rejection is an `Error` named `WidgetRequestError` with its `code`, made in a job.
+  - An outcome for an id that is not an outgoing pending request changes nothing.
+- **The gate's `show()`** runs in `setVisible`'s task when the widget becomes visible.
+- **Diagnostics:** `request-blocked` and `preview-blocked` are capped at `MAX_REJECTION_REPORTS` (`reportCapped`).
+
+**The other calls:**
+- **`copyText`:** 1–256 UTF-16 code units. It is privileged: one press, shared with the links and `request`; outside
+  one it reports `activation-blocked`.
+- **`watchPublicData` / `unwatchPublicData`:** post `watchPublicData ["true"|"false"]` on a change only.
+
+**A preview** (`WidgetContext.preview`) runs as usual but:
+- takes no input (`HostState::pointer` returns);
+- posts no bridge call but `ready` (`refusedInPreview` reports, and `postBridgeCall` is the floor);
+- never reads its storage preload or commits (`Storage::load`, `commitIfChanged`).
 
 ## Profile enforcement (V4)
 
@@ -769,13 +927,14 @@ group; the corpus checks that no honest document reaches a text or node limit (`
 profile image types and the placeholder reach the host; `//third-party/twidget:TwidgetProfileHooksTests`; and the
 conformance ratchet, which runs the set one widget at a time (`Tests/WidgetHarness/CLAUDE.md`).
 
-## Rendering fidelity (widget-sandbox v0.1.1's conformance set)
+## Rendering fidelity (widget-sandbox's conformance set)
 
-The fidelity plan (2026-10-22) took the renderer from 130 pass / 24 partly / 8 fail of v0.1.0's in-profile catalogue
-to **162 / 1 / 0 of v0.1.1's 174** (out of profile 75 neutralised / 0 / 0), judged by the harness's conformance ratchet
-(`Tests/WidgetHarness/CLAUDE.md`) against Chromium's expectations, which the conformance set encodes. The renderer's
-side is twidget edits 30 to 40 and 46 to 48 (`third-party/twidget/VENDOR.md`; 41 to 45 are the v0.1.1 update's); the
-runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for litehtml, `fork_test.cpp`.
+Of widget-sandbox v0.1.3's in-profile catalogue the renderer passes **165, 2 partly, 0 failing of 178** (out of profile
+75 neutralised / 0 / 0), judged by the harness's conformance ratchet (`Tests/WidgetHarness/CLAUDE.md`) against
+Chromium's expectations, which the conformance set encodes. The two partly are `css.background.basic` (upstream's bad
+PNG, below) and `behaviour.gesture-claim`, whose checks only the real bubble can satisfy and the Tier 2 run holds to
+pass. The renderer's side is twidget edits 30 to 40, 46 to 48, 56 and 57 (`third-party/twidget/VENDOR.md`; 41 to 45
+are the v0.1.1 update's); the runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for litehtml, `fork_test.cpp`.
 
 - **What a widget reads back** (edit 30): `getComputedStyle` answers `filter`, SVG `fill`/`stroke`/`stroke-width`,
   `touch-action`, the background longhands per layer (a gradient layer reads `none`: litehtml keeps no gradient text),
@@ -794,8 +953,11 @@ runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for
   says), the colour-stop fix-up, Blink's dash and dot metrics, `object-fit`/`object-position`, SVG `<use>` and per-run
   `tspan` text, `text-overflow: ellipsis`, and right-to-left: `direction`, `dir` (`auto` from the first strong
   character, drawn or not, kept current by text and structure changes and by a descendant's own `dir`), `start`/`end`
-  alignment, and each line's items in bidi order from ICU's levels (`document_container::bidi_levels`, answered by
-  `WidgetContainer` from `ubidi`, each item at the level of its first strong character). The direction `dir` gives
+  alignment, and each line's items in bidi order from UAX #9's levels (`document_container::bidi_levels`, answered by
+  `WidgetContainer` from `bidi::levels` in `Sources/Render/Bidi.cpp`, each item at the level of its first strong
+  character). The algorithm is ours, over the bidi classes and paired brackets of the system ICU's public `uchar.h`
+  (ICU's own `ubidi_*` is not public API on iOS); it passes all 91,670 cases of Unicode's `BidiCharacterTest.txt`
+  (`:WidgetRuntimeBidiTests` runs a sample, the whole file with `--test_env=WR_BIDI_CHARACTER_TEST=<path>`). The direction `dir` gives
   reaches the UA's rules as the Builder's host marker `data-tg-dir`, so an author's `[dir=auto]` matches and
   `[dir=rtl]` does not match an `auto` that resolves to rtl, as in a browser.
 - **The runtime's UA sheet** (`kWidgetUAStylesheet`, unlayered, after litehtml's master): `<q>`'s marks, the `[dir]`
@@ -810,18 +972,32 @@ runtime's side is below. Each change is pinned by `FidelityRenderTests` and, for
   first line.
 
 What still differs, on purpose or for now (none is measured by a conformance check today):
-- **`css.background.basic` stays partly:** the first `data:` PNG of `auto/05-colour-backgrounds-b` (widget-sandbox
-  v0.1.1) has a bad IDAT CRC. Chromium draws it; ImageIO refuses it, so that stage's background is missing (71.7 % of
-  its ink differs). A decoder that ignores CRCs is not one to ship for hostile input; the fix is upstream's.
+- **`css.background.basic` stays partly:** the tiled `data:` PNG of `auto/05-colour-backgrounds-b` (also the tiled row
+  of `visual/02-colours-gradients`; widget-sandbox v0.1.1) is corrupt: its IDAT inflates, but from the sixth of its 20
+  rows the filter bytes are invalid, and its Adler-32 and CRC are wrong. ImageIO calls it complete and draws those rows
+  black; the reference (Chromium) keeps the first five rows and leaves the rest transparent, so the tile is black
+  where the reference is white (71.7 % of the stage's ink differs). Matching a browser's partial decode is not worth
+  a decoder of our own; the fix is upstream's.
+- **`visual/13-out-of-profile` shows its popover, with a white button label:** the profile drops the popover
+  attributes, so the div is drawn where it stands (`auto/18-out-of-profile` checks that), while the reference picture
+  hides it. The page's button sets only a background, and the bubble passes `button_text_color` as the button text
+  token (sdk-v1 §2.4), so the label is white on `#dde` where the picture, drawn with no token, has it dark.
 - **Right-to-left is the line's order only:** floats, the static position of an absolutely positioned box and table
   column order stay left-to-right, and the UA layer's `padding-inline-*` stay dropped (`css.box.logical` is out of the
   profile), so an RTL list indents on the left. Inside one text piece the order is the text engine's; in a reversed
   span the start padding sits on the inside. A left-to-right line is reordered only when it holds a right-to-left
   character or an RLM/RLE/RLO/RLI.
+- **A blur past 24 device pixels** (a box or text shadow) is drawn from a raster of at most 24 px of blur and scaled up
+  (twidget edit 65), as Skia's GPU blur scales its source down until sigma is at most 4: within 8 levels of a
+  full-resolution blur (`ShadowRasterTests`).
+- **Filters and backdrops under a transform:** a `filter` on content drawn under a rotation or skew paints the content
+  unfiltered (`FilterTargetFor` takes only an axis-aligned CTM), and a `backdrop-filter` under any scale, rotation or
+  skew draws no backdrop (`draw_backdrop` takes only a translation of its group).
 - **`HTMLElement.dir` reflects as written** (a plain `[Reflect]`): `dir=RTL` reads `"RTL"`, not `"rtl"`.
 - **Nested intrinsic widths:** a keyword box more than 8 keyword boxes deep lays out as `auto` (Limits).
-- **Math:** a tree holds at most 64 nodes (Limits); a table column whose width is a calc with a percentage lays out as
-  `auto`; `CSS.supports` answers from the property's value grammar, so it can say true for a product the renderer
+- **Math:** a tree holds at most 64 nodes (Limits); a translation's math function is a tree too (twidget edit 56), its
+  percentage the border box's, but every other transform argument (an angle, a scale) folds to one unit or is refused;
+  a table column whose width is a calc with a percentage lays out as `auto`; `CSS.supports` answers from the property's value grammar, so it can say true for a product the renderer
   refuses (`calc(50% * 10px)`).
 - **Kept but not drawn:** `word-break: keep-all` breaks as `normal`; `font-feature-settings` other than `tnum`;
   `quotes` on `<q>` and `open-quote`/`close-quote`; an SVG shape's `translate`/`rotate`/`scale` without `transform`.
@@ -830,6 +1006,19 @@ What still differs, on purpose or for now (none is measured by a conformance che
 - **`text-overflow`:** an atomic inline at the cut is hidden with no `…`; inline boxes' backgrounds after the cut still
   draw.
 - **`touch-action: initial`** (and `unset`, `revert`) reads back as written; the hit test reads it as the parent's.
+- **getComputedStyle's approximations** (computed-style plan; honest widgets read `display`, `fontSize` and
+  `borderTopWidth` in the corpus): the complex shorthands are canonical rather than Chrome-exact (`background` per
+  layer in Chrome's order; `font` without its initial parts; the grid placements without trailing autos;
+  `animation` and `transition` their longhands' reads joined entry by entry and cycled, at most 64 entries, as the
+  runtime runs, and "" past 64 KiB, so a long item cycled through them cannot build megabytes). An `animation-*` or
+  `transition-*` longhand declared before a later shorthand still reads its own value, as the runtime runs it (Chrome
+  takes the later); the grid tracks read as written, not as Chrome's resolved px. A property answered from its
+  declaration reads it as written (`counter-reset: item`, not `item 0`). The enumeration (`[...getComputedStyle(e)]`)
+  lists longhands only, each shorthand still answering by name; `justify-self`, which profile 1 has only inside
+  `place-self`, answers by name unlisted. A length litehtml keeps as a calc (a percentage it resolves at layout)
+  reads as CSS writes a computed one, font-relative terms in px and without the clamp at 0 litehtml adds for a
+  length that may not be negative (`calc(10% + 20px)`, `min(10%, 30px)`). A grid line litehtml cannot lay out (an
+  unresolved `var()`, a line name) reads as absent.
 
 ## The selectable text (text selection, sdk-v1 §2.4, §5.10)
 
@@ -889,22 +1078,22 @@ reader select of the published layout, built on the widget's queue while its bub
 | List-valued CSS | 8 layers, shadows or transform/filter functions; 32 colour stops or points | `css_parser.h` (twidget edit 15) | later entries dropped | each element copies its lists, each entry paints (100 shadows: 105 MB per 1,000 divs) |
 | CSS nesting | 64 blocks | `css_parser.h` (twidget edit 14) | the deeper block is parsed as empty | litehtml's componentizer recursed once per block |
 | Pseudo-elements | none nest; `content` keeps 32 items; they count against the element cap | twidget edit 19 | not created | unbounded recursion, and 1,002,004 elements from 1,000 divs |
-| Style bytes | 16 MiB of heap payload copied into styles; an inherited string (one the element does not declare as a string, an unresolved `var()` included) 1 KiB | `document.h` `max_style_bytes` (twidget edit 21) | declarations holding heap payload are dropped in document order; `style-bytes` | 16 KiB on `*` over 9,000 elements held 353.6 MB |
+| Style bytes | 16 MiB of heap payload copied into styles; an inherited string (one the element does not declare as a string, an unresolved `var()` included) 1 KiB, but for the bullet URL, which is shared and charged per list item up to half the budget | `document.h` `max_style_bytes`, `style_charge_bullet` (twidget edits 21, 60) | declarations holding heap payload are dropped in document order; `style-bytes`. A bullet past half the budget falls back to the type, latching nothing | 16 KiB on `*` over 9,000 elements held 353.6 MB |
 | Journal | 4,096 distinct nodes | `Journal.h` | the flush rebuilds | bounds the journal |
 | `TelegramWidget` handlers | 16 per `onEvent` type, and 16 `onTheme` callbacks | `TelegramWidget.h` `kMaxHandlersPerEvent` | ignored, no exception | sdk-policy.ts `MAX_HANDLERS_PER_EVENT` |
 | Link URLs | 256 UTF-8 bytes as given and 256 characters normalised; one link call per press | `Links.h` `kMaxLinkLength` | `TypeError`; a second call is `activation-blocked` | sdk-policy.ts `MAX_LINK_LENGTH` |
 | Link diagnostics | 20 `activation-blocked` and 20 `navigation-blocked` per widget | `Links.h` `kMaxLinkDiagnostics` | not reported | the reference's 20 (and ours for navigation) |
-| Haptics | a bucket of 5 refilled at 10 per second; `haptic-limit` once per second | `TelegramWidget.h` `kHapticBurst`, `kHapticPerSecond`, `kHapticReportMs` | dropped | sdk-policy.ts `HapticGate` |
+| Haptics | a bucket of 5 refilled at 10 per second, and a touch (5 s after its lift; else a 1 s series per touch or per 10 s); `haptic-limit` once per second | the vendored `twidget::sdk::HapticGate` (`HAPTIC_*`) | dropped | sdk-policy.ts `HapticGate` (v0.2.2) |
 | Storage | 16,384 bytes of UTF-8 keys and values per area | `Storage.h` `kStorageQuotaBytes` | `QuotaExceededError` | sdk-policy.ts `STORAGE_QUOTA_BYTES` |
 | Locale | 35 characters, BCP 47-shaped | `HostState.cpp` `kMaxLocaleLength` | `en-US` | sdk-policy.ts `MAX_LOCALE_LENGTH` |
 | Random bytes | 65,536 per `getRandomValues` | `Crypto.h` `kMaxRandomBytes` | `QuotaExceededError` | Web Crypto's |
 | Clone depth | 1,000 nested values | `StructuredClone.h` `kMaxCloneDepth` | `DataCloneError` | no native recursion without bound |
 | A `CSS.supports` value or condition | 16,384 UTF-16 units, 64 nested blocks (the selector parser's caps) | `CSSComponents.h` `kMaxSelectorUnits`, `kMaxBracketDepth` | `false` | a browser answers `false` for what it cannot parse; bounds the tokenizer's and componentizer's native work |
-| ICU handles | 32 per runtime | `Intl.h` `kIntlCacheSize` | the least recently used is closed | Intl's native state stays bounded whatever a widget constructs |
-| A string handed to ICU | 1,048,576 UTF-16 code units (a list's items together) | `Intl.h` `kMaxIntlString` | `RangeError` | bounds the copies made for ICU and its work |
-| A locale tag | 157 bytes (ICU's `ULOC_FULLNAME_CAPACITY`) | `Intl.h` `kMaxLocaleTag` | `RangeError` | ICU's buffers are fixed-size |
+| A string handed to the `intl` host | 1,048,576 UTF-16 code units (a list's items together) | `Intl.h` `kMaxIntlString` | `RangeError` | bounds a request and the host's work |
+| An `intl` answer | 4 MiB | `Intl.h` `kMaxIntlAnswer` | `RangeError` | bounds what the host's answer makes in the JS heap |
+| A locale tag | 157 bytes | `Intl.h` `kMaxLocaleTag` | `RangeError` | bounds the tag every request and object carries |
 | Distinct tags in a locale list | 128 | `Intl.h` `kMaxLocaleList` | `RangeError` | the list is deduplicated through a hash set; no request needs more |
-| Items a `ListFormat` reads | 10,000 | `Intl.h` `kMaxListItems` | `RangeError`, the iterator closed | units alone let a million empty strings through, each a native allocation in ICU |
+| Items a `ListFormat` reads | 10,000 | `Intl.h` `kMaxListItems` | `RangeError`, the iterator closed | units alone let a million empty strings through, each a string the host makes |
 | A free-form Intl option (`timeZone`, `currency`, `unit`, …) | 64 UTF-16 units | `getStringOption`'s `maxLength` | `RangeError` | every one has a shorter grammar |
 | Keyframes | 10,000 per effect, 10,000 values in a property's list, 512 properties per keyframe (the first by name), values of 4,096 UTF-16 units, property keys of 128, easing text of 4,096 | `KeyframeEffect.h`, `Easing.h` `kMaxEasingText` | `RangeError` (counts), `TypeError` (lengths); properties past 512 dropped | the reference's `processKeyframes` |
 | Rendered animations | the first 1,024 live animations with a target, in tracking order; 64 keyframes and 64 properties of each; 16 KiB of declarations per element, which count toward the render's 1 MiB | `AnimationState.h` | not rendered (`animation-limit` once) / left out | the reference renderer's caps; litehtml keeps the text on the system heap |
@@ -919,6 +1108,7 @@ reader select of the published layout, built on the widget's queue while its bub
 | Diagnostics | 500 per core | `MessageWidgetCore` | dropped | the old core's |
 | `data:` images | profile 1's types only (V4); a body of at most 24 MiB; PNG, JPEG, GIF or WebP as ImageIO sniffs it, at most 4,096 px a side and 16 Mpx; the placeholder's SVG through `LHCreateSVGImage` (the only SVG the host is handed) | `LHContainer.mm` (`kMaxDataImageBytes`, `TelegramImageSourceAllowed`), reached through `LHHostContainer::createImage` | refused: not drawn | `LHContainer`'s policy, unchanged |
 | Tiles | 128 pt; one image each, at most 4,096 px a side; a size change redraws every tile | `WidgetFrame.swift`, `LayerTreePainter.mm` | — | as before |
+| Effects a draw's tiles share | 32 MiB of filter and backdrop results kept for the draw | `LHEffectStore::kMaxBytes` (twidget edit 64) | made where it is drawn and not kept | the tiles made one copy each, nine at once; the cap bounds a draw of many distinct effects |
 | Text value (V4) | 65,536 UTF-16 units: a Text's data, a text attribute (`alt label placeholder title value`, `data-*`, `aria-*`), the strings of a `style` or a sheet | `Builder.h` `kMaxTextValueUnits` | the Text renders nothing (`text-node`); the attribute or style is left out (`text-budget`) | profile 1 strict `MAX_TEXT` |
 | Document text (V4) | 262,144 UTF-16 units, of which 8,192 complex-script (>= U+0590) | `kTextBudgetUnits`, `kComplexTextBudgetUnits` | what does not fit in tree order renders nothing (`text-budget`) | profile 1 strict `TEXT_BUDGET`, `COMPLEX_TEXT_BUDGET` |
 | Nodes (V4) | 50,000: the document node, every element, Text and Comment, rendered or not, a `<script>`'s children aside | `kMaxRenderNodes` | the walk stops (`nodes`) | profile 1 `MAX_NODES` |
@@ -1004,9 +1194,49 @@ wall time, printed and not asserted):
   p95 8.4 ms, max 17.9 ms (`showcase/commerce/04-flash-sale.html`); until the tiles land, 2.2, 9.8 and 21.8 ms. A 5 s
   tap seen before was the process's first `CADisplayLink` (5,014 ms in a headless test simulator; the tap itself
   1.6 ms); `testThePollsTapsAreFast` warms it up and holds each of the poll's taps under 500 ms.
-- **The corpus**: all 230 files boot, none stops, and 23 end with an uncaught error ("What regresses until M2 to M4",
-  below). With every budget lifted to 200,000,000, only the deliberate runaway stops, and every other widget's boot
+- **The corpus**: every file boots and none stops; the uncaught errors left are by design ("What the corpus still
+  trips on", below). With every budget lifted to 200,000,000, only the deliberate runaway stops, and every other widget's boot
   and largest later task stay under a quarter of their budgets.
+
+Pool contention (V6; the widget harness's Tier 1 process in the iPhone 17 / 26.5 test simulator, a debug build, wall
+time read by sampling the widget's tiles on main, measured and not asserted):
+- **`visual/06-css-animations` alone** shows its first tiles 42–66 ms after the chat is laid out, then a new frame
+  every 17 ms (the longest gap 19 ms).
+- **Beside `visual/05-transforms-effects-a` and `-b`**, all three on screen, its first tiles come at 213–519 ms: the
+  pool's two threads take the widgets' tasks in the order they were queued, so they wait for the other two's first
+  draws, which take about 200–500 ms with their blurs at 3×. From then on it keeps 60 fps (the longest gap 35 ms).
+
+Per-frame publishes (2026-10-26; the 254 corpus documents and the client's 14 fixtures, each booted at a width of 360 on
+the host's fake render host and run through 120 frames, thread CPU time, best of three, under a load of about 30):
+- **What a frame publishes:** before the patch paths' refusals were narrowed (canvas repaints, `::before`/`::after`
+  content, `textContent` swaps, paint-only and geometry-only styles, the style bound per subtree), 4,105 whole-document
+  builds and 1,702 render-tree `Reset`s per 2 s over all documents; after, about 480 builds and 2,683 `Reset`s.
+- **CPU:** 6,901 ms → 3,131 ms over all documents (JS included); the heaviest, `showcase/travel/01-boarding-pass`,
+  357 ms → under 45 ms, `htmlbubbles-ported/09-code-review/01-leo-bare` 324 → 118 ms. What still builds: text inside a
+  `<button>` (the text path refuses text a form control reads), structure beside a kept node's own change (a mixed
+  journal), and structure under `::before`/`::after` content.
+
+Paint cost per frame (2026-10-26; one widget, 360 × 260: a card floating by `translateY` and `rotate(±1deg)` under
+three box shadows of 25–55 px, over a glow pulsing in `opacity` and `scale` with `filter: blur(45px)`, and a counter
+with `backdrop-filter: blur(4px)`; in the widget harness's app process on the iPhone 17 / 26.5 simulator, a debug build,
+tiles at 3×, frames from the real display link):
+- **What a frame costs:** the `.draw` task 137 ms, 7 frames/s, at first; 81–87 ms (11 frames/s) once a draw's tiles
+  shared their filter and backdrop results (twidget edit 64); 17.6–18.2 ms (45–49 frames/s) once a big box shadow
+  was drawn from one low-resolution raster (edit 65). Now without the backdrop 11 ms, without the glow's filter
+  8.3 ms, without both and the shadows 6 ms (60 frames/s). The frame task (script, animations, layout, publish) is
+  0.6 ms (a test process). Timed on a loaded machine (load average 10–16).
+- **What it was:** every tile, and each of the two 1×1 corner-colour samples `WidgetTileDrawer.draw` took, computed every
+  filter (`LHContainer::draw_filtered`) and backdrop (`draw_backdrop`) in the tree whole, whether it showed them or
+  not: a 128 pt tile cost 23.5 ms, a corner sample 10.5 ms. And a moving box shadow missed its raster cache, whose key
+  carried the box's sub-pixel phase, while a rotated one was never cached (neither cached path took a rotated CTM), so
+  every tile it reached painted a full-resolution Core Graphics blur every frame: one shadow of 55 px cost 44 ms a
+  frame, of 25 px 14 ms, of 8 px 5 ms (a test process).
+- **What is left:** the glow's filter and the backdrop are made once a frame, since the glow scales every frame and
+  what is behind the backdrop changes with it; the backdrop's source paint makes the glow's filter again.
+- **Where to measure paint cost:** in the widget harness's app process (a Tier 1 test). The hostless test processes
+  (`MessageWidgetTests`, `MessageWidgetCorpusTests`, `WidgetRuntimeIOSTests`) have no Metal device, and there a CSS
+  filter or backdrop paints nothing, so their timings leave filters out. The simulator's Core Image runs on the Mac's
+  GPU; the cost on a device is unmeasured.
 
 Units and KB are deterministic on one platform: the same on every run and, since quickjs-ng change 12, in every build
 configuration (before it, a build without `NDEBUG` charged more for every string). Another platform's allocator can
@@ -1044,8 +1274,9 @@ M1d's, from the old runtime (spec §10.1):
   (`pointerup` before `mousedown`) its counter starts a second gesture at `mousedown`; ours is one per press, as sdk-v1
   §2.5 says ("one press unlocks one call"). The reference's 5-second gesture lifetime is not ported: a press is only
   ever usable while its own events dispatch.
-- **The haptic bucket refills on the step's clock** (`EventLoop::currentTime`), not the live one the reference's host
-  reads, so a burst inside one task never sees a refill however long the task runs.
+- **The haptic gate runs on the step's clock** (`EventLoop::currentTime`), not the live one the reference's host
+  reads. A burst inside one task never sees a refill however long the task runs, and the touch's press and release
+  are stamped with the times of the tasks that run them.
 - **`openTelegramLink` asks first**, as `openLink` does: Mini Apps open t.me links without a prompt, but resolving one
   is a network request the widget would cause.
 - **There is no source cap** (V1): M1d's 256 KiB cap is gone with the inline `tgwidget` blocks and `.tgw` files it
@@ -1057,14 +1288,21 @@ M1d's, from the old runtime (spec §10.1):
   (`Blob.slice`, `AbortSignal.timeout`); there is no `FileReader` and no `AbortSignal.any`.
 - **Intl diverges in places** (V5b): `formatRange`, `formatRangeToParts`, `selectRange`, the `formatToParts` of
   `RelativeTimeFormat` and `ListFormat`, `Segmenter`, `DisplayNames`, `Locale`, `DurationFormat` and
-  `supportedValuesOf` are absent; a resolved locale drops its `-u-` extension (the `numberingSystem` and `calendar`
-  options are honored); a string handed to `NumberFormat.format` goes through `ToNumber`; a time zone resolves to
-  ICU's canonical (CLDR) id (`Asia/Calcutta`, not `Asia/Kolkata`: the IANA lookup is ICU 74, above the floor), and an
-  offset time zone (`+01:00`) is a `RangeError`. A `numberingSystem` ICU does not have as digits falls back to the
-  locale's own. A `Collator` sets only the attributes its options give, so a locale's tailoring stands (Danish sorts
-  upper case first, Thai ignores punctuation) and `resolvedOptions` reports it. Known gap: ICU 69 (iOS 15) has not
-  been run, and the number skeletons for `roundingMode: 'halfCeil'` / `'halfFloor'` may be refused there (a
-  `RangeError` at format, on iOS 15 only).
+  `supportedValuesOf` are absent. A tag's unicode extension reaches the glue reduced to the keywords its constructor
+  reads, with supported values (above); the glue applies them on iOS 16 and later, while `resolvedOptions()` still
+  reports `latn` and `gregory`, as upstream's glue answers it. The `numberingSystem` and `calendar` options do not
+  override an extension's keyword (ECMA-402 drops the keyword then): the glue reads neither option, so
+  `new Intl.NumberFormat('en-u-nu-thai', { numberingSystem: 'latn' })` formats in Thai digits. `hour12` and
+  `hourCycle` do override (the glue rebuilds the hour cycle from them). What the glue
+  formats is Foundation's, and it formats only what widget-sandbox's
+  shim asks it for: no compact, scientific or unit notation, `roundingMode`, `roundingIncrement` or
+  `trailingZeroDisplay` (accepted and reported, not applied); a `calendar` or `numberingSystem` is reported, the glue
+  formats Gregorian in Latin digits; `caseFirst` and `ignorePunctuation` do not reach the comparison; quarters are
+  English words, and months elsewhere; a unit list is a narrow conjunction (widget-sandbox's docs/changes.md, v0.1.1,
+  lists the glue's own approximations). Locale tags are canonicalized in case only (no alias is replaced) and every
+  valid tag is supported; a time zone the glue does not know formats in the device's, and only a name that cannot be
+  one (`+01:00`, `../x`) is a `RangeError`. A string handed to `NumberFormat.format` goes through `ToNumber`, and a
+  BigInt reaches the glue as a number.
 
 Two things the M1d plan wrote otherwise keep the old runtime's behaviour, so they are not divergences: the host CSS
 goes with litehtml's master sheet (an author's rules win over it, as with `LHDocument`'s `MasterWithCSS`), and a
@@ -1103,38 +1341,13 @@ What V4 does differently from the reference validator and sandbox at v0.1.0, on 
     behaviour there is not established); a `<style>` whose text or strings do not fit is not applied and counts
     nothing (the reference blanks the sheet and keeps its text charged).
 
-## What regresses until M2 to M4
+## What the corpus still trips on
 
-The cost of the spec's D14 (the switch now, with no flag): a widget that needs what is not built yet renders or
-behaves less well than on the old runtime until it is. At the end of M1d, after `element.style` came forward from M2
-(it alone was 79 of the 103 corpus documents with failures in M1b's count, and the corpus went from 92 files with an
-uncaught error to 23), `CorpusTests.testEveryCorpusWidgetStartsAndFetchesNothing` boots all 230 corpus files with no
-crash and no stop, and 23 end with an uncaught error. `CorpusTests.knownGaps` lists them, so they print rather than
-fail:
-- `TypeError: not a function` (7): `canvas.getContext` in 5 (`compat/webgl.html` asks for WebGL first; Canvas 2D is
-  M3), `window.matchMedia` in `compat/dark-mode.html` and SVG `getBBox` in `compat/svg-chart.html` (M2);
-- `Intl is not defined` (5, M2);
-- `Chart is not defined` (5) and `d3 is not defined` (2) (M3). The app installs no script loader, so all 9 files that
-  load Chart.js or D3 by URL get `script-skipped`, and 2 of them throw nothing; `compat/three-js.html` loads three.js,
-  which was never bundled;
-- `localStorage is not defined` (3; Web Storage came in V2a, persisted by the client since V2b);
-- `fetch is not defined` (1): never, since a widget cannot fetch.
-
-CSS transitions and animations do not run (V5f; `element.animate()` runs since V5e), and the observers are absent (M2; the geometry queries and
-`getComputedStyle` came in V3); none of these is among the corpus's uncaught errors. On the simulator (K3) the corpus messages already in
-Saved Messages render on the new runtime, every widget fully drawn from its first frame while the chat opens and is
-flung, and taps on the stock card, the live poll and the hotel booking update them. The re-post of the corpus at
-`widget-runtime-m1d-1` was queued but failed to send, because the account stayed offline the whole session; it is still
-owed.
-
-The tests that pinned the old runtime are deleted or rewritten (M1d's carry-over, in `feature/message-widgets`' history, lists every case): `EngineTests`,
-`ValidatorTests` and `RendererTests` whole, twidget's `PatchLogTests` and `WidgetDOMFuzzTests`, and the engine- and
-validator-specific cases of `CoreTests`, `DeterminismTests`, `LimitsTests` and `ViewTests`. Kept tests whose
-observation changed read the new core: tap helpers use `WRSession.borderBoxForTesting:` until M2's
-`getBoundingClientRect`, frozen checks read the renderer's badge, the failed-start tests use a source past the 256 KiB
-cap, and the attack and corpus scans assert that no URL-loading request is made (a URL now reaches `WidgetContainer`
-and is refused there). The three tests skipped for the CSSOM in Task 9 run again since `element.style`; nothing is
-skipped now.
+`CorpusTests.testEveryCorpusWidgetStartsAndFetchesNothing` boots every corpus file but `attacks` with no crash and no
+stop. The uncaught errors it allows (`CorpusTests.knownGaps`) are all by design: `Chart is not defined` and
+`d3 is not defined` (profile 1 bundles no library and the app installs no script loader, so a library loaded by URL is
+`script-skipped`) and `fetch is not defined` (a widget never fetches). The Hang and Buggy buttons are not honest widgets
+(`throwsOnPurpose`).
 
 ## Tests
 
@@ -1145,6 +1358,8 @@ Host tests, from the repo root:
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeTests \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeBindingTests \
   //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeIntlCasesTests \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeBidiTests \
+  //third-party/widget-sandbox:WidgetSandboxIntlTests \
   //build-system/WidgetIDL:WidgetIDLTests //third-party/quickjs-ng:QuickJSHostTests \
   //third-party/gumbo:GumboHtml5libTests --test_output=errors
 ./build-input/bazel-9.2.0-darwin-arm64 test //third-party/gumbo:GumboForkTests   # alone: its timing case is flaky under load
@@ -1217,33 +1432,39 @@ Three manual programs run with `-c opt`:
 - `:WidgetRuntimeCorpusBootTests`: every corpus document booted headless, with the render tree since M1c; the §6.2
   boot numbers, the first flush's, and the failures by missing global (M2's list).
 
+The corpus goldens, `:WidgetRuntimeCorpusGoldenTests` (size large, seconds), hold every non-attack corpus document's
+results, so that a change in the runtime or the renderer shows as a diff to fix or to accept: how the run ended, the
+render limits, what the host was told (diagnostics, console, bridge calls, storage commits, refused loads), the DOM
+without its scripts' and style sheets' text, the layout dump and the paint (`LayerTree::dump`, each font description
+printed once), in `WidgetRuntime/Tests/CorpusGoldens/<path under corpus/>.txt`. Each document boots at width 360 to
+idle, runs one virtual second and is flushed, in deterministic mode: the host's virtual clock (its wall clock at
+2026-01-01T00:00:00Z), random seed 1, `FakeRenderHost`'s metrics (8 px a byte, breaking only between code points), Intl
+answered by `echoIntl` (the request itself) and `TZ` pinned to Asia/Tokyo by the test (an offset, so a local-time and
+UTC mix-up shows; no daylight saving). Animations are kept; work units and memory are never recorded. Accepting a
+change, or re-vendoring the corpus, records them again (and removes the goldens of documents the corpus no longer has):
+
+```sh
+WR_GOLDENS_UPDATE=1 ./build-input/bazel-9.2.0-darwin-arm64 run \
+  //submodules/TelegramUI/Components/MessageWidget/WidgetRuntime:WidgetRuntimeCorpusGoldenTests
+```
+
 The corpus is `third-party/widget-sandbox/corpus` (`//third-party/widget-sandbox:CorpusFiles`).
 
-## Next
+## Open
 
-- M1a to M1d are done (the status above).
-- **M1e: the gates, and what M1c left** (spec §13):
-  - WPT rendering: reftests and `check-layout-th.js` tests through litehtml, with their own ratcheting expectations;
-  - the corpus gates and goldens (spec §9), the goldens in deterministic mode with `TZ` pinned, because local-time
-    `Date` output (`toString`, `getHours`, `getTimezoneOffset`) reads the process time zone;
-  - Task 10c, an incremental render subtree in the fork, so that structural and non-neutral attribute patches stop
-    publishing `Reset`;
-  - the sub-pixel gap of moved nodes, the SVG `<image>` the fork never loads, and a `list-style-image` over 1 KiB on a
-    `<ul>` (spec §10.3);
-  - the corpus re-post at `widget-runtime-m1d-1`, which failed to send in M1d's simulator run.
-- **M2:** the rest of the profile (spec §13), with `innerWidth` and `innerHeight`; `Intl`, which is new
-  (`IntlBridge.swift` went with the old engine; V5 in the widgets v0.1.0 plan); and the layout queries over
-  `flushForQuery` (the geometry ones, with the accumulated changed rects, came in V3; `getComputedStyle` in V3,
-  `matchMedia` in V3b, storage in V2a). Also the
-  captioned-table cell boxes, which mis-hit in `nodeAt` and `RenderTree::borderBox`.
-- **M3:** Canvas 2D, Chart.js and D3, and a script loader for the bundled libraries: the app installs none
-  (`WRProductionHost` does not override `scriptLoader()`).
-- **M4:** CSS transitions and animations came in V5f (Web Animations in V5e); computed values and the omissions listed
-  under them remain.
-- **M5:** the corpus goldens recorded again once M2 to M4 are in, and the boot measured against the allowance on a
-  device.
+- **V6, the release checks** (the client spec's §5). The pass by eye of the visual conformance set is done on the
+  simulator (light, dark, incoming, the largest text size, every widget re-created by scrolling): every row matches
+  its picture but `visual/02`'s tiled row and `visual/13`'s popover and button label, both the set's ("Rendering
+  fidelity"). Open: what needs a device or real messages: rotation, right-to-left, the bot's real layer-233 messages
+  end to end (forward, edit, delete), the SDK group's interactive rows (links, haptics, an app restart), the feed
+  bench on a low-end device, an iPad trackpad, and a resize during a drag.
+- **After V6** (the spec's §5): WPT rendering (reftests and `check-layout-th.js` tests through litehtml, with their own
+  ratcheting expectations); the rest of Task 10c, an incremental render subtree in the fork, so that a structural patch
+  other than a Text swap, and a change of a property that shapes the render tree (`display`, `position`, `float`, …),
+  stop re-creating litehtml's render tree and publishing `Reset` ("Measured", per-frame publishes); the boot measured
+  against the allowance on a device.
 
-What M1a and M1b owed M1d, and how the app keeps M1b's and M1c's host contract (all done in M1d):
+The host contract the app keeps (`MessageWidgetCore`, `WRProductionHost`, `CoreTextRenderHost`):
 - the loop is stepped with `now`, `CACurrentMediaTime()` in milliseconds, which is also the clock `WRProductionHost`
   reports to the runtime;
 - `MessageWidgetCore` reads `stopReason` and `failed` after every task (`publish`), so a stopped widget freezes
@@ -1251,15 +1472,9 @@ What M1a and M1b owed M1d, and how the app keeps M1b's and M1c's host contract (
 - moves reach the runtime's tasks only when the widget listens for them, which `Taps.cpp` decides from
   `ListenedTypes` itself: the host does not call `takeIfChanged`;
 - a width or theme change is `setWidth:` or `setDark:`, each followed by a flush; a stopped widget meets a new width
-  by being clipped, not reflowed;
+  by being clipped, not reflowed, and the view paints the canvas colour right of a narrower picture;
 - `CoreTextRenderHost` never throws and never calls back into the runtime, and its fonts and images (`IOSHostFont`,
   `IOSHostImage`) outlive it;
 - out-of-memory is fatal at the facade, and the 256 KiB source cap is `WRSession`'s;
+- a tile the renderer cannot draw keeps the last frame up and leaves a `tile-draw-failed` diagnostic;
 - taps, the UI events and the activation behaviour are built, and `TapTests` and `ActivationTests` pin their order.
-
-Open from M1d (its carry-over's deferred items): a widget frozen by a width task can show a blank strip at a later,
-wider width; a tile that fails to draw leaves the last frame with no diagnostic; nothing at the core level refuses a
-bridge call after a stop; demotion judges a whole drain; the DEBUG slow-task log line went with the old engine; and
-`borderBoxForTesting:` sits in the production header.
-
-The milestones' carry-over files, in `feature/message-widgets`' history, list them all.

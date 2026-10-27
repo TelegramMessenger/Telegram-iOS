@@ -234,3 +234,57 @@ version 1 and every v0.1.0 widget stays valid. From then on it is the authority 
 - **The conformance runner** configures the host as in production. Decided: the app's own theme for an incoming bubble
   of the default chat theme; the visual set is run too, loaded only.
 - Not taken from v0.1.1 yet: the narrower live-collection invalidation (cost only, no check depends on it).
+
+## 9. The v0.1.2 delta (2026-10-24)
+
+widget-sandbox `v0.1.2` (`842b4363`, 2026-10-22) decides who gets a press over a widget by `touch-action`, through a
+gesture policy shared by every client (`docs/decisions.md`, "Gestures: `touch-action` is the claim"; sdk-v1 §5.5;
+profile G1): taps and double taps are always the widget's (both clicks, then `dblclick`); a hold and a drag are the
+bubble's on `auto` (the widget gets `pointercancel`), drags on the other axis are the widget's on `pan-x` / `pan-y`,
+everything is on `none` (`contextmenu` included); the leading 20 px take no claim. Thresholds: slop 10 px, hold 500 ms,
+double tap 300 ms / 40 px. What this client decided (the user, 2026-10-24):
+
+- **Vertical drags always scroll the chat** ("Keep my rule"): `none` and `pan-x` claim no vertical drag here. No
+  conformance check drags vertically.
+- **The two-finger rules key on holds**: the chat steps back for a second finger, and a held finger locks the rest of
+  the chat, when a press claims its hold (`none`), no longer when it only lands on something the widget handles.
+- **The chat's menu keeps its timing** ("it should be as it is now"): a hold on a press that claims none opens the
+  menu when the chat's context gesture activates, not at the policy's 500 ms; the runtime's own `contextmenu` on `none`
+  comes at 500 ms.
+- **iPad pointers are in** ("if possible for iPads with a trackpad"): an indirect pointer presses as the policy's mouse;
+  its holds and sideways drags are the widget's, a vertical drag still scrolls, and a secondary click opens the
+  message's menu unless the press claims holds. No hover. Unverified on a device.
+- **A claimed drag is decided at 4 pt**, not the policy's 10: the chat's list pan begins at about 10 pt and took a
+  claimed drag decided there; the runtime keeps the 10 px slop for tap against drag.
+- **Conformance**: the Tier 1 runner performs `dblclick` (two taps 100 ms apart) and paces actions 350 ms apart
+  (CLIENTS.md step 6); the checks only the bubble can satisfy (a hold on `auto`, a drag from the strip) fail there as
+  CLIENTS.md says such a runner reports, and a Tier 2 run of `auto/23-gestures` through the real bubble passes them.
+- Hidden timers keep the order of their delays (the 1 Hz wake fires them in due order), pinned by a test.
+- Not taken: the area quota (decisions.md's "possible later step"), hover from a pointer, right-to-left mirroring of
+  the leading edge (the chat is not mirrored).
+
+## 10. The v0.1.3 delta (2026-10-24)
+
+widget-sandbox `v0.1.3` (`11aacec5`, 2026-10-24): the payload is zlib, vertical drags are always the chat's (decision
+G2, which this client already kept), and a widget chooses which edge of its bubble stays put when its height changes
+(`TelegramWidget.setResizeAnchor`, decision R1). Profile, SDK and protocol stay version 1. What this client decided:
+
+- **Payload**: inflate zlib or gzip (messages stored before the switch keep working); local messages compressed as the
+  server does, zlib at level 9.
+- **The anchored edge wins everywhere**, at the chat's bottom too (the user: "The anchor should win if scrolled to
+  bottom too"): a top-anchored newest widget that grows leaves the chat scrolled up by its growth.
+- **A widget's first height is placement** (the user's choice): the first height after the placeholder, with nothing
+  cached, is placed as any new message is; the anchor governs every later change.
+- **The list clamps at its ends** (the user's choice): it never shows space past an end; a shrink that would need it
+  moves the edge instead.
+- The new run's anchor governs its own reports; the cached anchor serves before the first report and for a widget gone
+  to the pill. A held jump yields to the anchor. No compensation while the user drags the chat.
+- Conformance: the Tier 2 run of `auto/23-gestures` performs the new vertical drags; `calc()` inside a translation is
+  a length's tree (twidget edit 56), as in a width.
+- Not taken: upstream's other platforms and demo apps.
+
+## 11. The v0.2.x delta (2026-10-26)
+
+widget-sandbox v0.2.0–v0.2.2 (vendored at `v0.2.2`, `66f4c1f7`) make a widget fixed code plus changeable state: the
+bot's state, requests, shared state, previews, and haptics that need a touch. The client's design and decisions for it are
+`docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`, which supersedes §3 and §6 of this one where it says so.

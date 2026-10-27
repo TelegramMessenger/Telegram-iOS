@@ -4,234 +4,60 @@
   host stylesheet: ../kit.css is prepended to every bubble by the host; images use app:/sf: schemes
   ported: classic widget, see corpus/htmlbubbles-ported/README.md
 -->
-<style>
-  :root { color-scheme: light dark;
-    --fg: light-dark(#000, #fff); --muted: light-dark(#6e6e73, #98989d);
-    --card: light-dark(#fff, #1c1c1e); --border: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.14));
-    --blue: #007aff; --red: #ff3b30; }
-  body { margin: 0; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.3; color: var(--fg); }
-  .card { background-color: var(--card); border: 1px solid var(--border); border-radius: 14px; color: var(--fg); }
-  .pad { padding: 12px 14px; }
-  .row { display: flex; align-items: center; } .between { justify-content: space-between; }
-  .grow { flex-grow: 1; }
-  .muted { color: var(--muted); } .small { font-size: 12px; } .tiny { font-size: 11px; }
-  .t-red { color: var(--red); }
-  .badge { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 11px; font-weight: 700; background-color: rgba(127,127,127,0.18); }
-  .badge.red { background-color: rgba(255,59,48,0.16); color: var(--red); }
-  a { color: var(--blue); text-decoration: none; }
-  [data-action] { cursor: pointer; }
-  [hidden] { display: none !important; }
-
-  .np { width: 360px; max-width: 100%; box-sizing: border-box; }
-  .np .top { display: flex; align-items: center; }
-  .np .art { width: 64px; height: 64px; border-radius: 10px; margin-right: 12px; flex-shrink: 0; }
-  /* app:sunset | aurora | ocean | dunes | forest */
-  .art-sunset { background: linear-gradient(180deg, #ffd60a, #ff9f0a 35%, #ff2d55 70%, #5e2b6e); }
-  .art-aurora { background: linear-gradient(160deg, #0b1a2b, #30d158 40%, #64d2ff 75%, #0b1a2b); }
-  .art-ocean { background: linear-gradient(180deg, #64d2ff, #0a84ff 55%, #1d2b64); }
-  .art-dunes { background: linear-gradient(170deg, #ffd60a, #ff9f0a 55%, #a0522d); }
-  .art-forest { background: linear-gradient(180deg, #a8e063, #34c759 50%, #14532d); }
-  .np .like { display: inline-block; font-size: 20px; padding: 2px 6px; border-radius: 8px; color: #8e8e93; }
-  .np .like:hover { background-color: rgba(127,127,127,0.14); }
-  .np .like.on { color: #ff2d55; }
-  /* tween(heart, {s: 1}, 450, ease.outBack) from 1.7 (liked) or 0.6 (unliked) */
-  .np .like.pop-big { animation: pop-big 450ms cubic-bezier(.34,1.56,.64,1); }
-  .np .like.pop-small { animation: pop-small 450ms cubic-bezier(.34,1.56,.64,1); }
-  @keyframes pop-big { from { transform: scale(1.7); } to { transform: scale(1); } }
-  @keyframes pop-small { from { transform: scale(0.6); } to { transform: scale(1); } }
-  .np .eq { display: block; height: 72px; margin: 14px 0 8px 0; }
-  .np .seek { position: relative; height: 14px; }
-  .np .prog { position: absolute; left: 0; top: 5px; width: 332px; max-width: 100%; height: 4px; border-radius: 2px; background-color: rgba(127,127,127,0.25); }
-  .np .prog div { height: 4px; border-radius: 2px; width: 0; }
-  .np .knob { position: absolute; top: 2px; left: -5px; width: 10px; height: 10px; border-radius: 5px; }
-  .np .hit { position: absolute; top: 0; width: 14px; height: 14px; border-radius: 3px; }
-  .np .hit:hover { background-color: rgba(127,127,127,0.16); }
-  .np .times { display: flex; justify-content: space-between; font-size: 11px; color: #8e8e93; margin-top: 2px; font-family: ui-monospace, monospace; }
-  .np .ctl { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
-  .np .ctl .b { display: inline-block; font-size: 22px; padding: 2px 12px; border-radius: 10px; }
-  .np .ctl .b:hover { background-color: rgba(127,127,127,0.14); }
-  .np .ctl .tg { display: inline-block; font-size: 15px; padding: 4px 8px; border-radius: 10px; color: #8e8e93; }
-  .np .ctl .tg:hover { background-color: rgba(127,127,127,0.14); }
-  .np .ctl .tg.on { color: #ff2d55; background-color: rgba(255,45,85,0.12); }
-  .np .lnk { font-size: 12px; }
-  .np .lnk:hover { text-decoration: underline; }
-  .np .q { display: flex; align-items: center; padding: 5px 6px; border-radius: 8px; }
-  .np .q:hover { background-color: rgba(127,127,127,0.12); }
-  .np .q .mini { width: 30px; height: 30px; border-radius: 6px; margin-right: 8px; flex-shrink: 0; }
-  .np .q.cur { background-color: rgba(255,45,85,0.10); }
-  /* transition('slide-left' | 'slide-right' | 'slide-down' | 'slide-up') on the bubble */
-  .tr-slide-left { animation: tr-slide-left 300ms cubic-bezier(.33,1,.68,1); }
-  .tr-slide-right { animation: tr-slide-right 300ms cubic-bezier(.33,1,.68,1); }
-  .tr-slide-down { animation: tr-slide-down 300ms cubic-bezier(.33,1,.68,1); }
-  .tr-slide-up { animation: tr-slide-up 300ms cubic-bezier(.33,1,.68,1); }
-  @keyframes tr-slide-left { from { opacity: 0; transform: translateX(28px); } }
-  @keyframes tr-slide-right { from { opacity: 0; transform: translateX(-28px); } }
-  @keyframes tr-slide-down { from { opacity: 0; transform: translateY(-14px); } }
-  @keyframes tr-slide-up { from { opacity: 0; transform: translateY(14px); } }
-</style>
-<div class="card pad np" id="w">
-  <div class="top"><div class="art" id="art"></div>
-    <div class="grow"><b id="title"></b><div class="small muted" id="artist"></div>
-      <div style="margin-top: 3px"><span class="badge" id="badge">paused</span> <span class="tiny muted" id="bpm"></span></div></div>
-    <span class="like" id="like" data-action="like">♡</span></div>
-  <canvas class="eq" id="eq" width="332" height="72"></canvas>
-  <div class="seek"><div class="prog"><div id="prog"></div></div><div class="knob" id="knob"></div><span id="hits"></span></div>
-  <div class="times"><span id="t1">0:00</span><span id="t2">-0:00</span></div>
-  <div class="ctl"><span class="tg" id="shuffle" data-action="shuffle">🔀</span>
-    <span><span class="b" data-action="prev">⏮</span><span class="b" id="playbtn" data-action="play">▶️</span><span class="b" data-action="next">⏭</span></span>
-    <span class="tg" id="repeat" data-action="repeat">🔂</span></div>
-  <div class="row between" style="margin-top: 4px"><span class="tiny muted" id="modeline">In order</span><a class="lnk" href="#" data-action="queue" id="queuelnk">Up next ▾</a></div>
-  <div id="list" hidden style="margin-top: 8px"></div>
-</div>
-<script>
-const TRACKS = [
-  { title: 'Margin Collapse', artist: 'The Box Model', art: 'sunset', length: 204, bpm: 118, c: ['#ff2d55', '#ff9f0a'] },
-  { title: 'Float Left', artist: 'Clearfix', art: 'aurora', length: 187, bpm: 96, c: ['#30d158', '#64d2ff'] },
-  { title: 'Reflow (Night Mix)', artist: 'Shrink-to-Fit', art: 'ocean', length: 236, bpm: 128, c: ['#0a84ff', '#bf5af2'] },
-  { title: 'Overflow: Hidden', artist: 'Clip Path', art: 'dunes', length: 212, bpm: 104, c: ['#ff9f0a', '#ffd60a'] },
-  { title: 'Z-Index Blues', artist: 'Stacking Context', art: 'forest', length: 199, bpm: 88, c: ['#5e5ce6', '#64d2ff'] },
-];
-const N = 24, SEGS = 24, W = 332;
-let track = 0, playing = false, running = false, lastT = 0, energy = 0, levels = Array(N).fill(0);
-let shuffle = false, repeat = false, queue = false;
-const pl = { pos: 41 }, liked = new Set([2]);
-const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
-const esc = v => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-const outCubic = t => 1 - Math.pow(1 - t, 3);
-const hex = c => { const n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-const mix = (a, b, t) => { const x = hex(a), y = hex(b); return `rgb(${x.map((q, i) => Math.round(q + (y[i] - q) * t)).join(',')})`; };
-
-const root = document.getElementById('w');
-const $ = id => document.getElementById(id);
-const ctx = $('eq').getContext('2d');
-function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-function bubble(kind) {
-  for (const c of [...root.classList]) if (c.startsWith('tr-')) root.classList.remove(c);
-  void root.offsetWidth;
-  root.classList.add('tr-' + kind);
+<style>.row{display:flex;align-items:center}.between{justify-content:space-between}.grow{flex-grow:1}.muted{color:var(--tg-theme-hint-color)}.small{font-size:.86em}.tiny{font-size:.79em}.t-red{color:#ff3b30}.badge{padding:1px 8px;border-radius:9px;font-size:.79em;font-weight:700;background:var(--tg-theme-secondary-bg-color)}.badge.red{background-color:rgba(255,59,48,.16);color:#ff3b30}[data-action]{cursor:pointer}[hidden]{display:none!important}.top{display:flex;align-items:center}.art{width:64px;height:64px;border-radius:10px;margin-right:12px;flex-shrink:0}.art-sunset{background:linear-gradient(180deg,#ffd60a,#ff9f0a 35%,#ff2d55 70%,#5e2b6e)}.art-aurora{background:linear-gradient(160deg,#0b1a2b,#30d158 40%,#64d2ff 75%,#0b1a2b)}.art-ocean{background:linear-gradient(180deg,#64d2ff,#0a84ff 55%,#1d2b64)}.art-dunes{background:linear-gradient(170deg,#ffd60a,#ff9f0a 55%,sienna)}.art-forest{background:linear-gradient(180deg,#a8e063,#34c759 50%,#14532d)}.like{display:inline-block;font-size:1.4em;padding:2px 6px;color:var(--tg-theme-hint-color)}.like.on{color:#ff2d55}.eq{display:block;width:100%;height:72px;margin:14px 0 8px}.seek{position:relative;height:14px}.prog{position:absolute;left:0;top:5px;width:100%;height:4px;border-radius:2px;background:var(--tg-theme-secondary-bg-color)}.prog div{height:4px;border-radius:2px;width:0}.knob{position:absolute;top:2px;margin-left:-5px;width:10px;height:10px;border-radius:5px}.hit{position:absolute;top:0;height:14px}.times{display:flex;justify-content:space-between;font-size:.75em;color:var(--tg-theme-hint-color);margin-top:2px;font-family:ui-monospace,monospace}.ctl{display:flex;justify-content:space-between;align-items:center;margin-top:2px}.ctl .b{display:inline-block;font-size:1.5em;padding:2px 10px}.ctl .tg{display:inline-block;padding:4px 8px;border-radius:10px;opacity:.45}.ctl .tg.on{opacity:1;background-color:rgba(255,45,85,.14)}.lnk{font-size:.86em}.q{display:flex;align-items:center;padding:5px 6px;border-radius:8px}.q .mini{width:30px;height:30px;border-radius:6px;margin-right:8px;flex-shrink:0}.q.cur{background-color:rgba(255,45,85,.1)}.like{box-sizing:border-box;width:32px;text-align:center;flex-shrink:0}.top{height:64px}.top .grow,.q .grow{min-width:0}#title{display:block;height:20px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top .small{height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top .grow>div:last-child{height:20px;white-space:nowrap}.badge{display:inline-block;box-sizing:border-box;width:64px;height:18px;line-height:18px;text-align:center;vertical-align:middle}.ctl{height:36px}.ctl .b,.ctl .tg{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:36px;height:32px;padding:0;font:22px/32px "Apple Color Emoji"}.ctl .tg{width:32px;font-size:18px}.ctl>span:nth-child(2){display:flex;gap:4px}.q{height:42px;box-sizing:border-box}.q .small,.q .tiny{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.q .small{height:17px;line-height:17px}.q .tiny{height:15px;line-height:15px}.q>.tiny{width:84px;flex-shrink:0;text-align:right}</style><div id="w"><div class="top"><div class="art" id="art"></div><div class="grow"><b id="title"></b><div class="small muted" id="artist"></div><div style="margin-top: 3px"><span class="badge" id="badge">paused</span><span class="tiny muted" id="bpm"></span></div></div><span class="like" id="like" data-action="like">♡</span></div><canvas class="eq" id="eq" width="332" height="72"></canvas><div class="seek"><div class="prog"><div id="prog"></div></div><div class="knob" id="knob"></div><span id="hits"></span></div><div class="times"><span id="t1">0:00</span><span id="t2">-0:00</span></div><div class="ctl"><span class="tg" id="shuffle" data-action="shuffle" role="button" aria-label="Shuffle">🔀</span><span><span class="b" data-action="prev" role="button" aria-label="Previous track">⏮️</span><span class="b" id="playbtn" data-action="play" role="button" aria-label="Play">▶️</span><span class="b" data-action="next" role="button" aria-label="Next track">⏭️</span></span><span class="tg" id="repeat" data-action="repeat" role="button" aria-label="Repeat track">🔂</span></div><div class="row between" style="margin-top: 4px"><span class="tiny muted" id="modeline">In order</span><a class="lnk" href="#" data-action="queue" id="queuelnk">Up next ▾</a></div><div id="list" hidden style="margin-top: 8px"></div></div><script>(()=>{
+const tracks=[{title:"Margin Collapse",artist:"The Box Model",art:"sunset",length:204,bpm:118,c:["#ff2d55","#ff9f0a"]},{title:"Float Left",artist:"Clearfix",art:"aurora",length:187,bpm:96,c:["#30d158","#64d2ff"]},{title:"Reflow (Night Mix)",artist:"Shrink-to-Fit",art:"ocean",length:236,bpm:128,c:["#0a84ff","#bf5af2"]},{title:"Overflow: Hidden",artist:"Clip Path",art:"dunes",length:212,bpm:104,c:["#ff9f0a","#ffd60a"]},{title:"Z-Index Blues",artist:"Stacking Context",art:"forest",length:199,bpm:88,c:["#5e5ce6","#64d2ff"]}];
+const $=id=>document.getElementById(id),root=$("w"),ctx=$("eq").getContext("2d"),liked=new Set([2]);
+let current=0,playing=false,shuffle=false,repeat=false,queue=false,position=41,energy=0,running=false,last=0,tween=null,levels=Array(24).fill(0);
+try{const s=JSON.parse(localStorage.getItem("mu"));if(s){liked.clear();s.u.forEach(i=>liked.add(i));current=Number.isInteger(s.o)&&tracks[s.o]?s.o:0;shuffle=!!s.g;repeat=!!s.m}}catch{}
+const save=()=>{try{localStorage.setItem("mu",JSON.stringify({u:[...liked],o:current,g:shuffle,m:repeat}))}catch{}},format=t=>Math.floor(t/60)+":"+String(Math.floor(t%60)).padStart(2,"0"),clamp=(n,a,b)=>Math.min(b,Math.max(a,n)),ease=t=>1-(1-t)**3;
+$("hits").innerHTML=Array.from({length:24},(_,i)=>`<div class="hit" data-action="seek" data-value="${i}" style="left:${i*100/24}%;width:${100/24}%"></div>`).join("");
+$("list").innerHTML=tracks.map((t,i)=>`<div class="q" data-action="pick" data-value="${i}"><div class="mini art-${t.art}"></div><div class="grow"><div class="small"><b>${t.title}</b></div><div class="tiny muted">${t.artist}</div></div><span class="tiny muted" id="status-${i}"></span></div>`).join("");
+const rows=Array.from($("list").children),statuses=tracks.map((_,i)=>$("status-"+i));
+function renderQueue(){
+ $("list").hidden=!queue;
+ rows.forEach((row,i)=>{row.classList.toggle("cur",i===current);const status=statuses[i];status.classList.toggle("t-red",i===current);status.classList.toggle("muted",i!==current);status.textContent=(i===current?(playing?"▶ playing":"paused"):format(tracks[i].length))+(liked.has(i)?" ♥":"")});
 }
-// tween() on a number (the playhead): the prelude's formula, one owner per key
-let posTween = 0;
-function tweenPos(to, ms) {
-  const token = ++posTween, from = pl.pos, start = performance.now();
-  const step = () => {
-    if (token !== posTween) return;
-    const t = Math.min(1, (performance.now() - start) / ms);
-    pl.pos = from + (to - from) * outCubic(t);
-    if (t < 1) requestAnimationFrame(step); else pl.pos = to;
-  };
-  step();
+function controls(){
+ $("badge").classList.toggle("red",playing);$("badge").textContent=playing?"● LIVE":"paused";
+ $("playbtn").textContent=playing?"⏸️":"▶️";$("playbtn").setAttribute("aria-label",playing?"Pause":"Play");
+ $("shuffle").classList.toggle("on",shuffle);$("repeat").classList.toggle("on",repeat);$("shuffle").setAttribute("aria-pressed",String(shuffle));$("repeat").setAttribute("aria-pressed",String(repeat));
+ $("modeline").textContent=(shuffle?"Shuffle on":"In order")+(repeat?" · repeat one":"");$("queuelnk").textContent="Up next "+(queue?"▴":"▾");renderQueue();save();
 }
-$('hits').innerHTML = Array.from({ length: SEGS }, (_, k) => `<div class="hit" data-action="seek" data-value="${k}" style="left: ${(k * W / SEGS).toFixed(1)}px"></div>`).join('');
-
-function go(i, dir) {
-  if (i === track) return;
-  bubble(dir);
-  track = i; pl.pos = 0; posTween++;
-  header();
+let oldProgress="",oldTime="",oldRemaining="";
+function progress(){
+ const duration=tracks[current].length,fraction=clamp(position/duration,0,1),width=(100*fraction).toFixed(2)+"%",time=format(position),remaining="-"+format(duration-position);
+ if(width!==oldProgress){oldProgress=width;$("prog").style.width=width;$("knob").style.left=width}
+ if(time!==oldTime){oldTime=time;$("t1").textContent=time}if(remaining!==oldRemaining){oldRemaining=remaining;$("t2").textContent=remaining}
 }
-function nextIndex() { return shuffle ? (track + 1 + Math.floor(Math.random() * (TRACKS.length - 1))) % TRACKS.length : (track + 1) % TRACKS.length; }
-
-function step(t) {
-  const dt = Math.min(0.1, (t - lastT) / 1000);
-  lastT = t;
-  const tr = TRACKS[track];
-  if (playing && !posTweenActive()) {
-    pl.pos += dt;
-    if (pl.pos >= tr.length) {
-      if (repeat) pl.pos = 0;
-      else if (shuffle || track < TRACKS.length - 1) go(nextIndex(), 'slide-left');
-      else { pl.pos = tr.length; playing = false; controls(); }
-    }
-  }
-  energy += ((playing ? 1 : 0) - energy) * Math.min(1, dt * 5);
-  const beat = Math.pow(Math.max(0, Math.sin(t / 1000 * Math.PI * tr.bpm / 60)), 8), s = t / 1000;
-  levels = levels.map((l, i) => {
-    const f = i / N;
-    const target = energy * Math.min(1, 0.18 + 0.3 * Math.abs(Math.sin(s * (1.7 + i * 0.41) + i * 1.3))
-                 + 0.55 * beat * (1 - f) + 0.2 * Math.random() * (0.4 + f));
-    return l + (target - l) * (target > l ? 0.6 : 0.25);
-  });
-  drawEq(tr);
-  seekbar();
-  if (playing || energy > 0.01) requestAnimationFrame(step); else running = false;
+function header(){
+ const t=tracks[current];$("art").className="art art-"+t.art;$("title").textContent=t.title;$("artist").textContent=t.artist;$("bpm").textContent=t.bpm+" BPM";$("like").textContent=liked.has(current)?"♥":"♡";$("like").classList.toggle("on",liked.has(current));$("prog").style.backgroundColor=t.c[0];$("knob").style.backgroundColor=t.c[0];progress();controls();
 }
-// a seek tween owns the playhead while it runs (the original tween overrides pos += dt the same way)
-let tweenEnd = 0;
-function posTweenActive() { return performance.now() < tweenEnd; }
-function wake() { if (!running) { running = true; lastT = performance.now(); requestAnimationFrame(step); } }
-
-// the 24 equaliser bars are drawn on a canvas: same heights, same per-bar gradient
-function drawEq(tr) {
-  ctx.clearRect(0, 0, W, 72);
-  for (let i = 0; i < N; i++) {
-    const l = levels[i], h = 3 + l * 69, x = i * 14;
-    const g = ctx.createLinearGradient(0, 72, 0, 72 - h);
-    g.addColorStop(0, tr.c[0]); g.addColorStop(1, mix(tr.c[0], tr.c[1], 0.3 + 0.7 * l));
-    ctx.fillStyle = g;
-    ctx.fillRect(x, 72 - h, 10, h);
-  }
+const rgb=hex=>{const n=parseInt(hex.slice(1),16);return[n>>16&255,n>>8&255,n&255]},mix=(a,b,t)=>{const x=rgb(a),y=rgb(b);return"rgb("+x.map((n,i)=>Math.round(n+(y[i]-n)*t)).join(",")+")"};
+function paint(){
+ const t=tracks[current];ctx.clearRect(0,0,332,72);levels.forEach((level,i)=>{const height=3+level*69,gradient=ctx.createLinearGradient(0,72,0,72-height);gradient.addColorStop(0,t.c[0]);gradient.addColorStop(1,mix(t.c[0],t.c[1],.3+.7*level));ctx.fillStyle=gradient;ctx.fillRect(i*14,72-height,10,height)});
 }
-let lastFrac = '', lastT1 = '', lastT2 = '';
-const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-function seekbar() {
-  const tr = TRACKS[track], frac = clamp(pl.pos / tr.length, 0, 1), f = (frac * 100).toFixed(2);
-  if (f !== lastFrac) { lastFrac = f; $('prog').style.width = f + '%'; $('knob').style.transform = `translateX(${(frac * W).toFixed(1)}px)`; }
-  const a = mmss(pl.pos), b = '-' + mmss(tr.length - pl.pos);
-  if (a !== lastT1) { lastT1 = a; $('t1').textContent = a; }
-  if (b !== lastT2) { lastT2 = b; $('t2').textContent = b; }
+function select(index){if(index===current)return;current=index;position=0;tween=null;header();paint()}
+const next=()=>shuffle?(current+1+Math.floor(Math.random()*(tracks.length-1)))%tracks.length:(current+1)%tracks.length;
+function frame(now){
+ const dt=Math.min(.1,(now-last)/1000);last=now;
+ if(tween){const t=clamp((now-tween.start)/tween.duration,0,1);position=tween.from+(tween.to-tween.from)*ease(t);if(t===1)tween=null}else if(playing){position+=dt;if(position>=tracks[current].length){if(repeat)position=0;else if(shuffle||current<tracks.length-1)select(next());else{position=tracks[current].length;playing=false;controls()}}}
+ energy+=((playing?1:0)-energy)*Math.min(1,dt*5);const beat=Math.max(0,Math.sin(now/1000*Math.PI*tracks[current].bpm/60))**8,s=now/1000;
+ levels=levels.map((level,i)=>{const f=i/24,target=energy*Math.min(1,.18+.3*Math.abs(Math.sin(s*(1.7+i*.41)+i*1.3))+.55*beat*(1-f)+.2*Math.random()*(.4+f));return level+(target-level)*(target>level?.6:.25)});paint();progress();
+ if(playing||energy>.01||tween)requestAnimationFrame(frame);else running=false;
 }
-function header() {
-  const tr = TRACKS[track], on = liked.has(track);
-  $('art').className = 'art art-' + tr.art;
-  $('title').textContent = tr.title; $('artist').textContent = tr.artist; $('bpm').textContent = tr.bpm + ' BPM';
-  $('like').textContent = on ? '♥' : '♡'; $('like').classList.toggle('on', on);
-  $('prog').style.backgroundColor = tr.c[0]; $('knob').style.backgroundColor = tr.c[0];
-  lastFrac = '';
-  seekbar(); controls(); list();
-}
-function controls() {
-  $('badge').className = 'badge' + (playing ? ' red' : ''); $('badge').textContent = playing ? '● LIVE' : 'paused';
-  $('playbtn').textContent = playing ? '⏸' : '▶️';
-  $('shuffle').classList.toggle('on', shuffle); $('repeat').classList.toggle('on', repeat);
-  $('modeline').textContent = (shuffle ? 'Shuffle on' : 'In order') + (repeat ? ' · repeat one' : '');
-  $('queuelnk').textContent = `Up next ${queue ? '▴' : '▾'}`;
-  if (queue) list();
-}
-function list() {
-  const el = $('list');
-  el.hidden = !queue;
-  if (!queue) return;
-  el.innerHTML = TRACKS.map((t, i) => `<div class="q ${i === track ? 'cur' : ''}" data-action="pick" data-value="${i}">
-      <div class="mini art-${t.art}"></div><div class="grow"><div class="small"><b>${esc(t.title)}</b></div><div class="tiny muted">${esc(t.artist)}</div></div>
-      <span class="tiny ${i === track ? 't-red' : 'muted'}">${i === track ? (playing ? '▶ playing' : 'paused') : mmss(t.length)}${liked.has(i) ? ' ♥' : ''}</span></div>`).join('');
-}
-
-function action(name, value) {
-  if (name === 'play') { playing = !playing; if (pl.pos >= TRACKS[track].length - 0.5) pl.pos = 0; }
-  if (name === 'next') go(nextIndex(), 'slide-left');
-  if (name === 'prev') { if (pl.pos > 3) { tweenEnd = performance.now() + 300; tweenPos(0, 300); } else go((track + TRACKS.length - 1) % TRACKS.length, 'slide-right'); playing = true; }
-  if (name === 'seek') { tweenEnd = performance.now() + 350; tweenPos((Number(value) + 0.5) / SEGS * TRACKS[track].length, 350); }
-  if (name === 'pick') { const i = Number(value); go(i, i > track ? 'slide-left' : 'slide-right'); playing = true; }
-  if (name === 'like') {
-    if (liked.has(track)) liked.delete(track); else liked.add(track);
-    const on = liked.has(track);
-    $('like').textContent = on ? '♥' : '♡'; $('like').classList.toggle('on', on);
-    $('like').classList.remove(on ? 'pop-small' : 'pop-big');
-    restart($('like'), on ? 'pop-big' : 'pop-small');
-  }
-  if (name === 'shuffle') shuffle = !shuffle;
-  if (name === 'repeat') repeat = !repeat;
-  if (name === 'queue') { bubble(queue ? 'slide-up' : 'slide-down'); queue = !queue; }
-  controls();
-  wake();
-}
-root.addEventListener('click', e => {
-  const el = e.target.closest('[data-action]');
-  if (!el) return;
-  e.preventDefault();
-  action(el.dataset.action, el.dataset.value);
+function wake(){if(!running){running=true;last=performance.now();requestAnimationFrame(frame)}}
+function seek(to,duration){tween={from:position,to,start:performance.now(),duration};wake()}
+root.addEventListener("click",event=>{
+ const el=event.target.closest("[data-action]");if(!el)return;event.preventDefault();const action=el.dataset.action;
+ if(action==="play"){playing=!playing;if(position>=tracks[current].length-.5)position=0}
+ if(action==="next")select(next());
+ if(action==="prev"){if(position>3)seek(0,300);else select((current+tracks.length-1)%tracks.length);playing=true}
+ if(action==="seek")seek((Number(el.dataset.value)+.5)/24*tracks[current].length,350);
+ if(action==="pick"){select(Number(el.dataset.value));playing=true}
+ if(action==="like"){liked.has(current)?liked.delete(current):liked.add(current);$("like").textContent=liked.has(current)?"♥":"♡";$("like").classList.toggle("on",liked.has(current))}
+ if(action==="shuffle")shuffle=!shuffle;if(action==="repeat")repeat=!repeat;if(action==="queue")queue=!queue;
+ controls();wake();
 });
-header();
-setTimeout(() => action('play'), 250);
+header();paint();setTimeout(()=>{playing=true;controls();wake()},250);
+})();
 </script>
