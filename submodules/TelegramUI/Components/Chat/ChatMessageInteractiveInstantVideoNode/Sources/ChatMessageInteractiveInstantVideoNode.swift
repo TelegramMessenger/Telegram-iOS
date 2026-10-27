@@ -1166,7 +1166,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             })
         }
     }
-
+    
     // The via-bot, reply and forward headers hide while the video plays. Playback status arrives
     // independently of layout, so this runs on both: a layout applied while the status still reads
     // "playing" would otherwise leave the headers hidden after playback stops.
@@ -1189,7 +1189,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             transition.updateAlpha(node: replyInfoNode, alpha: alpha)
         }
     }
-
+    
     private func updateStatus(animator: ControlledTransitionAnimator? = nil) {
         guard let item = self.item, let status = self.status, let videoFrame = self.videoFrame else {
             return
