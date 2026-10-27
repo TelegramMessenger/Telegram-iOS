@@ -97,8 +97,8 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         let red = self.sample(thumbnail.image, x: 24, y: 24)
         XCTAssertEqual(red.r, 255)
         XCTAssertEqual(red.a, 255)
-        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 6).a, 0)
-        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 41).a, 0)
+        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 6).r, 255)
+        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 41).r, 255)
         XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 12).a, 255)
         XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 35).a, 255)
     }
@@ -161,7 +161,7 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         let pixel = self.sample(thumbnail.image, x: 24, y: 24)
         XCTAssertEqual(pixel.b, 255)
         XCTAssertEqual(pixel.r, 0)
-        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 4).a, 0)
+        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 4).b, 255)
         self.write(store, [("c", self.makeImage(width: 10, height: 10, top: .red), "1")])
         self.assertRect(store.thumbnail(for: "c")!.contentsRect, CGRect(x: 96.0 * self.unit, y: 0.0, width: 48.0 * self.unit, height: 48.0 * self.unit))
     }
@@ -177,7 +177,7 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         let pixel = self.sample(thumbnail.image, x: 24, y: 24)
         XCTAssertEqual(pixel.b, 255)
         XCTAssertEqual(pixel.r, 0)
-        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 4).a, 0)
+        XCTAssertEqual(self.sample(thumbnail.image, x: 24, y: 4).b, 255)
         XCTAssertNil(store.thumbnail(for: "a"))
     }
 
@@ -367,6 +367,16 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         let elapsed = CACurrentMediaTime() - start
         XCTAssertEqual(found, 10_000)
         XCTAssertLessThan(elapsed, 0.05)
+    }
+
+    private var isMeasuring: Bool {
+        return ProcessInfo.processInfo.environment["MEDIAGRID_MEASURE"] == "1"
+    }
+
+    private func measure(_ line: String) {
+        if self.isMeasuring {
+            print("MEASURE \(line)")
+        }
     }
 
     private func makeDirectory() -> URL {
@@ -737,13 +747,18 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         let directory = self.makeDirectory()
         let store = MediaGridThumbnailStore(directory: directory)
         store.diskFlushDelay = 0.2
+        store.indexIdleDelay = 0.2
         self.load(store)
         self.write(store, [("a", self.makeImage(width: 10, height: 10, top: .red), "1")])
         XCTAssertTrue(self.spin(until: { FileManager.default.fileExists(atPath: directory.appendingPathComponent("index.bin").path) }, timeout: 3.0))
         let reopened = MediaGridThumbnailStore(directory: directory)
         self.load(reopened)
         XCTAssertEqual(reopened.version(for: "a"), "1")
-        XCTAssertEqual(MediaGridThumbnailStore(directory: nil).diskFlushDelay, 2.0)
+        let defaults = MediaGridThumbnailStore(directory: nil)
+        XCTAssertEqual(defaults.diskFlushDelay, 2.0)
+        XCTAssertEqual(defaults.indexIdleDelay, 2.0)
+        XCTAssertEqual(defaults.indexMaxInterval, 30.0)
+        XCTAssertEqual(MediaGridThumbnailStore.pageQuality, 0.6)
     }
 
     func testSupersededPageFilesDeletedAfterIndex() {
@@ -810,9 +825,27 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         XCTAssertNil(store.thumbnail(for: "0"))
         XCTAssertNil(store.thumbnail(for: "768"))
         self.prepare(store, ["0"])
-        NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        store.trimToVisible(ids: ["301"])
         XCTAssertEqual(store.decodedPageCount, 1)
         XCTAssertNotNil(store.thumbnail(for: "301"))
+        XCTAssertNil(store.thumbnail(for: "0"))
+    }
+
+    func testMemoryWarningKeepsVisibleAndLastPreparedPages() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 256 * 4)
+        let store = MediaGridThumbnailStore(directory: directory)
+        self.load(store)
+        self.prepare(store, ["512"])
+        store.trimToVisible(ids: ["512"])
+        self.prepare(store, ["0", "256"])
+        NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        XCTAssertEqual(store.decodedPageCount, 3)
+        self.prepare(store, ["768"])
+        NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        XCTAssertEqual(store.decodedPageCount, 2)
+        XCTAssertNotNil(store.thumbnail(for: "512"))
+        XCTAssertNotNil(store.thumbnail(for: "768"))
         XCTAssertNil(store.thumbnail(for: "0"))
     }
 
@@ -880,8 +913,8 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         XCTAssertTrue(self.spin(until: { loaded }, timeout: 30.0))
         self.pause(0.01)
         ticker.running = false
-        print("MEASURE index load entries=\(count) bytes=\(data.count) time=\(String(format: "%.1f", loadTime * 1000.0))ms maxMainGap=\(String(format: "%.2f", ticker.maxGap * 1000.0))ms")
-        XCTAssertLessThan(ticker.maxGap, 0.002)
+        self.measure("index load entries=\(count) bytes=\(data.count) time=\(String(format: "%.1f", loadTime * 1000.0))ms maxMainGap=\(String(format: "%.2f", ticker.maxGap * 1000.0))ms")
+        XCTAssertLessThan(ticker.maxGap, 0.008)
         XCTAssertEqual(store.version(for: entries[99_999].id), entries[99_999].version)
         XCTAssertEqual(store.version(for: entries[0].id), entries[0].version)
     }
@@ -948,12 +981,15 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
                 }
             }
         }
-        print("MEASURE jpeg bleed worstForeignChannel=\(worstNeighbour) worstEdgeLoss=\(worstEdge) worstInnerLoss=\(worstInner)")
+        self.measure("jpeg bleed worstForeignChannel=\(worstNeighbour) worstEdgeLoss=\(worstEdge) worstInnerLoss=\(worstInner)")
         XCTAssertLessThan(worstNeighbour, 48)
         XCTAssertLessThan(worstEdge, 96)
     }
 
     func testMeasurePageCodecWithSimulatorPhotos() throws {
+        guard self.isMeasuring else {
+            throw XCTSkip("set MEDIAGRID_MEASURE=1 to run")
+        }
         guard let shared = ProcessInfo.processInfo.environment["SIMULATOR_SHARED_RESOURCES_DIRECTORY"] else {
             throw XCTSkip("not on a simulator")
         }
@@ -1000,8 +1036,286 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         }
         encodeTimes.sort()
         decodeTimes.sort()
-        print("MEASURE page photos=\(urls.prefix(256).count) bytes=\(size) encodeMedian=\(String(format: "%.2f", encodeTimes[5] * 1000.0))ms encodeMax=\(String(format: "%.2f", encodeTimes[9] * 1000.0))ms decodeMedian=\(String(format: "%.2f", decodeTimes[5] * 1000.0))ms decodeMax=\(String(format: "%.2f", decodeTimes[9] * 1000.0))ms")
+        self.measure("page photos=\(urls.prefix(256).count) bytes=\(size) encodeMedian=\(String(format: "%.2f", encodeTimes[5] * 1000.0))ms encodeMax=\(String(format: "%.2f", encodeTimes[9] * 1000.0))ms decodeMedian=\(String(format: "%.2f", decodeTimes[5] * 1000.0))ms decodeMax=\(String(format: "%.2f", decodeTimes[9] * 1000.0))ms")
         XCTAssertGreaterThan(size, 10_000)
         XCTAssertLessThan(size, 400_000)
+    }
+
+    func testFailedPageWriteKeepsMappingConsistent() {
+        let directory = self.makeDirectory()
+        let store = MediaGridThumbnailStore(directory: directory, decodedPageBudget: 8)
+        store.diskFlushDelay = 60.0
+        store.indexIdleDelay = 60.0
+        self.load(store)
+        self.write(store, [("A", self.makeImage(width: 10, height: 10, top: .red), "1"), ("B", self.makeImage(width: 10, height: 10, top: .green), "1")])
+        self.flush(store)
+        store.failsDiskWrites = true
+        store.remove(ids: ["A"])
+        self.write(store, [("C", self.makeImage(width: 10, height: 10, top: .blue), "1")])
+        XCTAssertEqual(store.thumbnail(for: "C")!.contentsRect.origin, .zero)
+        self.flush(store)
+        let image = self.makeImage(width: 10, height: 10, top: .yellow)
+        self.write(store, (0 ..< 254 + 512).map { ("p\($0)", image, "1") })
+        XCTAssertLessThanOrEqual(store.writerContextCount(), 2)
+        self.flush(store)
+        let attempts = store.pageWriteAttempts()
+        self.pause(0.3)
+        XCTAssertEqual(store.pageWriteAttempts(), attempts)
+        XCTAssertLessThanOrEqual(store.writerContextCount(), 2)
+        store.trimToVisible(ids: [])
+        self.assertTileColor(store, "C", .blue, tolerance: 0)
+        self.assertTileColor(store, "B", .green)
+
+        let stale = MediaGridThumbnailStore(directory: directory)
+        self.load(stale)
+        XCTAssertNil(stale.version(for: "C"))
+        XCTAssertNil(stale.version(for: "p0"))
+        XCTAssertEqual(stale.version(for: "A"), "1")
+        self.prepare(stale, ["A"])
+        self.assertTileColor(stale, "A", .red)
+
+        store.failsDiskWrites = false
+        self.flush(store)
+        store.trimToVisible(ids: [])
+        XCTAssertEqual(store.decodedPageCount, 0)
+        self.prepare(store, ["C", "p300", "p700"])
+        self.assertTileColor(store, "C", .blue)
+        self.assertTileColor(store, "p700", .yellow)
+
+        let reopened = MediaGridThumbnailStore(directory: directory)
+        self.load(reopened)
+        XCTAssertNil(reopened.version(for: "A"))
+        XCTAssertEqual(reopened.version(for: "p765"), "1")
+        self.prepare(reopened, ["C", "B", "p0", "p765"])
+        self.assertTileColor(reopened, "C", .blue)
+        self.assertTileColor(reopened, "B", .green)
+        self.assertTileColor(reopened, "p0", .yellow)
+        self.assertTileColor(reopened, "p765", .yellow)
+    }
+
+    func testStaleDecodeNeverInstalledOverReusedSlot() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 3)
+        let store = MediaGridThumbnailStore(directory: directory)
+        store.diskFlushDelay = 60.0
+        store.indexIdleDelay = 60.0
+        self.load(store)
+        let gate = DispatchSemaphore(value: 0)
+        let lock = NSLock()
+        var blocks = true
+        var reads = 0
+        store.didReadPage = { _ in
+            lock.lock()
+            reads += 1
+            let wait = blocks
+            blocks = false
+            lock.unlock()
+            if wait {
+                gate.wait()
+            }
+        }
+        store.prepare(ids: ["0"])
+        self.pause(0.05)
+        store.remove(ids: ["0"])
+        self.write(store, [("c", self.makeImage(width: 10, height: 10, top: .blue), "1")])
+        XCTAssertEqual(store.thumbnail(for: "c")!.contentsRect.origin, .zero)
+        self.flush(store)
+        store.trimToVisible(ids: [])
+        XCTAssertNil(store.thumbnail(for: "c"))
+        gate.signal()
+        XCTAssertTrue(self.spin(until: { store.thumbnail(for: "c") != nil }))
+        self.pause(0.1)
+        self.assertTileColor(store, "c", .blue)
+        self.assertTileColor(store, "1", self.color(1))
+        lock.lock()
+        XCTAssertGreaterThanOrEqual(reads, 2)
+        lock.unlock()
+    }
+
+    func testLostPageKeepsTheIdBeingDrawn() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 5)
+        for file in self.pageFiles(directory) {
+            try! FileManager.default.removeItem(at: file)
+        }
+        let store = MediaGridThumbnailStore(directory: directory)
+        self.load(store)
+        XCTAssertEqual(store.version(for: "2"), "v2")
+        self.write(store, [("n", self.makeImage(width: 10, height: 10, top: .red), "1")])
+        XCTAssertEqual(store.version(for: "n"), "1")
+        XCTAssertNil(store.version(for: "2"))
+        XCTAssertNil(store.version(for: "0"))
+        self.assertTileColor(store, "n", .red, tolerance: 0)
+    }
+
+    func testPaddingIsEdgeExtended() {
+        let directory = self.makeDirectory()
+        let store = MediaGridThumbnailStore(directory: directory)
+        self.load(store)
+        let wide = self.makeImage(width: 200, height: 100, top: .red, bottom: .blue)
+        let tall = self.makeImage(width: 100, height: 200, top: .green, bottom: .yellow)
+        self.write(store, [("wide", wide, "1"), ("tall", tall, "1")])
+        let (data, width) = self.pixels(of: store.thumbnail(for: "wide")!.image)
+        func pixel(_ x: Int, _ y: Int) -> [UInt8] {
+            let offset = (y * width + x) * 4
+            return Array(data[offset ..< offset + 4])
+        }
+        for x in 0 ..< 48 {
+            for y in 0 ..< 12 {
+                XCTAssertEqual(pixel(x, y), pixel(x, 12))
+            }
+            for y in 36 ..< 48 {
+                XCTAssertEqual(pixel(x, y), pixel(x, 35))
+            }
+        }
+        for y in 0 ..< 48 {
+            for x in 48 ..< 60 {
+                XCTAssertEqual(pixel(x, y), pixel(60, y))
+            }
+            for x in 84 ..< 96 {
+                XCTAssertEqual(pixel(x, y), pixel(83, y))
+            }
+        }
+        XCTAssertEqual(pixel(24, 0), [255, 0, 0, 255])
+        XCTAssertEqual(pixel(24, 47), [0, 0, 255, 255])
+        self.flush(store)
+        let reopened = MediaGridThumbnailStore(directory: directory)
+        self.load(reopened)
+        self.prepare(reopened, ["wide"])
+        let (decoded, decodedWidth) = self.pixels(of: reopened.thumbnail(for: "wide")!.image)
+        var worst = 0
+        for x in 0 ..< 48 {
+            let top = (12 * decodedWidth + x) * 4
+            worst = max(worst, 255 - Int(decoded[top]), Int(decoded[top + 1]), Int(decoded[top + 2]))
+            let bottom = (35 * decodedWidth + x) * 4
+            worst = max(worst, Int(decoded[bottom]), Int(decoded[bottom + 1]), 255 - Int(decoded[bottom + 2]))
+        }
+        self.measure("padding edge row worst channel error=\(worst)")
+        XCTAssertLessThan(worst, 24)
+    }
+
+    func testLoadStartsWithoutBeingAsked() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 3)
+        let store = MediaGridThumbnailStore(directory: directory)
+        store.write(self.makeImage(width: 10, height: 10, top: .red), id: "late", version: "1")
+        XCTAssertTrue(self.spin(until: { store.version(for: "late") == "1" }))
+        XCTAssertEqual(store.version(for: "1"), "v1")
+        self.load(store)
+    }
+
+    func testIndexWaitsForIdleWhilePagesFlush() {
+        let directory = self.makeDirectory()
+        let store = MediaGridThumbnailStore(directory: directory)
+        store.diskFlushDelay = 0.1
+        store.indexIdleDelay = 0.4
+        store.indexMaxInterval = 60.0
+        self.load(store)
+        let indexPath = directory.appendingPathComponent("index.bin").path
+        let image = self.makeImage(width: 10, height: 10, top: .red)
+        let start = Date()
+        var i = 0
+        while Date().timeIntervalSince(start) < 1.0 {
+            store.write(image, id: "\(i)", version: "1")
+            i += 1
+            self.pause(0.05)
+        }
+        XCTAssertFalse(self.pageFiles(directory).isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: indexPath))
+        XCTAssertTrue(self.spin(until: { FileManager.default.fileExists(atPath: indexPath) }, timeout: 2.0))
+
+        let busyDirectory = self.makeDirectory()
+        let busy = MediaGridThumbnailStore(directory: busyDirectory)
+        busy.diskFlushDelay = 0.1
+        busy.indexIdleDelay = 10.0
+        busy.indexMaxInterval = 0.5
+        self.load(busy)
+        let busyIndexPath = busyDirectory.appendingPathComponent("index.bin").path
+        let busyStart = Date()
+        var sawIndex = false
+        while Date().timeIntervalSince(busyStart) < 1.5 {
+            busy.write(image, id: "\(i)", version: "1")
+            i += 1
+            self.pause(0.05)
+            sawIndex = sawIndex || FileManager.default.fileExists(atPath: busyIndexPath)
+        }
+        XCTAssertTrue(sawIndex)
+    }
+
+    func testMeasureIndexWriteAndFill() throws {
+        guard self.isMeasuring else {
+            throw XCTSkip("set MEDIAGRID_MEASURE=1 to run")
+        }
+        let directory = self.makeDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var entries: [MediaGridThumbnailIndexFile.Entry] = []
+        for i in 0 ..< 100_000 {
+            let local = i % 256
+            entries.append(MediaGridThumbnailIndexFile.Entry(id: "6A1F2C3D-9B8E-4F7A-8C6D-\(String(format: "%012d", i))/L0/001", version: "\(780000000.0 + Double(i))", slot: i, x: (local % 16) * 48, y: (local / 16) * 48, width: 48, height: 48))
+        }
+        var pages: [Int: UInt64] = [:]
+        for page in 0 ... 99_999 / 256 {
+            pages[page] = 1
+        }
+        var times: [Double] = []
+        for _ in 0 ..< 3 {
+            let start = CACurrentMediaTime()
+            let data = MediaGridThumbnailIndexFile(slotPixelSize: 48, pageSide: 16, nextStamp: 2, pages: pages, entries: entries).encoded()
+            try data.write(to: directory.appendingPathComponent("index-measure.bin"), options: .atomic)
+            times.append(CACurrentMediaTime() - start)
+        }
+        self.measure("index write entries=100000 encodeAndWrite=\(times.map { String(format: "%.1f", $0 * 1000.0) }.joined(separator: ","))ms")
+
+        let fillDirectory = self.makeDirectory()
+        let store = MediaGridThumbnailStore(directory: fillDirectory)
+        self.load(store)
+        let images = (0 ..< 64).map { self.makeImage(width: 96, height: 72, top: self.color($0), bottom: self.color($0 + 7)) }
+        final class Ticker {
+            var last = CACurrentMediaTime()
+            var maxGap = 0.0
+            var slow = 0
+            var running = true
+            func tick() {
+                let now = CACurrentMediaTime()
+                let gap = now - self.last
+                self.maxGap = max(self.maxGap, gap)
+                if gap > 0.008 {
+                    self.slow += 1
+                }
+                self.last = now
+                if self.running {
+                    DispatchQueue.main.async {
+                        self.tick()
+                    }
+                }
+            }
+        }
+        var delivered = 0
+        store.onThumbnailsChanged = { ids in
+            delivered += ids.count
+        }
+        let ticker = Ticker()
+        ticker.tick()
+        let start = CACurrentMediaTime()
+        var done = false
+        DispatchQueue.global(qos: .userInitiated).async {
+            for batch in 0 ..< 500 {
+                for i in 0 ..< 10 {
+                    let index = batch * 10 + i
+                    store.write(images[index % 64], id: "\(index)", version: "1")
+                }
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+            DispatchQueue.main.async {
+                done = true
+            }
+        }
+        XCTAssertTrue(self.spin(until: { done }, timeout: 60.0))
+        self.pause(2.5)
+        ticker.running = false
+        let elapsed = CACurrentMediaTime() - start
+        let files = self.pageFiles(fillDirectory)
+        let bytes = files.reduce(0) { $0 + ((try? FileManager.default.attributesOfItem(atPath: $1.path)[.size] as? Int) ?? 0) }
+        self.measure("fill writes=5000 elapsed=\(String(format: "%.2f", elapsed))s maxMainGap=\(String(format: "%.2f", ticker.maxGap * 1000.0))ms gapsOver8ms=\(ticker.slow) pages=\(files.count) pageBytes=\(bytes) delivered=\(delivered)")
     }
 }

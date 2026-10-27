@@ -35,10 +35,10 @@ At 15 and 31 the stored thumbnail is the final image. At 1, 3 and 5 it is a blur
 
 `MediaGridThumbnailStore` is keyed by an opaque `String` identifier, which for PhotoKit is the `localIdentifier`, plus a version token, which for PhotoKit is the modification date.
 
-**Pages.** Thumbnails are grouped into pages of 16×16 slots: 768×768 px, 256 photos per page. Each page is one JPEG file of about 60–100 KB. A small index file maps each identifier to a slot and a version.
+**Pages.** Thumbnails are grouped into pages of 16×16 slots: 768×768 px, 256 photos per page. Each page is one JPEG file (quality 0.6, padding edge-extended) of about 110 KB, measured with 256 real photos. A small index file maps each identifier to a slot and a version.
 - Slots are assigned in fill order. The first fill runs in grid order, so one screen falls into a few pages: about 9 at 31, and 1 at 3.
 - A deleted photo's slot is reused.
-- The expected size is about 6 MB for 16k photos and about 40 MB for 100k.
+- The expected size is about 7 MB of pages for 16k photos and about 44 MB for 100k, plus an index of about 70 bytes per photo (7 MB for 100k).
 
 **Memory.** Decoded pages are `CGImage`s of about 2.3 MB each, held in an LRU with a fixed budget. The working number is 32 pages, about 75 MB, at most. It is trimmed on a memory warning and when the app goes to the background.
 

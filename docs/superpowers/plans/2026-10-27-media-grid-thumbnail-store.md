@@ -17,8 +17,8 @@
 ## Global Constraints
 
 - All of `.superpowers/sdd/2026-10-27-media-grid-stage1/global-constraints.md` still applies: imports, no code comments, the dedicated simulator only, explicit staging, and the commit trailer.
-- Slot: 48×48 px. The photo is drawn aspect-fit inside the slot, with its aspect clamped to `0.5 ... 2.0` (width/height) and centred, on a transparent background.
-- Page: 16×16 slots = 768×768 px, 256 photos. Stored as a JPEG with quality 0.8.
+- Slot: 48×48 px. The photo is drawn aspect-fit inside the slot, with its aspect clamped to `0.5 ... 2.0` (width/height) and centred. The padding repeats the drawn rect's outermost row or column (edge-extended, so JPEG has no hard edge there); `contentsRect` never shows it.
+- Page: 16×16 slots = 768×768 px, 256 photos. Stored as a JPEG with quality 0.6.
 - Storage lives in `<Caches>/MediaGridThumbnails/`, unencrypted, and survives relaunch. It is rebuilt if it is missing or corrupt, and it never crashes on bad files.
 - The decoded-page budget defaults to 32 pages. On a memory warning or when the app enters the background, the cache is trimmed to the pages that are currently visible.
 - No disk I/O, decode or encode on main. `thumbnail(for:)` is O(1) on main.
