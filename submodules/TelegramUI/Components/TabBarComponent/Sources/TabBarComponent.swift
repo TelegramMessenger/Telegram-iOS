@@ -16,6 +16,23 @@ import SearchBarNode
 import TabSelectionRecognizer
 import TabBarLayout
 
+/// The items VoiceOver may reach: while search is active every item but the selected one is faded out.
+func tabBarAccessibleItemIds<Id: Hashable>(ids: [Id], selectedId: Id?, isSearchActive: Bool) -> [Id] {
+    if !isSearchActive {
+        return ids
+    }
+    return ids.filter { $0 == selectedId }
+}
+
+private final class CloseAccessibilityElement: UIAccessibilityElement {
+    var activate: (() -> Void)?
+    
+    override func accessibilityActivate() -> Bool {
+        self.activate?()
+        return self.activate != nil
+    }
+}
+
 public final class NavigationSearchView: UIView {
     private struct Params: Equatable {
         let size: CGSize
@@ -105,6 +122,34 @@ public final class NavigationSearchView: UIView {
             return true
         }
         return false
+    }
+    
+    private let closeAccessibilityElement = CloseAccessibilityElement(accessibilityContainer: NSObject())
+    
+    override public var accessibilityElements: [Any]? {
+        get {
+            guard let params = self.params, params.isActive else {
+                return []
+            }
+            var elements: [Any] = []
+            if let searchBarNode = self.searchBarNode {
+                elements.append(searchBarNode.view)
+            }
+            if let close = self.close {
+                let element = self.closeAccessibilityElement
+                element.accessibilityContainer = self
+                element.accessibilityLabel = params.strings.Common_Close
+                element.accessibilityTraits = .button
+                element.accessibilityFrameInContainerSpace = self.convert(close.background.bounds, from: close.background)
+                element.activate = { [weak self] in
+                    self?.closeAction()
+                }
+                elements.append(element)
+            }
+            return elements
+        }
+        set {
+        }
     }
     
     private func update(params: Params, transition: ComponentTransition) {
@@ -753,8 +798,9 @@ public final class TabBarComponent: Component {
                 let selectedId = self.overrideSelectedItemId ?? component.selectedId
                 var elements: [Any] = []
                 var validIds: [AnyHashable] = []
+                let accessibleIds = tabBarAccessibleItemIds(ids: component.items.map { $0.id }, selectedId: selectedId, isSearchActive: component.search?.isActive == true)
                 for item in component.items {
-                    guard let itemView = self.itemViews[item.id]?.view, itemView.superview != nil else {
+                    guard accessibleIds.contains(item.id), let itemView = self.itemViews[item.id]?.view, itemView.superview != nil else {
                         continue
                     }
                     validIds.append(item.id)

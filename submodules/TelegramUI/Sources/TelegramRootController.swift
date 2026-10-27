@@ -205,6 +205,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         let chatListController = self.context.sharedContext.makeChatListController(context: self.context, location: .chatList(groupId: .root), controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
             chatListController.tabBarItem.badgeValue = sharedContext.switchingData.chatListBadge
+            chatListController.tabBarItem.accessibilityValue = sharedContext.switchingData.chatListBadgeAccessibilityValue
         }
         let callListController = CallListController(context: self.context, mode: .tab)
         // Created even when hidden, like the calls tab: `updateRootControllers` shows and hides it.
@@ -232,7 +233,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
         restoreSettignsController?.updateContext(context: self.context)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
-            sharedContext.switchingData = (nil, nil, nil)
+            sharedContext.switchingData = (nil, nil, nil, nil)
         }
         
         let accountSettingsController = PeerInfoScreenImpl(context: self.context, updatedPresentationData: nil, peerId: self.context.account.peerId, avatarInitiallyExpanded: false, isOpenedFromChat: false, reactionSourceMessageId: nil, callMessages: [], isSettings: true)
