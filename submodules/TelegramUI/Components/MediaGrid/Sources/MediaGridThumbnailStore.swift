@@ -27,6 +27,12 @@ public final class MediaGridThumbnailStore {
         let generation: Int
     }
 
+    private enum WriteResult {
+        case written
+        case writeFailed
+        case encodeFailed
+    }
+
     private enum PendingOperation {
         case write(CGImage, String, String)
         case remove([String])
@@ -53,6 +59,8 @@ public final class MediaGridThumbnailStore {
     let writerContextLimit: Int
     let pageImageCapacity: Int
     private let maxConcurrentDecodes = 3
+    let unconfirmedPageLimit = 8
+    let encodeFailureLimit = 3
 
     private let lock = NSLock()
     private var index: [String: IndexEntry] = [:]
@@ -70,6 +78,8 @@ public final class MediaGridThumbnailStore {
     private var indexIdle: Double = 2.0
     private var indexMaximumInterval: Double = 30.0
     private var failsWrites = false
+    private var failingEncodes = Set<Int>()
+    private var retryMaximum: Double = 30.0
 
     private let queue = DispatchQueue(label: "org.telegram.MediaGridThumbnailStore")
     private var contexts: [Int: CGContext] = [:]
@@ -78,6 +88,11 @@ public final class MediaGridThumbnailStore {
     private var snapshotGenerations: [Int: Int] = [:]
     private var pendingSnapshots: [Int: PageImage] = [:]
     private var retryPages = Set<Int>()
+    private var retryDelay: Double = 0.0
+    private var isRetryScheduled = false
+    private var encodeFailures: [Int: Int] = [:]
+    private var lastWritable = true
+    private var isInOutage = false
     private var stashedImages: [Int: PageImage] = [:]
     private var dirtyPages = Set<Int>()
     private var pendingPlacements: [String: Placement] = [:]
@@ -113,7 +128,9 @@ public final class MediaGridThumbnailStore {
     private var visibleIds = Set<String>()
     private var observers: [NSObjectProtocol] = []
 
+    public private(set) var isWritable = true
     public var onThumbnailsChanged: ((Set<String>) -> Void)?
+    public var onWritabilityChanged: ((Bool) -> Void)?
     var didDecodePage: ((Int, Bool) -> Void)?
     var didReadPage: ((Int) -> Void)?
 
@@ -189,6 +206,36 @@ public final class MediaGridThumbnailStore {
         }
         set {
             self.locked { self.failsWrites = newValue }
+        }
+    }
+
+    var failingEncodePages: Set<Int> {
+        get {
+            return self.locked { self.failingEncodes }
+        }
+        set {
+            self.locked { self.failingEncodes = newValue }
+        }
+    }
+
+    var retryMaxDelay: Double {
+        get {
+            return self.locked { self.retryMaximum }
+        }
+        set {
+            self.locked { self.retryMaximum = newValue }
+        }
+    }
+
+    func retryFailedWritesNow() {
+        self.queue.async {
+            self.runRetries()
+        }
+    }
+
+    func unconfirmedPageCount() -> Int {
+        return self.queue.sync {
+            self.unconfirmedPages.count
         }
     }
 
@@ -536,11 +583,15 @@ public final class MediaGridThumbnailStore {
         guard self.directory != nil else {
             return
         }
+        let semaphore = DispatchSemaphore(value: 0)
         ProcessInfo.processInfo.performExpiringActivity(withReason: "MediaGridThumbnailStore flush", using: { [weak self] expired in
-            guard !expired, let self else {
+            if expired {
+                semaphore.signal()
                 return
             }
-            let semaphore = DispatchSemaphore(value: 0)
+            guard let self else {
+                return
+            }
             self.requestDiskFlush(includeIndex: true) {
                 semaphore.signal()
             }
@@ -721,9 +772,8 @@ public final class MediaGridThumbnailStore {
         let full = CGRect(x: 0, y: 0, width: side, height: side)
         if let pending = self.pendingSnapshots[page] {
             context.draw(pending.image, in: full)
-            if self.retryPages.remove(page) != nil {
+            if self.retryPages.contains(page) {
                 self.pendingSnapshots.removeValue(forKey: page)
-                self.snapshotGenerations[page] = -1
             }
         } else if let directory = self.directory {
             self.lock.lock()
@@ -760,7 +810,11 @@ public final class MediaGridThumbnailStore {
             guard let victim = self.contexts.keys.filter({ $0 != page }).min(by: { (self.contextUses[$0] ?? 0) < (self.contextUses[$1] ?? 0) }) else {
                 return
             }
-            if !self.isContextClean(page: victim) {
+            if self.retryPages.contains(victim) {
+                if let image = self.contexts[victim]?.makeImage() {
+                    self.pendingSnapshots[victim] = PageImage(image: image, generation: self.generation(page: victim))
+                }
+            } else if !self.isContextClean(page: victim) {
                 self.snapshotToDisk(pages: [victim])
             }
             self.dropContext(page: victim)
@@ -781,7 +835,7 @@ public final class MediaGridThumbnailStore {
         guard self.directory != nil else {
             return
         }
-        for page in Array(self.contexts.keys) where self.isContextClean(page: page) {
+        for page in Array(self.contexts.keys) where self.isContextClean(page: page) && !self.retryPages.contains(page) {
             self.dropContext(page: page)
         }
     }
@@ -808,16 +862,12 @@ public final class MediaGridThumbnailStore {
 
     private func draw(_ image: CGImage, id: String, slot: Int, geometry: SlotGeometry, contentsRect: CGRect) {
         let page = slot / self.slotsPerPage
+        if self.contexts[page] == nil, self.pendingSnapshots[page] == nil, !self.retryPages.contains(page), self.atRiskPageCount() >= self.unconfirmedPageLimit {
+            self.rollback(id: id, slot: slot)
+            return
+        }
         guard let context = self.context(page: page, drawing: id), let tile = self.makeTile(image, width: geometry.width, height: geometry.height) else {
-            self.lock.lock()
-            if self.index[id]?.slot == slot {
-                self.index.removeValue(forKey: id)
-                if self.slotIds[slot] == id {
-                    self.slotIds.removeValue(forKey: slot)
-                }
-                self.freeSlot(slot)
-            }
-            self.lock.unlock()
+            self.rollback(id: id, slot: slot)
             return
         }
         let size = self.slotPixelSize
@@ -848,6 +898,37 @@ public final class MediaGridThumbnailStore {
         self.dirtyPages.insert(page)
         self.schedulePublish()
         self.noteMutation()
+        self.updateWritability()
+    }
+
+    private func rollback(id: String, slot: Int) {
+        self.lock.lock()
+        let rolledBack = self.index[id]?.slot == slot
+        if rolledBack {
+            self.index.removeValue(forKey: id)
+            if self.slotIds[slot] == id {
+                self.slotIds.removeValue(forKey: slot)
+            }
+            self.freeSlot(slot)
+            self.indexVersion += 1
+        }
+        self.lock.unlock()
+        guard rolledBack else {
+            return
+        }
+        if self.pendingPlacements[id]?.slot == slot {
+            self.pendingPlacements.removeValue(forKey: id)
+        }
+        DispatchQueue.main.async {
+            guard self.placements[id]?.slot == slot else {
+                return
+            }
+            self.placements.removeValue(forKey: id)
+            if self.slotOwners[slot] == id {
+                self.slotOwners.removeValue(forKey: slot)
+            }
+            self.onThumbnailsChanged?([id])
+        }
     }
 
     private func clear(id: String, slot: Int) {
@@ -995,15 +1076,8 @@ public final class MediaGridThumbnailStore {
         if snapshot != nil {
             self.lastIndexFlushTime = CFAbsoluteTimeGetCurrent()
         }
-        let pages = self.contexts.keys.filter { !self.isContextClean(page: $0) }
+        let pages = self.contexts.keys.filter { !self.isContextClean(page: $0) && !self.retryPages.contains($0) }
         self.snapshotToDisk(pages: pages)
-        let retries = self.retryPages
-        self.retryPages.removeAll()
-        for page in retries {
-            if let pending = self.pendingSnapshots[page] {
-                self.enqueueWrite(directory: directory, page: page, snapshot: pending)
-            }
-        }
         self.ioQueue.async {
             if let snapshot, snapshot.version != self.writtenIndexVersion || self.pageFilesChangedSinceIndex {
                 self.writeIndex(directory: directory, snapshot: snapshot.entries, version: snapshot.version)
@@ -1024,43 +1098,144 @@ public final class MediaGridThumbnailStore {
             self.snapshotGenerations[page] = generation
             let snapshot = PageImage(image: image, generation: generation)
             self.pendingSnapshots[page] = snapshot
-            self.retryPages.remove(page)
             self.enqueueWrite(directory: directory, page: page, snapshot: snapshot)
         }
+        self.updateWritability()
+    }
+
+    private var unconfirmedPages: Set<Int> {
+        return Set(self.pendingSnapshots.keys).union(self.retryPages)
+    }
+
+    private func atRiskPageCount() -> Int {
+        guard self.directory != nil, self.isInOutage else {
+            return 0
+        }
+        var pages = self.unconfirmedPages
+        for page in self.contexts.keys where !self.isContextClean(page: page) {
+            pages.insert(page)
+        }
+        return pages.count
+    }
+
+    private func updateWritability() {
+        let writable = self.atRiskPageCount() < self.unconfirmedPageLimit
+        if writable == self.lastWritable {
+            return
+        }
+        self.lastWritable = writable
+        DispatchQueue.main.async {
+            self.isWritable = writable
+            self.onWritabilityChanged?(writable)
+        }
+    }
+
+    private func scheduleRetry() {
+        guard !self.isRetryScheduled, !self.retryPages.isEmpty else {
+            return
+        }
+        self.isRetryScheduled = true
+        let maximum = self.retryMaxDelay
+        self.retryDelay = self.retryDelay == 0.0 ? min(self.diskFlushDelay, maximum) : min(maximum, self.retryDelay * 2.0)
+        self.queue.asyncAfter(deadline: .now() + self.retryDelay, execute: { [weak self] in
+            self?.runRetries()
+        })
+    }
+
+    private func runRetries() {
+        self.isRetryScheduled = false
+        guard let directory = self.directory else {
+            return
+        }
+        let pages = self.retryPages
+        self.retryPages.removeAll()
+        for page in pages {
+            if let image = self.contexts[page]?.makeImage() {
+                let generation = self.generation(page: page)
+                self.snapshotGenerations[page] = generation
+                let snapshot = PageImage(image: image, generation: generation)
+                self.pendingSnapshots[page] = snapshot
+                self.enqueueWrite(directory: directory, page: page, snapshot: snapshot)
+            } else if let pending = self.pendingSnapshots[page] {
+                self.enqueueWrite(directory: directory, page: page, snapshot: pending)
+            }
+        }
+        self.updateWritability()
+    }
+
+    private func dropPage(_ page: Int) {
+        self.contexts.removeValue(forKey: page)
+        self.contextUses.removeValue(forKey: page)
+        self.pendingSnapshots.removeValue(forKey: page)
+        self.retryPages.remove(page)
+        self.encodeFailures.removeValue(forKey: page)
+        self.lock.lock()
+        let ids = self.idsInPage(page)
+        self.diskGenerations[page] = self.pageGenerations[page] ?? 0
+        self.lock.unlock()
+        self.ioQueue.async {
+            self.failedPages.remove(page)
+        }
+        self.remove(ids: ids)
     }
 
     private func enqueueWrite(directory: URL, page: Int, snapshot: PageImage) {
         self.ioQueue.async {
-            let succeeded = self.writePage(directory: directory, page: page, image: snapshot.image, generation: snapshot.generation)
+            let result = self.writePage(directory: directory, page: page, image: snapshot.image, generation: snapshot.generation)
             self.queue.async {
-                self.confirmSnapshot(page: page, generation: snapshot.generation, succeeded: succeeded)
+                self.confirmSnapshot(page: page, generation: snapshot.generation, result: result)
             }
         }
     }
 
-    private func confirmSnapshot(page: Int, generation: Int, succeeded: Bool) {
-        guard let pending = self.pendingSnapshots[page], pending.generation == generation else {
+    private func confirmSnapshot(page: Int, generation: Int, result: WriteResult) {
+        defer {
+            self.updateWritability()
+        }
+        if case .written = result {
+            if let pending = self.pendingSnapshots[page], pending.generation <= generation {
+                self.pendingSnapshots.removeValue(forKey: page)
+            }
+            self.retryPages.remove(page)
+            self.encodeFailures.removeValue(forKey: page)
+            self.retryDelay = 0.0
+            if self.retryPages.isEmpty {
+                self.isInOutage = false
+            }
             return
         }
-        if succeeded {
-            self.pendingSnapshots.removeValue(forKey: page)
+        if let pending = self.pendingSnapshots[page], pending.generation > generation {
             return
         }
         if self.contexts[page] != nil {
             self.pendingSnapshots.removeValue(forKey: page)
-            self.snapshotGenerations[page] = -1
-        } else {
-            self.retryPages.insert(page)
+        } else if self.pendingSnapshots[page] == nil {
+            return
         }
-        self.scheduleDiskFlush()
+        self.retryPages.insert(page)
+        self.isInOutage = true
+        if case .encodeFailed = result {
+            let failures = (self.encodeFailures[page] ?? 0) + 1
+            self.encodeFailures[page] = failures
+            if failures >= self.encodeFailureLimit {
+                self.dropPage(page)
+                return
+            }
+        }
+        self.scheduleRetry()
         self.scheduleIndexFlush(after: self.indexIdleDelay)
     }
 
-    private func writePage(directory: URL, page: Int, image: CGImage, generation: Int) -> Bool {
+    private func writePage(directory: URL, page: Int, image: CGImage, generation: Int) -> WriteResult {
         self.writeAttempts += 1
-        guard !self.failsDiskWrites, let data = MediaGridThumbnailStore.encodePage(image) else {
+        let (failsWrites, failsEncoding) = self.locked { (self.failsWrites, self.failingEncodes.contains(page)) }
+        guard !failsEncoding, let data = MediaGridThumbnailStore.encodePage(image) else {
             self.failedPages.insert(page)
-            return false
+            return .encodeFailed
+        }
+        guard !failsWrites else {
+            self.failedPages.insert(page)
+            return .writeFailed
         }
         let stamp = self.nextStamp
         self.nextStamp += 1
@@ -1068,7 +1243,7 @@ public final class MediaGridThumbnailStore {
             try data.write(to: self.pageURL(directory: directory, page: page, stamp: stamp), options: .atomic)
         } catch {
             self.failedPages.insert(page)
-            return false
+            return .writeFailed
         }
         self.failedPages.remove(page)
         self.lock.lock()
@@ -1082,7 +1257,7 @@ public final class MediaGridThumbnailStore {
         if let previous {
             self.supersededFiles.append(self.pageURL(directory: directory, page: page, stamp: previous))
         }
-        return true
+        return .written
     }
 
     private func writeIndex(directory: URL, snapshot: [String: IndexEntry], version: Int) {

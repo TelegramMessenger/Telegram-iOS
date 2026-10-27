@@ -1075,6 +1075,8 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         self.assertTileColor(stale, "A", .red)
 
         store.failsDiskWrites = false
+        store.retryFailedWritesNow()
+        XCTAssertTrue(self.spin(until: { store.unconfirmedPageCount() == 0 }))
         self.flush(store)
         store.trimToVisible(ids: [])
         XCTAssertEqual(store.decodedPageCount, 0)
@@ -1317,5 +1319,96 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         let files = self.pageFiles(fillDirectory)
         let bytes = files.reduce(0) { $0 + ((try? FileManager.default.attributesOfItem(atPath: $1.path)[.size] as? Int) ?? 0) }
         self.measure("fill writes=5000 elapsed=\(String(format: "%.2f", elapsed))s maxMainGap=\(String(format: "%.2f", ticker.maxGap * 1000.0))ms gapsOver8ms=\(ticker.slow) pages=\(files.count) pageBytes=\(bytes) delivered=\(delivered)")
+    }
+
+    func testOutageBoundsUnconfirmedPages() {
+        let directory = self.makeDirectory()
+        let store = MediaGridThumbnailStore(directory: directory, pageSide: 2)
+        store.diskFlushDelay = 0.05
+        store.indexIdleDelay = 60.0
+        store.retryMaxDelay = 0.2
+        self.load(store)
+        var changes: [Bool] = []
+        store.onWritabilityChanged = { writable in
+            XCTAssertTrue(Thread.isMainThread)
+            changes.append(writable)
+        }
+        store.failsDiskWrites = true
+        let image = self.makeImage(width: 10, height: 10, top: .red)
+        let ids = (0 ..< 160).map { "i\($0)" }
+        for id in ids {
+            store.write(image, id: id, version: "1")
+            self.pause(0.002)
+        }
+        self.pause(1.0)
+        XCTAssertLessThanOrEqual(store.unconfirmedPageCount(), store.unconfirmedPageLimit)
+        XCTAssertFalse(store.isWritable)
+        XCTAssertEqual(changes.first, false)
+        let refused = ids.filter { store.version(for: $0) == nil }
+        XCTAssertGreaterThan(refused.count, 80)
+        for id in refused {
+            XCTAssertNil(store.thumbnail(for: id))
+        }
+        XCTAssertLessThanOrEqual(store.decodedPageCount, store.unconfirmedPageLimit + store.writerContextLimit)
+        let attempts = store.pageWriteAttempts()
+        self.pause(0.5)
+        XCTAssertLessThanOrEqual(store.pageWriteAttempts() - attempts, 40)
+        self.write(store, [("i0", self.makeImage(width: 10, height: 10, top: .blue), "2")])
+        XCTAssertEqual(store.version(for: "i0"), "2")
+
+        store.failsDiskWrites = false
+        XCTAssertTrue(self.spin(until: { store.isWritable && store.unconfirmedPageCount() == 0 }, timeout: 5.0))
+        XCTAssertEqual(changes, [false, true])
+        self.write(store, refused.map { ($0, image, "1") })
+        self.flush(store)
+        XCTAssertTrue(self.spin(until: { store.unconfirmedPageCount() == 0 }))
+        self.flush(store)
+        let reopened = MediaGridThumbnailStore(directory: directory, pageSide: 2)
+        self.load(reopened)
+        XCTAssertEqual(ids.filter { reopened.version(for: $0) == nil }, [])
+        XCTAssertEqual(reopened.version(for: "i0"), "2")
+        self.prepare(reopened, ["i0", "i159", refused[0]])
+        self.assertPagePixel(reopened, "i0", .blue)
+        self.assertPagePixel(reopened, "i159", .red)
+    }
+
+    private func assertPagePixel(_ store: MediaGridThumbnailStore, _ id: String, _ color: UIColor, file: StaticString = #filePath, line: UInt = #line) {
+        guard let thumbnail = store.thumbnail(for: id) else {
+            XCTFail("no thumbnail for \(id)", file: file, line: line)
+            return
+        }
+        let side = CGFloat(thumbnail.image.width)
+        let pixel = self.sample(thumbnail.image, x: Int(thumbnail.contentsRect.midX * side), y: Int(thumbnail.contentsRect.midY * side))
+        let expected = self.components(color)
+        XCTAssertLessThanOrEqual(abs(Int(pixel.r) - expected.r), 14, file: file, line: line)
+        XCTAssertLessThanOrEqual(abs(Int(pixel.g) - expected.g), 14, file: file, line: line)
+        XCTAssertLessThanOrEqual(abs(Int(pixel.b) - expected.b), 14, file: file, line: line)
+    }
+
+    func testPermanentEncodeFailureDropsPageAndUnblocksIndex() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 300)
+        let store = MediaGridThumbnailStore(directory: directory)
+        store.diskFlushDelay = 0.05
+        store.retryMaxDelay = 0.05
+        store.indexIdleDelay = 60.0
+        self.load(store)
+        store.failingEncodePages = [1]
+        self.write(store, [("260", self.makeImage(width: 10, height: 10, top: .red), "2"), ("7", self.makeImage(width: 10, height: 10, top: .blue), "2")])
+        self.flush(store)
+        XCTAssertTrue(self.spin(until: { store.version(for: "260") == nil }, timeout: 5.0))
+        XCTAssertNil(store.version(for: "257"))
+        XCTAssertNil(store.thumbnail(for: "257"))
+        XCTAssertEqual(store.version(for: "7"), "2")
+        XCTAssertTrue(self.spin(until: { store.unconfirmedPageCount() == 0 }))
+        store.failingEncodePages = []
+        self.flush(store)
+        let reopened = MediaGridThumbnailStore(directory: directory)
+        self.load(reopened)
+        XCTAssertNil(reopened.version(for: "257"))
+        XCTAssertEqual(reopened.version(for: "7"), "2")
+        XCTAssertEqual(reopened.version(for: "5"), "v5")
+        self.write(store, [("257", self.makeImage(width: 10, height: 10, top: .green), "v257")])
+        XCTAssertEqual(store.version(for: "257"), "v257")
     }
 }
