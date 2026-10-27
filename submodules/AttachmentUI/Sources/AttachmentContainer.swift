@@ -178,6 +178,10 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     func cancelPanGesture() {
         if let panGestureRecognizer = self.panGestureRecognizer, panGestureRecognizer.isEnabled {
             self.panGestureArguments?.content?.attachmentSetContentBounces(true)
+            if self.contentHeld {
+                self.contentHeld = false
+                self.panGestureArguments?.content?.attachmentSetContentHeldAtTop(false)
+            }
             self.panGestureArguments = nil
             panGestureRecognizer.isEnabled = false
             panGestureRecognizer.isEnabled = true
@@ -271,6 +275,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     }
     
     private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?, content: AttachmentScrollableContent?, isFullSize: Bool)?
+    private var contentHeld = false
+    private var contentLastTranslation: CGFloat = 0.0
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         guard let (layout, controllers, coveredByModalTransition) = self.validLayout, let lastController = controllers.last else {
             return
@@ -314,6 +320,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     topInset = edgeTopInset
                 }
                 
+                self.contentHeld = false
+                self.contentLastTranslation = 0.0
+                if let content, content.attachmentContentOffset <= 1.0 {
+                    self.contentHeld = true
+                    content.attachmentSetContentHeldAtTop(true)
+                }
                 self.panGestureArguments = (topInset, 0.0, scrollView, listNode, content, isFullSize)
             case .changed:
                 guard let (topInset, panOffset, scrollView, listNode, content, isFullSize) = self.panGestureArguments else {
@@ -347,17 +359,25 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                     } else if currentOffset > 0.0 {
                         scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                     }
-                } else if let content, content.attachmentContentOffset <= epsilon {
-                    content.attachmentSetContentBounces(false)
-                    content.attachmentScrollContentToTop()
                 } else if let content {
-                    translation = panOffset
-                    currentOffset = topInset + translation
-                    if self.isExpanded {
-                        recognizer.setTranslation(CGPoint(), in: self.view)
-                    } else if currentOffset > 0.0 {
-                        content.attachmentScrollContentToTop()
+                    let rawTranslation = translation
+                    let delta = rawTranslation - self.contentLastTranslation
+                    self.contentLastTranslation = rawTranslation
+                    var sheetTranslation = panOffset
+                    if self.contentHeld {
+                        sheetTranslation += delta
+                        if sheetTranslation < -topInset {
+                            sheetTranslation = -topInset
+                            self.contentHeld = false
+                            content.attachmentSetContentHeldAtTop(false)
+                        }
+                    } else if delta > 0.0, content.attachmentContentOffset <= epsilon {
+                        self.contentHeld = true
+                        content.attachmentSetContentHeldAtTop(true)
+                        sheetTranslation += delta
                     }
+                    translation = sheetTranslation
+                    currentOffset = topInset + translation
                 }
                 
                 self.panGestureArguments = (topInset, translation, scrollView, listNode, content, isFullSize)
@@ -365,8 +385,6 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 if !self.isExpanded {
                     if currentOffset > 0.0, let scrollView = scrollView {
                         scrollView.panGestureRecognizer.setTranslation(CGPoint(), in: scrollView)
-                    } else if currentOffset > 0.0, let content {
-                        content.attachmentResetContentPanTranslation()
                     }
                 }
             
@@ -399,8 +417,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 let visibleContentOffset = listNode?.visibleContentOffset()
                 let contentOffset = scrollView?.contentOffset.y ?? 0.0
             
-                let translation = recognizer.translation(in: self.view).y
+                let translation = content != nil && scrollView == nil && listNode == nil ? panOffset : recognizer.translation(in: self.view).y
                 var velocity = recognizer.velocity(in: self.view)
+                if let content, self.contentHeld {
+                    self.contentHeld = false
+                    content.attachmentEndContentHold()
+                }
                 
                 if self.isExpanded {
                     if case let .known(value) = visibleContentOffset, value > 0.1 {

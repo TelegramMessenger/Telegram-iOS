@@ -106,8 +106,12 @@ final class MediaPickerMediaGridContainerView: UIView, AttachmentScrollableConte
         gridView.setContentOffset(0.0)
     }
 
-    func attachmentResetContentPanTranslation() {
-        self.gridView?.reanchorDrag()
+    func attachmentSetContentHeldAtTop(_ held: Bool) {
+        self.gridView?.holdsDragAtTop = held
+    }
+
+    func attachmentEndContentHold() {
+        self.gridView?.endDragHold()
     }
 }
 

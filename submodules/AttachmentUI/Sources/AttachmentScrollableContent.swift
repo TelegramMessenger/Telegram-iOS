@@ -6,5 +6,6 @@ public protocol AttachmentScrollableContent: AnyObject {
     var attachmentBlocksContainerPan: Bool { get }
     func attachmentSetContentBounces(_ bounces: Bool)
     func attachmentScrollContentToTop()
-    func attachmentResetContentPanTranslation()
+    func attachmentSetContentHeldAtTop(_ held: Bool)
+    func attachmentEndContentHold()
 }

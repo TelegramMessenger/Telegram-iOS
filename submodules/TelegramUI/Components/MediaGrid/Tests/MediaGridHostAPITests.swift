@@ -219,6 +219,64 @@ final class MediaGridHostAPITests: XCTestCase {
         self.drag(view, .ended, -130.0)
     }
 
+    private func flingUp(_ view: MediaGridView, from start: CGFloat = 0.0, steps: Int = 5, endingHold: Bool = false) {
+        view.engine.decelerationMode = .stepped
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        for step in 1 ... steps {
+            view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -24.0 * CGFloat(step)), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+        }
+        if endingHold {
+            view.endDragHold()
+        }
+        view.engine.applyPanUpdate(state: .ended, translation: CGPoint(x: 0.0, y: -24.0 * CGFloat(steps)), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+    }
+
+    func testHeldDragStaysAtTheTopAndDoesNotFling() {
+        let (view, _) = self.makeView(count: 10_000)
+        view.holdsDragAtTop = true
+        self.flingUp(view)
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+        XCTAssertFalse(view.engine.isDecelerating)
+        XCTAssertFalse(view.holdsDragAtTop)
+    }
+
+    func testHoldEndedBeforeReleaseStillDoesNotFling() {
+        let (view, _) = self.makeView(count: 10_000)
+        view.holdsDragAtTop = true
+        self.flingUp(view, endingHold: true)
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+        XCTAssertFalse(view.engine.isDecelerating)
+    }
+
+    func testReleasingTheHoldMidDragContinuesFromTheTop() {
+        let (view, _) = self.makeView(count: 10_000)
+        view.engine.decelerationMode = .stepped
+        view.holdsDragAtTop = true
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -60.0), velocity: .zero, forced: false, isIndirect: false)
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+        view.holdsDragAtTop = false
+        view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -100.0), velocity: .zero, forced: false, isIndirect: false)
+        XCTAssertEqual(view.contentOffset, 40.0, accuracy: 1.0)
+        view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -80.0), velocity: .zero, forced: false, isIndirect: false)
+        XCTAssertEqual(view.contentOffset, 20.0, accuracy: 1.0)
+        view.engine.applyPanUpdate(state: .ended, translation: CGPoint(x: 0.0, y: -80.0), velocity: .zero, forced: false, isIndirect: false)
+    }
+
+    func testUnheldDragFlings() {
+        let (view, _) = self.makeView(count: 10_000)
+        self.flingUp(view)
+        XCTAssertTrue(view.engine.isDecelerating)
+    }
+
+    func testHoldingMidScrollReturnsToTheTop() {
+        let (view, _) = self.makeView(count: 10_000)
+        view.setContentOffset(300.0)
+        view.holdsDragAtTop = true
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+        view.holdsDragAtTop = false
+    }
+
     func testDisabledBounceHoldsADragAtTheTop() {
         let (view, _) = self.makeView(count: 10_000)
         view.bounces = false

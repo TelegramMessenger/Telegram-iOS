@@ -273,6 +273,7 @@ public final class MediaGridView: UIView {
             }
             self.isDragging = false
             self.haltsNextRelease = false
+            self.holdsDragAtTop = false
             self.applyAspects()
             self.onDidEndDragging?()
         }
@@ -280,7 +281,10 @@ public final class MediaGridView: UIView {
             self?.flightChanged(settledOffset: flight?.settledOffset)
         }
         self.engine.shouldStopScrollingOnRelease = { [weak self] _ in
-            return self?.haltsNextRelease ?? false
+            guard let self else {
+                return false
+            }
+            return self.haltsNextRelease || self.holdsDragAtTop
         }
     }
 
@@ -570,6 +574,25 @@ public final class MediaGridView: UIView {
         if self.isDragging {
             self.engine.reanchorDragToCurrentPosition()
         }
+    }
+
+    public var holdsDragAtTop = false {
+        didSet {
+            if self.holdsDragAtTop && !oldValue {
+                self.stopScrollAnimation()
+                self.engine.haltMotionInPlace()
+                if self.engine.offset != 0.0 {
+                    self.setContentOffset(0.0)
+                }
+            }
+        }
+    }
+
+    public func endDragHold() {
+        if self.holdsDragAtTop && self.isDragging {
+            self.haltsNextRelease = true
+        }
+        self.holdsDragAtTop = false
     }
 
     private func noteZoomingChanged() {
@@ -1700,7 +1723,7 @@ public final class MediaGridView: UIView {
 
     private func scrolled(to offset: CGFloat) {
         var offset = offset
-        if !self.bounces, offset < 0.0, self.transition == nil {
+        if (self.holdsDragAtTop && self.isDragging && offset != 0.0) || (!self.bounces && offset < 0.0), self.transition == nil {
             if self.isDragging {
                 self.engine.applyShift(-self.engine.offset)
                 self.engine.reanchorDragToCurrentPosition()
