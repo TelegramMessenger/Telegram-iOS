@@ -618,6 +618,12 @@ private enum RequestChatListFiltersError {
     case generic
 }
 
+func _internal_requestChatListFilters(account: Account) -> Signal<[ChatListFilter], NoError> {
+    return requestChatListFilters(accountPeerId: account.peerId, postbox: account.postbox, network: account.network)
+    |> map { filters, _ in filters }
+    |> `catch` { _ -> Signal<[ChatListFilter], NoError> in .complete() }
+}
+
 private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<([ChatListFilter], Bool), RequestChatListFiltersError> {
     return network.request(Api.functions.messages.getDialogFilters())
     |> mapError { _ -> RequestChatListFiltersError in

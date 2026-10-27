@@ -802,6 +802,10 @@ public extension TelegramEngine {
             return _internal_updatedChatListFiltersInfo(postbox: self.account.postbox)
         }
 
+        public func requestChatListFilters() -> Signal<[ChatListFilter], NoError> {
+            return _internal_requestChatListFilters(account: self.account)
+        }
+
         public func currentChatListFilters() -> Signal<[ChatListFilter], NoError> {
             return _internal_currentChatListFilters(postbox: self.account.postbox)
         }
