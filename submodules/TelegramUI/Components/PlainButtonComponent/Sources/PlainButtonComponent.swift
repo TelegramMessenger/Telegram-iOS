@@ -22,6 +22,7 @@ public final class PlainButtonComponent: Component {
     public let animateContents: Bool
     public let rasterizeOnScaleAnimation: Bool
     public let tag: AnyObject?
+    public let accessibility: ComponentAccessibility?
     
     public init(
         content: AnyComponent<Empty>,
@@ -35,7 +36,8 @@ public final class PlainButtonComponent: Component {
         animateScale: Bool = true,
         animateContents: Bool = true,
         rasterizeOnScaleAnimation: Bool = true,
-        tag: AnyObject? = nil
+        tag: AnyObject? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.content = content
         self.background = background
@@ -49,6 +51,7 @@ public final class PlainButtonComponent: Component {
         self.animateContents = animateContents
         self.rasterizeOnScaleAnimation = rasterizeOnScaleAnimation
         self.tag = tag
+        self.accessibility = accessibility
     }
     
     public static func ==(lhs: PlainButtonComponent, rhs: PlainButtonComponent) -> Bool {
@@ -83,6 +86,9 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.tag !== rhs.tag {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -211,6 +217,7 @@ public final class PlainButtonComponent: Component {
             self.componentState = state
             
             self.isEnabled = component.isEnabled
+            self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
             
             let contentAlpha: CGFloat = 1.0
 

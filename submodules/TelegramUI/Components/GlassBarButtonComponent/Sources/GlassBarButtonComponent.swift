@@ -22,6 +22,7 @@ public final class GlassBarButtonComponent: Component {
     public let component: AnyComponentWithIdentity<Empty>
     public let action: ((UIView) -> Void)?
     public let tag: AnyObject?
+    public let accessibility: ComponentAccessibility?
 
     public init(
         size: CGSize?,
@@ -33,7 +34,8 @@ public final class GlassBarButtonComponent: Component {
         animateScale: Bool = true,
         component: AnyComponentWithIdentity<Empty>,
         action: ((UIView) -> Void)?,
-        tag: AnyObject? = nil
+        tag: AnyObject? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.size = size
         self.backgroundColor = backgroundColor
@@ -45,6 +47,7 @@ public final class GlassBarButtonComponent: Component {
         self.component = component
         self.action = action
         self.tag = tag
+        self.accessibility = accessibility
     }
 
     public static func ==(lhs: GlassBarButtonComponent, rhs: GlassBarButtonComponent) -> Bool {
@@ -73,6 +76,9 @@ public final class GlassBarButtonComponent: Component {
             return false
         }
         if lhs.tag !== rhs.tag {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -148,6 +154,14 @@ public final class GlassBarButtonComponent: Component {
             action(self)
         }
         
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component, component.isEnabled, let action = component.action else {
+                return false
+            }
+            action(self)
+            return true
+        }
+        
         @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 guard let component = self.component, let action = component.action else {
@@ -172,6 +186,7 @@ public final class GlassBarButtonComponent: Component {
             self.component = component
             
             self.containerView.isEnabled = component.isEnabled
+            self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
             
             var componentView: ComponentView<Empty>
             var animateAppearance = false

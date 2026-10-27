@@ -416,6 +416,7 @@ public final class ButtonComponent: Component {
     public let displaysProgress: Bool
     public let action: () -> Void
     public let longPressAction: (() -> Void)?
+    public let accessibility: ComponentAccessibility?
 
     public init(
         background: Background,
@@ -428,7 +429,8 @@ public final class ButtonComponent: Component {
         allowActionWhenDisabled: Bool = false,
         displaysProgress: Bool = false,
         action: @escaping () -> Void,
-        longPressAction: (() -> Void)? = nil
+        longPressAction: (() -> Void)? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.background = background
         self.content = content
@@ -441,6 +443,7 @@ public final class ButtonComponent: Component {
         self.displaysProgress = displaysProgress
         self.action = action
         self.longPressAction = longPressAction
+        self.accessibility = accessibility
     }
 
     public static func ==(lhs: ButtonComponent, rhs: ButtonComponent) -> Bool {
@@ -472,6 +475,9 @@ public final class ButtonComponent: Component {
             return false
         }
         if (lhs.longPressAction == nil) != (rhs.longPressAction == nil) {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -735,6 +741,14 @@ public final class ButtonComponent: Component {
             self.longPressGesture?.isEnabled = component.longPressAction != nil
             
             self.button.isEnabled = (component.isEnabled || component.allowActionWhenDisabled) && !component.displaysProgress
+            
+            // The view is one element: its title, badge and icons are not separately reachable. The label comes from the
+            // title content unless the call site supplies one.
+            var accessibility = component.accessibility ?? ComponentAccessibility()
+            if !accessibility.isHidden && accessibility.label == nil {
+                accessibility.label = ButtonComponent.accessibilityText(of: component.content.component)
+            }
+            self.apply(accessibility: accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
                         
             var contentAlpha: CGFloat = 1.0
             if component.displaysProgress {
@@ -989,6 +1003,36 @@ public final class ButtonComponent: Component {
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+    
+    /// The text of the title components a button is made of; `nil` for content that carries none (icons, custom views).
+    static func accessibilityText(of component: AnyComponent<Empty>) -> String? {
+        let text: String
+        switch component.wrapped {
+        case let content as ButtonTextContentComponent:
+            text = content.badge > 0 ? "\(content.text), \(content.badge)" : content.text
+        case let content as MultilineTextComponent:
+            switch content.text {
+            case let .plain(string):
+                text = string.string
+            case let .markdown(string, _):
+                text = string
+            }
+        case let content as AnimatedTextComponent:
+            text = content.items.compactMap { item -> String? in
+                switch item.content {
+                case let .text(value):
+                    return value
+                case let .number(value, minDigits):
+                    return String(format: "%0\(minDigits)d", value)
+                case .icon:
+                    return nil
+                }
+            }.joined()
+        default:
+            return nil
+        }
+        return text.isEmpty ? nil : text
     }
 }
 

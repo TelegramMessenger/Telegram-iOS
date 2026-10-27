@@ -13,6 +13,7 @@ public final class Button: Component {
     public let action: () -> Void
     public let holdAction: ((UIView) -> Void)?
     public let highlightedAction: ActionSlot<Bool>?
+    public let accessibility: ComponentAccessibility?
 
     convenience public init(
         content: AnyComponent<Empty>,
@@ -20,7 +21,8 @@ public final class Button: Component {
         isEnabled: Bool = true,
         automaticHighlight: Bool = true,
         action: @escaping () -> Void,
-        highlightedAction: ActionSlot<Bool>? = nil
+        highlightedAction: ActionSlot<Bool>? = nil,
+        accessibility: ComponentAccessibility? = nil
     ) {
         self.init(
             content: content,
@@ -32,7 +34,8 @@ public final class Button: Component {
             isEnabled: isEnabled,
             action: action,
             holdAction: nil,
-            highlightedAction: highlightedAction
+            highlightedAction: highlightedAction,
+            accessibility: accessibility
         )
     }
     
@@ -47,7 +50,8 @@ public final class Button: Component {
         isExclusive: Bool = true,
         action: @escaping () -> Void,
         holdAction: ((UIView) -> Void)?,
-        highlightedAction: ActionSlot<Bool>?
+        highlightedAction: ActionSlot<Bool>?,
+        accessibility: ComponentAccessibility?
     ) {
         self.content = content
         self.contentInsets = contentInsets
@@ -60,6 +64,7 @@ public final class Button: Component {
         self.action = action
         self.holdAction = holdAction
         self.highlightedAction = highlightedAction
+        self.accessibility = accessibility
     }
     
     public func minSize(_ minSize: CGSize?) -> Button {
@@ -74,7 +79,8 @@ public final class Button: Component {
             isExclusive: self.isExclusive,
             action: self.action,
             holdAction: self.holdAction,
-            highlightedAction: self.highlightedAction
+            highlightedAction: self.highlightedAction,
+            accessibility: self.accessibility
         )
     }
     
@@ -90,7 +96,8 @@ public final class Button: Component {
             isExclusive: self.isExclusive,
             action: self.action,
             holdAction: self.holdAction,
-            highlightedAction: self.highlightedAction
+            highlightedAction: self.highlightedAction,
+            accessibility: self.accessibility
         )
     }
     
@@ -106,7 +113,8 @@ public final class Button: Component {
             isExclusive: isExclusive,
             action: self.action,
             holdAction: self.holdAction,
-            highlightedAction: self.highlightedAction
+            highlightedAction: self.highlightedAction,
+            accessibility: self.accessibility
         )
     }
     
@@ -123,7 +131,8 @@ public final class Button: Component {
             isExclusive: self.isExclusive,
             action: self.action,
             holdAction: holdAction,
-            highlightedAction: self.highlightedAction
+            highlightedAction: self.highlightedAction,
+            accessibility: self.accessibility
         )
     }
     
@@ -139,7 +148,8 @@ public final class Button: Component {
             isExclusive: self.isExclusive,
             action: self.action,
             holdAction: self.holdAction,
-            highlightedAction: self.highlightedAction
+            highlightedAction: self.highlightedAction,
+            accessibility: self.accessibility
         )
     }
     
@@ -166,6 +176,9 @@ public final class Button: Component {
             return false
         }
         if lhs.isExclusive != rhs.isExclusive {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -339,6 +352,7 @@ public final class Button: Component {
             self.updateAlpha(transition: transition)
             self.isEnabled = component.isEnabled
             self.isExclusiveTouch = component.isExclusive
+            self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
             
             transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize), completion: nil)
             
