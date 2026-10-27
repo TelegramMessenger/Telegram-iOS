@@ -102,6 +102,47 @@ final class MediaGridUniformLayoutTests: XCTestCase {
         XCTAssertNil(layout.index(at: CGPoint(x: -1, y: 5)))
     }
 
+    func testColumnWidthsDifferByAtMostOnePixel() {
+        for (width, sideInset) in [(CGFloat(393), CGFloat(0)), (CGFloat(852), CGFloat(62))] {
+            for columns in [3, 5, 15, 31] {
+                let geometry = self.geometry(width: width, sideInset: sideInset)
+                let layout = MediaGridUniformLayout(geometry: geometry, columns: columns, cellAspect: 1.0, reservedSlots: [], count: columns * 3)
+                let frames = (0 ..< columns).map { layout.frame(at: $0) }
+                let widths = frames.map { $0.width * geometry.scale }
+                let context = "width \(width) columns \(columns) widths \(widths)"
+                XCTAssertLessThanOrEqual(widths.max()! - widths.min()!, 1.0 + 1e-6, context)
+                XCTAssertEqual(frames.first!.minX, sideInset, accuracy: 1e-9, context)
+                XCTAssertEqual(frames.last!.maxX, width - sideInset, accuracy: 1e-9, context)
+                for column in 0 ..< columns {
+                    let frame = frames[column]
+                    XCTAssertEqual((frame.minX * geometry.scale).rounded(), frame.minX * geometry.scale, accuracy: 1e-6, context)
+                    XCTAssertEqual((frame.width * geometry.scale).rounded(), frame.width * geometry.scale, accuracy: 1e-6, context)
+                    if column > 0 {
+                        XCTAssertEqual(frame.minX - frames[column - 1].maxX, geometry.spacing, accuracy: 1e-9, context)
+                    }
+                    XCTAssertEqual(layout.frame(at: columns + column).minX, frame.minX, accuracy: 1e-9, context)
+                    XCTAssertEqual(layout.frame(at: columns + column).width, frame.width, accuracy: 1e-9, context)
+                    XCTAssertEqual(layout.index(at: CGPoint(x: frame.minX + 0.01, y: frame.midY)), column, context)
+                    XCTAssertEqual(layout.index(at: CGPoint(x: frame.maxX - 0.01, y: frame.midY)), column, context)
+                    XCTAssertEqual(layout.index(at: CGPoint(x: frame.midX, y: layout.frame(at: columns + column).midY)), columns + column, context)
+                    XCTAssertGreaterThanOrEqual(layout.pixelSize(at: column).width, frame.width * geometry.scale - 1e-6, context)
+                }
+                XCTAssertEqual(layout.pixelSize(at: 0), layout.pixelSize(at: columns - 1), context)
+                let total = frames.reduce(CGFloat(0)) { $0 + $1.width } + CGFloat(columns - 1) * geometry.spacing
+                XCTAssertEqual(total, width - 2.0 * sideInset, accuracy: 1e-9, context)
+            }
+        }
+    }
+
+    func testNonFiniteInputsDoNotTrap() {
+        let layout = MediaGridUniformLayout(geometry: self.geometry(), columns: 31, cellAspect: 1.0, reservedSlots: [], count: 1000)
+        XCTAssertTrue(layout.indexRange(intersecting: CGRect(x: 0, y: CGFloat.nan, width: 393, height: 100)).isEmpty)
+        XCTAssertTrue(layout.indexRange(intersecting: CGRect(x: 0, y: 0, width: 393, height: CGFloat.infinity)).isEmpty)
+        XCTAssertTrue(layout.indexRange(intersecting: CGRect(x: 0, y: -CGFloat.infinity, width: 393, height: 100)).isEmpty)
+        XCTAssertNil(layout.index(at: CGPoint(x: CGFloat.nan, y: 10)))
+        XCTAssertNil(layout.index(at: CGPoint(x: 10, y: CGFloat.infinity)))
+    }
+
     func testContentHeight() {
         let geometry = self.geometry(topInset: 7, bottomInset: 11)
         let empty = MediaGridUniformLayout(geometry: geometry, columns: 3, cellAspect: 1.0, reservedSlots: [], count: 0)
