@@ -23,6 +23,7 @@ import EntityKeyboard
 import TelegramUIPreferences
 import FastBlur
 import MediaEditor
+import MediaEditorBottomControls
 import StickerPickerScreen
 import ImageObjectSeparation
 import ImageInpainting
@@ -1320,6 +1321,10 @@ private final class DrawingScreenComponent: CombinedComponent {
                     controlsBottomInset -= bottomPanelLift
                 }
             }
+            var cameraRowBarMinY: CGFloat?
+            if component.sourceHint == .storyEditor, mediaEditorStoryBottomControlsAlignWithCameraRow(deviceMetrics: environment.deviceMetrics, isTablet: environment.metrics.isTablet, hasReservedCorners: environment.reservedCorners != .none) {
+                cameraRowBarMinY = mediaEditorStoryCameraRowBottomControlsGeometry(size: context.availableSize, homeIndicatorInset: environment.safeInsets.bottom).panelFrame.minY
+            }
             let previewBottomInset = max(0.0, unclampedPreviewBottomInset)
             
             var topInset = environment.safeInsets.top + 31.0
@@ -1386,6 +1391,11 @@ private final class DrawingScreenComponent: CombinedComponent {
             var additionalBottomInset: CGFloat = 0.0
             if component.sourceHint == .storyEditor {
                 additionalBottomInset = max(0.0, previewBottomInset - environment.safeInsets.bottom - 49.0) + bottomPanelLift
+                if let cameraRowBarMinY {
+                    let swatchRowBottomOffset: CGFloat = 57.0
+                    let swatchRowToBottomControlsSpacing: CGFloat = 16.0
+                    additionalBottomInset = context.availableSize.height - environment.safeInsets.bottom - swatchRowBottomOffset - (cameraRowBarMinY - swatchRowToBottomControlsSpacing)
+                }
             } else {
                 additionalBottomInset = 8.0
             }
@@ -3926,6 +3936,17 @@ public final class DrawingToolsInteraction {
             if let componentView = self.textEditAccessoryHost.view, componentView.superview != nil {
                 isFirstTime = false
             }
+            var accessoryBandMinX: CGFloat = 0.0
+            var accessoryBandWidth = layout.size.width
+            var accessoryWidth = layout.size.width
+            if layout.safeInsets.left != layout.safeInsets.right {
+                accessoryBandMinX = layout.safeInsets.left
+                accessoryBandWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right
+            } else if let window = self.entitiesView.window, layout.size.width < window.bounds.width - 0.5 {
+                let canvasFrame = self.entitiesView.convert(self.entitiesView.bounds, to: window)
+                accessoryBandMinX = canvasFrame.midX - layout.size.width / 2.0
+                accessoryWidth = window.bounds.width
+            }
             UIView.performWithoutAnimation {
                 let accessorySize = self.textEditAccessoryHost.update(
                     transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
@@ -4044,15 +4065,15 @@ public final class DrawingToolsInteraction {
                     ),
                     environment: {},
                     forceUpdate: true,
-                    containerSize: CGSize(width: layout.size.width, height: 44.0)
+                    containerSize: CGSize(width: accessoryBandWidth, height: 44.0)
                 )
                 if let componentView = self.textEditAccessoryHost.view {
                     if componentView.superview == nil {
                         self.textEditAccessoryView.addSubview(componentView)
                     }
                     
-                    self.textEditAccessoryView.frame = CGRect(origin: .zero, size: accessorySize)
-                    componentView.frame = CGRect(origin: .zero, size: accessorySize)
+                    self.textEditAccessoryView.frame = CGRect(origin: .zero, size: CGSize(width: accessoryWidth, height: accessorySize.height))
+                    componentView.frame = CGRect(origin: CGPoint(x: accessoryBandMinX, y: 0.0), size: accessorySize)
                 }
             }
         }

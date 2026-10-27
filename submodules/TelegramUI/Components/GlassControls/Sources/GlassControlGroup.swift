@@ -41,11 +41,14 @@ public final class GlassControlGroupComponent: Component {
         
         public let id: AnyHashable
         public let content: Content
+        /// Overrides the group's foreground colour for this item's content (a destructive action's red, say).
+        public let foregroundColor: UIColor?
         public let action: (() -> Void)?
 
-        public init(id: AnyHashable, content: Content, action: (() -> Void)?) {
+        public init(id: AnyHashable, content: Content, foregroundColor: UIColor? = nil, action: (() -> Void)?) {
             self.id = id
             self.content = content
+            self.foregroundColor = foregroundColor
             self.action = action
         }
         
@@ -54,6 +57,9 @@ public final class GlassControlGroupComponent: Component {
                 return false
             }
             if lhs.content != rhs.content {
+                return false
+            }
+            if lhs.foregroundColor != rhs.foregroundColor {
                 return false
             }
             if (lhs.action == nil) != (rhs.action == nil) {
@@ -216,17 +222,18 @@ public final class GlassControlGroupComponent: Component {
                     isInteractive = true
                 }
                 
+                let itemForegroundColor = item.foregroundColor ?? foregroundColor
                 let content: AnyComponent<Empty>
                 var itemInsets = UIEdgeInsets()
                 switch item.content {
                 case let .icon(name):
                     content = AnyComponent(BundleIconComponent(
                         name: name,
-                        tintColor: foregroundColor
+                        tintColor: itemForegroundColor
                     ))
                 case let .text(string):
                     content = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: string, font: Font.medium(17.0), textColor: foregroundColor))
+                        text: .plain(NSAttributedString(string: string, font: Font.medium(17.0), textColor: itemForegroundColor))
                     ))
                     itemInsets.left = component.textHorizontalInset
                     itemInsets.right = itemInsets.left
@@ -240,7 +247,7 @@ public final class GlassControlGroupComponent: Component {
                     }
                     content = AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: name),
-                        color: foregroundColor,
+                        color: itemForegroundColor,
                         size: CGSize(width: 32.0, height: 32.0),
                         playOnce: playOnce,
                         lottieSettings: .noAccountFallback

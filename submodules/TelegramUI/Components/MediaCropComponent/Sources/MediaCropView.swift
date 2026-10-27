@@ -337,7 +337,7 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
         self.blurView.frame = self.bounds
     }
 
-    public func update(containerFrame: CGRect, rotationDialFrame: CGRect, selectorFrame: CGRect? = nil, transition: ComponentTransition) {
+    public func update(containerFrame: CGRect, rotationDialFrame: CGRect, rotationDialScale: CGFloat = 1.0, selectorFrame: CGRect? = nil, transition: ComponentTransition) {
         let previousContainerFrame = self.containerFrame
         self.containerFrame = containerFrame
 
@@ -350,6 +350,7 @@ public final class MediaCropView: UIView, UIGestureRecognizerDelegate {
         }
 
         if let rotationDialView = self.rotationDialView {
+            rotationDialView.rulerScale = rotationDialScale
             if previousContainerFrame == nil {
                 rotationDialView.frame = rotationDialFrame
             } else {

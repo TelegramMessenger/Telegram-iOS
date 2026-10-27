@@ -25,6 +25,12 @@ Current extensions are retained under `docs/superpowers/specs/`.
 
 ## Landed work
 
+- **2026-10-23 — the mouse wheel scrolls the list**: `PhysicsPanGestureRecognizer` allowed only
+  `.continuous` indirect scroll (trackpad), so a mouse wheel's `.discrete` events never reached the pan
+  and the chat history did not scroll with a wheel on iPad (the News feeds share it). It now allows
+  `.all`; a wheel gesture runs the same indirect path as the trackpad (no touch-down, trackpad rubber-band
+  coefficient). Not yet checked on screen: the iPhone simulator takes no pointer input.
+  `PhysicsScrollViewTests`.
 - **2026-09-29 — a second jump reversed mid-flight lands on the first's outgoing strip**: carousel
   adjacency placed the incoming window against the loaded window only, so a jump back the way an
   in-flight jump came landed exactly on that jump's strip, still parked in `carouselExitOverlay`,

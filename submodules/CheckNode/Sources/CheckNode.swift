@@ -468,11 +468,13 @@ public class CheckLayer: CALayer {
             return
         }
         let image = generateImage(self.bounds.size, rotatedContext: { size, context in
+            UIGraphicsPushContext(context)
             CheckLayer.drawContents(
                 context: context,
                 size: size,
                 parameters: CheckNodeParameters(theme: self.theme, content: self.content.renderedContent, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut, rectangleProgress: self.rectangleProgress)
             )
+            UIGraphicsPopContext()
         })
         self.contents = image?.cgImage
     }

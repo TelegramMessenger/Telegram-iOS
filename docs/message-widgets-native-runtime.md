@@ -355,9 +355,11 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     error fires from a task (`imageSourceChanged`, a source generation so a newer `src` replaces the pending event; the
     parsed images' at the window's load, those a script took out of the document included, from the list
     `CanvasState` keeps of them; one of a template's contents on its adoption into the document): not complete, no
-    natural size, drawn as nothing on a canvas. `width` and
+    natural size, drawn as nothing on a canvas, `null` from `createPattern` (`CanvasImageSource::usable`). `width` and
     `height` are the rendered content size while it is being rendered (`renderedContentSize`,
-    `RenderTree::beingRendered`), else the attribute, else the natural size. V5d had made a `data:` image complete with
+    `RenderTree::beingRendered`, whose ancestor walk is charged), else the attribute, else the natural size. While
+    pending, a dimension the CSS leaves auto is 0: the render tree already knows the decoded size, a browser does not.
+    At the window's load an image whose `src` changed meanwhile is left to its own task, so it fires once. V5d had made a `data:` image complete with
     its size at once.
   A hook is a pure function of its text and posts no diagnostic. The full record, with the strict budgets and the DOM
   side, is "Profile enforcement (V4)".
@@ -689,10 +691,18 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `MessageWidgetCore`'s session delegate hands it each request (`WRSessionDelegate session:intl:`); a session without
     one has no locale data and formats "".
   - **The locale** a request names is the first requested tag (UTS 35's case), else the host's (`HostState::locale`,
-    the app's language), **never with a unicode extension**: a divergence from upstream, which applies one
-    (widget-sandbox's VENDOR.md, "Divergence: a locale's unicode extension is dropped": no upstream fixture pins it,
-    iOS 15 formats without it, and neither the glue's option answers nor `resolvedOptions()` would report it on any
-    OS; the runtime's own Intl tests pin the drop). Until widget-sandbox v0.2.2 an extension also took the app down:
+    the app's language), **with the unicode extension keywords its constructor reads** (ECMA-402 ResolveLocale,
+    `intl::RelevantKeys`):
+    - NumberFormat and RelativeTimeFormat `nu`; DateTimeFormat `ca`, `hc`, `nu`; Collator `co`, `kf`, `kn`;
+    - each value from a conservative table: ECMA-402's 22 numbering systems with simple digit mappings, the calendars
+      Foundation has on iOS 15, the hour cycles, CLDR's collations;
+    - sorted by key, attributes dropped, other extensions and private use kept.
+
+    Upstream's shim sends the tag whole, but in its glue an unknown numbering system makes `RelativeDateTimeFormatter`
+    trap (the app's crash), and an extension breaks the plural rules' language key (widget-sandbox VENDOR.md). The
+    glue applies what is kept on iOS 16 and later and drops it before. `WRIntlExtensionTests` runs every call a widget
+    can make with every CLDR numbering system and calendar on iOS. Until widget-sandbox v0.2.2 any extension took the
+    app down:
     the glue built its `Locale` with `Locale(identifier:)`, and Foundation's identifier parsing drops a numbering
     system's 4-letter value: `ar-EG-u-nu-arab` becomes `ar_EG@numbers=yes`, and `fa-u-nu-arab`, `hi-IN-u-nu-deva` and
     `en-u-nu-latn-ca-gregory` go the same way (`canonicalIdentifier(from:)` and `identifier(.icu, from:)` too).
@@ -1278,9 +1288,13 @@ M1d's, from the old runtime (spec §10.1):
   (`Blob.slice`, `AbortSignal.timeout`); there is no `FileReader` and no `AbortSignal.any`.
 - **Intl diverges in places** (V5b): `formatRange`, `formatRangeToParts`, `selectRange`, the `formatToParts` of
   `RelativeTimeFormat` and `ListFormat`, `Segmenter`, `DisplayNames`, `Locale`, `DurationFormat` and
-  `supportedValuesOf` are absent. A tag's unicode extension (`-u-nu-arab`, `-u-ca-…`, `-u-hc-…`) is dropped; the
-  `numberingSystem`, `calendar` and `hourCycle` options are the way to ask. What the glue formats is Foundation's, and
-  it formats only what widget-sandbox's
+  `supportedValuesOf` are absent. A tag's unicode extension reaches the glue reduced to the keywords its constructor
+  reads, with supported values (above); the glue applies them on iOS 16 and later, while `resolvedOptions()` still
+  reports `latn` and `gregory`, as upstream's glue answers it. The `numberingSystem` and `calendar` options do not
+  override an extension's keyword (ECMA-402 drops the keyword then): the glue reads neither option, so
+  `new Intl.NumberFormat('en-u-nu-thai', { numberingSystem: 'latn' })` formats in Thai digits. `hour12` and
+  `hourCycle` do override (the glue rebuilds the hour cycle from them). What the glue
+  formats is Foundation's, and it formats only what widget-sandbox's
   shim asks it for: no compact, scientific or unit notation, `roundingMode`, `roundingIncrement` or
   `trailingZeroDisplay` (accepted and reported, not applied); a `calendar` or `numberingSystem` is reported, the glue
   formats Gregorian in Latin digits; `caseFirst` and `ignorePunctuation` do not reach the comparison; quarters are

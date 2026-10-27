@@ -137,6 +137,7 @@ private final class MediaToolsScreenComponent: Component {
     let hiddenTools: [EditorToolKey]
     let layoutStyle: MediaToolsScreen.LayoutStyle
     let externalControls: Bool
+    let homeIndicatorInset: CGFloat
     let sectionUpdated: (MediaToolsSection) -> Void
     
     init(
@@ -146,6 +147,7 @@ private final class MediaToolsScreenComponent: Component {
         hiddenTools: [EditorToolKey],
         layoutStyle: MediaToolsScreen.LayoutStyle,
         externalControls: Bool,
+        homeIndicatorInset: CGFloat,
         sectionUpdated: @escaping (MediaToolsSection) -> Void
     ) {
         self.context = context
@@ -154,6 +156,7 @@ private final class MediaToolsScreenComponent: Component {
         self.hiddenTools = hiddenTools
         self.layoutStyle = layoutStyle
         self.externalControls = externalControls
+        self.homeIndicatorInset = homeIndicatorInset
         self.sectionUpdated = sectionUpdated
     }
     
@@ -171,6 +174,9 @@ private final class MediaToolsScreenComponent: Component {
             return false
         }
         if lhs.externalControls != rhs.externalControls {
+            return false
+        }
+        if lhs.homeIndicatorInset != rhs.homeIndicatorInset {
             return false
         }
         return true
@@ -289,6 +295,7 @@ private final class MediaToolsScreenComponent: Component {
         func animateInFromEditor() {
             if let component = self.component, component.externalControls {
                 self.optionsContainerView.layer.animatePosition(from: CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                self.optionsEdgeEffectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                 return
             }
             let buttons = [
@@ -327,6 +334,7 @@ private final class MediaToolsScreenComponent: Component {
                 if let view = self.toolScreen?.view {
                     view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 }
+                self.optionsEdgeEffectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.optionsContainerView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
                     completion()
                 })
@@ -399,6 +407,7 @@ private final class MediaToolsScreenComponent: Component {
             let buttonsContainerFrame: CGRect
             var chatToolScreenFrame: CGRect?
             var chatMediaGeometry: MediaToolsScreen.ChatMediaGeometry?
+            var storyImageFrame: CGRect?
             switch component.layoutStyle {
             case .story:
                 var topInset: CGFloat = environment.statusBarHeight + 5.0
@@ -428,6 +437,9 @@ private final class MediaToolsScreenComponent: Component {
                 }
             
                 previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom + controlsBottomInset))
+                if !isTablet, case .iPhoneDuo = environment.deviceMetrics, availableSize.height < previewSize.height + 30.0, previewSize.height <= availableSize.height + 30.0 {
+                    storyImageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0) - previewContainerFrame.minX, y: -previewContainerFrame.minY), size: previewSize)
+                }
                 buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom + controlsBottomInset), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom - controlsBottomInset))
             case let .chat(previewFrame, mediaGeometry):
                 previewSize = previewFrame.size
@@ -694,7 +706,7 @@ private final class MediaToolsScreenComponent: Component {
             let externalOptionsBottom: CGFloat
             switch component.layoutStyle {
             case .story:
-                externalOptionsBottom = mediaEditorStoryBottomControlsGeometry(size: availableSize, isTablet: isTablet, statusBarHeight: environment.statusBarHeight, safeBottomInset: environment.safeInsets.bottom, hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0, hasReservedCorners: false).panelFrame.minY - MediaToolsScreen.externalControlsOptionsBottomInset
+                externalOptionsBottom = mediaEditorStoryBottomControlsGeometry(size: availableSize, isTablet: isTablet, statusBarHeight: environment.statusBarHeight, safeBottomInset: environment.safeInsets.bottom, hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0, hasReservedCorners: false, cameraRowHomeIndicatorInset: mediaEditorStoryBottomControlsAlignWithCameraRow(deviceMetrics: environment.deviceMetrics, isTablet: isTablet, hasReservedCorners: environment.reservedCorners != .none) ? component.homeIndicatorInset : nil).panelFrame.minY - MediaToolsScreen.externalControlsOptionsBottomInset
             case .chat:
                 externalOptionsBottom = previewContainerFrame.maxY - MediaToolsScreen.externalControlsOptionsBottomInset
             }
@@ -860,7 +872,7 @@ private final class MediaToolsScreenComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: chatToolScreenFrame?.size ?? CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
+                    containerSize: chatToolScreenFrame?.size ?? CGSize(width: storyImageFrame?.width ?? previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
                 )
             case .tint:
                 self.curvesState = nil
@@ -918,7 +930,7 @@ private final class MediaToolsScreenComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: chatToolScreenFrame?.size ?? CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
+                    containerSize: chatToolScreenFrame?.size ?? CGSize(width: storyImageFrame?.width ?? previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
                 )
             case .blur:
                 self.curvesState = nil
@@ -988,7 +1000,7 @@ private final class MediaToolsScreenComponent: Component {
                     environment: {},
                     // The blur's position maps onto the image, so where the 9:16 preview is much taller than the whole screen
                     // (iPhone Duo; it starts at the top there) it spans the preview rather than the visible area.
-                    containerSize: chatMediaGeometry?.size ?? chatToolScreenFrame?.size ?? CGSize(width: previewContainerFrame.width, height: previewSize.height > availableSize.height + 30.0 ? previewSize.height : previewContainerFrame.height)
+                    containerSize: chatMediaGeometry?.size ?? chatToolScreenFrame?.size ?? storyImageFrame?.size ?? CGSize(width: previewContainerFrame.width, height: previewSize.height > availableSize.height + 30.0 ? previewSize.height : previewContainerFrame.height)
                 )
             case .curves:
                 needsHistogram = true
@@ -1034,7 +1046,7 @@ private final class MediaToolsScreenComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: chatToolScreenFrame?.size ?? CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
+                    containerSize: chatToolScreenFrame?.size ?? CGSize(width: storyImageFrame?.width ?? previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
                 )
             }
             component.mediaEditor.isHistogramEnabled = needsHistogram
@@ -1087,7 +1099,7 @@ private final class MediaToolsScreenComponent: Component {
             transition.setFrame(view: self.optionsBackgroundView, frame: CGRect(origin: .zero, size: optionsBackgroundFrame.size))
             
             if let toolScreen = toolScreen {
-                let screenFrame = CGRect(origin: chatToolScreenFrame?.origin ?? .zero, size: screenSize)
+                let screenFrame = CGRect(origin: chatToolScreenFrame?.origin ?? storyImageFrame.flatMap { CGPoint(x: $0.minX, y: component.section == .blur ? $0.minY : 0.0) } ?? .zero, size: screenSize)
                 if let screenView = toolScreen.view {
                     if component.section == .blur, let chatMediaGeometry {
                         let transformView: MediaToolsPassthroughView
@@ -1279,6 +1291,7 @@ public final class MediaToolsScreen: ViewController {
                         hiddenTools: controller.hiddenTools,
                         layoutStyle: controller.layoutStyle,
                         externalControls: controller.externalControls,
+                        homeIndicatorInset: layout.intrinsicInsets.bottom,
                         sectionUpdated: { [weak self] section in
                             self?.select(section: section)
                         }

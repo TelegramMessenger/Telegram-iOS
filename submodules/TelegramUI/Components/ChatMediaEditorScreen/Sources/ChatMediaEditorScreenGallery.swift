@@ -69,8 +69,15 @@ extension ChatMediaEditorScreen.Node {
         self.pagerView.configurePage = { [weak self] page in
             self?.configurePage(page)
         }
-        self.pagerView.pageZoomUpdated = { [weak self] _ in
-            self?.updatePagerInteraction()
+        self.setupDrawingZoomOut()
+        self.pagerView.pageZoomUpdated = { [weak self] page in
+            guard let self else {
+                return
+            }
+            if page.isPaintZoomEnabled {
+                self.drawingView.updateZoomScale(page.zoomScale)
+            }
+            self.updatePagerInteraction()
         }
         self.pagerView.pageTapped = { [weak self] page in
             self?.handlePageTap(page)
@@ -168,6 +175,16 @@ extension ChatMediaEditorScreen.Node {
         self.drawingView = components.drawingView
         self.selectionContainerView = components.selectionContainerView
         self.mediaEditor = components.mediaEditor
+        self.setupDrawingZoomOut()
+    }
+
+    func setupDrawingZoomOut() {
+        self.drawingView.zoomOut = { [weak self] in
+            guard let self, let page = self.pagerView.page(at: self.pageModel.currentIndex), page.isPaintZoomEnabled else {
+                return
+            }
+            page.resetZoom(animated: true)
+        }
     }
 
     private func teardownCurrentItem() {
@@ -391,7 +408,26 @@ extension ChatMediaEditorScreen.Node {
         let isIdle = self.isPagerIdle && !self.isSwipingDown
         self.pagerView.setScrollEnabled(self.isGallery && isIdle && self.pageModel.itemsSource.count > 1)
         let currentIndex = self.pageModel.currentIndex
+        let isPainting = self.activeTool == .paint && !self.isSending && !(self.controller?.isDismissing ?? true)
         for (index, page) in self.pagerView.pages {
+            if index == currentIndex, isPainting || page.isPaintZoomEnabled, let layout = self.validLayout {
+                page.update(mediaFrame: isPainting ? self.previewFrame(layout: layout) : self.restingPreviewFrame(layout: layout, mediaSize: self.previewMediaSize, isVideo: self.subject.isVideo))
+            }
+            let isPaintZoomEnabled = isPainting && index == currentIndex
+            if page.shouldBeginPaintZoom == nil {
+                page.shouldBeginPaintZoom = { [weak self] in
+                    guard let self else {
+                        return false
+                    }
+                    return !self.entitiesView.hasSelection && !self.entitiesView.isEditingText
+                }
+            }
+            if page.isPaintZoomEnabled != isPaintZoomEnabled {
+                page.isPaintZoomEnabled = isPaintZoomEnabled
+                if index == currentIndex {
+                    self.drawingView.updateZoomScale(isPaintZoomEnabled ? page.zoomScale : 1.0)
+                }
+            }
             page.isZoomEnabled = self.isGallery && isIdle && index == currentIndex && !self.subject.isVideo
             page.isTapEnabled = self.isGallery && isIdle && index == currentIndex && !self.subject.isVideo && (self.selectionModel?.isEnabled ?? false)
         }

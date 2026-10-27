@@ -348,6 +348,9 @@ final class MediaEditorScreenComponent: Component {
         
         private let textCancelButton = ComponentView<Empty>()
         private let textDoneButton = ComponentView<Empty>()
+        private let textCancelButtonContainer = UIView()
+        private let textDoneButtonContainer = UIView()
+        private var appliedIsEditingTextEntity = false
         private let textSize =  ComponentView<Empty>()
         
         private var isDismissed = false
@@ -767,7 +770,7 @@ final class MediaEditorScreenComponent: Component {
             let bottomButtonsAlpha: CGFloat = isRecordingAdditionalVideo ? 0.3 : 1.0
             let buttonsAreHidden = component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities
             
-            let sharedBottomControlsGeometry = mediaEditorStoryBottomControlsGeometry(
+            let regularBottomControlsGeometry = mediaEditorStoryBottomControlsGeometry(
                 size: availableSize,
                 isTablet: isTablet,
                 statusBarHeight: environment.statusBarHeight,
@@ -775,6 +778,14 @@ final class MediaEditorScreenComponent: Component {
                 hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0,
                 hasReservedCorners: environment.reservedCorners != .none
             )
+            var sharedBottomControlsGeometry = regularBottomControlsGeometry
+            if mediaEditorStoryBottomControlsAlignWithCameraRow(deviceMetrics: environment.deviceMetrics, isTablet: isTablet, hasReservedCorners: environment.reservedCorners != .none) {
+                sharedBottomControlsGeometry = mediaEditorStoryCameraRowBottomControlsGeometry(size: availableSize, homeIndicatorInset: component.bottomSafeInset)
+                let captionFieldBottomInset: CGFloat = 6.0
+                let captionToBottomControlsSpacing: CGFloat = 16.0
+                let inputPanelBottomOffset: CGFloat = 3.0
+                controlsBottomInset = sharedBottomControlsGeometry.panelFrame.minY - captionToBottomControlsSpacing + captionFieldBottomInset + inputPanelBottomOffset - availableSize.height + environment.safeInsets.bottom
+            }
             let bottomControlsMinY = sharedBottomControlsGeometry.panelFrame.minY
             
             var timeoutValue: String
@@ -939,6 +950,14 @@ final class MediaEditorScreenComponent: Component {
             }
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool != nil)
+            let textEditingChanged = isEditingTextEntity != self.appliedIsEditingTextEntity
+            self.appliedIsEditingTextEntity = isEditingTextEntity
+            let topButtonsScale: CGFloat = displayTopButtons || isEditingTextEntity ? 1.0 : 0.01
+            let fadeTopButtonWithBlur: (UIView) -> Void = { view in
+                if textEditingChanged && !transition.animation.isImmediate {
+                    ComponentTransition.animateTransientBlur(layer: view.layer, fromRadius: isEditingTextEntity ? 0.0 : mediaEditorBottomControlsHandoffBlurRadius, toRadius: isEditingTextEntity ? mediaEditorBottomControlsHandoffBlurRadius : 0.0, duration: mediaEditorBottomControlsHandoffFadeDuration)
+                }
+            }
             
             var inputPanelSize: CGSize = .zero
             if case .storyEditor = controller.mode {
@@ -1268,7 +1287,8 @@ final class MediaEditorScreenComponent: Component {
 
                     buttonTransition.setPosition(view: saveButtonView, position: saveButtonFrame.center)
                     buttonTransition.setBounds(view: saveButtonView, bounds: CGRect(origin: .zero, size: saveButtonFrame.size))
-                    transition.setScale(view: saveButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                    transition.setScale(view: saveButtonView, scale: topButtonsScale)
+                    fadeTopButtonWithBlur(saveButtonView)
                     transition.setAlpha(view: saveButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? saveButtonAlpha : 0.0)
                 }
                  
@@ -1365,7 +1385,8 @@ final class MediaEditorScreenComponent: Component {
                         }
                         transition.setPosition(view: dayNightButtonView, position: dayNightButtonFrame.center)
                         transition.setBounds(view: dayNightButtonView, bounds: CGRect(origin: .zero, size: dayNightButtonFrame.size))
-                        transition.setScale(view: dayNightButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                        transition.setScale(view: dayNightButtonView, scale: topButtonsScale)
+                    fadeTopButtonWithBlur(dayNightButtonView)
                         transition.setAlpha(view: dayNightButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
                     }
                     
@@ -1460,7 +1481,8 @@ final class MediaEditorScreenComponent: Component {
                         }
                         buttonTransition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
                         buttonTransition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
-                        transition.setScale(view: muteButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                        transition.setScale(view: muteButtonView, scale: topButtonsScale)
+                    fadeTopButtonWithBlur(muteButtonView)
                         transition.setAlpha(view: muteButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
                     }
                     
@@ -1550,7 +1572,8 @@ final class MediaEditorScreenComponent: Component {
                         }
                         buttonTransition.setPosition(view: playbackButtonView, position: playbackButtonFrame.center)
                         buttonTransition.setBounds(view: playbackButtonView, bounds: CGRect(origin: .zero, size: playbackButtonFrame.size))
-                        transition.setScale(view: playbackButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                        transition.setScale(view: playbackButtonView, scale: topButtonsScale)
+                    fadeTopButtonWithBlur(playbackButtonView)
                         transition.setAlpha(view: playbackButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
                     }
                     
@@ -2479,7 +2502,6 @@ final class MediaEditorScreenComponent: Component {
                     backgroundColor: nil,
                     isDark: true,
                     state: .glass,
-                    isVisible: isEditingTextEntity,
                     component: AnyComponentWithIdentity(
                         id: "close",
                         component: AnyComponent(BundleIconComponent(name: "Navigation/Close", tintColor: .white))
@@ -2499,12 +2521,22 @@ final class MediaEditorScreenComponent: Component {
             )
             if let textCancelButtonView = self.textCancelButton.view {
                 if textCancelButtonView.superview == nil {
-                    self.addSubview(textCancelButtonView)
+                    self.textCancelButtonContainer.alpha = 0.0
+                    self.addSubview(self.textCancelButtonContainer)
+                    self.textCancelButtonContainer.addSubview(textCancelButtonView)
                 }
-                transition.setPosition(view: textCancelButtonView, position: textCancelButtonFrame.center)
-                transition.setBounds(view: textCancelButtonView, bounds: CGRect(origin: .zero, size: textCancelButtonFrame.size))
-                transition.setScale(view: textCancelButtonView, scale: isEditingTextEntity ? 1.0 : 0.01)
-                transition.setAlpha(view: textCancelButtonView, alpha: isEditingTextEntity ? 1.0 : 0.0)
+                transition.setFrame(view: self.textCancelButtonContainer, frame: textCancelButtonFrame)
+                transition.setFrame(view: textCancelButtonView, frame: CGRect(origin: .zero, size: textCancelButtonFrame.size))
+                self.textCancelButtonContainer.isUserInteractionEnabled = isEditingTextEntity
+                if textEditingChanged && !transition.animation.isImmediate {
+                    if isEditingTextEntity {
+                        mediaEditorFadeWithBlur(view: self.textCancelButtonContainer, isIn: true, alpha: 1.0)
+                    } else {
+                        mediaEditorFadeOutKeepingGlass(view: self.textCancelButtonContainer)
+                    }
+                } else {
+                    self.textCancelButtonContainer.alpha = isEditingTextEntity ? 1.0 : 0.0
+                }
             }
             
             let textDoneButtonSize = self.textDoneButton.update(
@@ -2514,7 +2546,6 @@ final class MediaEditorScreenComponent: Component {
                     backgroundColor: UIColor(rgb: 0x0088ff),
                     isDark: true,
                     state: .tintedGlass,
-                    isVisible: isEditingTextEntity,
                     component: AnyComponentWithIdentity(
                         id: "done",
                         component: AnyComponent(BundleIconComponent(name: "Navigation/Done", tintColor: .white))
@@ -2534,12 +2565,22 @@ final class MediaEditorScreenComponent: Component {
             )
             if let textDoneButtonView = self.textDoneButton.view {
                 if textDoneButtonView.superview == nil {
-                    self.addSubview(textDoneButtonView)
+                    self.textDoneButtonContainer.alpha = 0.0
+                    self.addSubview(self.textDoneButtonContainer)
+                    self.textDoneButtonContainer.addSubview(textDoneButtonView)
                 }
-                transition.setPosition(view: textDoneButtonView, position: textDoneButtonFrame.center)
-                transition.setBounds(view: textDoneButtonView, bounds: CGRect(origin: .zero, size: textDoneButtonFrame.size))
-                transition.setScale(view: textDoneButtonView, scale: isEditingTextEntity ? 1.0 : 0.01)
-                transition.setAlpha(view: textDoneButtonView, alpha: isEditingTextEntity ? 1.0 : 0.0)
+                transition.setFrame(view: self.textDoneButtonContainer, frame: textDoneButtonFrame)
+                transition.setFrame(view: textDoneButtonView, frame: CGRect(origin: .zero, size: textDoneButtonFrame.size))
+                self.textDoneButtonContainer.isUserInteractionEnabled = isEditingTextEntity
+                if textEditingChanged && !transition.animation.isImmediate {
+                    if isEditingTextEntity {
+                        mediaEditorFadeWithBlur(view: self.textDoneButtonContainer, isIn: true, alpha: 1.0)
+                    } else {
+                        mediaEditorFadeOutKeepingGlass(view: self.textDoneButtonContainer)
+                    }
+                } else {
+                    self.textDoneButtonContainer.alpha = isEditingTextEntity ? 1.0 : 0.0
+                }
             }
             
             let textSizeSize = self.textSize.update(
@@ -2875,6 +2916,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         fileprivate var drawingScreen: DrawingScreen?
         fileprivate let bottomControls = ComponentView<Empty>()
         fileprivate let bottomControlsContainerView = MediaEditorBottomControlsHostView()
+        fileprivate var controlsBandOriginX: CGFloat = 0.0
         fileprivate var embeddedToolsScreen: MediaToolsScreen?
         fileprivate var embeddedPaintTab: MediaEditorStoryPaintTab = .drawing
         fileprivate var embeddedPaintControlsVisible = true
@@ -5749,11 +5791,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
 
             var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             var previewSize: CGSize
+            var previewOriginX: CGFloat?
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+                if let placement = storyPreviewBandPlacement(containerSize: layout.size, safeInsets: layout.safeInsets) {
+                    previewOriginX = placement.x
+                    previewSize = placement.size
+                }
                 if layout.size.height < previewSize.height + 30.0 {
                     topInset = 0.0
                 }
@@ -5773,6 +5820,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 layoutInputHeight = 0.0
             }
             
+            let controlsLayout = self.controlsLayout(layout)
+            
             let environment = ViewControllerComponentContainer.Environment(
                 // Beside iPhone Duo's status island (unfolded portrait) the top row sits at the compact status height,
                 // its right buttons clear of the island (`navigationBarTrailingButtonsInset`).
@@ -5781,11 +5830,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: topInset,
-                    left: layout.safeInsets.left,
+                    left: controlsLayout.safeInsets.left,
                     bottom: bottomInset,
-                    right: layout.safeInsets.right
+                    right: controlsLayout.safeInsets.right
                 ),
-                reservedCorners: layout.reservedCorners,
+                reservedCorners: controlsLayout.reservedCorners,
                 navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layoutInputHeight,
@@ -6256,18 +6305,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     environment
                 },
                 forceUpdate: forceUpdate,
-                containerSize: layout.size
+                containerSize: controlsLayout.size
             )
             if let componentView = self.componentHost.view {
                 if componentView.superview == nil {
                     self.containerView.addSubview(componentView)
                     componentView.clipsToBounds = true
                 }
-                transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(x: 0.0, y: self.dismissOffset), size: componentSize))
+                transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(x: self.controlsBandOriginX, y: self.dismissOffset), size: componentSize))
                 if self.bottomControlsContainerView.superview == nil {
                     self.containerView.insertSubview(self.bottomControlsContainerView, aboveSubview: componentView)
                 }
-                transition.setFrame(view: self.bottomControlsContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: self.dismissOffset), size: componentSize))
+                transition.setFrame(view: self.bottomControlsContainerView, frame: CGRect(origin: CGPoint(x: self.controlsBandOriginX, y: self.dismissOffset), size: componentSize))
             }
             self.lastBottomInset = bottomInset
             self.updateBottomControls(layout: layout, transition: transition)
@@ -6336,7 +6385,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             transition.setPosition(view: self.containerView, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.containerView, bounds: CGRect(origin: .zero, size: layout.size))
             
-            var previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: topInset - bottomInputOffset + self.dismissOffset), size: previewSize)
+            var previewFrame = CGRect(origin: CGPoint(x: previewOriginX ?? floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: topInset - bottomInputOffset + self.dismissOffset), size: previewSize)
             if layout.size.height < 680.0, case .stickerEditor = controller.mode {
                 previewFrame = previewFrame.offsetBy(dx: 0.0, dy: -44.0)
             }
@@ -9553,10 +9602,24 @@ extension MediaEditorScreenImpl.Node {
         self.updateBottomControls(layout: layout, transition: transition)
     }
 
-    func updateBottomControls(layout: ContainerViewLayout, transition: ComponentTransition) {
+    func controlsLayout(_ layout: ContainerViewLayout) -> ContainerViewLayout {
+        if let controller = self.controller, case .stickerEditor = controller.mode {
+            self.controlsBandOriginX = 0.0
+            return layout
+        }
+        if let band = storyControlsBandLayout(layout) {
+            self.controlsBandOriginX = band.originX
+            return band.layout
+        }
+        self.controlsBandOriginX = 0.0
+        return layout
+    }
+
+    func updateBottomControls(layout fullLayout: ContainerViewLayout, transition: ComponentTransition) {
         guard let controller = self.controller else {
             return
         }
+        let layout = self.controlsLayout(fullLayout)
         let geometry = mediaEditorStoryBottomControlsGeometry(
             size: layout.size,
             isTablet: layout.metrics.isTablet,
@@ -9564,7 +9627,8 @@ extension MediaEditorScreenImpl.Node {
             safeBottomInset: self.lastBottomInset,
             hasStatusIsland: layout.navigationBarTrailingButtonsInset > 0.0,
             hasReservedCorners: layout.reservedCorners != .none,
-            bottomEdgeRightInset: bottomEdgeSideInsets(safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners).right
+            bottomEdgeRightInset: bottomEdgeSideInsets(safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners).right,
+            cameraRowHomeIndicatorInset: mediaEditorStoryBottomControlsAlignWithCameraRow(deviceMetrics: layout.deviceMetrics, isTablet: layout.metrics.isTablet, hasReservedCorners: layout.reservedCorners != .none) ? layout.intrinsicInsets.bottom : nil
         )
         let state: MediaEditorStoryBottomControlsState
         if self.drawingScreen != nil {
@@ -9661,7 +9725,8 @@ extension MediaEditorScreenImpl.Node {
         guard let layout = self.validLayout else {
             return
         }
-        mediaEditorEmbedToolController(controller, in: self.containerView, below: self.bottomControlsContainerView, layout: layout)
+        let controlsLayout = self.controlsLayout(layout)
+        mediaEditorEmbedToolController(controller, in: self.containerView, below: self.bottomControlsContainerView, layout: controlsLayout, originX: self.controlsBandOriginX)
     }
 
     func dismissEmbeddedToolController(_ controller: ViewController, animateOut: (@escaping () -> Void) -> Void) {
@@ -9681,7 +9746,8 @@ extension MediaEditorScreenImpl.Node {
         if let embeddedToolsScreen = self.embeddedToolsScreen {
             controllers.append(embeddedToolsScreen)
         }
-        mediaEditorUpdateEmbeddedToolLayout(controllers, in: self.containerView, layout: layout, transition: transition.containedViewLayoutTransition)
+        let controlsLayout = self.controlsLayout(layout)
+        mediaEditorUpdateEmbeddedToolLayout(controllers, in: self.containerView, layout: controlsLayout, originX: self.controlsBandOriginX, transition: transition.containedViewLayoutTransition)
     }
 }
 
@@ -9709,4 +9775,17 @@ private func mediaEditorStoryAccessibilityLabel(_ item: MediaEditorStoryBottomCo
     case .tools, .rotate, .paint:
         return nil
     }
+}
+
+private func mediaEditorFadeOutKeepingGlass(view: UIView) {
+    let currentAlpha = CGFloat(view.layer.presentation()?.opacity ?? Float(view.alpha))
+    view.alpha = 1.0
+    view.layer.animateAlpha(from: currentAlpha, to: 0.0, duration: mediaEditorBottomControlsHandoffFadeDuration, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak view] _ in
+        guard let view, !view.isUserInteractionEnabled else {
+            return
+        }
+        view.alpha = 0.0
+        view.layer.removeAnimation(forKey: "opacity")
+    })
+    ComponentTransition.animateTransientBlur(layer: view.layer, fromRadius: 0.0, toRadius: mediaEditorBottomControlsHandoffBlurRadius, duration: mediaEditorBottomControlsHandoffFadeDuration)
 }

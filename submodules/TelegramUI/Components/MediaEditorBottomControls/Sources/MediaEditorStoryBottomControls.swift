@@ -7,7 +7,30 @@ public struct MediaEditorStoryBottomControlsGeometry: Equatable {
     public var spec: MediaEditorBottomControlsLayoutSpec
 }
 
-public func mediaEditorStoryBottomControlsGeometry(size: CGSize, isTablet: Bool, statusBarHeight: CGFloat, safeBottomInset: CGFloat, hasStatusIsland: Bool, hasReservedCorners: Bool, bottomEdgeRightInset: CGFloat = 0.0) -> MediaEditorStoryBottomControlsGeometry {
+public func mediaEditorStoryBottomControlsAlignWithCameraRow(deviceMetrics: DeviceMetrics, isTablet: Bool, hasReservedCorners: Bool) -> Bool {
+    guard case .iPhoneDuo = deviceMetrics else {
+        return false
+    }
+    return !isTablet && !hasReservedCorners
+}
+
+public func mediaEditorStoryCameraRowBottomControlsGeometry(size: CGSize, homeIndicatorInset: CGFloat) -> MediaEditorStoryBottomControlsGeometry {
+    let cameraButtonSide: CGFloat = 48.0
+    let cameraButtonSideInset: CGFloat = 9.0
+    let cameraControlsBottomInset: CGFloat = -70.0
+    let cameraRowMinY = size.height - homeIndicatorInset - 5.0 + floorToScreenPixels(cameraControlsBottomInset * 0.66) - 2.0 - UIScreenPixel
+    let side = mediaEditorBottomControlsButtonSide
+    let sideInset = cameraButtonSideInset + (cameraButtonSide - side) / 2.0
+    return MediaEditorStoryBottomControlsGeometry(
+        panelFrame: CGRect(x: 0.0, y: cameraRowMinY + (cameraButtonSide - side) / 2.0, width: size.width, height: side),
+        spec: MediaEditorBottomControlsLayoutSpec(sideInset: sideInset, rightExtraInset: cameraButtonSideInset - sideInset, middleCentering: .betweenSideButtons)
+    )
+}
+
+public func mediaEditorStoryBottomControlsGeometry(size: CGSize, isTablet: Bool, statusBarHeight: CGFloat, safeBottomInset: CGFloat, hasStatusIsland: Bool, hasReservedCorners: Bool, bottomEdgeRightInset: CGFloat = 0.0, cameraRowHomeIndicatorInset: CGFloat? = nil) -> MediaEditorStoryBottomControlsGeometry {
+    if let cameraRowHomeIndicatorInset {
+        return mediaEditorStoryCameraRowBottomControlsGeometry(size: size, homeIndicatorInset: cameraRowHomeIndicatorInset)
+    }
     let buttonBottomInset: CGFloat = 8.0
     var controlsBottomInset: CGFloat = 0.0
     let sideInset: CGFloat

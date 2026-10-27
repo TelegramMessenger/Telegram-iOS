@@ -304,6 +304,22 @@ public func chatMediaEditorZoomTargetOffset(viewportSize: CGSize, mediaFrame: CG
     return CGPoint(x: max(minX, min(maxX, desired.x)), y: max(minY, min(maxY, desired.y)))
 }
 
+final class ChatMediaEditorZoomScrollView: UIScrollView {
+    var isPaintZoomEnabled = false
+    var shouldBeginPaintZoom: (() -> Bool)?
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if self.isPaintZoomEnabled, gestureRecognizer === self.pinchGestureRecognizer || gestureRecognizer === self.panGestureRecognizer, let shouldBeginPaintZoom = self.shouldBeginPaintZoom, !shouldBeginPaintZoom() {
+            return false
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+    }
+}
+
+public func chatMediaEditorZoomPanMinimumTouches(isPaintZoomEnabled: Bool) -> Int {
+    return isPaintZoomEnabled ? 2 : 1
+}
+
 public func chatMediaEditorPhotoMaxZoomScale(viewportSize: CGSize, mediaSize: CGSize) -> CGFloat {
     guard mediaSize.width > 0.0, mediaSize.height > 0.0 else {
         return 1.0
@@ -447,13 +463,40 @@ final class ChatMediaEditorPageView: UIView, UIScrollViewDelegate {
         }
     }
 
+    var shouldBeginPaintZoom: (() -> Bool)? {
+        get {
+            return (self.zoomScrollView as? ChatMediaEditorZoomScrollView)?.shouldBeginPaintZoom
+        }
+        set {
+            if let zoomScrollView = self.zoomScrollView as? ChatMediaEditorZoomScrollView {
+                zoomScrollView.shouldBeginPaintZoom = newValue
+            }
+        }
+    }
+
+    var isPaintZoomEnabled = false {
+        didSet {
+            if self.isPaintZoomEnabled != oldValue {
+                (self.zoomScrollView as? ChatMediaEditorZoomScrollView)?.isPaintZoomEnabled = self.isPaintZoomEnabled
+                self.updateZoomInteraction()
+                if !self.isPaintZoomEnabled {
+                    self.resetZoom(animated: true)
+                }
+            }
+        }
+    }
+
+    var zoomScale: CGFloat {
+        return self.zoomScrollView.zoomScale
+    }
+
     var isZoomed: Bool {
         return self.zoomScrollView.zoomScale > 1.001
     }
 
     init(index: Int) {
         self.index = index
-        self.zoomScrollView = UIScrollView()
+        self.zoomScrollView = ChatMediaEditorZoomScrollView()
         self.zoomScrollView.showsHorizontalScrollIndicator = false
         self.zoomScrollView.showsVerticalScrollIndicator = false
         self.zoomScrollView.contentInsetAdjustmentBehavior = .never
@@ -496,8 +539,10 @@ final class ChatMediaEditorPageView: UIView, UIScrollViewDelegate {
     }
 
     private func updateZoomInteraction() {
-        self.zoomScrollView.pinchGestureRecognizer?.isEnabled = self.isZoomEnabled
-        self.zoomScrollView.isScrollEnabled = self.isZoomEnabled
+        let isEnabled = self.isZoomEnabled || self.isPaintZoomEnabled
+        self.zoomScrollView.pinchGestureRecognizer?.isEnabled = isEnabled
+        self.zoomScrollView.isScrollEnabled = isEnabled
+        self.zoomScrollView.panGestureRecognizer.minimumNumberOfTouches = chatMediaEditorZoomPanMinimumTouches(isPaintZoomEnabled: self.isPaintZoomEnabled)
         self.doubleTapRecognizer.isEnabled = self.isZoomEnabled
     }
 
@@ -572,7 +617,7 @@ final class ChatMediaEditorPageView: UIView, UIScrollViewDelegate {
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-        return self.isZoomEnabled ? self.contentView : nil
+        return self.isZoomEnabled || self.isPaintZoomEnabled || abs(self.contentView.transform.a - 1.0) > 0.001 ? self.contentView : nil
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {

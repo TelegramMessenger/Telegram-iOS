@@ -69,9 +69,9 @@ final class ChatMediaEditorLayoutTests: XCTestCase {
         XCTAssertEqual(layout.arrowFrame.minY, 59.0 + 16.0)
     }
 
-    func testRecipientLabelIgnoresStatusBarOnlyInset() {
+    func testRecipientLabelKeepsBelowStatusBarOnlyInset() {
         let layout = chatMediaEditorRecipientLayout(size: CGSize(width: 375.0, height: 667.0), safeInsets: UIEdgeInsets(top: 20.0, left: 0.0, bottom: 0.0, right: 0.0), arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 80.0, height: 16.0))
-        XCTAssertEqual(layout.arrowFrame.minY, 16.0)
+        XCTAssertEqual(layout.arrowFrame.minY, 36.0)
     }
 
     func testLandscapeToolsPreviewKeepsFullWidth() {
@@ -98,5 +98,34 @@ final class ChatMediaEditorLayoutTests: XCTestCase {
         XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 384.0, mediaSize: CGSize(width: 1920.0, height: 1080.0)), 6)
         XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 384.0, mediaSize: CGSize(width: 1080.0, height: 1920.0)), 15)
         XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 0.0, mediaSize: CGSize(width: 1920.0, height: 1080.0)), 1)
+    }
+
+    func testToolPreviewCentresOnTheScreenWhenItClearsTheStrip() {
+        let unfoldedLandscape = chatMediaEditorToolPreviewFrame(kind: .tools, size: CGSize(width: 951.0, height: 669.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
+        XCTAssertEqual(unfoldedLandscape.midX, 475.5, accuracy: 0.5)
+        let foldedLandscape = chatMediaEditorToolPreviewFrame(kind: .paint, size: CGSize(width: 678.0, height: 466.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
+        XCTAssertEqual(foldedLandscape.midX, 339.0, accuracy: 0.5)
+        XCTAssertLessThanOrEqual(foldedLandscape.maxX, 678.0 - 84.0)
+    }
+
+    func testToolPreviewKeepsToTheBandWhenTheScreenCentreReachesTheStrip() {
+        let frame = chatMediaEditorToolPreviewFrame(kind: .tools, size: CGSize(width: 466.0, height: 678.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
+        XCTAssertEqual(frame.midX, 191.0, accuracy: 0.5)
+        XCTAssertLessThanOrEqual(frame.maxX, 466.0 - 84.0 + 0.5)
+    }
+
+    func testToolPreviewWithEqualInsetsIsUnchanged() {
+        let insets = UIEdgeInsets(top: 59.0, left: 0.0, bottom: 34.0, right: 0.0)
+        let frame = chatMediaEditorToolPreviewFrame(kind: .tools, size: CGSize(width: 402.0, height: 874.0), safeInsets: insets, mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
+        XCTAssertEqual(frame.midX, 201.0, accuracy: 0.5)
+    }
+
+    func testCropContainerCentresOnTheScreenInLandscapeBesideAStrip() {
+        let landscape = chatMediaEditorCropContainerFrame(size: CGSize(width: 951.0, height: 669.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true)
+        XCTAssertEqual(landscape.midX, 475.5, accuracy: 0.5)
+        XCTAssertEqual(landscape.maxX, 951.0 - 84.0, accuracy: 0.5)
+        let portrait = chatMediaEditorCropContainerFrame(size: CGSize(width: 466.0, height: 678.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), toolbarHeight: 49.0, hasRotationWheel: true, hasPerspective: true)
+        XCTAssertEqual(portrait.minX, 0.0)
+        XCTAssertEqual(portrait.width, 382.0)
     }
 }

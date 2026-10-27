@@ -79,7 +79,7 @@ JSValue pluralRulesConstruct(JSContext* ctx, JSValueConst newTarget, int argc, J
         const uint8_t type = uint8_t(optionIndex(getStringOption(ctx, options.get(), "type", kPluralTypes, &given), kPluralTypes, 0));
         DigitOptions digits;
         readDigitOptions(ctx, options.get(), 0, 3, Notation::Standard, digits, &given);
-        const std::string locale = resolveLocale(ctx, requested);
+        const std::string locale = resolveLocale(ctx, requested, RelevantKeys::None);
         return createIntlObject<PluralRulesObject>(ctx, proto.get(), id, locale, given.json(), type, digits).release();
     });
 }
@@ -171,7 +171,7 @@ JSValue relativeTimeConstruct(JSContext* ctx, JSValueConst newTarget, int argc, 
         if (numberingSystem && !isUnicodeType(*numberingSystem)) {
             throw RangeError{"Intl: the value of numberingSystem is out of range."};
         }
-        const std::string locale = resolveLocale(ctx, requested);
+        const std::string locale = resolveLocale(ctx, requested, RelevantKeys::RelativeTimeFormat);
         const uint8_t style = uint8_t(optionIndex(getStringOption(ctx, options.get(), "style", kWidths, &given), kWidths, 0));
         const uint8_t numeric = uint8_t(optionIndex(getStringOption(ctx, options.get(), "numeric", kNumerics, &given), kNumerics, 0));
         return createIntlObject<RelativeTimeFormatObject>(ctx, proto.get(), id, locale, given.json(), style, numeric).release();
@@ -316,7 +316,7 @@ JSValue listConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
         const std::vector<std::string> requested = canonicalizeLocaleList(ctx, argc > 0 ? argv[0] : JS_UNDEFINED);
         Value options = getOptionsObject(ctx, argc > 1 ? argv[1] : JS_UNDEFINED);
         getStringOption(ctx, options.get(), "localeMatcher", kMatchers);
-        const std::string locale = resolveLocale(ctx, requested);
+        const std::string locale = resolveLocale(ctx, requested, RelevantKeys::None);
         const uint8_t type = uint8_t(optionIndex(getStringOption(ctx, options.get(), "type", kListTypes, &given), kListTypes, 0));
         const uint8_t style = uint8_t(optionIndex(getStringOption(ctx, options.get(), "style", kWidths, &given), kWidths, 0));
         return createIntlObject<ListFormatObject>(ctx, proto.get(), id, locale, given.json(), type, style).release();
@@ -392,7 +392,7 @@ CollatorObject initializeCollator(JSContext* ctx, JSValueConst locales, JSValueC
     }
     r.numeric = getBooleanOption(ctx, o, "numeric", &given).value_or(false);
     r.caseFirst = uint8_t(optionIndex(getStringOption(ctx, o, "caseFirst", kCaseFirsts, &given), kCaseFirsts, 2));
-    const std::string locale = resolveLocale(ctx, requested);
+    const std::string locale = resolveLocale(ctx, requested, RelevantKeys::Collator);
     r.sensitivity = uint8_t(optionIndex(getStringOption(ctx, o, "sensitivity", kSensitivities, &given), kSensitivities, 3));
     r.ignorePunctuation = getBooleanOption(ctx, o, "ignorePunctuation", &given).value_or(false);
     if (r.usage == 0 && collation && *collation != "standard" && *collation != "search" && collation->size() < sizeof(r.collation)) {
@@ -501,7 +501,7 @@ JSValue transformCase(JSContext* ctx, JSValueConst thisVal, int argc, JSValueCon
         }
         const String s = String::fromJS(ctx, thisVal);
         const std::vector<std::string> requested = canonicalizeLocaleList(ctx, argc > 0 ? argv[0] : JS_UNDEFINED);
-        const std::string tag = requested.empty() ? resolveLocale(ctx, {}) : requested.front();
+        const std::string tag = requested.empty() ? resolveLocale(ctx, {}, RelevantKeys::None) : requested.front();
         const std::string language = tag.substr(0, tag.find('-'));
         if (!hasOwnCaseRules(language)) {
             JSValue string = s.toJS(ctx);

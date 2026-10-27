@@ -38,6 +38,8 @@ import GlassBarButtonComponent
 import GlassControls
 import AlertComponent
 import MultilineTextComponent
+import MediaGrid
+import MediaGridPhotoLibrary
 
 final class MediaPickerInteraction {
     let downloadManager: AssetDownloadManager
@@ -78,7 +80,7 @@ final class MediaPickerInteraction {
     }
 }
 
-private struct MediaPickerGridEntry: Comparable, Identifiable {
+struct MediaPickerGridEntry: Comparable, Identifiable {
     enum StableId: Hashable {
         case asset(Int)
         case media(Int)
@@ -120,7 +122,7 @@ private struct MediaPickerGridEntry: Comparable, Identifiable {
     }
 }
 
-private struct MediaPickerGridTransaction {
+struct MediaPickerGridTransaction {
     let deletions: [Int]
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
@@ -188,6 +190,17 @@ private func selectedButtonMinX(layout: ContainerViewLayout) -> CGFloat {
 }
 
 public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, AttachmentContainable {
+    fileprivate static let darkTopEdgeGradient: [EdgeEffectView.GradientStop] = [
+        EdgeEffectView.GradientStop(location: 0.0, alpha: 1.0),
+        EdgeEffectView.GradientStop(location: 0.35, alpha: 1.0),
+        EdgeEffectView.GradientStop(location: 0.5, alpha: 0.95),
+        EdgeEffectView.GradientStop(location: 0.6, alpha: 0.86),
+        EdgeEffectView.GradientStop(location: 0.7, alpha: 0.7),
+        EdgeEffectView.GradientStop(location: 0.8, alpha: 0.5),
+        EdgeEffectView.GradientStop(location: 0.9, alpha: 0.27),
+        EdgeEffectView.GradientStop(location: 1.0, alpha: 0.0)
+    ]
+
     public enum Style {
         case glass
         case legacy
@@ -344,6 +357,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private let cancelButtonNode: WebAppCancelButtonNode
     
     private var buttons: ComponentView<Empty>?
+    private var buttonsIsDark: Bool?
     private let moreButtonPlayOnce = ActionSlot<Void>()
     
     private let moreButtonNode: MoreButtonNode
@@ -388,6 +402,22 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     
     public var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? = nil
     
+    fileprivate let usesMediaGridV2: Bool
+    fileprivate let gridModeKind: MediaPickerGridModeKind
+
+    fileprivate var gridAllowsSelection: Bool {
+        var isMultipleSelectionMode = true
+        if case let .assets(_, mode) = self.subject {
+            switch mode {
+            case .default, .files(false), .passport(true):
+                break
+            default:
+                isMultipleSelectionMode = false
+            }
+        }
+        return mediaPickerGridAllowsSelection(isMultipleSelectionMode: isMultipleSelectionMode, explicitMultipleSelection: self.explicitMultipleSelection)
+    }
+    
     private let selectedCollection = Promise<PHAssetCollection?>(nil)
     private var selectedCollectionValue: PHAssetCollection? {
         didSet {
@@ -425,6 +455,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         private weak var controller: MediaPickerScreenImpl?
         private var presentationData: PresentationData
         fileprivate let mediaAssetsContext: MediaAssetsContext
+        private let assetsAreFiltered: Bool
         
         private var requestedMediaAccess = false
         private var requestedCameraAccess = false
@@ -435,7 +466,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         private let gridContainerNode: ASDisplayNode
         private let gridContentNode: ASDisplayNode
         private let warpView: WarpView?
-        fileprivate let gridNode: GridNode
+        fileprivate let gridHost: MediaPickerGridHost
         fileprivate let topEdgeEffectView: EdgeEffectView
         fileprivate let bottomEdgeEffectView: EdgeEffectView
         
@@ -463,6 +494,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         private var selectionNode: MediaPickerSelectedListNode?
         
         private var nextStableId: Int = 1
+        private var mediaGridItems: [String: MediaPickerGridExtraItem] = [:]
         private var currentEntries: [MediaPickerGridEntry] = []
         private var enqueuedTransactions: [MediaPickerGridTransaction] = []
         fileprivate var state: State?
@@ -484,6 +516,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         fileprivate var currentContentOffset: GridNodeVisibleContentOffset?
         fileprivate var scrolledToTop = true
         fileprivate var scrolledExactlyToTop = true
+        private var appliedContentUnderBar = false
         fileprivate var isSwitchingAssetGroup = false
         
         private var didSetReady = false
@@ -512,6 +545,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             }
             let mediaAssetsContext = MediaAssetsContext(assetType: assetType)
             self.mediaAssetsContext = mediaAssetsContext
+            self.assetsAreFiltered = assetType != nil
             
             self.containerNode = ASDisplayNode()
             self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
@@ -526,7 +560,24 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             self.gridContainerNode = ASDisplayNode()
             self.gridContentNode = ASDisplayNode()
             self.warpView = controller.warpContentsOnEdges ? WarpView(frame: CGRect()) : nil
-            self.gridNode = GridNode()
+            if controller.usesMediaGridV2, let interaction = controller.interaction {
+                let initialTheme = controller.presentationData.theme
+                self.gridHost = MediaPickerMediaGridHost(
+                    interaction: interaction,
+                    mode: mediaPickerGridModeConfiguration(controller.gridModeKind),
+                    isSelectable: controller.gridAllowsSelection,
+                    draftLabel: controller.presentationData.strings.MediaEditor_Draft,
+                    enableAnimations: controller.context.sharedContext.energyUsageSettings.fullTranslucency,
+                    getTheme: { [weak controller] in
+                        return controller?.presentationData.theme ?? initialTheme
+                    },
+                    selectionPanBegan: { [weak controller] in
+                        controller?.cancelPanGesture()
+                    }
+                )
+            } else {
+                self.gridHost = MediaPickerGridNodeHost()
+            }
             self.scrollingArea = SparseItemGridScrollingArea()
             
             self.cameraWrapperView = MediaPickerCameraWrapperView()
@@ -564,7 +615,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             } else {
                 self.gridContainerNode.addSubnode(self.gridContentNode)
             }
-            self.gridContentNode.addSubnode(self.gridNode)
+            self.gridHost.attach(to: self.gridContentNode)
             self.containerNode.addSubnode(self.scrollingArea)
             
             if case .glass = controller.style {
@@ -580,7 +631,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
             }
             
-            self.gridNode.scrollView.addSubview(self.cameraWrapperView)
+            self.gridHost.cameraHostView.addSubview(self.cameraWrapperView)
             
             let selectedCollection = controller.selectedCollection.get()
             let preloadPromise = self.preloadPromise
@@ -629,11 +680,21 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 self.updateState(state)
             })
             
-            self.gridNode.scrollingInitiated = { [weak self] in
+            self.gridHost.scrollingInitiated = { [weak self] in
                 self?.dismissInput()
             }
             
-            self.gridNode.visibleContentOffsetChanged = { [weak self] offset in
+            self.gridHost.contentUnderBarChanged = { [weak self] in
+                guard let self else {
+                    return
+                }
+                if self.currentContentOffset == nil {
+                    self.currentContentOffset = self.gridHost.visibleContentOffset()
+                }
+                self.updateTopEdgeEffect()
+            }
+            
+            self.gridHost.visibleContentOffsetChanged = { [weak self] offset in
                 guard let self else {
                     return
                 }
@@ -648,11 +709,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     return
                 }
                 self.controller?.interaction?.hiddenMediaId = id
-                self.gridNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? MediaPickerGridItemNode {
-                        itemNode.updateHiddenMedia()
-                    }
-                }
+                self.gridHost.updateItemsHiddenMedia()
                 self.selectionNode?.updateHiddenMedia()
             })
             
@@ -725,16 +782,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     guard let self else {
                         return nil
                     }
-                    var node: MediaPickerGridItemNode?
-                    self.gridNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? MediaPickerGridItemNode, itemNode.identifier == identifier {
-                            node = itemNode
-                        }
-                    }
-                    if let node = node {
-                        return (node.view, node.spoilerNode?.dustNode, { [weak node] animateCheckNode in
-                            node?.animateFadeIn(animateCheckNode: animateCheckNode, animateSpoilerNode: false)
-                        })
+                    if let item = self.gridHost.visibleItem(identifier: identifier) {
+                        return item.selectedListTransition()
                     } else {
                         return nil
                     }
@@ -766,13 +815,12 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 return
             }
             
-            self.gridNode.scrollView.alwaysBounceVertical = true
-            self.gridNode.scrollView.showsVerticalScrollIndicator = false
+            self.gridHost.hostDidLoad()
             
             self.setupSelectionGesture(force: controller.explicitMultipleSelection)
             
             if let controller = self.controller, case let .assets(collection, _) = controller.subject, collection != nil {
-                self.gridNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
+                self.gridHost.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
                     return point.x > 44.0
                 }
                 
@@ -785,7 +833,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
                 strongSelf.controller?.requestAttachmentMenuExpansion()
                 strongSelf.isFastScrolling = true
-                return strongSelf.gridNode.scrollView
+                return strongSelf.gridHost.fastScrollView
+            }
+            self.scrollingArea.beginScrollingTarget = { [weak self] in
+                return self?.gridHost.fastScrollTarget
             }
             self.scrollingArea.finishedScrolling = { [weak self] in
                 guard let strongSelf = self else {
@@ -797,11 +848,15 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 guard let strongSelf = self else {
                     return
                 }
+                if strongSelf.gridHost.appliesFastScrollImmediately {
+                    strongSelf.gridHost.setContentOffset(offset, animated: false)
+                    return
+                }
                 Queue.concurrentDefaultQueue().async {
                     strongSelf.fastScrollContentOffset.set(offset)
                 }
             }
-            self.gridNode.visibleItemsUpdated = { [weak self] _ in
+            self.gridHost.visibleItemsUpdated = { [weak self] in
                 self?.updateScrollingArea()
                 
                 if let self {
@@ -812,7 +867,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         cameraView = self.cameraWrapperView
                     }
                     if let cameraView {
-                        self.isCameraPreviewVisible = self.gridNode.scrollView.bounds.intersects(cameraView.frame)
+                        self.isCameraPreviewVisible = self.gridHost.isCameraPreviewVisible(cameraView)
                         self.updateIsCameraActive()
                     }
                 }
@@ -826,7 +881,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             self.fastScrollDisposable = (throttledContentOffsetSignal
             |> deliverOnMainQueue).start(next: { [weak self] contentOffset in
                 if let self {
-                    self.gridNode.scrollView.setContentOffset(contentOffset, animated: false)
+                    self.gridHost.setContentOffset(contentOffset, animated: false)
                 }
             })
             
@@ -835,7 +890,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 avatarEditorPreviewView.tapped = { [weak self] in
                     self?.controller?.openAvatarEditor()
                 }
-                self.gridNode.view.addSubview(avatarEditorPreviewView)
+                self.gridHost.setAccessoryView(avatarEditorPreviewView, layout: { [weak avatarEditorPreviewView] size in
+                    avatarEditorPreviewView?.updateLayout(size: size)
+                })
                 self.avatarEditorPreviewView = avatarEditorPreviewView
             }
             
@@ -877,8 +934,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     cameraView.startPreview()
                 }
                 
-                self.gridNode.scrollView.addSubview(cameraView)
-                self.gridNode.addSubnode(self.cameraActivateAreaNode)
+                self.gridHost.cameraHostView.addSubview(cameraView)
+                self.gridHost.headerHostNode.addSubnode(self.cameraActivateAreaNode)
             case .chatCamera:
                 let cameraImpl = LegacyCameraImpl.shared
                 let cameraPreviewView = cameraImpl.makeCameraSimplePreviewView(frame: .zero, main: true, roundVideo: false)
@@ -905,7 +962,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 self.cameraWrapperView.windowChanged = { [weak self] in
                     self?.updateIsCameraActive()
                 }
-                self.gridNode.addSubnode(self.cameraActivateAreaNode)
+                self.gridHost.headerHostNode.addSubnode(self.cameraActivateAreaNode)
                 
                 let camera = cameraImpl.makeCamera(
                     configuration: Camera.Configuration(
@@ -1002,10 +1059,17 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if self.placeholderNode != nil {
                 scrolledToTop = true
                 scrolledExactlyToTop = true
+            } else if self.gridHost.isContentUnderBar && self.currentDisplayMode == .all {
+                scrolledToTop = false
+                scrolledExactlyToTop = false
             }
             
             var updated = false
             var transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .easeInOut)
+            if self.gridHost.isContentUnderBar != self.appliedContentUnderBar {
+                self.appliedContentUnderBar = self.gridHost.isContentUnderBar
+                transition = .animated(duration: 0.25, curve: .easeInOut)
+            }
             if self.scrolledToTop != scrolledToTop {
                 self.scrolledToTop = scrolledToTop
                 updated = true
@@ -1021,7 +1085,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         }
         
         func setupSelectionGesture(force: Bool = false) {
-            guard self.selectionGesture == nil, let controller = self.controller else {
+            guard self.selectionGesture == nil, self.gridHost.usesPickerSelectionGesture, let controller = self.controller else {
                 return
             }
             
@@ -1040,10 +1104,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 self?.controller?.cancelPanGesture()
             }
             selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
-                self?.gridNode.scrollView.isScrollEnabled = isEnabled
+                (self?.gridHost as? MediaPickerGridNodeHost)?.isScrollEnabled = isEnabled
             }
             selectionGesture.itemAt = { [weak self] point in
-                if let self, let itemNode = self.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
+                if let self, let item = self.gridHost.item(at: point), let selectableItem = item.selectableItem {
                     return (selectableItem, self.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
                 } else {
                     return nil
@@ -1055,7 +1119,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
             }
             selectionGesture.sideInset = 44.0
-            self.gridNode.view.addGestureRecognizer(selectionGesture)
+            self.gridHost.view.addGestureRecognizer(selectionGesture)
             self.selectionGesture = selectionGesture
         }
         
@@ -1184,12 +1248,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 return
             }
 
-            var tag: Int32?
-            self.gridNode.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? MediaPickerGridItemNode {
-                    tag = itemNode.tag
-                }
-            }
+            let tag = self.gridHost.scrollingTag()
 
             let dateString = tag.flatMap { self.scrollerTextForTag(tag: $0) }
             if self.currentScrollingTag != tag {
@@ -1201,10 +1260,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
 
             self.scrollingArea.update(
                 containerSize: layout.size,
-                containerInsets: self.gridNode.gridLayout.insets,
-                contentHeight: self.gridNode.scrollView.contentSize.height,
-                contentOffset: self.gridNode.scrollView.bounds.minY,
-                isScrolling: self.gridNode.scrollView.isDragging || self.gridNode.scrollView.isDecelerating,
+                containerInsets: self.gridHost.contentInsets,
+                contentHeight: self.gridHost.contentHeight,
+                contentOffset: self.gridHost.scrollBounds.minY,
+                isScrolling: self.gridHost.isDragging || self.gridHost.isDecelerating,
                 date: (dateString ?? "", tag ?? 0),
                 theme: self.presentationData.theme,
                 transition: .immediate
@@ -1232,6 +1291,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     stories = true
                 }
             }
+            (self.gridHost as? MediaPickerMediaGridHost)?.isSelectable = controller.gridAllowsSelection
             
             switch state {
             case let .noAccess(cameraAccess):
@@ -1246,23 +1306,31 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
             case let .assets(fetchResult, preload, drafts, mediaAccess, cameraAccess):
                 if let fetchResult = fetchResult {
-                    let totalCount = fetchResult.count
-                    let count = preload ? min(13, totalCount) : totalCount
-                    
-                    var draftIndex = 0
-                    for draft in drafts {
-                        entries.append(MediaPickerGridEntry(index: draftIndex, content: .draft(draft, draftIndex), selectable: selectable, stories: stories))
-                        draftIndex += 1
-                    }
-                    
-                    for i in 0 ..< count {
-                        let index: Int
-                        if case let .assets(collection, _) = controller.subject, let _ = collection {
-                            index = i
-                        } else {
-                            index = totalCount - i - 1
+                    if self.gridHost.consumesEntries {
+                        let totalCount = fetchResult.count
+                        let count = preload ? min(13, totalCount) : totalCount
+                        
+                        var draftIndex = 0
+                        for draft in drafts {
+                            entries.append(MediaPickerGridEntry(index: draftIndex, content: .draft(draft, draftIndex), selectable: selectable, stories: stories))
+                            draftIndex += 1
                         }
-                        entries.append(MediaPickerGridEntry(index: i, content: .asset(fetchResult, index), selectable: selectable, stories: stories))
+                        
+                        for i in 0 ..< count {
+                            let index: Int
+                            if case let .assets(collection, _) = controller.subject, let _ = collection {
+                                index = i
+                            } else {
+                                index = totalCount - i - 1
+                            }
+                            entries.append(MediaPickerGridEntry(index: i, content: .asset(fetchResult, index), selectable: selectable, stories: stories))
+                        }
+                    } else {
+                        var subjectCollectionId: String?
+                        if case let .assets(collection, _) = controller.subject {
+                            subjectCollectionId = collection?.localIdentifier
+                        }
+                        self.gridHost.updateAssets(fetchResult: fetchResult, configuration: mediaPickerGridAssetsConfiguration(subjectCollectionId: subjectCollectionId, selectedCollectionId: controller.selectedCollectionValue?.localIdentifier, isFiltered: self.assetsAreFiltered), extras: drafts.map { .draft($0) })
                     }
                     
                     if case let .assets(previousFetchResult, _, _, _, previousCameraAccess) = previousState, previousFetchResult == nil || previousCameraAccess != cameraAccess {
@@ -1271,7 +1339,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     
                     #if DEBUG
                     if case let .assets(collection, _) = controller.subject, collection?.localizedTitle == "BulkTest" {
-                        for i in 0 ..< totalCount {
+                        for i in 0 ..< fetchResult.count {
                             let backingAsset = fetchResult.object(at: i)
                             let asset = TGMediaAsset(phAsset: backingAsset)
                             controller.interaction?.selectionState?.setItem(asset, selected: true)
@@ -1370,9 +1438,23 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.mediaAssetsContext.requestMediaAccess()
                 }
             case let .media(media):
-                let count = media.count
-                for i in 0 ..< count {
-                    entries.append(MediaPickerGridEntry(index: i, content: .media(media[i], i), selectable: true, stories: stories))
+                if self.gridHost.consumesEntries {
+                    let count = media.count
+                    for i in 0 ..< count {
+                        entries.append(MediaPickerGridEntry(index: i, content: .media(media[i], i), selectable: true, stories: stories))
+                    }
+                } else {
+                    var items: [MediaPickerGridExtraItem] = []
+                    for item in media {
+                        if let current = self.mediaGridItems[item.identifier] {
+                            items.append(current)
+                        } else {
+                            let extra = MediaPickerGridExtraItem.media(item, item.asset)
+                            self.mediaGridItems[item.identifier] = extra
+                            items.append(extra)
+                        }
+                    }
+                    self.gridHost.updateMedia(items)
                 }
             }
         
@@ -1409,11 +1491,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         }
         
         fileprivate func updateSelectionState(animated: Bool = false, updateLayout: Bool = true) {
-            self.gridNode.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? MediaPickerGridItemNode {
-                    itemNode.updateSelectionState(animated: animated)
-                }
-            }
+            self.gridHost.updateItemsSelectionState(animated: animated)
             self.selectionNode?.updateSelectionState()
             
             let count = Int32(self.controller?.interaction?.selectionState?.count() ?? 0)
@@ -1460,16 +1538,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 selectionNode.interaction = self.controller?.interaction
                 selectionNode.getTransitionView = { [weak self] identifier in
                     if let strongSelf = self {
-                        var node: MediaPickerGridItemNode?
-                        strongSelf.gridNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? MediaPickerGridItemNode, itemNode.identifier == identifier {
-                                node = itemNode
-                            }
-                        }
-                        if let node = node {
-                            return (node.view, node.spoilerNode?.dustNode, { [weak node] animateCheckNode in
-                                node?.animateFadeIn(animateCheckNode: animateCheckNode, animateSpoilerNode: false)
-                            })
+                        if let item = strongSelf.gridHost.visibleItem(identifier: identifier) {
+                            return item.selectedListTransition()
                         } else {
                             return nil
                         }
@@ -1484,7 +1554,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.25, curve: .easeInOut))
             }
             
-            self.gridNode.isUserInteractionEnabled = displayMode == .all
+            self.gridHost.isUserInteractionEnabled = displayMode == .all
             self.selectionNode?.isUserInteractionEnabled = displayMode == .selected
                         
             var completion: () -> Void = {}
@@ -1616,7 +1686,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             let index = reversed ? fetchResult.count - index - 1 : index
             
             if self.openChatMediaGallery(source: .fetchResult(fetchResult, index: index, reversed: reversed), immediateThumbnail: immediateThumbnail, transitionHostView: { [weak self] in
-                return self?.gridNode.view
+                return self?.gridHost.view
             }) {
                 return
             }
@@ -1633,7 +1703,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             self.currentGalleryController = presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, threadTitle: controller.threadTitle, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, isActionButtonDone: controller.isActionButtonDone, presentationData: self.presentationData, source: .fetchResult(fetchResult: fetchResult, index: index, reversed: reversed), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState?.selectionLimit == 1 ? nil : interaction.selectionState, editingContext: interaction.editingState, asFile: controller.subjectIsFile, hasSilentPosting: true, hasSchedule: hasSchedule, hasTimer: hasTimer, updateHiddenMedia: { [weak self] id in
                 self?.hiddenMediaId.set(.single(id))
             }, initialLayout: layout, transitionHostView: { [weak self] in
-                return self?.gridNode.view
+                return self?.gridHost.view
             }, transitionView: { [weak self] identifier in
                 return self?.transitionView(for: identifier)
             }, completed: { [weak self] result, silently, scheduleTime, completion in
@@ -2186,13 +2256,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         }
         
         fileprivate func defaultTransitionView() -> UIView? {
-            var transitionNode: MediaPickerGridItemNode?
-            if let itemNode = self.gridNode.itemNodeAtPoint(.zero) {
-                if let itemNode = itemNode as? MediaPickerGridItemNode {
-                    transitionNode = itemNode
-                }
-            }
-            let transitionView = transitionNode?.transitionView(snapshot: false)
+            let transitionItem = self.gridHost.defaultTransitionItem()
+            let transitionView = transitionItem?.transitionView(snapshot: false)
             return transitionView
         }
         
@@ -2200,28 +2265,17 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
                 return selectionNode.transitionView(for: identifier, hideSource: hideSource)
             } else {
-                var transitionNode: MediaPickerGridItemNode?
-                self.gridNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? MediaPickerGridItemNode, itemNode.identifier == identifier {
-                        transitionNode = itemNode
-                    }
-                }
-                let transitionView = transitionNode?.transitionView(snapshot: snapshot)
+                let transitionItem = self.gridHost.visibleItem(identifier: identifier)
+                let transitionView = transitionItem?.transitionView(snapshot: snapshot)
                 if hideSource {
-                    transitionNode?.isHidden = true
+                    transitionItem?.hideTransitionSource()
                 }
                 return transitionView
             }
         }
         
         fileprivate func transitionImage(for identifier: String) -> UIImage? {
-            var transitionNode: MediaPickerGridItemNode?
-            self.gridNode.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? MediaPickerGridItemNode, itemNode.identifier == identifier {
-                    transitionNode = itemNode
-                }
-            }
-            return transitionNode?.transitionImage()
+            return self.gridHost.visibleItem(identifier: identifier)?.transitionImage()
         }
         
         private func enqueueTransaction(_ transaction: MediaPickerGridTransaction) {
@@ -2238,11 +2292,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 return
             }
             let transaction = self.enqueuedTransactions.removeFirst()
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transaction.deletions, insertItems: transaction.insertions, updateItems: transaction.updates, scrollToItem: transaction.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            self.gridHost.apply(transaction)
             
             if let subject = self.controller?.subject, case .assets(_, .story) = subject, let contentOffset = savedStoriesContentOffset, !self.didRestoreContentOffset {
                 if contentOffset > 64.0 {
-                    self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
+                    self.gridHost.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
                     self.controller?.requestAttachmentMenuExpansion()
                 }
                 self.didRestoreContentOffset = true
@@ -2253,7 +2307,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
                 selectionNode.scrollToTop(animated: animated)
             } else {
-                self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.gridNode.scrollView.contentInset.top), animated: animated)
+                self.gridHost.scrollToTop(animated: animated)
             }
         }
         
@@ -2280,7 +2334,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.controller?.updateTabBarAlpha(0.0, transition)
                 }
             } else {
-                switch self.gridNode.visibleContentOffset() {
+                switch self.gridHost.visibleContentOffset() {
                 case let .known(value):
                     self.setNavigationBackdropAlpha(min(2.0, value) / 2.0)
                 case .unknown, .none:
@@ -2344,7 +2398,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
                 
                 if let (untilDate, personal) = bannedSendMedia {
-                    self.gridNode.isHidden = true
+                    self.gridHost.isHidden = true
                     self.controller?.titleView.isEnabled = false
                     
                     let banDescription: String
@@ -2390,7 +2444,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                                 }
                             }
                             self.manageNode = manageNode
-                            self.gridNode.addSubnode(manageNode)
+                            self.gridHost.headerHostNode.addSubnode(manageNode)
                         }
                         manageHeight = manageNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, subject: .limitedMedia, transition: transition)
                         transition.updateFrame(node: manageNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -manageHeight), size: CGSize(width: layout.size.width, height: manageHeight)))
@@ -2406,7 +2460,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                                 self?.controller?.context.sharedContext.applicationBindings.openSettings()
                             }
                             self.manageNode = manageNode
-                            self.gridNode.addSubnode(manageNode)
+                            self.gridHost.headerHostNode.addSubnode(manageNode)
                         }
                         manageHeight = manageNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, subject: .camera, transition: transition)
                         transition.updateFrame(node: manageNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -manageHeight), size: CGSize(width: layout.size.width, height: manageHeight)))
@@ -2427,7 +2481,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 transition.updateFrame(view: warpView, frame: innerBounds)
                 warpView.update(size: bounds.size, topInset: 0.0, bottomInset: layout.additionalInsets.bottom, warpHeight: 50.0, transition: ComponentTransition(transition))
             }
-            transition.updateFrame(node: self.gridNode, frame: innerBounds)
+            self.gridHost.updateFrame(innerBounds, transition: transition)
             self.scrollingArea.frame = innerBounds
             
             if let backgroundView = self.backgroundView {
@@ -2452,7 +2506,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 itemHeight = floor(itemWidth * 1.227)
             }
             let preloadSize: CGFloat = itemHeight// * 3.0
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: preloadSize, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutouts: cutoutRects), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
+            self.gridHost.headerHeight = manageHeight
+            self.gridHost.updateLayout(size: bounds.size, insets: gridInsets, preloadSize: preloadSize, itemSize: CGSize(width: itemWidth, height: itemHeight), itemSpacing: itemSpacing, cutouts: cutoutRects, hasCamera: cameraRect != nil, transition: transition, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2473,8 +2528,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             })
             
             if let avatarEditorPreviewView = self.avatarEditorPreviewView {
-                avatarEditorPreviewView.frame = CGRect(origin: CGPoint(x: cameraRect != nil ? cameraRect!.maxX + itemSpacing : layout.safeInsets.left, y: 0.0), size: CGSize(width: itemWidth, height: itemWidth))
-                avatarEditorPreviewView.updateLayout(size: CGSize(width: itemWidth, height: itemWidth))
+                self.gridHost.updateAccessoryFrame(avatarEditorPreviewView, frame: CGRect(origin: CGPoint(x: cameraRect != nil ? cameraRect!.maxX + itemSpacing : layout.safeInsets.left, y: 0.0), size: CGSize(width: itemWidth, height: itemWidth)))
             }
             
             if let selectionNode = self.selectionNode, let controller = self.controller {
@@ -2506,8 +2560,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             if let cameraView {
                 if let cameraRect = cameraRect {
+                    let hostCameraRect = self.gridHost.cameraFrame(for: cameraRect)
                     if cameraView.superview == self.cameraWrapperView {
-                        transition.updateFrame(view: self.cameraWrapperView, frame: cameraRect)
+                        transition.updateFrame(view: self.cameraWrapperView, frame: hostCameraRect)
                         
                         let screenWidth = min(layout.size.width, layout.size.height)
                         let cameraFullSize = mediaPickerCameraCellPreviewSize(branch: self.cameraCellBranch, layoutWidth: layout.size.width, screenWidth: screenWidth)
@@ -2517,10 +2572,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         cameraView.center = CGPoint(x: cameraRect.size.width / 2.0, y: cameraRect.size.height / 2.0)
                         cameraView.transform = CGAffineTransform(scaleX: cameraScale, y: cameraScale)
 
-                    } else if cameraView.superview == self.gridNode.scrollView {
-                        transition.updateFrame(view: cameraView, frame: cameraRect)
+                    } else if cameraView.superview == self.gridHost.cameraHostView {
+                        transition.updateFrame(view: cameraView, frame: hostCameraRect)
                     }
-                    self.cameraActivateAreaNode.frame = cameraRect
+                    self.cameraActivateAreaNode.frame = self.gridHost.cameraAccessibilityFrame(for: cameraRect)
                     self.cameraWrapperView.isHidden = false
                     cameraView.isHidden = false
                 } else {
@@ -2692,6 +2747,26 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         self.forCollage = forCollage
         self.saveEditedPhotos = saveEditedPhotos
         self.chatMediaEditorItemStore = chatMediaEditorItemStore ?? (self.routesPickerGallery ? ChatMediaEditorItemStore() : nil)
+        var isAssets = false
+        var isDefaultMode = false
+        if case let .assets(_, mode) = subject {
+            isAssets = true
+            isDefaultMode = mode == .default
+        }
+        var isStoryMode = false
+        if case .assets(_, .story) = subject {
+            isStoryMode = true
+        }
+        self.gridModeKind = mediaPickerGridModeKind(isAssets: isAssets, isDefaultMode: isDefaultMode, isStoryMode: isStoryMode, forCollage: forCollage)
+        self.usesMediaGridV2 = mediaPickerUsesMediaGrid(isEnabled: context.usesMediaPickerGridV2)
+        if self.usesMediaGridV2 {
+            let services = MediaGridPhotoLibraryServices.shared
+            services.configureLaunchCoverage({
+                let screen = mainWindowScreen
+                return MediaGridLaunchCache.coverage(screenSize: screen.bounds.size, scale: screen.scale)
+            })
+            services.startLaunchLoading()
+        }
         self.initialMainButtonState = mainButtonState
         self.mainButtonHidesOnSelection = mainButtonHidesOnSelection
         self.mainButtonStatePromise.set(.single(mainButtonState))
@@ -3377,22 +3452,30 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             buttonTransition = .easeInOut(duration: duration)
         }
         
-        self.titleView.updateIsDark(isDark: self.controllerNode.currentDisplayMode == .all && useGlassButtons, animated: true)
+        let isDarkBar = self.controllerNode.currentDisplayMode == .all && useGlassButtons
+        self.titleView.updateIsDark(isDark: isDarkBar, animated: true)
+        (self.parentController() as? AttachmentController)?.updatePillIsLight(isDarkBar, for: self, transition: transition)
         
         let topEdgeColor: UIColor
+        var topEdgeAlpha: CGFloat = 0.8
+        var topEdgeGradient: [EdgeEffectView.GradientStop]?
+        var topEdgeBlurRadius: CGFloat = 1.0
         if self.controllerNode.currentDisplayMode == .all {
             if useGlassButtons {
-                topEdgeColor = UIColor(rgb: 0x000000, alpha: 0.45)
+                topEdgeColor = UIColor(rgb: 0x000000, alpha: 0.48)
+                topEdgeAlpha = 1.0
+                topEdgeBlurRadius = 12.0
+                topEdgeGradient = MediaPickerScreenImpl.darkTopEdgeGradient
             } else {
                 topEdgeColor = self.presentationData.theme.overallDarkAppearance ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.plainBackgroundColor
             }
         } else {
             topEdgeColor = .clear
         }
-        let topEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 80.0))
+        let topEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 77.0))
         transition.updateFrame(view: self.controllerNode.topEdgeEffectView, frame: topEdgeEffectFrame)
         transition.updateAlpha(layer: self.controllerNode.topEdgeEffectView.layer, alpha: self.controllerNode.scrolledExactlyToTop && self.controllerNode.currentDisplayMode == .all ? 0.0 : 1.0)
-        self.controllerNode.topEdgeEffectView.update(content: topEdgeColor, blur: true, alpha: 0.8, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: ComponentTransition(transition))
+        self.controllerNode.topEdgeEffectView.update(content: topEdgeColor, blur: true, blurRadius: topEdgeBlurRadius, alpha: topEdgeAlpha, contentGradient: topEdgeGradient, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: ComponentTransition(transition))
         
         let leftControlItems: [GlassControlGroupComponent.Item] = [
             GlassControlGroupComponent.Item(
@@ -3489,10 +3572,19 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if buttons.view == nil {
                 buttonTransition = .immediate
             }
+            if let previousIsDark = self.buttonsIsDark, previousIsDark != isDarkBar, !buttonTransition.animation.isImmediate, let view = buttons.view, view.superview != nil, let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = view.frame
+                view.superview?.insertSubview(snapshotView, aboveSubview: view)
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+            self.buttonsIsDark = isDarkBar
             let buttonsSize = buttons.update(
                 transition: buttonTransition,
                 component: AnyComponent(GlassControlPanelComponent(
-                    theme: self.presentationData.theme,
+                    theme: isDarkBar ? defaultDarkColorPresentationTheme : self.presentationData.theme,
                     leftItem: GlassControlPanelComponent.Item(
                         items: leftControlItems,
                         background: .panel
@@ -3503,7 +3595,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         background: .panel
                     ),
                     centerAlignmentIfPossible: true,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
+                    isDark: isDarkBar || self.presentationData.theme.overallDarkAppearance,
                     sideItemsAppearWithBlur: true
                 )),
                 environment: {},
@@ -3622,7 +3714,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         self.controllerNode.cancelAssetDownloads()
         
         if case .assets(_, .story) = self.subject {
-            let contentOffset = self.controllerNode.gridNode.scrollView.contentOffset.y
+            let contentOffset = self.controllerNode.gridHost.contentOffset.y
             if contentOffset > 100.0 || savedStoriesContentOffset != nil {
                 savedStoriesContentOffset = contentOffset
             }

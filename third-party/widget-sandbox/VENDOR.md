@@ -107,8 +107,20 @@ Taken:
   - **v0.2.3 has the fix:** `IntlBridge.bcp47Locale` builds the locale with `Locale(components:
     Locale.Components(identifier:))` on iOS 16 and later and drops the extension before that. Its tags come from
     `identifier(.bcp47)`. `intl-cases.json` still passes (`:WidgetSandboxIntlTests`).
-  - **WidgetRuntime still never sends an extension** (`intl::resolveLocale`). Upstream applies it, so this is a
-    divergence: "Divergence: a locale's unicode extension is dropped" below.
+  - **WidgetRuntime sends a tag's unicode extension reduced as ECMA-402's ResolveLocale reduces it**
+    (`intl::resolveLocale`): only the keywords the constructor reads, each with a value from a conservative table.
+    The keys are NumberFormat and RelativeTimeFormat `nu`, DateTimeFormat `ca`/`hc`/`nu`, Collator `co`/`kf`/`kn`,
+    and none for PluralRules or ListFormat. Upstream's shim sends the tag whole. Two reasons not to do the same, both
+    in this glue (`WRIntlExtensionTests` pins them):
+    - a numbering system name Foundation does not know (`en-u-nu-bogus`, a bare `-u-nu`, `yes`) makes
+      `RelativeDateTimeFormatter` trap in `IntlBridge.relative`, crashing the app;
+    - `PluralRules.languageKey` splits the locale identifier on `-` and `_` but not `@`. So `ar-u-nu-arab` becomes
+      `ar@numbers=arab`, matches no rules, and selects `other` for everything; `IntlBridge.relative`'s English
+      quarter check misreads `en-u-nu-thai` the same way.
+
+    Both are upstream bugs to report. On iOS 16 and later the glue applies what is kept; before that it drops it.
+    `resolvedOptions()` reports `numberingSystem: "latn"` and `calendar: "gregory"` whatever the glue applied, as
+    upstream's glue answers it.
   - The runtime record's Intl section has the details.
 
   ```sh
@@ -146,23 +158,3 @@ slice, `cpuQuotaMs` 300 per `cpuQuotaWindowMs` 1000). Our runtime budgets determ
 400,000,000, boot 48,000,000, each later task 28,000,000; `MessageWidgetCore`), with no rate limit (the user, 2026-10-15,
 and again 2026-10-19: "Keep work-unit limits"). A widget the reference throttles may run here, and the reverse. The
 observable contract the catalogue's `limit.cpu` covers holds: a looping widget is stopped and keeps its last frame.
-
-**Divergence: a locale's unicode extension is dropped.** Upstream's shim passes a requested tag on whole, and since
-v0.2.3 its glue formats with the extension applied on iOS 16 and later (`IntlBridgeTests`'
-`testUnicodeExtensionTagsFormatInsteadOfTrapping`). WidgetRuntime drops it (`intl::resolveLocale`), so
-`ar-EG-u-nu-arab` formats in Latin digits here and in Arabic-Indic ones upstream. Kept for now (v0.2.3 vendoring,
-review I2), because:
-- no upstream fixture pins it: no conformance check, no `intl-cases.json` request and no corpus file has a tag with an
-  extension (the runtime's own Intl tests pin the drop: `IntlTests`, `IntlNumberFormatTests`,
-  `IntlDateTimeFormatTests`, `IntlTextTests`);
-- the app supports iOS 15, where the glue drops the extension anyway, so the same widget would format differently by
-  OS version;
-- nothing would report an applied extension, on any OS: the glue's `numberOptions` and `dateOptions` answers say
-  `numberingSystem: "latn"` and `calendar: "gregory"`, and so does the runtime's DateTimeFormat. On iOS 16 with
-  `ar-EG-u-nu-arab` kept, `format()` would show Arabic-Indic digits while `resolvedOptions().numberingSystem` says
-  `latn`.
-
-Passing extensions on is a follow-up candidate, and not a change to the runtime alone: the runtime knows neither the
-OS version nor what the glue applied, so the glue would have to report the numbering system, calendar and hour cycle
-it formats with (an upstream change: the glue is vendored unedited), and the runtime resolve ECMA-402's relevant
-extension keys per constructor and report what the glue says, with a test per request kind.

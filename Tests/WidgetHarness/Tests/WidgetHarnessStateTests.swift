@@ -96,6 +96,18 @@ final class WidgetHarnessStateTests: XCTestCase {
         XCTAssertEqual(anchor.size, markerFrame.size)
     }
 
+    /// VoiceOver reads the marker as what its tap explains, a button (W1's deferred minor: it read "cellular data", the
+    /// symbol's own name).
+    func testTheMarkerReadsItsExplanationToVoiceOver() throws {
+        let (root, host) = try self.load()
+        host.replaceWidgetState(path: self.path, canQuery: true, chatData: nil, publicData: nil)
+        XCTAssertTrue(self.wait(root) { _ in host.networkMarker(path: self.path) != nil }, root.readoutLines().joined(separator: "\n"))
+        let marker = try XCTUnwrap(host.networkMarker(path: self.path))
+        XCTAssertEqual(marker.accessibilityLabel, "Taps on this widget can send data to the bot.")
+        XCTAssertTrue(marker.isAccessibilityElement)
+        XCTAssertTrue(marker.accessibilityTraits.contains(.button))
+    }
+
     /// The marker is a button of its own above the widget's corner: a touch on it is the marker's, so the bubble's
     /// estimate at the touch's down starts no press in the widget under it (no pointerdown, pointercancel or haptic
     /// window from a tap that never touched the widget), claims no hold and no horizontal drag.

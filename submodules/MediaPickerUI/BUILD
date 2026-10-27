@@ -63,6 +63,8 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/ChatMediaSend",
         "//submodules/OverlayStatusController",
+        "//submodules/TelegramUI/Components/MediaGrid",
+        "//submodules/TelegramUI/Components/MediaGridPhotoLibrary",
     ],
     visibility = [
         "//visibility:public",
@@ -74,6 +76,17 @@ swift_test(
     srcs = [
         "Sources/MediaGroupsContextMenuLayout.swift",
         "Tests/MediaGroupsContextMenuLayoutTests.swift",
+    ],
+    copts = [
+        "-warnings-as-errors",
+    ],
+)
+
+swift_test(
+    name = "MediaPickerGridCellDecorationsTests",
+    srcs = [
+        "Sources/MediaPickerGridCellDecorations.swift",
+        "Tests/MediaPickerGridCellDecorationsTests.swift",
     ],
     copts = [
         "-warnings-as-errors",

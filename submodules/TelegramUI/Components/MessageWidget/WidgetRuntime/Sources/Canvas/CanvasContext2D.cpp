@@ -103,15 +103,17 @@ CanvasImageSource canvasImageSource(JSContext* ctx, const Value& value, const ch
     if (HTMLImageElement* img = unwrap<HTMLImageElement>(ctx, value.get(), idl::kHTMLImageElement)) {
         // HTML's "check the usability of the image argument": broken is an InvalidStateError, not yet available (no
         // src, or pending until its load or error fires: widget-sandbox v0.2.3) draws nothing.
+        CanvasImageSource source;
         if (img->pending()) {
-            return CanvasImageSource{};
+            source.usable = false;
+            return source;
         }
         std::optional<DecodedImage> decoded;
         const HTMLImageElement::State state = img->state(ctx, &decoded);
         if (state == HTMLImageElement::State::Broken) {
             throw DOMError{"InvalidStateError", std::string(kInterface) + "." + member + ": the image is broken."};
         }
-        CanvasImageSource source;
+        source.usable = state == HTMLImageElement::State::Available;
         if (decoded && decoded->width > 0 && decoded->height > 0) {
             source.image = decoded->image;
             source.width = decoded->width;
@@ -419,7 +421,10 @@ Ref<CanvasGradient> CanvasRenderingContext2D::createConicGradient(JSContext* ctx
 }
 
 Value CanvasRenderingContext2D::createPattern(JSContext* ctx, Value image, String repetition) {
-    (void)canvasImageSource(ctx, image, "createPattern");
+    // HTML: a bad image (not fully decodable) gives null, before the repetition is checked (v0.2.3 review, M2).
+    if (!canvasImageSource(ctx, image, "createPattern").usable) {
+        return Value::adopt(ctx, JS_NULL);
+    }
     if (!(repetition.empty() || repetition.equalsASCII("repeat") || repetition.equalsASCII("repeat-x") ||
           repetition.equalsASCII("repeat-y") || repetition.equalsASCII("no-repeat"))) {
         throw DOMError{"SyntaxError", "CanvasRenderingContext2D.createPattern: the repetition is not one HTML defines."};

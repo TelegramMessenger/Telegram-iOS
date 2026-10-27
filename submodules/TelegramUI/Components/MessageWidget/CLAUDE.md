@@ -189,11 +189,13 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (`third-party/widget-sandbox/ios/`, Foundation only). App Store review rejects libicucore's
   `unumf_*`/`udat_*`/`ucol_*`/`ubidi_*`: they link, but only what the SDK's `unicode/*.h` declare is public.
   `build-system/Make/ICUImportCheck.py` fails `Make.py build` on any other libicucore import; bidi is our UAX #9
-  (`WidgetRuntime/Sources/Render/Bidi.cpp`). **A request never carries a unicode extension** (`intl::resolveLocale`).
-  Until widget-sandbox v0.2.2 a tag like `ar-EG-u-nu-arab` made upstream's glue and Foundation trap, crashing the app.
-  v0.2.3's glue builds its locale with `Locale.Components` and applies one on iOS 16 and later; the runtime still drops
-  them, a divergence from upstream with its reasons in widget-sandbox's VENDOR.md. The runtime record's Intl section
-  has the protocol and the divergences.
+  (`WidgetRuntime/Sources/Render/Bidi.cpp`). **A request's unicode extension keeps only the keywords its constructor
+  reads, with values from conservative tables** (`intl::resolveLocale`, ECMA-402 ResolveLocale). Upstream's shim sends
+  the tag whole. In its glue, though, an unknown numbering system (`en-u-nu-bogus`) makes Foundation's relative
+  formatter trap, crashing the app, and an extension breaks the plural rules (widget-sandbox VENDOR.md). v0.2.3's glue
+  applies what is kept on iOS 16 and later. **A glue change or a new table value must keep `WRIntlExtensionTests`
+  green**: it runs every call a widget can make with every CLDR numbering system and calendar on iOS, and a trap
+  there is the app's crash. The runtime record's Intl section has the protocol and the divergences.
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; every later call answers its empty default. A stop or failure
   after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer` keeps its
@@ -239,12 +241,15 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     `@import` before any load is asked for, and `scanAttributes` turns a refused `<img src>` into the 48 px
     placeholder. An image's state is a browser's (widget-sandbox v0.2.3):
     - from a `src` change until its `load` or `error` fires from a task, it is pending: not complete, no natural size,
-      drawn as nothing on a canvas;
+      drawn as nothing on a canvas, `null` from `createPattern`;
     - a newer `src` replaces the pending event;
     - a script's image loads before it is inserted, and a parsed one a script takes out before the window's load
       still loads; one of a `<template>`'s contents loads once moved into the document;
-    - `width` / `height` are the rendered content size while the image is rendered (a layout query), else the
-      attribute, else the natural size. Behind it the runtime's litehtml container, `WidgetContainer`, is the boundary: it accepts only
+    - `width` / `height` are the rendered content size while the image is rendered (a layout query; while pending, 0
+      for a dimension the CSS leaves auto), else the attribute, else the natural size;
+    - at the window's load, an image whose `src` a handler changes fires once, for its new `src`.
+
+    Behind it the runtime's litehtml container, `WidgetContainer`, is the boundary: it accepts only
     `data:` images of the profile's types (PNG, JPEG, GIF, WebP) and the placeholder, and refuses and counts every
     other load (`WRSession.refusedLoads`). `CoreTextRenderHost` decodes those under the image policy
     (`LHHostContainer::createImage`: ImageIO's sniffing, ≤ 4096 px a side and 16 Mpx; the placeholder, the one SVG it

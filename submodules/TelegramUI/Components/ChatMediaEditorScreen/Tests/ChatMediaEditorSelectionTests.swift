@@ -99,7 +99,7 @@ final class ChatMediaEditorSelectionTests: XCTestCase {
         let safeInsets = UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0)
         let checkFrame = chatMediaEditorCheckButtonFrame(size: size, safeInsets: safeInsets)
         XCTAssertEqual(checkFrame, CGRect(x: 402.0 - 52.0, y: 62.0 + 5.0, width: 39.0, height: 39.0))
-        XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 20.0, left: 0.0, bottom: 0.0, right: 0.0)).minY, 5.0)
+        XCTAssertEqual(chatMediaEditorCheckButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 20.0, left: 0.0, bottom: 0.0, right: 0.0)).minY, 25.0)
     }
 
     func testCheckAndCounterRingsKeepTheEdgeInset() {

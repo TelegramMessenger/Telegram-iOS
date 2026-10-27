@@ -15,6 +15,9 @@ public final class MessageWidgetNetworkMarkerView: UIButton {
         self.tintColor = .white
         self.layer.cornerRadius = MessageWidgetNetworkMarkerView.size.height / 2.0
         self.accessibilityIdentifier = "widget.networkMarker"
+        // VoiceOver reads what a tap explains (the bubble sets the label from its strings), not the symbol's own name.
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
         self.addTarget(self, action: #selector(self.tapped), for: .touchUpInside)
     }
 

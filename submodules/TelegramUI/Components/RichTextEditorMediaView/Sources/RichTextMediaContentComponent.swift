@@ -45,6 +45,12 @@ public final class RichTextMediaContentComponent: Component {
     /// including it does not defeat the fetch-binds-once optimization.
     var isSpoiler: Bool
 
+    /// Where the "more" button sits, in this cell's coordinates: top-left, or lower on a tile under the
+    /// container's own buttons (`MediaChromeLayout.moreButtonOrigin`). Part of `==` like `isSpoiler`: it can
+    /// change without a size change (the container's "+" appearing or going), and it changes only with the
+    /// container's layout, never per frame, so the fetch still binds once.
+    var moreButtonOrigin: CGPoint
+
     /// Set by `MediaItemNodeView`; fired when an interactive control is tapped. Not part of `==` (identity
     /// equality must hold across resizes so the fetch binds once).
     var onControlTapped: ((RichTextMediaControlKind, UIView, CGRect) -> Void)?
@@ -55,6 +61,7 @@ public final class RichTextMediaContentComponent: Component {
         self.showsMoreButton = showsMoreButton
         self.usesAspectFit = usesAspectFit
         self.isSpoiler = isSpoiler
+        self.moreButtonOrigin = CGPoint(x: MediaChromeLayout.inset, y: MediaChromeLayout.inset)
     }
 
     public static func ==(lhs: RichTextMediaContentComponent, rhs: RichTextMediaContentComponent) -> Bool {
@@ -65,6 +72,9 @@ public final class RichTextMediaContentComponent: Component {
             return false
         }
         if lhs.isSpoiler != rhs.isSpoiler {
+            return false
+        }
+        if lhs.moreButtonOrigin != rhs.moreButtonOrigin {
             return false
         }
         return true
@@ -326,11 +336,8 @@ public final class RichTextMediaContentComponent: Component {
             self.bindPreuploadIfNeeded(context: context, media: component.media)
             self.updateStatusNode(availableSize: availableSize, isSpoiler: component.isSpoiler)
             
-            let buttonSize = CGSize(width: 36.0, height: 36.0)
-            let buttonHorizontalInset: CGFloat = 8.0
-            let buttonVerticalInset: CGFloat = 8.0
-            
-            let moreButtonFrame = CGRect(origin: CGPoint(x: buttonHorizontalInset, y: buttonVerticalInset), size: buttonSize)
+            let buttonSize = MediaChromeLayout.buttonSize
+            let moreButtonFrame = CGRect(origin: component.moreButtonOrigin, size: buttonSize)
             
             transition.setFrame(view: self.moreButtonBackgroundContainer, frame: moreButtonFrame)
             self.moreButtonBackgroundContainer.update(size: buttonSize, isDark: true, transition: transition)

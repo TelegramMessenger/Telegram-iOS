@@ -2848,7 +2848,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         context: self.context,
                                         theme: theme,
                                         title: strings.MediaEditor_AddGeneratedImage,
-                                        iconName: "Item List/Icons/AITools",
+                                        iconName: "Media Editor/AI",
                                         useOpaqueTheme: useOpaqueTheme,
                                         tintContainerView: self.tintContainerView
                                     )

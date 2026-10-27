@@ -605,6 +605,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                                 self.view.addSubview(marker)
                             }
                             marker.update(fill: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            marker.accessibilityLabel = item.presentationData.strings.Message_WidgetNetworkMarkerInfo
                             let size = MessageWidgetNetworkMarkerView.size
                             var origin = CGPoint(x: widgetFrame.maxX - 8.0 - size.width, y: widgetFrame.maxY - 8.0 - size.height)
                             if statusApply != nil, statusFrame.maxY <= widgetFrame.maxY + 0.5 {

@@ -95,6 +95,7 @@ swift_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/FastBlur:FastBlur",
         "//submodules/TelegramUI/Components/MediaEditor",
+        "//submodules/TelegramUI/Components/MediaEditorBottomControls",
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/LottieComponentResourceContent",

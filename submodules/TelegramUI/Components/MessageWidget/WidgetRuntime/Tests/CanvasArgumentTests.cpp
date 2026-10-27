@@ -77,3 +77,31 @@ WR_TEST(testCanvasPointQueriesConvertTheirPoint) {
           " x.isPointInStroke(NaN, 0), x.isPointInStroke('0', '5')].join()", &result);
     CHECK_EQ(result, std::string("true,false,false,false,true"));
 }
+
+/// v0.2.3 review, M5: ellipse's anticlockwise flag converts through Boolean() as arc's does: 'yes' is the long way
+/// round (three quarters of the ellipse), 0 the short way.
+WR_TEST(testEllipseAnticlockwiseConverts) {
+    CHECK_EQ(drawn("x.beginPath(); x.ellipse(50, 50, 10, 10, 0, 0, Math.PI / 2, 'yes'); x.fill(); 1"), std::string("fill 40,40 20x20 #000000ff"));
+    CHECK_EQ(drawn("x.beginPath(); x.ellipse(50, 50, 10, 10, 0, 0, Math.PI / 2, 0); x.fill(); 1"), std::string("fill 50,50 10x10 #000000ff"));
+}
+
+/// v0.2.3 review, M5: fillText's maxWidth converts through Number(); HTML draws nothing for NaN or a maxWidth of 0 or
+/// less, and an infinite one is as if it were absent.
+WR_TEST(testMaxWidthConverts) {
+    CHECK_EQ(drawn("x.fillText('abc', 0, 10, '5'); 1"), drawn("x.fillText('abc', 0, 10, 5); 1"));
+    CHECK_EQ(drawn("x.fillText('abc', 0, 10, Infinity); 1"), drawn("x.fillText('abc', 0, 10); 1"));
+    CHECK_EQ(drawn("x.fillText('a', 0, 10, NaN); x.fillText('b', 0, 10, 0); x.strokeText('c', 0, 10, -1); x.fillText('d', 0, 10, 'x'); 1"),
+             std::string(""));
+}
+
+/// v0.2.3 review, M5: roundRect's radii convert through Number(), each one alone or in a list: a negative one, or more
+/// than four, is a RangeError; one that is not finite draws nothing.
+WR_TEST(testRoundRectRadiiConvert) {
+    std::string result;
+    CHECK_EQ(drawn("x.beginPath(); var r = [err(() => x.roundRect(0, 0, 10, 10, '3')), err(() => x.roundRect(0, 0, 10, 10, [2, '4'])),"
+                   " err(() => x.roundRect(0, 0, 10, 10, '-1')), err(() => x.roundRect(0, 0, 10, 10, [1, 2, 3, 4, 5]))]; x.fill(); r.join()", &result),
+             std::string("fill 0,0 10x10 #000000ff"));
+    CHECK_EQ(result, std::string("ok,ok,RangeError,RangeError"));
+    CHECK_EQ(drawn("x.beginPath(); var r = err(() => x.roundRect(0, 0, 10, 10, NaN)); x.fill(); r", &result), std::string(""));
+    CHECK_EQ(result, std::string("ok"));
+}

@@ -732,18 +732,23 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
                 case .quality:
                     kind = .quality
                 case .cover:
-                    return self.restingPreviewFrame(layout: layout, mediaSize: self.previewMediaSize, isVideo: self.subject.isVideo)
+                    return self.restingPreviewFrame(layout: layout, mediaSize: self.previewMediaSize, isVideo: self.subject.isVideo, keepsToBand: true)
                 }
                 return chatMediaEditorToolPreviewFrame(kind: kind, size: layout.size, safeInsets: safeInsets, mediaSize: self.previewMediaSize, toolbarHeight: chatMediaEditorToolbarHeight)
             }
             return self.restingPreviewFrame(layout: layout, mediaSize: self.previewMediaSize, isVideo: self.subject.isVideo)
         }
 
-        func restingPreviewFrame(layout: ContainerViewLayout, mediaSize: CGSize, isVideo: Bool) -> CGRect {
+        func restingPreviewFrame(layout: ContainerViewLayout, mediaSize: CGSize, isVideo: Bool, keepsToBand: Bool = false) -> CGRect {
             let captionPanelHeight = (self.captionPanelView?.baseHeight() ?? 0.0) + chatMediaEditorCaptionPanelSpacing
+            var safeInsets = self.editorSafeInsets(layout: layout)
+            if !keepsToBand && safeInsets.left != safeInsets.right {
+                safeInsets.left = 0.0
+                safeInsets.right = 0.0
+            }
             return chatMediaEditorLayout(
                 size: layout.size,
-                safeInsets: self.editorSafeInsets(layout: layout),
+                safeInsets: safeInsets,
                 mediaSize: mediaSize,
                 toolbarHeight: chatMediaEditorToolbarHeight,
                 captionPanelHeight: captionPanelHeight,
@@ -1066,7 +1071,7 @@ public final class ChatMediaEditorScreen: ViewController, ChatMediaGalleryContro
     }
 
     private func setupController() {
-        self.statusBar.statusBarStyle = .Hide
+        self.statusBar.statusBarStyle = .White
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true

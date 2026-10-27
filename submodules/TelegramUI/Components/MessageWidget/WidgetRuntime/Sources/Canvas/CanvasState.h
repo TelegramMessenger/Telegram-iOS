@@ -17,6 +17,7 @@
 #include "Sources/Canvas/ImageElement.h"
 #include "Sources/DOM/Document.h"
 #include "Sources/Render/RenderHost.h"
+#include "Sources/Support/Allocator.h"
 
 namespace wr {
 
@@ -90,7 +91,9 @@ public:
     /// waiting at the window's load that belong to the main document, in its tree or taken out of it (v0.2.3 review,
     /// I1). Held until then.
     void addParsedImage(Ref<HTMLImageElement> image) { m_parsedImages.push_back(std::move(image)); }
-    std::vector<Ref<HTMLImageElement>> takeParsedImages() { return std::exchange(m_parsedImages, {}); }
+    Vector<Ref<HTMLImageElement>> takeParsedImages() {
+        return std::exchange(m_parsedImages, Vector<Ref<HTMLImageElement>>{m_parsedImages.get_allocator()});
+    }
 
 private:
     RenderHost* host() const;
@@ -114,7 +117,8 @@ private:
     /// The size at which the next sweep of expired entries runs: twice what the last one left, so sweeps cost O(1) per
     /// entry however many images stay alive (V5d fix-wave 2 review, I-1).
     size_t m_sweepAt = 256;
-    std::vector<Ref<HTMLImageElement>> m_parsedImages;
+    /// In the JS heap, so the widget's memory limit counts it.
+    Vector<Ref<HTMLImageElement>> m_parsedImages{JSAllocator<Ref<HTMLImageElement>>(JS_GetRuntime(m_ctx))};
 };
 
 } // namespace canvas
