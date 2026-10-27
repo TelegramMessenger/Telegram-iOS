@@ -13,6 +13,7 @@ open class MediaGridCellLayer: CALayer {
     var imageRequest: MediaGridImageRequest?
     var bindingToken: Int = 0
     var hasFinalImage = false
+    var requestedQuality: MediaGridImageQuality = .full
 
     public override init() {
         super.init()

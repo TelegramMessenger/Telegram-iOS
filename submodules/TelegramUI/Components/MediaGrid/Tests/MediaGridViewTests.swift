@@ -11,6 +11,7 @@ final class MediaGridViewTests: XCTestCase {
             self.createdCells[ObjectIdentifier(cell)] = cell
             return cell
         })
+        view.motionClock = { 0.0 }
         view.scaleOverride = 3.0
         view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
         view.layoutIfNeeded()

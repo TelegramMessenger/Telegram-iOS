@@ -1,0 +1,107 @@
+import UIKit
+import MediaGrid
+
+final class InstrumentedDataSource: MediaGridDataSource {
+    struct Counters {
+        var requests = 0
+        var cancelledBeforeImage = 0
+        var firstImages = 0
+        var synchronousFirstImages = 0
+        var firstImageLatencyTotal: Double = 0.0
+        var firstImageLatencyWorst: Double = 0.0
+        var cachingStarted = 0
+        var cachingStopped = 0
+        var cachingCallWorst: Double = 0.0
+        var requestCallWorst: Double = 0.0
+    }
+
+    private final class Request: MediaGridImageRequest {
+        weak var owner: InstrumentedDataSource?
+        var inner: MediaGridImageRequest?
+        var hasImage = false
+        var isCancelled = false
+
+        func cancel() {
+            if !self.isCancelled {
+                self.isCancelled = true
+                if !self.hasImage {
+                    self.owner?.counters.cancelledBeforeImage += 1
+                }
+            }
+            self.inner?.cancel()
+        }
+    }
+
+    let base: MediaGridDataSource
+    var counters = Counters()
+    var forwardsCaching = true
+
+    init(base: MediaGridDataSource) {
+        self.base = base
+    }
+
+    func resetCounters() {
+        self.counters = Counters()
+    }
+
+    var count: Int {
+        return self.base.count
+    }
+
+    func date(at index: Int) -> Date? {
+        return self.base.date(at: index)
+    }
+
+    func aspectRatio(at index: Int) -> CGFloat {
+        return self.base.aspectRatio(at: index)
+    }
+
+    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+        self.counters.requests += 1
+        let request = Request()
+        request.owner = self
+        let start = CACurrentMediaTime()
+        var isCalling = true
+        request.inner = self.base.requestImage(at: index, pixelSize: pixelSize, quality: quality, completion: { [weak self, weak request] image, isDegraded in
+            let deliver = {
+                if let self, let request, image != nil, !request.hasImage, !request.isCancelled {
+                    request.hasImage = true
+                    let latency = CACurrentMediaTime() - start
+                    self.counters.firstImages += 1
+                    if isCalling {
+                        self.counters.synchronousFirstImages += 1
+                    }
+                    self.counters.firstImageLatencyTotal += latency
+                    self.counters.firstImageLatencyWorst = max(self.counters.firstImageLatencyWorst, latency)
+                }
+            }
+            if Thread.isMainThread {
+                deliver()
+            } else {
+                DispatchQueue.main.async(execute: deliver)
+            }
+            completion(image, isDegraded)
+        })
+        isCalling = false
+        self.counters.requestCallWorst = max(self.counters.requestCallWorst, CACurrentMediaTime() - start)
+        return request
+    }
+
+    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+        self.counters.cachingStarted += indices.count
+        if self.forwardsCaching {
+            let start = CACurrentMediaTime()
+            self.base.startCaching(indices: indices, pixelSize: pixelSize, quality: quality)
+            self.counters.cachingCallWorst = max(self.counters.cachingCallWorst, CACurrentMediaTime() - start)
+        }
+    }
+
+    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+        self.counters.cachingStopped += indices.count
+        if self.forwardsCaching {
+            let start = CACurrentMediaTime()
+            self.base.stopCaching(indices: indices, pixelSize: pixelSize, quality: quality)
+            self.counters.cachingCallWorst = max(self.counters.cachingCallWorst, CACurrentMediaTime() - start)
+        }
+    }
+}

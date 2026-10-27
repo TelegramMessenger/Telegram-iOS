@@ -11,6 +11,7 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var detail: MediaGridCellDetail = .full
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
+    var quality: MediaGridImageQuality = .full
     private(set) var visibleRange: Range<Int> = 0 ..< 0
     private var needsRebind = false
 
@@ -90,21 +91,39 @@ final class MediaGridLayoutLayer: CALayer {
         }
     }
 
-    private func add(_ lower: Int, _ upper: Int, layout: MediaGridLayout) {
+    private func add(_ lower: Int, _ upper: Int, layout: MediaGridLayout, priority: Range<Int>) {
         guard lower < upper else {
             return
         }
-        for index in lower ..< upper {
-            let cell = self.pool.dequeue()
-            if cell.superlayer !== self {
-                self.addSublayer(cell)
+        let range = lower ..< upper
+        let first = range.clamped(to: priority)
+        if first.isEmpty {
+            for index in range {
+                self.add(index, layout: layout)
             }
-            self.bind(cell, index: index, layout: layout)
-            self.visibleCells[index] = cell
+            return
+        }
+        for index in lower ..< first.lowerBound {
+            self.add(index, layout: layout)
+        }
+        for index in (first.upperBound ..< upper).reversed() {
+            self.add(index, layout: layout)
+        }
+        for index in first.reversed() {
+            self.add(index, layout: layout)
         }
     }
 
-    func updateVisibleRange(_ range: Range<Int>) {
+    private func add(_ index: Int, layout: MediaGridLayout) {
+        let cell = self.pool.dequeue()
+        if cell.superlayer !== self {
+            self.addSublayer(cell)
+        }
+        self.bind(cell, index: index, layout: layout)
+        self.visibleCells[index] = cell
+    }
+
+    func updateVisibleRange(_ range: Range<Int>, priority: Range<Int> = 0 ..< 0) {
         guard let layout = self.layout else {
             return
         }
@@ -125,22 +144,47 @@ final class MediaGridLayoutLayer: CALayer {
                     }
                 }
             }
-            self.add(range.lowerBound, old.lowerBound, layout: layout)
-            self.add(old.upperBound, range.upperBound, layout: layout)
+            self.add(range.lowerBound, old.lowerBound, layout: layout, priority: priority)
+            self.add(old.upperBound, range.upperBound, layout: layout, priority: priority)
         } else {
             self.remove(old.lowerBound, old.upperBound)
-            self.add(range.lowerBound, range.upperBound, layout: layout)
+            self.add(range.lowerBound, range.upperBound, layout: layout, priority: priority)
         }
         self.needsRebind = false
         self.visibleRange = range
+    }
+
+    func upgradeFastCells(prioritizing priority: Range<Int>) {
+        let pending = self.visibleCells.filter { $0.value.requestedQuality == .fast && !$0.value.hasFinalImage }
+        let ordered = pending.keys.sorted { lhs, rhs in
+            let lhsPriority = priority.contains(lhs)
+            let rhsPriority = priority.contains(rhs)
+            if lhsPriority != rhsPriority {
+                return !lhsPriority
+            }
+            return lhs < rhs
+        }
+        for index in ordered {
+            guard let cell = pending[index] else {
+                continue
+            }
+            cell.imageRequest?.cancel()
+            cell.imageRequest = nil
+            self.requestImage(for: cell, index: index, quality: .full)
+        }
     }
 
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
         cell.bind(index: index, detail: self.detail)
         cell.setSelected(self.detail == .full ? (self.isItemSelected?(index) ?? false) : false)
         cell.frame = layout.frame(at: index)
-        cell.bindingToken += 1
         cell.hasFinalImage = false
+        self.requestImage(for: cell, index: index, quality: self.quality)
+    }
+
+    private func requestImage(for cell: MediaGridCellLayer, index: Int, quality: MediaGridImageQuality) {
+        cell.bindingToken += 1
+        cell.requestedQuality = quality
         let token = cell.bindingToken
         let apply: (MediaGridCellLayer?, UIImage?, Bool) -> Void = { cell, image, isDegraded in
             guard let cell, cell.bindingToken == token else {
@@ -152,12 +196,15 @@ final class MediaGridLayoutLayer: CALayer {
             if image == nil && !isDegraded {
                 return
             }
+            if image == nil && cell.contents != nil {
+                return
+            }
             if !isDegraded {
                 cell.hasFinalImage = true
             }
             cell.setImage(image)
         }
-        let request = self.dataSource.requestImage(at: index, pixelSize: self.pixelSize, completion: { [weak cell] image, isDegraded in
+        let request = self.dataSource.requestImage(at: index, pixelSize: self.pixelSize, quality: quality, completion: { [weak cell] image, isDegraded in
             if Thread.isMainThread {
                 apply(cell, image, isDegraded)
             } else {

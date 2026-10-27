@@ -10,6 +10,7 @@ final class DemoViewController: UIViewController {
 
     private let syntheticDataSource = SyntheticDataSource()
     private var photoDataSource: PhotoLibraryDataSource?
+    private var instrumentedDataSource: InstrumentedDataSource?
     private var gridView: MediaGridView?
     private var selectedIndices: Set<Int> = []
     private let bannerView = UILabel()
@@ -26,6 +27,13 @@ final class DemoViewController: UIViewController {
     }()
     private var autoScrubLink: CADisplayLink?
     private var autoScrubStep = 0
+    private var autoScrubLastTimestamp: CFTimeInterval?
+    private var autoScrubEmptyFrames = 0
+    private var autoScrubEmptyMax = 0
+    private var autoScrubEmptyTotal = 0
+    private var autoScrubVisibleTotal = 0
+    private var autoScrubWorkWorst: CFTimeInterval = 0.0
+    private var autoScrubSettleStart: CFTimeInterval?
     private var autoPinchLink: CADisplayLink?
     private var autoPinchStart: CFTimeInterval?
     private var autoPinchState: MediaGridPinchState?
@@ -35,6 +43,7 @@ final class DemoViewController: UIViewController {
     private var autoPinchVelocity: CGFloat = 0.0
     private var autoPinchLastTimestamp: CFTimeInterval?
     private var autoPinchDriveWorst: CFTimeInterval = 0.0
+    private var benchmark: PhotoLibraryBenchmark?
     private let sourceControl = UISegmentedControl(items: ["Synthetic 100k", "Photo Library"])
 
     override func viewDidLoad() {
@@ -44,6 +53,10 @@ final class DemoViewController: UIViewController {
         self.sourceControl.addTarget(self, action: #selector(self.sourceChanged), for: .valueChanged)
         self.navigationItem.titleView = self.sourceControl
         self.installGrid(dataSource: self.syntheticDataSource)
+        if DemoViewController.argument("-source") == "photos" {
+            self.sourceControl.selectedSegmentIndex = Source.photoLibrary.rawValue
+            self.sourceChanged()
+        }
 
         self.scrubber.onChange = { [weak self] fraction in
             guard let self, let gridView = self.gridView else {
@@ -75,10 +88,45 @@ final class DemoViewController: UIViewController {
         self.frameMonitor.start()
     }
 
+    private static func argument(_ name: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: name), index + 1 < arguments.count else {
+            return nil
+        }
+        return arguments[index + 1]
+    }
+
+    private var launchLevel: MediaGridLevel? {
+        return DemoViewController.argument("-level").flatMap(Int.init).flatMap(MediaGridLevel.init(rawValue:))
+    }
+
+    private func startBenchmarkIfRequested() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard self.benchmark == nil, let mode = ["-benchPhotos", "-benchThroughput", "-benchBatch"].first(where: arguments.contains) else {
+            return
+        }
+        let benchmark = PhotoLibraryBenchmark(fetchResult: PhotoLibraryDataSource.makeFetchResult())
+        self.benchmark = benchmark
+        let completion: () -> Void = { [weak self] in
+            print("BENCH done")
+            fflush(stdout)
+            self?.benchmark = nil
+        }
+        switch mode {
+        case "-benchThroughput":
+            benchmark.runThroughput(completion: completion)
+        case "-benchBatch":
+            benchmark.runBatchCaching(completion: completion)
+        default:
+            benchmark.run(completion: completion)
+        }
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        self.startBenchmarkIfRequested()
         if ProcessInfo.processInfo.arguments.contains("-autoScrub") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.startAutoScrub()
             }
         }
@@ -201,30 +249,103 @@ final class DemoViewController: UIViewController {
         gridView.layoutIfNeeded()
         self.frameMonitor.reset()
         self.autoScrubStep = 0
-        let link = CADisplayLink(target: self, selector: #selector(self.autoScrubTick))
+        self.autoScrubLastTimestamp = nil
+        self.autoScrubEmptyFrames = 0
+        self.autoScrubEmptyMax = 0
+        self.autoScrubEmptyTotal = 0
+        self.autoScrubVisibleTotal = 0
+        self.autoScrubWorkWorst = 0.0
+        let link = CADisplayLink(target: self, selector: #selector(self.autoScrubTick(_:)))
+        if #available(iOS 15.0, *) {
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+        }
         link.add(to: .main, forMode: .common)
         self.autoScrubLink = link
     }
 
-    @objc private func autoScrubTick() {
+    private var gridItemCount: Int {
+        if self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
+            return self.photoDataSource?.count ?? 0
+        }
+        return self.syntheticDataSource.count
+    }
+
+    private func countEmptyVisibleCells(_ gridView: MediaGridView) -> (empty: Int, visible: Int) {
+        var empty = 0
+        var visible = 0
+        let bounds = gridView.bounds
+        gridView.forEachVisibleCell { index, cell in
+            guard let frame = gridView.frameForItem(at: index), frame.intersects(bounds) else {
+                return
+            }
+            visible += 1
+            if cell.contents == nil {
+                empty += 1
+            }
+        }
+        return (empty, visible)
+    }
+
+    private func autoScrubFraction(step: Int, steps: Int) -> CGFloat? {
+        let target = DemoViewController.argument("-scrubTo").flatMap(Double.init).map { CGFloat($0) }
+        let peak = target ?? 1.0
+        let rest: CGFloat = target.map { $0 * 0.5 } ?? 0.0
+        if step <= steps {
+            return peak * CGFloat(step) / CGFloat(steps)
+        } else if step <= 2 * steps {
+            let t = CGFloat(step - steps) / CGFloat(steps)
+            return peak + (rest - peak) * t
+        }
+        return nil
+    }
+
+    @objc private func autoScrubTick(_ link: CADisplayLink) {
         guard let gridView = self.gridView else {
             return
         }
-        let steps = 120
+        let steps = DemoViewController.argument("-scrubSteps").flatMap(Int.init) ?? 120
         let step = self.autoScrubStep
         self.autoScrubStep += 1
-        let maximum = max(0.0, gridView.contentHeight - gridView.bounds.height)
-        if step <= steps {
-            gridView.setContentOffset(maximum * CGFloat(step) / CGFloat(steps))
-        } else if step <= 2 * steps {
-            gridView.setContentOffset(maximum * CGFloat(2 * steps - step) / CGFloat(steps))
-        } else {
-            self.autoScrubLink?.invalidate()
-            self.autoScrubLink = nil
-            let summary = self.frameMonitor.summary
-            print(String(format: "AUTOSCRUB frames=%d dropped=%d worst=%.2fms avg=%.2fms steps=%d (simulator-only)", summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, 2 * steps))
-            fflush(stdout)
+        let (empty, visible) = self.countEmptyVisibleCells(gridView)
+        if let settleStart = self.autoScrubSettleStart {
+            if empty == 0 || link.timestamp - settleStart > 10.0 {
+                self.autoScrubLink?.invalidate()
+                self.autoScrubLink = nil
+                self.autoScrubSettleStart = nil
+                let counters = self.instrumentedDataSource?.counters ?? InstrumentedDataSource.Counters()
+                print(String(format: "AUTOSCRUB_SETTLE empty=%d visible=%d settle=%.0fms requests=%d cancelled_before_image=%d first_images=%d sync_first_images=%d first_latency_avg=%.1fms first_latency_worst=%.1fms caching_started=%d caching_stopped=%d caching_call_worst=%.2fms request_call_worst=%.2fms", empty, visible, (link.timestamp - settleStart) * 1000.0, counters.requests, counters.cancelledBeforeImage, counters.firstImages, counters.synchronousFirstImages, counters.firstImages > 0 ? counters.firstImageLatencyTotal / Double(counters.firstImages) * 1000.0 : 0.0, counters.firstImageLatencyWorst * 1000.0, counters.cachingStarted, counters.cachingStopped, counters.cachingCallWorst * 1000.0, counters.requestCallWorst * 1000.0))
+                fflush(stdout)
+            }
+            return
         }
+        if step > 0 {
+            let interval = self.autoScrubLastTimestamp.map { link.timestamp - $0 } ?? 0.0
+            if step > 1 {
+                if empty > 0 {
+                    self.autoScrubEmptyFrames += 1
+                }
+                self.autoScrubEmptyMax = max(self.autoScrubEmptyMax, empty)
+                self.autoScrubEmptyTotal += empty
+                self.autoScrubVisibleTotal += visible
+            }
+            print(String(format: "AUTOSCRUB_FRAME step=%d empty=%d visible=%d dt=%.2fms fast=%d offset=%.1f", step - 1, empty, visible, interval * 1000.0, gridView.isMovingFast ? 1 : 0, gridView.contentOffset))
+        } else {
+            self.instrumentedDataSource?.resetCounters()
+        }
+        self.autoScrubLastTimestamp = link.timestamp
+        let maximum = max(0.0, gridView.contentHeight - gridView.bounds.height)
+        let workStart = CACurrentMediaTime()
+        if let fraction = self.autoScrubFraction(step: step, steps: steps) {
+            gridView.setContentOffset(maximum * fraction)
+        } else {
+            let summary = self.frameMonitor.summary
+            let measured = max(1, 2 * steps)
+            print(String(format: "AUTOSCRUB count=%d level=%d frames=%d dropped=%d worst=%.2fms avg=%.2fms work_worst=%.2fms steps=%d empty_frames=%d/%d empty_max=%d empty_fraction=%.3f (simulator-only)", gridView.contentHeight > 0.0 ? self.gridItemCount : 0, gridView.level.columns, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoScrubWorkWorst * 1000.0, 2 * steps, self.autoScrubEmptyFrames, measured, self.autoScrubEmptyMax, self.autoScrubVisibleTotal > 0 ? Double(self.autoScrubEmptyTotal) / Double(self.autoScrubVisibleTotal) : 0.0))
+            fflush(stdout)
+            self.autoScrubSettleStart = link.timestamp
+            return
+        }
+        self.autoScrubWorkWorst = max(self.autoScrubWorkWorst, CACurrentMediaTime() - workStart)
     }
 
     private func installGrid(dataSource: MediaGridDataSource) {
@@ -260,6 +381,9 @@ final class DemoViewController: UIViewController {
         gridView.onLevelChanged = { [weak self] _ in
             self?.updateZoomButtons()
         }
+        if let level = self.launchLevel {
+            gridView.setLevel(level, animated: false)
+        }
         self.view.insertSubview(gridView, at: 0)
         self.gridView = gridView
         self.updateZoomButtons()
@@ -287,7 +411,10 @@ final class DemoViewController: UIViewController {
                     if status == .authorized || status == .limited {
                         let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult())
                         self.photoDataSource = dataSource
-                        self.installGrid(dataSource: dataSource)
+                        let instrumented = InstrumentedDataSource(base: dataSource)
+                        instrumented.forwardsCaching = !ProcessInfo.processInfo.arguments.contains("-noCaching")
+                        self.instrumentedDataSource = instrumented
+                        self.installGrid(dataSource: instrumented)
                     } else {
                         self.sourceControl.selectedSegmentIndex = Source.synthetic.rawValue
                         self.installGrid(dataSource: self.syntheticDataSource)

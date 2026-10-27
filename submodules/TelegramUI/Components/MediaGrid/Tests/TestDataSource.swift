@@ -20,6 +20,12 @@ final class TestDataSource: MediaGridDataSource {
     private(set) var cachedIndices: Set<Int> = []
     private(set) var dateCalls: [Int: Int] = [:]
     var deliveries: [(UIImage?, Bool)]?
+    var deliveriesByQuality: [MediaGridImageQuality: [(UIImage?, Bool)]] = [:]
+    var holdsDeliveries = false
+    private(set) var requests: [(index: Int, quality: MediaGridImageQuality)] = []
+    private(set) var cachingQualities: [MediaGridImageQuality] = []
+    private(set) var startedCachingOrder: [[Int]] = []
+    private var held: [(TestImageRequest, () -> Void)] = []
 
     private static let image: UIImage = {
         let format = UIGraphicsImageRendererFormat()
@@ -43,25 +49,46 @@ final class TestDataSource: MediaGridDataSource {
         return 1.0
     }
 
-    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         self.requestCount += 1
-        if let deliveries = self.deliveries {
+        self.requests.append((index, quality))
+        let deliveries = self.deliveriesByQuality[quality] ?? self.deliveries ?? [(TestDataSource.image, false)]
+        var cancelled = false
+        let request = TestImageRequest(onCancel: { [weak self] in
+            cancelled = true
+            self?.cancelCount += 1
+        })
+        let deliver = {
+            if cancelled {
+                return
+            }
             for (image, isDegraded) in deliveries {
                 completion(image, isDegraded)
             }
-        } else {
-            completion(TestDataSource.image, false)
         }
-        return TestImageRequest(onCancel: { [weak self] in
-            self?.cancelCount += 1
-        })
+        if self.holdsDeliveries {
+            self.held.append((request, deliver))
+        } else {
+            deliver()
+        }
+        return request
     }
 
-    func startCaching(indices: [Int], pixelSize: CGSize) {
+    func flushHeldDeliveries() {
+        let held = self.held
+        self.held = []
+        for (_, deliver) in held {
+            deliver()
+        }
+    }
+
+    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+        self.cachingQualities.append(quality)
+        self.startedCachingOrder.append(indices)
         self.cachedIndices.formUnion(indices)
     }
 
-    func stopCaching(indices: [Int], pixelSize: CGSize) {
+    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
         self.cachedIndices.subtract(indices)
     }
 

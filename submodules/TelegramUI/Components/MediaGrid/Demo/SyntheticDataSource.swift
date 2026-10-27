@@ -76,7 +76,7 @@ final class SyntheticDataSource: MediaGridDataSource {
         return self.aspects[index]
     }
 
-    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         let key = "\(index)-\(Int(pixelSize.width))x\(Int(pixelSize.height))" as NSString
         if let image = self.cache.object(forKey: key) {
             completion(image, false)
@@ -98,10 +98,10 @@ final class SyntheticDataSource: MediaGridDataSource {
         return request
     }
 
-    func startCaching(indices: [Int], pixelSize: CGSize) {
+    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
     }
 
-    func stopCaching(indices: [Int], pixelSize: CGSize) {
+    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
     }
 
     private static func render(index: Int, pixelSize: CGSize) -> UIImage {
