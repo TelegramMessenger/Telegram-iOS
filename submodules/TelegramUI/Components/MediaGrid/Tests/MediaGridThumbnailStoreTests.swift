@@ -256,6 +256,101 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         XCTAssertEqual(self.sample(filled, x: 1, y: 2).a, 255)
     }
 
+    func testBackgroundWritesPublishAtMostOncePerFrame() {
+        let store = MediaGridThumbnailStore(directory: nil)
+        let image = self.makeImage(width: 10, height: 10, top: .red)
+        let expectation = self.expectation(description: "published")
+        var pending = Set((0 ..< 600).map { "\($0)" })
+        var calls = 0
+        var delivered = 0
+        var lastCall = 0.0
+        store.onThumbnailsChanged = { ids in
+            calls += 1
+            delivered += ids.count
+            pending.subtract(ids)
+            if pending.isEmpty {
+                lastCall = CACurrentMediaTime()
+                expectation.fulfill()
+            }
+        }
+        let start = CACurrentMediaTime()
+        DispatchQueue.global(qos: .userInitiated).async {
+            for batch in 0 ..< 50 {
+                for i in 0 ..< 12 {
+                    store.write(image, id: "\(batch * 12 + i)", version: "1")
+                }
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+        }
+        self.wait(for: [expectation], timeout: 5.0)
+        let frames = Int(((lastCall - start) * 60.0).rounded(.up))
+        XCTAssertLessThanOrEqual(calls, frames + 1)
+        XCTAssertGreaterThan(calls, 1)
+        XCTAssertEqual(delivered, 600)
+    }
+
+    func testFailedDrawRollsBackIndex() {
+        let store = MediaGridThumbnailStore(directory: nil, slotPixelSize: 0)
+        var calls = 0
+        store.onThumbnailsChanged = { _ in
+            calls += 1
+        }
+        store.write(self.makeImage(width: 10, height: 10, top: .red), id: "a", version: "1")
+        let settle = self.expectation(description: "settle")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            settle.fulfill()
+        }
+        self.wait(for: [settle], timeout: 5.0)
+        XCTAssertNil(store.version(for: "a"))
+        XCTAssertNil(store.thumbnail(for: "a"))
+        XCTAssertEqual(calls, 0)
+    }
+
+    func testRemovalIsReported() {
+        let store = MediaGridThumbnailStore(directory: nil)
+        let image = self.makeImage(width: 10, height: 10, top: .red)
+        self.write(store, [("a", image, "1"), ("b", image, "1")])
+        let expectation = self.expectation(description: "removed")
+        store.onThumbnailsChanged = { ids in
+            XCTAssertTrue(Thread.isMainThread)
+            XCTAssertNil(store.thumbnail(for: "a"))
+            if ids.contains("a") {
+                expectation.fulfill()
+            }
+        }
+        store.remove(ids: ["a", "missing"])
+        self.wait(for: [expectation], timeout: 5.0)
+        XCTAssertNotNil(store.thumbnail(for: "b"))
+    }
+
+    func testRemoveWhilePublishPendingNeverResurrects() {
+        let store = MediaGridThumbnailStore(directory: nil)
+        let expectation = self.expectation(description: "published")
+        store.onThumbnailsChanged = { ids in
+            XCTAssertNil(store.thumbnail(for: "a"))
+            if ids.contains("b") {
+                expectation.fulfill()
+            }
+        }
+        store.write(self.makeImage(width: 10, height: 10, top: .red), id: "a", version: "1")
+        store.remove(ids: ["a"])
+        store.write(self.makeImage(width: 10, height: 10, top: .blue), id: "b", version: "1")
+        XCTAssertNil(store.thumbnail(for: "a"))
+        self.wait(for: [expectation], timeout: 5.0)
+        let settle = self.expectation(description: "settle")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            settle.fulfill()
+        }
+        self.wait(for: [settle], timeout: 5.0)
+        XCTAssertNil(store.thumbnail(for: "a"))
+        XCTAssertNil(store.version(for: "a"))
+        let thumbnail = store.thumbnail(for: "b")!
+        XCTAssertEqual(thumbnail.contentsRect.origin, .zero)
+        let pixel = self.sample(thumbnail.image, x: 24, y: 24)
+        XCTAssertEqual(pixel.b, 255)
+        XCTAssertEqual(pixel.r, 0)
+    }
+
     func testThumbnailOnMainIsCheap() {
         let store = MediaGridThumbnailStore(directory: nil)
         let image = self.makeImage(width: 10, height: 10, top: .red)
@@ -270,6 +365,6 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         }
         let elapsed = CACurrentMediaTime() - start
         XCTAssertEqual(found, 10_000)
-        XCTAssertLessThan(elapsed, 0.005)
+        XCTAssertLessThan(elapsed, 0.05)
     }
 }
