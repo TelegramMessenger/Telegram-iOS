@@ -232,4 +232,75 @@ final class MediaGridMotionTests: XCTestCase {
         let distances = dataSource.startedCachingOrder.last!.map { abs($0 - centre) }
         XCTAssertEqual(distances, distances.sorted())
     }
+
+    func testUpgradeRequestsFullBeforeCancellingFast() {
+        let (view, dataSource) = self.makeView()
+        dataSource.holdsDeliveries = true
+        self.startFastScrub(view)
+        let visible = view.activeLayoutLayer.visibleCells
+        let before = dataSource.events.count
+        self.time += MediaGridView.motionSettleDelay * 2.0
+        view._testSettleMotion()
+        let events = Array(dataSource.events[before...])
+        XCTAssertEqual(events.count, 2 * visible.count)
+        for pair in stride(from: 0, to: events.count, by: 2) {
+            let request = events[pair]
+            let cancel = events[pair + 1]
+            XCTAssertTrue(request.hasPrefix("request "))
+            XCTAssertEqual(cancel, request.replacingOccurrences(of: "request ", with: "cancel "))
+        }
+    }
+
+    func testLateFastDeliveryAfterUpgradeIsDropped() {
+        let (view, dataSource) = self.makeView()
+        var images: [String: UIImage] = [:]
+        dataSource.imageForIndex = { index, quality in
+            let key = "\(index)-\(quality)"
+            if let image = images[key] {
+                return image
+            }
+            let image = TestDataSource.distinctImage(index + (quality == .fast ? 128 : 0))
+            images[key] = image
+            return image
+        }
+        dataSource.holdsDeliveries = true
+        dataSource.deliversAfterCancel = true
+        self.startFastScrub(view)
+        let visible = view.activeLayoutLayer.visibleCells
+        self.time += MediaGridView.motionSettleDelay * 2.0
+        view._testSettleMotion()
+        dataSource.flushHeldDeliveries(where: { _, quality in quality == .full })
+        dataSource.flushHeldDeliveries()
+        for (index, cell) in visible {
+            XCTAssertTrue(cell.hasFinalImage)
+            XCTAssertTrue((cell.contents as! CGImage) === images["\(index)-full"]?.cgImage, "index \(index) shows a late fast image")
+        }
+    }
+
+    func testLateDeliveryAfterReuseIsDropped() {
+        let (view, dataSource) = self.makeView()
+        var images: [Int: UIImage] = [:]
+        dataSource.imageForIndex = { index, _ in
+            if let image = images[index] {
+                return image
+            }
+            let image = TestDataSource.distinctImage(index)
+            images[index] = image
+            return image
+        }
+        dataSource.holdsDeliveries = true
+        dataSource.deliversAfterCancel = true
+        self.scroll(view, to: 10_000.0)
+        let old = Set(view.activeLayoutLayer.visibleCells.keys)
+        self.scroll(view, to: 10_000.0, after: 1.0)
+        self.scroll(view, to: 40_000.0, after: 1.0)
+        let current = view.activeLayoutLayer.visibleCells
+        XCTAssertTrue(old.isDisjoint(with: current.keys))
+        dataSource.flushHeldDeliveries(where: { index, _ in current[index] != nil })
+        dataSource.flushHeldDeliveries()
+        for (index, cell) in current {
+            XCTAssertEqual(cell.index, index)
+            XCTAssertTrue((cell.contents as! CGImage) === images[index]?.cgImage, "index \(index) shows a stale image")
+        }
+    }
 }

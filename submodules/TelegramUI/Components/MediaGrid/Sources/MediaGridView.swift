@@ -1019,6 +1019,7 @@ public final class MediaGridView: UIView {
             }
             self.updatePrefetch(offset: self.engine.offset)
         } else {
+            self.resetPrefetch()
             self.prefetchQuality = quality
         }
     }

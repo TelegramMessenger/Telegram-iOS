@@ -168,9 +168,10 @@ final class MediaGridLayoutLayer: CALayer {
             guard let cell = pending[index] else {
                 continue
             }
-            cell.imageRequest?.cancel()
+            let previous = cell.imageRequest
             cell.imageRequest = nil
             self.requestImage(for: cell, index: index, quality: .full)
+            previous?.cancel()
         }
     }
 

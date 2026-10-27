@@ -3,7 +3,7 @@ import Photos
 import MediaGrid
 
 final class PhotoLibraryDataSource: MediaGridDataSource {
-    private struct ImageKey: Hashable {
+    struct ImageKey: Hashable {
         var identifier: String
         var width: Int
         var height: Int
@@ -13,101 +13,54 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
         }
     }
 
-    private struct PrefetchKey: Hashable {
+    struct PrefetchKey: Hashable {
         var index: Int
         var width: Int
         var height: Int
     }
 
-    private enum JobState {
-        case pending
-        case running
-        case finished
+    struct Load {
+        var asset: PHAsset
+        var targetSize: CGSize
     }
 
-    private final class Consumer {
-        let isReduced: Bool
-        let completion: (UIImage?, Bool) -> Void
-
-        init(isReduced: Bool, completion: @escaping (UIImage?, Bool) -> Void) {
-            self.isReduced = isReduced
-            self.completion = completion
-        }
-    }
-
-    private final class Job {
-        let key: ImageKey
-        let asset: PHAsset
-        let targetSize: CGSize
-        var consumers: [ObjectIdentifier: Consumer] = [:]
-        var isPrefetched = false
-        var usesNetwork = false
-        var state: JobState = .pending
-        var requestId: PHImageRequestID?
-
-        init(key: ImageKey, asset: PHAsset, targetSize: CGSize) {
-            self.key = key
-            self.asset = asset
-            self.targetSize = targetSize
-        }
-
-        var isWanted: Bool {
-            return !self.consumers.isEmpty || self.isPrefetched
-        }
-    }
-
-    private final class Lane {
-        let limit: Int
-        let prefetchLimit: Int
-        var running = 0
-        var visible: [Job] = []
-        var compactionThreshold = 512
-
-        init(limit: Int, prefetchLimit: Int) {
-            self.limit = limit
-            self.prefetchLimit = prefetchLimit
-        }
-    }
-
-    private final class Request: MediaGridImageRequest {
-        weak var source: PhotoLibraryDataSource?
-        let job: Job
-        let consumer: Consumer
-
-        init(source: PhotoLibraryDataSource, job: Job, consumer: Consumer) {
-            self.source = source
-            self.job = job
-            self.consumer = consumer
-        }
-
-        func cancel() {
-            self.source?.remove(self.consumer, from: self.job)
-        }
-    }
+    typealias Scheduler = ImageLoadScheduler<ImageKey, PrefetchKey, Load>
 
     static let fastMaxPixelSize: CGFloat = 128.0
-    static let synchronousBudgetPerFrame: CFTimeInterval = 0.004
+    static let synchronousBudgetPerTurn: CFTimeInterval = 0.004
     static let fastFormatProbeLimit = 32
+    static let fastFormatReprobeInterval: CFTimeInterval = 10.0
 
     private let fetchResult: PHFetchResult<PHAsset>
     private let manager = PHImageManager.default()
     private let cache = NSCache<NSString, UIImage>()
-    private let localLane = Lane(limit: 12, prefetchLimit: 6)
-    private let networkLane = Lane(limit: 4, prefetchLimit: 0)
-    private var jobs: [ImageKey: Job] = [:]
-    private var isUpdatingPrefetch = false
-    private var prefetchQueue: [PrefetchKey] = []
-    private var prefetchHead = 0
-    private var prefetchWanted = Set<PrefetchKey>()
-    private var prefetchJobs: [PrefetchKey: Job] = [:]
-    private var synchronousWindowStart: CFTimeInterval = 0.0
+    private let scheduler = Scheduler(localLimit: 12, localPrefetchLimit: 6, networkLimit: 4)
     private var synchronousSpent: CFTimeInterval = 0.0
-    private var fastFormatAttempts = 0
+    private var isSynchronousResetScheduled = false
+    private var fastFormatFailures = 0
     private var fastFormatSuccesses = 0
+    private var fastFormatReprobeTime: CFTimeInterval?
 
     init(fetchResult: PHFetchResult<PHAsset>) {
         self.fetchResult = fetchResult
         self.cache.totalCostLimit = 80 * 1024 * 1024
+        self.scheduler.startJob = { [weak self] job in
+            self?.start(job)
+        }
+        self.scheduler.cancelJob = { [weak self] job in
+            if let token = job.token {
+                self?.manager.cancelImageRequest(token)
+            }
+        }
+        self.scheduler.resolvePrefetch = { [weak self] key in
+            guard let self, let asset = self.asset(at: key.index) else {
+                return nil
+            }
+            return (ImageKey(identifier: asset.localIdentifier, width: key.width, height: key.height), Load(asset: asset, targetSize: CGSize(width: key.width, height: key.height)))
+        }
+        self.scheduler.isCached = { [weak self] key in
+            return self?.cache.object(forKey: key.cacheKey) != nil
+        }
     }
 
     static func makeFetchResult() -> PHFetchResult<PHAsset> {
@@ -159,6 +112,10 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
         }
         let targetSize = PhotoLibraryDataSource.targetSize(for: pixelSize, quality: quality)
         let isReduced = targetSize != pixelSize
+        if isReduced, let image = self.cache.object(forKey: self.key(for: asset, size: pixelSize).cacheKey) {
+            completion(image, false)
+            return nil
+        }
         let key = self.key(for: asset, size: targetSize)
         if let image = self.cache.object(forKey: key.cacheKey) {
             completion(image, isReduced)
@@ -172,186 +129,91 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
         }
         if !hasPlaceholder, let image = self.synchronousFastFormatImage(for: asset, targetSize: targetSize) {
             completion(image, true)
-            hasPlaceholder = true
             if quality == .fast {
                 return nil
             }
         }
-        let job: Job
-        if let existing = self.jobs[key] {
-            job = existing
-        } else {
-            job = Job(key: key, asset: asset, targetSize: targetSize)
-            self.jobs[key] = job
-        }
-        let consumer = Consumer(isReduced: isReduced, completion: completion)
-        job.consumers[ObjectIdentifier(consumer)] = consumer
-        if job.state == .pending {
-            let lane = self.lane(for: job)
-            if lane.visible.count > lane.compactionThreshold {
-                lane.visible.removeAll(where: { $0.state != .pending || !$0.isWanted })
-                lane.compactionThreshold = max(512, lane.visible.count * 2)
-            }
-            lane.visible.append(job)
-            self.pump()
-        }
-        return Request(source: self, job: job, consumer: consumer)
+        return self.scheduler.request(key: key, payload: Load(asset: asset, targetSize: targetSize), isReduced: isReduced, completion: completion)
     }
 
     func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
-        let targetSize = PhotoLibraryDataSource.targetSize(for: pixelSize, quality: quality)
-        let width = Int(targetSize.width)
-        let height = Int(targetSize.height)
-        for index in indices {
-            let key = PrefetchKey(index: index, width: width, height: height)
-            if self.prefetchWanted.insert(key).inserted {
-                self.prefetchQueue.append(key)
-            }
-        }
-        self.pump()
+        self.scheduler.startPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize, quality: quality))
     }
 
     func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+        self.scheduler.stopPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize, quality: quality))
+    }
+
+    private func prefetchKeys(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) -> [PrefetchKey] {
         let targetSize = PhotoLibraryDataSource.targetSize(for: pixelSize, quality: quality)
         let width = Int(targetSize.width)
         let height = Int(targetSize.height)
-        self.isUpdatingPrefetch = true
-        defer {
-            self.isUpdatingPrefetch = false
-            self.pump()
+        return indices.map { PrefetchKey(index: $0, width: width, height: height) }
+    }
+
+    private var isFastFormatProbing: Bool {
+        if self.fastFormatSuccesses > 0 || self.fastFormatFailures < PhotoLibraryDataSource.fastFormatProbeLimit {
+            return true
         }
-        for index in indices {
-            let key = PrefetchKey(index: index, width: width, height: height)
-            guard self.prefetchWanted.remove(key) != nil, let job = self.prefetchJobs.removeValue(forKey: key) else {
-                continue
-            }
-            job.isPrefetched = false
-            self.dropIfUnwanted(job)
+        let now = CACurrentMediaTime()
+        guard let reprobeTime = self.fastFormatReprobeTime else {
+            self.fastFormatReprobeTime = now + PhotoLibraryDataSource.fastFormatReprobeInterval
+            return false
         }
-        if self.prefetchHead > 1024 && self.prefetchHead * 2 > self.prefetchQueue.count {
-            self.prefetchQueue.removeFirst(self.prefetchHead)
-            self.prefetchHead = 0
+        if now >= reprobeTime {
+            self.fastFormatReprobeTime = now + PhotoLibraryDataSource.fastFormatReprobeInterval
+            return true
         }
+        return false
     }
 
     private func synchronousFastFormatImage(for asset: PHAsset, targetSize: CGSize) -> UIImage? {
-        if self.fastFormatSuccesses == 0 && self.fastFormatAttempts >= PhotoLibraryDataSource.fastFormatProbeLimit {
+        guard self.synchronousSpent < PhotoLibraryDataSource.synchronousBudgetPerTurn, self.isFastFormatProbing else {
             return nil
         }
-        let now = CACurrentMediaTime()
-        if now - self.synchronousWindowStart > 1.0 / 60.0 {
-            self.synchronousWindowStart = now
-            self.synchronousSpent = 0.0
-        }
-        if self.synchronousSpent >= PhotoLibraryDataSource.synchronousBudgetPerFrame {
-            return nil
+        if !self.isSynchronousResetScheduled {
+            self.isSynchronousResetScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                self?.synchronousSpent = 0.0
+                self?.isSynchronousResetScheduled = false
+            }
         }
         let options = PHImageRequestOptions()
         options.deliveryMode = .fastFormat
         options.resizeMode = .fast
         options.isSynchronous = true
         options.isNetworkAccessAllowed = false
+        let start = CACurrentMediaTime()
         var result: UIImage?
-        self.manager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options, resultHandler: { image, _ in
+        var isInCloud = false
+        self.manager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options, resultHandler: { image, info in
             result = image
+            isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
         })
-        self.synchronousSpent += CACurrentMediaTime() - now
-        self.fastFormatAttempts += 1
+        self.synchronousSpent += CACurrentMediaTime() - start
         if result != nil {
             self.fastFormatSuccesses += 1
+        } else if !isInCloud {
+            self.fastFormatFailures += 1
         }
         return result
     }
 
-    private func lane(for job: Job) -> Lane {
-        return job.usesNetwork ? self.networkLane : self.localLane
-    }
-
-    private func remove(_ consumer: Consumer, from job: Job) {
-        job.consumers.removeValue(forKey: ObjectIdentifier(consumer))
-        self.dropIfUnwanted(job)
-    }
-
-    private func dropIfUnwanted(_ job: Job) {
-        guard !job.isWanted, job.state != .finished else {
-            return
-        }
-        let wasRunning = job.state == .running
-        job.state = .finished
-        if self.jobs[job.key] === job {
-            self.jobs.removeValue(forKey: job.key)
-        }
-        if wasRunning {
-            if let requestId = job.requestId {
-                self.manager.cancelImageRequest(requestId)
-            }
-            self.lane(for: job).running -= 1
-            self.pump()
-        }
-    }
-
-    private func pump() {
-        if self.isUpdatingPrefetch {
-            return
-        }
-        for lane in [self.localLane, self.networkLane] {
-            while lane.running < lane.limit, let job = self.nextJob(in: lane) {
-                self.start(job, in: lane)
-            }
-        }
-    }
-
-    private func nextJob(in lane: Lane) -> Job? {
-        while let job = lane.visible.popLast() {
-            if job.state == .pending && job.isWanted {
-                return job
-            }
-        }
-        guard lane === self.localLane, lane.running < lane.prefetchLimit else {
-            return nil
-        }
-        while self.prefetchHead < self.prefetchQueue.count {
-            let prefetchKey = self.prefetchQueue[self.prefetchHead]
-            self.prefetchHead += 1
-            guard self.prefetchWanted.contains(prefetchKey), self.prefetchJobs[prefetchKey] == nil, let asset = self.asset(at: prefetchKey.index) else {
-                continue
-            }
-            let key = ImageKey(identifier: asset.localIdentifier, width: prefetchKey.width, height: prefetchKey.height)
-            if let job = self.jobs[key] {
-                job.isPrefetched = true
-                self.prefetchJobs[prefetchKey] = job
-                continue
-            }
-            if self.cache.object(forKey: key.cacheKey) != nil {
-                continue
-            }
-            let job = Job(key: key, asset: asset, targetSize: CGSize(width: prefetchKey.width, height: prefetchKey.height))
-            job.isPrefetched = true
-            self.jobs[key] = job
-            self.prefetchJobs[prefetchKey] = job
-            return job
-        }
-        self.prefetchQueue.removeAll()
-        self.prefetchHead = 0
-        return nil
-    }
-
-    private func start(_ job: Job, in lane: Lane) {
-        job.state = .running
-        lane.running += 1
+    private func start(_ job: Scheduler.Job) {
+        let attempt = job.attempt
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.resizeMode = .fast
         options.isNetworkAccessAllowed = job.usesNetwork
-        let requestId = self.manager.requestImage(for: job.asset, targetSize: job.targetSize, contentMode: .aspectFill, options: options, resultHandler: { [weak self, weak job] image, info in
+        let token = self.manager.requestImage(for: job.payload.asset, targetSize: job.payload.targetSize, contentMode: .aspectFill, options: options, resultHandler: { [weak self, weak job] image, info in
             let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
             let isCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
             let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
             let handle = {
-                guard let self, let job, !isCancelled else {
+                guard let self, let job else {
                     return
                 }
-                self.handle(job, image: image, isDegraded: isDegraded, isInCloud: isInCloud)
+                self.handle(job, attempt: attempt, image: image, isDegraded: isDegraded, isCancelled: isCancelled, isInCloud: isInCloud)
             }
             if Thread.isMainThread {
                 handle()
@@ -359,46 +221,28 @@ final class PhotoLibraryDataSource: MediaGridDataSource {
                 DispatchQueue.main.async(execute: handle)
             }
         })
-        if job.state == .running {
-            job.requestId = requestId
+        if job.state == .running && job.attempt == attempt {
+            job.token = token
         }
     }
 
-    private func handle(_ job: Job, image: UIImage?, isDegraded: Bool, isInCloud: Bool) {
-        guard job.state == .running else {
+    private func handle(_ job: Scheduler.Job, attempt: Int, image: UIImage?, isDegraded: Bool, isCancelled: Bool, isInCloud: Bool) {
+        if isCancelled {
+            self.scheduler.cancelledExternally(job, attempt: attempt)
             return
         }
         if isDegraded {
             if let image {
-                for consumer in job.consumers.values {
-                    consumer.completion(image, true)
-                }
+                self.scheduler.deliverDegraded(job, attempt: attempt, image: image)
             }
             return
         }
-        let lane = self.lane(for: job)
-        if image == nil && isInCloud && !job.usesNetwork && !job.consumers.isEmpty {
-            lane.running -= 1
-            job.state = .pending
-            job.requestId = nil
-            job.usesNetwork = true
-            self.networkLane.visible.append(job)
-            self.pump()
+        if image == nil && isInCloud && self.scheduler.moveToNetwork(job, attempt: attempt) {
             return
         }
-        job.state = .finished
-        lane.running -= 1
-        if self.jobs[job.key] === job {
-            self.jobs.removeValue(forKey: job.key)
-        }
-        if let image, let cgImage = image.cgImage {
+        if let image, let cgImage = image.cgImage, job.state == .running, job.attempt == attempt {
             self.cache.setObject(image, forKey: job.key.cacheKey, cost: cgImage.bytesPerRow * cgImage.height)
         }
-        let consumers = Array(job.consumers.values)
-        job.consumers.removeAll()
-        for consumer in consumers {
-            consumer.completion(image, image != nil && consumer.isReduced)
-        }
-        self.pump()
+        self.scheduler.finish(job, attempt: attempt, image: image)
     }
 }
