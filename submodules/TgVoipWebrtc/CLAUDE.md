@@ -98,21 +98,40 @@ Default signaling SCTP timer values (set in `SignalingSctpConnection::Options`):
 
 Retry pattern: 400ms, 750ms, 750ms, 750ms... (~18 attempts in 15s). At 30% loss, 100% success rate over 5000 runs.
 
-These values are configurable via JSON custom parameters (`config.customParameters`), read by
-every engine that carries its signaling over SCTP: `InstanceV2Impl` (7–13), `InstanceV2CompatImpl`
-(14), `InstanceV2ReferenceImpl` (11) and `CallCoreHost` (18/19), all through
-`SignalingSctpConnection::Options::fromCustomParameters`. Until 2026-10-27 only the first two read
-them, and 11.0.0 and 18/19 ran the defaults whatever the server sent.
-- `network_sctp_t1_init_ms` — T1-init timeout (0 = use default 400ms)
-- `network_sctp_t1_cookie_ms` — T1-cookie timeout (0 = use default 400ms)
-- `network_sctp_max_backoff_ms` — max timer backoff cap (0 = use default 750ms)
+These values are configurable via JSON custom parameters (`config.customParameters`), read through
+`SignalingSctpConnection::Options::fromCustomParameters` by every call version whose signaling
+runs over SCTP:
+
+| version | engine | SCTP signaling |
+|---|---|---|
+| 7.0.0, 8.0.0, 9.0.0 | `InstanceV2Impl` | no (`network_kcp_experiment` moves them onto it) |
+| 10.0.0 | `InstanceV2ReferenceImpl` | no |
+| **11.0.0** | `InstanceV2ReferenceImpl` | yes |
+| **12.0.0, 13.0.0** | `InstanceV2Impl` | yes, unless `network_signaling_nosctp` |
+| **14.0.0** | `InstanceV2CompatImpl` | yes, unless `network_signaling_nosctp` (on `dev/android`, always) |
+| **18.0.0, 19.0.0** | `CallCoreHost` | yes |
+
+Mind the names: `InstanceV2ReferenceImpl`'s "V2" signaling is the SCTP one, `InstanceV2Impl`'s
+"V2" (8.0.0/9.0.0) is not, and its SCTP mode is "V3". Until 2026-10-27 only `InstanceV2Impl` read
+the keys; `InstanceV2CompatImpl` gained them that day, and 11.0.0 and 18/19 later the same day
+(tgcalls `8d5e7e0`). Before that those engines ran the defaults whatever the server sent.
+- `network_sctp_t1_init_ms` — T1-init timeout (default 400ms)
+- `network_sctp_t1_cookie_ms` — T1-cookie timeout (default 400ms)
+- `network_sctp_max_backoff_ms` — max timer backoff cap (default 750ms)
+
+An absent key, a non-number or a value outside 1–60000 ms (RFC 4960's RTO.Max) keeps the default;
+a fraction is truncated. Before the range check a negative value silently ran dcsctp's own
+1000/1000/3000 ms, and a seconds-for-milliseconds slip held the first INIT retransmission for
+minutes. `//submodules/TgVoipWebrtc:signaling_sctp_options_test` pins this. The constructor takes
+`Options` with no default, so a new engine cannot silently skip the overrides.
 
 Every connection logs the values it runs with, e.g. `SignalingSctpConnection: initiator, t1_init
 400 ms, t1_cookie 400 ms, max backoff 750 ms`, so a call log shows whether an override arrived.
 Check an engine with `tgcalls_cli --mode p2p --version V --delay 5000-5000 --custom-params
 '{"network_sctp_t1_init_ms":1500,"network_sctp_max_backoff_ms":3000}'` (same for
-`--custom-params2`). The callee's `adding data of 44 bytes` lines, the caller's INIT retries,
-must arrive 1.5 s and then 3.0 s apart. With the defaults they arrive 0.4 s, then every 0.75 s.
+`--custom-params2`), V being one of the SCTP versions above. The callee's `adding data of 44 bytes`
+lines, the caller's INIT retries, must arrive 1.5 s and then 3.0 s apart. With the defaults they
+arrive 0.4 s, then every 0.75 s.
 
 `network_signaling_nosctp` drops the SCTP layer altogether (`ExternalSignalingConnection`, same
 gzip + `encryptRawPacket` framing). It changes the wire, so every engine that speaks 13.0.0's
