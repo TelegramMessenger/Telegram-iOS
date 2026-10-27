@@ -225,6 +225,23 @@ public final class MediaGridView: UIView {
         }
     }
 
+    public var availableLevels: [MediaGridLevel] = MediaGridLevel.allCases {
+        didSet {
+            let sorted = self.availableLevels.sorted()
+            if sorted.isEmpty {
+                self.availableLevels = oldValue
+                return
+            }
+            if sorted != self.availableLevels {
+                self.availableLevels = sorted
+                return
+            }
+            if sorted != oldValue, !sorted.contains(self.level) {
+                self.setLevel(self.level, animated: false)
+            }
+        }
+    }
+
     public var isSelectionPanEnabled: Bool = true {
         didSet {
             if self.isSelectionPanEnabled != oldValue {
@@ -560,7 +577,7 @@ public final class MediaGridView: UIView {
         self.stopMotion()
         let previousLevel = self.level
         if rotates {
-            let target = self.level.rotated(toLandscape: isLandscape)
+            let target = self.level.rotated(toLandscape: isLandscape, within: self.availableLevels)
             if target != self.level {
                 self.level = target
                 self.layoutLevel = target
@@ -846,22 +863,22 @@ public final class MediaGridView: UIView {
             self.onTapItem?(index)
             self.onTapItemAt?(index, point)
             self.updateSelectionForVisibleItems()
-        } else if self.isZoomEnabled, let target = self.layoutLevel.zoomedIn {
+        } else if self.isZoomEnabled, let target = self.layoutLevel.zoomedIn(within: self.availableLevels) {
             self.setLevel(target, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: point))
         }
     }
 
     public var canZoomIn: Bool {
-        return self.isZoomEnabled && self.level.zoomedIn != nil
+        return self.isZoomEnabled && self.level.zoomedIn(within: self.availableLevels) != nil
     }
 
     public var canZoomOut: Bool {
-        return self.isZoomEnabled && self.level.zoomedOut != nil
+        return self.isZoomEnabled && self.level.zoomedOut(within: self.availableLevels) != nil
     }
 
     public func zoomIn() {
         self.endInteraction()
-        guard self.isZoomEnabled, let target = self.level.zoomedIn else {
+        guard self.isZoomEnabled, let target = self.level.zoomedIn(within: self.availableLevels) else {
             return
         }
         self.setLevel(target, animated: true, anchor: self.centerAnchor())
@@ -869,7 +886,7 @@ public final class MediaGridView: UIView {
 
     public func zoomOut() {
         self.endInteraction()
-        guard self.isZoomEnabled, let target = self.level.zoomedOut else {
+        guard self.isZoomEnabled, let target = self.level.zoomedOut(within: self.availableLevels) else {
             return
         }
         self.setLevel(target, animated: true, anchor: self.centerAnchor())
@@ -904,6 +921,7 @@ public final class MediaGridView: UIView {
     }
 
     public func setLevel(_ level: MediaGridLevel, animated: Bool, anchor: MediaGridZoomAnchor? = nil) {
+        let level = level.nearest(within: self.availableLevels)
         self.endInteraction()
         self.rotationAnchor = nil
         guard level != self.level else {
@@ -1378,7 +1396,7 @@ public final class MediaGridView: UIView {
         let relativePosition: CGPoint
         if let transition = self.transition, let (anchor, relative) = self.transitionAnchor {
             transition.interrupt()
-            state = MediaGridPinchState(startLevel: transition.sourceLevel, anchor: anchor, toward: transition.targetLevel, startProgress: transition.progress)
+            state = MediaGridPinchState(startLevel: transition.sourceLevel, anchor: anchor, toward: transition.targetLevel, startProgress: transition.progress, levels: self.availableLevels)
             relativePosition = relative
         } else {
             let hostLayer = self.engine.contentHost.layer
@@ -1388,7 +1406,7 @@ public final class MediaGridView: UIView {
             guard let anchor = self.anchor(at: center) else {
                 return
             }
-            state = MediaGridPinchState(startLevel: self.layoutLevel, anchor: anchor)
+            state = MediaGridPinchState(startLevel: self.layoutLevel, anchor: anchor, levels: self.availableLevels)
             relativePosition = self.relativePosition(of: anchor)
         }
         self.pinch = PinchSession(state: state, relativePosition: relativePosition, isTracking: true)
@@ -1416,7 +1434,7 @@ public final class MediaGridView: UIView {
         let host = self.engine.contentHost.frame
         let point = CGPoint(x: anchor.pointInView.x - host.minX, y: anchor.pointInView.y - host.minY)
         var ranges: [Range<Int>] = []
-        for level in [self.layoutLevel.zoomedIn, self.layoutLevel.zoomedOut] {
+        for level in [self.layoutLevel.zoomedIn(within: self.availableLevels), self.layoutLevel.zoomedOut(within: self.availableLevels)] {
             guard let level else {
                 continue
             }
@@ -1545,7 +1563,7 @@ public final class MediaGridView: UIView {
                 let next = level == from ? to : from
                 let start = level == from ? progress : 1.0 - progress
                 self.beginTransition(to: next, source: source, anchor: anchor, relativePosition: session.relativePosition, binding: start ... start)
-            } else if let next = from > level ? level.zoomedOut : level.zoomedIn {
+            } else if let next = from > level ? level.zoomedOut(within: self.availableLevels) : level.zoomedIn(within: self.availableLevels) {
                 self.jumpLayout(to: next, anchor: anchor, relativePosition: session.relativePosition)
             } else {
                 return
