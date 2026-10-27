@@ -78,10 +78,11 @@ final class TestScrollEngine: ScrollEngine {
 
     func haltMotionInPlace() {
         // Mirrors PhysicsScrollEngine.haltMotionInPlace: catch the flight at its live position (production
-        // additionally removes the CA animation), then idle the core.
+        // additionally removes the CA animation, and `catchFlight` publishes the end), then idle the core.
         if let f = flight {
             core.setOffset(f.liveOffset(now: clock.now))
             flight = nil
+            onFlightChanged?(nil)
         }
         core.cancelDeceleration()
     }
