@@ -84,6 +84,8 @@ WR_TEST(testARefusedImageRendersThePlaceholder) {
     // A widget's own internal URLs are refused like any other.
     env.env().eval("$('r').src = 'twcanvas:1:4:4'; 1");
     env.flush();
+    // Its natural size once its load fired (widget-sandbox v0.2.3: pending until then).
+    env.env().drain();
     checkEval(env, "var b = $('r').getBoundingClientRect(); [b.width, b.height, $('r').naturalWidth].join()", "48,48,48");
     expectMatchesRebuild(env, "twcanvas");
 }

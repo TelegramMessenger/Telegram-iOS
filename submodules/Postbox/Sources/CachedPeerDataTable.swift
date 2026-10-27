@@ -9,6 +9,7 @@ final class CachedPeerDataTable: Table {
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedDatas: [PeerId: CachedPeerData] = [:]
+    private var missingDatas = Set<PeerId>()
     private var updatedPeers: [PeerId: (CachedPeerData?, CachedPeerData)] = [:]
     
     override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
@@ -29,6 +30,7 @@ final class CachedPeerDataTable: Table {
         }
         
         self.cachedDatas[id] = data
+        self.missingDatas.remove(id)
         self.updatedPeers[id] = (previousValue, data)
     }
     
@@ -36,17 +38,22 @@ final class CachedPeerDataTable: Table {
         if let status = self.cachedDatas[id] {
             return status
         }
+        if self.missingDatas.contains(id) {
+            return nil
+        }
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
             if let data = PostboxDecoder(buffer: value).decodeRootObject() as? CachedPeerData {
                 self.cachedDatas[id] = data
                 return data
             }
         }
+        self.missingDatas.insert(id)
         return nil
     }
     
     override func clearMemoryCache() {
         self.cachedDatas.removeAll()
+        self.missingDatas.removeAll()
         self.updatedPeers.removeAll()
     }
     
@@ -67,6 +74,7 @@ final class CachedPeerDataTable: Table {
         self.updatedPeers.removeAll()
         if !self.useCaches {
             self.cachedDatas.removeAll()
+            self.missingDatas.removeAll()
         }
     }
 }

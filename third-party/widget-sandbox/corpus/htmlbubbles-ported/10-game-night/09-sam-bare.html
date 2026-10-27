@@ -72,10 +72,6 @@
   .sdk .ctl button { margin-left: 6px; font-size: 13px; padding: 4px 11px; }
   .sdk .banner { margin-top: 10px; padding: 9px 12px; border-radius: 10px; background-color: rgba(52,199,89,0.15); text-align: center; }
   .sdk [hidden] { display: none !important; }
-  .fx-pop { animation: fx-pop 320ms cubic-bezier(.34,1.56,.64,1); }
-  .fx-slide-left { animation: fx-slide-left 260ms cubic-bezier(.33,1,.68,1); }
-  @keyframes fx-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
-  @keyframes fx-slide-left { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 </style>
 <div class="card pad sdk" id="root">
   <div class="hd"><b class="grow" style="font-size: 16px">🔢 Sudoku <span class="muted small" id="pnum">#1</span></b><span class="small muted" style="margin-right: 6px">⏱ <span id="clock">0:00</span></span><span class="badge orange" id="status">medium</span></div>
@@ -103,10 +99,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const mmss = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 const $ = id => document.getElementById(id);
 const root = $('root'), table = $('table');
-function fxRoot(kind) {
-  root.classList.remove('fx-pop', 'fx-slide-left');
-  void root.offsetWidth;
-  root.classList.add('fx-' + kind);
+let panelAnimation = null;
+function transitionBoard(kind, target = table) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
 
 // ---- build once ----
@@ -193,7 +191,7 @@ function win(byBot) {
   stopClock();
   sel = -1;
   solved = byBot ? 'bot' : 'you';
-  fxRoot('pop');
+  transitionBoard('pop');
   // the green wave of the original (fx.wave 0→1 over 1100 ms, inOutSine) as one short flash per cell, timed along the diagonal
   for (let i = 0; i < 81; i++) {
     const w = Math.min(1, Math.max(0, (2 + Math.floor(i / 9) + i % 9) / 22));
@@ -269,7 +267,7 @@ $('keys').addEventListener('click', e => {
 $('checkBtn').addEventListener('click', check);
 $('solveBtn').addEventListener('click', solve);
 $('newBtn').addEventListener('click', () => {
-  fxRoot('slide-left');
+  transitionBoard('slide-left');
   load(false);
   enter();
 });

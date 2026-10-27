@@ -216,6 +216,28 @@ void drain(WRSession* session) {
     XCTAssertTrue([delegate.bridgeCalls containsObject:@"openLink [\"https://example.org/tapped\"]"]);
 }
 
+/// widget-sandbox v0.2 (W2 plan, Task 2): a request's answer that comes back from the network after the runtime
+/// stopped is ignored: no exception, no bridge call, and the stop stays.
+- (void)testACompletionAfterTheSessionStoppedIsIgnored {
+    WRRecordingDelegate* delegate = [WRRecordingDelegate new];
+    WRSession* session = [self sessionWith:delegate];
+    [session setContextCopy:NO canQuery:YES backgroundQuery:NO chatType:@"private" viewer:nil preview:NO];
+    XCTAssertTrue([session bootWithSource:@"<!doctype html><html><head><style>body{margin:0;padding:0} button{position:"
+                                            "absolute;left:0;top:0;width:100px;height:40px}</style></head><body><button "
+                                            "onclick=\"TelegramWidget.request('ping').then(r => TelegramWidget.openLink("
+                                            "'https://example.org/answered'))\">b</button></body></html>"]);
+    [session pointer:WRPointerPhaseDown at:CGPointMake(50, 20) pointerId:1 primary:YES];
+    [session pointer:WRPointerPhaseUp at:CGPointMake(50, 20) pointerId:1 primary:YES];
+    drain(session);
+    XCTAssertTrue([delegate.bridgeCalls containsObject:@"request [\"1\",\"ping\"]"], @"%@", delegate.bridgeCalls);
+    [session stopForTesting:WRStopReasonInternal];
+    NSUInteger calls = delegate.bridgeCalls.count;
+    XCTAssertNoThrow([session completeRequest:1 result:[@"pong" dataUsingEncoding:NSUTF8StringEncoding] failure:WRRequestFailureNone]);
+    drain(session);
+    XCTAssertEqual(delegate.bridgeCalls.count, calls);
+    XCTAssertEqual(session.stopReason, WRStopReasonInternal);
+}
+
 /// sdk-v1 §5.5: a press reports the drag axes and the hold the widget takes (touch-action: none claims the hold too,
 /// widget-sandbox v0.1.2; never the vertical axis, v0.1.3) and whether it takes taps, once its down task has run.
 - (void)testAPressReportsItsGestureClaim {

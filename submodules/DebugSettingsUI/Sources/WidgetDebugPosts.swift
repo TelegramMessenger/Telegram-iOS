@@ -27,7 +27,10 @@ func widgetConformanceDebugPosts() -> [EngineLocalWidgetPost] {
             }
             return EngineLocalWidgetPost.Photo(png: png, width: Int32(image.width), height: Int32(image.height))
         }
-        return EngineLocalWidgetPost(html: html, width: post.width, height: post.height, caption: post.caption, photos: photos)
+        // widget-sandbox v0.2.1: the post's message kind and state, so the inserted widget runs with them. Its requests
+        // fail (a local message means nothing to the server) and nothing polls it.
+        let context = post.message?.kind.context(viewer: nil)
+        return EngineLocalWidgetPost(html: html, width: post.width, height: post.height, caption: post.caption, photos: photos, isCopy: context?.isCopy ?? false, canQuery: context?.canQuery ?? false, backgroundQuery: context?.backgroundQuery ?? false, chatData: post.message?.chatData.map { Data($0.utf8) }, publicData: post.message?.publicData.map { Data($0.utf8) })
     }
 }
 

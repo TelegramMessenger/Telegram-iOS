@@ -396,6 +396,23 @@ std::optional<RenderBox> RenderTree::borderBox(const Node& node) const {
     return box;
 }
 
+bool RenderTree::beingRendered(const Node& node, uint64_t& visited) const {
+    if (!m_current.document) {
+        return false;
+    }
+    auto it = m_current.nodes.find(const_cast<Node*>(&node));
+    if (it == m_current.nodes.end() || !it->second.element) {
+        return false;
+    }
+    for (litehtml::element::ptr element = it->second.element; element; element = element->parent()) {
+        visited++;
+        if (element->css().get_display() == litehtml::display_none) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::optional<RenderTree::BoxMetrics> RenderTree::boxMetrics(const Node& node) const {
     if (!m_current.document) {
         return std::nullopt;
@@ -423,6 +440,8 @@ std::optional<RenderTree::BoxMetrics> RenderTree::boxMetrics(const Node& node) c
     metrics.fixed = position == litehtml::element_position_fixed;
     const litehtml::style_display display = element.css().get_display();
     metrics.inlineLevel = display == litehtml::display_inline || display == litehtml::display_inline_text;
+    metrics.autoWidth = element.css().get_width().is_predefined();
+    metrics.autoHeight = element.css().get_height().is_predefined();
     return metrics;
 }
 

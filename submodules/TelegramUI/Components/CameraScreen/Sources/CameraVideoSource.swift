@@ -130,6 +130,7 @@ final class LiveStreamMediaSource {
             cropRotation: 0.0,
             cropMirroring: false,
             cropOrientation: nil,
+            cropPerspective: .zero,
             gradientColors: nil,
             videoTrimRange: nil,
             videoBounce: false,

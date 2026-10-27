@@ -102,6 +102,9 @@ public final class WidgetHarnessRootViewController: UIViewController {
         let host = WidgetHarnessListHost(context: context)
         host.holdsMenu = self.options.holdsMenu
         host.copyProtected = self.options.copyProtected
+        host.canQuery = self.options.canQuery
+        host.backgroundQuery = self.options.backgroundQuery
+        host.botChat = self.options.botChat
         host.onContextMenuChange = { [weak self] open in
             self?.contextMenuChanged(open: open)
         }

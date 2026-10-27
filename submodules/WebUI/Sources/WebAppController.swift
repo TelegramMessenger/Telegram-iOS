@@ -1842,7 +1842,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.webView?.sendEvent(name: "device_storage_failed", data: data.string)
                             return
                         }
-                        let _ = self.context.engine.peers.setBotStorageValue(peerId: controller.botId, key: key, value: effectiveValue).start(error: { [weak self] error in
+                        let _ = (self.context.engine.peers.setBotStorageValue(peerId: controller.botId, key: key, value: effectiveValue)
+                        |> deliverOnMainQueue).start(error: { [weak self] error in
                             var errorValue = "UNKNOWN_ERROR"
                             if case .quotaExceeded = error {
                                 errorValue = "QUOTA_EXCEEDED"
@@ -2416,13 +2417,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 initialUsername: createBot.suggestedUsername,
                                 initialTitle: createBot.suggestedName,
                                 openAutomatically: false,
+                                viaDeeplink: false,
                                 completion: { [weak self] resultId in
                                     guard let self, let controller = self.controller else {
                                         return
                                     }
                                     if let resultId {
-                                        let _ = self.context.engine.peers.sendBotRequestedPeer(peerId: controller.botId, requestId: requestId, buttonId: buttonId, requestedPeerIds: [resultId]
-                                        ).startStandalone(error: { [weak self] _ in
+                                        let _ = (self.context.engine.peers.sendBotRequestedPeer(peerId: controller.botId, requestId: requestId, buttonId: buttonId, requestedPeerIds: [resultId])
+                                        |> deliverOnMainQueue).startStandalone(error: { [weak self] _ in
                                             guard let self else {
                                                 return
                                             }

@@ -268,6 +268,26 @@ final class CameraNeo: NSObject, CameraProtocol {
     func setDualCameraEnabled(_ enabled: Bool) {
     }
 
+    func setCaptureMode(_ mode: CameraCaptureMode) -> Signal<Void, NoError> {
+        return .single(Void())
+    }
+
+    func setZoomScale(_ zoomScale: CGFloat) {
+    }
+
+    func startRecording(captureMode: CameraCaptureMode) -> Signal<CameraRecordingData, CameraRecordingError> {
+        return self.startRecording()
+    }
+
+    func beginExposureTargetBiasChange() {
+    }
+
+    func setExposureTargetBias(_ bias: CGFloat) {
+    }
+
+    func endExposureTargetBiasChange() {
+    }
+
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
         return .complete()
     }

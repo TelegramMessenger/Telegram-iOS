@@ -47,6 +47,26 @@ final class WidgetHarnessUITests: XCTestCase {
         self.add(attachment)
     }
 
+    /// widget-sandbox v0.2 (sdk-v1 §5.11): a real tap on the network marker shows its explanation, and the widget under
+    /// the marker's corner sees no press at all (its log's last field counts pointerdown and pointercancel).
+    func testATapOnTheNetworkMarkerExplainsItAndPressesNothing() throws {
+        let path = "fixture/widget-state.html"
+        let app = self.launch(["-widget-set", "fixture", "-widget-posts", path, "-widget-caption", "off", "-harness-can-query", "on"])
+        let ready = self.waitForReadout(app) { $0.contains(path) && $0.contains(" widget") && $0.contains("+marker@") && $0.contains("log \(path) ") }
+        let line = try XCTUnwrap(ready.split(separator: "\n").first { $0.hasPrefix("bubble ") && $0.contains(path) }, ready)
+        let at = try XCTUnwrap(line.split(separator: " ").first { $0.hasPrefix("+marker@") }, ready)
+        let numbers = at.dropFirst("+marker@".count).split(separator: ",").compactMap { Double($0) }
+        XCTAssertEqual(numbers.count, 2, ready)
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: numbers[0], dy: numbers[1])).press(forDuration: 0.1)
+        let after = self.waitForReadout(app, timeout: 5.0) { $0.contains("tooltip ") }
+        self.attachScreenshot(app, "after a tap on the network marker")
+        XCTAssertTrue(after.contains("tooltip Taps on this widget can send data to the bot."), after)
+        XCTAssertFalse(after.contains("(not shown)"), after)
+        let log = try XCTUnwrap(after.split(separator: "\n").first { $0.hasPrefix("log \(path) ") }, after)
+        XCTAssertTrue(log.hasSuffix("|0"), "the widget under the marker was pressed: \(log)")
+        XCTAssertFalse(after.contains("contextMenu"), after)
+    }
+
     func testATapOnAWidgetButtonOpensTheLinkPrompt() throws {
         let app = self.launch(["-widget-set", "fixture", "-widget-post", "open-link"])
         let ready = self.waitForReadout(app) { $0.contains("open-link.html") && $0.contains(" widget") }
@@ -616,15 +636,43 @@ final class WidgetHarnessUITests: XCTestCase {
         return (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any]
     }
 
-    /// widget-sandbox v0.1.3's auto/23-gestures, its actions performed on the real bubble (a Tier 1 run injects below
+    /// widget-sandbox v0.2.2's auto/23-gestures-a, its actions performed on the real bubble (a Tier 1 run injects below
     /// it, so the checks only the bubble can satisfy fail there): holds of 700 ms on #none and #auto, double taps on
-    /// #nonedbl and #autodbl, vertical drags of +60 px in 10 steps on #vnone and #vpanx (the chat's scroll), drags of
-    /// +120 px in 10 steps from the pad's leading strip (#edge) and from 60 px in (#mid), then Finish. Every check
-    /// passes. Each action aims at the latest readout (CLIENTS.md step 6): the widget lists its open checks, so it
-    /// changes height as they pass, and the chat scrolls. No caption (the 600 pt widget's long one put its first probes
-    /// under the status bar) and auto/22 above it, so the chat is taller than the screen and can scroll.
-    func testAuto23ThroughTheRealBubble() throws {
-        let path = "auto/23-gestures.html"
+    /// #nonedbl and #autodbl, then Finish. Every check passes.
+    func testAuto23aThroughTheRealBubble() throws {
+        try self.runAuto23("auto/23-gestures-a.html") { app, at, _ in
+            try at("none").press(forDuration: 0.7)
+            try at("auto").press(forDuration: 0.7)
+            // The hold on #auto opened the menu; the next touches wait for it to end.
+            self.waitForReadout(app, timeout: 5.0) { $0.contains("contextMenuEnded") }
+            try at("nonedbl").doubleTap()
+            try at("autodbl").doubleTap()
+        }
+    }
+
+    /// widget-sandbox v0.2.2's auto/23-gestures-b on the real bubble: vertical drags of +60 px in 10 steps on #vnone and
+    /// #vpanx (the chat's scroll), drags of +120 px in 10 steps from the pad's leading strip (#edge) and from 60 px in
+    /// (#mid), then Finish. Every check passes.
+    func testAuto23bThroughTheRealBubble() throws {
+        try self.runAuto23("auto/23-gestures-b.html") { app, _, locate in
+            for name in ["vnone", "vpanx"] {
+                let from = try locate(name)
+                let moves = (1 ... 10).map { step in (CGPoint(x: from.x, y: from.y + 6.0 * Double(step)), 0.05 + 0.03 * Double(step)) }
+                try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 0.45)], in: app)
+            }
+            for name in ["edge", "mid"] {
+                let from = try locate(name)
+                let moves = (1 ... 10).map { step in (CGPoint(x: from.x + 12.0 * Double(step), y: from.y), 0.05 + 0.03 * Double(step)) }
+                try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 0.45)], in: app)
+            }
+        }
+    }
+
+    /// One half of auto/23-gestures through the real bubble: `perform` acts, then Finish, then every check must pass.
+    /// Each action aims at the latest readout (CLIENTS.md step 6): the widget lists its open checks, so it changes height
+    /// as they pass, and the chat scrolls. No caption (the 600 pt widget's long one put its first probes under the
+    /// status bar) and auto/22 above it, so the chat is taller than the screen and can scroll.
+    private func runAuto23(_ path: String, perform: (XCUIApplication, (String) throws -> XCUICoordinate, (String) throws -> CGPoint) throws -> Void) throws {
         let app = self.launch(["-widget-set", "conformance", "-widget-posts", "auto/22-ua-defaults.html," + path, "-widget-caption", "off"])
         let ready = self.waitForReadout(app) { value in
             (self.conformance(path, in: value)?["status"] as? String) == "awaiting" && value.contains(" widget") && !value.contains("x160 ")
@@ -646,25 +694,10 @@ final class WidgetHarnessUITests: XCTestCase {
             let p = try locate(name)
             return origin.withOffset(CGVector(dx: p.x, dy: p.y))
         }
-        try at("none").press(forDuration: 0.7)
-        try at("auto").press(forDuration: 0.7)
-        // The hold on #auto opened the menu; the next touches wait for it to end.
-        self.waitForReadout(app, timeout: 5.0) { $0.contains("contextMenuEnded") }
-        try at("nonedbl").doubleTap()
-        try at("autodbl").doubleTap()
-        for name in ["vnone", "vpanx"] {
-            let from = try locate(name)
-            let moves = (1 ... 10).map { step in (CGPoint(x: from.x, y: from.y + 6.0 * Double(step)), 0.05 + 0.03 * Double(step)) }
-            try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 0.45)], in: app)
-        }
-        for name in ["edge", "mid"] {
-            let from = try locate(name)
-            let moves = (1 ... 10).map { step in (CGPoint(x: from.x + 12.0 * Double(step), y: from.y), 0.05 + 0.03 * Double(step)) }
-            try performFingers([Finger(at: from, down: 0.0, moves: moves, up: 0.45)], in: app)
-        }
+        try perform(app, at, locate)
         try at("finish").tap()
         let after = self.waitForReadout(app, timeout: 25.0) { (self.conformance(path, in: $0)?["status"] as? String) == "done" }
-        self.attachScreenshot(app, "after auto/23-gestures")
+        self.attachScreenshot(app, "after \(path)")
         let checks = try XCTUnwrap(self.conformance(path, in: after)?["checks"] as? [[Any]], after)
         XCTAssertFalse(checks.isEmpty, after)
         for check in checks {

@@ -8,6 +8,7 @@ public final class CameraButton: Component {
     let tag: AnyObject?
     let isEnabled: Bool
     let isExclusive: Bool
+    let animateScale: Bool
     let action: () -> Void
     let longTapAction: (() -> Void)?
 
@@ -17,6 +18,7 @@ public final class CameraButton: Component {
         tag: AnyObject? = nil,
         isEnabled: Bool = true,
         isExclusive: Bool = true,
+        animateScale: Bool = true,
         action: @escaping () -> Void,
         longTapAction: (() -> Void)? = nil
     ) {
@@ -25,6 +27,7 @@ public final class CameraButton: Component {
         self.tag = tag
         self.isEnabled = isEnabled
         self.isExclusive = isExclusive
+        self.animateScale = animateScale
         self.action = action
         self.longTapAction = longTapAction
     }
@@ -36,6 +39,7 @@ public final class CameraButton: Component {
             tag: tag,
             isEnabled: self.isEnabled,
             isExclusive: self.isExclusive,
+            animateScale: self.animateScale,
             action: self.action,
             longTapAction: self.longTapAction
         )
@@ -55,6 +59,9 @@ public final class CameraButton: Component {
             return false
         }
         if lhs.isExclusive != rhs.isExclusive {
+            return false
+        }
+        if lhs.animateScale != rhs.animateScale {
             return false
         }
         return true
@@ -78,7 +85,7 @@ public final class CameraButton: Component {
                 return
             }
             let scale: CGFloat
-            if component.isEnabled {
+            if component.isEnabled && component.animateScale {
                 scale = self.currentIsHighlighted ? 0.8 : 1.0
             } else {
                 scale = 1.0

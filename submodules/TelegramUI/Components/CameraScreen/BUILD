@@ -1,4 +1,4 @@
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library", "swift_test")
 load(
     "@build_bazel_rules_apple//apple:resources.bzl",
     "apple_resource_bundle",
@@ -78,7 +78,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TooltipUI",
         "//submodules/TelegramUI/Components/MediaEditor",
-        "//submodules/Components/MetalImageView",
+        "//submodules/AttachmentUI",
         "//submodules/TelegramUI/Components/CameraButtonComponent",
         "//submodules/Utils/VolumeButtons",
         "//submodules/TelegramNotices",
@@ -102,5 +102,19 @@ swift_library(
     ],
     visibility = [
         "//visibility:public",
+    ],
+)
+
+swift_test(
+    name = "CameraScreenTests",
+    srcs = [
+        "Sources/CameraScreenGating.swift",
+        "Sources/CameraBatchModel.swift",
+        "Tests/CameraScreenGatingTests.swift",
+        "Tests/CameraBatchTests.swift",
+        "Tests/CameraScreenChatChromeTests.swift",
+    ],
+    copts = [
+        "-warnings-as-errors",
     ],
 )

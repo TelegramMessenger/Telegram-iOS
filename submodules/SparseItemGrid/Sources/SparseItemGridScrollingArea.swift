@@ -856,6 +856,11 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
     }
 }
 
+public protocol SparseItemGridScrollingTarget: AnyObject {
+    var scrollingTargetContentOffset: CGFloat { get }
+    var scrollingTargetMaxContentOffset: CGFloat { get }
+}
+
 public final class SparseItemGridScrollingArea: ASDisplayNode {
     private struct ShouldBegin {
         var shouldDelay: Bool
@@ -1003,11 +1008,13 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     public private(set) var isDragging: Bool = false
 
     private weak var draggingScrollView: UIScrollView?
+    private weak var draggingTarget: SparseItemGridScrollingTarget?
     private var scrollingInitialOffset: CGFloat?
 
     private var activityTimer: SwiftSignalKit.Timer?
 
     public var beginScrolling: (() -> UIScrollView?)?
+    public var beginScrollingTarget: (() -> SparseItemGridScrollingTarget?)?
     public var finishedScrolling: (() -> Void)?
     public var setContentOffset: ((CGPoint) -> Void)?
     public var openCurrentDate: (() -> Void)?
@@ -1094,6 +1101,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     strongSelf.draggingScrollView = scrollView
                     strongSelf.scrollingInitialOffset = scrollView.contentOffset.y
                     strongSelf.setContentOffset?(scrollView.contentOffset)
+                } else if let target = strongSelf.beginScrollingTarget?() {
+                    strongSelf.draggingTarget = target
+                    strongSelf.scrollingInitialOffset = target.scrollingTargetContentOffset
+                    strongSelf.setContentOffset?(CGPoint(x: 0.0, y: target.scrollingTargetContentOffset))
                 }
 
                 strongSelf.updateActivityTimer(isScrolling: false)
@@ -1104,6 +1115,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     return
                 }
                 strongSelf.draggingScrollView = nil
+                strongSelf.draggingTarget = nil
 
                 if strongSelf.offsetBarTimer != nil {
                     strongSelf.offsetBarTimer?.invalidate()
@@ -1127,7 +1139,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-                guard let scrollView = strongSelf.draggingScrollView, let scrollingInitialOffset = strongSelf.scrollingInitialOffset else {
+                let maxContentOffset: CGFloat
+                if let scrollView = strongSelf.draggingScrollView {
+                    maxContentOffset = scrollView.contentSize.height - scrollView.bounds.height
+                } else if let target = strongSelf.draggingTarget {
+                    maxContentOffset = target.scrollingTargetMaxContentOffset
+                } else {
+                    return
+                }
+                guard let scrollingInitialOffset = strongSelf.scrollingInitialOffset else {
                     return
                 }
                 guard let projectionData = strongSelf.projectionData else {
@@ -1147,12 +1167,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 if offset < 0.0 {
                     offset = 0.0
                 }
-                if offset > scrollView.contentSize.height - scrollView.bounds.height {
-                    offset = scrollView.contentSize.height - scrollView.bounds.height
+                if offset > maxContentOffset {
+                    offset = maxContentOffset
                 }
 
                 strongSelf.setContentOffset?(CGPoint(x: 0.0, y: offset))
-                let _ = scrollView
                 let _ = projectionData
             }
         )

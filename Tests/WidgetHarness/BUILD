@@ -103,10 +103,12 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode",
         "//submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageShareButton",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         "//submodules/TelegramUI/Components/UnsupportedContentPill",
         "//submodules/TextSelectionNode",
+        "//submodules/UndoUI",
     ],
     visibility = ["//Tests:__subpackages__"],
 )
@@ -152,6 +154,8 @@ swift_library(
         # The app's widget theme, for the conformance runner's tests.
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
+        # AccountContext, in MessageWidgetNetwork's signatures, for the network tests.
+        "//submodules/AccountContext",
         # MessageWidgetKillSwitch and MessageWidgetView, for the availability tests.
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         # TextSelectionNodeView and its node, for the selection tests.

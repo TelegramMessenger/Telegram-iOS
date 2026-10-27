@@ -207,10 +207,16 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     confirmation appeared and when it goes, drops a widget link that comes while one is up. It holds the confirmation
     weakly, so one that was never presented (its chat had left the window) or went by a path that does not report it
     stops blocking once released.
-  - *Haptics* (§2.6): `HapticFeedback`'s three methods return it, throw `TypeError` for an unknown style or type, and
-    post `haptic` only while the widget is visible and the reference's bucket (5, refilled at 10 per second, on the
-    step's clock) has a token; a drop is reported as `haptic-limit` at most once a second. The bubble plays them as
-    Mini Apps do.
+  - *Haptics* (§2.6): `HapticFeedback`'s three methods return it and throw `TypeError` for an unknown style or type.
+    A call posts `haptic` only when the vendored SDK policy's `HapticGate` admits it (`HostState::admitHaptic`, on the
+    step's clock). It needs:
+    - a visible widget;
+    - a token in the bucket (5, refilled at 10 per second);
+    - since widget-sandbox v0.2.2, a touch: while the primary press is down and for 5 s after it is lifted. Outside a
+      touch, the first call opens a 1 s series; the next series waits for a touch or 10 s.
+
+    The press and release are `TapState`'s primary down, up and cancel (`hapticPressed` / `hapticReleased`). A drop is
+    reported as `haptic-limit` at most once a second. The bubble plays them as Mini Apps do.
   - *Storage* (`Storage.cpp`, §2.8): `localStorage` and `sessionStorage` over `Host::storageArea`, 16,384 bytes of
     UTF-8 keys and values per area, committed through `Host::storageCommit` at the end of the step that changed them,
     after its rendering update (a media query's change listener or a ResizeObserver callback may write). A stored area
@@ -345,6 +351,16 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   - **images:** `css::policy::imageSourceKept` (PNG, JPEG, GIF or WebP `data:` URLs) in layout and in
     `HTMLImageElement::state` alike; a refused `<img src>`, the empty one included, renders the 48 px placeholder
     (`WidgetContainer::kPlaceholderURL`, `placeholderSVG`) with `data-tg-placeholder`, and the element loads at 48 × 48.
+    Since widget-sandbox v0.2.3 the element's state is a browser's. It is pending from a `src` change until its load or
+    error fires from a task (`imageSourceChanged`, a source generation so a newer `src` replaces the pending event; the
+    parsed images' at the window's load, those a script took out of the document included, from the list
+    `CanvasState` keeps of them; one of a template's contents on its adoption into the document): not complete, no
+    natural size, drawn as nothing on a canvas, `null` from `createPattern` (`CanvasImageSource::usable`). `width` and
+    `height` are the rendered content size while it is being rendered (`renderedContentSize`,
+    `RenderTree::beingRendered`, whose ancestor walk is charged), else the attribute, else the natural size. While
+    pending, a dimension the CSS leaves auto is 0: the render tree already knows the decoded size, a browser does not.
+    At the window's load an image whose `src` changed meanwhile is left to its own task, so it fires once. V5d had made a `data:` image complete with
+    its size at once.
   A hook is a pure function of its text and posts no diagnostic. The full record, with the strict budgets and the DOM
   side, is "Profile enforcement (V4)".
 - **The container is the only way out.** litehtml has no I/O of its own: every load is a container callback
@@ -675,18 +691,27 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `MessageWidgetCore`'s session delegate hands it each request (`WRSessionDelegate session:intl:`); a session without
     one has no locale data and formats "".
   - **The locale** a request names is the first requested tag (UTS 35's case), else the host's (`HostState::locale`,
-    the app's language), **never with a unicode extension**, because one can take the app down. The glue builds its
-    `Locale` with `Locale(identifier:)`. Foundation's identifier parsing drops a numbering system's 4-letter value:
-    `ar-EG-u-nu-arab` becomes `ar_EG@numbers=yes`, and `fa-u-nu-arab`, `hi-IN-u-nu-deva` and
+    the app's language), **with the unicode extension keywords its constructor reads** (ECMA-402 ResolveLocale,
+    `intl::RelevantKeys`):
+    - NumberFormat and RelativeTimeFormat `nu`; DateTimeFormat `ca`, `hc`, `nu`; Collator `co`, `kf`, `kn`;
+    - each value from a conservative table: ECMA-402's 22 numbering systems with simple digit mappings, the calendars
+      Foundation has on iOS 15, the hour cycles, CLDR's collations;
+    - sorted by key, attributes dropped, other extensions and private use kept.
+
+    Upstream's shim sends the tag whole, but in its glue an unknown numbering system makes `RelativeDateTimeFormatter`
+    trap (the app's crash), and an extension breaks the plural rules' language key (widget-sandbox VENDOR.md). The
+    glue applies what is kept on iOS 16 and later and drops it before. `WRIntlExtensionTests` runs every call a widget
+    can make with every CLDR numbering system and calendar on iOS. Until widget-sandbox v0.2.2 any extension took the
+    app down:
+    the glue built its `Locale` with `Locale(identifier:)`, and Foundation's identifier parsing drops a numbering
+    system's 4-letter value: `ar-EG-u-nu-arab` becomes `ar_EG@numbers=yes`, and `fa-u-nu-arab`, `hi-IN-u-nu-deva` and
     `en-u-nu-latn-ca-gregory` go the same way (`canonicalIdentifier(from:)` and `identifier(.icu, from:)` too).
     Formatters for such a locale are broken: `DateFormatter.dateFormat` and the `NumberFormatter` symbols are nil,
-    which the glue force-unwraps, and `RelativeDateTimeFormatter.localizedString(from:)` traps inside Foundation. So
-    guarding the glue would not be enough: the locale must not be built. Tags without a unicode extension are safe
-    (`testTheExtremesAreAnswered`; a fuzz of 1,500 random tags across every request kind). `Locale(components:
-    Locale.Components(identifier:))` (iOS 16+) parses such tags and formats with the extension applied (digits,
-    calendar, hour cycle), and upstream's own fixture still passes with it. That fix belongs in the glue, which is
-    vendored unedited; once upstream's glue builds its locale that way, a request may keep its extension on iOS 16 and
-    later. With no list of available locales, every structurally valid tag is one, as in the shim, and
+    which that glue force-unwrapped, and `RelativeDateTimeFormatter.localizedString(from:)` traps inside Foundation.
+    Tags without a unicode extension are safe (`testTheExtremesAreAnswered`; a fuzz of 1,500 random tags across every
+    request kind). `Locale(components: Locale.Components(identifier:))` (iOS 16+) parses such tags and formats with
+    the extension applied (digits, calendar, hour cycle); v0.2.3's glue builds its locale that way
+    (`IntlBridge.bcp47Locale`; before iOS 16 it drops the extension), so an extension no longer traps. With no list of available locales, every structurally valid tag is one, as in the shim, and
     `supportedLocalesOf` answers the canonical requested tags. `resolvedOptions` takes what needs
     locale data from the glue's answer where it has one (the locale it formats in, a currency's digits, a date's fields
     and time zone) and the rest from ECMA-402's resolution of the options here; PluralRules' `pluralCategories` are the
@@ -765,6 +790,54 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
   display: none } body { display: block }`); an author's rules win over both whatever their specificity, as the spec's
   `:where()` makes them, and in the master the layer is an origin above litehtml's own rules that `revert` skips
   (twidget edit 41).
+
+## The widget's state and requests (widget-sandbox v0.2)
+
+The v0.2 design: `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`. Every rule comes from the vendored
+SDK policy (`third-party/widget-sandbox/gesture/twidget/sdk_policy.h`, `twidget::sdk`), as `checkResizeAnchor` already
+did. The order of the checks is upstream's glue's (`packages/ios` `SandboxEngine.bridgeCall`).
+
+**The context and the state** (`HostState`):
+- **Fixed for the runtime's life:** `setContext` is called before the boot's scripts and stripped as the glue strips:
+  - a preview's flags are ignored;
+  - a copy and a preview have no chat type;
+  - the viewer is there only with `canQuery`, its fields checked by `checkViewer`.
+- **The state:** `setInitialData` and `setData` take the bot's two strings as bytes. `checkWidgetData` decides what is
+  text. `data-rejected` is one report naming the rejected fields; a copy's `chatData` is dropped silently.
+- **A change:** `setData` queues the task that puts the new values in place and runs `chatDataChanged`, then
+  `publicDataChanged` (`TelegramWidget::Event`), each only for a value that changed. Nothing restarts.
+- **What the widget reads:** `TelegramWidget` answers the members from `HostState`. `viewer` is one frozen object per
+  context generation.
+
+**Requests:**
+- **Every call gets an id** (1 … `MAX_REQUEST_ID`) and a promise in `TelegramWidget::m_requests`. The list is traced
+  like the handler lists: `HostState` holds no JS values.
+- **The order of the checks:**
+  1. a `data` that is not 1–64 bytes of well-formed UTF-8 is a TypeError at once;
+  2. a preview refuses;
+  3. the `RequestGate` decides, on the step's clock (`EventLoop::currentTime`), with `gesture` being an unconsumed press
+     on the visible widget (`activationAvailable`);
+  4. a `Foreground` verdict consumes the press.
+- **Out to the host:** an admitted request is the bridge call `request ["<id>", "<data>"]`.
+- **Every outcome settles in a task of its own, never inside the call:**
+  - a refusal through `queueRequestRefusal`;
+  - the client's outcome through `HostState::completeRequest` → `TelegramWidget::settleRequest`. This frees the gate
+    first, checks the answer (`checkRequestAnswer`, else `INVALID_ANSWER` and `answer-rejected`), and resolves
+    `{result}` frozen.
+  - A rejection is an `Error` named `WidgetRequestError` with its `code`, made in a job.
+  - An outcome for an id that is not an outgoing pending request changes nothing.
+- **The gate's `show()`** runs in `setVisible`'s task when the widget becomes visible.
+- **Diagnostics:** `request-blocked` and `preview-blocked` are capped at `MAX_REJECTION_REPORTS` (`reportCapped`).
+
+**The other calls:**
+- **`copyText`:** 1–256 UTF-16 code units. It is privileged: one press, shared with the links and `request`; outside
+  one it reports `activation-blocked`.
+- **`watchPublicData` / `unwatchPublicData`:** post `watchPublicData ["true"|"false"]` on a change only.
+
+**A preview** (`WidgetContext.preview`) runs as usual but:
+- takes no input (`HostState::pointer` returns);
+- posts no bridge call but `ready` (`refusedInPreview` reports, and `postBridgeCall` is the floor);
+- never reads its storage preload or commits (`Storage::load`, `commitIfChanged`).
 
 ## Profile enforcement (V4)
 
@@ -1010,7 +1083,7 @@ reader select of the published layout, built on the widget's queue while its bub
 | `TelegramWidget` handlers | 16 per `onEvent` type, and 16 `onTheme` callbacks | `TelegramWidget.h` `kMaxHandlersPerEvent` | ignored, no exception | sdk-policy.ts `MAX_HANDLERS_PER_EVENT` |
 | Link URLs | 256 UTF-8 bytes as given and 256 characters normalised; one link call per press | `Links.h` `kMaxLinkLength` | `TypeError`; a second call is `activation-blocked` | sdk-policy.ts `MAX_LINK_LENGTH` |
 | Link diagnostics | 20 `activation-blocked` and 20 `navigation-blocked` per widget | `Links.h` `kMaxLinkDiagnostics` | not reported | the reference's 20 (and ours for navigation) |
-| Haptics | a bucket of 5 refilled at 10 per second; `haptic-limit` once per second | `TelegramWidget.h` `kHapticBurst`, `kHapticPerSecond`, `kHapticReportMs` | dropped | sdk-policy.ts `HapticGate` |
+| Haptics | a bucket of 5 refilled at 10 per second, and a touch (5 s after its lift; else a 1 s series per touch or per 10 s); `haptic-limit` once per second | the vendored `twidget::sdk::HapticGate` (`HAPTIC_*`) | dropped | sdk-policy.ts `HapticGate` (v0.2.2) |
 | Storage | 16,384 bytes of UTF-8 keys and values per area | `Storage.h` `kStorageQuotaBytes` | `QuotaExceededError` | sdk-policy.ts `STORAGE_QUOTA_BYTES` |
 | Locale | 35 characters, BCP 47-shaped | `HostState.cpp` `kMaxLocaleLength` | `en-US` | sdk-policy.ts `MAX_LOCALE_LENGTH` |
 | Random bytes | 65,536 per `getRandomValues` | `Crypto.h` `kMaxRandomBytes` | `QuotaExceededError` | Web Crypto's |
@@ -1201,8 +1274,9 @@ M1d's, from the old runtime (spec §10.1):
   (`pointerup` before `mousedown`) its counter starts a second gesture at `mousedown`; ours is one per press, as sdk-v1
   §2.5 says ("one press unlocks one call"). The reference's 5-second gesture lifetime is not ported: a press is only
   ever usable while its own events dispatch.
-- **The haptic bucket refills on the step's clock** (`EventLoop::currentTime`), not the live one the reference's host
-  reads, so a burst inside one task never sees a refill however long the task runs.
+- **The haptic gate runs on the step's clock** (`EventLoop::currentTime`), not the live one the reference's host
+  reads. A burst inside one task never sees a refill however long the task runs, and the touch's press and release
+  are stamped with the times of the tasks that run them.
 - **`openTelegramLink` asks first**, as `openLink` does: Mini Apps open t.me links without a prompt, but resolving one
   is a network request the widget would cause.
 - **There is no source cap** (V1): M1d's 256 KiB cap is gone with the inline `tgwidget` blocks and `.tgw` files it
@@ -1214,9 +1288,13 @@ M1d's, from the old runtime (spec §10.1):
   (`Blob.slice`, `AbortSignal.timeout`); there is no `FileReader` and no `AbortSignal.any`.
 - **Intl diverges in places** (V5b): `formatRange`, `formatRangeToParts`, `selectRange`, the `formatToParts` of
   `RelativeTimeFormat` and `ListFormat`, `Segmenter`, `DisplayNames`, `Locale`, `DurationFormat` and
-  `supportedValuesOf` are absent. A tag's unicode extension (`-u-nu-arab`, `-u-ca-…`, `-u-hc-…`) is dropped; the
-  `numberingSystem`, `calendar` and `hourCycle` options are the way to ask. What the glue formats is Foundation's, and
-  it formats only what widget-sandbox's
+  `supportedValuesOf` are absent. A tag's unicode extension reaches the glue reduced to the keywords its constructor
+  reads, with supported values (above); the glue applies them on iOS 16 and later, while `resolvedOptions()` still
+  reports `latn` and `gregory`, as upstream's glue answers it. The `numberingSystem` and `calendar` options do not
+  override an extension's keyword (ECMA-402 drops the keyword then): the glue reads neither option, so
+  `new Intl.NumberFormat('en-u-nu-thai', { numberingSystem: 'latn' })` formats in Thai digits. `hour12` and
+  `hourCycle` do override (the glue rebuilds the hour cycle from them). What the glue
+  formats is Foundation's, and it formats only what widget-sandbox's
   shim asks it for: no compact, scientific or unit notation, `roundingMode`, `roundingIncrement` or
   `trailingZeroDisplay` (accepted and reported, not applied); a `calendar` or `numberingSystem` is reported, the glue
   formats Gregorian in Latin digits; `caseFirst` and `ignorePunctuation` do not reach the comparison; quarters are

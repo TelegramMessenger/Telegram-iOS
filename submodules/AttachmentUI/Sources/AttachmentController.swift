@@ -483,6 +483,7 @@ public class AttachmentController: ViewController, MinimizableController {
     }
 
     public weak var attachmentButton: UIView?
+    public var attachmentButtonContentSnapshot: (() -> UIView?)?
 
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
@@ -1261,6 +1262,7 @@ public class AttachmentController: ViewController, MinimizableController {
             }
 
             self.isAnimating = true
+            self.container.isUserInteractionEnabled = true
             if case .regular = layout.metrics.widthClass {
                 if controller.animateAppearance {
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -1328,15 +1330,9 @@ public class AttachmentController: ViewController, MinimizableController {
                         self.container.suppressesBottomCorners = true
                         containerView.contentView.addSubnode(self.container)
 
-                        let buttonIcon = GlassBackgroundView.ContentImageView()
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                        buttonIcon.image = PresentationResourcesChat.chatInputPanelAttachmentButtonImage(presentationData.theme)
-                        buttonIcon.tintColor = presentationData.theme.chat.inputPanel.panelControlColor
-                        if let image = buttonIcon.image {
-                            buttonIcon.bounds = CGRect(origin: .zero, size: image.size)
-                            buttonIcon.center = CGPoint(x: targetFrame.width * 0.5, y: targetFrame.height * 0.5)
-                            buttonIcon.transform = CGAffineTransformMakeScale(1.0 / sourceButtonScale, 1.0 / sourceButtonScale)
-                        }
+                        let buttonIcon = controller.attachmentButtonMorphContent(size: sourceButtonFrame.size)
+                        buttonIcon.center = CGPoint(x: targetFrame.width * 0.5, y: targetFrame.height * 0.5)
+                        buttonIcon.transform = CGAffineTransformMakeScale(1.0 / sourceButtonScale, 1.0 / sourceButtonScale)
                         localGlassView.contentView.addSubview(buttonIcon)
                         ComponentTransition(buttonTransition).animateBlur(layer: buttonIcon.layer, fromRadius: 0.0, toRadius: 10.0)
 
@@ -1467,15 +1463,9 @@ public class AttachmentController: ViewController, MinimizableController {
                     self.container.view.layer.animateAlpha(from: CGFloat(self.container.view.layer.presentation()?.opacity ?? 1.0), to: 0.0, duration: 0.12, removeOnCompletion: false)
                     containerView.contentView.addSubnode(self.container)
 
-                    let buttonIcon = GlassBackgroundView.ContentImageView()
-                    let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                    buttonIcon.image = PresentationResourcesChat.chatInputPanelAttachmentButtonImage(presentationData.theme)
-                    buttonIcon.tintColor = presentationData.theme.chat.inputPanel.panelControlColor
-                    if let image = buttonIcon.image {
-                        buttonIcon.bounds = CGRect(origin: .zero, size: image.size)
-                        buttonIcon.center = CGPoint(x: initialFrame.width * 0.5, y: initialFrame.height * 0.5)
-                        buttonIcon.transform = CGAffineTransformMakeScale(1.0 / targetButtonScale, 1.0 / targetButtonScale)
-                    }
+                    let buttonIcon = controller.attachmentButtonMorphContent(size: targetButtonFrame.size)
+                    buttonIcon.center = CGPoint(x: initialFrame.width * 0.5, y: initialFrame.height * 0.5)
+                    buttonIcon.transform = CGAffineTransformMakeScale(1.0 / targetButtonScale, 1.0 / targetButtonScale)
                     localGlassView.contentView.addSubview(buttonIcon)
                     ComponentTransition(buttonTransition).animateBlur(layer: buttonIcon.layer, fromRadius: buttonBlurRadius, toRadius: 0.0)
                     ComponentTransition(buttonTransition).animateBlur(layer: sourceGlassView.contentView.layer, fromRadius: buttonBlurRadius, toRadius: 0.0)
@@ -1816,6 +1806,13 @@ public class AttachmentController: ViewController, MinimizableController {
         self.node.updateSelectionCount(count, animated: false)
     }
 
+    public func updatePillIsLight(_ isLight: Bool, for controller: AttachmentContainable, transition: ContainedViewLayoutTransition) {
+        guard self.isNodeLoaded else {
+            return
+        }
+        self.node.container.updatePillIsLight(isLight, owner: controller, transition: transition)
+    }
+
     private var node: Node {
         return self.displayNode as! Node
     }
@@ -1977,6 +1974,25 @@ public class AttachmentController: ViewController, MinimizableController {
             snapshotView?.addSubview(contentSnapshotView)
         }
         return snapshotView
+    }
+}
+
+extension AttachmentController {
+    func attachmentButtonMorphContent(size: CGSize) -> UIView {
+        if let snapshot = self.attachmentButtonContentSnapshot?() {
+            snapshot.bounds = CGRect(origin: .zero, size: size)
+            snapshot.clipsToBounds = true
+            snapshot.layer.cornerRadius = min(size.width, size.height) * 0.5
+            return snapshot
+        }
+        let buttonIcon = GlassBackgroundView.ContentImageView()
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        buttonIcon.image = PresentationResourcesChat.chatInputPanelAttachmentButtonImage(presentationData.theme)
+        buttonIcon.tintColor = presentationData.theme.chat.inputPanel.panelControlColor
+        if let image = buttonIcon.image {
+            buttonIcon.bounds = CGRect(origin: .zero, size: image.size)
+        }
+        return buttonIcon
     }
 }
 

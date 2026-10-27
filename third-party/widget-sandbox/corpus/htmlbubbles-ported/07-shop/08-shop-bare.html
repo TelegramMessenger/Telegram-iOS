@@ -66,7 +66,7 @@
   .rv .pg:hover { background-color: rgba(0,122,255,0.16); }
   [hidden] { display: none !important; }
   @keyframes fade { from { opacity: 0.25; } to { opacity: 1; } }
-  .rv.fx-fade, .rv.fx-fade2 { animation: fade 220ms ease-out; }
+  .rv .fx-fade, .rv .fx-fade2 { animation: fade 220ms ease-out; }
 </style>
 <div class="card pad rv" id="root">
   <div class="row" style="align-items: flex-start">
@@ -112,8 +112,6 @@ const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 const outCubic = t => 1 - Math.pow(1 - t, 3);
 const $ = id => document.getElementById(id);
 const root = $('root');
-function fade() { const a = root.classList.contains('fx-fade'); root.classList.remove('fx-fade', 'fx-fade2'); root.classList.add(a ? 'fx-fade2' : 'fx-fade'); }
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('fx-fade', 'fx-fade2'); });
 function pop(el, cls, other) { el.classList.remove(cls, other); void el.offsetWidth; el.classList.add(cls); }
 
 // --- static parts ---
@@ -169,15 +167,15 @@ root.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
   if (!el || !root.contains(el)) return;
   const name = el.dataset.action, value = el.dataset.value;
-  if (name === 'filter') { const s = Number(value); fade(); filter = filter === s ? 0 : s; limit = 3; renderList(); }
-  else if (name === 'sort') { if (sort === value) return; fade(); sort = value; limit = 3; renderList(); }
+  if (name === 'filter') { const s = Number(value); introDone = true; filter = filter === s ? 0 : s; limit = 3; renderList(); }
+  else if (name === 'sort') { if (sort === value) return; sort = value; limit = 3; renderList(); }
   else if (name === 'more') {
-    const id = Number(value); fade();
+    const id = Number(value);
     if (open.has(id)) open.delete(id); else open.add(id);
     const p = root.querySelector(`.rev[data-id="${id}"] p`);
-    if (p) p.innerHTML = textHTML(R[id]);
+    if (p) { p.innerHTML = textHTML(R[id]);  }
   }
-  else if (name === 'page') { fade(); limit = visible().length > limit ? limit + 3 : 3; renderList(); }
+  else if (name === 'page') { limit = visible().length > limit ? limit + 3 : 3; renderList(); }
   else if (name === 'help') {
     const id = Number(value), was = voted.has(id);
     if (was) voted.delete(id); else voted.add(id);

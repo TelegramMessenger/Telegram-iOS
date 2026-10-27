@@ -341,6 +341,10 @@ void TapState::runDown(JSContext* ctx, double x, double y, int32_t pointerId, bo
     press.pointerId = pointerId;
     press.target = Ref<EventTarget>::retain(ctx, target);
     press.number = state.beginPress();
+    if (primary) {
+        // widget-sandbox v0.2.2: the primary press is the haptic gate's touch, before its pointerdown's handlers run.
+        state.hapticPressed();
+    }
     press.lastX = x;
     press.lastY = y;
     press.kind = kind;
@@ -491,6 +495,9 @@ void TapState::runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool
     const int16_t button = press->button;
     const bool held = press->held;
     this->endPress(*press);
+    if (primary) {
+        state.hapticReleased();
+    }
     // Its activation is forgotten after its last event: the click, when there is one.
     struct Forget {
         HostState& state;
@@ -559,6 +566,9 @@ void TapState::runCancel(JSContext* ctx, double x, double y, int32_t pointerId, 
     const bool mouse = press->kind == twidget::PointerKind::Mouse;
     this->endPress(*press);
     HostState::of(ctx).endPress(number);
+    if (primary) {
+        HostState::of(ctx).hapticReleased();
+    }
     if (!mouse) {
         fireTouch(ctx, "touchcancel", *target, x, y, pointerId, false, false);
     }

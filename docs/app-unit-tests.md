@@ -66,6 +66,11 @@ keeps a 0.1 s end tolerance for HLS chunks that do not line up with the declared
 is not played — its clock never moves, even on a later `play()`. Looping one would seek to where the clock already is,
 and that no-op `seek` re-runs the end check synchronously until the stack overflows.
 
+`//submodules/UndoUI:UndoUITests` covers `undoOverlayHorizontalLayout`, the undo toast's panel and text widths. A
+chat's presentation context carries its history list's side insets (the safe insets, left and right swapped), so the
+context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
+previous ones.
+
 `//submodules/TelegramUI/Components/RichTextEditorMediaView:RichTextEditorMediaViewTests` covers
 `MediaChromeLayout`, where the article editor's glass media buttons go: a tile's "…" keeps clear of the
 container's "+" and layout toggle (#28), checked over the real album layouts (`MosaicCellFrames`).

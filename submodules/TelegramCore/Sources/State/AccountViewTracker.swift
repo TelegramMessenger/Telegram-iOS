@@ -351,6 +351,8 @@ public final class AccountViewTracker {
     
     /// Reply targets and stories a history fill is fetching; layout draws them as skeletons.
     public let pendingMessageReferences = PendingMessageReferences()
+    /// widget-sandbox v0.2: the shared states of message widgets watched on screen (`messages.getWidgetPublicData`).
+    let widgetPublicDataPolling: WidgetPublicDataPolling
     
     private let historyViewStateValidationContexts: HistoryViewStateValidationContexts
     
@@ -381,6 +383,7 @@ public final class AccountViewTracker {
         self.accountPeerId = account.peerId
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
+        self.widgetPublicDataPolling = WidgetPublicDataPolling(queue: self.queue, postbox: account.postbox, network: account.network)
         
         self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged |> map { Array($0) })
         

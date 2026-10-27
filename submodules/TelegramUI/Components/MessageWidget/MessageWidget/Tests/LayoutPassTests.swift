@@ -128,7 +128,7 @@ class LayoutPassTests: MessageWidgetTestCase {
         self.lowerTheParseCeiling()
         let pool = self.pool!, turn = self.turn!, capped = self.capped
         var gate: MessageWidgetInstance.TaskGate?
-        let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _ in
+        let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _, _, _ in
             let instance = MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, pool: pool, waitPolicy: capped, turn: turn, scale: 1.0)
             gate = instance?.gateNextTaskForTesting()
             return instance

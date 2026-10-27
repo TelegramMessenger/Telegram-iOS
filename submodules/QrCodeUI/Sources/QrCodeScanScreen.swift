@@ -18,6 +18,7 @@ import LegacyUI
 import LegacyComponents
 import LegacyMediaPickerUI
 import ImageContentAnalysis
+import ChatMediaSend
 import PresentationDataUtils
 import BundleIconComponent
 import GlassBarButtonComponent
@@ -954,6 +955,35 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         let presentError = { [weak self] in
             let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Contacts_QrCode_NoCodeFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
             self?.present(alertController)
+        }
+        
+        if context.routesToChatMediaEditorV2(.qrPhotoPicker) {
+            let pickerController = context.sharedContext.makeQrCodePhotoPickerScreen(context: context, completion: { [weak self] asset in
+                let _ = (chatMediaQrPhotoImage(asset: asset)
+                |> mapToSignal { image -> Signal<String?, NoError> in
+                    guard let image else {
+                        return .single(nil)
+                    }
+                    return recognizeQRCode(in: image)
+                }
+                |> deliverOnMainQueue).start(next: { result in
+                    if let result, let self {
+                        self.resolveCode(code: result, completion: { result in
+                            if !result {
+                                presentError()
+                            }
+                        })
+                    } else {
+                        presentError()
+                    }
+                })
+            })
+            if let controller = self.controller, controller.navigationController != nil {
+                controller.push(pickerController)
+            } else {
+                self.present(pickerController)
+            }
+            return
         }
         
         let _ = legacyWallpaperPicker(context: context, presentationData: presentationData, subject: .qrCode).start(next: { [weak self] generator in

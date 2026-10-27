@@ -32,6 +32,10 @@ private func modelPath() -> String {
     return NSTemporaryDirectory() + "u2netp.mlmodelc"
 }
 
+public func removeDownloadedCutoutModel() {
+    try? FileManager.default.removeItem(atPath: modelPath())
+}
+
 public func cutoutAvailability(context: AccountContext) -> Signal<CutoutAvailability, NoError> {
     if #available(iOS 17.0, *), !forceCoreMLVariant {
         return .single(.available)

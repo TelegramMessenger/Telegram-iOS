@@ -22,7 +22,7 @@ final class ConformanceSetTests: XCTestCase {
         let tests = try ConformanceManifest.loadAutomaticSet() + ConformanceManifest.loadVisualSet()
         let runs = ConformanceRunner(host: root.view).runAll(tests)
         let pairs = zip(tests.flatMap { test in test.themes.map { _ in test } }, runs).map { (test: $0.0, run: $0.1) }
-        XCTAssertEqual(runs.count, 85)
+        XCTAssertEqual(runs.count, 103)
 
         let outputs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["TEST_UNDECLARED_OUTPUTS_DIR"] ?? NSTemporaryDirectory()).appendingPathComponent("conformance", isDirectory: true)
         try? FileManager.default.removeItem(at: outputs)

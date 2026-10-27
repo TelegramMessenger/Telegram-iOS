@@ -13,6 +13,8 @@ struct WidgetSnapshot {
         case frame
         case visibility
         case event
+        /// The bot's state changed (sdk-v1 §2.13), or a request's outcome came (§2.14): the widget's events run.
+        case state
         /// Draws the tiles the tasks before it changed (MessageWidgetInstance queues one, never waited for, after a
         /// snapshot that needs it): drawing is off the critical path, which is the size.
         case draw

@@ -70,8 +70,11 @@ enum StateSyncApi {
 
     /// `message#7600b9d3` in a private chat with `peerUserId`. Incoming unless `outgoing`
     /// (`out` flags.1). `from_id` flags.8 when `fromUserId` is set; `reply_to` flags.3.
-    static func privateMessage(id: Int32, peerUserId: Int64, fromUserId: Int64? = nil, date: Int32, text: String = "text", outgoing: Bool = false, replyToMessageId: Int32? = nil) -> Api.Message {
+    static func privateMessage(id: Int32, peerUserId: Int64, fromUserId: Int64? = nil, date: Int32, text: String = "text", outgoing: Bool = false, replyToMessageId: Int32? = nil, media: Api.MessageMedia? = nil) -> Api.Message {
         var flags: Int32 = 0
+        if media != nil {
+            flags |= 1 << 9
+        }
         if outgoing {
             flags |= 1 << 1
         }
@@ -81,7 +84,36 @@ enum StateSyncApi {
         if replyToMessageId != nil {
             flags |= 1 << 3
         }
-        return .message(.init(flags: flags, flags2: 0, id: id, fromId: fromUserId.flatMap { self.peerUser($0) }, fromBoostsApplied: nil, fromRank: nil, peerId: self.peerUser(peerUserId), savedPeerId: nil, fwdFrom: nil, viaBotId: nil, viaBusinessBotId: nil, guestchatViaFrom: nil, replyTo: replyToMessageId.flatMap { self.replyHeader(toMessageId: $0) }, date: date, message: text, media: nil, replyMarkup: nil, entities: nil, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, reactions: nil, restrictionReason: nil, ttlPeriod: nil, quickReplyShortcutId: nil, effect: nil, factcheck: nil, reportDeliveryUntilDate: nil, paidMessageStars: nil, suggestedPost: nil, scheduleRepeatPeriod: nil, summaryFromLanguage: nil, richMessage: nil))
+        return .message(.init(flags: flags, flags2: 0, id: id, fromId: fromUserId.flatMap { self.peerUser($0) }, fromBoostsApplied: nil, fromRank: nil, peerId: self.peerUser(peerUserId), savedPeerId: nil, fwdFrom: nil, viaBotId: nil, viaBusinessBotId: nil, guestchatViaFrom: nil, replyTo: replyToMessageId.flatMap { self.replyHeader(toMessageId: $0) }, date: date, message: text, media: media, replyMarkup: nil, entities: nil, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, reactions: nil, restrictionReason: nil, ttlPeriod: nil, quickReplyShortcutId: nil, effect: nil, factcheck: nil, reportDeliveryUntilDate: nil, paidMessageStars: nil, suggestedPost: nil, scheduleRepeatPeriod: nil, summaryFromLanguage: nil, richMessage: nil))
+    }
+
+    /// widget-sandbox v0.2: a message widget with the bot's state (`messageMediaWidget`: the shared state flags.3, the
+    /// chat state flags.4, the widget id flags.5). A nil state is absent; "" is present and empty.
+    static func widgetMedia(chatData: String?, publicData: String?, publicDataHash: Int64? = nil, widgetId: Int64? = nil) -> Api.MessageMedia {
+        var flags: Int32 = 0
+        if publicData != nil {
+            flags |= 1 << 3
+        }
+        if chatData != nil {
+            flags |= 1 << 4
+        }
+        if widgetId != nil {
+            flags |= 1 << 5
+        }
+        return .messageMediaWidget(.init(flags: flags, width: 0, height: 0, payload: Buffer(data: Data("<p>w</p>".utf8)), publicData: publicData, publicDataHash: publicData == nil ? nil : (publicDataHash ?? 0), chatData: chatData, widgetId: widgetId))
+    }
+
+    /// widget-sandbox v0.2: the bot's edit of a message widget's state in a private chat (`updateMessageWidgetData`,
+    /// the account's pts sequence). A nil field is absent (unchanged); "" clears it.
+    static func updateMessageWidgetData(userId: Int64, msgId: Int32, chatData: String?, publicData: String?, publicDataHash: Int64? = nil, pts: Int32) -> Api.Update {
+        var flags: Int32 = 0
+        if publicData != nil {
+            flags |= 1 << 0
+        }
+        if chatData != nil {
+            flags |= 1 << 1
+        }
+        return .updateMessageWidgetData(.init(flags: flags, peer: self.peerUser(userId), msgId: msgId, publicData: publicData, publicDataHash: publicData == nil ? nil : (publicDataHash ?? 0), chatData: chatData, pts: pts, ptsCount: 1))
     }
 
     /// A broadcast channel post: `post` flags.14, no `from_id`, `reply_to` flags.3.

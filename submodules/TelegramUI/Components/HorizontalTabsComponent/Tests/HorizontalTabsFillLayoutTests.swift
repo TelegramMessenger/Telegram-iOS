@@ -184,6 +184,24 @@ final class HorizontalTabsFillLayoutTests: XCTestCase {
         withExtendedLifetime(componentView) {}
     }
 
+    func testWithoutASelectedTabThePillStaysWhereItWas() {
+        // The chat list search's suggested peers replace its filters, so no tab is selected. The pill
+        // hides where it was: it used to shrink to an empty lens at the leading edge, which still drew
+        // a sliver there.
+        let (componentView, view) = self.makeView(titles: Self.shortTitles, selectedIndex: 1)
+        let before = self.measure(view)
+        XCTAssertGreaterThan(before.pillFrame.width, 0.0)
+
+        let _ = componentView.update(
+            transition: .immediate,
+            component: AnyComponent(self.makeComponent(titles: Self.shortTitles, selectedTab: nil)),
+            environment: {},
+            containerSize: CGSize(width: Self.barWidth, height: Self.barHeight)
+        )
+        let after = self.measure(view)
+        XCTAssertEqual(after.pillFrame, before.pillFrame)
+    }
+
     // MARK: - Slot widths
 
     func testShortTabsGetEqualSlots() {
@@ -305,7 +323,7 @@ final class HorizontalTabsFillLayoutTests: XCTestCase {
         }
     }
 
-    private func makeView(titles: [String], selectedIndex: Int = 0, isEditing: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> (ComponentView<Empty>, HorizontalTabsComponent.View) {
+    private func makeComponent(titles: [String], selectedTab: AnyHashable?, isEditing: Bool = false) -> HorizontalTabsComponent {
         let tabs = titles.enumerated().map { index, title in
             HorizontalTabsComponent.Tab(
                 id: AnyHashable(index),
@@ -314,17 +332,20 @@ final class HorizontalTabsFillLayoutTests: XCTestCase {
                 action: {}
             )
         }
-        let component = HorizontalTabsComponent(
+        return HorizontalTabsComponent(
             context: nil,
             theme: defaultDarkPresentationTheme,
             tabs: tabs,
-            selectedTab: AnyHashable(selectedIndex),
+            selectedTab: selectedTab,
             isEditing: isEditing
         )
+    }
+
+    private func makeView(titles: [String], selectedIndex: Int = 0, isEditing: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> (ComponentView<Empty>, HorizontalTabsComponent.View) {
         let componentView = ComponentView<Empty>()
         let _ = componentView.update(
             transition: .immediate,
-            component: AnyComponent(component),
+            component: AnyComponent(self.makeComponent(titles: titles, selectedTab: AnyHashable(selectedIndex), isEditing: isEditing)),
             environment: {},
             containerSize: CGSize(width: Self.barWidth, height: Self.barHeight)
         )

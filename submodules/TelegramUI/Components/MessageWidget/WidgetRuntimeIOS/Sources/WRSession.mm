@@ -207,6 +207,21 @@ public:
 
 @end
 
+@implementation WRWidgetViewer
+
+- (instancetype)initWithId:(int64_t)userId firstName:(NSString*)firstName lastName:(NSString*)lastName username:(NSString*)username isPremium:(BOOL)isPremium {
+    if (self = [super init]) {
+        _userId = userId;
+        _firstName = [firstName copy];
+        _lastName = [lastName copy];
+        _username = [username copy];
+        _isPremium = isPremium;
+    }
+    return self;
+}
+
+@end
+
 @implementation WRSession {
     std::recursive_mutex _lock;
     std::unique_ptr<WRProductionHost> _host;
@@ -563,6 +578,88 @@ static WRStepResult stepOf(wr::StepResult result) {
     WR_GUARD(, {
         if (_runtime) {
             wr::HostState::of(_runtime->context()).setLocale(locale.UTF8String ?: "");
+        }
+    });
+}
+
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(NSString*)chatType viewer:(WRWidgetViewer*)viewer preview:(BOOL)preview {
+    WR_GUARD(, {
+        if (_runtime) {
+            twidget::WidgetContext context;
+            context.isCopy = isCopy;
+            context.canQuery = canQuery;
+            context.backgroundQuery = backgroundQuery;
+            context.chatType = chatType.UTF8String ?: "";
+            context.preview = preview;
+            if (viewer) {
+                twidget::WidgetViewer checked;
+                checked.id = viewer.userId;
+                if (viewer.firstName) {
+                    checked.firstName = std::string(viewer.firstName.UTF8String ?: "");
+                }
+                if (viewer.lastName) {
+                    checked.lastName = std::string(viewer.lastName.UTF8String ?: "");
+                }
+                if (viewer.username) {
+                    checked.username = std::string(viewer.username.UTF8String ?: "");
+                }
+                checked.isPremium = viewer.isPremium;
+                context.viewer = checked;
+            }
+            JSContext* ctx = _runtime->context();
+            wr::HostState::of(ctx).setContext(ctx, context);
+        }
+    });
+}
+
+/// The server's bytes as the policy reads them (it decides what is text); none for nil.
+static std::optional<std::string> bytesOf(NSData* data) {
+    if (!data) {
+        return std::nullopt;
+    }
+    return std::string(static_cast<const char*>(data.bytes), data.length);
+}
+
+- (void)setChatData:(NSData*)chatData publicData:(NSData*)publicData {
+    WR_GUARD(, {
+        if (_runtime) {
+            twidget::WidgetData data;
+            data.chatData = bytesOf(chatData);
+            data.publicData = bytesOf(publicData);
+            JSContext* ctx = _runtime->context();
+            if (_booted) {
+                wr::HostState::of(ctx).setData(ctx, data);
+                // Queuing the task can latch a memory stop, which drops the runtime as a step's does.
+                [self noteTree];
+            } else {
+                wr::HostState::of(ctx).setInitialData(ctx, data);
+            }
+        }
+    });
+}
+
+- (void)completeRequest:(int64_t)requestId result:(NSData*)result failure:(WRRequestFailure)failure {
+    WR_GUARD(, {
+        if (_runtime) {
+            twidget::WidgetRequestOutcome outcome;
+            switch (failure) {
+            case WRRequestFailureNone:
+                outcome.failure = twidget::WidgetRequestFailure::None;
+                outcome.answer.result = bytesOf(result);
+                break;
+            case WRRequestFailureTimeout:
+                outcome.failure = twidget::WidgetRequestFailure::Timeout;
+                break;
+            case WRRequestFailureRateLimited:
+                outcome.failure = twidget::WidgetRequestFailure::RateLimited;
+                break;
+            case WRRequestFailureFailed:
+                outcome.failure = twidget::WidgetRequestFailure::Failed;
+                break;
+            }
+            JSContext* ctx = _runtime->context();
+            wr::HostState::of(ctx).completeRequest(ctx, requestId, outcome);
+            [self noteTree];
         }
     });
 }
