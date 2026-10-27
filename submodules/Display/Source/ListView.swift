@@ -90,6 +90,19 @@ public final class ListViewBackingView: UIView {
     override public func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
         return self.target?.accessibilityScroll(direction) ?? false
     }
+
+    // Not an `_ASDisplayView`, so it forwards to ASDK's collector itself: the rows inside the list's bounds, cached for
+    // the run loop turn. An explicitly set array and the `accessibilityUsesViewElements` opt-out keep UIKit's behaviour.
+    override public var accessibilityElements: [Any]? {
+        get {
+            if let elements = super.accessibilityElements {
+                return elements
+            }
+            return ASDisplayNodeCachedAccessibilityElements(self.target)
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
 }
 
 private final class ListViewTimerProxy: NSObject {

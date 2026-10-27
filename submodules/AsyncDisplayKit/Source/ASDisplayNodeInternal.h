@@ -81,6 +81,13 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
 @package
   AS::RecursiveMutex __instanceLock__;
 
+  // Accessibility collection (`_ASDisplayViewAccessiblity.mm`), main thread only: the opt-out, and the collector's
+  // answer for this node's view, valid while `_accessibilityElementsCacheGeneration` equals the current main run
+  // loop generation (a marker array caches "UIKit's own behaviour").
+  BOOL _accessibilityUsesViewElements;
+  NSArray *_accessibilityElementsCache;
+  NSUInteger _accessibilityElementsCacheGeneration;
+
   _ASPendingState *_pendingViewState;
   ASInterfaceState _pendingInterfaceState;
   ASInterfaceState _preExitingInterfaceState;
