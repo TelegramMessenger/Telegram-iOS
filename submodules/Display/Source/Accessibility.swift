@@ -20,6 +20,17 @@ public func addAccessibilityChildren(of node: ASDisplayNode, container: Any, to 
     }
 }
 
+/// Whether layout should behave as under VoiceOver. Debug builds can force it with the
+/// `--force-voiceover-layout` launch argument (the simulator never runs VoiceOver); compiled out of release builds.
+public var isVoiceOverRunningForLayout: Bool {
+    #if DEBUG
+    if CommandLine.arguments.contains("--force-voiceover-layout") {
+        return true
+    }
+    #endif
+    return UIAccessibility.isVoiceOverRunning
+}
+
 public func smartInvertColorsEnabled() -> Bool {
     if #available(iOSApplicationExtension 11.0, iOS 11.0, *), UIAccessibility.isInvertColorsEnabled {
         return true

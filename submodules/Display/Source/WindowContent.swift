@@ -501,7 +501,7 @@ public class Window1 {
         let reservedArea = windowReservedArea(hostView: self.hostView, deviceMetrics: self.deviceMetrics, windowSize: boundsSize, orientation: orientation)
         let onScreenNavigationHeight = windowOnScreenNavigationHeight(hostView: self.hostView, deviceMetrics: self.deviceMetrics, isLandscape: isLandscape)
         
-        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForWindowSize(size: boundsSize, orientation: orientation), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, reservedArea: reservedArea, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: UIAccessibility.isVoiceOverRunning)
+        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForWindowSize(size: boundsSize, orientation: orientation), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, reservedArea: reservedArea, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: isVoiceOverRunningForLayout)
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.containerView)
@@ -839,7 +839,7 @@ public class Window1 {
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
-                    strongSelf.updateLayout { $0.update(inVoiceOver: UIAccessibility.isVoiceOverRunning) }
+                    strongSelf.updateLayout { $0.update(inVoiceOver: isVoiceOverRunningForLayout) }
                 }
             })
         }
