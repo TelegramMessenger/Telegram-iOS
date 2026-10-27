@@ -62,8 +62,8 @@ final class MentionDateMarkersTests: XCTestCase {
     }
 
     func testCodecBoundaryValues() {
-        // Zero peer id and a negative timestamp both parse cleanly (no sign/zero special-casing).
-        XCTAssertEqual(parseMentionPeerId(fromURL: "tg://user?id=0"), EnginePeer.Id(0))
+        // A negative timestamp parses cleanly (no sign special-casing); a user id of zero is no user.
+        XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=0"))
         XCTAssertEqual(parseDate(fromURL: "tg://timestamp?t=-1"), -1)
     }
 }
