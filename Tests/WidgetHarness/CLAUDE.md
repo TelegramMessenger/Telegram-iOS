@@ -79,6 +79,7 @@ One leading dash (`--widget-set` is ignored silently).
 | `-harness-menu` | `hold` (the stand-in context menu stays open until `harness.endMenu`; `harness.openMenu` opens it on the newest widget bubble without a long press) | ends after 2 s |
 | `-harness-copy-protected` | `on` (the chat forbids copying: `isCopyProtectionEnabled`) | off |
 | `-harness-can-query` | `on` (every widget message has the server's `can_query`: its bubble shows the network marker) | off |
+| `-harness-background-query` | `on` (every widget message also has `background_query`: requests without a tap, as in the private chat with the bot) | off |
 | `-harness-chat` | `bot` (the chat is with a bot, "Harness Bot": with `-harness-side incoming`, a bot's media, which otherwise gets the share button) | a user |
 | `-harness-text-size` | Settings ▸ Appearance ▸ Text Size as `PresentationFontSize`'s raw value (0 extra small … 4 extra large, 5 extra large ×2, 6 medium) | the context's |
 
@@ -210,8 +211,10 @@ There is no caption, and an older post sits above, so the probes are below the s
 - **A reload does not free the previous chat.** After `reload(options:)` the old list host is freed, but its whole node
   tree, bubbles and running widgets, stays alive under a root that left the window (measured 2026-10-26). A test
   never waits for a bubble's deinit after a reload; what a bubble's teardown does is unit-tested in its own module.
-  Whether a closed chat leaks the same way in the app is not known: CoreList's scroll engine targets its
-  `CADisplayLink`s at itself.
+  **The app does not leak this way** (measured 2026-10-27 on the "iPhone 18 Pro" sim with `heap <pid>`): a chat with
+  four live widgets holds 4 `ChatMessageWidgetBubbleContentNode`, `MessageWidgetInstance`, `MessageWidgetCore` and
+  `MessageWidgetView` while open, and none 5 s after it closes, in three open/close cycles. The reload's leftover is the
+  harness's own. Count only once the pop has settled: right after the tap the old chat is still alive.
 
 ## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
 

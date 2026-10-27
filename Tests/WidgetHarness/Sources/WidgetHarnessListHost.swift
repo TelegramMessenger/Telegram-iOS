@@ -84,6 +84,8 @@ public final class WidgetHarnessListHost {
     public var copyProtected = false
     /// `-harness-can-query on`: every widget message has the server's can_query (the network marker). Set before `load`.
     public var canQuery = false
+    /// `-harness-background-query on`: every widget message also has the server's background_query. Set before `load`.
+    public var backgroundQuery = false
     /// `-harness-chat bot`: the chat is with a bot (`botChatPeer`). Set before `load`.
     public var botChat = false
     /// The other side of the chat: `chatPeer`, or `botChatPeer` under `botChat`.
@@ -194,7 +196,7 @@ public final class WidgetHarnessListHost {
             guard let compressed = TelegramMediaWidget(html: post.html, width: post.width, height: post.height) else {
                 continue
             }
-            let widget = TelegramMediaWidget(width: compressed.width, height: compressed.height, payload: compressed.payload, isCopy: false, canQuery: self.canQuery, backgroundQuery: false, chatData: nil, publicData: nil, widgetId: nil)
+            let widget = TelegramMediaWidget(width: compressed.width, height: compressed.height, payload: compressed.payload, isCopy: false, canQuery: self.canQuery, backgroundQuery: self.backgroundQuery, chatData: nil, publicData: nil, widgetId: nil)
             append(text: post.caption, media: widget, path: post.path)
             for photo in post.photos {
                 let resource = LocalFileMediaResource(fileId: Int64.random(in: 1 ... Int64.max), size: Int64(photo.png.count))

@@ -31,6 +31,9 @@ public struct WidgetHarnessLaunchOptions: Equatable {
     public var copyProtected: Bool = false
     /// `-harness-can-query on`: every widget message has the server's can_query, so its bubble shows the network marker.
     public var canQuery: Bool = false
+    /// `-harness-background-query on`: every widget message also has the server's background_query (requests without
+    /// a tap, as in the private chat with the bot).
+    public var backgroundQuery: Bool = false
     /// `-harness-chat bot`: the chat is with a bot.
     public var botChat: Bool = false
     /// `-harness-text-size <n>`: Settings ▸ Appearance ▸ Text Size, `PresentationFontSize`'s raw value (0 extra small …
@@ -43,7 +46,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
         return lhs.set == rhs.set && lhs.postFilter == rhs.postFilter && lhs.posts == rhs.posts && lhs.killSwitch == rhs.killSwitch
             && lhs.anchors?.width == rhs.anchors?.width && lhs.anchors?.height == rhs.anchors?.height && lhs.useDarkTheme == rhs.useDarkTheme
             && lhs.incoming == rhs.incoming && lhs.captions == rhs.captions && lhs.holdsMenu == rhs.holdsMenu
-            && lhs.copyProtected == rhs.copyProtected && lhs.canQuery == rhs.canQuery && lhs.botChat == rhs.botChat && lhs.textSize == rhs.textSize
+            && lhs.copyProtected == rhs.copyProtected && lhs.canQuery == rhs.canQuery && lhs.backgroundQuery == rhs.backgroundQuery && lhs.botChat == rhs.botChat && lhs.textSize == rhs.textSize
     }
 
     /// `-widget-set conformance|corpus|fixture`, `-widget-post <part of a path>`, `-widget-posts <path>,<path>,…`,
@@ -75,6 +78,7 @@ public struct WidgetHarnessLaunchOptions: Equatable {
         options.holdsMenu = value("-harness-menu") == "hold"
         options.copyProtected = value("-harness-copy-protected") == "on"
         options.canQuery = value("-harness-can-query") == "on"
+        options.backgroundQuery = value("-harness-background-query") == "on"
         options.botChat = value("-harness-chat") == "bot"
         options.textSize = value("-harness-text-size").flatMap { Int32($0) }
         return options

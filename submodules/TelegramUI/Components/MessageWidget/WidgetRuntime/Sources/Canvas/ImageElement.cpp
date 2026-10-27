@@ -15,6 +15,7 @@
 #include "Sources/Render/RenderTree.h"
 #include "Sources/Render/WidgetContainer.h"
 #include "Sources/Runtime/Runtime.h"
+#include "Sources/Support/Allocator.h"
 #include "Sources/Support/Errors.h"
 #include "Sources/Support/Work.h"
 
@@ -109,11 +110,12 @@ uint32_t HTMLImageElement::naturalHeight(JSContext* ctx) const {
 }
 
 // HTML (widget-sandbox v0.2.3): the rendered size when the image is being rendered (a layout query), else the
-// attribute, else the natural size.
+// attribute, else the natural size. A pending image has no natural size yet, so a browser lays a dimension the CSS
+// leaves auto out at 0 until it decodes; the render tree already knows the decoded size (v0.2.3 review, M3).
 uint32_t HTMLImageElement::width(JSContext* ctx) const {
     if (connected(ctx)) {
-        if (std::optional<std::pair<double, double>> rendered = renderedContentSize(ctx, *this)) {
-            return uint32_t(std::lround(rendered->first));
+        if (std::optional<RenderedContentSize> rendered = renderedContentSize(ctx, *this)) {
+            return m_pending && rendered->autoWidth ? 0 : uint32_t(std::lround(rendered->width));
         }
     }
     std::optional<uint32_t> attribute = dimensionAttribute(ctx, *this, Name::width);
@@ -122,8 +124,8 @@ uint32_t HTMLImageElement::width(JSContext* ctx) const {
 
 uint32_t HTMLImageElement::height(JSContext* ctx) const {
     if (connected(ctx)) {
-        if (std::optional<std::pair<double, double>> rendered = renderedContentSize(ctx, *this)) {
-            return uint32_t(std::lround(rendered->second));
+        if (std::optional<RenderedContentSize> rendered = renderedContentSize(ctx, *this)) {
+            return m_pending && rendered->autoHeight ? 0 : uint32_t(std::lround(rendered->height));
         }
     }
     std::optional<uint32_t> attribute = dimensionAttribute(ctx, *this, Name::height);
@@ -229,15 +231,20 @@ void HTMLImageElement::adoptedInto(JSContext* ctx, Document& document) {
 }
 
 void fireParsedImageEvents(JSContext* ctx) {
-    // Collected first: a handler may change the tree.
-    std::vector<Ref<HTMLImageElement>> pending;
+    // Collected first, each with its source generation: a handler may change the tree, or give an image collected
+    // here a new src, whose own task then fires it (v0.2.3 fix-wave review, minor 5).
+    struct Collected {
+        Ref<HTMLImageElement> image;
+        uint32_t generation;
+    };
+    Vector<Collected> pending{JSAllocator<Collected>(JS_GetRuntime(ctx))};
     Document& document = DOMState::of(ctx).document();
     Node* node = &document;
     while (node) {
         charge(ctx, work::kNodeVisit);
         if (auto* image = dynamic_cast<HTMLImageElement*>(node); image && !image->eventQueued()) {
             image->setEventQueued();
-            pending.push_back(Ref<HTMLImageElement>::retain(ctx, image));
+            pending.push_back(Collected{Ref<HTMLImageElement>::retain(ctx, image), image->sourceGeneration()});
         }
         if (Node* child = node->firstChildNode()) {
             node = child;
@@ -256,12 +263,15 @@ void fireParsedImageEvents(JSContext* ctx) {
             charge(ctx, work::kNodeVisit);
             if (!image->eventQueued() && &image->nodeDocument() == &document) {
                 image->setEventQueued();
-                pending.push_back(std::move(image));
+                const uint32_t generation = image->sourceGeneration();
+                pending.push_back(Collected{std::move(image), generation});
             }
         }
     }
-    for (Ref<HTMLImageElement>& image : pending) {
-        fireImageEvent(ctx, *image);
+    for (Collected& entry : pending) {
+        if (entry.image->sourceGeneration() == entry.generation) {
+            fireImageEvent(ctx, *entry.image);
+        }
     }
 }
 

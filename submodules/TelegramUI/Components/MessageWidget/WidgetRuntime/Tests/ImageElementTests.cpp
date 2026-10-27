@@ -340,3 +340,112 @@ WR_TEST(testATemplateImageLoadsInTheDocument) {
     env.env().drain();
     CHECK_EQ(env.env().eval("[log.join(), m.complete, m.naturalWidth].join('|')"), std::string("load|true|40"));
 }
+
+/// HTML's "check the usability of the image argument" (v0.2.3 review, M2): an image that is not fully decodable (its
+/// load has not fired, or it has no src) makes createPattern return null; a canvas without a context still gives a
+/// pattern.
+WR_TEST(testCreatePatternOfAPendingImageIsNull) {
+    RenderEnv env(page("<canvas id=c width=60 height=40></canvas><canvas id=e width=8 height=8></canvas>"));
+    env.env().eval(std::string("var x = c.getContext('2d'); var p = new Image(); p.src = '") + kPNG + "'; 1");
+    CHECK_EQ(env.env().eval("[x.createPattern(p, 'repeat'), x.createPattern(new Image(), 'repeat')].map(String).join()"),
+             std::string("null,null"));
+    CHECK_EQ(env.env().eval("x.createPattern(e, 'repeat') instanceof CanvasPattern"), std::string("true"));
+    env.env().drain();
+    CHECK_EQ(env.env().eval("x.createPattern(p, 'repeat') instanceof CanvasPattern"), std::string("true"));
+}
+
+/// v0.2.3 review, M3: a pending image has no natural size, so while it is rendered a dimension the CSS leaves auto is 0
+/// (a browser lays it out at 0 until it decodes); a dimension the CSS sets is the rendered one. After its load, both
+/// follow the image.
+WR_TEST(testAPendingRenderedImageHasNoNaturalSizeInLayout) {
+    RenderEnv env(page(""));
+    env.env().eval(std::string("var a = new Image(); a.src = '") + kPNG + "'; var b = new Image(); b.style.width = '12px';"
+                   " b.src = '" + kPNG + "'; document.body.append(a, b); 1");
+    CHECK_EQ(env.env().eval("[a.width, a.height, b.width, b.height].join()"), std::string("0,0,12,0"));
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[a.width, a.height, b.width, b.height].join()"), std::string("40,20,12,6"));
+}
+
+/// v0.2.3 review, M5: an image under a display: none ancestor is not being rendered, so its width is the attribute's.
+WR_TEST(testAnImageUnderADisplayNoneAncestorUsesItsAttribute) {
+    RenderEnv env(page(std::string("<div id=d style=\"display:none\"><img id=i width=30 style=\"width:12px\" src=\"") + kPNG +
+                       "\"></div>"));
+    CHECK_EQ(env.env().eval("i.width"), std::string("30"));
+    env.env().eval("d.style.display = 'block'; 1");
+    CHECK_EQ(env.env().eval("i.width"), std::string("12"));
+}
+
+/// v0.2.3 review, M5: the rendered width is rounded to the nearest pixel (pins `lround`).
+WR_TEST(testAnImagesRenderedWidthRounds) {
+    RenderEnv env(page(std::string("<img id=r style=\"width:12.6px\" src=\"") + kPNG + "\">"));
+    CHECK_EQ(env.env().eval("r.width"), std::string("13"));
+}
+
+/// v0.2.3 fix-wave review, minor 5: a parsed image's load handler that gives another parsed image a new src during the
+/// window's load gets one load for that image, for its new src (a browser's new request replaces the pending one).
+WR_TEST(testALoadHandlerChangingAnotherParsedImageFiresOnce) {
+    RenderEnv env("<!doctype html><html><head></head><body><img id=a src=\"" + std::string(kPNG) + "\"><img id=b src=\"" +
+                  std::string(kPNG) +
+                  "\"><script>window.log = []; const a = document.getElementById('a'), b = document.getElementById('b');"
+                  " a.onload = () => { log.push('a'); b.src = '" + std::string(kSVG10x8) + "' };"
+                  " b.onload = () => log.push('b:' + b.naturalWidth);</script></body></html>");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("a,b:48"));
+}
+
+/// v0.2.3 fix-wave review, test gaps: when a parsed image's load fires, against the window's, once.
+WR_TEST(testADetachedParsedImageLoadsBeforeTheWindow) {
+    RenderEnv env("<!doctype html><html><head></head><body><img id=a src=\"" + std::string(kPNG) +
+                  "\"><script>window.log = []; const a = document.getElementById('a'); a.onload = () => log.push('a');"
+                  " window.onload = () => log.push('window'); a.remove();</script></body></html>");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("a,window"));
+}
+
+WR_TEST(testAParsedImageRemovedAndReinsertedLoadsOnce) {
+    RenderEnv env("<!doctype html><html><head></head><body><img id=a src=\"" + std::string(kPNG) +
+                  "\"><script>window.log = []; const a = document.getElementById('a'); a.onload = () => log.push('a');"
+                  " a.remove(); document.body.append(a);</script></body></html>");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("log.join()"), std::string("a"));
+}
+
+WR_TEST(testAParsedImageIntoATemplateAndBackLoadsOnce) {
+    RenderEnv env("<!doctype html><html><head></head><body><template id=t></template><img id=a src=\"" + std::string(kPNG) +
+                  "\"><script>window.log = []; const a = document.getElementById('a'); a.onload = () => log.push('a');"
+                  " document.getElementById('t').content.append(a); document.body.append(a);</script></body></html>");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[log.join(), document.getElementById('a').complete].join('|')"), std::string("a|true"));
+}
+
+/// HTML: adoption is a relevant mutation, so an image that already loaded and is moved out of the document and back in
+/// loads again.
+WR_TEST(testReadoptingALoadedImageLoadsAgain) {
+    RenderEnv env(page(std::string("<template id=t></template><img id=i src=\"") + kPNG + "\">"));
+    env.env().eval("var log = []; i.onload = () => log.push('load'); t.content.append(i); document.body.append(i); 1");
+    env.env().drain();
+    CHECK_EQ(env.env().eval("[log.join(), i.complete, i.naturalWidth].join('|')"), std::string("load|true|40"));
+}
+
+/// v0.2.3 review, M4: the being-rendered walk up an image's ancestors costs a node visit a step. Read twice (the second
+/// read finds the layout clean), an image 200 elements deep walks its ancestors twice, for its border box and for
+/// being rendered, so it costs at least 2 × 200 visits more than one at the top. Measured: 932 units more charged, 526
+/// with the being-rendered walk uncharged.
+WR_TEST(testTheRenderedWalkIsCharged) {
+    RenderEnv env(page("<div id=root></div>"));
+    env.env().eval(std::string("var d = root; for (let i = 0; i < 200; i++) d = d.appendChild(document.createElement('div'));"
+                               " var deep = d.appendChild(new Image()); deep.src = '") + kPNG + "'; var top = root.appendChild(new Image());"
+                   " top.src = '" + kPNG + "'; 1");
+    env.env().drain();
+    JSRuntime* rt = env.env().runtime().jsRuntime();
+    auto readCost = [&](const char* name) {
+        env.env().eval(std::string(name) + ".width; 1");
+        const uint64_t before = JS_GetWorkUnits(rt);
+        env.env().eval(std::string(name) + ".width; 1");
+        return JS_GetWorkUnits(rt) - before;
+    };
+    const uint64_t shallow = readCost("top");
+    const uint64_t deep = readCost("deep");
+    std::printf("  rendered walk read: %llu units at the top, %llu 200 deep\n", (unsigned long long)shallow, (unsigned long long)deep);
+    CHECK(deep >= shallow + 2 * 200 * wr::work::kNodeVisit);
+}

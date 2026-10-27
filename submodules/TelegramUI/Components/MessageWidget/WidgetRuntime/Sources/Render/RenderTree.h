@@ -336,11 +336,14 @@ public:
         double borderTop = 0, borderRight = 0, borderBottom = 0, borderLeft = 0;
         double paddingTop = 0, paddingRight = 0, paddingBottom = 0, paddingLeft = 0;
         bool positioned = false, fixed = false, inlineLevel = false;
+        /// The CSS leaves the width / height auto (or another keyword): the content sizes it.
+        bool autoWidth = false, autoHeight = false;
     };
     std::optional<BoxMetrics> boxMetrics(const Node& node) const;
     /// HTML's "being rendered": `node` is laid out and neither it nor an ancestor is display: none (litehtml keeps an
     /// empty render item for a display: none element). What img's width and height ask (widget-sandbox v0.2.3).
-    bool beingRendered(const Node& node) const;
+    /// `visited` gains the elements walked, for the caller's charge.
+    bool beingRendered(const Node& node, uint64_t& visited) const;
     /// The padding box of an element that clips its contents (overflow other than visible), which Intersection Observer
     /// clips a target by; nullopt for any other node.
     std::optional<RenderBox> overflowClip(const Node& node) const;
