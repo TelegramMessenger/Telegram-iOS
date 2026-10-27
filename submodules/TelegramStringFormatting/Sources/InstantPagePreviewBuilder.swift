@@ -146,12 +146,13 @@ private final class InstantPagePreviewBuilder {
             }
             return self.attribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Date), date, text)
         case let .textCustomEmoji(fileId, alt):
-            // A received rich message's emoji files are rarely among its media. Like an ordinary message's
-            // CustomEmoji entity, the run is marked even then: entity text nodes resolve the file by id.
             let file = self.environment.file(EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId))
-            let text = self.text(alt.isEmpty ? "\u{fffc}" : alt)
+            let text = self.text(alt.isEmpty ? (file == nil ? "�" : "\u{fffc}") : alt)
             let emoji = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: file)
-            return self.attribute(ChatTextInputAttributes.customEmoji, emoji, self.attribute(instantPagePreviewCustomEmoji, emoji, text))
+            let result = self.attribute(instantPagePreviewCustomEmoji, emoji, text)
+            // Entity text nodes replace the backing text by an attachment. Without
+            // a known file that would hide alt text even when resolution fails.
+            return file == nil ? result : self.attribute(ChatTextInputAttributes.customEmoji, emoji, result)
         case .formula: return self.icon(.formula, value: 0)
         case .image: return self.label(.photo)
         case let .textButton(button): return self.rich(button.text, depth: depth + 1)

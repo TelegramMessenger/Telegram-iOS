@@ -205,24 +205,13 @@ final class InstantPagePreviewTests: XCTestCase {
         XCTAssertEqual((result.attribute(.font, at: 1, effectiveRange: nil) as? UIFont)?.pointSize, 20)
     }
 
-    func testUnresolvedEmojiIsRenderedAsCustomEmoji() {
-        // A received rich message's emoji files are usually not among its media. Like an ordinary
-        // message's CustomEmoji entity, the run still gets the native attribute: the entity
-        // renderer resolves the file from its id. The alt text stays the backing string.
+    func testUnresolvedEmojiRemainsReadableInEntityRenderer() {
         let text = preview([.paragraph(.textCustomEmoji(fileId: 42, alt: "🙂"))])
         let styled = styleInstantPagePreview(text, font: .systemFont(ofSize: 15), italicFont: .italicSystemFont(ofSize: 15), textColor: .black)
         XCTAssertEqual(styled.string, "🙂")
-        let emoji = styled.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) as? ChatTextInputTextCustomEmojiAttribute
-        XCTAssertEqual(emoji?.fileId, 42)
-        XCTAssertNil(emoji?.file)
-        XCTAssertEqual(instantPagePreviewPlainText(text), "🙂")
-    }
-
-    func testUnresolvedEmptyAltEmojiIsRenderedAsCustomEmoji() {
-        let text = preview([.paragraph(.concat([.plain("a "), .textCustomEmoji(fileId: 42, alt: "")]))])
-        let emoji = text.attribute(ChatTextInputAttributes.customEmoji, at: 2, effectiveRange: nil) as? ChatTextInputTextCustomEmojiAttribute
-        XCTAssertEqual(emoji?.fileId, 42)
-        XCTAssertEqual(instantPagePreviewPlainText(text), "a �")
+        // The entity renderer replaces customEmoji runs by an attachment even if
+        // resolution fails; absent media must therefore remain ordinary text.
+        XCTAssertNil(styled.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil))
     }
 
     func testNestedThinkingIsOnlyAFallback() {
