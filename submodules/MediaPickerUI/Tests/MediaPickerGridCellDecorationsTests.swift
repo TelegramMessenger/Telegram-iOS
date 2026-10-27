@@ -115,6 +115,29 @@ final class MediaPickerGridCellDecorationsTests: XCTestCase {
         XCTAssertEqual((0 ..< 4).map { mediaPickerGridFetchIndex(gridIndex: $0, count: 4, isReversed: false) }, [0, 1, 2, 3])
     }
 
+    func testChatAttachmentDefaultAssetsPredicate() {
+        XCTAssertTrue(mediaPickerIsChatAttachmentDefaultAssets(isAssets: true, isDefaultMode: true, forCollage: false))
+        XCTAssertFalse(mediaPickerIsChatAttachmentDefaultAssets(isAssets: true, isDefaultMode: true, forCollage: true))
+        XCTAssertFalse(mediaPickerIsChatAttachmentDefaultAssets(isAssets: true, isDefaultMode: false, forCollage: false))
+        XCTAssertFalse(mediaPickerIsChatAttachmentDefaultAssets(isAssets: false, isDefaultMode: true, forCollage: false))
+    }
+
+    func testInstallAndTeardownDecision() {
+        let recents = mediaPickerGridAssetsConfiguration(subjectCollectionId: nil, selectedCollectionId: nil)
+        let album = mediaPickerGridAssetsConfiguration(subjectCollectionId: nil, selectedCollectionId: "album")
+        XCTAssertTrue(mediaPickerGridNeedsInstall(current: nil, hasGrid: false, new: recents))
+        XCTAssertFalse(mediaPickerGridNeedsInstall(current: recents, hasGrid: true, new: recents))
+        XCTAssertTrue(mediaPickerGridNeedsInstall(current: recents, hasGrid: true, new: album))
+        XCTAssertTrue(mediaPickerGridNeedsInstall(current: recents, hasGrid: false, new: recents))
+    }
+
+    func testAlbumSwitchKeepsTheLevel() {
+        XCTAssertEqual(mediaPickerGridInitialLevelColumns(carriedColumns: nil, isLandscape: false), 3)
+        XCTAssertEqual(mediaPickerGridInitialLevelColumns(carriedColumns: nil, isLandscape: true), 5)
+        XCTAssertEqual(mediaPickerGridInitialLevelColumns(carriedColumns: 15, isLandscape: false), 15)
+        XCTAssertEqual(mediaPickerGridInitialLevelColumns(carriedColumns: 1, isLandscape: true), 1)
+    }
+
     func testRouting() {
         XCTAssertTrue(mediaPickerUsesMediaGrid(isChatAttachmentDefaultAssets: true, isEnabled: true))
         XCTAssertFalse(mediaPickerUsesMediaGrid(isChatAttachmentDefaultAssets: true, isEnabled: false))

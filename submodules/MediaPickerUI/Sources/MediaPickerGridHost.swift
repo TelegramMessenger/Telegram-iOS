@@ -32,7 +32,6 @@ protocol MediaPickerGridHost: AnyObject {
 
     var isHidden: Bool { get set }
     var isUserInteractionEnabled: Bool { get set }
-    var isScrollEnabled: Bool { get set }
 
     var scrollingInitiated: (() -> Void)? { get set }
     var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void { get set }
@@ -59,6 +58,7 @@ protocol MediaPickerGridHost: AnyObject {
     func scrollingTag() -> Int32?
     func isCameraPreviewVisible(_ cameraView: UIView) -> Bool
     func cameraFrame(for rect: CGRect) -> CGRect
+    func cameraAccessibilityFrame(for rect: CGRect) -> CGRect
     func updateItemsSelectionState(animated: Bool)
     func updateItemsHiddenMedia()
 
@@ -256,6 +256,10 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
     }
 
     func cameraFrame(for rect: CGRect) -> CGRect {
+        return rect
+    }
+
+    func cameraAccessibilityFrame(for rect: CGRect) -> CGRect {
         return rect
     }
 

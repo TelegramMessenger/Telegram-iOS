@@ -278,6 +278,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     private var dataSource: MediaPickerMediaGridDataSource?
     private var configuration: MediaPickerGridAssetsConfiguration?
     private var level: MediaGridLevel?
+    private weak var levelInitializedGrid: MediaGridView?
 
     private var layoutState: (size: CGSize, insets: UIEdgeInsets, isLandscape: Bool, hasCamera: Bool)?
     private var selectionNumbers: [String: Int] = [:]
@@ -294,7 +295,6 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     var scrollingInitiated: (() -> Void)?
     var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
     var visibleItemsUpdated: (() -> Void)?
-    var isScrollEnabled: Bool = true
     var headerHeight: CGFloat = 0.0
 
     init(interaction: MediaPickerInteraction, isSelectable: Bool, enableAnimations: Bool, getTheme: @escaping () -> PresentationTheme, selectionPanBegan: @escaping () -> Void) {
@@ -476,8 +476,10 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         self.headerNode.bounds = CGRect(origin: CGPoint(x: 0.0, y: -headerHeight), size: CGSize(width: layoutState.size.width, height: headerHeight))
         let insets = layoutState.insets
         gridView.geometryInsets = UIEdgeInsets(top: max(0.0, insets.top - headerHeight), left: insets.left, bottom: insets.bottom, right: insets.right)
-        if self.level == nil {
-            let level = MediaGridLevel.defaultLevel(isLandscape: layoutState.isLandscape)
+        if self.levelInitializedGrid !== gridView {
+            self.levelInitializedGrid = gridView
+            let columns = mediaPickerGridInitialLevelColumns(carriedColumns: self.level?.columns, isLandscape: layoutState.isLandscape)
+            let level = MediaGridLevel(rawValue: columns) ?? MediaGridLevel.defaultLevel(isLandscape: layoutState.isLandscape)
             self.level = level
             gridView.setLevel(level, animated: false)
         }
@@ -487,7 +489,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     }
 
     func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration) {
-        if let current = self.configuration, current == configuration, self.gridView != nil {
+        guard mediaPickerGridNeedsInstall(current: self.configuration, hasGrid: self.gridView != nil, new: configuration) else {
             return
         }
         self.configuration = configuration
@@ -636,6 +638,13 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         return self.gridView?.isCameraVisible ?? false
     }
 
+    func cameraAccessibilityFrame(for rect: CGRect) -> CGRect {
+        guard let gridView = self.gridView, let cameraView = gridView.cameraView, cameraView.superview != nil, !cameraView.isHidden else {
+            return CGRect()
+        }
+        return cameraView.convert(cameraView.bounds, to: self.headerNode.view)
+    }
+
     func cameraFrame(for rect: CGRect) -> CGRect {
         self.cameraContainerView.canvasSize = rect.size
         return CGRect(origin: CGPoint(), size: rect.size)
@@ -722,7 +731,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         let isCompact = self.isCompact
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        gridView.forEachVisibleCell { _, cell in
+        gridView.forEachCell { _, cell in
             (cell as? MediaPickerGridCellLayer)?.refresh(isCompact: isCompact, animated: animated)
         }
         CATransaction.commit()
@@ -865,11 +874,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
                 guard let self, let gridView, self.gridView === gridView else {
                     return
                 }
-                let count = self.dataSource?.count ?? 0
-                let valid = changed.filteredIndexSet { $0 < count }
-                if !valid.isEmpty {
-                    gridView.apply(MediaGridChanges(removed: IndexSet(), inserted: IndexSet(), changed: valid))
-                }
+                gridView.reloadImages(at: changed)
             }
         }
     }
@@ -923,7 +928,6 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             if checkFrame.contains(localPoint), let item = TGMediaAsset(phAsset: asset) {
                 let isSelected = self.selectionNumbers[asset.localIdentifier] != nil
                 let _ = self.interaction.toggleSelection(item, !isSelected, false)
-                self.updateItemsSelectionState(animated: true)
                 return
             }
         }

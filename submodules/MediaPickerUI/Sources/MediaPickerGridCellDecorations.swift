@@ -157,3 +157,18 @@ func mediaPickerGridFetchIndex(gridIndex: Int, count: Int, isReversed: Bool) -> 
 func mediaPickerUsesMediaGrid(isChatAttachmentDefaultAssets: Bool, isEnabled: Bool) -> Bool {
     return isChatAttachmentDefaultAssets && isEnabled
 }
+
+func mediaPickerIsChatAttachmentDefaultAssets(isAssets: Bool, isDefaultMode: Bool, forCollage: Bool) -> Bool {
+    return isAssets && isDefaultMode && !forCollage
+}
+
+func mediaPickerGridNeedsInstall(current: MediaPickerGridAssetsConfiguration?, hasGrid: Bool, new: MediaPickerGridAssetsConfiguration) -> Bool {
+    return !hasGrid || current != new
+}
+
+func mediaPickerGridInitialLevelColumns(carriedColumns: Int?, isLandscape: Bool) -> Int {
+    if let carriedColumns {
+        return carriedColumns
+    }
+    return isLandscape ? 5 : 3
+}

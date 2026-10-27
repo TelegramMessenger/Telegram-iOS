@@ -179,9 +179,13 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
             return
         }
         let isSameItem = self.identifier == state.identifier
+        let wasHidden = self.isHidden
         self.identifier = state.identifier
         self.isHidden = state.isHidden
         self.applyDecorations(state.decorations, animated: animated && isSameItem)
+        if isSameItem && wasHidden && !state.isHidden {
+            self.animateFadeIn(animateCheck: true)
+        }
     }
 
     private func makeImageLayer(_ image: UIImage?) -> CALayer {
@@ -213,7 +217,8 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
             spoilerLayer.removeFromSuperlayer()
         }
 
-        if decorations.showsLeftShadow {
+        let typeIconImage = decorations.typeIcon.flatMap { gridCellTypeIconImage($0) }
+        if decorations.showsLeftShadow && typeIconImage != nil {
             if self.leftShadowLayer == nil {
                 let layer = self.makeImageLayer(gridCellLeftShadowImage)
                 layer.contentsGravity = .resize
@@ -237,12 +242,11 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
             layer.removeFromSuperlayer()
         }
 
-        if let typeIcon = decorations.typeIcon {
-            let image = gridCellTypeIconImage(typeIcon)
+        if let typeIcon = decorations.typeIcon, let image = typeIconImage {
             if let layer = self.typeIconLayer {
                 if previous.typeIcon != typeIcon {
-                    layer.contents = image?.cgImage
-                    layer.contentsScale = image?.scale ?? UIScreenScale
+                    layer.contents = image.cgImage
+                    layer.contentsScale = image.scale
                 }
             } else {
                 let layer = self.makeImageLayer(image)

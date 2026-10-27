@@ -1053,7 +1053,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 self?.controller?.cancelPanGesture()
             }
             selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
-                self?.gridHost.isScrollEnabled = isEnabled
+                (self?.gridHost as? MediaPickerGridNodeHost)?.isScrollEnabled = isEnabled
             }
             selectionGesture.itemAt = { [weak self] point in
                 if let self, let item = self.gridHost.item(at: point), let selectableItem = item.selectableItem {
@@ -2510,7 +2510,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     } else if cameraView.superview == self.gridHost.cameraHostView {
                         transition.updateFrame(view: cameraView, frame: hostCameraRect)
                     }
-                    self.cameraActivateAreaNode.frame = cameraRect
+                    self.cameraActivateAreaNode.frame = self.gridHost.cameraAccessibilityFrame(for: cameraRect)
                     self.cameraWrapperView.isHidden = false
                     cameraView.isHidden = false
                 } else {
@@ -2682,10 +2682,13 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         self.forCollage = forCollage
         self.saveEditedPhotos = saveEditedPhotos
         self.chatMediaEditorItemStore = chatMediaEditorItemStore ?? (self.routesPickerGallery ? ChatMediaEditorItemStore() : nil)
-        var isChatAttachmentDefaultAssets = false
-        if case .assets(_, .default) = subject, !forCollage {
-            isChatAttachmentDefaultAssets = true
+        var isAssets = false
+        var isDefaultMode = false
+        if case let .assets(_, mode) = subject {
+            isAssets = true
+            isDefaultMode = mode == .default
         }
+        let isChatAttachmentDefaultAssets = mediaPickerIsChatAttachmentDefaultAssets(isAssets: isAssets, isDefaultMode: isDefaultMode, forCollage: forCollage)
         self.usesMediaGridV2 = mediaPickerUsesMediaGrid(isChatAttachmentDefaultAssets: isChatAttachmentDefaultAssets, isEnabled: context.usesMediaPickerGridV2)
         if self.usesMediaGridV2 {
             let services = MediaGridPhotoLibraryServices.shared
