@@ -2,7 +2,7 @@ import UIKit
 import Photos
 import MediaGrid
 
-final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibraryChangeObserver {
+public final class MediaGridPhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibraryChangeObserver {
     struct ImageKey: Hashable {
         var identifier: String
         var width: Int
@@ -30,15 +30,16 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     static let preparePageLimit = 32
     static let unknownPage: Int32 = -2
 
-    private var fetchResult: PHFetchResult<PHAsset>
+    public private(set) var fetchResult: PHFetchResult<PHAsset>
+    public let reversed: Bool
     private(set) var catalog = ThumbnailCatalog.empty
     private var catalogGeneration = 0
-    let store: MediaGridThumbnailStore
-    let filler: ThumbnailFiller
-    private let thumbnailSource: PhotoKitThumbnailSource
-    var onThumbnailsChanged: ((IndexSet) -> Void)?
+    public let store: MediaGridThumbnailStore
+    public let filler: MediaGridPhotoLibraryFiller?
+    public var onThumbnailsChanged: ((IndexSet) -> Void)?
+    public var onLog: ((String) -> Void)?
     private(set) var fillStartTime: CFTimeInterval?
-    private(set) var fillDuration: CFTimeInterval?
+    public private(set) var fillDuration: CFTimeInterval?
     private var preparedRanges: [Range<Int>] = []
     private var pageCache: [Int32] = []
     private var launchSnapshot: ThumbnailLaunchSnapshot?
@@ -46,78 +47,42 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     private var snapshotSaveGeneration = 0
     private(set) var planInstallCount = 0
     private var isSharpNetworkIdle = true
-    private(set) var networkFills = 0
-    private var networkDeliveries = 0
     private var backgroundObserver: NSObjectProtocol?
-    var prepareCallWorst: CFTimeInterval = 0.0
-    var prepareCallTotal: CFTimeInterval = 0.0
-    var prepareCalls = 0
     private var revisions: [String: Int] = [:]
     private var revisionBase = 0
-    var onChange: ((MediaGridChanges?) -> Void)?
+    public var onChange: ((MediaGridChanges?) -> Void)?
     private let manager = PHImageManager.default()
     private let cache = NSCache<NSString, UIImage>()
     private let scheduler = Scheduler(localLimit: 12, localPrefetchLimit: 6, networkLimit: 4)
-    let launchKeeper: MediaGridLaunchCacheKeeper?
+    public let launchKeeper: MediaGridLaunchCacheKeeper?
     let launchMatch: MediaGridLaunchMatch?
     private let launchFetchResult: PHFetchResult<PHAsset>
     private(set) var isLaunchInstalled = false
 
-    static var defaultThumbnailDirectory: URL {
-        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridThumbnails", isDirectory: true)
-    }
-
-    static var defaultRetryRegistryURL: URL {
-        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridDemoThumbnailRetries.plist")
-    }
-
-    static var defaultSnapshotURL: URL {
-        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridDemoLaunchSnapshot.plist")
-    }
-
     static let snapshotHead = 2048
 
-    init(fetchResult: PHFetchResult<PHAsset>, thumbnailDirectory: URL?, registryURL: URL?, snapshotURL: URL?, launchCache: MediaGridLaunchCache? = nil, launchMatch: MediaGridLaunchMatch? = nil) {
-        let match = launchMatch ?? launchCache.map { cache in
-            MediaGridLaunchMatch(cache: cache, readHead: {
-                return PhotoLibraryDataSource.head(of: fetchResult, count: cache.capacity)
-            })
-        }
-        self.launchMatch = match
-        self.launchKeeper = match.map { MediaGridLaunchCacheKeeper(cache: $0.cache) }
+    public init(fetchResult: PHFetchResult<PHAsset>, reversed: Bool, store: MediaGridThumbnailStore, launch: MediaGridLaunchMatch?, filler: MediaGridPhotoLibraryFiller? = nil, snapshotURL: URL? = nil) {
+        self.launchMatch = launch
+        self.launchKeeper = launch.map { MediaGridLaunchCacheKeeper(cache: $0.cache) }
         self.launchFetchResult = fetchResult
         self.fetchResult = fetchResult
+        self.reversed = reversed
         self.observedFetchResult = fetchResult
         self.snapshotURL = snapshotURL
-        self.store = MediaGridThumbnailStore(directory: thumbnailDirectory)
-        self.thumbnailSource = PhotoKitThumbnailSource(fetchResult: fetchResult)
-        self.filler = ThumbnailFiller(store: self.store, source: self.thumbnailSource, registry: ThumbnailRetryRegistry(url: registryURL))
+        self.store = store
+        self.filler = filler
         super.init()
         self.store.onThumbnailsChanged = { [weak self] ids in
             self?.thumbnailsChanged(ids)
         }
-        self.store.onWritabilityChanged = { [weak self] isWritable in
-            self?.filler.isPaused = !isWritable
-        }
-        self.filler.onProgress = { [weak self] in
-            self?.fillProgressed()
-        }
-        self.filler.networkGate = { [weak self] in
-            return self?.isSharpNetworkIdle ?? false
-        }
-        self.filler.onNetworkFill = { [weak self] _ in
-            self?.networkFills += 1
-        }
-        self.thumbnailSource.onNetworkDelivery = { [weak self] width, height in
-            DispatchQueue.main.async {
-                guard let self else {
-                    return
-                }
-                self.networkDeliveries += 1
-                if self.networkDeliveries <= 100 {
-                    print("NETFILL n=\(self.networkDeliveries) delivered=\(width)x\(height)")
-                    fflush(stdout)
-                }
+        if let filler {
+            filler.source.fetchResult = fetchResult
+            filler.source.reversed = reversed
+            filler.filler.onProgress = { [weak self] in
+                self?.fillProgressed()
+            }
+            filler.sharpNetworkIdle = { [weak self] in
+                return self?.isSharpNetworkIdle ?? false
             }
         }
         self.scheduler.networkLaneDidChange = { [weak self] in
@@ -127,7 +92,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             let isIdle = self.scheduler.isNetworkLaneIdle
             if isIdle != self.isSharpNetworkIdle {
                 self.isSharpNetworkIdle = isIdle
-                self.filler.networkConditionsChanged()
+                self.filler?.filler.networkConditionsChanged()
             }
         }
         self.backgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main, using: { [weak self] _ in
@@ -177,12 +142,22 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
-    static func head(of fetchResult: PHFetchResult<PHAsset>, count: Int) -> [MediaGridLaunchCache.Key] {
+    static func fetchIndex(_ index: Int, count: Int, reversed: Bool) -> Int {
+        return reversed ? count - 1 - index : index
+    }
+
+    static func launchMatch(cache: MediaGridLaunchCache, fetchResult: PHFetchResult<PHAsset>, reversed: Bool) -> MediaGridLaunchMatch {
+        return MediaGridLaunchMatch(cache: cache, readHead: {
+            return MediaGridPhotoLibraryDataSource.head(of: fetchResult, count: cache.capacity, reversed: reversed)
+        })
+    }
+
+    static func head(of fetchResult: PHFetchResult<PHAsset>, count: Int, reversed: Bool) -> [MediaGridLaunchCache.Key] {
         let total = fetchResult.count
         var head: [MediaGridLaunchCache.Key] = []
         for index in 0 ..< min(count, total) {
-            let asset = fetchResult.object(at: total - 1 - index)
-            head.append(MediaGridLaunchCache.Key(id: asset.localIdentifier, version: PhotoLibraryDataSource.version(of: asset)))
+            let asset = fetchResult.object(at: MediaGridPhotoLibraryDataSource.fetchIndex(index, count: total, reversed: reversed))
+            head.append(MediaGridLaunchCache.Key(id: asset.localIdentifier, version: MediaGridPhotoLibraryDataSource.version(of: asset)))
         }
         return head
     }
@@ -199,8 +174,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             keeper.install(head: [], images: [:])
             keeper.setHead(self.catalogHead())
         }
-        print(String(format: "LAUNCH installed matched=%d/%d stored=%d load=%.1fms decode=%.1fms since_launch=%.0fms", keeper.images.count, result.head?.count ?? 0, keeper.cache.storedKeys.count, result.duration * 1000.0, keeper.cache.loadDuration * 1000.0, DemoViewController.timeSinceProcessStart() * 1000.0))
-        fflush(stdout)
+        self.onLog?(String(format: "LAUNCH installed matched=%d/%d stored=%d load=%.1fms decode=%.1fms", keeper.images.count, result.head?.count ?? 0, keeper.cache.storedKeys.count, result.duration * 1000.0, keeper.cache.loadDuration * 1000.0))
         return true
     }
 
@@ -216,7 +190,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return (0 ..< count).map { MediaGridLaunchCache.Key(id: self.catalog.ids[$0], version: self.catalog.versions[$0]) }
     }
 
-    func waitForLaunchImages(timeout: TimeInterval) {
+    public func waitForLaunchImages(timeout: TimeInterval) {
         guard !self.isLaunchInstalled else {
             return
         }
@@ -227,38 +201,36 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         if let result {
             self.installLaunch(result)
         }
-        print(String(format: "LAUNCH wait=%.2fms ready=%d matched=%d since_launch=%.0fms", waited * 1000.0, ready ? 1 : 0, self.launchKeeper?.images.count ?? 0, DemoViewController.timeSinceProcessStart() * 1000.0))
-        fflush(stdout)
+        self.onLog?(String(format: "LAUNCH wait=%.2fms ready=%d matched=%d", waited * 1000.0, ready ? 1 : 0, self.launchKeeper?.images.count ?? 0))
     }
 
-    func launchImage(at index: Int) -> MediaGridLaunchImage? {
+    public func launchImage(at index: Int) -> MediaGridLaunchImage? {
         return self.launchKeeper?.images[index]
     }
 
     private func startCatalog(_ fetchResult: PHFetchResult<PHAsset>) {
         let store = self.store
-        let filler = self.filler
+        let filler = self.filler?.filler
         let snapshotURL = self.snapshotURL
+        let reversed = self.reversed
         self.changeQueue.async { [weak self] in
             if let snapshotURL, let data = try? Data(contentsOf: snapshotURL), let snapshot = ThumbnailLaunchSnapshot.decode(data), snapshot.count == fetchResult.count {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.fetchResult === fetchResult, self.catalogGeneration == 0, self.catalog.count == 0 else {
                         return
                     }
-                    print(String(format: "THUMBS snapshot ids=%d since_launch=%.0fms", snapshot.indices.count, DemoViewController.timeSinceProcessStart() * 1000.0))
-                    fflush(stdout)
+                    self.onLog?(String(format: "THUMBS snapshot ids=%d", snapshot.indices.count))
                     self.installLaunchSnapshot(snapshot)
                 }
             }
             let start = CACurrentMediaTime()
-            let catalog = PhotoLibraryDataSource.makeCatalog(fetchResult, prefix: PhotoLibraryDataSource.initialCatalogPrefix, onPrefix: { prefix in
+            let catalog = MediaGridPhotoLibraryDataSource.makeCatalog(fetchResult, reversed: reversed, prefix: MediaGridPhotoLibraryDataSource.initialCatalogPrefix, onPrefix: { prefix in
                 let duration = CACurrentMediaTime() - start
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.fetchResult === fetchResult, self.catalogGeneration == 0 else {
                         return
                     }
-                    print(String(format: "THUMBS catalog prefix=%d build=%.1fms since_launch=%.0fms", prefix.count, duration * 1000.0, DemoViewController.timeSinceProcessStart() * 1000.0))
-                    fflush(stdout)
+                    self.onLog?(String(format: "THUMBS catalog prefix=%d build=%.1fms", prefix.count, duration * 1000.0))
                     self.installCatalog(prefix, generation: 0)
                 }
             })
@@ -273,8 +245,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                 guard let self, self.fetchResult === fetchResult else {
                     return
                 }
-                print(String(format: "THUMBS catalog count=%d build=%.1fms since_launch=%.0fms", catalog.count, duration * 1000.0, DemoViewController.timeSinceProcessStart() * 1000.0))
-                fflush(stdout)
+                self.onLog?(String(format: "THUMBS catalog count=%d build=%.1fms", catalog.count, duration * 1000.0))
                 self.installCatalog(catalog, generation: generation)
             }
             store.load { [weak self] in
@@ -285,6 +256,16 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                     self.isStoreLoaded = true
                     let catalog = self.observedCatalog
                     let generation = self.observedCatalogGeneration
+                    guard let filler else {
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self, self.catalogGeneration == generation else {
+                                return
+                            }
+                            self.resetPageCache()
+                            self.prepareStore()
+                        }
+                        return
+                    }
                     let start = CACurrentMediaTime()
                     let plan = filler.makePlan(for: catalog)
                     let planDuration = CACurrentMediaTime() - start
@@ -292,8 +273,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                         guard let self, self.catalogGeneration == generation else {
                             return
                         }
-                        print(String(format: "THUMBS plan count=%d filled=%d unavailable=%d orphans=%d build=%.1fms since_launch=%.0fms", catalog.count, plan.filled, plan.unavailable, plan.orphans.count, planDuration * 1000.0, DemoViewController.timeSinceProcessStart() * 1000.0))
-                        fflush(stdout)
+                        self.onLog?(String(format: "THUMBS plan count=%d filled=%d unavailable=%d orphans=%d build=%.1fms", catalog.count, plan.filled, plan.unavailable, plan.orphans.count, planDuration * 1000.0))
                         self.installPlan(plan)
                         self.resetPageCache()
                         self.prepareStore()
@@ -354,7 +334,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
         self.snapshotSaveGeneration += 1
         let generation = self.snapshotSaveGeneration
-        DispatchQueue.main.asyncAfter(deadline: .now() + PhotoLibraryDataSource.snapshotSettleDelay) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + MediaGridPhotoLibraryDataSource.snapshotSettleDelay) { [weak self] in
             guard let self, self.snapshotSaveGeneration == generation else {
                 return
             }
@@ -370,7 +350,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         if let viewport = self.preparedRanges.first {
             ranges.append(max(0, viewport.lowerBound - viewport.count) ..< viewport.upperBound + viewport.count)
         }
-        let snapshot = ThumbnailLaunchSnapshot.make(catalog: self.catalog, head: PhotoLibraryDataSource.snapshotHead, ranges: ranges)
+        let snapshot = ThumbnailLaunchSnapshot.make(catalog: self.catalog, head: MediaGridPhotoLibraryDataSource.snapshotHead, ranges: ranges)
         DispatchQueue.global(qos: .utility).async {
             try? snapshot.encode().write(to: url, options: .atomic)
         }
@@ -385,14 +365,14 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
 
     static let initialCatalogPrefix = 4096
 
-    static func makeCatalog(_ fetchResult: PHFetchResult<PHAsset>, prefix: Int = 0, onPrefix: ((ThumbnailCatalog) -> Void)? = nil) -> ThumbnailCatalog {
+    static func makeCatalog(_ fetchResult: PHFetchResult<PHAsset>, reversed: Bool, prefix: Int = 0, onPrefix: ((ThumbnailCatalog) -> Void)? = nil) -> ThumbnailCatalog {
         var ids: [String] = []
         var versions: [String] = []
         ids.reserveCapacity(fetchResult.count)
         versions.reserveCapacity(fetchResult.count)
-        fetchResult.enumerateObjects(options: .reverse) { asset, _, _ in
+        fetchResult.enumerateObjects(options: reversed ? .reverse : []) { asset, _, _ in
             ids.append(asset.localIdentifier)
-            versions.append(PhotoLibraryDataSource.version(of: asset))
+            versions.append(MediaGridPhotoLibraryDataSource.version(of: asset))
             if ids.count == prefix, prefix < fetchResult.count {
                 onPrefix?(ThumbnailCatalog(ids: ids, versions: versions))
             }
@@ -401,31 +381,33 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     }
 
     private func installPlan(_ plan: ThumbnailFillPlan, removed: [String] = [], urgent: [String] = []) {
+        guard let filler = self.filler?.filler else {
+            return
+        }
         self.planInstallCount += 1
         if self.fillStartTime == nil {
             self.fillStartTime = CACurrentMediaTime()
         }
-        self.filler.install(plan, removed: removed, urgent: urgent)
+        filler.install(plan, removed: removed, urgent: urgent)
     }
 
     private func fillProgressed() {
-        if self.filler.isComplete, self.fillDuration == nil, let start = self.fillStartTime {
+        if let filler = self.filler?.filler, filler.isComplete, self.fillDuration == nil, let start = self.fillStartTime {
             let duration = CACurrentMediaTime() - start
             self.fillDuration = duration
-            print(String(format: "THUMBS fill complete filled=%d unavailable=%d total=%d time=%.2fs", self.filler.filledCount, self.filler.unavailableCount, self.catalog.count, duration))
-            fflush(stdout)
+            self.onLog?(String(format: "THUMBS fill complete filled=%d unavailable=%d total=%d time=%.2fs", filler.filledCount, filler.unavailableCount, self.catalog.count, duration))
         }
     }
 
     private func thumbnailsChanged(_ ids: Set<String>) {
-        self.filler.storeChanged(ids: ids)
+        self.filler?.filler.storeChanged(ids: ids)
         var indices = IndexSet()
         let hasCache = self.pageCache.count == self.catalog.count
         for id in ids {
             if let index = self.catalog.indexById[id] {
                 indices.insert(index)
                 if hasCache {
-                    self.pageCache[index] = PhotoLibraryDataSource.unknownPage
+                    self.pageCache[index] = MediaGridPhotoLibraryDataSource.unknownPage
                 }
             }
         }
@@ -448,35 +430,34 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return self.launchSnapshot?.id(at: index)
     }
 
-    func hasStoredThumbnail(at index: Int) -> Bool {
+    public var catalogCount: Int {
+        return self.catalog.count
+    }
+
+    public func hasStoredThumbnail(at index: Int) -> Bool {
         guard let id = self.id(at: index) else {
             return false
         }
         return self.store.version(for: id) != nil
     }
 
-    func thumbnail(at index: Int) -> MediaGridThumbnail? {
+    public func thumbnail(at index: Int) -> MediaGridThumbnail? {
         guard let id = self.id(at: index) else {
             return nil
         }
         return self.store.thumbnail(for: id)
     }
 
-    func prepareThumbnails(ranges: [Range<Int>]) {
-        let start = CACurrentMediaTime()
+    public func prepareThumbnails(ranges: [Range<Int>]) {
         self.preparedRanges = ranges
         self.launchKeeper?.viewportChanged(lowerBound: ranges.first?.lowerBound ?? 0)
-        self.filler.setPriority(ranges: ranges)
+        self.filler?.filler.setPriority(ranges: ranges)
         self.prepareStore()
         self.scheduleLaunchSnapshotSave()
-        let duration = CACurrentMediaTime() - start
-        self.prepareCalls += 1
-        self.prepareCallTotal += duration
-        self.prepareCallWorst = max(self.prepareCallWorst, duration)
     }
 
     private func resetPageCache() {
-        self.pageCache = [Int32](repeating: PhotoLibraryDataSource.unknownPage, count: self.catalog.count)
+        self.pageCache = [Int32](repeating: MediaGridPhotoLibraryDataSource.unknownPage, count: self.catalog.count)
     }
 
     private func prepareStore() {
@@ -489,7 +470,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         let store = self.store
         var ids: [String] = []
         var seen = Set<Int32>()
-        var last: Int32 = PhotoLibraryDataSource.unknownPage
+        var last: Int32 = MediaGridPhotoLibraryDataSource.unknownPage
         let snapshot = self.launchSnapshot
         let upper = max(catalog.count, snapshot?.count ?? 0)
         outer: for range in self.preparedRanges {
@@ -500,7 +481,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                 if index < catalog.count {
                     id = catalog.ids[index]
                     page = cache[index]
-                    if page == PhotoLibraryDataSource.unknownPage {
+                    if page == MediaGridPhotoLibraryDataSource.unknownPage {
                         page = store.page(for: id).map { Int32($0) } ?? -1
                         cache[index] = page
                     }
@@ -516,7 +497,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                 last = page
                 if seen.insert(page).inserted {
                     ids.append(id)
-                    if ids.count >= PhotoLibraryDataSource.preparePageLimit {
+                    if ids.count >= MediaGridPhotoLibraryDataSource.preparePageLimit {
                         break outer
                     }
                 }
@@ -549,19 +530,19 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         var plan: ThumbnailFillPlan?
     }
 
-    private let changeQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.libraryChanges")
+    private let changeQueue = DispatchQueue(label: "org.telegram.MediaGridPhotoLibrary.libraryChanges")
     private var observedFetchResult: PHFetchResult<PHAsset>
     private var observedCatalog = ThumbnailCatalog.empty
     private var observedCatalogGeneration = 0
     private var isStoreLoaded = false
 
-    func photoLibraryDidChange(_ changeInstance: PHChange) {
+    public func photoLibraryDidChange(_ changeInstance: PHChange) {
         self.changeQueue.sync {
-            guard var update = PhotoLibraryDataSource.update(for: changeInstance, previous: self.observedFetchResult) else {
+            guard var update = MediaGridPhotoLibraryDataSource.update(for: changeInstance, previous: self.observedFetchResult, reversed: self.reversed) else {
                 return
             }
             if let changes = update.changes, !changes.changed.isEmpty, self.observedCatalog.count == update.previous.count {
-                let filtered = PhotoLibraryDataSource.droppingUnversionedChanges(changes, changedIdentifiers: update.changedIdentifiers, newVersions: update.changedVersions, previous: self.observedCatalog)
+                let filtered = MediaGridPhotoLibraryDataSource.droppingUnversionedChanges(changes, changedIdentifiers: update.changedIdentifiers, newVersions: update.changedVersions, previous: self.observedCatalog)
                 let kept = Set(filtered.changedIdentifiers)
                 update.availabilityIdentifiers = update.changedIdentifiers.filter { !kept.contains($0) }
                 update.changes = filtered.changes
@@ -577,12 +558,12 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                 }
                 return
             }
-            update.catalog = PhotoLibraryDataSource.catalog(for: update, previous: self.observedCatalog)
+            update.catalog = MediaGridPhotoLibraryDataSource.catalog(for: update, previous: self.observedCatalog, reversed: self.reversed)
             self.observedCatalogGeneration += 1
             update.catalogGeneration = self.observedCatalogGeneration
             self.observedCatalog = update.catalog
-            if self.isStoreLoaded {
-                update.plan = self.filler.makePlan(for: update.catalog)
+            if self.isStoreLoaded, let filler = self.filler?.filler {
+                update.plan = filler.makePlan(for: update.catalog)
             }
             self.observedFetchResult = update.fetchResult
             DispatchQueue.main.async { [weak self] in
@@ -591,7 +572,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
-    static func update(for change: PHChange, previous: PHFetchResult<PHAsset>) -> LibraryUpdate? {
+    static func update(for change: PHChange, previous: PHFetchResult<PHAsset>, reversed: Bool) -> LibraryUpdate? {
         guard let details = change.changeDetails(for: previous) else {
             return nil
         }
@@ -604,10 +585,10 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         update.removedIdentifiers = details.removedObjects.map { $0.localIdentifier }
         update.insertedIdentifiers = details.insertedObjects.map { $0.localIdentifier }
         for asset in details.changedObjects {
-            update.changedVersions[asset.localIdentifier] = PhotoLibraryDataSource.version(of: asset)
+            update.changedVersions[asset.localIdentifier] = MediaGridPhotoLibraryDataSource.version(of: asset)
         }
         if !details.hasMoves {
-            update.changes = PhotoLibraryDataSource.gridChanges(removed: details.removedIndexes ?? IndexSet(), inserted: details.insertedIndexes ?? IndexSet(), changed: details.changedIndexes ?? IndexSet(), oldCount: previous.count, newCount: fetchResult.count)
+            update.changes = MediaGridPhotoLibraryDataSource.gridChanges(removed: details.removedIndexes ?? IndexSet(), inserted: details.insertedIndexes ?? IndexSet(), changed: details.changedIndexes ?? IndexSet(), oldCount: previous.count, newCount: fetchResult.count, reversed: reversed)
         }
         return update
     }
@@ -625,21 +606,21 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return (result, kept)
     }
 
-    static func catalog(for update: LibraryUpdate, previous: ThumbnailCatalog) -> ThumbnailCatalog {
+    static func catalog(for update: LibraryUpdate, previous: ThumbnailCatalog, reversed: Bool) -> ThumbnailCatalog {
         let fetchResult = update.fetchResult
         let count = fetchResult.count
         guard let changes = update.changes, previous.count == update.previous.count, changes.isValid(oldCount: previous.count, newCount: count) else {
-            return PhotoLibraryDataSource.makeCatalog(fetchResult)
+            return MediaGridPhotoLibraryDataSource.makeCatalog(fetchResult, reversed: reversed)
         }
         return previous.applying(changes, newCount: count, entry: { index in
-            let asset = fetchResult.object(at: count - 1 - index)
-            return (asset.localIdentifier, PhotoLibraryDataSource.version(of: asset))
+            let asset = fetchResult.object(at: MediaGridPhotoLibraryDataSource.fetchIndex(index, count: count, reversed: reversed))
+            return (asset.localIdentifier, MediaGridPhotoLibraryDataSource.version(of: asset))
         })
     }
 
     private func swapFetchResult(_ update: LibraryUpdate) {
         self.fetchResult = update.fetchResult
-        self.thumbnailSource.fetchResult = update.fetchResult
+        self.filler?.source.fetchResult = update.fetchResult
         self.catalog = update.catalog
         self.catalogGeneration = update.catalogGeneration
         self.launchSnapshot = nil
@@ -650,10 +631,10 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             self.installPlan(plan, removed: update.removedIdentifiers, urgent: update.insertedIdentifiers + update.changedIdentifiers)
         } else if !update.removedIdentifiers.isEmpty {
             self.store.remove(ids: update.removedIdentifiers)
-            self.filler.registry.remove(ids: update.removedIdentifiers)
+            self.filler?.filler.registry.remove(ids: update.removedIdentifiers)
         }
         if !update.availabilityIdentifiers.isEmpty {
-            self.filler.retryNow(ids: update.availabilityIdentifiers)
+            self.filler?.filler.retryNow(ids: update.availabilityIdentifiers)
         }
         self.resetPageCache()
         self.prepareStore()
@@ -672,8 +653,8 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
         if isConsecutive && update.isAvailabilityOnly {
             self.fetchResult = update.fetchResult
-            self.thumbnailSource.fetchResult = update.fetchResult
-            self.filler.retryNow(ids: update.availabilityIdentifiers)
+            self.filler?.source.fetchResult = update.fetchResult
+            self.filler?.filler.retryNow(ids: update.availabilityIdentifiers)
             return
         }
         guard isConsecutive, let changes = update.changes else {
@@ -694,47 +675,45 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         self.onChange?(changes)
     }
 
-    static func gridChanges(removed: IndexSet, inserted: IndexSet, changed: IndexSet, oldCount: Int, newCount: Int) -> MediaGridChanges {
-        let reversed: (IndexSet, Int) -> IndexSet = { indices, count in
+    static func gridChanges(removed: IndexSet, inserted: IndexSet, changed: IndexSet, oldCount: Int, newCount: Int, reversed: Bool) -> MediaGridChanges {
+        guard reversed else {
+            return MediaGridChanges(removed: removed, inserted: inserted, changed: changed)
+        }
+        let reverse: (IndexSet, Int) -> IndexSet = { indices, count in
             var result = IndexSet()
             for range in indices.rangeView {
                 result.insert(integersIn: (count - range.upperBound) ..< (count - range.lowerBound))
             }
             return result
         }
-        return MediaGridChanges(removed: reversed(removed, oldCount), inserted: reversed(inserted, newCount), changed: reversed(changed, newCount))
+        return MediaGridChanges(removed: reverse(removed, oldCount), inserted: reverse(inserted, newCount), changed: reverse(changed, newCount))
     }
 
-    static func makeFetchResult() -> PHFetchResult<PHAsset> {
-        let options = PHFetchOptions()
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-        return PHAsset.fetchAssets(with: .image, options: options)
-    }
-
-    var count: Int {
+    public var count: Int {
         return self.fetchResult.count
     }
 
-    private func asset(at index: Int) -> PHAsset? {
+    public func asset(at index: Int) -> PHAsset? {
         let count = self.fetchResult.count
         guard index >= 0, index < count else {
             return nil
         }
-        return self.fetchResult.object(at: count - 1 - index)
+        return self.fetchResult.object(at: MediaGridPhotoLibraryDataSource.fetchIndex(index, count: count, reversed: self.reversed))
     }
 
-    func date(at index: Int) -> Date? {
+    public func date(at index: Int) -> Date? {
         return self.asset(at: index)?.creationDate
     }
 
-    func aspectRatioReader() -> MediaGridAspectRatioReader {
+    public func aspectRatioReader() -> MediaGridAspectRatioReader {
         let fetchResult = self.fetchResult
+        let reversed = self.reversed
         return { index in
             let count = fetchResult.count
             guard index >= 0, index < count else {
                 return 1.0
             }
-            let asset = fetchResult.object(at: count - 1 - index)
+            let asset = fetchResult.object(at: MediaGridPhotoLibraryDataSource.fetchIndex(index, count: count, reversed: reversed))
             guard asset.pixelWidth > 0, asset.pixelHeight > 0 else {
                 return 1.0
             }
@@ -751,7 +730,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return ImageKey(identifier: identifier, width: Int(size.width), height: Int(size.height), revision: self.imageRevision(for: identifier))
     }
 
-    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+    public func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         guard let asset = self.asset(at: index) else {
             completion(nil, false)
             return nil
@@ -769,15 +748,15 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return self.launchKeeper?.targetSize(at: index, pixelSize: pixelSize) ?? pixelSize
     }
 
-    func performBatch(_ updates: () -> Void) {
+    public func performBatch(_ updates: () -> Void) {
         self.scheduler.batch(updates)
     }
 
-    func startCaching(indices: [Int], pixelSize: CGSize) {
+    public func startCaching(indices: [Int], pixelSize: CGSize) {
         self.scheduler.startPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize))
     }
 
-    func stopCaching(indices: [Int], pixelSize: CGSize) {
+    public func stopCaching(indices: [Int], pixelSize: CGSize) {
         self.scheduler.stopPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize))
     }
 
@@ -803,8 +782,8 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                 }
                 self.handle(job, attempt: attempt, image: image, isDegraded: isDegraded, isCancelled: isCancelled, isInCloud: isInCloud)
             }
-            if let image, !isDegraded, Thread.isMainThread, let job, job.hasConsumers(running: attempt), PhotoLibraryDataSource.needsPreparation(image) {
-                PhotoLibraryDataSource.enqueuePreparation(image, job: job, attempt: attempt, queue: PhotoLibraryDataSource.preparationQueue, prepare: PhotoLibraryDataSource.prepare, deliver: handle)
+            if let image, !isDegraded, Thread.isMainThread, let job, job.hasConsumers(running: attempt), MediaGridPhotoLibraryDataSource.needsPreparation(image) {
+                MediaGridPhotoLibraryDataSource.enqueuePreparation(image, job: job, attempt: attempt, queue: MediaGridPhotoLibraryDataSource.preparationQueue, prepare: MediaGridPhotoLibraryDataSource.prepare, deliver: handle)
             } else if Thread.isMainThread {
                 handle(image)
             } else {
@@ -818,13 +797,13 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
-    static let harvestQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.thumbnailHarvest", qos: .utility)
+    static let harvestQueue = DispatchQueue(label: "org.telegram.MediaGridPhotoLibrary.thumbnailHarvest", qos: .utility)
 
     private func harvest(_ image: UIImage, id: String) {
-        guard let version = self.filler.harvestVersion(for: id) else {
+        guard let filler = self.filler?.filler, let version = filler.harvestVersion(for: id) else {
             return
         }
-        PhotoLibraryDataSource.harvestQueue.async { [weak self] in
+        MediaGridPhotoLibraryDataSource.harvestQueue.async { [weak self] in
             guard let small = ThumbnailDownscaler.image(from: image) else {
                 return
             }
@@ -833,14 +812,14 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                     return
                 }
                 self.harvests += 1
-                self.filler.harvest(id: id, version: version, image: small)
+                filler.harvest(id: id, version: version, image: small)
             }
         }
     }
 
-    private(set) var harvests = 0
+    public private(set) var harvests = 0
 
-    static let preparationQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.imagePreparation", qos: .userInitiated)
+    static let preparationQueue = DispatchQueue(label: "org.telegram.MediaGridPhotoLibrary.imagePreparation", qos: .userInitiated)
     static let preparationMinPixels = 512 * 512
 
     static func enqueuePreparation<K, P, L>(_ image: UIImage, job: ImageLoadScheduler<K, P, L>.Job, attempt: Int, queue: DispatchQueue, prepare: @escaping (UIImage) -> UIImage, deliver: @escaping (UIImage) -> Void) {
@@ -856,7 +835,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         guard let cgImage = image.cgImage else {
             return false
         }
-        return cgImage.width * cgImage.height >= PhotoLibraryDataSource.preparationMinPixels
+        return cgImage.width * cgImage.height >= MediaGridPhotoLibraryDataSource.preparationMinPixels
     }
 
     static func prepare(_ image: UIImage) -> UIImage {

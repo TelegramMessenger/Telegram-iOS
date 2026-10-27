@@ -13,6 +13,9 @@ final class InstrumentedDataSource: MediaGridDataSource {
         var cachingStopped = 0
         var cachingCallWorst: Double = 0.0
         var requestCallWorst: Double = 0.0
+        var prepareCalls = 0
+        var prepareCallTotal: Double = 0.0
+        var prepareCallWorst: Double = 0.0
     }
 
     private final class Request: MediaGridImageRequest {
@@ -103,7 +106,12 @@ final class InstrumentedDataSource: MediaGridDataSource {
         guard self.providesThumbnails else {
             return
         }
+        let start = CACurrentMediaTime()
         self.base.prepareThumbnails(ranges: ranges)
+        let duration = CACurrentMediaTime() - start
+        self.counters.prepareCalls += 1
+        self.counters.prepareCallTotal += duration
+        self.counters.prepareCallWorst = max(self.counters.prepareCallWorst, duration)
     }
 
     func launchImage(at index: Int) -> MediaGridLaunchImage? {

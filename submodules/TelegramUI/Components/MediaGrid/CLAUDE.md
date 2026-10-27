@@ -12,11 +12,13 @@ xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$
 xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$SIM" build
 ```
 
-`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 322 tests (2 skipped), CoreList 1048 (unchanged, not re-run in Task 5), 0 failures.
+`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 258 tests (2 skipped), MediaGridPhotoLibraryTests 69, CoreList 1048 (unchanged, not re-run in Task 5), 0 failures.
 
 Run only on the dedicated simulator `MediaGridDemo iPhone 18 Pro 27.0` (UDID above); never on the booted logged-in simulators.
 
 Sources import only UIKit, QuartzCore, Foundation, Photos and CoreList. No Display, AsyncDisplayKit, SwiftSignalKit, Postbox, TelegramCore or LegacyComponents. APIs newer than iOS 13 need `#available` guards, since the sources also compile in the app.
+
+The PhotoKit loading stack (`ImageLoadScheduler`, `MediaGridPhotoLibraryDataSource`, the filler, the launch-match glue) is the sibling module `../MediaGridPhotoLibrary` (Bazel target and an xcodegen framework target here, with its own `MediaGridPhotoLibraryTests`). `MediaGridPhotoLibraryServices.shared` owns the app-session store, filler and launch cache under `<Caches>/MediaGridThumbnails/`; tests inject temporary directories and never touch `shared`. A data source maps grid index `i` to fetch index `count - 1 - i` when `reversed` (Recents, newest first; the demo) and to `i` otherwise (an album). Only a data source given the filler (`isLibrary`) drives it: its catalog decides which stored ids are orphans, so never give the filler an album's data source.
 
 ## Measuring image loading in the demo
 
@@ -34,7 +36,7 @@ Level 1 is `MediaGridAspectLayout`: one photo per row at its aspect ratio, clamp
 - In a 1 ↔ 3 transition the layers also scale vertically, so the anchor photo's height morphs between the two levels instead of cross-fading between two heights.
 - Level-1 rows differ in pixel size, so prefetch calls `startCaching`/`stopCaching` once per run of equal sizes.
 
-Binding a frame's cells happens inside `MediaGridDataSource.performBatch`, so a LIFO loader starts the viewport's requests first even with free slots. A frame step longer than the viewport switches to moving fast at once (a scrubber jump), without waiting for the 50 ms speed sample. `PhotoLibraryDataSource` redraws images of 512×512 px or more off the main thread before delivering them: committing PhotoKit's full-size level-1 images as delivered cost ~7 ms each on main. The queued redraw is skipped when the job has meanwhile lost its consumers, finished or restarted (`Job.hasConsumers(running:)`, a lock-guarded snapshot readable off main).
+Binding a frame's cells happens inside `MediaGridDataSource.performBatch`, so a LIFO loader starts the viewport's requests first even with free slots. A frame step longer than the viewport switches to moving fast at once (a scrubber jump), without waiting for the 50 ms speed sample. `MediaGridPhotoLibraryDataSource` redraws images of 512×512 px or more off the main thread before delivering them: committing PhotoKit's full-size level-1 images as delivered cost ~7 ms each on main. The queued redraw is skipped when the job has meanwhile lost its consumers, finished or restarted (`Job.hasConsumers(running:)`, a lock-guarded snapshot readable off main).
 
 ## Thumbnails
 
@@ -56,7 +58,7 @@ The denser level (more columns) sits below the sparser one and stays opaque whil
 ## Thumbnail store, filler and launch cache
 
 - Store (`MediaGridThumbnailStore`): 48 px slots aspect-fit (clamped 0.5…2, edge-extended padding) in 16×16 pages of 768 px, JPEG q0.6, `<Caches>/MediaGridThumbnails/`. Slots go in write order; a removed id's slot is reused, and a reused slot never shows the old photo (the writer draws into the page; installs need a generation ≥ the held one). The version is the asset's modification date; a new version redraws the slot. Page files are written atomically under a new stamp and the old one is deleted only after an index without it is on disk. Decoded-page budget 32 (28 images + 4 writer contexts), LRU, never evicting a page with unflushed writes; memory warning and background trim to the visible pages. A bound cell never goes back to empty; the one exception is reuse for an index whose page is not decoded yet.
-- Filler (demo): local `.fastFormat` 96 px, 16 in flight idle / 4 moving fast; misses retry after 30 s, 2 min, 10 min, then next launch (re-queued 30 s after launch, 256/s). The network lane: 2 in flight, only while idle and the sharp network lane is idle, cancelled when sharp network work appears, `.highQualityFormat` 96 px; final sharp deliveries are also harvested into the store.
+- Filler (`MediaGridPhotoLibrary`): local `.fastFormat` 96 px, 16 in flight idle / 4 moving fast; misses retry after 30 s, 2 min, 10 min, then next launch (re-queued 30 s after launch, 256/s). The network lane: 2 in flight, only while idle and the sharp network lane is idle, cancelled when sharp network work appears, `.highQualityFormat` 96 px; final sharp deliveries are also harvested into the store.
 - Launch cache (`MediaGridLaunchCache`, `<Caches>/MediaGridThumbnails/launch/launch.cache`): the newest photos, one screen plus one row at the default level in both orientations (24 at 522 px on an 18 Pro), JPEG q0.85, refreshed from delivered sharp images only at rest at the top. Coverage is the delivered image's short side; an entry is shown only on an id and version match, and a cell makes no sharp request when coverage ≥ its pixel width. The first layout waits at most 50 ms (`launchImageWait`). In the app, start loading it when the attach menu begins presenting; decoded it is about 26 MB on a device (24 × 522² × 4 B).
 
 ## Uniform levels
@@ -71,7 +73,7 @@ Columns of `MediaGridUniformLayout` start at pixel-rounded `sideInset + c × (co
 - A zoom transition or pinch in progress is finished first (as `reloadData` does): the data source has already swapped, so neither layout can keep binding old indices.
 - Visible cells are re-keyed, not rebound; only `changed` cells, cells whose pixel size changed and inserted holes are requested. Data-source state keyed by index (the demo's prefetch keys) must be remapped by the data source before calling `apply`; the host remaps its selection the same way (`MediaGridChanges.newIndex(forOld:)`).
 - Level 1: the new aspects array is built off main by `MediaGridAspectIndex.apply` from the previous one, reading only inserted and changed assets; until its table arrives the layout is the old table patched by the change log (`MediaGridAspectLayout(patches:)`, O(changed ranges) to build), inserted rows at the estimate. A newer change cancels the in-flight rebuild and restarts it from the last built aspects with all pending changes.
-- The demo's `PhotoLibraryDataSource` runs `changeDetails(for:)` and `fetchResultAfterChanges` off main on a serial queue against its own last-seen fetch result, then applies each update on main in order; an update whose previous fetch result is not the current one reloads. Its prefetch remap swaps the fetch result before any prefetch resolves.
+- `MediaGridPhotoLibraryDataSource` runs `changeDetails(for:)` and `fetchResultAfterChanges` off main on a serial queue against its own last-seen fetch result, then applies each update on main in order; an update whose previous fetch result is not the current one reloads. Its prefetch remap swaps the fetch result before any prefetch resolves.
 
 ## Rotation and width changes
 

@@ -1,8 +1,6 @@
 import XCTest
 import UIKit
-import Photos
 @testable import MediaGrid
-@testable import MediaGridDemo
 
 final class MediaGridLaunchCacheTests: XCTestCase {
     private var directories: [URL] = []
@@ -225,101 +223,6 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         XCTAssertEqual(reloaded.launchImage(for: "b", version: "1")?.coveredPixelWidth, 120)
         XCTAssertEqual(reloaded.launchImage(for: "c", version: "1")?.coveredPixelWidth, 522)
         XCTAssertEqual(reloaded.launchImage(for: "c", version: "1")?.pixelWidth, 522)
-    }
-
-    private func spin(timeout: TimeInterval = 5.0, until condition: () -> Bool) {
-        let deadline = Date(timeIntervalSinceNow: timeout)
-        while !condition() && Date() < deadline {
-            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.005))
-        }
-    }
-
-    private func makeStoredCache(ids: [String], capacity: Int = 3) -> MediaGridLaunchCache {
-        let directory = self.makeDirectory()
-        if !ids.isEmpty {
-            let writer = MediaGridLaunchCache(directory: directory, capacity: capacity, pixelSize: 64)
-            var colors: [String: UIColor] = [:]
-            for id in ids {
-                colors[id] = .red
-            }
-            self.write(writer, head: self.keys(ids), colors: colors)
-        }
-        return MediaGridLaunchCache(directory: directory, capacity: capacity, pixelSize: 64)
-    }
-
-    private func makeLibraryDataSource(cache: MediaGridLaunchCache, head: [MediaGridLaunchCache.Key], gate: DispatchSemaphore?) -> PhotoLibraryDataSource {
-        let match = MediaGridLaunchMatch(cache: cache, queue: DispatchQueue(label: "test.launchMatch"), readHead: {
-            if let gate {
-                _ = gate.wait(timeout: .now() + 5.0)
-            }
-            return head
-        })
-        return PhotoLibraryDataSource(fetchResult: PHFetchResult<PHAsset>(), thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil, launchMatch: match)
-    }
-
-    func testMissingCacheFileDoesNotWaitForHeadRead() {
-        let cache = self.makeStoredCache(ids: [])
-        let gate = DispatchSemaphore(value: 0)
-        let dataSource = self.makeLibraryDataSource(cache: cache, head: self.keys(["a", "b", "c"]), gate: gate)
-        let start = CACurrentMediaTime()
-        dataSource.waitForLaunchImages(timeout: 0.05)
-        XCTAssertLessThan(CACurrentMediaTime() - start, 0.035)
-        XCTAssertTrue(dataSource.isLaunchInstalled)
-        XCTAssertNil(dataSource.launchImage(at: 0))
-        XCTAssertEqual(dataSource.launchKeeper?.head, [])
-        gate.signal()
-        self.spin(until: { dataSource.launchKeeper?.head.isEmpty == false })
-        XCTAssertEqual(dataSource.launchKeeper?.head, self.keys(["a", "b", "c"]))
-    }
-
-    func testTimedOutLaunchMatchInstallsLaterAndPostsIndices() {
-        let cache = self.makeStoredCache(ids: ["a", "b", "c"])
-        let gate = DispatchSemaphore(value: 0)
-        let dataSource = self.makeLibraryDataSource(cache: cache, head: self.keys(["a", "b", "c"]), gate: gate)
-        var posted: [IndexSet] = []
-        dataSource.onThumbnailsChanged = { posted.append($0) }
-        dataSource.waitForLaunchImages(timeout: 0.05)
-        XCTAssertFalse(dataSource.isLaunchInstalled)
-        XCTAssertNil(dataSource.launchImage(at: 0))
-        gate.signal()
-        self.spin(until: { !posted.isEmpty })
-        XCTAssertEqual(posted, [IndexSet([0, 1, 2])])
-        XCTAssertNotNil(dataSource.launchImage(at: 1))
-    }
-
-    func testLaunchMatchForReplacedFetchResultRematchesFromCatalog() {
-        let cache = self.makeStoredCache(ids: ["a", "b", "c"])
-        let gate = DispatchSemaphore(value: 0)
-        let initial = PHFetchResult<PHAsset>()
-        let match = MediaGridLaunchMatch(cache: cache, queue: DispatchQueue(label: "test.launchMatch"), readHead: {
-            _ = gate.wait(timeout: .now() + 5.0)
-            return self.keys(["a", "b", "c"])
-        })
-        let dataSource = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil, launchMatch: match)
-        var update = PhotoLibraryDataSource.LibraryUpdate(previous: initial, fetchResult: PHFetchResult<PHAsset>(), changes: MediaGridChanges(removed: [], inserted: [], changed: []), invalidatesAll: false, changedIdentifiers: [], removedIdentifiers: [])
-        update.catalog = ThumbnailCatalog(ids: ["x", "a", "b"], versions: ["1", "1", "1"])
-        update.catalogGeneration = 5
-        dataSource.apply(update)
-        gate.signal()
-        self.spin(until: { dataSource.isLaunchInstalled })
-        XCTAssertEqual(dataSource.launchKeeper?.head, self.keys(["x", "a", "b"]))
-        XCTAssertNil(dataSource.launchImage(at: 0))
-        XCTAssertTrue(dataSource.launchImage(at: 1)?.image === cache.image(for: "a", version: "1"))
-        XCTAssertTrue(dataSource.launchImage(at: 2)?.image === cache.image(for: "b", version: "1"))
-    }
-
-    func testPartialCatalogPrefixDoesNotReplaceHead() {
-        let cache = self.makeStoredCache(ids: ["a", "b", "c"])
-        let dataSource = self.makeLibraryDataSource(cache: cache, head: self.keys(["a", "b", "c"]), gate: nil)
-        dataSource.waitForLaunchImages(timeout: 2.0)
-        XCTAssertTrue(dataSource.isLaunchInstalled)
-        XCTAssertEqual(dataSource.launchKeeper?.images.count, 3)
-        dataSource.installCatalog(ThumbnailCatalog(ids: ["x", "a"], versions: ["1", "1"]), generation: 0)
-        XCTAssertEqual(dataSource.launchKeeper?.head, self.keys(["a", "b", "c"]))
-        XCTAssertEqual(dataSource.launchKeeper?.images.count, 3)
-        dataSource.installCatalog(ThumbnailCatalog(ids: ["x", "a"], versions: ["1", "1"]), generation: 1)
-        XCTAssertEqual(dataSource.launchKeeper?.head, self.keys(["x", "a"]))
-        XCTAssertEqual(Set(dataSource.launchKeeper?.images.keys.map { $0 } ?? []), [1])
     }
 
     func testStaleLaunchEntryIgnored() {

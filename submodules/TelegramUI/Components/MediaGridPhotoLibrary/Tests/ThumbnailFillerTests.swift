@@ -1,7 +1,7 @@
 import XCTest
 import UIKit
 import MediaGrid
-@testable import MediaGridDemo
+@testable import MediaGridPhotoLibrary
 
 private final class FakeThumbnailRequest: ThumbnailRequest {
     var isCancelled = false

@@ -1,6 +1,7 @@
 import UIKit
 import Photos
 import MediaGrid
+import MediaGridPhotoLibrary
 
 final class DemoViewController: UIViewController {
     private enum Source: Int {
@@ -9,7 +10,7 @@ final class DemoViewController: UIViewController {
     }
 
     private let syntheticDataSource = SyntheticDataSource()
-    private var photoDataSource: PhotoLibraryDataSource?
+    private var photoDataSource: MediaGridPhotoLibraryDataSource?
     private var instrumentedDataSource: InstrumentedDataSource?
     private var gridView: MediaGridView?
     private var selectedIndices: Set<Int> = []
@@ -65,6 +66,17 @@ final class DemoViewController: UIViewController {
     private var autoPinchIndexedEmptyMax = 0
     private var didReportFirstFilledFrame = false
     private var didReportFirstGridFrame = false
+
+    static func makePhotoFetchResult() -> PHFetchResult<PHAsset> {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        return PHAsset.fetchAssets(with: .image, options: options)
+    }
+
+    static func logLine(_ message: String) {
+        print(String(format: "%@ since_launch=%.0fms", message, DemoViewController.timeSinceProcessStart() * 1000.0))
+        fflush(stdout)
+    }
 
     static func timeSinceProcessStart() -> CFTimeInterval {
         var info = kinfo_proc()
@@ -130,8 +142,8 @@ final class DemoViewController: UIViewController {
                 return
             }
             var text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms\nempty %d  max %d  frames %d", summary.frames, summary.dropped, summary.worst * 1000.0, self.emptyNow, self.emptyMax, self.emptyFrames)
-            if self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue, let dataSource = self.photoDataSource {
-                text += String(format: "\nthumbs %d/%d\nno local thumb %d  net %d", dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount, dataSource.networkFills)
+            if self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue, let dataSource = self.photoDataSource, let filler = dataSource.filler {
+                text += String(format: "\nthumbs %d/%d\nno local thumb %d  net %d", filler.filledCount, dataSource.catalogCount, filler.unavailableCount, filler.networkFills)
             }
             self.hudLabel.text = text
         }
@@ -217,7 +229,7 @@ final class DemoViewController: UIViewController {
         guard self.benchmark == nil, let mode = ["-benchPhotos", "-benchThroughput", "-benchBatch"].first(where: arguments.contains) else {
             return
         }
-        let benchmark = PhotoLibraryBenchmark(fetchResult: PhotoLibraryDataSource.makeFetchResult())
+        let benchmark = PhotoLibraryBenchmark(fetchResult: DemoViewController.makePhotoFetchResult())
         self.benchmark = benchmark
         let completion: () -> Void = { [weak self] in
             print("BENCH done")
@@ -252,8 +264,8 @@ final class DemoViewController: UIViewController {
     }
 
     private func logFillProgress(started: CFTimeInterval) {
-        if let dataSource = self.photoDataSource {
-            print(String(format: "FILL_PROGRESS t=%.0fs filled=%d/%d unavailable=%d missing=%d in_flight=%d net_in_flight=%d net_fills=%d harvests=%d retry_entries=%d launch_released=%d", CACurrentMediaTime() - started, dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount, dataSource.filler.missingCount, dataSource.filler.inFlightCount, dataSource.filler.networkInFlightCount, dataSource.networkFills, dataSource.harvests, dataSource.filler.registry.count, dataSource.filler.launchRetriesReleased))
+        if let dataSource = self.photoDataSource, let filler = dataSource.filler {
+            print(String(format: "FILL_PROGRESS t=%.0fs filled=%d/%d unavailable=%d missing=%d in_flight=%d net_in_flight=%d net_fills=%d harvests=%d retry_entries=%d launch_released=%d", CACurrentMediaTime() - started, filler.filledCount, dataSource.catalogCount, filler.unavailableCount, filler.missingCount, filler.inFlightCount, filler.networkInFlightCount, filler.networkFills, dataSource.harvests, filler.retryEntryCount, filler.launchRetriesReleased))
             fflush(stdout)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
@@ -262,7 +274,7 @@ final class DemoViewController: UIViewController {
     }
 
     private func waitForFill(started: CFTimeInterval) {
-        guard let dataSource = self.photoDataSource, dataSource.filler.isComplete else {
+        guard let dataSource = self.photoDataSource, let filler = dataSource.filler, filler.isComplete else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                 self?.waitForFill(started: started)
             }
@@ -272,7 +284,7 @@ final class DemoViewController: UIViewController {
             guard let self else {
                 return
             }
-            let directory = PhotoLibraryDataSource.defaultThumbnailDirectory
+            let directory = MediaGridPhotoLibraryServices.defaultDirectory
             let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
             var bytes: UInt64 = 0
             var pageFiles = 0
@@ -283,7 +295,7 @@ final class DemoViewController: UIViewController {
                     pageFiles += 1
                 }
             }
-            print(String(format: "WAITFORFILL ready after=%.2fs filled=%d unavailable=%d total=%d fill_time=%@ store_bytes=%llu files=%d decoded_pages=%d", CACurrentMediaTime() - started, dataSource.filler.filledCount, dataSource.filler.unavailableCount, dataSource.catalog.count, dataSource.fillDuration.map { String(format: "%.2fs", $0) } ?? "-", bytes, pageFiles, dataSource.store.decodedPageCount))
+            print(String(format: "WAITFORFILL ready after=%.2fs filled=%d unavailable=%d total=%d fill_time=%@ store_bytes=%llu files=%d decoded_pages=%d", CACurrentMediaTime() - started, filler.filledCount, filler.unavailableCount, dataSource.catalogCount, dataSource.fillDuration.map { String(format: "%.2fs", $0) } ?? "-", bytes, pageFiles, dataSource.store.decodedPageCount))
             fflush(stdout)
             self.startAutomation()
         }
@@ -302,7 +314,7 @@ final class DemoViewController: UIViewController {
             let (final, visible) = gridView.debugVisibleFinalImageCount()
             let elapsed = CACurrentMediaTime() - start
             if (visible > 0 && final == visible) || elapsed > 20.0 {
-                print(String(format: "SHARP_PROBE fraction=%.2f time=%.0fms final=%d visible=%d net_in_flight=%d", fraction, elapsed * 1000.0, final, visible, self.photoDataSource?.filler.networkInFlightCount ?? 0))
+                print(String(format: "SHARP_PROBE fraction=%.2f time=%.0fms final=%d visible=%d net_in_flight=%d", fraction, elapsed * 1000.0, final, visible, self.photoDataSource?.filler?.networkInFlightCount ?? 0))
                 fflush(stdout)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                     self?.runSharpProbe(fractions: Array(fractions.dropFirst()))
@@ -330,7 +342,7 @@ final class DemoViewController: UIViewController {
         }
         if let delay = DemoViewController.argument("-sharpProbe").flatMap(Double.init) {
             if ProcessInfo.processInfo.arguments.contains("-noNetworkLane") {
-                self.photoDataSource?.filler.networkGate = { false }
+                self.photoDataSource?.filler?.isNetworkLaneEnabled = false
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 let fractions = DemoViewController.argument("-probeFractions").map { $0.split(separator: ",").compactMap { Double($0).map { CGFloat($0) } } } ?? [0.1, 0.6, 0.3, 0.8, 0.2, 0.7, 0.15, 0.9]
@@ -532,7 +544,7 @@ final class DemoViewController: UIViewController {
         self.isMeasuringAspects = true
         self.measureButton.isEnabled = false
         DispatchQueue.global(qos: .userInitiated).async {
-            let enumerated = PhotoLibraryDataSource.makeFetchResult()
+            let enumerated = DemoViewController.makePhotoFetchResult()
             var enumerateSum = 0.0
             let enumerateStart = CACurrentMediaTime()
             enumerated.enumerateObjects { asset, _, _ in
@@ -540,7 +552,7 @@ final class DemoViewController: UIViewController {
             }
             let enumerateTime = CACurrentMediaTime() - enumerateStart
 
-            let indexed = PhotoLibraryDataSource.makeFetchResult()
+            let indexed = DemoViewController.makePhotoFetchResult()
             var indexedSum = 0.0
             let indexedStart = CACurrentMediaTime()
             for index in 0 ..< indexed.count {
@@ -706,9 +718,6 @@ final class DemoViewController: UIViewController {
             print(String(format: "AUTOSCRUB_FRAME step=%d empty=%d indexed_empty=%d visible=%d dt=%.2fms fast=%d offset=%.1f", step - 1, empty, indexedEmpty, visible, interval * 1000.0, gridView.isMovingFast ? 1 : 0, gridView.contentOffset))
         } else {
             self.instrumentedDataSource?.resetCounters()
-            self.photoDataSource?.prepareCallWorst = 0.0
-            self.photoDataSource?.prepareCallTotal = 0.0
-            self.photoDataSource?.prepareCalls = 0
         }
         self.autoScrubLastTimestamp = link.timestamp
         let maximum = max(0.0, gridView.contentHeight - gridView.bounds.height)
@@ -727,8 +736,8 @@ final class DemoViewController: UIViewController {
             let summary = self.frameMonitor.summary
             let measured = max(1, 2 * steps)
             print(String(format: "AUTOSCRUB count=%d level=%d frames=%d dropped=%d worst=%.2fms avg=%.2fms work_worst=%.2fms steps=%d empty_frames=%d/%d empty_max=%d empty_fraction=%.3f indexed_empty_frames=%d indexed_empty_max=%d main_avg=%.2fms main_worst=%.2fms (simulator-only)", gridView.contentHeight > 0.0 ? self.gridItemCount : 0, gridView.level.columns, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoScrubWorkWorst * 1000.0, 2 * steps, self.autoScrubEmptyFrames, measured, self.autoScrubEmptyMax, self.autoScrubVisibleTotal > 0 ? Double(self.autoScrubEmptyTotal) / Double(self.autoScrubVisibleTotal) : 0.0, self.autoScrubIndexedEmptyFrames, self.autoScrubIndexedEmptyMax, self.autoScrubMainFrames > 0 ? self.autoScrubMainTotal / Double(self.autoScrubMainFrames) * 1000.0 : 0.0, self.autoScrubMainWorst * 1000.0))
-            if let dataSource = self.photoDataSource, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
-                print(String(format: "AUTOSCRUB_PREPARE calls=%d avg=%.3fms worst=%.3fms in_flight=%d", dataSource.prepareCalls, dataSource.prepareCalls > 0 ? dataSource.prepareCallTotal / Double(dataSource.prepareCalls) * 1000.0 : 0.0, dataSource.prepareCallWorst * 1000.0, dataSource.filler.inFlightCount))
+            if let dataSource = self.photoDataSource, let counters = self.instrumentedDataSource?.counters, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
+                print(String(format: "AUTOSCRUB_PREPARE calls=%d avg=%.3fms worst=%.3fms in_flight=%d", counters.prepareCalls, counters.prepareCalls > 0 ? counters.prepareCallTotal / Double(counters.prepareCalls) * 1000.0 : 0.0, counters.prepareCallWorst * 1000.0, dataSource.filler?.inFlightCount ?? 0))
             }
             fflush(stdout)
             self.autoScrubSettleStart = link.timestamp
@@ -773,7 +782,7 @@ final class DemoViewController: UIViewController {
             guard let self, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue else {
                 return
             }
-            self.photoDataSource?.filler.isMovingFast = isMovingFast
+            self.photoDataSource?.filler?.isMovingFast = isMovingFast
         }
         if let level = self.launchLevel {
             gridView.setLevel(level, animated: false)
@@ -813,7 +822,7 @@ final class DemoViewController: UIViewController {
         switch Source(rawValue: self.sourceControl.selectedSegmentIndex) ?? .synthetic {
         case .synthetic:
             self.photoDataSource?.onChange = nil
-            self.photoDataSource?.filler.isMovingFast = false
+            self.photoDataSource?.filler?.isMovingFast = false
             self.installGrid(dataSource: self.syntheticDataSource)
         case .photoLibrary:
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
@@ -822,12 +831,16 @@ final class DemoViewController: UIViewController {
                         return
                     }
                     if status == .authorized || status == .limited {
-                        var launchCache: MediaGridLaunchCache?
-                        if !ProcessInfo.processInfo.arguments.contains("-noLaunchCache") {
-                            let coverage = MediaGridLaunchCache.coverage(screenSize: self.view.window?.windowScene?.screen.bounds.size ?? self.view.bounds.size, scale: self.traitCollection.displayScale)
-                            launchCache = MediaGridLaunchCache(directory: MediaGridLaunchCache.defaultDirectory, capacity: coverage.capacity, pixelSize: coverage.pixelSize)
+                        let services = MediaGridPhotoLibraryServices.shared
+                        let fetchResult = DemoViewController.makePhotoFetchResult()
+                        let launch = ProcessInfo.processInfo.arguments.contains("-noLaunchCache") ? nil : services.makeLaunchMatch(fetchResult: fetchResult, reversed: true)
+                        services.filler.onLog = { message in
+                            DemoViewController.logLine(message)
                         }
-                        let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult(), thumbnailDirectory: PhotoLibraryDataSource.defaultThumbnailDirectory, registryURL: PhotoLibraryDataSource.defaultRetryRegistryURL, snapshotURL: PhotoLibraryDataSource.defaultSnapshotURL, launchCache: launchCache)
+                        let dataSource = MediaGridPhotoLibraryDataSource(fetchResult: fetchResult, reversed: true, store: services.store, launch: launch, filler: services.filler, snapshotURL: services.snapshotURL)
+                        dataSource.onLog = { message in
+                            DemoViewController.logLine(message)
+                        }
                         dataSource.launchKeeper?.onRefresh = { written in
                             print(String(format: "LAUNCH refresh written=%d since_launch=%.0fms", written ? 1 : 0, DemoViewController.timeSinceProcessStart() * 1000.0))
                             fflush(stdout)
@@ -847,7 +860,7 @@ final class DemoViewController: UIViewController {
                         instrumented.forwardsCaching = !ProcessInfo.processInfo.arguments.contains("-noCaching")
                         if DemoViewController.disablesThumbnails {
                             instrumented.providesThumbnails = false
-                            dataSource.filler.networkGate = { false }
+                            dataSource.filler?.isNetworkLaneEnabled = false
                         }
                         self.instrumentedDataSource = instrumented
                         self.installGrid(dataSource: instrumented)

@@ -41,6 +41,16 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGrid
+  MediaGridPhotoLibrary:
+    type: framework
+    platform: iOS
+    sources:
+      - ../MediaGridPhotoLibrary/Sources
+    dependencies:
+      - target: MediaGrid
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridPhotoLibrary
   MediaGridDemo:
     type: application
     platform: iOS
@@ -49,6 +59,7 @@ targets:
     dependencies:
       - target: CoreList
       - target: MediaGrid
+      - target: MediaGridPhotoLibrary
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridDemo
@@ -67,12 +78,28 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridTests
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/MediaGridDemo.app/MediaGridDemo
         BUNDLE_LOADER: $(TEST_HOST)
+  MediaGridPhotoLibraryTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - ../MediaGridPhotoLibrary/Tests
+    dependencies:
+      - target: MediaGridDemo
+      - target: MediaGrid
+      - target: MediaGridPhotoLibrary
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.telegram.MediaGridPhotoLibraryTests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/MediaGridDemo.app/MediaGridDemo
+        BUNDLE_LOADER: $(TEST_HOST)
 schemes:
   MediaGridDemo:
     build:
       targets:
         MediaGridDemo: all
         MediaGridTests: [test]
+        MediaGridPhotoLibraryTests: [test]
     test:
       targets:
         - MediaGridTests
+        - MediaGridPhotoLibraryTests

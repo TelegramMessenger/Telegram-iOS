@@ -1,6 +1,6 @@
 import XCTest
 import MediaGrid
-@testable import MediaGridDemo
+@testable import MediaGridPhotoLibrary
 
 final class ImageLoadSchedulerTests: XCTestCase {
     private typealias Scheduler = ImageLoadScheduler<String, Int, Int>
@@ -54,7 +54,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         XCTAssertFalse(scheduler.isNetworkLaneIdle)
         let moved = changes
         let networkJob = self.started.last!
-        scheduler.finish(networkJob, attempt: networkJob.attempt, image: TestDataSource.sampleImage)
+        scheduler.finish(networkJob, attempt: networkJob.attempt, image: PhotoLibraryTestImages.sampleImage)
         XCTAssertGreaterThan(changes, moved)
         XCTAssertTrue(scheduler.isNetworkLaneIdle)
     }
@@ -83,7 +83,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         })
         XCTAssertEqual(self.started.map { $0.key }, ["a"])
         let job = self.started[0]
-        scheduler.finish(job, attempt: job.attempt, image: TestDataSource.sampleImage)
+        scheduler.finish(job, attempt: job.attempt, image: PhotoLibraryTestImages.sampleImage)
         XCTAssertEqual(results, [false, false])
         XCTAssertEqual(scheduler.localLane.running, 0)
     }
@@ -143,7 +143,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         })
         first.cancel()
         XCTAssertTrue(self.cancelled.isEmpty)
-        scheduler.finish(self.started[0], attempt: 1, image: TestDataSource.sampleImage)
+        scheduler.finish(self.started[0], attempt: 1, image: PhotoLibraryTestImages.sampleImage)
         XCTAssertTrue(delivered)
     }
 
@@ -250,7 +250,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         XCTAssertEqual(scheduler.localLane.running, 1)
         scheduler.finish(job, attempt: 1, image: nil)
         XCTAssertTrue(results.isEmpty)
-        scheduler.finish(job, attempt: 2, image: TestDataSource.sampleImage)
+        scheduler.finish(job, attempt: 2, image: PhotoLibraryTestImages.sampleImage)
         XCTAssertEqual(results.count, 1)
         XCTAssertEqual(scheduler.localLane.running, 0)
     }
@@ -308,13 +308,13 @@ final class ImageLoadSchedulerTests: XCTestCase {
     private func runPreparation(_ job: Scheduler.Job, attempt: Int, before: () -> Void) -> (prepared: Int, delivered: UIImage?) {
         let queue = DispatchQueue(label: "ImageLoadSchedulerTests.preparation")
         queue.suspend()
-        let source = TestDataSource.distinctImage(1)
-        let output = TestDataSource.distinctImage(2)
+        let source = PhotoLibraryTestImages.distinctImage(1)
+        let output = PhotoLibraryTestImages.distinctImage(2)
         var prepared = 0
         let lock = NSLock()
         var delivered: UIImage?
         let expectation = self.expectation(description: "delivered")
-        PhotoLibraryDataSource.enqueuePreparation(source, job: job, attempt: attempt, queue: queue, prepare: { _ in
+        MediaGridPhotoLibraryDataSource.enqueuePreparation(source, job: job, attempt: attempt, queue: queue, prepare: { _ in
             lock.lock()
             prepared += 1
             lock.unlock()

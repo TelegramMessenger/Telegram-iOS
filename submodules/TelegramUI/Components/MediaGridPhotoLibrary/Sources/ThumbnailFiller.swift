@@ -147,7 +147,7 @@ final class ThumbnailRetryRegistry {
     private var isLoaded = false
     private let url: URL?
     private var isSaveScheduled = false
-    private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.thumbnailRetries", qos: .utility)
+    private let queue = DispatchQueue(label: "org.telegram.MediaGridPhotoLibrary.thumbnailRetries", qos: .utility)
 
     init(url: URL?) {
         self.url = url
@@ -809,6 +809,7 @@ final class ThumbnailFormatPolicy {
 
     static let fallbackLimit = 32
 
+    var onLog: ((String) -> Void)?
     private(set) var usesFastFormat = true
     private(set) var fastFormatSuccesses = 0
     private(set) var fastFormatFailures = 0
@@ -837,8 +838,7 @@ final class ThumbnailFormatPolicy {
                 self.fastFormatFailures += 1
                 if self.usesFastFormat && self.fastFormatSuccesses == 0 && self.fastFormatFailures >= ThumbnailFormatPolicy.fallbackLimit {
                     self.usesFastFormat = false
-                    print("THUMBS fastFormat unavailable after \(self.fastFormatFailures) failures, using highQualityFormat")
-                    fflush(stdout)
+                    self.onLog?("THUMBS fastFormat unavailable after \(self.fastFormatFailures) failures, using highQualityFormat")
                 }
             }
             highQuality()
@@ -960,17 +960,20 @@ final class PhotoKitThumbnailSource: ThumbnailImageSource {
     }
 
     var fetchResult: PHFetchResult<PHAsset>
+    var reversed: Bool
     var onNetworkDelivery: ((Int, Int) -> Void)?
     private let manager = PHImageManager.default()
-    private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.thumbnailRequests", qos: .utility)
-    private let policy = ThumbnailFormatPolicy()
+    private let queue = DispatchQueue(label: "org.telegram.MediaGridPhotoLibrary.thumbnailRequests", qos: .utility)
+    let policy = ThumbnailFormatPolicy()
 
-    init(fetchResult: PHFetchResult<PHAsset>) {
+    init(fetchResult: PHFetchResult<PHAsset>, reversed: Bool) {
         self.fetchResult = fetchResult
+        self.reversed = reversed
     }
 
     func requestThumbnail(index: Int, id: String, network: Bool, completion: @escaping (ThumbnailImageResult) -> Void) -> ThumbnailRequest? {
         let fetchResult = self.fetchResult
+        let reversed = self.reversed
         let request = Request(manager: self.manager)
         let finish: (ThumbnailImageResult) -> Void = { result in
             DispatchQueue.main.async {
@@ -985,7 +988,7 @@ final class PhotoKitThumbnailSource: ThumbnailImageSource {
             let count = fetchResult.count
             var asset: PHAsset?
             if index >= 0, index < count {
-                let candidate = fetchResult.object(at: count - 1 - index)
+                let candidate = fetchResult.object(at: MediaGridPhotoLibraryDataSource.fetchIndex(index, count: count, reversed: reversed))
                 if candidate.localIdentifier == id {
                     asset = candidate
                 }
