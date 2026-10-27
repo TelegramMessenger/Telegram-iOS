@@ -11,6 +11,7 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
     var suspendsSharpRequests = false
+    var compactRequestsSharpImages = false
     weak var donor: MediaGridLayoutLayer?
     private(set) var visibleRange: Range<Int> = 0 ..< 0
     private var needsRebind = false
@@ -327,7 +328,7 @@ final class MediaGridLayoutLayer: CALayer {
 
     private func wantsSharpImage(_ cell: MediaGridCellLayer, size: CGSize, pixelSize: CGSize) -> Bool {
         if cell.isShowingThumbnail {
-            if self.detail == .compact {
+            if self.detail == .compact && !self.compactRequestsSharpImages {
                 return false
             }
             return max(pixelSize.width, pixelSize.height) > MediaGridLayoutLayer.thumbnailSufficiency * cell.thumbnailPixelSize

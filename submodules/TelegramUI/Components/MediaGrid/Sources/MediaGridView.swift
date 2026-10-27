@@ -225,6 +225,19 @@ public final class MediaGridView: UIView {
         }
     }
 
+    public var compactLevelsRequestSharpImages: Bool = false {
+        didSet {
+            if self.compactLevelsRequestSharpImages != oldValue {
+                self.activeLayoutLayer.compactRequestsSharpImages = self.compactLevelsRequestSharpImages
+                self.spareLayoutLayer?.compactRequestsSharpImages = self.compactLevelsRequestSharpImages
+                if !self.layoutLevel.isInteractive {
+                    self.requestVisibleSharpImages()
+                    self.updatePrefetch(offset: self.engine.offset)
+                }
+            }
+        }
+    }
+
     public var availableLevels: [MediaGridLevel] = MediaGridLevel.allCases {
         didSet {
             let sorted = self.availableLevels.sorted()
@@ -1115,6 +1128,7 @@ public final class MediaGridView: UIView {
         let shift = sourceOffset - targetOffset
 
         let incoming = self.spareLayoutLayer ?? MediaGridLayoutLayer(dataSource: self.dataSource, pool: self.pool)
+        incoming.compactRequestsSharpImages = self.compactLevelsRequestSharpImages
         self.spareLayoutLayer = nil
         incoming.isItemSelected = self.isItemSelected
         incoming.suspendsSharpRequests = false
@@ -2083,7 +2097,7 @@ public final class MediaGridView: UIView {
         guard let layout = self.gridLayout else {
             return
         }
-        if self.defersCellBinding || self.isCellBindingScheduled || self.isMovingFast || !self.layoutLevel.isInteractive {
+        if self.defersCellBinding || self.isCellBindingScheduled || self.isMovingFast || !self.requestsSharpImages(at: self.layoutLevel) {
             return
         }
         let sizing = self.prefetchLayout ?? layout
@@ -2178,6 +2192,10 @@ public final class MediaGridView: UIView {
         }
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
         CFRunLoopWakeUp(CFRunLoopGetMain())
+    }
+
+    private func requestsSharpImages(at level: MediaGridLevel) -> Bool {
+        return level.isInteractive || self.compactLevelsRequestSharpImages
     }
 
     private func windowMargin(level: MediaGridLevel) -> CGFloat {
