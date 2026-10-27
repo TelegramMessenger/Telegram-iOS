@@ -10,10 +10,13 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var detail: MediaGridCellDetail = .full
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
-    var quality: MediaGridImageQuality = .full
+    var suspendsSharpRequests = false
+    weak var donor: MediaGridLayoutLayer?
     private(set) var visibleRange: Range<Int> = 0 ..< 0
     private var needsRebind = false
     private var staleIndices = Set<Int>()
+    private var changedIndices = Set<Int>()
+    static let thumbnailSufficiency: CGFloat = 1.25
 
     init(dataSource: MediaGridDataSource, pool: MediaGridCellPool) {
         self.dataSource = dataSource
@@ -66,6 +69,7 @@ final class MediaGridLayoutLayer: CALayer {
         let previous = self.layout
         var cells: [Int: MediaGridCellLayer] = [:]
         var stale = Set<Int>()
+        var changed = Set<Int>()
         for (index, cell) in self.visibleCells {
             guard let newIndex = changes.newIndex(forOld: index), newIndex < layout.count else {
                 self.pool.enqueue(cell)
@@ -75,6 +79,9 @@ final class MediaGridLayoutLayer: CALayer {
             let resized = previous.map { index < $0.count && $0.pixelSize(at: index) != layout.pixelSize(at: newIndex) } ?? true
             if changes.changed.contains(newIndex) || resized || self.staleIndices.contains(index) {
                 stale.insert(newIndex)
+                if changes.changed.contains(newIndex) || self.changedIndices.contains(index) {
+                    changed.insert(newIndex)
+                }
             } else if newIndex != index {
                 cell.bind(index: newIndex, detail: self.detail)
                 cell.setSelected(self.detail == .full ? (self.isItemSelected?(newIndex) ?? false) : false)
@@ -91,6 +98,7 @@ final class MediaGridLayoutLayer: CALayer {
             self.visibleRange = 0 ..< 0
         }
         self.staleIndices = stale
+        self.changedIndices = changed
         for (index, cell) in cells {
             cell.frame = layout.frame(at: index)
         }
@@ -113,6 +121,7 @@ final class MediaGridLayoutLayer: CALayer {
         self.visibleRange = 0 ..< 0
         self.needsRebind = false
         self.staleIndices.removeAll()
+        self.changedIndices.removeAll()
     }
 
     private func remove(_ lower: Int, _ upper: Int) {
@@ -175,7 +184,7 @@ final class MediaGridLayoutLayer: CALayer {
                     if let cell = self.visibleCells[index] {
                         cell.imageRequest?.cancel()
                         cell.imageRequest = nil
-                        self.bind(cell, index: index, layout: layout)
+                        self.bind(cell, index: index, layout: layout, keepsImage: !self.changedIndices.contains(index))
                     } else {
                         self.add(index, layout: layout)
                     }
@@ -189,44 +198,122 @@ final class MediaGridLayoutLayer: CALayer {
         }
         self.needsRebind = false
         self.staleIndices.removeAll()
+        self.changedIndices.removeAll()
         self.visibleRange = range
     }
 
-    func upgradeFastCells(prioritizing priority: Range<Int>) {
-        let pending = self.visibleCells.filter { $0.value.requestedQuality == .fast && !$0.value.hasFinalImage }
+    func requestSharpImages(prioritizing priority: Range<Int>) {
+        guard let layout = self.layout else {
+            return
+        }
+        let pending = self.visibleCells.filter { $0.value.isAwaitingSharpImage && !$0.value.hasFinalImage }
         let ordered = pending.keys.sorted { lhs, rhs in
             let lhsPriority = priority.contains(lhs)
             let rhsPriority = priority.contains(rhs)
             if lhsPriority != rhsPriority {
                 return !lhsPriority
             }
-            return lhs < rhs
+            return lhsPriority ? lhs > rhs : lhs < rhs
         }
         for index in ordered {
-            guard let cell = pending[index] else {
+            guard let cell = pending[index], index < layout.count else {
                 continue
             }
-            let previous = cell.imageRequest
-            cell.imageRequest = nil
-            self.requestImage(for: cell, index: index, quality: .full)
-            previous?.cancel()
+            cell.isAwaitingSharpImage = false
+            self.requestImage(for: cell, index: index)
         }
     }
 
-    private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
+    func refreshThumbnails(indices: IndexSet?) {
+        guard let layout = self.layout, !self.visibleCells.isEmpty else {
+            return
+        }
+        if let indices {
+            for range in indices.rangeView {
+                for index in range.clamped(to: self.visibleRange) {
+                    if let cell = self.visibleCells[index] {
+                        self.refreshThumbnail(cell, index: index, layout: layout)
+                    }
+                }
+            }
+        } else {
+            for (index, cell) in self.visibleCells {
+                self.refreshThumbnail(cell, index: index, layout: layout)
+            }
+        }
+    }
+
+    private func refreshThumbnail(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
+        guard index < layout.count, cell.contents == nil || cell.isShowingThumbnail, let thumbnail = self.dataSource.thumbnail(at: index) else {
+            return
+        }
+        let aspect = MediaGridLayoutLayer.aspect(of: cell.frame)
+        if cell.contents != nil && thumbnail.contentsRect(fillingAspect: aspect).width * CGFloat(thumbnail.image.width) < cell.shownPixelWidth {
+            return
+        }
+        cell.setThumbnail(thumbnail, cellAspect: aspect)
+        if !cell.hasFinalImage, !self.wantsSharpImage(cell, index: index, layout: layout) {
+            cell.isAwaitingSharpImage = false
+            if let request = cell.imageRequest {
+                cell.imageRequest = nil
+                cell.bindingToken += 1
+                request.cancel()
+            }
+        }
+    }
+
+    private static func aspect(of frame: CGRect) -> CGFloat {
+        return frame.height > 0.0 ? frame.width / frame.height : 1.0
+    }
+
+    private func wantsSharpImage(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) -> Bool {
+        guard cell.contents != nil else {
+            return true
+        }
+        let pixelSize = layout.pixelSize(at: index)
+        if cell.isShowingThumbnail {
+            if self.detail == .compact {
+                return false
+            }
+            return max(pixelSize.width, pixelSize.height) > MediaGridLayoutLayer.thumbnailSufficiency * cell.thumbnailPixelSize
+        }
+        return cell.shownPixelWidth < pixelSize.width
+    }
+
+    private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout, keepsImage: Bool = false) {
         cell.bind(index: index, detail: self.detail)
         cell.setSelected(self.detail == .full ? (self.isItemSelected?(index) ?? false) : false)
         cell.frame = layout.frame(at: index)
         cell.hasFinalImage = false
-        self.requestImage(for: cell, index: index, quality: self.quality)
+        cell.isAwaitingSharpImage = false
+        cell.bindingToken += 1
+        let showsSharpImage = cell.sharpImage != nil
+        var showsStaleImage = false
+        if !(keepsImage && showsSharpImage) {
+            if let thumbnail = self.dataSource.thumbnail(at: index) {
+                cell.setThumbnail(thumbnail, cellAspect: MediaGridLayoutLayer.aspect(of: cell.frame))
+            } else {
+                showsStaleImage = showsSharpImage
+            }
+        }
+        if let donorCell = self.donor?.visibleCells[index], donorCell !== cell, let image = donorCell.sharpImage {
+            cell.setImage(image)
+        }
+        guard showsStaleImage || self.wantsSharpImage(cell, index: index, layout: layout) else {
+            return
+        }
+        if self.suspendsSharpRequests {
+            cell.isAwaitingSharpImage = true
+        } else {
+            self.requestImage(for: cell, index: index)
+        }
     }
 
-    private func requestImage(for cell: MediaGridCellLayer, index: Int, quality: MediaGridImageQuality) {
+    private func requestImage(for cell: MediaGridCellLayer, index: Int) {
         guard let layout = self.layout else {
             return
         }
         cell.bindingToken += 1
-        cell.requestedQuality = quality
         let token = cell.bindingToken
         let apply: (MediaGridCellLayer?, UIImage?, Bool) -> Void = { cell, image, isDegraded in
             guard let cell, cell.bindingToken == token else {
@@ -246,7 +333,7 @@ final class MediaGridLayoutLayer: CALayer {
             }
             cell.setImage(image)
         }
-        let request = self.dataSource.requestImage(at: index, pixelSize: layout.pixelSize(at: index), quality: quality, completion: { [weak cell] image, isDegraded in
+        let request = self.dataSource.requestImage(at: index, pixelSize: layout.pixelSize(at: index), completion: { [weak cell] image, isDegraded in
             if Thread.isMainThread {
                 apply(cell, image, isDegraded)
             } else {

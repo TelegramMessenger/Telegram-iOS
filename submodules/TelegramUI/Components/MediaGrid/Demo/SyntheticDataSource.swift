@@ -36,6 +36,20 @@ final class SyntheticDataSource: MediaGridDataSource {
     private let aspects: [CGFloat]
     private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.SyntheticDataSource", qos: .userInitiated)
     private let cache = NSCache<NSString, UIImage>()
+    var onThumbnailsChanged: ((IndexSet) -> Void)?
+    private static let slotPixelSize = 48
+    private static let pageSide = 16
+    private static let slotsPerPage = SyntheticDataSource.pageSide * SyntheticDataSource.pageSide
+    private static let pagePixelSize = SyntheticDataSource.pageSide * SyntheticDataSource.slotPixelSize
+    private static let pageBudget = 32
+    private static let maxConcurrentRenders = 2
+    private let pageQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.SyntheticPages", qos: .userInitiated, attributes: .concurrent)
+    private var pages: [Int: CGImage] = [:]
+    private var pageUses: [Int: Int] = [:]
+    private var useTick = 0
+    private var renderStack: [Int] = []
+    private var rendersInFlight = Set<Int>()
+    private var isPrepareTurnOpen = false
 
     init(count: Int = 100_000, seed: UInt64 = 1) {
         self.count = count
@@ -79,7 +93,7 @@ final class SyntheticDataSource: MediaGridDataSource {
         }
     }
 
-    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         let key = "\(index)-\(Int(pixelSize.width))x\(Int(pixelSize.height))" as NSString
         if let image = self.cache.object(forKey: key) {
             completion(image, false)
@@ -101,10 +115,128 @@ final class SyntheticDataSource: MediaGridDataSource {
         return request
     }
 
-    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+    func startCaching(indices: [Int], pixelSize: CGSize) {
     }
 
-    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+    func stopCaching(indices: [Int], pixelSize: CGSize) {
+    }
+
+    func thumbnail(at index: Int) -> MediaGridThumbnail? {
+        guard index >= 0, index < self.count else {
+            return nil
+        }
+        let page = index / SyntheticDataSource.slotsPerPage
+        guard let image = self.pages[page] else {
+            return nil
+        }
+        self.touch(page: page)
+        let rect = SyntheticDataSource.drawnRect(slot: index % SyntheticDataSource.slotsPerPage, aspect: self.aspects[index])
+        let size = CGFloat(SyntheticDataSource.pagePixelSize)
+        return MediaGridThumbnail(image: image, contentsRect: CGRect(x: rect.minX / size, y: rect.minY / size, width: rect.width / size, height: rect.height / size))
+    }
+
+    func prepareThumbnails(indices: Range<Int>) {
+        if !self.isPrepareTurnOpen {
+            self.isPrepareTurnOpen = true
+            self.renderStack.removeAll()
+            DispatchQueue.main.async { [weak self] in
+                self?.isPrepareTurnOpen = false
+            }
+        }
+        let clamped = indices.clamped(to: 0 ..< self.count)
+        guard !clamped.isEmpty else {
+            return
+        }
+        let first = clamped.lowerBound / SyntheticDataSource.slotsPerPage
+        let last = (clamped.upperBound - 1) / SyntheticDataSource.slotsPerPage
+        var wanted: [Int] = []
+        for page in first ... last {
+            if self.pages[page] != nil {
+                self.touch(page: page)
+            } else if !self.rendersInFlight.contains(page) {
+                wanted.append(page)
+            }
+        }
+        if wanted.count > SyntheticDataSource.pageBudget {
+            wanted.removeLast(wanted.count - SyntheticDataSource.pageBudget)
+        }
+        let wantedSet = Set(wanted)
+        self.renderStack.removeAll { wantedSet.contains($0) }
+        self.renderStack.append(contentsOf: wanted.reversed())
+        self.startRenders()
+    }
+
+    private func touch(page: Int) {
+        self.useTick += 1
+        self.pageUses[page] = self.useTick
+    }
+
+    private func startRenders() {
+        while self.rendersInFlight.count < SyntheticDataSource.maxConcurrentRenders, let page = self.renderStack.popLast() {
+            if self.pages[page] != nil || self.rendersInFlight.contains(page) {
+                continue
+            }
+            self.rendersInFlight.insert(page)
+            let aspects = self.aspects
+            let count = self.count
+            self.pageQueue.async { [weak self] in
+                let image = SyntheticDataSource.renderPage(page, aspects: aspects, count: count)
+                DispatchQueue.main.async {
+                    self?.install(page: page, image: image)
+                }
+            }
+        }
+    }
+
+    private func install(page: Int, image: CGImage?) {
+        self.rendersInFlight.remove(page)
+        if let image {
+            self.pages[page] = image
+            self.touch(page: page)
+            if self.pages.count > SyntheticDataSource.pageBudget {
+                let victims = self.pages.keys.filter { $0 != page }.sorted { (self.pageUses[$0] ?? 0) < (self.pageUses[$1] ?? 0) }
+                for victim in victims.prefix(self.pages.count - SyntheticDataSource.pageBudget) {
+                    self.pages.removeValue(forKey: victim)
+                    self.pageUses.removeValue(forKey: victim)
+                }
+            }
+            let lower = page * SyntheticDataSource.slotsPerPage
+            self.onThumbnailsChanged?(IndexSet(integersIn: lower ..< min(self.count, lower + SyntheticDataSource.slotsPerPage)))
+        }
+        self.startRenders()
+    }
+
+    private static func drawnRect(slot: Int, aspect: CGFloat) -> CGRect {
+        let side = CGFloat(SyntheticDataSource.slotPixelSize)
+        let clamped = min(2.0, max(0.5, aspect))
+        let width = clamped >= 1.0 ? side : (side * clamped).rounded()
+        let height = clamped >= 1.0 ? (side / clamped).rounded() : side
+        let x = CGFloat(slot % SyntheticDataSource.pageSide) * side + ((side - width) / 2.0).rounded(.down)
+        let y = CGFloat(slot / SyntheticDataSource.pageSide) * side + ((side - height) / 2.0).rounded(.down)
+        return CGRect(x: x, y: y, width: width, height: height)
+    }
+
+    private static func renderPage(_ page: Int, aspects: [CGFloat], count: Int) -> CGImage? {
+        let size = SyntheticDataSource.pagePixelSize
+        guard let context = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue) else {
+            return nil
+        }
+        context.translateBy(x: 0.0, y: CGFloat(size))
+        context.scaleBy(x: 1.0, y: -1.0)
+        let side = CGFloat(SyntheticDataSource.slotPixelSize)
+        for slot in 0 ..< SyntheticDataSource.slotsPerPage {
+            let index = page * SyntheticDataSource.slotsPerPage + slot
+            guard index < count else {
+                break
+            }
+            let hue = CGFloat((Double(index) * 0.618033988749895).truncatingRemainder(dividingBy: 1.0))
+            context.setFillColor(UIColor(hue: hue, saturation: 0.5, brightness: 0.85, alpha: 1.0).cgColor)
+            context.fill(CGRect(x: CGFloat(slot % SyntheticDataSource.pageSide) * side, y: CGFloat(slot / SyntheticDataSource.pageSide) * side, width: side, height: side))
+            let rect = SyntheticDataSource.drawnRect(slot: slot, aspect: aspects[index])
+            context.setFillColor(UIColor(white: 1.0, alpha: 0.5).cgColor)
+            context.fill(CGRect(x: rect.midX - 6.0, y: rect.midY - 3.0, width: 12.0, height: 6.0))
+        }
+        return context.makeImage()
     }
 
     private static func render(index: Int, pixelSize: CGSize) -> UIImage {

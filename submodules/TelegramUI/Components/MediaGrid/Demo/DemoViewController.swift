@@ -50,6 +50,12 @@ final class DemoViewController: UIViewController {
     private var gridNeedsInitialLevel = false
     private var rotationProbe: RotationProbe?
     private let sourceControl = UISegmentedControl(items: ["Synthetic 100k", "Photo Library"])
+    private var emptyLink: CADisplayLink?
+    private var emptyNow = 0
+    private var emptyMax = 0
+    private var emptyFrames = 0
+    private var autoPinchEmptyFrames = 0
+    private var autoPinchEmptyMax = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -57,6 +63,12 @@ final class DemoViewController: UIViewController {
         self.sourceControl.selectedSegmentIndex = Source.synthetic.rawValue
         self.sourceControl.addTarget(self, action: #selector(self.sourceChanged), for: .valueChanged)
         self.navigationItem.titleView = self.sourceControl
+        self.syntheticDataSource.onThumbnailsChanged = { [weak self] indices in
+            guard let self, self.sourceControl.selectedSegmentIndex == Source.synthetic.rawValue else {
+                return
+            }
+            self.gridView?.thumbnailsDidChange(indices: indices)
+        }
         self.installGrid(dataSource: self.syntheticDataSource)
         if DemoViewController.argument("-source") == "photos" {
             self.sourceControl.selectedSegmentIndex = Source.photoLibrary.rawValue
@@ -74,7 +86,7 @@ final class DemoViewController: UIViewController {
 
         self.hudLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 11.0, weight: .medium)
         self.hudLabel.textColor = .white
-        self.hudLabel.numberOfLines = 2
+        self.hudLabel.numberOfLines = 3
         self.hudLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         self.view.addSubview(self.hudLabel)
         self.resetButton.setTitle("Reset", for: .normal)
@@ -92,9 +104,38 @@ final class DemoViewController: UIViewController {
         self.measureButton.addTarget(self, action: #selector(self.measureAspectsPressed), for: .touchUpInside)
         self.view.addSubview(self.measureButton)
         self.frameMonitor.onUpdate = { [weak self] summary in
-            self?.hudLabel.text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms", summary.frames, summary.dropped, summary.worst * 1000.0)
+            guard let self else {
+                return
+            }
+            self.hudLabel.text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms\nempty %d  max %d  frames %d", summary.frames, summary.dropped, summary.worst * 1000.0, self.emptyNow, self.emptyMax, self.emptyFrames)
         }
         self.frameMonitor.start()
+        let emptyLink = CADisplayLink(target: self, selector: #selector(self.emptyTick))
+        if #available(iOS 15.0, *) {
+            emptyLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+        }
+        emptyLink.add(to: .main, forMode: .common)
+        self.emptyLink = emptyLink
+    }
+
+    @objc private func emptyTick() {
+        #if DEBUG
+        guard let gridView = self.gridView else {
+            return
+        }
+        let empty = gridView.debugEmptyVisibleCellCount().empty
+        self.emptyNow = empty
+        self.emptyMax = max(self.emptyMax, empty)
+        if empty > 0 {
+            self.emptyFrames += 1
+        }
+        if self.autoPinchLink != nil {
+            self.autoPinchEmptyMax = max(self.autoPinchEmptyMax, empty)
+            if empty > 0 {
+                self.autoPinchEmptyFrames += 1
+            }
+        }
+        #endif
     }
 
     private static func argument(_ name: String) -> String? {
@@ -241,11 +282,13 @@ final class DemoViewController: UIViewController {
     private func reportAutoPinchPair() {
         if let pair = self.autoPinchPair {
             let summary = self.frameMonitor.summary
-            print(String(format: "AUTOPINCH pair=%@ frames=%d dropped=%d worst=%.2fms avg=%.2fms drive_worst=%.2fms (simulator-only)", pair, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoPinchDriveWorst * 1000.0))
+            print(String(format: "AUTOPINCH pair=%@ frames=%d dropped=%d worst=%.2fms avg=%.2fms drive_worst=%.2fms empty_frames=%d empty_max=%d (simulator-only)", pair, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoPinchDriveWorst * 1000.0, self.autoPinchEmptyFrames, self.autoPinchEmptyMax))
             fflush(stdout)
         }
         self.frameMonitor.reset()
         self.autoPinchDriveWorst = 0.0
+        self.autoPinchEmptyFrames = 0
+        self.autoPinchEmptyMax = 0
     }
 
     @objc private func autoPinchTick(_ link: CADisplayLink) {
@@ -364,6 +407,8 @@ final class DemoViewController: UIViewController {
 
     @objc private func resetPressed() {
         self.frameMonitor.reset()
+        self.emptyMax = 0
+        self.emptyFrames = 0
     }
 
     @objc private func zoomInPressed() {
@@ -611,7 +656,7 @@ final class DemoViewController: UIViewController {
         gridView.updateLayout(size: self.view.bounds.size, safeInsets: insets, isLandscape: isLandscape, transition: self.rotationDuration)
         self.rotationProbe?.noteUpdate(CACurrentMediaTime() - start)
         self.scrubber.frame = CGRect(x: self.view.bounds.width - 220.0, y: insets.top, width: 220.0, height: self.view.bounds.height - insets.top - insets.bottom)
-        self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 32.0)
+        self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 46.0)
         self.resetButton.frame = CGRect(x: 8.0, y: self.hudLabel.frame.maxY + 4.0, width: 60.0, height: 28.0)
         self.zoomInButton.frame = CGRect(x: 8.0, y: self.view.bounds.height - insets.bottom - 40.0, width: 84.0, height: 32.0)
         self.zoomOutButton.frame = CGRect(x: self.zoomInButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 84.0, height: 32.0)

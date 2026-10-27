@@ -59,11 +59,15 @@ public final class MediaGridView: UIView {
             }
         }
     }
-    private var prefetchQuality: MediaGridImageQuality = .full
+    private var scrollStep: CGFloat = 0.0
+    private var lastScrolledOffset: CGFloat?
+    private var flightTargetOffset: CGFloat?
     private var motionSample: (time: CFTimeInterval, offset: CGFloat)? {
         didSet {
             if self.motionSample == nil {
                 self.lastScrollEvent = nil
+                self.lastScrolledOffset = nil
+                self.scrollStep = 0.0
             }
         }
     }
@@ -762,7 +766,8 @@ public final class MediaGridView: UIView {
         let incoming = self.spareLayoutLayer ?? MediaGridLayoutLayer(dataSource: self.dataSource, pool: self.pool)
         self.spareLayoutLayer = nil
         incoming.isItemSelected = self.isItemSelected
-        incoming.quality = .full
+        incoming.suspendsSharpRequests = false
+        incoming.donor = self.activeLayoutLayer
         incoming.opacity = 1.0
         incoming.setLayout(target, detail: level.isInteractive ? .full : .compact)
         MediaGridZoomTransition.resetPivot(incoming, width: width, height: target.contentHeight, originY: shift)
@@ -824,14 +829,16 @@ public final class MediaGridView: UIView {
         transition.boundRange = newLower ... newUpper
         let pad = self.bounds.height * 0.05
         let incomingRect = transition.incomingRect(at: newLower).union(transition.incomingRect(at: newUpper)).insetBy(dx: 0.0, dy: -pad)
-        self.dataSource.performBatch {
-            transition.incoming.updateVisibleRange(transition.targetLayout.indexRange(intersecting: incomingRect))
-        }
+        let incomingRange = transition.targetLayout.indexRange(intersecting: incomingRect)
         let outgoingRect = transition.outgoingRect(at: newLower).union(transition.outgoingRect(at: newUpper)).insetBy(dx: 0.0, dy: -pad)
         var outgoingRange = transition.sourceLayout.indexRange(intersecting: outgoingRect)
         let current = transition.outgoing.visibleRange
         if !current.isEmpty, current.overlaps(outgoingRange) {
             outgoingRange = min(current.lowerBound, outgoingRange.lowerBound) ..< max(current.upperBound, outgoingRange.upperBound)
+        }
+        self.prepareThumbnails([outgoingRange, transition.targetLayout.indexRange(intersecting: transition.incomingRect(at: 1.0)), incomingRange])
+        self.dataSource.performBatch {
+            transition.incoming.updateVisibleRange(incomingRange)
         }
         transition.outgoing.updateVisibleRange(outgoingRange)
         self.pool.setVisibleCount(transition.outgoing.visibleCells.count + transition.incoming.visibleCells.count)
@@ -876,6 +883,8 @@ public final class MediaGridView: UIView {
         let width = self.bounds.width
         let outgoing = transition.outgoing
         let incoming = transition.incoming
+        outgoing.donor = nil
+        incoming.donor = nil
         if commits {
             outgoing.removeAllCells()
             MediaGridZoomTransition.resetPivot(outgoing, width: width, height: 0.0, originY: 0.0)
@@ -885,7 +894,7 @@ public final class MediaGridView: UIView {
 
             MediaGridZoomTransition.resetPivot(incoming, width: width, height: transition.targetLayout.contentHeight, originY: 0.0)
             incoming.opacity = 1.0
-            incoming.quality = self.isMovingFast ? .fast : .full
+            incoming.suspendsSharpRequests = self.isMovingFast
             self.activeLayoutLayer = incoming
 
             self.layoutLevel = transition.targetLevel
@@ -927,11 +936,8 @@ public final class MediaGridView: UIView {
         self.updateGestureAvailability()
         self.applyAspects(notify: false)
         self.scrolled(to: self.engine.offset)
-        if !self.isMovingFast, let layout = self.gridLayout {
-            let viewport = CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height)
-            self.dataSource.performBatch {
-                self.activeLayoutLayer.upgradeFastCells(prioritizing: layout.indexRange(intersecting: viewport))
-            }
+        if !self.isMovingFast {
+            self.requestVisibleSharpImages()
         }
         if self.level != previousLevel {
             self.onLevelChanged?(self.level)
@@ -1022,8 +1028,42 @@ public final class MediaGridView: UIView {
             relativePosition = self.relativePosition(of: anchor)
         }
         self.pinch = PinchSession(state: state, relativePosition: relativePosition, isTracking: true)
+        if self.transition == nil {
+            self.prepareIncomingThumbnails(anchor: state.anchor, relativePosition: relativePosition)
+        }
         self.updateGestureAvailability()
         self.engine.isScrollEnabled = false
+    }
+
+    private func prepareIncomingThumbnails(anchor: MediaGridZoomAnchor, relativePosition: CGPoint) {
+        guard let source = self.gridLayout, self.bounds.height > 0.0 else {
+            return
+        }
+        let host = self.engine.contentHost.frame
+        let point = CGPoint(x: anchor.pointInView.x - host.minX, y: anchor.pointInView.y - host.minY)
+        var ranges: [Range<Int>] = []
+        for level in [self.layoutLevel.zoomedOut, self.layoutLevel.zoomedIn] {
+            guard let level else {
+                continue
+            }
+            let target = self.makeLayout(level: level, geometry: source.geometry)
+            let offset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: anchor.index, pointInView: point), in: target, viewportHeight: self.bounds.height, relativePosition: relativePosition)
+            ranges.append(target.indexRange(intersecting: CGRect(x: 0.0, y: offset, width: source.geometry.width, height: self.bounds.height)))
+        }
+        self.prepareThumbnails(ranges)
+    }
+
+    private func prepareThumbnails(_ ranges: [Range<Int>]) {
+        for range in ranges where !range.isEmpty {
+            self.dataSource.prepareThumbnails(indices: range)
+        }
+    }
+
+    public func thumbnailsDidChange(indices: IndexSet?) {
+        self.activeLayoutLayer.refreshThumbnails(indices: indices)
+        if let transition = self.transition, transition.incoming !== self.activeLayoutLayer {
+            transition.incoming.refreshThumbnails(indices: indices)
+        }
     }
 
     private func updatePinch(scale: CGFloat) {
@@ -1182,6 +1222,31 @@ public final class MediaGridView: UIView {
     }
 
     #if DEBUG
+    public func debugEmptyVisibleCellCount() -> (empty: Int, visible: Int) {
+        var empty = 0
+        var visible = 0
+        let count: (MediaGridLayoutLayer, CGRect) -> Void = { layer, rect in
+            for cell in layer.visibleCells.values where cell.frame.intersects(rect) {
+                visible += 1
+                if cell.contents == nil {
+                    empty += 1
+                }
+            }
+        }
+        if let transition = self.transition {
+            let progress = transition.presentedProgress
+            if progress < 1.0 {
+                count(transition.outgoing, transition.outgoingRect(at: progress))
+            }
+            if progress > 0.0 {
+                count(transition.incoming, transition.incomingRect(at: progress))
+            }
+        } else {
+            count(self.activeLayoutLayer, CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height))
+        }
+        return (empty, visible)
+    }
+
     public func debugDrivePinch(_ state: UIGestureRecognizer.State, center: CGPoint, scale: CGFloat, velocity: CGFloat) {
         self._testPinch(state, center: center, scale: scale, velocity: velocity)
     }
@@ -1345,6 +1410,10 @@ public final class MediaGridView: UIView {
         if self.transition != nil {
             return
         }
+        if let last = self.lastScrolledOffset {
+            self.scrollStep = offset - last
+        }
+        self.lastScrolledOffset = offset
         self.updateMotion(offset: offset)
         self.updateVisibleCells(offset: offset)
         self.updatePrefetch(offset: offset)
@@ -1433,21 +1502,22 @@ public final class MediaGridView: UIView {
 
     private func setMovingFast(_ isMovingFast: Bool, upgrade: Bool = true) {
         self.isMovingFast = isMovingFast
-        let quality: MediaGridImageQuality = isMovingFast ? .fast : .full
-        self.activeLayoutLayer.quality = quality
-        if upgrade, self.transition == nil, let layout = self.gridLayout {
-            self.resetPrefetch()
-            self.prefetchQuality = quality
-            if !isMovingFast {
-                let viewport = CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height)
-                self.dataSource.performBatch {
-                    self.activeLayoutLayer.upgradeFastCells(prioritizing: layout.indexRange(intersecting: viewport))
-                }
-            }
+        self.activeLayoutLayer.suspendsSharpRequests = isMovingFast || self.isCellBindingScheduled
+        self.resetPrefetch()
+        if upgrade, !isMovingFast, self.transition == nil {
+            self.requestVisibleSharpImages()
             self.updatePrefetch(offset: self.engine.offset)
-        } else {
-            self.resetPrefetch()
-            self.prefetchQuality = quality
+        }
+    }
+
+    private func requestVisibleSharpImages() {
+        guard let layout = self.gridLayout, !self.isCellBindingScheduled, !self.defersCellBinding else {
+            return
+        }
+        self.activeLayoutLayer.suspendsSharpRequests = self.isMovingFast
+        let viewport = CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height)
+        self.dataSource.performBatch {
+            self.activeLayoutLayer.requestSharpImages(prioritizing: layout.indexRange(intersecting: viewport))
         }
     }
 
@@ -1457,6 +1527,7 @@ public final class MediaGridView: UIView {
 
     private func flightChanged(settledOffset: CGFloat?) {
         self.settledFlightOffset = settledOffset
+        self.flightTargetOffset = settledOffset
         self.isFlightActive = settledOffset != nil
         self.updatePrefetch(offset: self.engine.offset)
         if settledOffset == nil {
@@ -1478,7 +1549,7 @@ public final class MediaGridView: UIView {
         self.settledFlightOffset = nil
         if !stale.isEmpty, let layout = self.prefetchLayout {
             MediaGridView.forEachPixelSizeRun(stale, layout: layout) { indices, pixelSize in
-                self.dataSource.stopCaching(indices: indices, pixelSize: pixelSize, quality: self.prefetchQuality)
+                self.dataSource.stopCaching(indices: indices, pixelSize: pixelSize)
             }
         }
     }
@@ -1487,7 +1558,7 @@ public final class MediaGridView: UIView {
         guard let layout = self.gridLayout else {
             return
         }
-        if self.defersCellBinding || self.isCellBindingScheduled {
+        if self.defersCellBinding || self.isCellBindingScheduled || self.isMovingFast || !self.layoutLevel.isInteractive {
             return
         }
         let sizing = self.prefetchLayout ?? layout
@@ -1495,13 +1566,13 @@ public final class MediaGridView: UIView {
         let plan = self.prefetchPlanner.update(layout: layout, viewportHeight: self.bounds.height, offset: offset, settledOffset: self.settledFlightOffset)
         if !plan.stop.isEmpty {
             MediaGridView.forEachPixelSizeRun(plan.stop, layout: sizing) { indices, pixelSize in
-                self.dataSource.stopCaching(indices: indices, pixelSize: pixelSize, quality: self.prefetchQuality)
+                self.dataSource.stopCaching(indices: indices, pixelSize: pixelSize)
             }
         }
         if !plan.start.isEmpty {
             let center = layout.indexRange(intersecting: CGRect(x: 0.0, y: offset + self.bounds.height * 0.5, width: layout.geometry.width, height: 1.0)).lowerBound
             MediaGridView.forEachPixelSizeRun(MediaGridView.nearestFirst(plan.start, center: center), layout: sizing) { indices, pixelSize in
-                self.dataSource.startCaching(indices: indices, pixelSize: pixelSize, quality: self.prefetchQuality)
+                self.dataSource.startCaching(indices: indices, pixelSize: pixelSize)
             }
         }
     }
@@ -1546,19 +1617,28 @@ public final class MediaGridView: UIView {
         }
         if self.defersCellBinding {
             self.scheduleCellBinding()
-            return
-        }
-        if self.isCellBindingScheduled {
-            return
         }
         let height = self.bounds.height
         guard offset.isFinite, height > 0.0, height.isFinite else {
             return
         }
-        let viewport = CGRect(x: 0.0, y: offset, width: self.bounds.width, height: height)
+        let width = self.bounds.width
+        let viewport = CGRect(x: 0.0, y: offset, width: width, height: height)
         let range = layout.indexRange(intersecting: viewport.insetBy(dx: 0.0, dy: -self.windowMargin(level: self.layoutLevel)))
+        let priority = layout.indexRange(intersecting: viewport)
+        var ranges = [layout.indexRange(intersecting: viewport.insetBy(dx: 0.0, dy: -height))]
+        if let target = self.flightTargetOffset, target.isFinite {
+            ranges.append(layout.indexRange(intersecting: CGRect(x: 0.0, y: target, width: width, height: height)))
+        }
+        if self.isMovingFast, self.scrollStep != 0.0, self.scrollStep.isFinite {
+            ranges.append(layout.indexRange(intersecting: viewport.offsetBy(dx: 0.0, dy: self.scrollStep)))
+        }
+        ranges.append(range)
+        ranges.append(priority)
+        self.prepareThumbnails(ranges)
+        self.activeLayoutLayer.suspendsSharpRequests = self.isMovingFast || self.isCellBindingScheduled
         self.dataSource.performBatch {
-            self.activeLayoutLayer.updateVisibleRange(range, priority: layout.indexRange(intersecting: viewport))
+            self.activeLayoutLayer.updateVisibleRange(range, priority: priority)
         }
         self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count)
     }
@@ -1575,10 +1655,14 @@ public final class MediaGridView: UIView {
             self.isCellBindingScheduled = false
             if self.transition == nil {
                 self.updateVisibleCells(offset: self.engine.offset)
+                if !self.isMovingFast {
+                    self.requestVisibleSharpImages()
+                }
                 self.updatePrefetch(offset: self.engine.offset)
             }
         }
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
+        CFRunLoopWakeUp(CFRunLoopGetMain())
     }
 
     private func windowMargin(level: MediaGridLevel) -> CGFloat {

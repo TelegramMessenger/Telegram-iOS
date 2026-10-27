@@ -35,19 +35,20 @@ final class MediaGridMotionTests: XCTestCase {
         self.scroll(view, to: 14_000.0)
     }
 
-    func testFastScrubBindsFastQuality() {
+    func testFastScrubDefersSharpRequests() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 10_000.0)
         XCTAssertFalse(view.isMovingFast)
         let before = dataSource.requests.count
         self.scroll(view, to: 14_000.0)
         XCTAssertTrue(view.isMovingFast)
-        let added = dataSource.requests[before...]
-        XCTAssertFalse(added.isEmpty)
-        XCTAssertTrue(added.allSatisfy { $0.quality == .fast })
+        XCTAssertEqual(dataSource.requests.count, before)
+        let visible = view.activeLayoutLayer.visibleCells
+        XCTAssertFalse(visible.isEmpty)
+        XCTAssertTrue(visible.values.allSatisfy { $0.isAwaitingSharpImage })
     }
 
-    func testSlowScrollKeepsFullQuality() {
+    func testSlowScrollRequestsSharpImages() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 1000.0)
         let before = dataSource.requests.count
@@ -55,9 +56,8 @@ final class MediaGridMotionTests: XCTestCase {
             self.scroll(view, to: 1000.0 + CGFloat(step) * 20.0)
         }
         XCTAssertFalse(view.isMovingFast)
-        let added = dataSource.requests[before...]
-        XCTAssertFalse(added.isEmpty)
-        XCTAssertTrue(added.allSatisfy { $0.quality == .full })
+        XCTAssertGreaterThan(dataSource.requests.count, before)
+        XCTAssertFalse(view.activeLayoutLayer.visibleCells.values.contains { $0.isAwaitingSharpImage })
     }
 
     func testOffsetUpdatesWithinOneFrameDoNotMeasureSpeed() {
@@ -68,15 +68,13 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertFalse(view.isMovingFast)
     }
 
-    func testFrameJumpOverAScreenBindsFast() {
+    func testFrameJumpOverAScreenDefersSharpRequests() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 1000.0)
         let before = dataSource.requests.count
         self.scroll(view, to: 1000.0 + view.bounds.height * 1.5, after: 1.0 / 60.0)
         XCTAssertTrue(view.isMovingFast)
-        let added = dataSource.requests[before...]
-        XCTAssertFalse(added.isEmpty)
-        XCTAssertTrue(added.allSatisfy { $0.quality == .fast })
+        XCTAssertEqual(dataSource.requests.count, before)
     }
 
     func testScrollBindsInsideOneDataSourceBatch() {
@@ -102,19 +100,20 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertFalse(view.isMovingFast)
     }
 
-    func testSettleUpgradesFastCellsKeepingTheirImage() {
+    func testSettleUpgradesThumbnailCellsKeepingTheirImage() {
         let (view, dataSource) = self.makeView()
-        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
+        dataSource.providesThumbnails = true
         self.startFastScrub(view)
         XCTAssertTrue(view.isMovingFast)
         let visible = view.activeLayoutLayer.visibleCells
         XCTAssertFalse(visible.isEmpty)
         for cell in visible.values {
             XCTAssertNotNil(cell.contents)
+            XCTAssertTrue(cell.isShowingThumbnail)
             XCTAssertFalse(cell.hasFinalImage)
         }
         dataSource.holdsDeliveries = true
-        dataSource.deliveriesByQuality[.full] = [(nil, true), (TestDataSource.sampleImage, false)]
+        dataSource.deliveries = [(nil, true), (TestDataSource.distinctImage(7, side: 600.0), false)]
         let before = dataSource.requests.count
 
         self.time += MediaGridView.motionSettleDelay / 2.0
@@ -127,7 +126,6 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertFalse(view.isMovingFast)
         let upgrades = dataSource.requests[before...]
         XCTAssertEqual(Set(upgrades.map { $0.index }), Set(visible.keys))
-        XCTAssertTrue(upgrades.allSatisfy { $0.quality == .full })
         for cell in visible.values {
             XCTAssertNotNil(cell.contents)
         }
@@ -135,12 +133,12 @@ final class MediaGridMotionTests: XCTestCase {
         for cell in visible.values {
             XCTAssertNotNil(cell.contents)
             XCTAssertTrue(cell.hasFinalImage)
+            XCTAssertFalse(cell.isShowingThumbnail)
         }
     }
 
     func testSettleRequestsViewportUpgradesLast() {
         let (view, dataSource) = self.makeView()
-        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
         self.startFastScrub(view)
         let before = dataSource.requests.count
         self.time += MediaGridView.motionSettleDelay * 2.0
@@ -152,32 +150,20 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertEqual(Set(tail), Set(viewport))
     }
 
-    func testSettleDoesNotRerequestFinalImages() {
+    func testSettleDoesNotRerequestKeptFinalImages() {
         let (view, dataSource) = self.makeView()
-        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, false)]
-        self.startFastScrub(view)
+        self.scroll(view, to: 10_000.0)
+        let kept = view.activeLayoutLayer.visibleCells
+        XCTAssertTrue(kept.values.allSatisfy { $0.hasFinalImage })
+        self.scroll(view, to: 10_000.0 + view.bounds.height * 0.5)
+        XCTAssertTrue(view.isMovingFast)
         let before = dataSource.requests.count
         self.time += MediaGridView.motionSettleDelay * 2.0
         view._testSettleMotion()
         XCTAssertFalse(view.isMovingFast)
-        XCTAssertEqual(dataSource.requests.count, before)
-    }
-
-    func testSettleUpgradesPendingFastRequests() {
-        let (view, dataSource) = self.makeView()
-        dataSource.holdsDeliveries = true
-        self.startFastScrub(view)
-        let visible = view.activeLayoutLayer.visibleCells
-        let cancels = dataSource.cancelCount
-        let before = dataSource.requests.count
-        self.time += MediaGridView.motionSettleDelay * 2.0
-        view._testSettleMotion()
-        XCTAssertEqual(dataSource.requests.count - before, visible.count)
-        XCTAssertEqual(dataSource.cancelCount - cancels, visible.count)
-        dataSource.flushHeldDeliveries()
-        for cell in visible.values {
-            XCTAssertTrue(cell.hasFinalImage)
-        }
+        let requested = Set(dataSource.requests[before...].map { $0.index })
+        XCTAssertFalse(requested.isEmpty)
+        XCTAssertTrue(requested.isDisjoint(with: kept.keys))
     }
 
     func testFastScrubDoesNotRebindKeptCells() {
@@ -202,8 +188,10 @@ final class MediaGridMotionTests: XCTestCase {
     func testJumpRequestsViewportLast() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 10_000.0)
-        let before = dataSource.requests.count
         self.scroll(view, to: 60_000.0)
+        let before = dataSource.requests.count
+        self.time += MediaGridView.motionSettleDelay * 2.0
+        view._testSettleMotion()
         let added = Array(dataSource.requests[before...])
         let viewport = self.viewportIndices(view)
         XCTAssertGreaterThan(added.count, viewport.count)
@@ -211,16 +199,17 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertEqual(added.last?.index, viewport.lowerBound)
     }
 
-    func testPrefetchFollowsMotionQuality() {
+    func testPrefetchPausesWhileMovingFast() {
         let (view, dataSource) = self.makeView()
-        XCTAssertEqual(dataSource.cachingQualities.last, .full)
+        XCTAssertFalse(dataSource.cachedIndices.isEmpty)
         self.startFastScrub(view)
-        XCTAssertEqual(dataSource.cachingQualities.last, .fast)
+        XCTAssertTrue(dataSource.cachedIndices.isEmpty)
+        let starts = dataSource.startedCachingOrder.count
+        self.scroll(view, to: 18_000.0)
+        XCTAssertEqual(dataSource.startedCachingOrder.count, starts)
         let viewport = self.viewportIndices(view)
-        XCTAssertTrue(Set(viewport).isSubset(of: dataSource.cachedIndices))
         self.time += MediaGridView.motionSettleDelay * 2.0
         view._testSettleMotion()
-        XCTAssertEqual(dataSource.cachingQualities.last, .full)
         XCTAssertTrue(Set(viewport).isSubset(of: dataSource.cachedIndices))
     }
 
@@ -234,22 +223,19 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertFalse(view.isMovingFast)
     }
 
-    func testZoomTransitionBindsFullQualityWhileFast() {
+    func testZoomTransitionRequestsSharpWhileFast() {
         let (view, dataSource) = self.makeView()
         self.startFastScrub(view)
         XCTAssertTrue(view.isMovingFast)
         let before = dataSource.requests.count
         view.setLevel(.five, animated: true)
         XCTAssertNotNil(view.transition)
-        let added = dataSource.requests[before...]
-        XCTAssertFalse(added.isEmpty)
-        XCTAssertTrue(added.allSatisfy { $0.quality == .full })
+        XCTAssertGreaterThan(dataSource.requests.count, before)
         view._testFinishAnimations()
     }
 
-    func testZoomStartDoesNotUpgradeOutgoingFastCells() {
+    func testZoomStartDoesNotUpgradeOutgoingAwaitingCells() {
         let (view, dataSource) = self.makeView()
-        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
         self.startFastScrub(view)
         XCTAssertTrue(view.isMovingFast)
         let outgoing = Set(self.viewportIndices(view))
@@ -266,9 +252,8 @@ final class MediaGridMotionTests: XCTestCase {
         view._testFinishAnimations()
     }
 
-    func testCancelledZoomUpgradesFastCells() {
+    func testCancelledZoomUpgradesAwaitingCells() {
         let (view, dataSource) = self.makeView()
-        dataSource.deliveriesByQuality[.fast] = [(TestDataSource.sampleImage, true)]
         self.startFastScrub(view)
         let viewport = Set(self.viewportIndices(view))
         let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
@@ -279,7 +264,7 @@ final class MediaGridMotionTests: XCTestCase {
         view._testPinch(.ended, center: center, scale: 1.0)
         view._testFinishAnimations()
         XCTAssertEqual(view.level, .three)
-        let upgraded = Set(dataSource.requests[before...].filter { $0.quality == .full }.map { $0.index })
+        let upgraded = Set(dataSource.requests[before...].map { $0.index })
         XCTAssertTrue(viewport.isSubset(of: upgraded))
     }
 
@@ -303,54 +288,10 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertEqual(distances, distances.sorted())
     }
 
-    func testUpgradeRequestsFullBeforeCancellingFast() {
-        let (view, dataSource) = self.makeView()
-        dataSource.holdsDeliveries = true
-        self.startFastScrub(view)
-        let visible = view.activeLayoutLayer.visibleCells
-        let before = dataSource.events.count
-        self.time += MediaGridView.motionSettleDelay * 2.0
-        view._testSettleMotion()
-        let events = Array(dataSource.events[before...])
-        XCTAssertEqual(events.count, 2 * visible.count)
-        for pair in stride(from: 0, to: events.count, by: 2) {
-            let request = events[pair]
-            let cancel = events[pair + 1]
-            XCTAssertTrue(request.hasPrefix("request "))
-            XCTAssertEqual(cancel, request.replacingOccurrences(of: "request ", with: "cancel "))
-        }
-    }
-
-    func testLateFastDeliveryAfterUpgradeIsDropped() {
-        let (view, dataSource) = self.makeView()
-        var images: [String: UIImage] = [:]
-        dataSource.imageForIndex = { index, quality in
-            let key = "\(index)-\(quality)"
-            if let image = images[key] {
-                return image
-            }
-            let image = TestDataSource.distinctImage(index + (quality == .fast ? 128 : 0))
-            images[key] = image
-            return image
-        }
-        dataSource.holdsDeliveries = true
-        dataSource.deliversAfterCancel = true
-        self.startFastScrub(view)
-        let visible = view.activeLayoutLayer.visibleCells
-        self.time += MediaGridView.motionSettleDelay * 2.0
-        view._testSettleMotion()
-        dataSource.flushHeldDeliveries(where: { _, quality in quality == .full })
-        dataSource.flushHeldDeliveries()
-        for (index, cell) in visible {
-            XCTAssertTrue(cell.hasFinalImage)
-            XCTAssertTrue((cell.contents as! CGImage) === images["\(index)-full"]?.cgImage, "index \(index) shows a late fast image")
-        }
-    }
-
     func testLateDeliveryAfterReuseIsDropped() {
         let (view, dataSource) = self.makeView()
         var images: [Int: UIImage] = [:]
-        dataSource.imageForIndex = { index, _ in
+        dataSource.imageForIndex = { index in
             if let image = images[index] {
                 return image
             }
@@ -364,13 +305,15 @@ final class MediaGridMotionTests: XCTestCase {
         let old = Set(view.activeLayoutLayer.visibleCells.keys)
         self.scroll(view, to: 10_000.0, after: 1.0)
         self.scroll(view, to: 40_000.0, after: 1.0)
+        self.time += MediaGridView.motionSettleDelay * 2.0
+        view._testSettleMotion()
         let current = view.activeLayoutLayer.visibleCells
         XCTAssertTrue(old.isDisjoint(with: current.keys))
-        dataSource.flushHeldDeliveries(where: { index, _ in current[index] != nil })
+        dataSource.flushHeldDeliveries(where: { index in current[index] != nil })
         dataSource.flushHeldDeliveries()
         for (index, cell) in current {
             XCTAssertEqual(cell.index, index)
-            XCTAssertTrue((cell.contents as! CGImage) === images[index]?.cgImage, "index \(index) shows a stale image")
+            XCTAssertTrue((cell.contents as AnyObject?) === images[index]?.cgImage, "index \(index) shows a stale image")
         }
     }
 }

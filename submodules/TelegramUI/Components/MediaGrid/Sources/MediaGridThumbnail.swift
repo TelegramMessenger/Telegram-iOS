@@ -10,6 +10,10 @@ public struct MediaGridThumbnail {
         self.contentsRect = contentsRect
     }
 
+    public var pixelSize: CGFloat {
+        return max(self.contentsRect.width * CGFloat(self.image.width), self.contentsRect.height * CGFloat(self.image.height))
+    }
+
     public func contentsRect(fillingAspect aspect: CGFloat) -> CGRect {
         let rect = self.contentsRect
         let pixelWidth = rect.width * CGFloat(self.image.width)

@@ -5,26 +5,30 @@ public protocol MediaGridImageRequest: AnyObject {
     func cancel()
 }
 
-public enum MediaGridImageQuality {
-    case full
-    case fast
-}
-
 public typealias MediaGridAspectRatioReader = @Sendable (Int) -> CGFloat
 
 public protocol MediaGridDataSource: AnyObject {
     var count: Int { get }
     func date(at index: Int) -> Date?
     func aspectRatioReader() -> MediaGridAspectRatioReader
-    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, _ isDegraded: Bool) -> Void) -> MediaGridImageRequest?
-    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality)
-    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality)
+    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, _ isDegraded: Bool) -> Void) -> MediaGridImageRequest?
+    func startCaching(indices: [Int], pixelSize: CGSize)
+    func stopCaching(indices: [Int], pixelSize: CGSize)
     func performBatch(_ updates: () -> Void)
+    func thumbnail(at index: Int) -> MediaGridThumbnail?
+    func prepareThumbnails(indices: Range<Int>)
 }
 
 public extension MediaGridDataSource {
     func performBatch(_ updates: () -> Void) {
         updates()
+    }
+
+    func thumbnail(at index: Int) -> MediaGridThumbnail? {
+        return nil
+    }
+
+    func prepareThumbnails(indices: Range<Int>) {
     }
 }
 

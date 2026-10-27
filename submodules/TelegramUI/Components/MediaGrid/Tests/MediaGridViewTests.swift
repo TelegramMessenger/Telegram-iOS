@@ -1903,7 +1903,7 @@ final class MediaGridViewTests: XCTestCase {
         let (view, dataSource) = self.makeView(count: 1000)
         let bank = ImageBank()
         bank.identifiers = Array(0 ..< 1000)
-        dataSource.imageForIndex = { index, _ in
+        dataSource.imageForIndex = { index in
             return bank.image(for: bank.identifiers[index])
         }
         view.reloadData()

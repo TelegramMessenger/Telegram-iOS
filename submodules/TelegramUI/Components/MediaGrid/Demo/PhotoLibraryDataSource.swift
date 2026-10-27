@@ -193,9 +193,9 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
-    static func targetSize(for pixelSize: CGSize, quality: MediaGridImageQuality) -> CGSize {
+    static func fastTargetSize(for pixelSize: CGSize) -> CGSize {
         let longest = max(pixelSize.width, pixelSize.height)
-        guard quality == .fast, longest > PhotoLibraryDataSource.fastMaxPixelSize else {
+        guard longest > PhotoLibraryDataSource.fastMaxPixelSize else {
             return pixelSize
         }
         let scale = PhotoLibraryDataSource.fastMaxPixelSize / longest
@@ -211,53 +211,44 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return ImageKey(identifier: identifier, width: Int(size.width), height: Int(size.height), revision: self.imageRevision(for: identifier))
     }
 
-    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         guard let asset = self.asset(at: index) else {
             completion(nil, false)
             return nil
         }
-        let targetSize = PhotoLibraryDataSource.targetSize(for: pixelSize, quality: quality)
-        let isReduced = targetSize != pixelSize
-        if isReduced, let image = self.cache.object(forKey: self.key(for: asset, size: pixelSize).cacheKey) {
+        let targetSize = pixelSize
+        let key = self.key(for: asset, size: targetSize)
+        if let image = self.cache.object(forKey: key.cacheKey) {
             completion(image, false)
             return nil
         }
-        let key = self.key(for: asset, size: targetSize)
-        if let image = self.cache.object(forKey: key.cacheKey) {
-            completion(image, isReduced)
-            return nil
-        }
         var hasPlaceholder = false
-        let fastSize = PhotoLibraryDataSource.targetSize(for: pixelSize, quality: .fast)
+        let fastSize = PhotoLibraryDataSource.fastTargetSize(for: pixelSize)
         if fastSize != targetSize, let image = self.cache.object(forKey: self.key(for: asset, size: fastSize).cacheKey) {
             completion(image, true)
             hasPlaceholder = true
         }
         if !hasPlaceholder, let image = self.synchronousFastFormatImage(for: asset, targetSize: targetSize) {
             completion(image, true)
-            if quality == .fast {
-                return nil
-            }
         }
-        return self.scheduler.request(key: key, payload: Load(asset: asset, targetSize: targetSize), isReduced: isReduced, completion: completion)
+        return self.scheduler.request(key: key, payload: Load(asset: asset, targetSize: targetSize), isReduced: false, completion: completion)
     }
 
     func performBatch(_ updates: () -> Void) {
         self.scheduler.batch(updates)
     }
 
-    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
-        self.scheduler.startPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize, quality: quality))
+    func startCaching(indices: [Int], pixelSize: CGSize) {
+        self.scheduler.startPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize))
     }
 
-    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
-        self.scheduler.stopPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize, quality: quality))
+    func stopCaching(indices: [Int], pixelSize: CGSize) {
+        self.scheduler.stopPrefetching(self.prefetchKeys(indices: indices, pixelSize: pixelSize))
     }
 
-    private func prefetchKeys(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) -> [PrefetchKey] {
-        let targetSize = PhotoLibraryDataSource.targetSize(for: pixelSize, quality: quality)
-        let width = Int(targetSize.width)
-        let height = Int(targetSize.height)
+    private func prefetchKeys(indices: [Int], pixelSize: CGSize) -> [PrefetchKey] {
+        let width = Int(pixelSize.width)
+        let height = Int(pixelSize.height)
         return indices.map { PrefetchKey(index: $0, width: width, height: height) }
     }
 

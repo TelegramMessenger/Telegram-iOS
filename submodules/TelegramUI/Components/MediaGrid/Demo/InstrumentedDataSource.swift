@@ -56,13 +56,13 @@ final class InstrumentedDataSource: MediaGridDataSource {
         return self.base.aspectRatioReader()
     }
 
-    func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
+    func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         self.counters.requests += 1
         let request = Request()
         request.owner = self
         let start = CACurrentMediaTime()
         var isCalling = true
-        request.inner = self.base.requestImage(at: index, pixelSize: pixelSize, quality: quality, completion: { [weak self, weak request] image, isDegraded in
+        request.inner = self.base.requestImage(at: index, pixelSize: pixelSize, completion: { [weak self, weak request] image, isDegraded in
             let deliver = {
                 if let self, let request, image != nil, !request.hasImage, !request.isCancelled {
                     request.hasImage = true
@@ -91,20 +91,28 @@ final class InstrumentedDataSource: MediaGridDataSource {
         self.base.performBatch(updates)
     }
 
-    func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+    func thumbnail(at index: Int) -> MediaGridThumbnail? {
+        return self.base.thumbnail(at: index)
+    }
+
+    func prepareThumbnails(indices: Range<Int>) {
+        self.base.prepareThumbnails(indices: indices)
+    }
+
+    func startCaching(indices: [Int], pixelSize: CGSize) {
         self.counters.cachingStarted += indices.count
         if self.forwardsCaching {
             let start = CACurrentMediaTime()
-            self.base.startCaching(indices: indices, pixelSize: pixelSize, quality: quality)
+            self.base.startCaching(indices: indices, pixelSize: pixelSize)
             self.counters.cachingCallWorst = max(self.counters.cachingCallWorst, CACurrentMediaTime() - start)
         }
     }
 
-    func stopCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
+    func stopCaching(indices: [Int], pixelSize: CGSize) {
         self.counters.cachingStopped += indices.count
         if self.forwardsCaching {
             let start = CACurrentMediaTime()
-            self.base.stopCaching(indices: indices, pixelSize: pixelSize, quality: quality)
+            self.base.stopCaching(indices: indices, pixelSize: pixelSize)
             self.counters.cachingCallWorst = max(self.counters.cachingCallWorst, CACurrentMediaTime() - start)
         }
     }
