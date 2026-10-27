@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-/// Marks a message that was deleted on the server while "Save deleted messages" (Настройки Twelve) was on:
+/// Marks a message that was deleted on the server while "Save deleted messages" (Настройки Pure) was on:
 /// the message is kept locally instead of being removed.
 public class TwelveDeletedMessageAttribute: MessageAttribute {
     public let date: Int32
@@ -20,7 +20,7 @@ public class TwelveDeletedMessageAttribute: MessageAttribute {
 }
 
 /// The previous versions of an edited message's text, oldest first, kept while "Save edit history"
-/// (Настройки Twelve) is on.
+/// (Настройки Pure) is on.
 public class TwelveEditHistoryMessageAttribute: MessageAttribute {
     public struct Entry: Equatable {
         public let text: String

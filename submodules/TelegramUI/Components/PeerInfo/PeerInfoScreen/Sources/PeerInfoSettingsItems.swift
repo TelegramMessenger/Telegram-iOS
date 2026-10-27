@@ -269,7 +269,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 6, label: .text(data.isPowerSavingEnabled == true ? presentationData.strings.Settings_PowerSavingOn : presentationData.strings.Settings_PowerSavingOff), text: presentationData.strings.Settings_PowerSaving, icon: PresentationResourcesSettings.powerSaving, action: {
         interaction.openSettings(.powerSaving)
     }))
-    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 7, text: presentationData.strings.baseLanguageCode == "ru" ? "Настройки Twelve" : "Twelve Settings", icon: PresentationResourcesSettings.security, action: {
+    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 7, text: presentationData.strings.baseLanguageCode == "ru" ? "Настройки Pure" : "Pure Settings", icon: PresentationResourcesSettings.security, action: {
         interaction.openSettings(.twelve)
     }))
     

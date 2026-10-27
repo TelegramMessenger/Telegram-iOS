@@ -774,7 +774,7 @@ public class GlassBackgroundView: UIView {
         }
         
         let params = Params(shape: shape, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
-        // "Disable fake glass" (Настройки Twelve) only changes the custom glass: no rim, highlights or shadow, just a fill.
+        // "Disable fake glass" (Настройки Pure) only changes the custom glass: no rim, highlights or shadow, just a fill.
         let isFlat = self.foregroundView != nil && TwelveSettings.disableFakeGlass
         if self.params != params || self.appliedIsFlat != isFlat {
             self.params = params
@@ -1184,7 +1184,7 @@ private func legacyResizableImageMetrics(cornerRadii: GlassBackgroundView.Corner
 }
 
 public extension GlassBackgroundView {
-    /// The custom glass's foreground with "Disable fake glass" (Настройки Twelve) on: the shape filled with one colour,
+    /// The custom glass's foreground with "Disable fake glass" (Настройки Pure) on: the shape filled with one colour,
     /// laid out exactly like `generateLegacyGlassImage(cornerRadii:...)` so it stretches into the same frame.
     static func generateFlatGlassImage(cornerRadii: CornerRadii, inset: CGFloat, fillColor: UIColor) -> UIImage? {
         let metrics = legacyResizableImageMetrics(cornerRadii: cornerRadii, inset: inset)

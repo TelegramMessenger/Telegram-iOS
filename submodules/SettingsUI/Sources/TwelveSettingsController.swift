@@ -79,7 +79,7 @@ private struct TwelveStrings {
     
     init(languageCode: String) {
         if languageCode == "ru" {
-            self.title = "Настройки Twelve"
+            self.title = "Настройки Pure"
             self.adsHeader = "РЕКЛАМА"
             self.hideAds = "Убрать рекламу"
             self.adsFooter = "Не загружать спонсорские сообщения в каналах, ботах и видео, рекламные каналы в поиске и спонсорский канал прокси."
@@ -94,7 +94,7 @@ private struct TwelveStrings {
             self.ghostStories = "Смотреть истории анонимно"
             self.ghostFooter = "Прочитанные чаты помечаются прочитанными только на этом устройстве, у собеседника сообщения остаются непрочитанными."
         } else {
-            self.title = "Twelve Settings"
+            self.title = "Pure Settings"
             self.adsHeader = "ADS"
             self.hideAds = "Hide Ads"
             self.adsFooter = "Don't load sponsored messages in channels, bots and videos, sponsored channels in search and the proxy sponsor channel."
@@ -143,7 +143,7 @@ private func currentTwelveValues() -> [TwelveSettings.Key: Bool] {
     return values
 }
 
-/// Settings ▸ Настройки Twelve.
+/// Settings ▸ Настройки Pure.
 public func twelveSettingsController(context: AccountContext) -> ViewController {
     let valuesPromise = ValuePromise<[TwelveSettings.Key: Bool]>(currentTwelveValues(), ignoreRepeated: true)
     

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Client-side options of the "Twelve" settings screen (Settings ▸ Настройки Twelve).
+/// Client-side options of the "Twelve" settings screen (Settings ▸ Настройки Pure).
 ///
 /// Values live in the app's standard `UserDefaults`, so they are global for every account and are read
 /// synchronously from any thread (rendering code reads `disableFakeGlass` on every layout pass, network

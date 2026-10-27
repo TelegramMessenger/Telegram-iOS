@@ -134,7 +134,7 @@ final class LegacyGlassView: UIView {
     }
 
     func update(size: CGSize, shape: GlassBackgroundView.Shape, style: Style, transition: ComponentTransition) {
-        // "Disable fake glass" (Настройки Twelve): a plain blur, no colour boost and no refraction mesh.
+        // "Disable fake glass" (Настройки Pure): a plain blur, no colour boost and no refraction mesh.
         let isFlat = TwelveSettings.disableFakeGlass
         let params = Params(size: size, shape: shape, style: style, isFlat: isFlat)
         let previousParams = self.params

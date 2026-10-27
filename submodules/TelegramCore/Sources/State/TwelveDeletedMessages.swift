@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TwelveSettings
 
-/// While "Save deleted messages" (Настройки Twelve) is on, the cloud messages the server deletes are kept and
+/// While "Save deleted messages" (Настройки Pure) is on, the cloud messages the server deletes are kept and
 /// marked with `TwelveDeletedMessageAttribute` instead of being removed. Returns the ids that still have to be
 /// deleted for real. Deletions made on this device never reach here: they remove the message locally first.
 func twelveKeepDeletedMessages(transaction: Transaction, ids: [MessageId]) -> [MessageId] {

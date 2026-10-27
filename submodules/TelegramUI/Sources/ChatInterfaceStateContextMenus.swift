@@ -1347,7 +1347,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        // "Save edit history" (Настройки Twelve): previous versions of the text, oldest first.
+        // "Save edit history" (Настройки Pure): previous versions of the text, oldest first.
         let twelveEditHistory = message.twelveEditHistory
         if !twelveEditHistory.isEmpty {
             let isRussian = chatPresentationInterfaceState.strings.baseLanguageCode == "ru"
