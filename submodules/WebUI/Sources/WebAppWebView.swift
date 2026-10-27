@@ -291,6 +291,13 @@ final class WebAppWebView: WKWebView {
     }
     
     func sendEvent(name: String, data: String?) {
+        // WebKit on iOS 27 kills an app built against the iOS 27 SDK that uses a web view off the main thread.
+        if !Thread.isMainThread {
+            Queue.mainQueue().async { [weak self] in
+                self?.sendEvent(name: name, data: data)
+            }
+            return
+        }
         if self.useSecuredEventProxy {
             guard let trustedOrigin = self.trustedOrigin, self.origin == trustedOrigin else {
                 return
