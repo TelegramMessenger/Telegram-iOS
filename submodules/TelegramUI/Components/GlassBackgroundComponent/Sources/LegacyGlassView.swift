@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import MeshTransform
+import TwelveSettings
 
 private let backdropLayerClass: NSObject? = {
     let name = ("CA" as NSString).appendingFormat("BackdropLayer")
@@ -90,11 +91,13 @@ final class LegacyGlassView: UIView {
         let size: CGSize
         let shape: GlassBackgroundView.Shape
         let style: Style
+        let isFlat: Bool
         
-        init(size: CGSize, shape: GlassBackgroundView.Shape, style: Style) {
+        init(size: CGSize, shape: GlassBackgroundView.Shape, style: Style, isFlat: Bool) {
             self.size = size
             self.shape = shape
             self.style = style
+            self.isFlat = isFlat
         }
     }
     
@@ -131,7 +134,9 @@ final class LegacyGlassView: UIView {
     }
 
     func update(size: CGSize, shape: GlassBackgroundView.Shape, style: Style, transition: ComponentTransition) {
-        let params = Params(size: size, shape: shape, style: style)
+        // "Disable fake glass" (Настройки Twelve): a plain blur, no colour boost and no refraction mesh.
+        let isFlat = TwelveSettings.disableFakeGlass
+        let params = Params(size: size, shape: shape, style: style, isFlat: isFlat)
         let previousParams = self.params
         if self.params == params {
             return
@@ -142,8 +147,15 @@ final class LegacyGlassView: UIView {
             return
         }
         
-        if previousParams?.style != style {
-            if let blurFilter = CALayer.blur(), let colorMatrixFilter = CALayer.colorMatrix() {
+        if previousParams?.style != style || previousParams?.isFlat != isFlat {
+            if isFlat {
+                if let blurFilter = CALayer.blur() {
+                    blurFilter.setValue(20.0 as NSNumber, forKey: "inputRadius")
+                    backdropLayer.filters = [blurFilter]
+                }
+                backdropLayer.removeAnimation(forKey: "meshTransform")
+                backdropLayer.setValue(nil, forKey: "meshTransform")
+            } else if let blurFilter = CALayer.blur(), let colorMatrixFilter = CALayer.colorMatrix() {
                 switch style {
                 case .clear:
                     if #available(iOS 17.0, *), DeviceMetrics.performance.isGraphicallyCapable {
@@ -195,7 +207,7 @@ final class LegacyGlassView: UIView {
         }
         transition.setFrame(layer: backdropLayer, frame: CGRect(origin: CGPoint(), size: size))
         
-        if #available(iOS 17.0, *), DeviceMetrics.performance.isGraphicallyCapable {
+        if #available(iOS 17.0, *), DeviceMetrics.performance.isGraphicallyCapable, !isFlat {
             let size = CGSize(width: max(1.0, size.width), height: max(1.0, size.height))
             let cornerRadius = min(min(size.width, size.height) * 0.5, shape.maximumCornerRadius(for: size))
             let displacementMagnitudePoints: CGFloat = 20.0

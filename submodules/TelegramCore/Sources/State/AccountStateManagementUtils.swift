@@ -4621,7 +4621,8 @@ func replayFinalState(
                 upsertEphemeralReplacement(transaction: transaction, anchorMessageId: anchorMessageId, message: message)
             case let .DeleteEphemeralMessages(peerId, ids):
                 deleteEphemeralMessages(transaction: transaction, peerId: peerId, ids: ids)
-            case let .DeleteMessagesWithGlobalIds(ids):
+            case let .DeleteMessagesWithGlobalIds(serverIds):
+                let ids = twelveKeepDeletedMessages(transaction: transaction, globalIds: serverIds)
                 var resourceIds: [MediaResourceId] = []
                 transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
@@ -4630,7 +4631,8 @@ func replayFinalState(
                     let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                 }
                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
-            case let .DeleteMessages(ids):
+            case let .DeleteMessages(serverIds):
+                let ids = twelveKeepDeletedMessages(transaction: transaction, ids: serverIds)
                 _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
                     addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
                 })

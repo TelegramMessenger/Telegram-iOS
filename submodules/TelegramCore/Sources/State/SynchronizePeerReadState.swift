@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TwelveSettings
 internal import TelegramApi
 import SwiftSignalKit
 
@@ -438,6 +439,12 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
     return keepsReadState
     |> mapToSignal { keepsReadState -> Signal<Never, PeerReadStateValidationError> in
         if !keepsReadState {
+            return confirmSynchronized(postbox: postbox, peerId: peerId)
+            |> ignoreValues
+        }
+        if push && TwelveSettings.ghostRead {
+            // Ghost mode (Настройки Twelve): the chat is read locally and the server is never told. Validating
+            // would bring the server's unread state straight back, so the operation is confirmed as is.
             return confirmSynchronized(postbox: postbox, peerId: peerId)
             |> ignoreValues
         }

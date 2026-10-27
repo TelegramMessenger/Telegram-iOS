@@ -1,6 +1,7 @@
 import Foundation
 internal import TelegramApi
 import Postbox
+import TwelveSettings
 import SwiftSignalKit
 import MtProtoKit
 
@@ -44,7 +45,7 @@ private final class AccountPresenceManagerImpl {
     
     private func updatePresence(_ isOnline: Bool) {
         let request: Signal<Api.Bool, MTRpcError>
-        if isOnline {
+        if isOnline && !TwelveSettings.ghostOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return

@@ -23,6 +23,7 @@ import ThemeAccentColorScreen
 import WallpaperGridScreen
 import PeerNameColorItem
 import DeviceModel
+import TwelveSettings
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext
@@ -40,6 +41,7 @@ private final class ThemeSettingsControllerArguments {
     let openStickersAndEmoji: () -> Void
     let toggleSendWithCmdEnter: (Bool) -> Void
     let toggleShowNextMediaOnTap: (Bool) -> Void
+    let toggleLiquidGlass: (Bool) -> Void
     let selectAppIcon: (PresentationAppIcon) -> Void
     let editTheme: (PresentationCloudTheme) -> Void
     let themeContextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
@@ -61,6 +63,7 @@ private final class ThemeSettingsControllerArguments {
         openStickersAndEmoji: @escaping () -> Void,
         toggleSendWithCmdEnter: @escaping (Bool) -> Void,
         toggleShowNextMediaOnTap: @escaping (Bool) -> Void,
+        toggleLiquidGlass: @escaping (Bool) -> Void,
         selectAppIcon: @escaping (PresentationAppIcon) -> Void,
         editTheme: @escaping (PresentationCloudTheme) -> Void,
         themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void,
@@ -81,6 +84,7 @@ private final class ThemeSettingsControllerArguments {
         self.openStickersAndEmoji = openStickersAndEmoji
         self.toggleSendWithCmdEnter = toggleSendWithCmdEnter
         self.toggleShowNextMediaOnTap = toggleShowNextMediaOnTap
+        self.toggleLiquidGlass = toggleLiquidGlass
         self.selectAppIcon = selectAppIcon
         self.editTheme = editTheme
         self.themeContextAction = themeContextAction
@@ -90,6 +94,7 @@ private final class ThemeSettingsControllerArguments {
 
 private enum ThemeSettingsControllerSection: Int32 {
     case chatPreview
+    case liquidGlass
     case nightMode
     case message
     case icon
@@ -127,6 +132,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case chatTheme(PresentationTheme, String)
     case wallpaper(PresentationTheme, String)
     case nameColor(PresentationTheme, String, String, PeerNameColors.Colors?, PeerNameColors.Colors?)
+    case liquidGlass(String, Bool)
+    case liquidGlassInfo(String)
     case autoNight(PresentationTheme, String, Bool, Bool)
     case autoNightTheme(PresentationTheme, String, String)
     case textSize(PresentationTheme, String, String)
@@ -144,6 +151,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
         switch self {
         case .themeListHeader, .chatPreview, .themes, .chatTheme, .wallpaper, .nameColor:
                 return ThemeSettingsControllerSection.chatPreview.rawValue
+            case .liquidGlass, .liquidGlassInfo:
+                return ThemeSettingsControllerSection.liquidGlass.rawValue
             case .autoNight, .autoNightTheme:
                 return ThemeSettingsControllerSection.nightMode.rawValue
             case .textSize, .bubbleSettings:
@@ -171,30 +180,34 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             return 4
         case .nameColor:
             return 5
-        case .autoNight:
+        case .liquidGlass:
             return 6
-        case .autoNightTheme:
+        case .liquidGlassInfo:
             return 7
-        case .textSize:
+        case .autoNight:
             return 8
-        case .bubbleSettings:
+        case .autoNightTheme:
             return 9
-        case .powerSaving:
+        case .textSize:
             return 10
-        case .stickersAndEmoji:
+        case .bubbleSettings:
             return 11
-        case .iconHeader:
+        case .powerSaving:
             return 12
-        case .iconItem:
+        case .stickersAndEmoji:
             return 13
-        case .otherHeader:
+        case .iconHeader:
             return 14
-        case .sendWithCmdEnter:
+        case .iconItem:
             return 15
-        case .showNextMediaOnTap:
+        case .otherHeader:
             return 16
-        case .showNextMediaOnTapInfo:
+        case .sendWithCmdEnter:
             return 17
+        case .showNextMediaOnTap:
+            return 18
+        case .showNextMediaOnTapInfo:
+            return 19
         }
     }
     
@@ -226,6 +239,18 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .nameColor(lhsTheme, lhsText, lhsName, lhsNameColor, lhsProfileColor):
                 if case let .nameColor(rhsTheme, rhsText, rhsName, rhsNameColor, rhsProfileColor) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsName == rhsName, lhsNameColor == rhsNameColor, lhsProfileColor == rhsProfileColor {
+                    return true
+                } else {
+                    return false
+                }
+            case let .liquidGlass(lhsText, lhsValue):
+                if case let .liquidGlass(rhsText, rhsValue) = rhs, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .liquidGlassInfo(lhsText):
+                if case let .liquidGlassInfo(rhsText) = rhs, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -350,6 +375,12 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: text, label: "", labelStyle: .image(image: colorImage, size: colorImage.size), sectionId: self.section, style: .blocks, action: {
                     arguments.openNameColorSettings()
                 })
+            case let .liquidGlass(title, value):
+                return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleLiquidGlass(value)
+                })
+            case let .liquidGlassInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .autoNight(_, title, value, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleNightTheme(value)
@@ -411,7 +442,8 @@ private func themeSettingsControllerEntries(
     chatThemes: [PresentationThemeReference],
     animatedEmojiStickers: [String: [StickerPackItem]],
     accountPeer: EnginePeer?,
-    nameColors: PeerNameColors
+    nameColors: PeerNameColors,
+    liquidGlass: Bool
 ) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
@@ -448,6 +480,14 @@ private func themeSettingsControllerEntries(
     }
     let profileColors = profileColor.flatMap { nameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }
     entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
+    
+    if presentationData.strings.baseLanguageCode == "ru" {
+        entries.append(.liquidGlass("Жиденькое стекло Кука", liquidGlass))
+        entries.append(.liquidGlassInfo("Стеклянные панели и кнопки. Если выключить, вместо стекла будет обычное размытие. Полностью применяется после перезапуска."))
+    } else {
+        entries.append(.liquidGlass("Liquid glass", liquidGlass))
+        entries.append(.liquidGlassInfo("Glass panels and buttons. When off, a plain blur is drawn instead. Fully applies after restarting the app."))
+    }
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String
@@ -544,6 +584,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     cloudThemes.set(updatedCloudThemes)
     
     let removedThemeIndexesPromise = Promise<Set<Int64>>(Set())
+    let liquidGlassValue = ValuePromise<Bool>(!TwelveSettings.disableFakeGlass, ignoreRepeated: true)
     let removedThemeIndexes = Atomic<Set<Int64>>(value: Set())
     
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
@@ -619,6 +660,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let _ = updateMediaDisplaySettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedShowNextMediaOnTap(value)
         }).start()
+    }, toggleLiquidGlass: { value in
+        TwelveSettings.set(.disableFakeGlass, value: !value)
+        liquidGlassValue.set(value)
     }, selectAppIcon: { icon in
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> deliverOnMainQueue).start(next: { peer in
@@ -1093,7 +1137,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
 
     let signal = combineLatest(
         queue: .mainQueue(),
-        context.sharedContext.presentationData,
+        combineLatest(context.sharedContext.presentationData, liquidGlassValue.get()),
         context.sharedContext.accountManager.sharedData(keys: [
             ApplicationSpecificSharedDataKeys.presentationThemeSettings,
             ApplicationSpecificSharedDataKeys.chatSettings,
@@ -1108,7 +1152,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         context.account.postbox.peerView(id: context.account.peerId),
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes, animatedEmojiStickers, peerView, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationDataAndLiquidGlass, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes, animatedEmojiStickers, peerView, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let (presentationData, liquidGlass) = presentationDataAndLiquidGlass
         let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
         let chatSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.chatSettings]?.get(ChatSettings.self) ?? ChatSettings.defaultSettings
         let mediaSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaDisplaySettings]?.get(MediaDisplaySettings.self) ?? MediaDisplaySettings.defaultSettings
@@ -1150,7 +1195,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         chatThemes.insert(.builtin(.dayClassic), at: 0)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, chatSettings: chatSettings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors, liquidGlass: liquidGlass), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
