@@ -542,7 +542,10 @@ func chatInputRun(fromSinglePart rt: RichText, attributes: ChatInputInlineAttrib
         attributes.spoiler = true
         return chatInputRun(fromSinglePart: inner, attributes: attributes)
     case let .textMentionName(inner, userId):
-        attributes.entity = .mention(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId)))
+        // An id no user can have (only a bogus page carries one) leaves the text plain.
+        if userId > 0 {
+            attributes.entity = .mention(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId)))
+        }
         return chatInputRun(fromSinglePart: inner, attributes: attributes)
     case let .url(inner, url, _):
         attributes.entity = .url(url)

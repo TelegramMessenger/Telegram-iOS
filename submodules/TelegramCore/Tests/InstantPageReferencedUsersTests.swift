@@ -40,6 +40,10 @@ final class InstantPageReferencedUsersTests: XCTestCase {
         XCTAssertEqual(result, [1, 2, 3, 4, 5, 6, 7, 8].map(user))
     }
 
+    func testMentionOfAnImpossibleUserIdIsSkipped() {
+        XCTAssertEqual(page([.paragraph(.concat([mention(0), mention(-(1 << 40)), mention(3)]))]).referencedUserIds, [user(3)])
+    }
+
     func testAttributeAssociatesTheUsersOfBothPages() {
         let attribute = RichTextMessageAttribute(
             instantPage: page([.paragraph(.concat([mention(1), mention(2)]))]),

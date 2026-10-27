@@ -25,7 +25,10 @@ private func collectReferencedUserIds(_ text: RichText, _ visit: (PeerId) -> Voi
     case let .textAutoEmail(text), let .textAutoPhone(text), let .textAutoUrl(text), let .textBankCard(text), let .textTonAddress(text), let .textBotCommand(text), let .textCashtag(text), let .textHashtag(text), let .textMention(text), let .textSpoiler(text):
         collectReferencedUserIds(text, visit)
     case let .textMentionName(text, userId):
-        visit(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
+        // A rendered message's peers are looked up by these ids, so an id no user can have (a bogus page) is skipped.
+        if userId > 0 {
+            visit(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
+        }
         collectReferencedUserIds(text, visit)
     case let .textDate(text, _, _):
         collectReferencedUserIds(text, visit)
