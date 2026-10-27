@@ -71,6 +71,10 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
+`//submodules/TelegramUI/Components/RichTextEditorMediaView:RichTextEditorMediaViewTests` covers
+`MediaChromeLayout`, where the article editor's glass media buttons go: a tile's "…" keeps clear of the
+container's "+" and layout toggle (#28), checked over the real album layouts (`MosaicCellFrames`).
+
 The RichTextEditor SwiftPM package keeps its own suite (`swift test` / `Scripts/iostest.sh`). MtProtoKit's suite
 (`//submodules/MtProtoKit:MtProtoKitTests`) also runs on macOS: `swift test` in `submodules/MtProtoKit` (the package's
 test target puts the module's private headers on its search path).
