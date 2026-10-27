@@ -158,9 +158,9 @@ final class ImageLoadSchedulerTests: XCTestCase {
         let scheduler = self.makeScheduler(localLimit: 2, prefetchLimit: 2)
         scheduler.startPrefetching([1, 2, 3, 4])
         XCTAssertEqual(self.started.map { $0.key }, ["p1", "p2"])
-        scheduler.remapPrefetching { key in
+        scheduler.remapPrefetching({ key in
             return key == 2 || key == 4 ? nil : key + 10
-        }
+        }, update: {})
         XCTAssertEqual(self.cancelled, ["p2"])
         XCTAssertEqual(scheduler.wantedPrefetchCount, 2)
         XCTAssertEqual(self.started.map { $0.key }, ["p1", "p2", "p13"])
@@ -170,6 +170,29 @@ final class ImageLoadSchedulerTests: XCTestCase {
         scheduler.startPrefetching([13])
         XCTAssertEqual(self.started.count, 3)
         XCTAssertEqual(scheduler.wantedPrefetchCount, 1)
+    }
+
+    func testRemapResolvesPrefetchOnlyAfterUpdate() {
+        let scheduler = self.makeScheduler(localLimit: 2, prefetchLimit: 2)
+        var swapped = false
+        var resolvedBeforeSwap: [Int] = []
+        scheduler.resolvePrefetch = { key in
+            if !swapped {
+                resolvedBeforeSwap.append(key)
+            }
+            return ("p\(key)", key)
+        }
+        scheduler.startPrefetching([1, 2, 3])
+        resolvedBeforeSwap = []
+        scheduler.remapPrefetching({ key in
+            return key == 1 ? nil : key + 10
+        }, update: {
+            swapped = true
+        })
+        XCTAssertTrue(swapped)
+        XCTAssertEqual(resolvedBeforeSwap, [])
+        XCTAssertEqual(self.cancelled, ["p1"])
+        XCTAssertEqual(self.started.map { $0.key }, ["p1", "p2", "p13"])
     }
 
     func testStoppedPrefetchIsCancelledAtFlush() {

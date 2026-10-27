@@ -165,7 +165,7 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         }
     }
 
-    func remapPrefetching(_ transform: (PrefetchKey) -> PrefetchKey?) {
+    func remapPrefetching(_ transform: (PrefetchKey) -> PrefetchKey?, update: () -> Void) {
         var wanted = Set<PrefetchKey>()
         for key in self.prefetchWanted {
             if let mapped = transform(key) {
@@ -198,6 +198,7 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
             job.isPrefetched = false
             self.dropIfUnwanted(job)
         }
+        update()
         self.isBatching = wasBatching
         if !wasBatching {
             self.pump()

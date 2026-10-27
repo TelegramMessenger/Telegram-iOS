@@ -202,7 +202,7 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
         core.cancelDeceleration()
         core.setOffset(y)
     }
-    func reanchorDragToCurrentPosition() {
+    public func reanchorDragToCurrentPosition() {
         core.reanchorDragToCurrentPosition()
     }
 

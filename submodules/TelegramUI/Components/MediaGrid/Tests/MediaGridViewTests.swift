@@ -1,4 +1,5 @@
 import XCTest
+@testable import CoreList
 @testable import MediaGrid
 
 final class MediaGridViewTests: XCTestCase {
@@ -1788,8 +1789,16 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertEqual(view.topVisibleIndex, 495)
         self.assertCellsMatchLayout(view, "after second removal")
 
+        let tail = MediaGridChanges(removed: IndexSet(495 ..< 9_991), inserted: [], changed: [])
+        XCTAssertEqual(tail.nearestSurvivor(toOld: 495, oldCount: 9_991), 494)
+        dataSource.count = 495
+        view.apply(tail)
+        XCTAssertEqual(view.contentOffset, view.contentHeight - view.bounds.height, accuracy: 1e-6)
+        XCTAssertTrue(view.bounds.intersects(view.frameForItem(at: 494) ?? .null))
+        self.assertCellsMatchLayout(view, "after removal through the end")
+
         dataSource.count = 0
-        view.apply(MediaGridChanges(removed: IndexSet(0 ..< 9_991), inserted: [], changed: []))
+        view.apply(MediaGridChanges(removed: IndexSet(0 ..< 495), inserted: [], changed: []))
         XCTAssertEqual(view.contentOffset, 0.0)
         XCTAssertTrue(self.visibleCells(view).isEmpty)
     }
@@ -1941,14 +1950,105 @@ final class MediaGridViewTests: XCTestCase {
             XCTFail("no layout")
             return
         }
-        view.setContentOffset(5000.0)
-        view.engine.onWillBeginDragging?()
+        let bottom = view.contentHeight - view.bounds.height
+        view.setContentOffset(bottom)
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        XCTAssertTrue(view.isUserScrolling)
+        guard let top = view.topVisibleIndex else {
+            XCTFail("no top")
+            return
+        }
+        dataSource.count = top + 3
+        view.apply(MediaGridChanges(removed: IndexSet(top + 3 ..< 10_000), inserted: [], changed: []))
+        let newMax = view.contentHeight - view.bounds.height
+        XCTAssertLessThan(newMax, bottom - 2.0 * layout.itemSize.height)
+        XCTAssertEqual(view.contentOffset, bottom, accuracy: 1e-6)
+        XCTAssertTrue(view.isUserScrolling)
         dataSource.count += 30
         view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 30), changed: []))
-        XCTAssertEqual(view.contentOffset, 5000.0 + 10.0 * (layout.itemSize.height + 1.0), accuracy: 1e-6)
-        XCTAssertTrue(view.isUserScrolling)
-        self.assertCellsMatchLayout(view, "after change mid-drag")
-        view.engine.onDidEndDragging?()
+        XCTAssertEqual(view.contentOffset, bottom + 10.0 * (layout.itemSize.height + 1.0), accuracy: 1e-6)
+        view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: 5.0), velocity: .zero, forced: false, isIndirect: false)
+        XCTAssertLessThan(abs(view.contentOffset - (bottom + 10.0 * (layout.itemSize.height + 1.0))), 6.0)
+        view.engine.applyPanUpdate(state: .ended, translation: CGPoint(x: 0.0, y: 5.0), velocity: .zero, forced: false, isIndirect: false)
+
+        let (rest, restSource) = self.makeView(count: 10_000)
+        rest.setContentOffset(bottom)
+        restSource.count = top + 3
+        rest.apply(MediaGridChanges(removed: IndexSet(top + 3 ..< 10_000), inserted: [], changed: []))
+        XCTAssertEqual(rest.contentOffset, rest.contentHeight - rest.bounds.height, accuracy: 1e-6)
+        self.assertCellsMatchLayout(rest, "after clamped removal")
+    }
+
+    private func fling(_ view: MediaGridView, velocity: CGFloat) {
+        view.engine.decelerationMode = .stepped
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        for step in 1 ... 5 {
+            view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -velocity * 0.008 * CGFloat(step)), velocity: CGPoint(x: 0.0, y: -velocity), forced: false, isIndirect: false)
+        }
+        view.engine.applyPanUpdate(state: .ended, translation: CGPoint(x: 0.0, y: -velocity * 0.04), velocity: CGPoint(x: 0.0, y: -velocity), forced: false, isIndirect: false)
+    }
+
+    private func spinUntilSettled(_ view: MediaGridView, timeout: TimeInterval = 10.0) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while view.engine.isDecelerating && Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+        }
+    }
+
+    private func makeWindowedSourceView(count: Int) -> (MediaGridView, TestDataSource, UIWindow) {
+        let (view, dataSource) = self.makeView(count: count)
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow(frame: view.frame)
+        window.frame = view.frame
+        window.windowLevel = .alert
+        window.isHidden = false
+        window.addSubview(view)
+        view.layoutIfNeeded()
+        return (view, dataSource, window)
+    }
+
+    func testChangeDuringFlingInsertAboveShiftsByDelta() {
+        let (view, dataSource, window) = self.makeWindowedSourceView(count: 10_000)
+        guard let layout = view.currentLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(5000.0)
+        self.fling(view, velocity: 3000.0)
+        XCTAssertTrue(view.engine.isDecelerating)
+        let before = view.contentOffset
+        dataSource.count += 30
+        view.apply(MediaGridChanges(removed: [], inserted: IndexSet(0 ..< 30), changed: []))
+        XCTAssertEqual(view.contentOffset, before + 10.0 * (layout.itemSize.height + 1.0), accuracy: 1e-6)
+        XCTAssertTrue(view.engine.isDecelerating)
+        self.spinUntilSettled(view)
+        XCTAssertFalse(view.engine.isDecelerating)
+        XCTAssertGreaterThan(view.contentOffset, before + 10.0 * (layout.itemSize.height + 1.0))
+        self.assertCellsMatchLayout(view, "after fling settles")
+        window.isHidden = true
+    }
+
+    func testChangeDuringFlingShrinkingBelowOffsetSpringsToNewEnd() {
+        let (view, dataSource, window) = self.makeWindowedSourceView(count: 10_000)
+        view.setContentOffset(view.contentHeight - view.bounds.height - 3000.0)
+        self.fling(view, velocity: 2000.0)
+        XCTAssertTrue(view.engine.isDecelerating)
+        let before = view.contentOffset
+        guard let top = view.topVisibleIndex else {
+            XCTFail("no top")
+            return
+        }
+        dataSource.count = top + 3
+        view.apply(MediaGridChanges(removed: IndexSet(top + 3 ..< 10_000), inserted: [], changed: []))
+        let newMax = view.contentHeight - view.bounds.height
+        XCTAssertLessThan(newMax, before)
+        XCTAssertEqual(view.contentOffset, before, accuracy: 1e-6)
+        XCTAssertTrue(view.engine.isDecelerating)
+        self.spinUntilSettled(view)
+        XCTAssertFalse(view.engine.isDecelerating)
+        XCTAssertEqual(view.contentOffset, newMax, accuracy: 0.5)
+        self.assertCellsMatchLayout(view, "after spring back")
+        window.isHidden = true
     }
 
     func testLevelOneChangeUsesPatchedRowsUntilRebuilt() {

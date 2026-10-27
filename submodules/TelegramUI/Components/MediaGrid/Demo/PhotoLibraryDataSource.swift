@@ -47,6 +47,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
 
     init(fetchResult: PHFetchResult<PHAsset>) {
         self.fetchResult = fetchResult
+        self.observedFetchResult = fetchResult
         super.init()
         self.cache.totalCostLimit = 80 * 1024 * 1024
         self.scheduler.startJob = { [weak self] job in
@@ -74,39 +75,73 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         PHPhotoLibrary.shared().unregisterChangeObserver(self)
     }
 
+    struct LibraryUpdate {
+        var previous: PHFetchResult<PHAsset>
+        var fetchResult: PHFetchResult<PHAsset>
+        var changes: MediaGridChanges?
+        var invalidatesAll: Bool
+        var changedIdentifiers: [String]
+        var removedIdentifiers: [String]
+    }
+
+    private let changeQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.libraryChanges")
+    private var observedFetchResult: PHFetchResult<PHAsset>
+
     func photoLibraryDidChange(_ changeInstance: PHChange) {
-        DispatchQueue.main.async { [weak self] in
-            self?.applyLibraryChange(changeInstance)
+        self.changeQueue.sync {
+            guard let update = PhotoLibraryDataSource.update(for: changeInstance, previous: self.observedFetchResult) else {
+                return
+            }
+            self.observedFetchResult = update.fetchResult
+            DispatchQueue.main.async { [weak self] in
+                self?.apply(update)
+            }
         }
     }
 
-    private func applyLibraryChange(_ change: PHChange) {
-        guard let details = change.changeDetails(for: self.fetchResult) else {
-            return
+    static func update(for change: PHChange, previous: PHFetchResult<PHAsset>) -> LibraryUpdate? {
+        guard let details = change.changeDetails(for: previous) else {
+            return nil
         }
-        let oldCount = self.fetchResult.count
         let fetchResult = details.fetchResultAfterChanges
-        if !details.hasIncrementalChanges || details.hasMoves {
-            self.fetchResult = fetchResult
+        var update = LibraryUpdate(previous: previous, fetchResult: fetchResult, changes: nil, invalidatesAll: !details.hasIncrementalChanges, changedIdentifiers: [], removedIdentifiers: [])
+        guard details.hasIncrementalChanges else {
+            return update
+        }
+        update.changedIdentifiers = details.changedObjects.map { $0.localIdentifier }
+        update.removedIdentifiers = details.removedObjects.map { $0.localIdentifier }
+        if !details.hasMoves {
+            update.changes = PhotoLibraryDataSource.gridChanges(removed: details.removedIndexes ?? IndexSet(), inserted: details.insertedIndexes ?? IndexSet(), changed: details.changedIndexes ?? IndexSet(), oldCount: previous.count, newCount: fetchResult.count)
+        }
+        return update
+    }
+
+    func apply(_ update: LibraryUpdate) {
+        let isConsecutive = update.previous === self.fetchResult
+        if update.invalidatesAll || !isConsecutive {
             self.revisionBase += 1
-            self.scheduler.remapPrefetching { _ in nil }
+        }
+        for identifier in update.changedIdentifiers {
+            self.revisions[identifier, default: 0] += 1
+        }
+        for identifier in update.removedIdentifiers {
+            self.revisions.removeValue(forKey: identifier)
+        }
+        guard isConsecutive, let changes = update.changes else {
+            self.scheduler.remapPrefetching({ _ in nil }, update: {
+                self.fetchResult = update.fetchResult
+            })
             self.onChange?(nil)
             return
         }
-        for asset in details.changedObjects {
-            self.revisions[asset.localIdentifier, default: 0] += 1
-        }
-        for asset in details.removedObjects {
-            self.revisions.removeValue(forKey: asset.localIdentifier)
-        }
-        let changes = PhotoLibraryDataSource.gridChanges(removed: details.removedIndexes ?? IndexSet(), inserted: details.insertedIndexes ?? IndexSet(), changed: details.changedIndexes ?? IndexSet(), oldCount: oldCount, newCount: fetchResult.count)
-        self.scheduler.remapPrefetching { key in
+        self.scheduler.remapPrefetching({ key in
             guard let index = changes.newIndex(forOld: key.index), !changes.changed.contains(index) else {
                 return nil
             }
             return PrefetchKey(index: index, width: key.width, height: key.height)
-        }
-        self.fetchResult = fetchResult
+        }, update: {
+            self.fetchResult = update.fetchResult
+        })
         self.onChange?(changes)
     }
 
@@ -167,9 +202,13 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         return CGSize(width: max(1.0, ceil(pixelSize.width * scale)), height: max(1.0, ceil(pixelSize.height * scale)))
     }
 
+    func imageRevision(for identifier: String) -> Int {
+        return self.revisionBase + (self.revisions[identifier] ?? 0)
+    }
+
     private func key(for asset: PHAsset, size: CGSize) -> ImageKey {
         let identifier = asset.localIdentifier
-        return ImageKey(identifier: identifier, width: Int(size.width), height: Int(size.height), revision: self.revisionBase + (self.revisions[identifier] ?? 0))
+        return ImageKey(identifier: identifier, width: Int(size.width), height: Int(size.height), revision: self.imageRevision(for: identifier))
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {

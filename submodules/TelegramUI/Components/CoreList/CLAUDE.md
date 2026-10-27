@@ -72,7 +72,7 @@ current offset. `ReleaseSuppressionTests`.
   (touch delivery, unholdable); the ABSORB of the stopping tap is the forced `.began`
   (`shouldBeginImmediately`), plain exclusion — the engine grants no simultaneity and deliberately has no
   `shouldBeRequiredToFailBy`. Read the limbo gotcha before adding either or moving anything onto `.began`.
-- `PhysicsScrollEngine` and `ScrollFlight` are public so `MediaGrid` can scroll on the same engine; the `ScrollEngine` protocol stays module-internal. `applyShift` is public for MediaGrid's library changes, which re-base the offset mid-drag or mid-flight. `isScrollEnabled` (setting `false` first calls `haltMotionInPlace()`, then disables the pan) exists for hosts that run their own gestures, such as a pinch.
+- `PhysicsScrollEngine` and `ScrollFlight` are public so `MediaGrid` can scroll on the same engine; the `ScrollEngine` protocol stays module-internal. `applyShift` and `reanchorDragToCurrentPosition` are public for MediaGrid's library changes, which re-base the offset and edges mid-drag or mid-flight. `isScrollEnabled` (setting `false` first calls `haltMotionInPlace()`, then disables the pan) exists for hosts that run their own gestures, such as a pinch.
 - `.keyframe` plays `KeyframeFlight`. A coordinate-only rebase updates its persistent shift without a
   restart, but only while both edges are open; with a finite edge, shift and latest edges fold into one
   continuous rebake. A real edge change is a durable invalidation (survives sampling ticks, coalesces,

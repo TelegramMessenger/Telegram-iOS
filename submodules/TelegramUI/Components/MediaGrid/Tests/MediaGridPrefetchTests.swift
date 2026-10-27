@@ -23,6 +23,23 @@ final class MediaGridPrefetchTests: XCTestCase {
         XCTAssertTrue(plan.stop.isEmpty || Set(plan.stop).isDisjoint(with: cached))
     }
 
+    func testChangesRemapCachedAndRestartChanged() {
+        let layout = self.makeLayout(count: 100_000)
+        var planner = MediaGridPrefetchPlanner()
+        let offset: CGFloat = 20_000.0
+        _ = planner.update(layout: layout, viewportHeight: self.height, offset: offset, settledOffset: nil)
+        let before = planner.cachedIndices
+        let changed = before[5]
+        planner.apply(MediaGridChanges(removed: [before[0]], inserted: [], changed: [changed - 1]))
+        let cached = planner.cachedIndices
+        XCTAssertFalse(cached.contains(changed - 1))
+        XCTAssertEqual(cached.count, before.count - 2)
+        XCTAssertEqual(cached.first, before[0])
+        let shifted = self.makeLayout(count: 99_999)
+        let plan = planner.update(layout: shifted, viewportHeight: self.height, offset: offset, settledOffset: nil)
+        XCTAssertTrue(plan.start.contains(changed - 1))
+    }
+
     func testUpwardWindow() {
         let layout = self.makeLayout(count: 100_000)
         var planner = MediaGridPrefetchPlanner()

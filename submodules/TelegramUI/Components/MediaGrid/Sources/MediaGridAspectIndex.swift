@@ -71,7 +71,8 @@ public final class MediaGridAspectIndex {
     }
 
     private static func marking(_ changes: MediaGridChanges, in aspects: [Float]) -> [Float] {
-        let newCount = max(0, aspects.count - changes.removed.count + changes.inserted.count)
+        let newCount = aspects.count - changes.removed.count + changes.inserted.count
+        precondition(changes.isValid(oldCount: aspects.count, newCount: newCount))
         var result: [Float] = []
         result.reserveCapacity(newCount)
         var removed = changes.removed.rangeView.makeIterator()
@@ -80,24 +81,22 @@ public final class MediaGridAspectIndex {
         var nextInserted = inserted.next()
         var oldIndex = 0
         while result.count < newCount {
-            if let range = nextInserted, range.lowerBound <= result.count {
-                result.append(contentsOf: repeatElement(Float.nan, count: min(range.count, newCount - result.count)))
+            if let range = nextInserted, range.lowerBound == result.count {
+                result.append(contentsOf: repeatElement(Float.nan, count: range.count))
                 nextInserted = inserted.next()
                 continue
             }
-            while let range = nextRemoved, range.lowerBound <= oldIndex {
-                oldIndex = max(oldIndex, range.upperBound)
+            if let range = nextRemoved, range.lowerBound == oldIndex {
+                oldIndex = range.upperBound
                 nextRemoved = removed.next()
+                continue
             }
-            let upper = min(aspects.count, nextRemoved?.lowerBound ?? aspects.count, oldIndex + (nextInserted.map { $0.lowerBound - result.count } ?? newCount - result.count), oldIndex + newCount - result.count)
-            if upper <= oldIndex {
-                result.append(contentsOf: repeatElement(Float.nan, count: newCount - result.count))
-                break
-            }
+            let upper = min(nextRemoved?.lowerBound ?? aspects.count, oldIndex + (nextInserted?.lowerBound ?? newCount) - result.count)
+            precondition(upper > oldIndex)
             result.append(contentsOf: aspects[oldIndex ..< upper])
             oldIndex = upper
         }
-        for index in changes.changed where index < result.count {
+        for index in changes.changed {
             result[index] = .nan
         }
         return result

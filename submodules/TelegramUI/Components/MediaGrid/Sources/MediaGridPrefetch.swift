@@ -36,7 +36,7 @@ public struct MediaGridPrefetchPlanner {
     public mutating func apply(_ changes: MediaGridChanges) {
         var ranges: [Range<Int>] = []
         for index in self.cachedIndices {
-            guard let newIndex = changes.newIndex(forOld: index) else {
+            guard let newIndex = changes.newIndex(forOld: index), !changes.changed.contains(newIndex) else {
                 continue
             }
             if let last = ranges.last, last.upperBound == newIndex {

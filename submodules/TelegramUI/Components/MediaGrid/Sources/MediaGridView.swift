@@ -342,6 +342,9 @@ public final class MediaGridView: UIView {
                 self.engine.applyShift(delta)
             }
         }
+        if self.isDragging {
+            self.engine.reanchorDragToCurrentPosition()
+        }
         self.scrolled(to: self.engine.offset)
         self.startAspectLoad()
     }
