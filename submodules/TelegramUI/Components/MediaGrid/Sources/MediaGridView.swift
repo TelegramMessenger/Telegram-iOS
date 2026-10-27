@@ -238,6 +238,23 @@ public final class MediaGridView: UIView {
         }
     }
 
+    public var isScrollingLockedAtTop: Bool = false {
+        didSet {
+            if self.isScrollingLockedAtTop == oldValue {
+                return
+            }
+            if self.isScrollingLockedAtTop {
+                self.stopScrollAnimation()
+                self.engine.isScrollEnabled = false
+                if self.engine.offset != 0.0 {
+                    self.setContentOffset(0.0)
+                }
+            } else {
+                self.engine.isScrollEnabled = self.transition == nil && self.pinch == nil && !self.isSelecting
+            }
+        }
+    }
+
     public var availableLevels: [MediaGridLevel] = MediaGridLevel.allCases {
         didSet {
             let sorted = self.availableLevels.sorted()
@@ -334,7 +351,7 @@ public final class MediaGridView: UIView {
             if began {
                 self.stopScrollAnimation()
             }
-            self.engine.isScrollEnabled = isEnabled && self.transition == nil && self.pinch == nil
+            self.engine.isScrollEnabled = isEnabled && self.transition == nil && self.pinch == nil && !self.isScrollingLockedAtTop
             if began {
                 self.onSelectionPanBegan?()
             }
@@ -1372,7 +1389,7 @@ public final class MediaGridView: UIView {
             self.resetPrefetch()
             self.prefetchLayout = layout
         }
-        self.engine.isScrollEnabled = true
+        self.engine.isScrollEnabled = !self.isScrollingLockedAtTop
         self.updateGestureAvailability()
         self.applyAspects(notify: false)
         self.scrolled(to: self.engine.offset)

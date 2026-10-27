@@ -83,4 +83,23 @@ final class MediaGridVisibleRangeTests: XCTestCase {
         view._testStepTransferredVelocity()
         XCTAssertEqual(view.contentOffset, 1000.0, accuracy: 1e-6)
     }
+
+    func testScrollLockPinsToTopAndDisablesScrolling() {
+        let view = self.makeView(count: 10_000)
+        view.setContentOffset(2000.0)
+        view.isScrollingLockedAtTop = true
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+        XCTAssertFalse(view.engine.isScrollEnabled)
+        view.isScrollingLockedAtTop = false
+        XCTAssertTrue(view.engine.isScrollEnabled)
+    }
+
+    func testScrollLockSurvivesAZoom() {
+        let view = self.makeView(count: 10_000)
+        view.isScrollingLockedAtTop = true
+        view.setLevel(.five, animated: true)
+        view._testFinishAnimations()
+        XCTAssertFalse(view.engine.isScrollEnabled)
+        XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+    }
 }
