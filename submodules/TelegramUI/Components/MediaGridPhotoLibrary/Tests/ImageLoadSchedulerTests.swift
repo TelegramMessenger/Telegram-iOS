@@ -41,6 +41,29 @@ final class ImageLoadSchedulerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testSynchronousDeliveryDoesNotNestStarts() {
+        let scheduler = Scheduler(localLimit: 1, localPrefetchLimit: 1, networkLimit: 1)
+        var depth = 0
+        var maxDepth = 0
+        var delivered: [String] = []
+        scheduler.startJob = { [unowned scheduler] job in
+            depth += 1
+            maxDepth = max(maxDepth, depth)
+            scheduler.finish(job, attempt: job.attempt, image: PhotoLibraryTestImages.sampleImage)
+            depth -= 1
+        }
+        scheduler.batch {
+            for index in 0 ..< 200 {
+                let key = "k\(index)"
+                _ = scheduler.request(key: key, payload: index, completion: { _, _ in
+                    delivered.append(key)
+                })
+            }
+        }
+        XCTAssertEqual(delivered.count, 200)
+        XCTAssertEqual(maxDepth, 1)
+    }
+
     func testNetworkLaneChangesAreReported() {
         let scheduler = self.makeScheduler()
         var changes = 0

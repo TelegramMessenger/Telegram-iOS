@@ -130,6 +130,8 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
     private var pendingDrops: [PrefetchKey] = []
     private var isFlushScheduled = false
     private var isBatching = false
+    private var isPumping = false
+    private var needsPump = false
 
     init(localLimit: Int, localPrefetchLimit: Int, networkLimit: Int) {
         self.localLane = Lane(limit: localLimit, prefetchLimit: localPrefetchLimit)
@@ -383,14 +385,23 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         if self.isBatching {
             return
         }
-        for lane in [self.localLane, self.networkLane] {
-            while lane.running < lane.limit, let job = self.nextJob(in: lane) {
-                job.state = .running
-                job.attempt += 1
-                lane.running += 1
-                self.startJob(job)
-            }
+        if self.isPumping {
+            self.needsPump = true
+            return
         }
+        self.isPumping = true
+        repeat {
+            self.needsPump = false
+            for lane in [self.localLane, self.networkLane] {
+                while lane.running < lane.limit, let job = self.nextJob(in: lane) {
+                    job.state = .running
+                    job.attempt += 1
+                    lane.running += 1
+                    self.startJob(job)
+                }
+            }
+        } while self.needsPump
+        self.isPumping = false
     }
 
     private func nextJob(in lane: Lane) -> Job? {
