@@ -20,6 +20,8 @@ final class DemoViewController: UIViewController {
     private let resetButton = UIButton(type: .system)
     private let zoomInButton = UIButton(type: .system)
     private let zoomOutButton = UIButton(type: .system)
+    private let measureButton = UIButton(type: .system)
+    private var isMeasuringAspects = false
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "LLLL yyyy"
@@ -82,6 +84,10 @@ final class DemoViewController: UIViewController {
             button.addTarget(self, action: action, for: .touchUpInside)
             self.view.addSubview(button)
         }
+        self.measureButton.setTitle("Measure aspects", for: .normal)
+        self.measureButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        self.measureButton.addTarget(self, action: #selector(self.measureAspectsPressed), for: .touchUpInside)
+        self.view.addSubview(self.measureButton)
         self.frameMonitor.onUpdate = { [weak self] summary in
             self?.hudLabel.text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms", summary.frames, summary.dropped, summary.worst * 1000.0)
         }
@@ -128,6 +134,11 @@ final class DemoViewController: UIViewController {
         if ProcessInfo.processInfo.arguments.contains("-autoScrub") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.startAutoScrub()
+            }
+        }
+        if ProcessInfo.processInfo.arguments.contains("-measureAspects") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                self?.measureAspectsPressed()
             }
         }
         if ProcessInfo.processInfo.arguments.contains("-autoPinch") {
@@ -219,6 +230,54 @@ final class DemoViewController: UIViewController {
         CATransaction.flush()
         self.autoPinchDriveWorst = max(self.autoPinchDriveWorst, CACurrentMediaTime() - driveStart)
         #endif
+    }
+
+    @objc private func measureAspectsPressed() {
+        guard !self.isMeasuringAspects else {
+            return
+        }
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized || PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited else {
+            self.showMeasurement("Photo Library access is needed")
+            return
+        }
+        self.isMeasuringAspects = true
+        self.measureButton.isEnabled = false
+        DispatchQueue.global(qos: .userInitiated).async {
+            let enumerated = PhotoLibraryDataSource.makeFetchResult()
+            var enumerateSum = 0.0
+            let enumerateStart = CACurrentMediaTime()
+            enumerated.enumerateObjects { asset, _, _ in
+                enumerateSum += Double(asset.pixelWidth) / Double(max(1, asset.pixelHeight))
+            }
+            let enumerateTime = CACurrentMediaTime() - enumerateStart
+
+            let indexed = PhotoLibraryDataSource.makeFetchResult()
+            var indexedSum = 0.0
+            let indexedStart = CACurrentMediaTime()
+            for index in 0 ..< indexed.count {
+                let asset = indexed.object(at: index)
+                indexedSum += Double(asset.pixelWidth) / Double(max(1, asset.pixelHeight))
+            }
+            let indexedTime = CACurrentMediaTime() - indexedStart
+
+            let text = String(format: "count %d\nenumerateObjects %.0f ms\nobject(at:) %.0f ms", enumerated.count, enumerateTime * 1000.0, indexedTime * 1000.0)
+            print(String(format: "MEASURE_ASPECTS count=%d enumerate=%.1fms object_at=%.1fms check=%d", enumerated.count, enumerateTime * 1000.0, indexedTime * 1000.0, abs(enumerateSum - indexedSum) < 1e-6 ? 1 : 0))
+            fflush(stdout)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isMeasuringAspects = false
+                self.measureButton.isEnabled = true
+                self.showMeasurement(text)
+            }
+        }
+    }
+
+    private func showMeasurement(_ text: String) {
+        let alert = UIAlertController(title: "Aspect read", message: text, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        self.present(alert, animated: true)
     }
 
     @objc private func resetPressed() {
@@ -444,5 +503,6 @@ final class DemoViewController: UIViewController {
         self.resetButton.frame = CGRect(x: 8.0, y: self.hudLabel.frame.maxY + 4.0, width: 60.0, height: 28.0)
         self.zoomInButton.frame = CGRect(x: 8.0, y: self.view.bounds.height - insets.bottom - 40.0, width: 84.0, height: 32.0)
         self.zoomOutButton.frame = CGRect(x: self.zoomInButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 84.0, height: 32.0)
+        self.measureButton.frame = CGRect(x: self.zoomOutButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 140.0, height: 32.0)
     }
 }
