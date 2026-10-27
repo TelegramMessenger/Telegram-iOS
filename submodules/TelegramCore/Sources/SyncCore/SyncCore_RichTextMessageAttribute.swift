@@ -16,7 +16,8 @@ public class RichTextMessageAttribute: MessageAttribute, Equatable {
     public var associatedMediaIds: [MediaId] {
         var fileIds = self.instantPage.customEmojiFileIds
         if let fullInstantPage = self.fullInstantPage {
-            for fileId in fullInstantPage.customEmojiFileIds where !fileIds.contains(fileId) {
+            var seen = Set(fileIds)
+            for fileId in fullInstantPage.customEmojiFileIds where seen.insert(fileId).inserted {
                 fileIds.append(fileId)
             }
         }

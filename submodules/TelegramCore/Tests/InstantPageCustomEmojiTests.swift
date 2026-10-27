@@ -40,4 +40,14 @@ final class InstantPageCustomEmojiTests: XCTestCase {
         XCTAssertEqual(result.map(\.customEmojiFileId), [1, nil, 2, 1])
         XCTAssertEqual(result.map(\.text), ["🙂", " a ", "🔥", "🙂"])
     }
+
+    /// A rendered rich message carries its stored emoji files as associated media, which is where the chat list
+    /// preview looks for them.
+    func testAttributeAssociatesTheEmojiOfBothPages() {
+        let attribute = RichTextMessageAttribute(
+            instantPage: page([.paragraph(.concat([emoji(1), emoji(2)]))]),
+            fullInstantPage: page([.paragraph(emoji(2)), .paragraph(emoji(3))])
+        )
+        XCTAssertEqual(attribute.associatedMediaIds, [1, 2, 3].map { MediaId(namespace: Namespaces.Media.CloudFile, id: $0) })
+    }
 }

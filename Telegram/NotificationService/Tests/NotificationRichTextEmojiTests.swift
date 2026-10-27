@@ -66,6 +66,17 @@ final class NotificationRichTextEmojiTests: XCTestCase {
         XCTAssertEqual(ranges("alternative", [text("alternative"), emoji(1, "alt")]), [])
     }
 
+    func testAnAltTextContainingAnotherIsCountedAcrossRuns() {
+        // A custom "😀" then a custom "😀😀": the longer alt text's first match in "😀😀😀" is not its own run, so
+        // only the short one is certain; mapping both would overlap and cut a surrogate pair in half.
+        XCTAssertEqual(ranges("😀😀😀", [emoji(2, "😀"), emoji(1, "😀😀")]), ["2:😀@0"])
+    }
+
+    func testAnAltTextStraddlingPlainTextIsNotMatched() {
+        // "x😀" then a custom "😀😀": the body's first "😀😀" takes the plain 😀 and half of the emoji.
+        XCTAssertEqual(ranges("x😀😀😀", [text("x😀"), emoji(1, "😀😀")]), [])
+    }
+
     func testSearchStartsAfterTheAuthorPrefix() {
         XCTAssertEqual(ranges("Ann 🙂: 🙂", from: 7, [emoji(1, "🙂")]), ["1:🙂@8"])
     }
