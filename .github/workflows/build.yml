@@ -16,8 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
+
+      - name: Checkout submodules
+        run: |
+          # в .gitmodules относительные пути (../tgcalls.git), в форке они ведут в никуда — направляем на оригинал
+          git config --global url."https://github.com/TelegramMessenger/tgcalls".insteadOf "https://github.com/an0therlabs/tgcalls"
+          git config --global url."https://github.com/TelegramMessenger/rlottie".insteadOf "https://github.com/an0therlabs/rlottie"
+          git submodule sync --recursive
+          git submodule update --init --recursive --jobs 8
 
       - name: Set active Xcode path
         run: |
