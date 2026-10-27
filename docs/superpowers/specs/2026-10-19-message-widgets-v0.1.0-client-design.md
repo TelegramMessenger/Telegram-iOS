@@ -282,3 +282,9 @@ G2, which this client already kept), and a widget chooses which edge of its bubb
 - Conformance: the Tier 2 run of `auto/23-gestures` performs the new vertical drags; `calc()` inside a translation is
   a length's tree (twidget edit 56), as in a width.
 - Not taken: upstream's other platforms and demo apps.
+
+## 11. The v0.2.x delta (2026-10-26)
+
+widget-sandbox v0.2.0–v0.2.2 (vendored at `v0.2.2`, `66f4c1f7`) make a widget fixed code plus changeable state: the
+bot's state, requests, shared state, previews, and haptics that need a touch. The client's design and decisions for it are
+`docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`, which supersedes §3 and §6 of this one where it says so.

@@ -369,6 +369,25 @@ int32_t HTMLElement::offsetLeft(JSContext* ctx) {
     return rounded(box->x - parentBox->x - parentMetrics->borderLeft);
 }
 
+std::optional<std::pair<double, double>> renderedContentSize(JSContext* ctx, const Element& element) {
+    RenderTree* render = layoutForQuery(ctx);
+    if (!render) {
+        return std::nullopt;
+    }
+    chargeQueryRead(ctx, work::kNodeVisit);
+    if (!render->beingRendered(element)) {
+        return std::nullopt;
+    }
+    std::optional<RenderBox> box = chargedBorderBox(ctx, *render, element);
+    std::optional<RenderTree::BoxMetrics> metrics = box ? chargedMetrics(ctx, *render, element) : std::nullopt;
+    if (!box || !metrics) {
+        return std::nullopt;
+    }
+    const double width = box->width - metrics->borderLeft - metrics->borderRight - metrics->paddingLeft - metrics->paddingRight;
+    const double height = box->height - metrics->borderTop - metrics->borderBottom - metrics->paddingTop - metrics->paddingBottom;
+    return std::make_pair(std::max(0.0, width), std::max(0.0, height));
+}
+
 int32_t HTMLElement::offsetWidth(JSContext* ctx) {
     RenderTree* render = layoutForQuery(ctx);
     std::optional<RenderBox> box = render ? chargedBorderBox(ctx, *render, *this) : std::nullopt;

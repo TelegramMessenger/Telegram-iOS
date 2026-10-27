@@ -94,4 +94,8 @@ RenderTree* layoutForQuery(JSContext* ctx);
 /// the query and its flush: past the budget the widget stops with StopReason::LayoutQuery and this throws Aborted.
 void chargeQueryRead(JSContext* ctx, uint64_t units);
 
+/// The size `element` is laid out at, its content box (CSS px, before transforms), after a layout query; nullopt when
+/// it has no box. HTML img's width and height when the image is being rendered (widget-sandbox v0.2.3).
+std::optional<std::pair<double, double>> renderedContentSize(JSContext* ctx, const Element& element);
+
 } // namespace wr

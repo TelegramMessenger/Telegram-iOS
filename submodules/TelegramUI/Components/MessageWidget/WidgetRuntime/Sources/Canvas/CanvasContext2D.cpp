@@ -101,8 +101,11 @@ CanvasImageSource canvasImageSource(JSContext* ctx, const Value& value, const ch
         return source;
     }
     if (HTMLImageElement* img = unwrap<HTMLImageElement>(ctx, value.get(), idl::kHTMLImageElement)) {
-        // HTML's "check the usability of the image argument": broken is an InvalidStateError, not yet available draws
-        // nothing.
+        // HTML's "check the usability of the image argument": broken is an InvalidStateError, not yet available (no
+        // src, or pending until its load or error fires: widget-sandbox v0.2.3) draws nothing.
+        if (img->pending()) {
+            return CanvasImageSource{};
+        }
         std::optional<DecodedImage> decoded;
         const HTMLImageElement::State state = img->state(ctx, &decoded);
         if (state == HTMLImageElement::State::Broken) {

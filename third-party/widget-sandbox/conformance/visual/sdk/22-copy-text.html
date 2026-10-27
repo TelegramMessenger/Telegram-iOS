@@ -1,9 +1,9 @@
 <!doctype html>
-<html data-test="visual/sdk/16-bot-edit">
+<html data-test="visual/sdk/22-copy-text">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<!-- conformance {"title":"A bot edit: same HTML keeps the widget, new HTML restarts it on the same storage","hint":"Tap +1 twice. Ask the bot to edit the message with the same HTML: nothing restarts (Started stays). Ask for the edit with version 2: it shows v2, Started goes up, the count is still 2.","expect":"An edit with the same HTML keeps the running widget; with different HTML the widget restarts on the same storage.","contract":"docs/sdk-v1.md §2.8","covers":["behaviour.message-edit"]} -->
+<!-- conformance {"title": "copyText: the client copies on a tap and shows what it copied", "hint": "Tap Copy: the client's toast shows CONF-2026-OK, and that is what you paste. Tap Copy later: nothing is copied a second later (no tap). Tap Copy twice: one tap, one toast.", "expect": "copyText on a tap: copy the text and show a toast with the text itself (truncated if long); outside a tap nothing (activation-blocked); one copy per tap. The widget is not told.", "contract": "docs/sdk-v1.md §2.15, §5.11", "covers": ["tw.copy-text"], "message": [{"kind": "private"}]} -->
 <!-- conformance:mini --><style>html,body{margin:0;padding:0}body{font:14px/1.4 system-ui,sans-serif;color:var(--tg-theme-text-color,#111)}@media (prefers-color-scheme:dark){body{color:var(--tg-theme-text-color,#eee)}}.h{font-weight:600;font-size:15px;margin:10px 12px 2px}.i{margin:0 12px 8px;font-size:13px;color:var(--tg-theme-hint-color,#888)}.r{display:flex;flex-wrap:wrap;gap:6px;margin:6px 12px}.big{font-size:22px;font-weight:600;margin:4px 12px}#log{margin:8px 12px 10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}</style><script>var S = (function () {
   var r = document.documentElement, c = [], tg = {}, st = 'running';
   function rc(e) { var b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height].map(function (v) { return Math.round(v * 10) / 10; }); }
@@ -28,18 +28,27 @@
     done: function () { st = 'done'; pub(); },
   };
 })();</script><!-- /conformance:mini -->
+<style>
+.v{margin:2px 12px;font-size:14px}.v b{font-weight:600}
+</style>
 </head>
 <body>
-<div class="h">SDK 16 · A bot edits the message · v1</div>
-<div class="i">+1 twice; same-HTML edit: nothing restarts; edit to v2: restarts, count kept.</div>
-<div class="big" id="v"></div>
-<div class="r"><button id="p">+1</button></div>
+<div class="h">SDK 22 · copyText</div>
+<div class="i">The toast must show exactly what is copied.</div>
+<div class="v">Code: <b>CONF-2026-OK</b></div>
+<div class="r"><button id="copy">Copy</button><button id="later">Copy later</button><button id="twice">Copy twice</button></div>
+<div id="log"></div>
 <script>
-var L = localStorage;
-L.setItem('starts', String(+(L.getItem('starts') || 0) + 1));
-function show() { document.getElementById('v').textContent = 'count ' + (L.getItem('n') || 0) + ' · started ' + L.getItem('starts'); }
-document.getElementById('p').onclick = function () { L.setItem('n', String(+(L.getItem('n') || 0) + 1)); show(); };
-S.target('p', 'p'); show(); S.start();
+var $ = function (id) { return document.getElementById(id); };
+var TW = S.TW;
+
+function copy(t) { try { TW.copyText(t); } catch (e) { S.log('copyText threw ' + e, false); } }
+$('copy').onclick = function () { if (TW) copy('CONF-2026-OK'); };
+$('later').onclick = function () { if (TW) setTimeout(function () { copy('NOT COPIED: no tap'); }, 1000); };
+$('twice').onclick = function () { if (TW) { copy('CONF-2026-OK'); copy('NOT COPIED: second call'); } };
+S.check('tw.copy-text', 'copyText exists', !!TW && typeof TW.copyText === 'function', '');
+S.target('copy', 'copy');
+S.done();
 </script>
 </body>
 </html>

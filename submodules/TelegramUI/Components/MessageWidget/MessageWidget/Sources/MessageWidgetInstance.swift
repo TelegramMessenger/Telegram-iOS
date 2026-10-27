@@ -145,10 +145,16 @@ public final class MessageWidgetInstance {
     /// SDK v1 §2.5: a link the runtime checked and the press allowed. The host must confirm either before it opens.
     /// §2.6: a haptic the runtime let through its rate limit: `impact` with a style, `notification` with a type, or
     /// `selection` with none.
+    /// widget-sandbox v0.2 (sdk-v1 §2.13–§2.15): a request the runtime's gate admitted, to answer with
+    /// `completeRequest(id:outcome:)` exactly once; a text to copy, after a tap; whether the widget watches its shared
+    /// state.
     public enum BridgeCall: Equatable {
         case openLink(String)
         case openTelegramLink(String)
         case haptic(kind: String, value: String?)
+        case request(id: Int64, data: Data)
+        case copyText(String)
+        case watchPublicData(Bool)
     }
 
     /// The longest URL `openLink` hands the host, in UTF-8 bytes; a longer one is refused.
@@ -238,6 +244,25 @@ public final class MessageWidgetInstance {
     private(set) var demoted = false
     /// Effective visibility: the bubble's (`setVisible`), the view's window and the app's active state together.
     private(set) var visible = true
+    /// The effective visibility, for the host's work that follows the screen (sdk-v1 §2.13: shared state is polled only
+    /// for widgets on screen).
+    public var isVisible: Bool {
+        return self.visible
+    }
+    /// Whether the widget watches its shared state (`TelegramWidget.watchPublicData`, sdk-v1 §2.13), as its last applied
+    /// snapshot reported it; set before `onBridge` hears the call.
+    public private(set) var watchesPublicData = false
+    /// widget-sandbox v0.2 (W2): whether the host polls this widget's shared state: it watches and is effectively
+    /// visible (on screen, in a window, the app active), and is not destroyed (upstream integration.md).
+    public var wantsPublicDataPolling: Bool {
+        return !self.destroyed && self.visible && self.watchesPublicData
+    }
+    /// Called on a later main-queue turn (as `onBridge`) when `wantsPublicDataPolling` changes, with the new value.
+    public var onPublicDataPollingChange: ((Bool) -> Void)?
+    /// The value `onPublicDataPollingChange` was last called with.
+    private var reportedPublicDataPolling = false
+    /// The bot's state as last set: the one the boot passes, then each change handed on (`setState`).
+    private var state: MessageWidgetState
     private var hostVisible = true
     /// False once the view has left its window, until it is in one again. A view never put in a window does not
     /// hide the widget: the bubble's visibility decides then.
@@ -264,12 +289,15 @@ public final class MessageWidgetInstance {
     /// `locale`: the client's UI language (SDK v1 §2.9, navigator.language).
     /// `storage`: the stored areas the widget reads at its first touch of each (SDK v1 §3.1). `startsStopped`: the
     /// restart policy's (§5.7): the widget's code never runs, and it shows the stopped badge.
-    public init?(source: String, theme: Theme, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, startsStopped: Bool = false, pool: MessageWidgetPool = .shared, waitPolicy: MessageWidgetWaitPolicy = .standard, turn: MessageWidgetTurn = .shared, scale: CGFloat = UIScreen.main.scale) {
+    /// `context` and `state` (widget-sandbox v0.2): where the widget is and what it may do, fixed for its life; and the
+    /// bot's state it starts with, which `setState` changes.
+    public init?(source: String, theme: Theme, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), state: MessageWidgetState = .empty, startsStopped: Bool = false, pool: MessageWidgetPool = .shared, waitPolicy: MessageWidgetWaitPolicy = .standard, turn: MessageWidgetTurn = .shared, scale: CGFloat = UIScreen.main.scale) {
         let timers = MessageWidgetTimers()
         self.startedStopped = startsStopped
         let storageCommitSink = StorageCommitSink()
         self.storageCommitSink = storageCommitSink
-        self.core = MessageWidgetCore(source: source, stoppedLabel: stoppedLabel, maxMessageLength: maxMessageLength, locale: locale, storage: storage, startsStopped: startsStopped, commitSink: storageCommitSink, timers: timers, scale: scale)
+        self.state = state
+        self.core = MessageWidgetCore(source: source, stoppedLabel: stoppedLabel, maxMessageLength: maxMessageLength, locale: locale, storage: storage, context: context, startsStopped: startsStopped, commitSink: storageCommitSink, timers: timers, scale: scale)
         self.handshake = WidgetHandshake(queue: pool.makeQueue(), policy: waitPolicy, turn: turn)
         self.theme = theme
         self.tileScale = scale
@@ -410,6 +438,34 @@ public final class MessageWidgetInstance {
         }
     }
 
+    /// The bot's state changed (sdk-v1 §2.13): the widget gets chatDataChanged and publicDataChanged for what changed, and
+    /// keeps its page. Before the boot it is the state the boot passes. Waited for like a theme: the change usually
+    /// changes what the bubble shows.
+    public func setState(_ state: MessageWidgetState) {
+        guard self.state != state else {
+            return
+        }
+        self.state = state
+        guard self.bootQueued, !self.destroyed else {
+            return
+        }
+        self.perform(.state, wait: true) { core in
+            core.setState(state)
+        }
+    }
+
+    /// The client's outcome for the widget's request `id` (`BridgeCall.request`, sdk-v1 §2.14), settled in the widget's
+    /// next task; never waited for. Nothing once the widget is destroyed, and the runtime ignores an id it has no request
+    /// out for.
+    public func completeRequest(id: Int64, outcome: MessageWidgetRequestOutcome) {
+        guard self.bootQueued, !self.destroyed else {
+            return
+        }
+        self.perform(.state, wait: false) { core in
+            core.completeRequest(id: id, outcome: outcome)
+        }
+    }
+
     /// The bubble's visibility. The widget is visible only while this is true, its view is in a window and the app
     /// is active (`MessageWidgetApplicationState`).
     /// The system's Reduce Motion changed (the observer's; tests call it): the widget's prefers-reduced-motion follows.
@@ -442,6 +498,7 @@ public final class MessageWidgetInstance {
         self.destroyed = true
         self.displayLink?.invalidate()
         self.displayLink = nil
+        self.publicDataPollingMayHaveChanged()
         let core = self.core
         self.handshake.queue.close {
             core.teardown()
@@ -540,6 +597,20 @@ public final class MessageWidgetInstance {
             }
         }
         self.updateDisplayLink()
+        self.publicDataPollingMayHaveChanged()
+    }
+
+    private func publicDataPollingMayHaveChanged() {
+        let wants = self.wantsPublicDataPolling
+        guard wants != self.reportedPublicDataPolling else {
+            return
+        }
+        self.reportedPublicDataPolling = wants
+        // On a later main-queue turn, as `onBridge` is: never inside the layout pass (or the registry's loop) that made
+        // the change, where the host has not taken its new item yet.
+        DispatchQueue.main.async { [weak self] in
+            self?.onPublicDataPollingChange?(wants)
+        }
     }
 
     func evaluateForTesting(_ code: String) -> String? {
@@ -645,8 +716,10 @@ public final class MessageWidgetInstance {
         // Read here, on main: a test clears it in a `defer` that may run before a boot it did not wait for.
         let theme = self.theme, visible = self.visible, budgets = MessageWidgetCore.budgetsForTesting, maximumHeight = self.maximumHeight
         let reducedMotion = self.reducedMotion
+        let state = self.state
         self.requestedMaximumHeight = maximumHeight
         self.perform(.boot, wait: true) { core in
+            core.setState(state)
             core.boot(width: width, maximumHeight: maximumHeight, theme: theme, visible: visible, reducedMotion: reducedMotion, budgets: budgets)
         }
     }
@@ -740,6 +813,10 @@ public final class MessageWidgetInstance {
             self.requestSelectionExport()
         }
         for call in snapshot.bridgeCalls {
+            if case let .watchPublicData(on) = call {
+                self.watchesPublicData = on
+                self.publicDataPollingMayHaveChanged()
+            }
             DispatchQueue.main.async { [weak self] in
                 self?.onBridge?(call)
             }

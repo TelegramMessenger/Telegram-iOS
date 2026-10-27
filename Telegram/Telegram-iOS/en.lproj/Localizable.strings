@@ -17248,6 +17248,7 @@ Error: %8$@";
 
 "Message.WidgetStopped" = "Widget stopped";
 "Message.Widget" = "Widget";
+"Message.WidgetNetworkMarkerInfo" = "Taps on this widget can send data to the bot.";
 
 "Agent.AddKey" = "Add Your AI API key";
 "Agent.AddKeyInfo" = "This chatbot works only if you have an active subscription for an AI service.";

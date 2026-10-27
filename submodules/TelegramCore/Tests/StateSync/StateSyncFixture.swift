@@ -344,10 +344,10 @@ final class StateSyncFixture {
     /// server sends is stored (StoreMessage_Telegram.swift:1207-1209). `.UpperHistoryBlock` also
     /// removes the hole from `id` upward, as a live sync leaves it (Postbox.swift:2204-2219);
     /// `.Random` leaves the holes alone.
-    func storeMessage(peerId: PeerId, id: Int32, timestamp: Int32, authorId: PeerId?, text: String, incoming: Bool = true, location: AddMessagesLocation = .UpperHistoryBlock) {
+    func storeMessage(peerId: PeerId, id: Int32, timestamp: Int32, authorId: PeerId?, text: String, incoming: Bool = true, location: AddMessagesLocation = .UpperHistoryBlock, media: [Media] = []) {
         let threadId: Int64? = peerId.namespace == Namespaces.Peer.CloudChannel ? 1 : nil
         let flags: StoreMessageFlags = incoming ? [.Incoming] : []
-        let message = StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), customStableId: nil, globallyUniqueId: nil, groupingKey: nil, threadId: threadId, timestamp: timestamp, flags: flags, tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorId, text: text, attributes: [], media: [])
+        let message = StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), customStableId: nil, globallyUniqueId: nil, groupingKey: nil, threadId: threadId, timestamp: timestamp, flags: flags, tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorId, text: text, attributes: [], media: media)
         self.transaction { transaction -> Void in
             let _ = transaction.addMessages([message], location: location)
         }

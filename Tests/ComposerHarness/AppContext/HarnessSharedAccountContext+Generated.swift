@@ -331,7 +331,7 @@ extension HarnessSharedAccountContext {
     public func displaySetPhoto( parentController: ViewController, context: AccountContext, peer: EnginePeer, canDelete: Bool, performDelete: @escaping () -> Void, options: SetPhotoOptions, completion: @escaping (UIImage?) -> Void, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? ) {
         fatalError("harness: SharedAccountContext.displaySetPhoto is not provided")
     }
-    public func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any) -> Void) -> ViewController? {
+    public func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any, @escaping () -> Void) -> Void) -> ViewController? {
         fatalError("harness: SharedAccountContext.makeSuggestedAvatarEditor is not provided")
     }
     public func openAddPeerMembers(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, parentController: ViewController, groupPeer: EnginePeer, selectAddMemberDisposable: MetaDisposable, addMemberDisposable: MetaDisposable) {
@@ -400,7 +400,7 @@ extension HarnessSharedAccountContext {
     public func makeQrCodePhotoPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeQrCodePhotoPickerScreen is not provided")
     }
-    public func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([UIImage]) -> Void) -> Void {
+    public func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([TelegramMediaResource]) -> Void) -> Void {
         fatalError("harness: SharedAccountContext.makePassportAttachmentFlow is not provided")
     }
     public func makeChatMediaGalleryController(context: AccountContext, parameters: ChatMediaGalleryParameters) -> ViewController? {

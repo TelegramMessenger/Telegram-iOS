@@ -13,7 +13,7 @@
     "D11": "One widget model: classic DOM in the sandbox",
     "D12a": "Above the cap: hard clip, no fullscreen",
     "D14": "Theme: themeParams + --tg-theme-*, theme change event",
-    "D17": "State: localStorage per (account, bot, message_id), 16 KB, QuotaExceededError; sessionStorage in memory",
+    "D17": "State: localStorage per (account, chat, message id): the chat the message is in, as message ids are unique only within a chat (supergroups); 16 KB, QuotaExceededError; sessionStorage in memory",
     "D18": "Text is not selectable by default; a widget enables selection with user-select: text (2026-10-20, replaces \"Text selection forbidden\")",
     "D20": "Mini-HTML (2026-10-17): a widget is one HTML document of at most 4 KB compressed and 32 KB uncompressed, delivered in the message; the server compresses the HTML from the bot (zlib at level 9 since 2026-10-24) and enforces both limits",
     "D21": "No accessibility in v1",
@@ -31,7 +31,8 @@
     "P1-ua": "Clarified in v0.1.1 (2026-10-20): the renderer's user-agent layer (tables.uaStylesheet) also fixes the root and the text elements: the bubble's text colour (the bubble's own fill is the canvas behind a transparent renderer), the client's text tokens (--tg-text-font-size, --tg-text-line-height, --tg-text-padding as the body's margin) and explicit sizes and margins for headings, paragraphs, lists, tables, quotes and code, so a UA default in this profile means that layer, not an engine's own stylesheet",
     "G1": "Gestures, v0.1.2 (Artem, 2026-10-22): one shared policy with the same thresholds on every client and in the sandbox. A double tap over the widget is always the widget's (both clicks and dblclick, on every element; the reaction stays with the bubble outside the widget). For the rest touch-action is the claim, decided per element at pointerdown over the target and its ancestors (a container covers its children, as in CSS): auto: holds and swipes are the bubble's (the widget gets pointercancel); pan-y / pan-x: drags on the other axis are the widget's; none: everything is the widget's, holds (contextmenu) included. The leading 20 px of the widget and the bubble outside it never take a claim. Replaces \"double tap and long press stay with the bubble\" (SDK)",
     "G2": "Vertical drags are the chat's, v0.1.3 (Artem, 2026-10-24): a widget claims only horizontal drags; a vertical drag over a widget always scrolls the chat, whatever touch-action says, and the widget gets pointercancel. auto: holds and drags are the bubble's; pan-y: horizontal drags are the widget's; pan-x claims nothing; none: horizontal drags and holds (contextmenu) are the widget's. The axis lock (the first move past the 10 px slop decides for the whole press), double taps and the leading 20 px are unchanged. The engine under the renderer always allows vertical panning. Replaces G1's pan-x and the vertical half of none",
-    "R1": "Resize anchor, v0.1.3 (Artem, 2026-10-24): TelegramWidget.setResizeAnchor('top' | 'bottom') says which edge of the bubble stays put on screen when the widget's height changes (top by default: it grows downward; bottom: it grows upward and the content above moves). An SDK v1 addition inside profile 1: TelegramWidget.profile stays 1 and widgets detect the method with typeof. It goes through the bridge as a checked call (sdk-policy, four copies and the fixture), needs no gesture, and the host keeps the latest value and reports it with the height; the client's list compensates its scroll"
+    "R1": "Resize anchor, v0.1.3 (Artem, 2026-10-24): TelegramWidget.setResizeAnchor('top' | 'bottom') says which edge of the bubble stays put on screen when the widget's height changes (top by default: it grows downward; bottom: it grows upward and the content above moves). An SDK v1 addition inside profile 1: TelegramWidget.profile stays 1 and widgets detect the method with typeof. It goes through the bridge as a checked call (sdk-policy, four copies and the fixture), needs no gesture, and the host keeps the latest value and reports it with the height; the client's list compensates its scroll",
+    "I1": "The bot's data and requests (Artem, 2026-10-25; the server's spec): a widget is fixed code plus changeable state: the HTML never changes after sending; the state changes, and only the bot writes it. TelegramWidget.chatData, the chat state (one original message, seen only in its chat: in a group every member sees it; never forwarded), and publicData, the shared state (wherever the widget is shown: a forward gets a copy, or shares a shared widget's one state with the original): each a text of up to 1024 bytes (UTF-8), read-only in the widget; chatDataChanged / publicDataChanged when they change (no restart). isForward, chatType and viewer (Mini Apps' WebAppUser: id, first_name, last_name, username, is_premium; a field that breaks its rule is left out); a forward is told nothing about the chat it is in (no chatType: the bot must not learn where its widget was forwarded), and the widget knows its viewer only where it may ask the bot (can_query), originals included. request(data of 1-64 bytes): a callback button inside the widget; where it may ask is the server's per message (can_query: originals of a widget sent with allow_queries, forwards of one sent with fwd_allow_queries; background_query: the original in the private chat with the bot); the client marks a widget with can_query as one whose tap may send data to the bot's server; on a tap, one per tap (shared with openLink, openTelegramLink and copyText); in the background while visible: one when the widget appears on screen, then one per 5 s; one in flight; resolves { result } (text of at most 1024 bytes), rejects with error.code; the answer does not change the state. copyText(text of 1-256 characters) on a tap; the client's toast shows what it copied. Part of SDK v1 and layer 233 from the launch, inside profile 1. TelegramWidget.isPreview: an inline result in the list before it is sent gets its state but no input, no bridge call but ready and setResizeAnchor, no chat type or viewer, and Web Storage that is never committed. The checks are sdk-policy (four copies and the fixture)"
   },
   "features": [
     {
@@ -3218,7 +3219,7 @@
     {
       "id": "js.storage.local",
       "area": "js",
-      "title": "localStorage: per (account, bot, message), preloaded, 16 KB, QuotaExceededError past it",
+      "title": "localStorage: per (account, chat, message), preloaded, 16 KB, QuotaExceededError past it",
       "status": "in",
       "decision": "D17",
       "today": "host",
@@ -3589,6 +3590,94 @@
       "note": "v0.1.3: detect it with typeof TelegramWidget.setResizeAnchor === 'function'; anything but 'top' or 'bottom' throws TypeError; the host reports it with the height."
     },
     {
+      "id": "tw.bot-data",
+      "area": "sdk",
+      "title": "TelegramWidget.chatData and publicData: the bot's two strings (text of at most 1024 bytes each, read-only, null for none); chatDataChanged / publicDataChanged when they change",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "match": {
+        "apis": [
+          "TelegramWidget.chatData",
+          "TelegramWidget.publicData"
+        ]
+      },
+      "note": "chatData belongs to one original message (in a group every member sees it) and is null in a forward; publicData is the forward's snapshot or a value shared with the original; one change of both fires both, chat first; an unchanged value fires nothing."
+    },
+    {
+      "id": "tw.context",
+      "area": "sdk",
+      "title": "TelegramWidget.isForward, chatType and viewer (a WebAppUser): a forwarded copy, the kind of chat, who looks; no chatType in a forward, no viewer where the widget may not ask the bot",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "match": {
+        "apis": [
+          "TelegramWidget.isForward",
+          "TelegramWidget.chatType",
+          "TelegramWidget.viewer"
+        ]
+      },
+      "note": "viewer is shaped like Mini Apps' WebAppUser (id, first_name, last_name, username, is_premium only when true; names 1-64 UTF-16 code units, a username 5-32 of [A-Za-z0-9_]; a field that breaks its rule is left out); chatType is private, group, supergroup or channel and null in every forward (a copy is told nothing about its chat); viewer only where the message has can_query (an original sent with allow_queries, a forward of one sent with fwd_allow_queries), else null."
+    },
+    {
+      "id": "tw.request",
+      "area": "sdk",
+      "title": "TelegramWidget.request(data): a callback button inside the widget; data of 1-64 bytes, resolves { result } (text of at most 1024 bytes), rejects with error.code; where it may ask is the server's flag per message",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "match": {
+        "apis": [
+          "TelegramWidget.request"
+        ]
+      },
+      "note": "On a tap where can_query (originals of a widget sent with allow_queries, forwards of one sent with fwd_allow_queries; the client shows a network marker there), in the background only where background_query (the original in the private chat with the bot) while visible: one when the widget appears on screen, then one per 5 s; one in flight; the answer carries no data."
+    },
+    {
+      "id": "tw.copy-text",
+      "area": "sdk",
+      "title": "TelegramWidget.copyText(text): copies 1-256 characters on a tap; the client's toast shows the copied text",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "match": {
+        "apis": [
+          "TelegramWidget.copyText"
+        ]
+      },
+      "note": "One call per tap, shared with the links and request; outside a tap dropped with activation-blocked; navigator.clipboard stays a stub."
+    },
+    {
+      "id": "tw.watch-public-data",
+      "area": "sdk",
+      "title": "TelegramWidget.watchPublicData() / unwatchPublicData(): the widget asks for live shared data; the client polls a shared widget's public_data only while it watches and is on screen",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "match": {
+        "apis": [
+          "TelegramWidget.watchPublicData",
+          "TelegramWidget.unwatchPublicData"
+        ]
+      },
+      "note": "No tap needed, idempotent; the shim sends only changes and the host keeps the latest (web onWatchPublicData and watchesPublicData, the native diagnostics); a widget that does not watch gets public_data with the message and the bot's pushed edits only; a preview never watches."
+    },
+    {
+      "id": "tw.preview",
+      "area": "sdk",
+      "title": "TelegramWidget.isPreview: an inline result shown in the list before it is sent",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "match": {
+        "apis": [
+          "TelegramWidget.isPreview"
+        ]
+      },
+      "note": "A preview has its data but no input, no request, link, copy or haptic (only ready and setResizeAnchor), no chatType or viewer, and Web Storage that is never committed."
+    },
+    {
       "id": "tw.open-link",
       "area": "sdk",
       "title": "openLink(url): an absolute https URL of at most 256 characters, no user info, not a t.me host; one call per pointer press; the client confirms showing the full URL",
@@ -3618,7 +3707,7 @@
     {
       "id": "tw.haptic",
       "area": "sdk",
-      "title": "HapticFeedback: impactOccurred(light|medium|heavy|rigid|soft), notificationOccurred(error|success|warning), selectionChanged(); no gesture needed, visible widgets only",
+      "title": "HapticFeedback: impactOccurred(light|medium|heavy|rigid|soft), notificationOccurred(error|success|warning), selectionChanged(); visible widgets only, during a touch or in one 1 s series without one (v0.2.2)",
       "status": "in",
       "decision": "D8",
       "today": "host",
@@ -3950,7 +4039,7 @@
     {
       "id": "limit.haptic-rate",
       "area": "limit",
-      "title": "Haptics: a bucket of 5 calls refilled at 10 per second; the rest dropped (haptic-limit)",
+      "title": "Haptics: a bucket of 5 calls refilled at 10 per second, and a touch: free while a finger is down on the widget and 5 s after it is lifted, otherwise one 1 s series (the next after a touch or 10 s later); the rest dropped (haptic-limit)",
       "status": "in",
       "decision": "SDK",
       "today": "kept"
@@ -4034,11 +4123,11 @@
     {
       "id": "behaviour.message-edit",
       "area": "behaviour",
-      "title": "A bot edit with the same HTML keeps the running widget; with new HTML the widget restarts on the same storage",
+      "title": "The HTML of a sent widget never changes (an edit may change only the caption): a bot changes only chatData and publicData (behaviour.data-edit)",
       "status": "in",
-      "decision": "SDK",
+      "decision": "I1",
       "today": "host",
-      "note": "Testable with a test bot: edit the message with the same and with new HTML."
+      "note": "visual/sdk/16-bot-edit still tests an HTML edit, which the server does not allow, and is to be replaced by a data-edit case once the server ships editMessageWidgetData."
     },
     {
       "id": "behaviour.resize-anchor",
@@ -4048,6 +4137,42 @@
       "decision": "R1",
       "today": "host",
       "note": "v0.1.3: WidgetDiagnostics.resizeAnchor / web onResize(height, anchor); the old pixels stay aligned to the anchored edge during a height animation."
+    },
+    {
+      "id": "behaviour.data-edit",
+      "area": "behaviour",
+      "title": "A change of the bot's data reaches the running widget as chatDataChanged / publicDataChanged (the client's setData with the full state: the server's update, or the polled shared public_data): no new host, no restart",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "note": "The client keeps the values with the message; a shared widget's public_data (widget_id) is polled for one visible carrier per id, one message per call, at the object's period and applied to every widget with that id, forwards included; an answer carries no data; testable with a test bot once the server ships."
+    },
+    {
+      "id": "behaviour.forward-copy",
+      "area": "behaviour",
+      "title": "A forwarded copy never has chatData; its publicData is the forward's snapshot or the shared value; it is told nothing about the chat it is in (no chatType); it asks the bot only on a tap and only if the widget was sent with fwd_allow_queries, and otherwise has no viewer either",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "note": "The client passes the server's flags (is_copy, can_query); the framework drops chatData and chatType of a copy, and viewer of any message without can_query."
+    },
+    {
+      "id": "behaviour.preview",
+      "area": "behaviour",
+      "title": "A widget in a list of inline results is a preview: the client creates it with context.preview and the result's data, routes no touches to it (a tap selects the result) and creates a new host for the sent message",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "note": "The host drops the preview's input, every bridge call but ready and setResizeAnchor, and its storage commits; chatType and viewer are null."
+    },
+    {
+      "id": "behaviour.network-marker",
+      "area": "behaviour",
+      "title": "The network marker: the client marks a widget whose tap may send data to the bot's server exactly where the message has can_query (a UI contract of the server's spec)",
+      "status": "in",
+      "decision": "I1",
+      "today": "host",
+      "note": "Never without allow_queries, never on a forward of a widget without fwd_allow_queries, never on a preview; the client's own UI from context.canQuery (docs/integration.md)."
     },
     {
       "id": "behaviour.size-hint",

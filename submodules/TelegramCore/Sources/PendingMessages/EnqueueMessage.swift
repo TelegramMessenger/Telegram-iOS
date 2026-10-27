@@ -265,6 +265,21 @@ private extension EnqueueMessage {
     }
 }
 
+/// A forward's local echo of `media` (widget-sandbox v0.2, design §4 call 10): a widget as the copy the server will make
+/// (`TelegramMediaWidget.forwardedCopy`), anything else as it is.
+func forwardedMediaForLocalEcho(_ media: Media) -> Media {
+    if let widget = media as? TelegramMediaWidget {
+        return widget.forwardedCopy()
+    }
+    return media
+}
+
+/// Whether a forward keeps its sender's header even under "hide sender names" (widget-sandbox v0.2, tgw-format.md: a
+/// widget is never forwarded without its author; the server keeps the header): a message with a widget.
+func forwardKeepsSenderHeader(media: [Media]) -> Bool {
+    return media.contains(where: { $0 is TelegramMediaWidget })
+}
+
 func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
     if let file = mediaReference.media as? TelegramMediaFile {
         if file.partialReference != nil {
@@ -1395,7 +1410,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                             }
                             
-                            if hideSendersNames {
+                            if hideSendersNames && !forwardKeepsSenderHeader(media: sourceMessage.media) {
                                 
                             } else if sourceMessage.id.namespace == Namespaces.Message.EphemeralLocal {
                                 forwardInfo = StoreMessageForwardInfo(authorId: ephemeralParams?.authorId ?? author.id, sourceId: nil, sourceMessageId: nil, date: sourceMessage.timestamp, authorSignature: nil, psaType: nil, flags: [])
@@ -1494,7 +1509,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         let localGroupingKey = forwardGroupingKey(grouping: grouping, sourceGroupingKey: sourceMessage.groupingKey, generatedKeys: &localGroupingKeyBySourceKey)
                         
                         var augmentedMediaList = sourceMessage.media.map { media -> Media in
-                            return augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media))
+                            return forwardedMediaForLocalEcho(augmentMediaWithReference(.message(message: MessageReference(sourceMessage), media: media)))
                         }
                         
                         if peerId.namespace == Namespaces.Peer.SecretChat {

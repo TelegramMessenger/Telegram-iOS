@@ -65,8 +65,6 @@ const $ = id => document.getElementById(id);
 const root = $('root');
 const esc = v => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const TR = ['fade', 'slide-left', 'slide-right'];
-function transition(kind) { for (const k of TR) root.classList.remove('tr-' + k); requestAnimationFrame(() => root.classList.add('tr-' + kind)); }
 function replay(el, cls) { el.classList.remove(cls); requestAnimationFrame(() => el.classList.add(cls)); }
 
 const CATS = [
@@ -154,13 +152,11 @@ function handleAction(name, v) {
   if (name === 'tab') {
     const t = Number(v);
     if (t === tab) return;
-    transition(t > tab ? 'slide-left' : 'slide-right');
     tab = t;
     if (t === QUIZ && !quiz) { newQuestion(); buildQuiz(); }
     syncTabs();
     if (t !== QUIZ) buildList();
   } else if (name === 'filter') {
-    transition('fade');
     filter = filter === v ? '' : v;
     syncTabs();
     buildList();
@@ -179,7 +175,6 @@ function handleAction(name, v) {
     buildQuiz(right);
     if (right) press('q' + quiz.pick, quiz.target[1]);
   } else if (name === 'next') {
-    transition('slide-left');
     newQuestion();
     buildQuiz();
   }

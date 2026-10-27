@@ -7,6 +7,7 @@
 #include "Generated/Bindings.h"
 #include "Sources/Canvas/CanvasState.h"
 #include "Sources/DOM/DOMState.h"
+#include "Sources/DOM/Geometry.h"
 #include "Sources/Events/Dispatch.h"
 #include "Sources/Host/CSSPolicy.h"
 #include "Sources/Host/EventLoop.h"
@@ -54,6 +55,7 @@ void setDimensionAttribute(JSContext* ctx, Element& element, Name name, uint32_t
 }
 
 void fireImageEvent(JSContext* ctx, HTMLImageElement& image) {
+    image.settled();
     const HTMLImageElement::State state = image.state(ctx);
     if (state == HTMLImageElement::State::Unavailable) {
         return;
@@ -98,20 +100,32 @@ HTMLImageElement::State HTMLImageElement::state(JSContext* ctx, std::optional<De
 
 uint32_t HTMLImageElement::naturalWidth(JSContext* ctx) const {
     std::optional<DecodedImage> image;
-    return state(ctx, &image) == State::Available ? uint32_t(std::lround(image->width)) : 0;
+    return !m_pending && state(ctx, &image) == State::Available ? uint32_t(std::lround(image->width)) : 0;
 }
 
 uint32_t HTMLImageElement::naturalHeight(JSContext* ctx) const {
     std::optional<DecodedImage> image;
-    return state(ctx, &image) == State::Available ? uint32_t(std::lround(image->height)) : 0;
+    return !m_pending && state(ctx, &image) == State::Available ? uint32_t(std::lround(image->height)) : 0;
 }
 
+// HTML (widget-sandbox v0.2.3): the rendered size when the image is being rendered (a layout query), else the
+// attribute, else the natural size.
 uint32_t HTMLImageElement::width(JSContext* ctx) const {
+    if (connected(ctx)) {
+        if (std::optional<std::pair<double, double>> rendered = renderedContentSize(ctx, *this)) {
+            return uint32_t(std::lround(rendered->first));
+        }
+    }
     std::optional<uint32_t> attribute = dimensionAttribute(ctx, *this, Name::width);
     return attribute ? *attribute : naturalWidth(ctx);
 }
 
 uint32_t HTMLImageElement::height(JSContext* ctx) const {
+    if (connected(ctx)) {
+        if (std::optional<std::pair<double, double>> rendered = renderedContentSize(ctx, *this)) {
+            return uint32_t(std::lround(rendered->second));
+        }
+    }
     std::optional<uint32_t> attribute = dimensionAttribute(ctx, *this, Name::height);
     return attribute ? *attribute : naturalHeight(ctx);
 }
@@ -120,12 +134,12 @@ void HTMLImageElement::setWidth(JSContext* ctx, uint32_t value) { setDimensionAt
 void HTMLImageElement::setHeight(JSContext* ctx, uint32_t value) { setDimensionAttribute(ctx, *this, Name::height, value); }
 
 bool HTMLImageElement::complete(JSContext*) const {
-    // A data: image's decision is made the moment it is asked for, and nothing else ever loads.
-    return true;
+    // A data: image is decided when its load or error fires (widget-sandbox v0.2.3); nothing else ever loads.
+    return !m_pending;
 }
 
 String HTMLImageElement::currentSrc(JSContext* ctx) const {
-    if (state(ctx) != State::Available) {
+    if (m_pending || state(ctx) != State::Available) {
         return String::fromUTF8(ctx, "");
     }
     return *this->attributeValue(ctx, DOMState::of(ctx).name(Name::src));
@@ -185,25 +199,40 @@ void imageCreated(JSContext* ctx) {
 
 void imageSourceChanged(JSContext* ctx, HTMLImageElement& element) {
     element.forgetDecision();
-    // A parsed image's event waits for the window's load (fireParsedImageEvents), when the page's listeners exist.
-    if (DOMState::of(ctx).parsingDocument()) {
+    std::optional<String> src = element.attributeValue(ctx, DOMState::of(ctx).name(Name::src));
+    const bool loads = src && HostState::find(ctx);
+    // Pending until its load or error fires (widget-sandbox v0.2.3); a newer src replaces that event.
+    element.sourceChanged(loads);
+    if (!loads) {
         return;
     }
-    std::optional<String> src = element.attributeValue(ctx, DOMState::of(ctx).name(Name::src));
-    if (!src || !HostState::find(ctx)) {
+    // A parsed image's event waits for the window's load (fireParsedImageEvents), when the page's listeners exist.
+    if (DOMState::of(ctx).parsingDocument()) {
+        canvas::CanvasState::of(ctx).addParsedImage(Ref<HTMLImageElement>::retain(ctx, &element));
         return;
     }
     element.setEventQueued();
     Ref<HTMLImageElement> image = Ref<HTMLImageElement>::retain(ctx, &element);
-    EventLoop::of(ctx).queueTask(TaskSource::DOMManipulation, makeTask(ctx, [image = std::move(image)](JSContext* ctx) mutable {
-        fireImageEvent(ctx, *image);
+    const uint32_t generation = element.sourceGeneration();
+    EventLoop::of(ctx).queueTask(TaskSource::DOMManipulation, makeTask(ctx, [image = std::move(image), generation](JSContext* ctx) mutable {
+        if (image->sourceGeneration() == generation) {
+            fireImageEvent(ctx, *image);
+        }
     }));
+}
+
+void HTMLImageElement::adoptedInto(JSContext* ctx, Document& document) {
+    HTMLElement::adoptedInto(ctx, document);
+    if (&document == &DOMState::of(ctx).document()) {
+        imageSourceChanged(ctx, *this);
+    }
 }
 
 void fireParsedImageEvents(JSContext* ctx) {
     // Collected first: a handler may change the tree.
     std::vector<Ref<HTMLImageElement>> pending;
-    Node* node = &DOMState::of(ctx).document();
+    Document& document = DOMState::of(ctx).document();
+    Node* node = &document;
     while (node) {
         charge(ctx, work::kNodeVisit);
         if (auto* image = dynamic_cast<HTMLImageElement*>(node); image && !image->eventQueued()) {
@@ -218,6 +247,18 @@ void fireParsedImageEvents(JSContext* ctx) {
             node = node->parentNode(ctx);
         }
         node = node ? node->nextSiblingNode() : nullptr;
+    }
+    // Then the parsed images a script took out of the document: a browser's fetch goes on (v0.2.3 review, I1). One in a
+    // template's contents (another document) loads when it is adopted into this one.
+    HostState* host = HostState::find(ctx);
+    if (canvas::CanvasState* state = host ? host->canvasSlot().get() : nullptr) {
+        for (Ref<HTMLImageElement>& image : state->takeParsedImages()) {
+            charge(ctx, work::kNodeVisit);
+            if (!image->eventQueued() && &image->nodeDocument() == &document) {
+                image->setEventQueued();
+                pending.push_back(std::move(image));
+            }
+        }
     }
     for (Ref<HTMLImageElement>& image : pending) {
         fireImageEvent(ctx, *image);

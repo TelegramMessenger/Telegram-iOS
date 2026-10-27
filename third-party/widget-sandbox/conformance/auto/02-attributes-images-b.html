@@ -28,6 +28,8 @@
     <img id="i-bmp" src="data:image/bmp;base64,Qk1GAAAAAAAAADYAAAAoAAAAAgAAAAIAAAABABgAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAIjMAIjMAAAAiMwAiMwAAA==">
     <img id="i-ico" src="data:image/x-icon;base64,AAABAAEAAgIAAAEAGABAAAAAFgAAACgAAAACAAAABAAAAAEAGAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAADMAIjMAIgAAMwAiMwAiAAAAAAAAAAAAAA=">
     <img id="i-remote" src="https://example.org/conformance/pixel.png">
+    <img id="i-css" width="30" style="width:12px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAE0lEQVR4AWM8Y2z8nwEImBigAAAh4QI1lhEEowAAAABJRU5ErkJggg==">
+    <img id="i-broken" src="data:image/png;base64,AAAA">
   </div>
 </div>
 <div id="conf-list"></div>
@@ -47,6 +49,14 @@ onImage('i-svg', 'html.el.img-svg', 'an SVG image is refused: the 48px placehold
 onImage('i-bmp', 'html.el.img-other-formats', 'BMP is refused (placeholder, not the 2px image)', function (t, n) { return n !== 2; });
 onImage('i-ico', 'html.el.img-other-formats', 'ICO is refused (placeholder, not the 2px image)', function (t, n) { return n !== 2; });
 onImage('i-remote', 'html.el.img-remote', 'a remote image becomes the 48px placeholder', function (t, n) { return t === 'load' && n === 48; }, { sandboxOnly: true });
+onImage('i-css', 'html.el.img', 'img.width is the rendered width (12, not the attribute\'s 30)', function (t) { var el = document.getElementById('i-css'); return t === 'load' && el.width === 12; });
+onImage('i-broken', 'html.el.img', 'a broken image fires error and is complete, with no natural size', function (t, n) { return t === 'error' && n === 0 && document.getElementById('i-broken').complete; });
+// A script's image loads before it is inserted, as in a browser.
+var made = T.wait('html.el.img', 'new Image() loads before it is inserted: naturalWidth, complete, width');
+var img = new Image();
+img.onload = function () { made.result(img.naturalWidth === 2 && img.complete && img.width === 2, 'naturalWidth ' + img.naturalWidth + ', complete ' + img.complete + ', width ' + img.width); };
+img.onerror = function () { made.fail('error'); };
+img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAE0lEQVR4AWM8Y2z8nwEImBigAAAh4QI1lhEEowAAAABJRU5ErkJggg==';
 T.run({ deadline: 4000 });
 </script>
 <template data-ref="raster"><div style="padding:4px"><div style="float:left;width:16px;height:16px;margin:2px;background:#cc3333"></div><div style="float:left;width:16px;height:16px;margin:2px;background:#3366cc"></div><div style="float:left;width:16px;height:16px;margin:2px;background:#33aa33"></div><div style="float:left;width:16px;height:16px;margin:2px;background:#ff0000"></div></div></template>

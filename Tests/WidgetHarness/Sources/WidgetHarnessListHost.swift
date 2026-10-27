@@ -16,9 +16,11 @@ import ChatMessageItemImpl
 import ChatMessageBubbleContentNode
 import ChatMessageBubbleItemNode
 import ChatHistoryListViewBackend
+import ChatMessageShareButton
 import ChatMessageWidgetBubbleContentNode
 import MessageWidget
 import TextSelectionNode
+import UndoUI
 import UnsupportedContentPill
 
 /// The REAL chat bubbles (`ChatMessageItemImpl` → `ChatMessageBubbleItemNode` → `ChatMessageWidgetBubbleContentNode` and the
@@ -34,6 +36,15 @@ public final class WidgetHarnessListHost {
         storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil,
         profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
 
+    /// `-harness-chat bot`: the same chat with a bot, as widgets mostly come from (a bot's incoming media gets the
+    /// chat's share button beside its bubble).
+    public static let botChatPeer = TelegramUser(
+        id: WidgetHarnessListHost.chatPeer.id,
+        accessHash: nil, firstName: "Harness", lastName: "Bot", username: "harness_bot", phone: nil,
+        photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [],
+        storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil,
+        profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
+
     /// Stable ids never repeat in a process: the widget height cache and the registry are keyed by them.
     private static var nextStableId: UInt32 = 1
 
@@ -46,6 +57,10 @@ public final class WidgetHarnessListHost {
     private var paths: [EngineMessage.Id: String] = [:]
     private var items: [ListViewItem] = []
     private var controllerInteraction: ChatControllerInteraction?
+    /// The account's own peer, as the chat's history passes it to its items (a widget's viewer).
+    private var accountPeer: EnginePeer?
+    /// Where the last message tooltip shown would point, in window coordinates (`displayMessageTooltip`).
+    public private(set) var lastTooltipRect: CGRect?
     private var extractedMessageId: EngineMessage.Id?
     /// Settings ▸ Appearance ▸ Text Size, when set after the context's (`setFontSize`).
     private var fontSize: PresentationFontSize?
@@ -67,6 +82,14 @@ public final class WidgetHarnessListHost {
     public var holdsMenu = false
     /// `-harness-copy-protected on`: the chat forbids copying (`isCopyProtectionEnabled`). Set before `load`.
     public var copyProtected = false
+    /// `-harness-can-query on`: every widget message has the server's can_query (the network marker). Set before `load`.
+    public var canQuery = false
+    /// `-harness-chat bot`: the chat is with a bot (`botChatPeer`). Set before `load`.
+    public var botChat = false
+    /// The other side of the chat: `chatPeer`, or `botChatPeer` under `botChat`.
+    private var otherPeer: TelegramUser {
+        return self.botChat ? WidgetHarnessListHost.botChatPeer : WidgetHarnessListHost.chatPeer
+    }
     /// The stand-in context menu opened (true) or ended.
     public var onContextMenuChange: ((Bool) -> Void)?
     /// A text selection asked to show its menu: the root shows its actions as buttons.
@@ -116,14 +139,36 @@ public final class WidgetHarnessListHost {
         return Int32(hash & 0x3fffffff) | 1
     }
 
+    /// The account's own user id, a widget's `TelegramWidget.viewer.id` (widget-sandbox v0.2).
+    public var accountPeerIdValue: Int64 {
+        return self.context.account.peerId.id._internalGetInt64Value()
+    }
+
+    /// Replaces the widget media of the post at `path` with the same widget carrying `canQuery` and the bot's state
+    /// (widget-sandbox v0.2), and updates its bubble as the chat does a message's edit (`updateMessageWidgetData`, or a
+    /// supergroup's channel edit).
+    public func replaceWidgetState(path: String, canQuery: Bool, chatData: String?, publicData: String?, widgetId: Int64? = nil) {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let index = self.messages.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        let message = self.messages[index]
+        guard let widget = message.media.first(where: { $0 is TelegramMediaWidget }) as? TelegramMediaWidget else {
+            return
+        }
+        let updated = TelegramMediaWidget(width: widget.width, height: widget.height, payload: widget.payload, isCopy: widget.isCopy, canQuery: canQuery, backgroundQuery: widget.backgroundQuery, chatData: chatData.map { Data($0.utf8) }, publicData: publicData.map { Data($0.utf8) }, widgetId: widgetId ?? widget.widgetId)
+        self.messages[index] = message.withUpdatedMedia([updated])
+        self.requestUpdate(id)
+    }
+
     public func load(posts: [WidgetHarnessPost], incoming: Bool = false) {
         let accountPeer = TelegramUser(
             id: self.context.account.peerId, accessHash: nil, firstName: "Harness", lastName: "Account", username: nil, phone: nil,
             photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil,
             nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil,
             verificationIconFileId: nil)
+        self.accountPeer = EnginePeer(accountPeer)
         var peers = EngineSimpleDictionary<EnginePeer.Id, EngineRawPeer>()
-        peers[WidgetHarnessListHost.chatPeer.id] = WidgetHarnessListHost.chatPeer
+        peers[self.otherPeer.id] = self.otherPeer
         peers[accountPeer.id] = accountPeer
 
         var messages: [EngineRawMessage] = []
@@ -142,13 +187,14 @@ public final class WidgetHarnessListHost {
             takenIds.insert(messageId)
             let id = EngineMessage.Id(peerId: WidgetHarnessListHost.chatPeer.id, namespace: Namespaces.Message.Cloud, id: messageId)
             timestamp += 1
-            messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: incoming ? [.Incoming] : [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: incoming ? WidgetHarnessListHost.chatPeer : accountPeer, text: text, attributes: [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
+            messages.append(EngineRawMessage(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp, flags: incoming ? [.Incoming] : [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: incoming ? self.otherPeer : accountPeer, text: text, attributes: [], media: [media], peers: peers, associatedMessages: EngineSimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
             paths[id] = path
         }
         for post in posts {
-            guard let widget = TelegramMediaWidget(html: post.html, width: post.width, height: post.height) else {
+            guard let compressed = TelegramMediaWidget(html: post.html, width: post.width, height: post.height) else {
                 continue
             }
+            let widget = TelegramMediaWidget(width: compressed.width, height: compressed.height, payload: compressed.payload, isCopy: false, canQuery: self.canQuery, backgroundQuery: false, chatData: nil, publicData: nil, widgetId: nil)
             append(text: post.caption, media: widget, path: post.path)
             for photo in post.photos {
                 let resource = LocalFileMediaResource(fileId: Int64.random(in: 1 ... Int64.max), size: Int64(photo.png.count))
@@ -261,6 +307,42 @@ public final class WidgetHarnessListHost {
         return find(node.view)
     }
 
+    /// The message id of the post at `path`.
+    public func messageId(path: String) -> EngineMessage.Id? {
+        return self.paths.first(where: { $0.value == path })?.key
+    }
+
+    /// The network marker of the post at `path`'s bubble, while it shows one (widget-sandbox v0.2).
+    public func networkMarker(path: String) -> MessageWidgetNetworkMarkerView? {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let node = self.bubbleNode(for: id) else {
+            return nil
+        }
+        func find(_ view: UIView) -> MessageWidgetNetworkMarkerView? {
+            if let view = view as? MessageWidgetNetworkMarkerView {
+                return view
+            }
+            return view.subviews.lazy.compactMap(find).first
+        }
+        return find(node.view)
+    }
+
+    /// What the widget content node of the post at `path` answers the bubble at `point` (its own coordinates), as the
+    /// bubble's tap recognizer asks at a touch's down (`isEstimating`) and its swipes ask before they begin: whether
+    /// the bubble's tap is ignored, whether the press claims its hold, and whether a horizontal drag is claimed.
+    public func widgetContentAnswers(path: String, at point: CGPoint) -> (ignoresTap: Bool, claimsHold: Bool, claimsHorizontalDrag: Bool)? {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let node = self.bubbleNode(for: id), let widgetNode = node.contentNodes.first(where: { $0 is ChatMessageWidgetBubbleContentNode }) else {
+            return nil
+        }
+        let action = widgetNode.tapActionAtPoint(point, gesture: .tap, isEstimating: true)
+        let ignoresTap: Bool
+        if case .ignore = action.content {
+            ignoresTap = true
+        } else {
+            ignoresTap = false
+        }
+        return (ignoresTap, action.hasLongTapAction, widgetNode.claimsHorizontalDrag(at: point))
+    }
+
     /// The list item's stable id, the backend's identity: its message's (index 0 is the newest message).
     private func stableId(atListIndex index: Int) -> UInt64 {
         return UInt64(self.messages[self.messages.count - 1 - index].stableId)
@@ -273,7 +355,7 @@ public final class WidgetHarnessListHost {
             fontSize: self.fontSize ?? presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat,
             nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false,
             chatBubbleCorners: presentationData.chatBubbleCorners)
-        let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .wifi, isRecentActions: false, isCopyProtectionEnabled: self.copyProtected, availableReactions: nil, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: nil)
+        let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .wifi, isRecentActions: false, isCopyProtectionEnabled: self.copyProtected, availableReactions: nil, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: self.accountPeer)
         return ChatMessageItemImpl(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(id: WidgetHarnessListHost.chatPeer.id), associatedData: associatedData, controllerInteraction: self.controllerInteraction!, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
     }
 
@@ -455,6 +537,15 @@ public final class WidgetHarnessListHost {
             }
             // Another content node in the bubble is the caption's text.
             let caption = node.contentNodes.count > 1 ? " +caption" : ""
+            // The chat's share button beside the bubble.
+            let share = (node.subnodes ?? []).contains { $0 is ChatMessageShareButton && !$0.isHidden } ? " +share" : ""
+            // widget-sandbox v0.2: the network marker the bubble shows where the message has can_query, at its centre in
+            // the window's coordinates.
+            var marker = ""
+            if let markerView = widgetNode.view.subviews.first(where: { $0 is MessageWidgetNetworkMarkerView && !$0.isHidden }) {
+                let centre = markerView.convert(CGPoint(x: markerView.bounds.midX, y: markerView.bounds.midY), to: nil)
+                marker = " +marker@\(Int(centre.x.rounded())),\(Int(centre.y.rounded()))"
+            }
             // The bubble's context gesture shrinks its content while it waits for a long press (ContextControllerSourceNode).
             // A Tier 2 query does not return while synthesized fingers play, so how long a press lasted is an event.
             let isPressed = node.mainContextSourceNode.contentNode.layer.sublayerTransform.m11 < 0.999
@@ -465,7 +556,7 @@ public final class WidgetHarnessListHost {
                 self.events.append("pressed \(path) " + String(format: "%.1f", CACurrentMediaTime() - since))
             }
             bubbles.append((frame.minY, { index in
-                return "bubble \(index) \(path) \(Int(frame.width.rounded()))x\(Int(frame.height.rounded())) @\(Int(frame.midX.rounded())),\(Int(frame.midY.rounded())) \(state)\(caption)\(pressed)"
+                return "bubble \(index) \(path) \(Int(frame.width.rounded()))x\(Int(frame.height.rounded())) @\(Int(frame.midX.rounded())),\(Int(frame.midY.rounded())) \(state)\(caption)\(marker)\(share)\(pressed)"
             }))
         }
         bubbles.sort { $0.y < $1.y }
@@ -546,7 +637,18 @@ public final class WidgetHarnessListHost {
         }, requestOpenMessagePollResults: { _, _ in
         }, openAppStorePage: { [weak self] in
             self?.events.append("appStore")
-        }, displayMessageTooltip: { _, _, _, _, _ in
+        }, displayMessageTooltip: { [weak self] _, text, _, node, nodeRect in
+            // As ChatController: no tooltip without a node, and the anchor is `nodeRect` inside the node.
+            guard let self, let node else {
+                self?.events.append("tooltip " + text + " (not shown)")
+                return
+            }
+            var rect = node.view.convert(node.view.bounds, to: nil)
+            if let nodeRect {
+                rect = CGRect(origin: rect.origin.offsetBy(dx: nodeRect.minX, dy: nodeRect.minY - node.bounds.minY), size: nodeRect.size)
+            }
+            self.lastTooltipRect = rect
+            self.events.append("tooltip " + text)
         }, seekToTimecode: { _, _, _ in
         }, scheduleCurrentMessage: { _ in
         }, sendScheduledMessagesNow: { _ in
@@ -573,7 +675,14 @@ public final class WidgetHarnessListHost {
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
-        }, displayUndo: { _ in
+        }, displayUndo: { [weak self] content in
+            // A widget's copyText toast (sdk-v1 §2.15) and the copy-protection notice, as `toast <text>`.
+            switch content {
+            case let .copy(text), let .info(_, text, _, _):
+                self?.events.append("toast " + text.replacingOccurrences(of: "\n", with: "\\n"))
+            default:
+                break
+            }
         }, isAnimatingMessage: { _ in
             return false
         }, getMessageTransitionNode: {

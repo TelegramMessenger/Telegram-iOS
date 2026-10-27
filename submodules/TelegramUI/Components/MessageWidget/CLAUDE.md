@@ -3,13 +3,16 @@
 A widget message carries `messageMediaWidget width:int height:int payload:bytes` (layer 233): a bot's size anchors and
 the widget's HTML, compressed by the server: a zlib stream (PHP's `gzcompress($html, 9)`; gzip before widget-sandbox
 v0.1.3). It is the only way widgets are delivered. TelegramCore stores it as `TelegramMediaWidget` (Postbox keys `w`,
-`h`, `p`, plus `f`, `pd`, `cd` and `wi` for the flags, public data, chat data and widget id; `html()` inflates zlib or gzip, checking the header first, with no size check of its own; a local message is
+`h`, `p`, and since widget-sandbox v0.2 `f` (the server's flags), `cd`/`pd` (the bot's states, kept as the UTF-8 of the
+TL `string`s since the 2026-10-27 schema), `ph` (`public_data_hash`) and `wi` (`widget_id`), each absent when unset;
+`html()` inflates zlib or gzip, checking the header first, with no size check of its own; a local message is
 compressed as the server does, zlib at level 9, through the SDK's `zlib`, never Compression's `COMPRESSION_ZLIB`, which
 is raw deflate);
 `ChatMessageWidgetBubbleContentNode` draws it as a live widget in a bubble of its own, the message's text as its
-caption below. The authority is widget-sandbox, vendored at tag v0.1.3 in `third-party/widget-sandbox` (`corpus/`,
+caption below. The authority is widget-sandbox, vendored at tag v0.2.3 in `third-party/widget-sandbox` (`corpus/`,
 `conformance/`); the client's spec is `docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`
-(milestones V1–V6; §8, §9 and §10 hold this client's v0.1.1, v0.1.2 and v0.1.3 decisions). The runtime, `WidgetRuntime`, has its own record:
+(milestones V1–V6; §8, §9 and §10 hold this client's v0.1.1, v0.1.2 and v0.1.3 decisions), and v0.2's (the bot's
+state, the message context, requests) is `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`. The runtime, `WidgetRuntime`, has its own record:
 [`docs/message-widgets-native-runtime.md`](../../../../docs/message-widgets-native-runtime.md). Code:
 `submodules/TelegramUI/Components/MessageWidget/{MessageWidget,MessageWidgetRendering,WidgetRuntimeIOS,WidgetRuntime}`
 and `…/Chat/ChatMessageWidgetBubbleContentNode`.
@@ -25,7 +28,11 @@ the gate differently asks for its own relayout, because nothing else lays out a 
 (`MessageContentKind.widget`). None of what follows shows up as a build error:
 
 - **Size** (`MessageWidgetBubbleSize`). Width 0 is the bubble's width; any other width is clamped to 200…the
-  bubble's. Height 0 is the widget's own: 160 pt until it reports, then the reported height clamped to 50…600 and
+  bubble's. A widget message's bubble has no share button beside it and may take the chat's full width
+  (`ChatMessageBubbleItemNode`: `allowFullWidth`, as a channel post's; the user, 2026-10-26), so a width-0 widget
+  spans the list but for the bubble's edge and content insets, past the narrow maximum (`maximumWidthFill`, the list
+  less 36 pt on a phone) that a bubble without the full width keeps
+  (`WidgetHarnessSizingTests.testAWidgetBubbleHasNoShareButtonAndTheFullWidth`). Height 0 is the widget's own: 160 pt until it reports, then the reported height clamped to 50…600 and
   cached per message with its resize anchor (`MessageWidgetHeightCache`, 4,096 messages) so scrolling back does not
   jump; any other height is
   clamped to 50…600 and clips the widget. The runtime clamps what it reports to 50…600 too (`WidgetTreeRenderer`), and
@@ -182,10 +189,11 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (`third-party/widget-sandbox/ios/`, Foundation only). App Store review rejects libicucore's
   `unumf_*`/`udat_*`/`ucol_*`/`ubidi_*`: they link, but only what the SDK's `unicode/*.h` declare is public.
   `build-system/Make/ICUImportCheck.py` fails `Make.py build` on any other libicucore import; bidi is our UAX #9
-  (`WidgetRuntime/Sources/Render/Bidi.cpp`). **A request never carries a unicode extension** (`intl::resolveLocale`):
-  on a tag like `ar-EG-u-nu-arab` upstream's glue and Foundation itself trap, which crashes the app. Passing
-  extensions on waits for upstream's glue to build its locale with `Locale.Components`; see widget-sandbox's
-  VENDOR.md. The runtime record's Intl section has the protocol and the divergences.
+  (`WidgetRuntime/Sources/Render/Bidi.cpp`). **A request never carries a unicode extension** (`intl::resolveLocale`).
+  Until widget-sandbox v0.2.2 a tag like `ar-EG-u-nu-arab` made upstream's glue and Foundation trap, crashing the app.
+  v0.2.3's glue builds its locale with `Locale.Components` and applies one on iOS 16 and later; the runtime still drops
+  them, a divergence from upstream with its reasons in widget-sandbox's VENDOR.md. The runtime record's Intl section
+  has the protocol and the divergences.
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; every later call answers its empty default. A stop or failure
   after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer` keeps its
@@ -206,13 +214,37 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   (edit 65); a smaller one is painted by every tile its ink reaches. On an animated widget, blurred effects are still
   the frame's cost (the runtime record's "Measured", paint cost per frame). **Measure paint cost in the widget
   harness's app process**: the hostless test processes have no Metal device and paint no CSS filter.
-- **No network, ever.** A widget can never cause a network request from the device, and `openLink` always prompts.
+- **The runtime opens nothing; the app asks Telegram's server for a widget in exactly two ways** (widget-sandbox v0.2;
+  the user's decision, `docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md` §4.A). Both requests go only
+  to Telegram's server, carry only the bot's data and never a URL, and `openLink` always prompts.
+  - **`messages.getBotWidgetQueryAnswer`** answers a widget's `TelegramWidget.request`. The runtime's request gate (the
+    vendored policy's `RequestGate`, `HostState::decideRequest`) admits it only in these cases:
+    - on a tap, where the message's server flags say `can_query`;
+    - without a tap, in the bot's private chat when the server sets `background_query`: one when the widget appears on
+      screen, then at most one per 5 s while it stays visible.
+
+    One request is in flight at a time.
+  - **`messages.getWidgetPublicData`** is polled for a widget on screen that has a `widget_id` and has called
+    `watchPublicData()`: one message per `widget_id`, at the period the server returns.
   - **One way out.** Widget JS reaches native code only through the generated bindings, none of which resolves a URL.
-    The only way out is the bridge: `openLink` behind its prompt, one per tap (`MessageWidgetCore.bridge`). SDK v1 has
-    no `sendMessage` (sdk-v1 §2.10).
+    The only way out is the bridge (`MessageWidgetCore.bridge`):
+    - `openLink` / `openTelegramLink` behind its prompt, one per tap;
+    - `request`;
+    - `copyText`, on a tap;
+    - `watchPublicData`;
+    - haptics.
+
+    A preview (an inline result not sent yet) posts only `ready`. SDK v1 has no `sendMessage` (sdk-v1 §2.10).
   - **Loads.** Profile 1 decides the renderer's copy first (below): its hooks drop a remote `url()` declaration and an
     `@import` before any load is asked for, and `scanAttributes` turns a refused `<img src>` into the 48 px
-    placeholder. Behind it the runtime's litehtml container, `WidgetContainer`, is the boundary: it accepts only
+    placeholder. An image's state is a browser's (widget-sandbox v0.2.3):
+    - from a `src` change until its `load` or `error` fires from a task, it is pending: not complete, no natural size,
+      drawn as nothing on a canvas;
+    - a newer `src` replaces the pending event;
+    - a script's image loads before it is inserted, and a parsed one a script takes out before the window's load
+      still loads; one of a `<template>`'s contents loads once moved into the document;
+    - `width` / `height` are the rendered content size while the image is rendered (a layout query), else the
+      attribute, else the natural size. Behind it the runtime's litehtml container, `WidgetContainer`, is the boundary: it accepts only
     `data:` images of the profile's types (PNG, JPEG, GIF, WebP) and the placeholder, and refuses and counts every
     other load (`WRSession.refusedLoads`). `CoreTextRenderHost` decodes those under the image policy
     (`LHHostContainer::createImage`: ImageIO's sniffing, ≤ 4096 px a side and 16 Mpx; the placeholder, the one SVG it
@@ -229,6 +261,115 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     link-options preview (`performOpenURL`, which fetches a preview of the URL) ignores such a link; the other
     `ChatControllerInteraction`s open nothing or show list items, not bubbles. A new opener of `OpenUrl` must honour
     it too.
+- **The message's context and state** (widget-sandbox v0.2). The bubble hands the registry the message's context
+  (`messageWidgetContext`, `MessageWidgetMessageContextBuilder.swift`: the media's `isCopy` / `canQuery` /
+  `backgroundQuery` as the server set them, the chat's type, the account as `viewer`) and its state (the media's
+  `chatData` / `publicData`) on every main-thread pass. The context is part of the registry's key, so a context that
+  changes (the server's flags on an edit) re-boots the widget; the state never is: a new state reaches the running
+  widget through `setState` (its `chatDataChanged` / `publicDataChanged` events), never a re-boot, so a bot's edit
+  keeps the widget's own state. The rules:
+  - **The chat type is the peer's, mapped as upstream's.** `.user` and secret chats are `private`, a legacy group
+    `group`, a channel `supergroup` or `channel` by its info; a chat with no peer has none.
+  - **The viewer is the account's user, or id-only.** The chat history's first transition waits for
+    `associatedData.accountPeer` (`ChatHistoryListNode` combines it in), so its passes have it. A list that passes none
+    gets an id-only viewer (`item.context.account.peerId`), which the policy accepts. The viewer is part of the
+    context, hence of the key, so a change to the account's own name, username or Premium restarts every widget on
+    screen once.
+  - **The network marker is exactly `can_query`** (sdk-v1 §5.11): `MessageWidgetNetworkMarkerView`
+    (`widget.networkMarker`), a 20 pt badge the date pill's colour at the widget area's bottom-right, left of the date
+    pill when the bubble draws one there, never over the pill; a tap shows `Message.WidgetNetworkMarkerInfo` as the
+    message's tooltip, which the chat shows only with a source node (the content node). A message without the flag
+    gets none, however its widget behaves.
+  - **A touch on the marker is never the widget's.** The marker sits inside the widget area, and the bubble's
+    estimate at a touch's down (`tapActionAtPoint`, `isEstimating`) would otherwise start a press in the widget under
+    it: `pointerdown` and `pointercancel` at its corner, and the haptic window. `tapActionAtPoint` answers `.ignore`
+    without a long-tap action there (the button takes the tap; a hold opens the message's menu), and
+    `claimsHorizontalDrag` answers false. `testATouchOnTheMarkerIsNeverAPressInTheWidget` (Tier 1) and
+    `testATapOnTheNetworkMarkerExplainsItAndPressesNothing` (Tier 2, a real tap) pin it.
+  - **`copyText` copies only where the widget's text selection may** (the same `copyAllowed`: the chat's
+    `isCopyProtectionEnabled`, the message's `isCopyProtected()`, verification codes excepted), and always says what
+    it copied (`displayUndo(.copy(text:))`), so a widget cannot show one text and copy another unnoticed. Where copying
+    is forbidden nothing reaches the pasteboard and the chat's own copy-protection notice shows instead.
+
+  `WidgetHarnessStateTests` (Tier 1, `Fixtures/widget-state.html`) covers the state, an edit, the marker and the copy.
+- **A request reaches the bot from the bubble** (W2). The bubble sends each admitted `request` through
+  `MessageWidgetNetwork.requestAnswer`, whose default is `engine.messages.requestBotWidgetQueryAnswer`.
+  `MessageWidgetRequests` holds each on a disposable of its own until its outcome reaches the widget. The rules:
+  - **Exactly one outcome.** The engine's call maps the server's errors as the tag says (`WIDGET_RESPONSE_TIMEOUT` a
+    timeout, `FLOOD_WAIT_*` a rate limit, anything else a failure) and fails a request still unanswered after 30 s.
+  - **Flood waits are not waited out** (`automaticFloodWait: false`). Otherwise a short one would be waited out
+    silently and the guard would fire first.
+  - **A local message never reaches the server.** Its request fails at once (the DEBUG insertion's posts).
+  - **Requests in flight are cancelled** when the node shows another message (its widget is destroyed) and with the
+    node. A late answer reaches nothing, since a destroyed instance ignores `completeRequest`.
+  - **The harness replaces the seam** (`WidgetHarnessNetworkTests`, `Fixtures/widget-request.html`). The engine's call
+    is pinned in TelegramCore (`WidgetQueryRequestTests`), and the cancellation in `MessageWidgetRequestsTests`.
+
+- **A shared widget's state is polled while it watches on screen** (W2; design §4 calls 3–4, upstream integration.md).
+  The bubble subscribes to `MessageWidgetNetwork.pollPublicData` (default `engine.messages.pollWidgetPublicData`)
+  exactly while all of these hold:
+  - its message is a cloud message with a `widgetId`;
+  - the widget's `MessageWidgetInstance.wantsPublicDataPolling` is true: it watches and is effectively visible, so not
+    off screen, out of the window (a pushed screen) or with the app in the background.
+
+  `onPublicDataPollingChange` (delivered on a later main-queue turn, as `onBridge` is, so never inside the layout pass
+  before the bubble takes its item) and each applied item re-evaluate the subscription. TelegramCore's
+  `WidgetPublicDataPolling` (held by `AccountViewTracker`; timing in the pure `WidgetPublicDataPollingState`):
+  - polls one carrier per widget id: the first poll at once, with the hash of the state the message carries
+    (`public_data_hash`, 2026-10-27 schema) or 0, then after each answer's period (5–3600 s), 30 s after a failure;
+  - writes a new state into the stored widget of every registered message, so the bubble hands it to the widget through
+    `setState` as any edit does, and records it as the message's edit (`recordMessageEdit`), so a history fill in
+    flight does not write the older state back;
+  - **never writes over a message's own state on registration.** Hashes are not ordered, so a message whose hash
+    disagrees with the id's may carry the newer state. The disagreement owes a full poll (hash 0): at once, or after
+    the poll in flight if that one answers "not modified", or when a widget comes back on screen while it is still
+    owed. Its answer is written to every registration, and no message's hash is adopted until it goes. Only a message without a hash (stored before the 2026-10-27 schema) gets
+    the id's latest state at once;
+  - makes a widget back on screen within its id's period wait for the next poll.
+
+  Pinned by `WidgetPublicDataPolling*Tests` (TelegramCore), `StateTests.testPollingInterestFollowsVisibilityAndWatching`
+  and `WidgetHarnessNetworkTests` (`Fixtures/widget-watch.html`).
+- **Forwards** (W2; design §4 calls 8, 10; tgw-format.md "a forward is a copy", "never forwarded without its author").
+  - **The echo is the copy the server will make.** A forward's local echo, and the forward preview, show the widget as
+    `TelegramMediaWidget.forwardedCopy()`: `isCopy`, no `canQuery`, no `backgroundQuery`, no chat state, its shared
+    state and widget id kept (`EnqueueMessage`'s `forwardedMediaForLocalEcho`). Without this the echo of an original
+    booted as a non-copy with the source's queries and chat state. The server's message brings its own flags (a live
+    copy's `can_query` depends on `fwd_allow_queries`, which the client cannot see); the context changes, so the widget
+    restarts once.
+  - **The sender's header stays under "hide sender names"**, as for dice: the echo (`forwardKeepsSenderHeader`), the
+    preview (`ChatControllerNode`), and the option itself is not offered for a selection of widgets and dice
+    (`chatForwardOptions`, `PeerSelectionControllerNode`). The send path keeps the echo's header, so dropping it there
+    would lose it until a refetch.
+- **An inline result that is a widget is a preview** (W3; sdk-v1 §2.16, design §5 W3; the row shape is the user's,
+  2026-10-27).
+  - **The result.** `botInlineMessageWidget` parses to `ChatContextResultMessage.widget`: the widget with the result's
+    state and no flags (a result is not a message), and its text. Sending it enqueues the widget as the echo's media
+    (no queries). The server's message replaces the echo with its own flags, so the widget restarts once. A secret chat
+    cannot carry a widget: the result sends its text alone, or nothing.
+  - **The preview.** `MessageWidgetPreviewNode` (the bubble's module) runs the widget as a preview:
+    - a registry of its own, keyed by the result: another result is another widget;
+    - context `isPreview`, so no viewer and no chat type;
+    - no storage and no bridge;
+    - no touches: the node takes none, so a tap selects the result;
+    - the app's language and stopped label, as the sent bubble has;
+    - a widget only while on screen: the list's preload rows run none, a row leaving the screen stops its own, and a
+      row shown again boots afresh, so a fling through many widget results runs only the visible ones;
+    - a late snapshot (a boot past the pass's wait, a new height, a failure) re-runs its pass on a later main-queue
+      turn, as the bubble's relayout does, so a late boot is not left at the 160 pt placeholder;
+    - a widget that failed to start is remembered and never booted again for that result, when the failure lands
+      while the row is on screen (a slow parse failing after the row left is parsed again on the next show).
+  - **The vertical list.** A row with the result's title and the widget at its sent bubble's width and its own height,
+    scaled down past `MessageWidgetPreviewLayout.maximumListHeight` (240 pt). The panel keeps each reported height and
+    re-lays that row out from it, without the list's crossfade. A fixed height reports nothing.
+  - **The gallery strip.** A cell the size of an image result's widest crop, with the widget fitted inside and no peek.
+  - **Layout off main.** Both lists lay out off main, so a row's layout uses only the anchors and the height passed in,
+    and the widget boots in the item's apply. A height report arrives one main-queue turn after the pass, never inside
+    a list's apply.
+  - **Elsewhere.** With the kill switch engaged, a widget result draws as any other result. The Mini App share preview
+    shows its text.
+  - **Tests.** Pinned by `ChatContextResultWidgetTests` (TelegramCore), `MessageWidgetPreviewLayoutTests` and
+    `WidgetHarnessPreviewTests` (`Fixtures/preview/widget-preview.html`). The two panels live in TelegramUI, which has no
+    test target.
 - **A widget's storage is in its message's derived data** (`DerivedDataMessageAttribute["widgetStorage"]`,
   `MessageWidgetStorage`; by user decision), so it goes with the message, the chat and the account by itself. Three
   traps: an area with no entries is written as one, never removed, because Postbox's attribute merge re-appends a
@@ -265,8 +406,9 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   - **The flush is atomic and runs no JS**, and the first one is in `boot`, after the parse and before any script, so
     a first script that never ends still leaves the parsed markup laid out.
 - **Lifetime.** A widget lives as long as its bubble shows the same message (`MessageWidgetRegistry`, keyed by path +
-  source; a new message stable id destroys it; a widget that failed to start is remembered, not re-booted). Height
-  changes ride the layout (`reportedHeight`, then the height cache) and `requestMessageUpdate`.
+  source + the message context, never its state; a new message stable id destroys it; a widget that failed to start
+  is remembered, not re-booted). Height changes ride the layout (`reportedHeight`, then the height cache) and
+  `requestMessageUpdate`.
 - **Touches** follow widget-sandbox's shared gesture policy (sdk-v1 §5.5; the C++ copy, `twidget/gesture_policy.h`
   in `third-party/widget-sandbox/gesture/`, whose `claimOf` and `GestureArbiter` the runtime runs, thresholds included:
   slop 10 px, hold 500 ms, double tap 300 ms / 40 px, a 20 px leading strip). **Every tap and double tap over a live

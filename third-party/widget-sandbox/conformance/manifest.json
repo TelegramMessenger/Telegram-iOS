@@ -23,9 +23,9 @@
   }
  },
  "coverage": {
-  "auto": 247,
-  "visual": 116,
-  "catalogue": 257,
+  "auto": 253,
+  "visual": 126,
+  "catalogue": 267,
   "external": {
    "limit.nodes": "corpus/attacks (pnpm test:attacks): node flood",
    "limit.cpu": "corpus/attacks and tests/lifecycle.spec.ts: CPU quota, deferral, kill",
@@ -35,7 +35,11 @@
    "behaviour.gesture-claim": "visual/sdk/12-drag-gestures (client behaviour)",
    "behaviour.storage-persist": "visual/sdk/07, 08, 09 (client behaviour)",
    "behaviour.storage-forward": "visual/sdk/15-storage-forward (client behaviour)",
-   "behaviour.message-edit": "visual/sdk/16-bot-edit (client behaviour)",
+   "behaviour.message-edit": "visual/sdk/16-state-edit (client behaviour)",
+   "behaviour.data-edit": "visual/sdk/16-state-edit, 24-watch-public-data, 25-group-chat-state (client behaviour)",
+   "behaviour.forward-copy": "visual/sdk/20-forward-requests and auto/26-context-copy, -live-copy viewed as forwards (client behaviour)",
+   "behaviour.preview": "visual/sdk/23-preview and auto/26-context-preview in the inline results (client behaviour)",
+   "behaviour.network-marker": "visual/sdk/21-network-marker (client behaviour)",
    "behaviour.resize-anchor": "visual/sdk/18-resize-anchor (client behaviour)",
    "behaviour.size-hint": "visual/sdk/17-size-hint (client behaviour)"
   },
@@ -723,6 +727,27 @@
      "native": {
       "chromium": "skip"
      }
+    },
+    {
+     "id": "html.el.img",
+     "name": "img.width is the rendered width (12, not the attribute's 30)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.img",
+     "name": "a broken image fires error and is complete, with no natural size",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.img",
+     "name": "new Image() loads before it is inserted: naturalWidth, complete, width",
+     "native": {
+      "chromium": "pass"
+     }
     }
    ],
    "stages": [
@@ -775,8 +800,8 @@
      "nativeVsTemplate": 0.9853
     }
    ],
-   "bytes": 9014,
-   "zlib": 3492
+   "bytes": 10242,
+   "zlib": 3792
   },
   {
    "id": "auto/03-layout-a",
@@ -6973,11 +6998,11 @@
    "zlib": 3754
   },
   {
-   "id": "auto/23-gestures",
+   "id": "auto/23-gestures-a",
    "set": "auto",
-   "file": "auto/23-gestures.html",
-   "title": "Who gets a press: a double tap is always the widget's (dblclick, on every element); a hold on touch-action: none is the widget's (contextmenu), on auto the bubble's (pointercancel); a vertical drag is always the chat's, on none and pan-x too; the leading 20 px take no claim",
-   "hint": "Hold “none” and “auto” for a second each, double-tap “none ×2” and “auto ×2”, drag “none ↕” and “pan-x ↕” down (the chat scrolls), drag the pad to the right from its red strip and then from its green mark, tap Finish.",
+   "file": "auto/23-gestures-a.html",
+   "title": "Who gets a press (1/2): a double tap is always the widget's (dblclick, on every element); a hold on touch-action: none is the widget's (contextmenu), on auto the bubble's (pointercancel)",
+   "hint": "Hold “none” and “auto” for a second each, double-tap “none ×2” and “auto ×2”, tap Finish.",
    "kind": [
     "self",
     "interactive"
@@ -7022,6 +7047,67 @@
       "input.dblclick"
      ]
     },
+    {
+     "tap": "finish"
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "input.long-press",
+     "name": "a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "input.dblclick",
+     "name": "a double tap on touch-action: none: both clicks, then dblclick",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "input.dblclick",
+     "name": "a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6590,
+   "zlib": 2843
+  },
+  {
+   "id": "auto/23-gestures-b",
+   "set": "auto",
+   "file": "auto/23-gestures-b.html",
+   "title": "Who gets a press (2/2): a vertical drag is always the chat's, on touch-action: none and pan-x too; a drag from the leading 20 px is the back gesture",
+   "hint": "Drag “none ↕” and “pan-x ↕” down (the chat scrolls), drag the pad to the right from its red strip and then from its green mark, tap Finish.",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "behaviour.gesture-claim"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
     {
      "drag": "vnone",
      "to": [
@@ -7077,34 +7163,6 @@
    "host": [],
    "checks": [
     {
-     "id": "input.long-press",
-     "name": "a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger",
-     "native": {
-      "chromium": "pass"
-     }
-    },
-    {
-     "id": "behaviour.gesture-claim",
-     "name": "a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)",
-     "native": {
-      "chromium": "skip"
-     }
-    },
-    {
-     "id": "input.dblclick",
-     "name": "a double tap on touch-action: none: both clicks, then dblclick",
-     "native": {
-      "chromium": "pass"
-     }
-    },
-    {
-     "id": "input.dblclick",
-     "name": "a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel",
-     "native": {
-      "chromium": "pass"
-     }
-    },
-    {
      "id": "behaviour.gesture-claim",
      "name": "a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)",
      "native": {
@@ -7134,8 +7192,8 @@
     }
    ],
    "stages": [],
-   "bytes": 8817,
-   "zlib": 3379
+   "bytes": 6738,
+   "zlib": 2928
   },
   {
    "id": "auto/24-resize-anchor",
@@ -7198,6 +7256,605 @@
    "stages": [],
    "bytes": 5239,
    "zlib": 2459
+  },
+  {
+   "id": "auto/25-state-api-a",
+   "set": "auto",
+   "file": "auto/25-state-api-a.html",
+   "title": "The widget's state (SDK v1, layer 233): chatData / publicData read-only text or null, events, the context fields and the rules that hold in every message",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.bot-data",
+    "tw.context",
+    "tw.preview"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.bot-data",
+     "name": "chatData and publicData are text of 1–1024 bytes, or null",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.bot-data",
+     "name": "the state and the context fields are read-only",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.bot-data",
+     "name": "onEvent takes 'chatDataChanged' and 'publicDataChanged'",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "isForward is a boolean; chatType is private, group, supergroup, channel or null",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "viewer is null or a frozen WebAppUser: id, first_name, last_name, username, is_premium",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "a forward has no chatData and no chatType",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.preview",
+     "name": "isPreview is a boolean; a preview is no forward and has no chatType or viewer",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6358,
+   "zlib": 2922
+  },
+  {
+   "id": "auto/25-state-api-b",
+   "set": "auto",
+   "file": "auto/25-state-api-b.html",
+   "title": "Requests and copyText (SDK v1, layer 233): argument errors, a request without a tap settles with { result } or a WidgetRequestError, copyText outside a tap is dropped, watchPublicData idempotent",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.copy-text",
+    "tw.request",
+    "tw.watch-public-data"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap settles: { result } (frozen) or a WidgetRequestError with its code",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "request throws TypeError at once for data that is not 1–64 bytes of text",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.copy-text",
+     "name": "copyText throws TypeError for anything but 1–256 characters of text",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.copy-text",
+     "name": "copyText outside a tap returns undefined and throws nothing (the client drops it)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.watch-public-data",
+     "name": "watchPublicData and unwatchPublicData return undefined and may be called again",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6327,
+   "zlib": 2988,
+   "bot": {
+    "conf:a25": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/26-context-copy",
+   "set": "auto",
+   "file": "auto/26-context-copy.html",
+   "title": "The message context: a forward of a widget sent without fwd_allow_queries: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap is refused with NOT_ALLOWED too",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6615,
+   "zlib": 3060,
+   "message": [
+    {
+     "kind": "copy",
+     "allow_queries": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "forward": true,
+     "view": "the forward (in the test group or any chat)"
+    }
+   ]
+  },
+  {
+   "id": "auto/26-context-group",
+   "set": "auto",
+   "file": "auto/26-context-group.html",
+   "title": "The message context: an original the bot sent to a group: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6695,
+   "zlib": 3093,
+   "message": [
+    {
+     "kind": "group",
+     "allow_queries": true,
+     "chat": "group",
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the original the test bot sent into the test group"
+    }
+   ],
+   "bot": {
+    "conf:a26:bg": {
+     "result": "ok"
+    },
+    "conf:a26:tap": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/26-context-live-copy",
+   "set": "auto",
+   "file": "auto/26-context-live-copy.html",
+   "title": "The message context: a forward of a widget sent with fwd_allow_queries: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6795,
+   "zlib": 3129,
+   "message": [
+    {
+     "kind": "live-copy",
+     "allow_queries": true,
+     "fwd_allow_queries": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "forward": true,
+     "view": "the forward (in the test group or any chat); the bot needs the fwd_allow_queries whitelist"
+    }
+   ],
+   "bot": {
+    "conf:a26:bg": {
+     "result": "ok"
+    },
+    "conf:a26:tap": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/26-context-no-queries",
+   "set": "auto",
+   "file": "auto/26-context-no-queries.html",
+   "title": "The message context: an original sent without allow_queries: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap is refused with NOT_ALLOWED too",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6597,
+   "zlib": 3050,
+   "message": [
+    {
+     "kind": "no-queries",
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the original in the tester's private chat (sent without allow_queries)"
+    }
+   ]
+  },
+  {
+   "id": "auto/26-context-preview",
+   "set": "auto",
+   "file": "auto/26-context-preview.html",
+   "title": "The message context: an inline result shown before it is sent: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 5827,
+   "zlib": 2805,
+   "message": [
+    {
+     "kind": "preview",
+     "allow_queries": true,
+     "inline": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the list of inline results: type the test bot's username and conf-preview in any chat; do not send it"
+    }
+   ]
+  },
+  {
+   "id": "auto/26-context-private",
+   "set": "auto",
+   "file": "auto/26-context-private.html",
+   "title": "The message context: the original in the private chat with the bot: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is not refused (background requests are allowed here)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6712,
+   "zlib": 3084,
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the original in the tester's private chat with the test bot"
+    }
+   ],
+   "bot": {
+    "conf:a26:bg": {
+     "result": "ok"
+    },
+    "conf:a26:tap": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/27-haptics-no-touch",
+   "set": "auto",
+   "file": "auto/27-haptics-no-touch.html",
+   "title": "Haptics without a touch (v0.2.2): a timer's haptics get one series, the first second's, then none until a touch or 10 s later",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.haptic-rate"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [
+    {
+     "id": "limit.haptic-rate",
+     "name": "no touch: the 5 haptics of the first second reach the client, the ones at 1.2 s and 2.5 s do not",
+     "bridge": {
+      "method": "haptic",
+      "count": 5
+     }
+    }
+   ],
+   "checks": [
+    {
+     "id": "limit.haptic-rate",
+     "name": "haptics may be asked for without a touch: no exception (the client decides what plays)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4103,
+   "zlib": 2182
   },
   {
    "id": "visual/01-boxes",
@@ -7970,7 +8627,7 @@
      "refs": {
       "chromium": "refs/visual/06-css-animations/slide.chromium.png"
      },
-     "nativeVsTemplate": 0.6305
+     "nativeVsTemplate": 0.6184
     },
     {
      "name": "spin-pulse",
@@ -7987,7 +8644,7 @@
      "refs": {
       "chromium": "refs/visual/06-css-animations/spin-pulse.chromium.png"
      },
-     "nativeVsTemplate": 0.8422
+     "nativeVsTemplate": 0.8319
     },
     {
      "name": "steps",
@@ -8040,8 +8697,8 @@
      "nativeVsTemplate": 0.9824
     }
    ],
-   "bytes": 8068,
-   "zlib": 2889,
+   "bytes": 8140,
+   "zlib": 2904,
    "refImages": {
     "light": "refs/visual/06-css-animations.png"
    },
@@ -8092,7 +8749,7 @@
      "refs": {
       "chromium": "refs/visual/07-web-animations/bounce.chromium.png"
      },
-     "nativeVsTemplate": 0
+     "nativeVsTemplate": 0.0132
     },
     {
      "name": "seek",
@@ -8146,8 +8803,8 @@
      "nativeVsTemplate": 0.0154
     }
    ],
-   "bytes": 7452,
-   "zlib": 2658,
+   "bytes": 7470,
+   "zlib": 2669,
    "refImages": {
     "light": "refs/visual/07-web-animations.png"
    },
@@ -8157,7 +8814,7 @@
    "id": "visual/08-canvas-a",
    "set": "visual",
    "file": "visual/08-canvas-a.html",
-   "title": "Canvas 2D (1/2): shapes and paths, line styles, colours, gradients and patterns, text, alpha",
+   "title": "Canvas 2D (1/2): shapes and paths, line styles, colours, gradients, text, alpha",
    "hint": "Each canvas should look like the reference picture posted next to this message.",
    "kind": [
     "pixel"
@@ -8169,7 +8826,6 @@
     "canvas.hidpi",
     "canvas.line-style",
     "canvas.path",
-    "canvas.pattern",
     "canvas.rect",
     "canvas.text"
    ],
@@ -8234,8 +8890,8 @@
      }
     }
    ],
-   "bytes": 6055,
-   "zlib": 2667,
+   "bytes": 5689,
+   "zlib": 2554,
    "refImages": {
     "light": "refs/visual/08-canvas-a.png"
    },
@@ -8245,7 +8901,7 @@
    "id": "visual/08-canvas-b",
    "set": "visual",
    "file": "visual/08-canvas-b.html",
-   "title": "Canvas 2D (2/2): transforms and clipping; shadows, ctx.filter and conic gradients out; a chart",
+   "title": "Canvas 2D (2/2): transforms and clipping; shadows, ctx.filter, conic gradients and patterns out; a chart",
    "hint": "Each canvas should look like the reference picture posted next to this message.",
    "kind": [
     "pixel"
@@ -8257,6 +8913,7 @@
     "canvas.hidpi",
     "canvas.line-style",
     "canvas.path",
+    "canvas.pattern",
     "canvas.rect",
     "canvas.shadow",
     "canvas.transform"
@@ -8322,12 +8979,12 @@
      }
     }
    ],
-   "bytes": 5621,
-   "zlib": 2613,
+   "bytes": 6008,
+   "zlib": 2732,
    "refImages": {
     "light": "refs/visual/08-canvas-b.png"
    },
-   "height": 352
+   "height": 358
   },
   {
    "id": "visual/09-svg-a",
@@ -8487,7 +9144,7 @@
      "refs": {
       "chromium": "refs/visual/09-svg-b/smil.chromium.png"
      },
-     "nativeVsTemplate": 0.7191
+     "nativeVsTemplate": 0.7179
     }
    ],
    "bytes": 5218,
@@ -8745,7 +9402,7 @@
    "set": "visual",
    "file": "visual/13-out-of-profile.html",
    "title": "Out of the profile, neutralised the same way everywhere: form controls, inner scrolling, sticky, named fonts, 3D, popover over the chat",
-   "hint": "Each box must look like the reference picture: the out-of-profile feature is simply not there. Tap “Show popover”: nothing may appear outside this bubble.",
+   "hint": "Each box must look like the reference picture: the out-of-profile feature is simply not there. The popover is dropped: its red box is an ordinary block in the bubble, shown from the start. Tap “Show popover”: nothing changes, and nothing may appear outside this bubble.",
    "kind": [
     "pixel",
     "interactive"
@@ -8843,12 +9500,12 @@
      "nativeVsTemplate": 0.436
     }
    ],
-   "bytes": 6382,
-   "zlib": 2610,
+   "bytes": 6752,
+   "zlib": 2722,
    "refImages": {
     "light": "refs/visual/13-out-of-profile.png"
    },
-   "height": 494
+   "height": 531
   },
   {
    "id": "visual/14-unstyled-document",
@@ -9403,14 +10060,14 @@
    "host": [],
    "checks": [],
    "stages": [],
-   "bytes": 3232,
-   "zlib": 1580,
+   "bytes": 3255,
+   "zlib": 1594,
    "refImages": {
     "light": "refs/visual/sdk/11-crash-restart.png"
    },
    "height": 157,
    "group": "sdk",
-   "expect": "The frozen last frame with the localised badge; one rebuild after the first crash; none after the second, until the app restarts or the message gets new HTML.",
+   "expect": "The frozen last frame with the localised badge; one rebuild after the first crash; none after the second, until the app restarts (the HTML never changes, so no edit brings it back).",
    "contract": "docs/sdk-v1.md §2.7, §5.7"
   },
   {
@@ -9550,14 +10207,18 @@
    "contract": "docs/sdk-v1.md §2.8"
   },
   {
-   "id": "visual/sdk/16-bot-edit",
+   "id": "visual/sdk/16-state-edit",
    "set": "visual",
-   "file": "visual/sdk/16-bot-edit.html",
-   "title": "A bot edit: same HTML keeps the widget, new HTML restarts it on the same storage",
-   "hint": "Tap +1 twice. Ask the bot to edit the message with the same HTML: nothing restarts (Started stays). Ask for the edit with version 2: it shows v2, Started goes up, the count is still 2.",
-   "kind": [],
+   "file": "visual/sdk/16-state-edit.html",
+   "title": "The bot edits the widget's state: the widget changes without a restart",
+   "hint": "Tap Ask the bot to edit a few times. Each time both values go up by one, chatDataChanged and publicDataChanged each count one more, Started stays 1, and the answer line says edited N.",
+   "kind": [
+    "self"
+   ],
    "covers": [
-    "behaviour.message-edit"
+    "behaviour.data-edit",
+    "behaviour.message-edit",
+    "tw.bot-data"
    ],
    "themes": [
     "light"
@@ -9569,17 +10230,42 @@
    ],
    "actions": [],
    "host": [],
-   "checks": [],
+   "checks": [
+    {
+     "id": "tw.bot-data",
+     "name": "chatData and publicData are there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
    "stages": [],
-   "bytes": 3076,
-   "zlib": 1502,
+   "bytes": 4351,
+   "zlib": 1973,
    "refImages": {
-    "light": "refs/visual/sdk/16-bot-edit.png"
+    "light": "refs/visual/sdk/16-state-edit.png"
    },
-   "height": 153,
+   "height": 215,
    "group": "sdk",
-   "expect": "An edit with the same HTML keeps the running widget; with different HTML the widget restarts on the same storage.",
-   "contract": "docs/sdk-v1.md §2.8"
+   "expect": "The bot's editMessageWidgetData reaches the running widget (updateMessageWidgetData, then setData): chatDataChanged, then publicDataChanged, in one task; no restart, the HTML never changes; the answer carries no state.",
+   "contract": "docs/sdk-v1.md §2.13, §5.11",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "chat_data": "0",
+     "public_data": "0"
+    }
+   ],
+   "bot": {
+    "conf:16:edit": {
+     "edit": {
+      "chat_data": "{n}",
+      "public_data": "{n}"
+     },
+     "result": "edited {n}"
+    }
+   }
   },
   {
    "id": "visual/sdk/17-size-hint",
@@ -9656,6 +10342,433 @@
    "group": "sdk",
    "expect": "With every height the host reports the widget's anchor (setResizeAnchor, v0.1.3); the chat list keeps that edge of the bubble in place on screen: bottom, the content above moves and the bubble's bottom edge does not; top (the default), the content below moves. No jump of the anchored edge while the height animates. A bubble off screen keeps what is on screen in place.",
    "contract": "docs/sdk-v1.md §2.12, §5.6"
+  },
+  {
+   "id": "visual/sdk/19-request-tap",
+   "set": "visual",
+   "file": "visual/sdk/19-request-tap.html",
+   "title": "A request on a tap gets the bot's answer",
+   "hint": "Tap Ping: “sending…”, then the bot's answer “pong, <your first name>”; the client shows nothing of its own. Tap Two at once: the first is answered, the second fails at once with BUSY.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "request exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3637,
+   "zlib": 1758,
+   "refImages": {
+    "light": "refs/visual/sdk/19-request-tap.png"
+   },
+   "height": 175,
+   "group": "sdk",
+   "expect": "messages.getBotWidgetQueryAnswer per tap with the widget's data; its result goes back to the widget (no toast, alert or link from the client); one request in flight per widget.",
+   "contract": "docs/sdk-v1.md §2.14, §5.11",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true
+    }
+   ],
+   "bot": {
+    "conf:19:ping": {
+     "result": "pong, {from}"
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/20-forward-requests",
+   "set": "visual",
+   "file": "visual/sdk/20-forward-requests.html",
+   "title": "A forward asks the bot only if the widget was sent with fwd_allow_queries",
+   "hint": "The bot sends this twice: “live forward” (fwd_allow_queries) and “plain forward”. Forward both to another chat. In the forwards: Ask on the live one is answered; on the plain one it says NOT_ALLOWED. Neither shows chatData or a chat type; only the live one shows a viewer (your name).",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.forward-copy",
+    "tw.context"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.context",
+     "name": "isForward and chatType are there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4337,
+   "zlib": 1987,
+   "refImages": {
+    "light": "refs/visual/sdk/20-forward-requests.png"
+   },
+   "height": 215,
+   "group": "sdk",
+   "expect": "A copy gets is_copy; can_query only for a fwd_allow_queries widget, taps only. The client passes the flags from the media; the widget of a copy gets no chatData and no chatType, and the viewer only with can_query; the bot gets only from, data and widget_id.",
+   "contract": "docs/sdk-v1.md §2.13, §2.14; docs/tgw-format.md",
+   "message": [
+    {
+     "kind": "live-copy",
+     "allow_queries": true,
+     "fwd_allow_queries": true,
+     "chat_data": "secret",
+     "public_data": "live forward",
+     "forward": true
+    },
+    {
+     "kind": "copy",
+     "allow_queries": true,
+     "chat_data": "secret",
+     "public_data": "plain forward",
+     "forward": true
+    }
+   ],
+   "bot": {
+    "conf:20:ask": {
+     "result": "answered for {from}"
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/21-network-marker",
+   "set": "visual",
+   "file": "visual/sdk/21-network-marker.html",
+   "title": "The network marker: shown exactly where a tap may send data to the bot",
+   "hint": "The bot sends this twice. On “allow_queries” the client shows its network marker; on “no queries” it shows none. Forward both: neither forward has a marker (no fwd_allow_queries). Tap the marker: the client explains it (a tap may send data to the bot's server).",
+   "kind": [],
+   "covers": [
+    "behaviour.network-marker"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [],
+   "bytes": 3358,
+   "zlib": 1620,
+   "refImages": {
+    "light": "refs/visual/sdk/21-network-marker.png"
+   },
+   "height": 137,
+   "group": "sdk",
+   "expect": "The marker exactly where the message has can_query (context.canQuery): never without allow_queries, never on a forward of a widget without fwd_allow_queries, never on a preview.",
+   "contract": "docs/integration.md \"The network marker\"; docs/sdk-v1.md §5.11",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "public_data": "allow_queries"
+    },
+    {
+     "kind": "no-queries",
+     "public_data": "no queries"
+    }
+   ]
+  },
+  {
+   "id": "visual/sdk/22-copy-text",
+   "set": "visual",
+   "file": "visual/sdk/22-copy-text.html",
+   "title": "copyText: the client copies on a tap and shows what it copied",
+   "hint": "Tap Copy: the client's toast shows CONF-2026-OK, and that is what you paste. Tap Copy later: nothing is copied a second later (no tap). Tap Copy twice: one tap, one toast.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.copy-text"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.copy-text",
+     "name": "copyText exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3495,
+   "zlib": 1697,
+   "refImages": {
+    "light": "refs/visual/sdk/22-copy-text.png"
+   },
+   "height": 153,
+   "group": "sdk",
+   "expect": "copyText on a tap: copy the text and show a toast with the text itself (truncated if long); outside a tap nothing (activation-blocked); one copy per tap. The widget is not told.",
+   "contract": "docs/sdk-v1.md §2.15, §5.11",
+   "message": [
+    {
+     "kind": "private"
+    }
+   ]
+  },
+  {
+   "id": "visual/sdk/23-preview",
+   "set": "visual",
+   "file": "visual/sdk/23-preview.html",
+   "title": "A preview in the inline results: the widget's data, no input, nothing about the user",
+   "hint": "In any chat type the test bot's username and conf-preview. In the list the widget says Preview yes and shows its state; a tap on it selects the result: Taps stays 0. Send it: the message says Preview no, shows a viewer, and Tap me counts.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.preview",
+    "tw.preview"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.preview",
+     "name": "isPreview is there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3634,
+   "zlib": 1773,
+   "refImages": {
+    "light": "refs/visual/sdk/23-preview.png"
+   },
+   "height": 170,
+   "group": "sdk",
+   "expect": "A widget result in the inline list (botInlineMessageWidget) runs with context.preview and the result's data: no input routed to the widget, no requests or actions, no viewer, no storage, no network marker; the sent message is a new widget.",
+   "contract": "docs/sdk-v1.md §2.16, §5.11",
+   "message": [
+    {
+     "kind": "preview",
+     "allow_queries": true,
+     "inline": true,
+     "chat_data": "chat state",
+     "public_data": "shared state"
+    }
+   ]
+  },
+  {
+   "id": "visual/sdk/24-watch-public-data",
+   "set": "visual",
+   "file": "visual/sdk/24-watch-public-data.html",
+   "title": "watchPublicData: the client polls a shared widget's state while the widget watches",
+   "hint": "Tap Start: for two minutes the bot changes the shared state every 10 s (editWidgetData with cache_time 5, nothing pushed). Watching: the value follows within about 5 s. Tap Unwatch: it stops following; Watch: it catches up at the next poll. Scrolled off screen nothing is polled.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.data-edit",
+    "tw.watch-public-data"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.watch-public-data",
+     "name": "watchPublicData exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4367,
+   "zlib": 2035,
+   "refImages": {
+    "light": "refs/visual/sdk/24-watch-public-data.png"
+   },
+   "height": 206,
+   "group": "sdk",
+   "expect": "The client polls getWidgetPublicData only while the widget watches (onWatchPublicData / watchesPublicData) and is on screen, one carrier per widget_id, at the object's period; a new value reaches the widget as publicDataChanged.",
+   "contract": "docs/sdk-v1.md §2.13, §5.11; docs/integration.md",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "shared_widget": true,
+     "public_data": "0"
+    }
+   ],
+   "bot": {
+    "conf:24:start": {
+     "result": "ticking",
+     "repeat": {
+      "every": 10,
+      "times": 12
+     },
+     "editShared": {
+      "public_data": "{n}",
+      "cache_time": 5
+     }
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/25-group-chat-state",
+   "set": "visual",
+   "file": "visual/sdk/25-group-chat-state.html",
+   "title": "A group: one chat state for all members, drawn per viewer",
+   "hint": "The bot sends this into the test group. Each member taps +1: everyone sees the same count and who tapped last (one chat state for the group), and each sees their own name under You. Nobody's widget asks without a tap.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.data-edit",
+    "tw.bot-data",
+    "tw.context"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.bot-data",
+     "name": "chatData is there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3954,
+   "zlib": 1943,
+   "refImages": {
+    "light": "refs/visual/sdk/25-group-chat-state.png"
+   },
+   "height": 186,
+   "group": "sdk",
+   "expect": "In a group chatData is one value for all members, edited by the bot (updateMessageWidgetData; in a supergroup with the channel's pts); requests on a tap only; viewer is each member.",
+   "contract": "docs/sdk-v1.md §2.13, §2.14, §5.11",
+   "message": [
+    {
+     "kind": "group",
+     "allow_queries": true,
+     "chat": "group",
+     "chat_data": "{\"n\":0}"
+    }
+   ],
+   "bot": {
+    "conf:25:plus": {
+     "edit": {
+      "chat_data": "{\"n\":{n},\"by\":\"{from}\"}"
+     },
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/26-haptics-no-touch",
+   "set": "visual",
+   "file": "visual/sdk/26-haptics-no-touch.html",
+   "title": "Haptics without a touch: one second, then nothing for nine (a widget cannot buzz the phone)",
+   "hint": "Tap Start, then do not touch the widget: 6 s later it asks for a haptic every 50 ms for 15 s (the counter runs). You feel one second of them, nothing for nine, one more second, then nothing. Then hold Hold and buzz for a second and lift your finger: it asks every 100 ms while you hold and for 8 s after; you feel it while you hold and about 6 s after (the 5 s after a touch, then one series), then nothing.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.haptic-rate",
+    "tw.haptic"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.haptic",
+     "name": "HapticFeedback is there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4448,
+   "zlib": 2057,
+   "refImages": {
+    "light": "refs/visual/sdk/26-haptics-no-touch.png"
+   },
+   "height": 172,
+   "group": "sdk",
+   "expect": "Outside a touch the first haptic opens a 1 s series; the next series needs a touch or 10 s since the last began (one series after a touch at any time later). During a touch (a press on the widget and 5 s after it is lifted) haptics pass under the rate limit (a burst of 5, then 10 per second).",
+   "contract": "docs/sdk-v1.md §2.6"
   }
  ]
 }

@@ -68,7 +68,7 @@ One leading dash (`--widget-set` is ignored silently).
 
 | Argument | Values | Default |
 |---|---|---|
-| `-widget-set` | `conformance` (widget-sandbox v0.1.3's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
+| `-widget-set` | `conformance` (widget-sandbox v0.2.3's `channel.json`, with the reference pictures), `corpus`, `fixture` (`Fixtures/*.html`; `Fixtures/resize/` only by `-widget-posts`) | `conformance` |
 | `-widget-post` | a part of a widget path; only matching posts | all |
 | `-widget-posts` | whole widget paths, comma-separated: only these posts, in this order (oldest first), e.g. `fixture/tall-box.html,fixture/resize/grow-top.html` | all |
 | `-widget-kill-switch` | `on` (the app config's `ios_killswitch_disable_message_widgets` engaged: every widget a pill) | `off` |
@@ -78,6 +78,8 @@ One leading dash (`--widget-set` is ignored silently).
 | `-harness-side` | `incoming` (the posts come from the other side of the chat) | outgoing |
 | `-harness-menu` | `hold` (the stand-in context menu stays open until `harness.endMenu`; `harness.openMenu` opens it on the newest widget bubble without a long press) | ends after 2 s |
 | `-harness-copy-protected` | `on` (the chat forbids copying: `isCopyProtectionEnabled`) | off |
+| `-harness-can-query` | `on` (every widget message has the server's `can_query`: its bubble shows the network marker) | off |
+| `-harness-chat` | `bot` (the chat is with a bot, "Harness Bot": with `-harness-side incoming`, a bot's media, which otherwise gets the share button) | a user |
 | `-harness-text-size` | Settings ▸ Appearance ▸ Text Size as `PresentationFontSize`'s raw value (0 extra small … 4 extra large, 5 extra large ×2, 6 medium) | the context's |
 
 A hosted (Tier 1) test calls `WidgetHarnessRootViewController.reload(options:)` instead.
@@ -101,8 +103,9 @@ contextMenuEnded fixture/open-link.html
   text needs the window's). A widget reports its height after its boot: wait for the readout to leave the 160 pt
   placeholder (`x160 `) before aiming inside a widget.
 - The state is `widget` (a live `MessageWidgetView` is attached), `pill` (the unsupported pill) or `placeholder`.
-- `+caption`: the bubble holds another content node (the caption's text); ` pressed`: its context gesture's press
-  (the shrink while it waits for a long press) is on.
+- `+caption`: the bubble holds another content node (the caption's text); ` +marker@x,y`: it shows the network marker
+  (the message has `can_query`), centred there in the window's coordinates; ` +share`: the chat's share button sits
+  beside the bubble (never, for a widget); ` pressed`: its context gesture's press (the shrink while it waits for a long press) is on.
 - `log <path> <value>`: a fixture widget's (`fixture/…`) `<html data-log>`, when it has one, read through
   `MessageWidgetView.documentElementAttribute` (each read waits for the widget's queue, so only the harness's own
   fixtures are read). `Fixtures/multitouch.html` logs each pointer event at its buttons (a finger's first move only) as
@@ -111,7 +114,7 @@ contextMenuEnded fixture/open-link.html
   gesture events their tests read (`click`, `dblclick`, `pointercancel`, `contextmenu`).
 - `conformance <path> <json>`: an automatic conformance test's (`auto/…`) `<html data-conformance>`, its harness's own
   result (status, checks, published targets), for a Tier 2 run of the test through the real bubble
-  (`testAuto23ThroughTheRealBubble`).
+  (`testAuto23aThroughTheRealBubble`, `testAuto23bThroughTheRealBubble`).
 - Events: `openLink <url>` (the bubble asked to open a link; the chat would show "Open link?" — ` (not concealed)` is
   appended if it would not have), `appStore` (the pill's button), `contextMenu <path>` / `contextMenuEnded <path>`,
   `reply <path>` (a completed swipe-to-reply), `reaction <path>` (the quick reaction: a double tap the bubble took),
@@ -119,18 +122,21 @@ contextMenuEnded fixture/open-link.html
   rubber-bands back), `scrollEnded <seconds>` (the list came to rest that long after the drag's lift: its momentum,
   0 without), `selectionMenu <titles>` (a text selection showed its menu, its actions' titles
   joined by `,`; each is a button `harness.menu.<title>` under the readout), `selectionMenuDismissed` (that menu went
-  away), `copy <text>` (its Copy, a newline written `\n`) and `pressed <path> <seconds>` (a bubble's press ended after
+  away), `copy <text>` (its Copy, a newline written `\n`), `toast <text>` (the chat's undo toast: a widget's
+  `copyText`, or the copy-protection notice that replaces it), `tooltip <text>` (a message tooltip: the network
+  marker's tap; ` (not shown)` is appended when the chat would show none, as it does without a source node, and
+  `WidgetHarnessListHost.lastTooltipRect` is where a shown one points) and `pressed <path> <seconds>` (a bubble's press ended after
   that long, as the readout's ticks saw it: a query does not return while synthesized fingers play).
 - Changing the format means changing every test that parses it.
 
-## The conformance set (widget-sandbox v0.1.3, `conformance/CLIENTS.md`)
+## The conformance set (widget-sandbox v0.2.3, `conformance/CLIENTS.md`)
 
 The widget-sandbox author's rule: take the widgets from the tag (vendored in `third-party/widget-sandbox`), together
 with `manifest.json`, never from the chat; run and report as CLIENTS.md says. `ConformanceSetTests.testTheAutomaticSet`
-runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (43 runs), through
+runs the automatic set: every `auto/` test of `manifest.json` in every theme it lists (53 runs), through
 `MessageWidgetInstance` with the app's pool and wait policy at width 390, on the app's own theme for an incoming bubble
 of the default chat theme (`ConformanceRunner.theme`, `messageWidgetTheme`: CLIENTS.md step 1, "as in production"),
-then the visual set loaded only (42 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
+then the visual set loaded only (50 more runs, ended once the widget has loaded, recorded as `load · loads`; CLIENTS.md:
 "the report then shows whether each widget loads"), one at a time (`ConformanceRunner.runAll`:
 widgets run together share the pool's two threads, and 10-css-animations' iteration check failed whenever the
 filter-heavy 09 pages ran beside it), each view in the window so it gets its frames, a stand-in chat input focused
@@ -165,11 +171,47 @@ count, the bubble's height, the chat input's focus).
 
 **Who gets a press is the bubble's, so Tier 1 cannot pass it all.** The runner injects below the bubble, so the checks
 only the bubble can satisfy fail there and stay `fail` in the baseline, as CLIENTS.md says such a runner reports:
-`auto/23-gestures`' hold on `auto` (the menu's `pointercancel`), vertical drags on `none` and `pan-x` (the chat's
-scroll's) and drag from the leading 20 px (the back swipe's). `WidgetHarnessUITests.testAuto23ThroughTheRealBubble` runs
-that test through the real bubble (XCUITest presses at the targets the readout's `conformance` line publishes; no
-caption and an older post above, so its probes are below the status bar and the chat can scroll) and holds every check
-to `pass`.
+- `auto/23-gestures-a`: the hold on `auto` (the menu's `pointercancel`).
+- `auto/23-gestures-b`: vertical drags on `none` and `pan-x` (the chat's scroll's), and the drag from the leading 20 px
+  (the back swipe's).
+
+`WidgetHarnessUITests.testAuto23aThroughTheRealBubble` and `testAuto23bThroughTheRealBubble` run those tests through the
+real bubble and hold every check to `pass`. XCUITest presses at the targets the readout's `conformance` line publishes.
+There is no caption, and an older post sits above, so the probes are below the status bar and the chat can scroll.
+
+**The message context and the bot** (widget-sandbox v0.2.1, CLIENTS.md "The message context"):
+- **The context and state:** a test with `message` runs with its first spec's kind (`MessageWidgetMessageKind`, upstream's
+  `WIDGET_MESSAGE_KINDS`) and the spec's `chat_data` / `public_data`, seen by `ConformanceRunner.viewer`. Every other
+  test runs as the private chat's original with no state. An unknown kind runs as the private chat's and is a run
+  error.
+- **The bot:** the runner plays it (`ConformanceMockBot`), answering each request by its exact data from the test's
+  `bot` table. Edits (`edit`, `editShared`) reach the widget through `setState` before the answer, `repeat`s are
+  timed on the main queue, and `{n}` counts per data.
+- **Tier 1's one gap:** `auto/26`'s "TelegramWidget exists" check is published only when the SDK is missing, so it
+  stays `missing` here.
+- **The bubble's own path** (`WidgetHarnessStateTests`, `Fixtures/widget-state.html`, which logs what it sees):
+  the harness's messages carry the account as the chat's `accountPeer` (the widget's viewer), and
+  `WidgetHarnessListHost.replaceWidgetState(path:canQuery:chatData:publicData:)` replaces a post's widget media and
+  updates its bubble as a message edit does.
+- **The network** (W2; `WidgetHarnessNetworkTests`): the harness has no server, so a test replaces the bubble's seam,
+  `MessageWidgetNetwork` (`requestAnswer`, `pollPublicData`), and restores it in `tearDown`.
+  `Fixtures/widget-request.html` asks `ping` on a tap of `#ask` and logs `ok:<result>` or `err:<code>`.
+  `Fixtures/widget-watch.html` watches its shared state from the start (a tap on `#toggle` stops or starts) and logs
+  `watching|<state>` or `not|<state>`; `replaceWidgetState(…, widgetId:)` gives a post the widget id a shared widget's
+  message has, which polling needs.
+- **Inline previews** (W3; `WidgetHarnessPreviewTests`): a `MessageWidgetPreviewNode` in the root's view, with no list.
+  `Fixtures/preview/widget-preview.html` asks a request at load and logs
+  `isPreview|chatType|viewer.id|chatData|publicData|request outcome|pointer count`, each value written with `String(…)`
+  so a null reads `null`. It is a folder fixture loaded by its path, so it stays out of the all-fixtures set. The no-input
+  test drives the widget's own pointer path (`MessageWidgetInstance.pointer`), below the node, so it fails if the
+  runtime's preview gate lets input through. `Fixtures/preview/slow-box.html` boots past the layout pass's wait (about
+  3M units), for the late-snapshot tests: every other fixture boots inside the wait. The failed-start test forces a
+  parse failure with `MessageWidgetCore.budgetsForTesting` (`@testable import MessageWidget`) and resets it.
+- **A reload does not free the previous chat.** After `reload(options:)` the old list host is freed, but its whole node
+  tree, bubbles and running widgets, stays alive under a root that left the window (measured 2026-10-26). A test
+  never waits for a bubble's deinit after a reload; what a bubble's teardown does is unit-tested in its own module.
+  Whether a closed chat leaks the same way in the app is not known: CoreList's scroll engine targets its
+  `CADisplayLink`s at itself.
 
 ## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
 

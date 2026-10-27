@@ -338,6 +338,9 @@ public:
         bool positioned = false, fixed = false, inlineLevel = false;
     };
     std::optional<BoxMetrics> boxMetrics(const Node& node) const;
+    /// HTML's "being rendered": `node` is laid out and neither it nor an ancestor is display: none (litehtml keeps an
+    /// empty render item for a display: none element). What img's width and height ask (widget-sandbox v0.2.3).
+    bool beingRendered(const Node& node) const;
     /// The padding box of an element that clips its contents (overflow other than visible), which Intersection Observer
     /// clips a target by; nullopt for any other node.
     std::optional<RenderBox> overflowClip(const Node& node) const;

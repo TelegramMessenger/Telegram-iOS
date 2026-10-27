@@ -381,10 +381,10 @@ struct UpdateInterpreter {
                 self.applyJoinChatWebViewDecision(updateJoinChatWebViewDecisionData)
             case .updateConfig:
                 self.applyConfig()
-            case let .updateMessageWidgetData(data):
-                self.applyMessageWidgetData(data)
             case let .updateMessageExtendedMedia(updateMessageExtendedMediaData):
                 self.applyMessageExtendedMedia(updateMessageExtendedMediaData)
+            case let .updateMessageWidgetData(updateMessageWidgetDataData):
+                self.applyMessageWidgetData(updateMessageWidgetDataData)
             case let .updateStory(updateStoryData):
                 self.applyStory(updateStoryData)
             case let .updateReadStories(updateReadStoriesData):

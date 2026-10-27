@@ -529,10 +529,10 @@ final class ReplayContext {
                     self.applyUpdateAudioTranscription(messageId, id, isPending, text)
                 case .UpdateConfig:
                     self.applyUpdateConfig()
-                case let .UpdateMessageWidgetData(messageId, publicData, chatData):
-                    self.applyUpdateMessageWidgetData(messageId, publicData, chatData)
                 case let .UpdateExtendedMedia(messageId, apiExtendedMedia):
                     self.applyUpdateExtendedMedia(messageId, apiExtendedMedia)
+                case let .UpdateMessageWidgetData(messageId, chatData, publicData, publicDataHash):
+                    self.applyUpdateMessageWidgetData(messageId, chatData: chatData, publicData: publicData, publicDataHash: publicDataHash)
                 case let .ResetForumTopic(topicId, data, _):
                     self.applyResetForumTopic(topicId, data)
                 case let .UpdateStory(peerId, story):

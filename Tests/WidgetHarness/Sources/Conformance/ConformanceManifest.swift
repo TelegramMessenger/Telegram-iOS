@@ -1,4 +1,61 @@
 import Foundation
+import MessageWidget
+
+/// widget-sandbox v0.2.1 (CLIENTS.md, "The message context"; scripts/conformance/lib.ts `MessageSpec`): how a test's
+/// widget is sent, of which the runner takes the first spec: its kind (the server's flags) and its state.
+public struct ConformanceMessageSpec: Equatable {
+    /// The kind as the manifest names it; `kind` is nil when this client does not know it.
+    public let kindName: String
+    public let kind: MessageWidgetMessageKind?
+    public let chatData: String?
+    public let publicData: String?
+
+    public init(kindName: String, chatData: String?, publicData: String?) {
+        self.kindName = kindName
+        self.kind = MessageWidgetMessageKind(rawValue: kindName)
+        self.chatData = chatData
+        self.publicData = publicData
+    }
+}
+
+/// What the test bot does on a request with exactly this data (lib.ts `BotAction`): edit the message's state, edit the
+/// shared widget's state, then answer with `result`; `repeat` runs the edits again every `every` s, `times` times in all.
+/// Templates in the strings: `{n}` counts the requests with this data, `{from}` is who pressed (first name), `{time}`
+/// the bot's HH:MM:SS.
+public struct ConformanceBotAction: Equatable {
+    public struct Edit: Equatable {
+        public var chatData: String?
+        public var publicData: String?
+
+        public init(chatData: String?, publicData: String?) {
+            self.chatData = chatData
+            self.publicData = publicData
+        }
+    }
+
+    public struct Repeat: Equatable {
+        public var every: Double
+        public var times: Int
+
+        public init(every: Double, times: Int) {
+            self.every = every
+            self.times = times
+        }
+    }
+
+    public var result: String?
+    public var edit: Edit?
+    /// `editShared.public_data`: the shared widget's state, for every carrier.
+    public var editShared: String?
+    public var `repeat`: Repeat?
+
+    public init(result: String? = nil, edit: Edit? = nil, editShared: String? = nil, repeat: Repeat? = nil) {
+        self.result = result
+        self.edit = edit
+        self.editShared = editShared
+        self.repeat = `repeat`
+    }
+}
 
 /// A check the manifest expects a widget to publish: its catalogue ID and name.
 public struct ConformanceCheck: Hashable {
@@ -26,8 +83,13 @@ public struct ConformanceTest {
     public let expectedChecks: [ConformanceCheck]
     /// A visual widget (`set: "visual"`): run only to see that it loads (CLIENTS.md: "without actions or crops").
     public let loadOnly: Bool
+    /// The first of the test's `message` specs (v0.2.1), nil without one: such a test runs as the private chat's
+    /// original with no state.
+    public let message: ConformanceMessageSpec?
+    /// The bot's answers by exact request data (v0.2.1).
+    public let bot: [String: ConformanceBotAction]
 
-    public init(id: String, fileURL: URL, themes: [String], actions: [[String: Any]], stages: [ConformanceStage], host: [ConformanceHostCheck], expectedChecks: [ConformanceCheck] = [], loadOnly: Bool = false) {
+    public init(id: String, fileURL: URL, themes: [String], actions: [[String: Any]], stages: [ConformanceStage], host: [ConformanceHostCheck], expectedChecks: [ConformanceCheck] = [], loadOnly: Bool = false, message: ConformanceMessageSpec? = nil, bot: [String: ConformanceBotAction] = [:]) {
         self.id = id
         self.fileURL = fileURL
         self.themes = themes
@@ -36,6 +98,8 @@ public struct ConformanceTest {
         self.host = host
         self.expectedChecks = expectedChecks
         self.loadOnly = loadOnly
+        self.message = message
+        self.bot = bot
     }
 
     /// The widget's file name without its folder and extension (`auto/03-layout-a` → `03-layout-a`).
@@ -118,8 +182,37 @@ public enum ConformanceManifest {
                 throw LoadError.unreadable("a test without id or file")
             }
             let themes = (entry["themes"] as? [String]).flatMap { $0.isEmpty ? nil : $0 } ?? ["light"]
-            return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: [], stages: [], host: [], loadOnly: true)
+            return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: [], stages: [], host: [], loadOnly: true, message: self.message(entry), bot: self.bot(entry))
         }
+    }
+
+    /// The first `message` spec, nil when there is none or it is malformed (no kind), as unknown keys are read as absent.
+    private static func message(_ entry: [String: Any]) -> ConformanceMessageSpec? {
+        guard let spec = (entry["message"] as? [[String: Any]])?.first, let kind = spec["kind"] as? String else {
+            return nil
+        }
+        return ConformanceMessageSpec(kindName: kind, chatData: spec["chat_data"] as? String, publicData: spec["public_data"] as? String)
+    }
+
+    /// The `bot` table; an entry that is not an object is left out.
+    private static func bot(_ entry: [String: Any]) -> [String: ConformanceBotAction] {
+        guard let table = entry["bot"] as? [String: Any] else {
+            return [:]
+        }
+        var actions: [String: ConformanceBotAction] = [:]
+        for (data, value) in table {
+            guard let action = value as? [String: Any] else {
+                continue
+            }
+            let edit = (action["edit"] as? [String: Any]).map { ConformanceBotAction.Edit(chatData: $0["chat_data"] as? String, publicData: $0["public_data"] as? String) }
+            let editShared = (action["editShared"] as? [String: Any])?["public_data"] as? String
+            var repeatAction: ConformanceBotAction.Repeat?
+            if let repeatSpec = action["repeat"] as? [String: Any], let every = (repeatSpec["every"] as? NSNumber)?.doubleValue, let times = (repeatSpec["times"] as? NSNumber)?.intValue {
+                repeatAction = ConformanceBotAction.Repeat(every: every, times: times)
+            }
+            actions[data] = ConformanceBotAction(result: action["result"] as? String, edit: edit, editShared: editShared, repeat: repeatAction)
+        }
+        return actions
     }
 
     private static func entries(set: String) throws -> [[String: Any]] {
@@ -169,6 +262,6 @@ public enum ConformanceManifest {
             }
             return ConformanceCheck(id: id, name: name)
         }
-        return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: (entry["actions"] as? [[String: Any]]) ?? [], stages: stages, host: host, expectedChecks: expected)
+        return ConformanceTest(id: id, fileURL: root.appendingPathComponent(file), themes: themes, actions: (entry["actions"] as? [[String: Any]]) ?? [], stages: stages, host: host, expectedChecks: expected, message: self.message(entry), bot: self.bot(entry))
     }
 }
