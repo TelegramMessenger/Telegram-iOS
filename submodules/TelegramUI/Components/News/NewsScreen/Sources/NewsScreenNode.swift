@@ -92,11 +92,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let pinchHaptic = HapticFeedback()
     /// Posts whose Show more was tapped: their whole text, with its formatting and links.
     private var expandedTextPosts = Set<AnyHashable>()
-    /// For the expanded rows' reaction pills and the bubble.
-    private var availableReactions: AvailableReactions?
+    /// For the expanded rows' bubble.
     private var accountPeer: EnginePeer?
     private var settingsDisposable: Disposable?
-    private var reactionsDisposable: Disposable?
     private var accountPeerDisposable: Disposable?
 
     private var searchDisplayController: SearchDisplayController?
@@ -232,16 +230,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             self.applyDisplayMode(displayMode, animated: self.hasReceivedDisplayMode)
             self.hasReceivedDisplayMode = true
         })
-        self.reactionsDisposable = (context.engine.stickers.availableReactions()
-        |> deliverOnMainQueue).start(next: { [weak self] availableReactions in
-            guard let self, self.availableReactions != availableReactions else {
-                return
-            }
-            self.availableReactions = availableReactions
-            if self.displayMode == .expanded {
-                self.updateLists(transition: .immediate)
-            }
-        })
         self.accountPeerDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             guard let self, self.accountPeer != peer else {
@@ -257,7 +245,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     deinit {
         self.foregroundDisposable?.dispose()
         self.settingsDisposable?.dispose()
-        self.reactionsDisposable?.dispose()
         self.accountPeerDisposable?.dispose()
     }
 
@@ -300,7 +287,6 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private func expandedContent(message: EngineMessage, identity: AnyHashable) -> NewsFeedPostExpandedContent {
         return NewsFeedPostExpandedContent(
             presentationData: self.presentationData,
-            availableReactions: self.availableReactions,
             accountPeer: self.accountPeer,
             isTextExpanded: self.expandedTextPosts.contains(identity),
             toggleTextExpanded: { [weak self] in
@@ -386,7 +372,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             guard let self, !self.isSearchActive, self.tappedSegment == nil else {
                 return []
             }
-            // An expanded post's gallery or reactions scroll sideways themselves: a swipe on them is theirs.
+            // An expanded post's gallery scrolls sideways itself: a swipe on it is the gallery's.
             let activeList = self.activeList
             if activeList.hasHorizontalScrollingRow(at: activeList.convert(point, from: self.listsContainerNode.view)) {
                 return []

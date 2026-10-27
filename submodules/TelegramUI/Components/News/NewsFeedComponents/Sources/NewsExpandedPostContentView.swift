@@ -14,12 +14,10 @@ import PlainButtonComponent
 import ChatMessageItemView
 import NewsFeedSupport
 
-/// What an expanded post row needs beyond the compact one: the chat's presentation (the bubble follows it), the
-/// account's reactions, and where the content's taps go. The closures are the screen's; only the values take part
-/// in the component's equality.
+/// What an expanded post row needs beyond the compact one: the chat's presentation (the bubble follows it) and where
+/// the content's taps go. The closures are the screen's; only the values take part in the component's equality.
 public final class NewsFeedPostExpandedContent {
     public let presentationData: PresentationData
-    public let availableReactions: AvailableReactions?
     public let accountPeer: EnginePeer?
     /// Show more was tapped: the whole text, with its formatting and links.
     public let isTextExpanded: Bool
@@ -30,9 +28,8 @@ public final class NewsFeedPostExpandedContent {
     public let openPeer: (EnginePeer) -> Void
     public let openInstantPage: (EngineMessage) -> Void
 
-    public init(presentationData: PresentationData, availableReactions: AvailableReactions?, accountPeer: EnginePeer?, isTextExpanded: Bool, toggleTextExpanded: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMedia: @escaping (EngineMessage, EngineMedia?) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void) {
+    public init(presentationData: PresentationData, accountPeer: EnginePeer?, isTextExpanded: Bool, toggleTextExpanded: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMedia: @escaping (EngineMessage, EngineMedia?) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void) {
         self.presentationData = presentationData
-        self.availableReactions = availableReactions
         self.accountPeer = accountPeer
         self.isTextExpanded = isTextExpanded
         self.toggleTextExpanded = toggleTextExpanded
@@ -50,9 +47,6 @@ public final class NewsFeedPostExpandedContent {
             return false
         }
         if lhs.presentationData.chatFontSize != rhs.presentationData.chatFontSize || lhs.presentationData.chatBubbleCorners != rhs.presentationData.chatBubbleCorners || lhs.presentationData.chatWallpaper != rhs.presentationData.chatWallpaper {
-            return false
-        }
-        if lhs.availableReactions != rhs.availableReactions {
             return false
         }
         if lhs.accountPeer != rhs.accountPeer {
@@ -217,7 +211,7 @@ private final class NewsGalleryItemView: UIView {
     }
 }
 
-/// A horizontal strip (the gallery, the reactions) that starts at the content column and passes under the avatar's
+/// A horizontal strip (the gallery) that starts at the content column and passes under the avatar's
 /// column when scrolled. Its scrolling is its own: the list's vertical pan and the screen's page swipe yield to it.
 private final class NewsHorizontalStripView: UIScrollView {
     var scrolled: (() -> Void)?
@@ -420,7 +414,7 @@ final class NewsExpandedPostContentView: UIView {
             }, clickThrough: {
                 component.action()
             })
-            let item = context.sharedContext.makeChatMessageFeedItem(context: context, messages: bubbleMessages, presentationData: content.presentationData, availableReactions: content.availableReactions, accountPeer: content.accountPeer, actions: actions)
+            let item = context.sharedContext.makeChatMessageFeedItem(context: context, messages: bubbleMessages, presentationData: content.presentationData, accountPeer: content.accountPeer, actions: actions)
             let params = ListViewItemLayoutParams(width: contentWidth + metrics.bubbleWidthOverhead, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             let neighbors = ListViewItemNeighbors(previous: nil, next: nil)
             var nodeSize = CGSize()

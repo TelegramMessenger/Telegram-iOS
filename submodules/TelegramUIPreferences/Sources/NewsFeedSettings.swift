@@ -7,7 +7,7 @@ public enum NewsFeedDisplayMode: Int32, Codable, Equatable {
     /// The channel line, up to three lines of text and a thumbnail on the right.
     case compact = 0
     /// A full post, as a feed in Threads or X: the message bubble's content, its media in a horizontal
-    /// gallery under the text, reactions and comments.
+    /// gallery under the text.
     case expanded = 1
 }
 

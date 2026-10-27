@@ -705,8 +705,8 @@ public final class NewsFeedPostComponent: Component {
         }
 
         /// The expanded post (Threads/X): the 36 pt avatar, the channel line with the views and time, the bubble's
-        /// content, the gallery and the reactions line. The avatar, name, badge and time are the compact row's own
-        /// views moved into place, so a switch between the modes morphs them.
+        /// content and the gallery. The avatar, name, badge and time are the compact row's own views moved into
+        /// place, so a switch between the modes morphs them.
         private func updateExpanded(component: NewsFeedPostComponent, content: NewsFeedPostExpandedContent, availableSize: CGSize, timeText: String, transition: ComponentTransition) -> (CGSize, CGRect, NSAttributedString) {
             let metrics = NewsExpandedPostMetrics.self
             let theme = component.theme

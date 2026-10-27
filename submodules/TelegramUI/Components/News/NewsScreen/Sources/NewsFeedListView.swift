@@ -271,8 +271,8 @@ final class NewsFeedListView: UIView {
         self.coreList.updateAttachmentDisplayInsets(insets)
     }
 
-    /// Whether `point` (in this view) is on an expanded post's strip that scrolls sideways (its gallery or
-    /// reactions), for the pager's rule: the strip scrolls, the page does not swipe.
+    /// Whether `point` (in this view) is on an expanded post's strip that scrolls sideways (its gallery), for the
+    /// pager's rule: the strip scrolls, the page does not swipe.
     func hasHorizontalScrollingRow(at point: CGPoint) -> Bool {
         for view in self.coreList.loadedItemViews {
             guard let row = self.postRow(view) else {
