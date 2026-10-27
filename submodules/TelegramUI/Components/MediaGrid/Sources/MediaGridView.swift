@@ -1308,6 +1308,22 @@ public final class MediaGridView: UIView {
         return (empty, visible)
     }
 
+    public func debugVisibleFinalImageCount() -> (final: Int, visible: Int) {
+        guard let layout = self.activeLayoutLayer.layout else {
+            return (0, 0)
+        }
+        let rect = CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height)
+        var final = 0
+        var visible = 0
+        for index in layout.indexRange(intersecting: rect) where layout.frame(at: index).intersects(rect) {
+            visible += 1
+            if self.activeLayoutLayer.visibleCells[index]?.hasFinalImage ?? false {
+                final += 1
+            }
+        }
+        return (final, visible)
+    }
+
     public func debugDrivePinch(_ state: UIGestureRecognizer.State, center: CGPoint, scale: CGFloat, velocity: CGFloat) {
         self._testPinch(state, center: center, scale: scale, velocity: velocity)
     }
@@ -1564,9 +1580,6 @@ public final class MediaGridView: UIView {
     private func setMovingFast(_ isMovingFast: Bool, upgrade: Bool = true) {
         let changed = self.isMovingFast != isMovingFast
         self.isMovingFast = isMovingFast
-        if changed {
-            self.onMovingFastChanged?(isMovingFast)
-        }
         self.activeLayoutLayer.suspendsSharpRequests = isMovingFast || self.isCellBindingScheduled
         self.resetPrefetch()
         if upgrade, !isMovingFast, self.transition == nil {
@@ -1576,6 +1589,9 @@ public final class MediaGridView: UIView {
             self.requestVisibleSharpImages()
             self.updatePrefetch(offset: self.engine.offset)
             self.updateThumbnailPreparation()
+        }
+        if changed {
+            self.onMovingFastChanged?(isMovingFast)
         }
     }
 

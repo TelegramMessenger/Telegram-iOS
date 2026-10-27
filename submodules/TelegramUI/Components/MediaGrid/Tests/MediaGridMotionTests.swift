@@ -49,14 +49,24 @@ final class MediaGridMotionTests: XCTestCase {
     }
 
     func testMovingFastChangesAreReported() {
-        let (view, _) = self.makeView()
+        let (view, dataSource) = self.makeView()
         var reported: [Bool] = []
-        view.onMovingFastChanged = { reported.append($0) }
+        var suspendedWhenReported: [Bool] = []
+        var requestsWhenReported: [Int] = []
+        view.onMovingFastChanged = { [unowned view] isMovingFast in
+            reported.append(isMovingFast)
+            suspendedWhenReported.append(view.activeLayoutLayer.suspendsSharpRequests)
+            requestsWhenReported.append(dataSource.requests.count)
+        }
         self.startFastScrub(view)
         XCTAssertEqual(reported, [true])
+        let beforeSettle = dataSource.requests.count
         self.time += 1.0
         view._testSettleMotion()
         XCTAssertEqual(reported, [true, false])
+        XCTAssertEqual(suspendedWhenReported, [true, false])
+        XCTAssertGreaterThan(requestsWhenReported[1], beforeSettle)
+        XCTAssertEqual(requestsWhenReported[1], dataSource.requests.count)
     }
 
     func testSlowScrollRequestsSharpImages() {
