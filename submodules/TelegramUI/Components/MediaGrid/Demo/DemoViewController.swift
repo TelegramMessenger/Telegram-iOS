@@ -235,7 +235,7 @@ final class DemoViewController: UIViewController {
 
     private func logFillProgress(started: CFTimeInterval) {
         if let dataSource = self.photoDataSource {
-            print(String(format: "FILL_PROGRESS t=%.0fs filled=%d/%d unavailable=%d missing=%d in_flight=%d net_in_flight=%d net_fills=%d harvests=%d retry_entries=%d", CACurrentMediaTime() - started, dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount, dataSource.filler.missingCount, dataSource.filler.inFlightCount, dataSource.filler.networkInFlightCount, dataSource.networkFills, dataSource.harvests, dataSource.filler.registry.count))
+            print(String(format: "FILL_PROGRESS t=%.0fs filled=%d/%d unavailable=%d missing=%d in_flight=%d net_in_flight=%d net_fills=%d harvests=%d retry_entries=%d launch_released=%d", CACurrentMediaTime() - started, dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount, dataSource.filler.missingCount, dataSource.filler.inFlightCount, dataSource.filler.networkInFlightCount, dataSource.networkFills, dataSource.harvests, dataSource.filler.registry.count, dataSource.filler.launchRetriesReleased))
             fflush(stdout)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
@@ -794,7 +794,7 @@ final class DemoViewController: UIViewController {
                         return
                     }
                     if status == .authorized || status == .limited {
-                        let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult())
+                        let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult(), thumbnailDirectory: PhotoLibraryDataSource.defaultThumbnailDirectory, registryURL: PhotoLibraryDataSource.defaultRetryRegistryURL, snapshotURL: PhotoLibraryDataSource.defaultSnapshotURL)
                         self.photoDataSource?.onChange = nil
                         self.photoDataSource = dataSource
                         dataSource.onChange = { [weak self] changes in

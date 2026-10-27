@@ -286,13 +286,13 @@ final class ThumbnailFillerTests: XCTestCase {
     func testSharpDeliveryHarvestsAndClearsRetry() {
         let (filler, source, store) = self.makeFiller(count: 2)
         source.complete(id: "p1", .unavailable)
-        XCTAssertTrue(filler.wantsHarvest(id: "p1"))
-        XCTAssertFalse(filler.wantsHarvest(id: "unknown"))
-        filler.harvest(id: "p1", image: self.image)
+        XCTAssertEqual(filler.harvestVersion(for: "p1"), "1")
+        XCTAssertNil(filler.harvestVersion(for: "unknown"))
+        filler.harvest(id: "p1", version: "1", image: self.image)
         XCTAssertEqual(store.version(for: "p1"), "1")
         XCTAssertNil(filler.registry.failures(id: "p1", version: "1"))
         XCTAssertEqual(filler.unavailableCount, 0)
-        XCTAssertFalse(filler.wantsHarvest(id: "p1"))
+        XCTAssertNil(filler.harvestVersion(for: "p1"))
         self.now += 30.0
         filler.processRetries()
         XCTAssertFalse(source.localRequests.contains("p1"))
@@ -301,15 +301,103 @@ final class ThumbnailFillerTests: XCTestCase {
         XCTAssertEqual(filler.filledCount, 2)
     }
 
-    func testHarvestSkipsStaleVersion() {
+    func testHarvestWritesNewVersionOverOldStoreEntry() {
         let (filler, source, store) = self.makeFiller(count: 1)
         source.complete(id: "p0", .image(self.image))
-        XCTAssertFalse(filler.wantsHarvest(id: "p0"))
+        XCTAssertNil(filler.harvestVersion(for: "p0"))
         let catalog = ThumbnailCatalog(ids: ["p0"], versions: ["2"])
         filler.install(filler.makePlan(for: catalog))
-        XCTAssertTrue(filler.wantsHarvest(id: "p0"))
-        filler.harvest(id: "p0", image: self.image)
+        XCTAssertEqual(filler.harvestVersion(for: "p0"), "2")
+        filler.harvest(id: "p0", version: "2", image: self.image)
         XCTAssertEqual(store.version(for: "p0"), "2")
+    }
+
+    func testHarvestDropsStaleVersion() {
+        let (filler, source, store) = self.makeFiller(count: 1)
+        source.complete(id: "p0", .unavailable)
+        let captured = filler.harvestVersion(for: "p0")
+        XCTAssertEqual(captured, "1")
+        filler.install(filler.makePlan(for: ThumbnailCatalog(ids: ["p0"], versions: ["2"])))
+        filler.harvest(id: "p0", version: captured!, image: self.image)
+        XCTAssertNil(store.version(for: "p0"))
+    }
+
+    func testLocalMissAfterHarvestCountsAsFilled() {
+        let (filler, source, store) = self.makeFiller(count: 1)
+        filler.harvest(id: "p0", version: "1", image: self.image)
+        XCTAssertEqual(store.version(for: "p0"), "1")
+        source.complete(id: "p0", .unavailable)
+        XCTAssertEqual(filler.filledCount, 1)
+        XCTAssertEqual(filler.unavailableCount, 0)
+        XCTAssertNil(filler.registry.failures(id: "p0", version: "1"))
+        XCTAssertTrue(filler.isComplete)
+    }
+
+    func testRefusedWriteIsNotMarkedFilled() {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = MediaGridThumbnailStore(directory: directory)
+        let (filler, source) = self.makeFiller(store: store)
+        filler.install(ThumbnailFillPlan.make(catalog: self.catalog(1), isFilled: { _, _ in false }, retryFailures: { _, _ in nil }, storedIds: []))
+        source.complete(id: "p0", .image(self.image))
+        XCTAssertNil(store.version(for: "p0"))
+        XCTAssertEqual(filler.filledCount, 0)
+        XCTAssertTrue(source.localRequests.isEmpty)
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    func testInstallKeepsDueRetryMissing() {
+        let (filler, source) = self.makeFiller()
+        filler.isPaused = true
+        filler.install(filler.makePlan(for: self.catalog(2)))
+        filler.isPaused = false
+        source.complete(id: "p1", .unavailable)
+        source.complete(id: "p0", .image(self.image))
+        self.now += 30.0
+        filler.isPaused = true
+        filler.processRetries()
+        filler.install(filler.makePlan(for: filler.catalog))
+        XCTAssertEqual(filler.missingCount, 1)
+        filler.isPaused = false
+        XCTAssertEqual(source.localRequests, ["p1"])
+        filler.install(filler.makePlan(for: filler.catalog))
+        source.complete(id: "p1", .unavailable)
+        XCTAssertEqual(filler.registry.failures(id: "p1", version: "1"), 2)
+    }
+
+    func testRetryNowReleasesUnavailableIds() {
+        let (filler, source, _) = self.makeFiller(count: 3)
+        source.complete(id: "p1", .unavailable)
+        source.drainLocal { _ in .image(self.image) }
+        XCTAssertTrue(source.localRequests.isEmpty)
+        filler.retryNow(ids: ["p1", "p2", "unknown"])
+        XCTAssertEqual(source.localRequests, ["p1"])
+    }
+
+    func testLaunchRetriesReleaseInBatchesNearTheViewport() {
+        let registry = ThumbnailRetryRegistry(url: nil)
+        for index in 0 ..< 1000 {
+            for _ in 0 ..< 4 {
+                _ = registry.recordFailure(id: "p\(index)", version: "1")
+            }
+        }
+        let (filler, source) = self.makeFiller(registry: registry)
+        filler.isPaused = true
+        filler.setPriority(ranges: [500 ..< 502])
+        filler.install(filler.makePlan(for: self.catalog(1000)))
+        self.now += ThumbnailFiller.launchRetryDelay
+        filler.isMovingFast = true
+        filler.processRetries()
+        XCTAssertEqual(filler.missingCount, 0)
+        filler.isMovingFast = false
+        filler.processRetries()
+        XCTAssertEqual(filler.missingCount, ThumbnailFiller.launchRetryBatch)
+        filler.isPaused = false
+        XCTAssertEqual(source.localRequests.first, "p500")
+        let released = Set(source.localRequests.map { Int($0.dropFirst())! })
+        XCTAssertTrue(released.allSatisfy { abs($0 - 500) <= ThumbnailFiller.launchRetryBatch })
+        self.now += ThumbnailFiller.launchRetryInterval
+        filler.processRetries()
+        XCTAssertEqual(filler.missingCount + filler.inFlightCount, 2 * ThumbnailFiller.launchRetryBatch - (source.log.count - source.localRequests.count))
     }
 
     func testNetworkLaneRunsOnlyWhenIdleAndViewportFirst() {
@@ -327,10 +415,21 @@ final class ThumbnailFillerTests: XCTestCase {
         filler.isMovingFast = false
         XCTAssertEqual(source.networkRequests, ["p11", "p15"])
         XCTAssertEqual(filler.networkInFlightCount, ThumbnailFiller.networkLimit)
-        filler.isPaused = true
         source.complete(id: "p11", network: true, .image(self.image))
-        XCTAssertEqual(source.networkRequests, ["p15"])
+        XCTAssertEqual(source.networkRequests, ["p15", "p19"])
+        let running = source.requests.filter { $0.network }.map(\.request)
+        filler.isPaused = true
+        XCTAssertTrue(running.allSatisfy { $0.isCancelled })
+        XCTAssertEqual(filler.networkInFlightCount, 0)
+        source.requests.removeAll()
         filler.isPaused = false
+        XCTAssertEqual(source.networkRequests, ["p15", "p19"])
+        source.requests.removeAll()
+        let movingRunning = filler.networkInFlightCount
+        XCTAssertEqual(movingRunning, 2)
+        filler.isMovingFast = true
+        XCTAssertEqual(filler.networkInFlightCount, 0)
+        filler.isMovingFast = false
         XCTAssertEqual(source.networkRequests, ["p15", "p19"])
         XCTAssertEqual(filler.store.version(for: "p11"), "1")
         XCTAssertNil(filler.registry.failures(id: "p11", version: "1"))
@@ -362,17 +461,26 @@ final class ThumbnailFillerTests: XCTestCase {
         let (filler, source) = self.makeFiller()
         filler.networkGate = { true }
         filler.install(filler.makePlan(for: self.catalog(1)))
-        source.complete(id: "p0", .unavailable)
-        XCTAssertEqual(source.networkRequests, ["p0"])
-        source.complete(id: "p0", network: true, .unavailable)
-        XCTAssertEqual(filler.registry.failures(id: "p0", version: "1"), 2)
-        XCTAssertTrue(source.requests.isEmpty)
-        self.now += 30.0
+        var expectedFailures = 0
+        for delay in [0.0, 30.0, 120.0, 600.0] {
+            if delay > 0.0 {
+                self.now += delay - 1.0
+                filler.processRetries()
+                XCTAssertTrue(source.requests.isEmpty, "early before \(delay)")
+                self.now += 1.0
+                filler.processRetries()
+            }
+            XCTAssertEqual(source.localRequests, ["p0"], "local after \(delay)")
+            source.complete(id: "p0", .unavailable)
+            expectedFailures += 1
+            XCTAssertEqual(source.networkRequests, ["p0"], "network after \(delay)")
+            source.complete(id: "p0", network: true, .unavailable)
+            XCTAssertEqual(filler.registry.failures(id: "p0", version: "1"), expectedFailures)
+            XCTAssertTrue(source.requests.isEmpty)
+        }
+        self.now += 3600.0
         filler.processRetries()
         XCTAssertTrue(source.requests.isEmpty)
-        self.now += 90.0
-        filler.processRetries()
-        XCTAssertEqual(source.localRequests, ["p0"])
     }
 
     func testLostIdsAreRefilled() {

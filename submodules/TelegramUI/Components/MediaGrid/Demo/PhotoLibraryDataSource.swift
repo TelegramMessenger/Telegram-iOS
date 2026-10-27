@@ -43,7 +43,8 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     private var pageCache: [Int32] = []
     private var launchSnapshot: ThumbnailLaunchSnapshot?
     private let snapshotURL: URL?
-    private var isSnapshotSaveScheduled = false
+    private var snapshotSaveGeneration = 0
+    private(set) var planInstallCount = 0
     private var isSharpNetworkIdle = true
     private(set) var networkFills = 0
     private var networkDeliveries = 0
@@ -72,7 +73,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
 
     static let snapshotHead = 2048
 
-    init(fetchResult: PHFetchResult<PHAsset>, thumbnailDirectory: URL? = PhotoLibraryDataSource.defaultThumbnailDirectory, registryURL: URL? = PhotoLibraryDataSource.defaultRetryRegistryURL, snapshotURL: URL? = PhotoLibraryDataSource.defaultSnapshotURL) {
+    init(fetchResult: PHFetchResult<PHAsset>, thumbnailDirectory: URL?, registryURL: URL?, snapshotURL: URL?) {
         self.fetchResult = fetchResult
         self.observedFetchResult = fetchResult
         self.snapshotURL = snapshotURL
@@ -153,18 +154,9 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                     guard let self, self.fetchResult === fetchResult, self.catalogGeneration == 0, self.catalog.count == 0 else {
                         return
                     }
-                    self.launchSnapshot = snapshot
                     print(String(format: "THUMBS snapshot ids=%d since_launch=%.0fms", snapshot.indices.count, DemoViewController.timeSinceProcessStart() * 1000.0))
                     fflush(stdout)
-                    store.load { [weak self] in
-                        guard let self, self.launchSnapshot != nil else {
-                            return
-                        }
-                        print(String(format: "THUMBS store loaded since_launch=%.0fms", DemoViewController.timeSinceProcessStart() * 1000.0))
-                        fflush(stdout)
-                        self.prepareStore()
-                    }
-                    self.onThumbnailsChanged?(snapshot.indices)
+                    self.installLaunchSnapshot(snapshot)
                 }
             }
             let start = CACurrentMediaTime()
@@ -220,7 +212,22 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
-    private func installCatalog(_ catalog: ThumbnailCatalog, generation: Int) {
+    func installLaunchSnapshot(_ snapshot: ThumbnailLaunchSnapshot) {
+        self.launchSnapshot = snapshot
+        self.store.load { [weak self] in
+            guard let self, self.launchSnapshot != nil else {
+                return
+            }
+            self.prepareStore()
+        }
+        self.onThumbnailsChanged?(snapshot.indices)
+    }
+
+    func debugId(at index: Int) -> String? {
+        return self.id(at: index)
+    }
+
+    func installCatalog(_ catalog: ThumbnailCatalog, generation: Int) {
         let previousCount = self.catalog.count
         var changed = IndexSet(integersIn: min(previousCount, catalog.count) ..< catalog.count)
         if let snapshot = self.launchSnapshot {
@@ -245,16 +252,18 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
+    static let snapshotSettleDelay: Double = 1.0
+
     private func scheduleLaunchSnapshotSave() {
-        guard !self.isSnapshotSaveScheduled, self.snapshotURL != nil else {
+        guard self.snapshotURL != nil else {
             return
         }
-        self.isSnapshotSaveScheduled = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self else {
+        self.snapshotSaveGeneration += 1
+        let generation = self.snapshotSaveGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + PhotoLibraryDataSource.snapshotSettleDelay) { [weak self] in
+            guard let self, self.snapshotSaveGeneration == generation else {
                 return
             }
-            self.isSnapshotSaveScheduled = false
             self.saveLaunchSnapshot()
         }
     }
@@ -298,6 +307,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     }
 
     private func installPlan(_ plan: ThumbnailFillPlan, removed: [String] = [], urgent: [String] = []) {
+        self.planInstallCount += 1
         if self.fillStartTime == nil {
             self.fillStartTime = CACurrentMediaTime()
         }
@@ -438,6 +448,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         var insertedIdentifiers: [String] = []
         var changedVersions: [String: String] = [:]
         var isAvailabilityOnly = false
+        var availabilityIdentifiers: [String] = []
         var catalog = ThumbnailCatalog.empty
         var catalogGeneration = 0
         var plan: ThumbnailFillPlan?
@@ -456,9 +467,20 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             }
             if let changes = update.changes, !changes.changed.isEmpty, self.observedCatalog.count == update.previous.count {
                 let filtered = PhotoLibraryDataSource.droppingUnversionedChanges(changes, changedIdentifiers: update.changedIdentifiers, newVersions: update.changedVersions, previous: self.observedCatalog)
+                let kept = Set(filtered.changedIdentifiers)
+                update.availabilityIdentifiers = update.changedIdentifiers.filter { !kept.contains($0) }
                 update.changes = filtered.changes
                 update.changedIdentifiers = filtered.changedIdentifiers
                 update.isAvailabilityOnly = filtered.changes.isEmpty
+            }
+            if update.isAvailabilityOnly {
+                update.catalog = self.observedCatalog
+                update.catalogGeneration = self.observedCatalogGeneration
+                self.observedFetchResult = update.fetchResult
+                DispatchQueue.main.async { [weak self] in
+                    self?.apply(update)
+                }
+                return
             }
             update.catalog = PhotoLibraryDataSource.catalog(for: update, previous: self.observedCatalog)
             self.observedCatalogGeneration += 1
@@ -532,6 +554,9 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             self.store.remove(ids: update.removedIdentifiers)
             self.filler.registry.remove(ids: update.removedIdentifiers)
         }
+        if !update.availabilityIdentifiers.isEmpty {
+            self.filler.retryNow(ids: update.availabilityIdentifiers)
+        }
         self.resetPageCache()
         self.prepareStore()
     }
@@ -548,7 +573,9 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             self.revisions.removeValue(forKey: identifier)
         }
         if isConsecutive && update.isAvailabilityOnly {
-            self.swapFetchResult(update)
+            self.fetchResult = update.fetchResult
+            self.thumbnailSource.fetchResult = update.fetchResult
+            self.filler.retryNow(ids: update.availabilityIdentifiers)
             return
         }
         guard isConsecutive, let changes = update.changes else {
@@ -689,11 +716,13 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
     }
 
+    static let harvestQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.thumbnailHarvest", qos: .utility)
+
     private func harvest(_ image: UIImage, id: String) {
-        guard self.filler.wantsHarvest(id: id) else {
+        guard let version = self.filler.harvestVersion(for: id) else {
             return
         }
-        PhotoLibraryDataSource.preparationQueue.async { [weak self] in
+        PhotoLibraryDataSource.harvestQueue.async { [weak self] in
             guard let small = ThumbnailDownscaler.image(from: image) else {
                 return
             }
@@ -702,7 +731,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                     return
                 }
                 self.harvests += 1
-                self.filler.harvest(id: id, image: small)
+                self.filler.harvest(id: id, version: version, image: small)
             }
         }
     }

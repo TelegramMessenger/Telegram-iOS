@@ -50,6 +50,35 @@ final class PhotoLibraryChangesTests: XCTestCase {
         XCTAssertNotNil(received[0] ?? nil)
     }
 
+    func testAvailabilityOnlyUpdateSkipsPlanInstall() {
+        let initial = PHFetchResult<PHAsset>()
+        let dataSource = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)
+        var update = self.update(previous: initial, changes: MediaGridChanges(removed: [], inserted: [], changed: []))
+        update.isAvailabilityOnly = true
+        update.availabilityIdentifiers = ["a"]
+        update.plan = dataSource.filler.makePlan(for: ThumbnailCatalog(ids: ["a"], versions: ["1"]))
+        dataSource.apply(update)
+        XCTAssertEqual(dataSource.planInstallCount, 0)
+        XCTAssertEqual(dataSource.catalog.count, 0)
+    }
+
+    func testCatalogInstallPostsOnlyNewAndMismatchedSnapshotIndices() {
+        let dataSource = PhotoLibraryDataSource(fetchResult: PHFetchResult<PHAsset>(), thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)
+        var posted: [IndexSet] = []
+        dataSource.onThumbnailsChanged = { posted.append($0) }
+        dataSource.installLaunchSnapshot(ThumbnailLaunchSnapshot(count: 6, segments: [ThumbnailLaunchSnapshot.Segment(start: 0, ids: ["a", "b", "x"]), ThumbnailLaunchSnapshot.Segment(start: 5, ids: ["f"])]))
+        XCTAssertEqual(posted, [IndexSet([0, 1, 2, 5])])
+        XCTAssertEqual(dataSource.debugId(at: 5), "f")
+        posted = []
+        dataSource.installCatalog(ThumbnailCatalog(ids: ["a", "b", "c", "d"], versions: ["1", "1", "1", "1"]), generation: 0)
+        XCTAssertEqual(posted, [IndexSet([2, 3])])
+        XCTAssertEqual(dataSource.debugId(at: 5), "f")
+        posted = []
+        dataSource.installCatalog(ThumbnailCatalog(ids: ["a", "b", "c", "d", "e", "g"], versions: ["1", "1", "1", "1", "1", "1"]), generation: 1)
+        XCTAssertEqual(posted, [IndexSet([4, 5])])
+        XCTAssertEqual(dataSource.debugId(at: 5), "g")
+    }
+
     func testConsecutiveUpdateAppliesIncrementally() {
         let initial = PHFetchResult<PHAsset>()
         let dataSource = PhotoLibraryDataSource(fetchResult: initial, thumbnailDirectory: nil, registryURL: nil, snapshotURL: nil)

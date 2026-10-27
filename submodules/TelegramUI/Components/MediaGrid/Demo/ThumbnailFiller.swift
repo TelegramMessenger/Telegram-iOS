@@ -243,6 +243,8 @@ final class ThumbnailFiller {
     static let networkLimit = 2
     static let backoff: [Double] = [30.0, 120.0, 600.0]
     static let launchRetryDelay: Double = 30.0
+    static let launchRetryBatch = 256
+    static let launchRetryInterval: Double = 1.0
 
     private struct PendingRetry {
         let due: Double
@@ -284,6 +286,11 @@ final class ThumbnailFiller {
     private var retryHeads: [Int] = Array(repeating: 0, count: ThumbnailFiller.backoff.count + 1)
     private var scheduledRetryTime: Double?
     private var hasScheduledLaunchRetries = false
+    private var launchPending: [String: String] = [:]
+    private var launchPendingIndices = IndexSet()
+    private var launchReleaseTime: Double?
+    private var retryDue = Set<String>()
+    private(set) var launchRetriesReleased = 0
     var networkGate: () -> Bool = { false }
     var onProgress: (() -> Void)?
     var onNetworkFill: ((String) -> Void)?
@@ -291,6 +298,9 @@ final class ThumbnailFiller {
     var isMovingFast = false {
         didSet {
             if self.isMovingFast != oldValue {
+                if !self.isMovingFast, self.launchReleaseTime != nil {
+                    self.processRetries()
+                }
                 self.pump()
             }
         }
@@ -369,14 +379,22 @@ final class ThumbnailFiller {
                 self.networkEligible.remove(index)
             }
         }
+        for id in self.retryDue {
+            if let index = catalog.indexById[id], self.states[index] == .unavailable {
+                self.setState(.missing, at: index)
+            }
+        }
         if !self.hasScheduledLaunchRetries {
             self.hasScheduledLaunchRetries = true
-            let due = self.clock() + ThumbnailFiller.launchRetryDelay
-            for (index, failures) in plan.failures {
-                self.retryQueues[ThumbnailFiller.backoff.count].append(PendingRetry(due: due, id: catalog.ids[index], version: catalog.versions[index], failures: failures))
+            for (index, _) in plan.failures {
+                self.launchPending[catalog.ids[index]] = catalog.versions[index]
             }
-            self.scheduleRetryTimer()
+            if !self.launchPending.isEmpty {
+                self.launchReleaseTime = self.clock() + ThumbnailFiller.launchRetryDelay
+            }
         }
+        self.launchPendingIndices = IndexSet(self.launchPending.keys.compactMap { catalog.indexById[$0] })
+        self.scheduleRetryTimer()
         self.urgent.append(contentsOf: urgent)
         self.hasPlan = true
         self.isComplete = false
@@ -400,22 +418,26 @@ final class ThumbnailFiller {
         self.pump()
     }
 
-    func wantsHarvest(id: String) -> Bool {
+    func harvestVersion(for id: String) -> String? {
         guard let index = self.catalog.indexById[id] else {
-            return false
-        }
-        return self.store.version(for: id) != self.catalog.versions[index]
-    }
-
-    func harvest(id: String, image: CGImage) {
-        guard let index = self.catalog.indexById[id] else {
-            return
+            return nil
         }
         let version = self.catalog.versions[index]
+        return self.store.version(for: id) == version ? nil : version
+    }
+
+    func harvest(id: String, version: String, image: CGImage) {
+        guard let index = self.catalog.indexById[id], self.catalog.versions[index] == version else {
+            return
+        }
         if self.store.version(for: id) != version {
             self.store.write(image, id: id, version: version)
         }
+        guard self.store.version(for: id) == version else {
+            return
+        }
         self.registry.remove(ids: [id])
+        self.retryDue.remove(id)
         if let network = self.networkInFlight.removeValue(forKey: id) {
             network.request?.cancel()
         }
@@ -426,15 +448,36 @@ final class ThumbnailFiller {
         self.onProgress?()
     }
 
+    func retryNow(ids: [String]) {
+        var changed = false
+        for id in ids {
+            guard let index = self.catalog.indexById[id], self.states[index] == .unavailable, self.networkInFlight[id] == nil else {
+                continue
+            }
+            self.networkTried.remove(id)
+            self.retryDue.insert(id)
+            self.setState(.missing, at: index)
+            changed = true
+        }
+        if changed {
+            self.isComplete = false
+            self.pump()
+        }
+    }
+
     func storeChanged(ids: Set<String>) {
         var changed = false
         for id in ids {
-            guard let index = self.catalog.indexById[id], self.states[index] == .filled else {
+            guard let index = self.catalog.indexById[id] else {
                 continue
             }
-            if self.store.version(for: id) != self.catalog.versions[index] {
+            let isCurrent = self.store.version(for: id) == self.catalog.versions[index]
+            if self.states[index] == .filled && !isCurrent {
                 self.setState(.missing, at: index)
                 changed = true
+            } else if self.states[index] == .unavailable && isCurrent {
+                self.registry.remove(ids: [id])
+                self.setState(.filled, at: index)
             }
         }
         if changed {
@@ -454,6 +497,7 @@ final class ThumbnailFiller {
                     continue
                 }
                 self.networkTried.remove(retry.id)
+                self.retryDue.insert(retry.id)
                 self.setState(.missing, at: index)
                 changed = true
             }
@@ -461,6 +505,10 @@ final class ThumbnailFiller {
                 self.retryQueues[level].removeFirst(self.retryHeads[level])
                 self.retryHeads[level] = 0
             }
+        }
+        if let release = self.launchReleaseTime, release <= now, !self.isMovingFast {
+            changed = self.releaseLaunchRetries() || changed
+            self.launchReleaseTime = self.launchPending.isEmpty ? nil : now + ThumbnailFiller.launchRetryInterval
         }
         self.scheduledRetryTime = nil
         self.scheduleRetryTimer()
@@ -470,8 +518,31 @@ final class ThumbnailFiller {
         }
     }
 
+    private func releaseLaunchRetries() -> Bool {
+        var released = 0
+        var changed = false
+        while released < ThumbnailFiller.launchRetryBatch, let index = self.nearest(in: self.launchPendingIndices, radius: nil) {
+            self.launchPendingIndices.remove(index)
+            let id = self.catalog.ids[index]
+            let version = self.launchPending.removeValue(forKey: id)
+            released += 1
+            guard version == self.catalog.versions[index], self.states[index] == .unavailable, self.networkInFlight[id] == nil, self.registry.failures(id: id, version: self.catalog.versions[index]) != nil else {
+                continue
+            }
+            self.networkTried.remove(id)
+            self.retryDue.insert(id)
+            self.setState(.missing, at: index)
+            self.launchRetriesReleased += 1
+            changed = true
+        }
+        if self.launchPendingIndices.isEmpty {
+            self.launchPending.removeAll()
+        }
+        return changed
+    }
+
     private func scheduleRetryTimer() {
-        var earliest: Double?
+        var earliest: Double? = self.isMovingFast ? nil : self.launchReleaseTime
         for level in 0 ..< self.retryQueues.count where self.retryHeads[level] < self.retryQueues[level].count {
             let due = self.retryQueues[level][self.retryHeads[level]].due
             earliest = min(earliest ?? due, due)
@@ -591,6 +662,7 @@ final class ThumbnailFiller {
             let id = self.catalog.ids[index]
             let version = self.catalog.versions[index]
             if self.store.version(for: id) == version {
+                self.retryDue.remove(id)
                 self.setState(.filled, at: index)
                 continue
             }
@@ -599,6 +671,7 @@ final class ThumbnailFiller {
                 continue
             }
             self.inFlight[id] = version
+            self.retryDue.remove(id)
             self.setState(.inFlight, at: index)
             _ = self.source.requestThumbnail(index: index, id: id, network: false, completion: { [weak self] result in
                 self?.complete(id: id, version: version, result: result)
@@ -612,7 +685,7 @@ final class ThumbnailFiller {
     }
 
     private func pumpNetwork() {
-        guard self.networkGate() else {
+        guard !self.isPaused, !self.isMovingFast, self.networkGate() else {
             if !self.networkInFlight.isEmpty {
                 let running = self.networkInFlight
                 self.networkInFlight.removeAll()
@@ -623,9 +696,6 @@ final class ThumbnailFiller {
                     }
                 }
             }
-            return
-        }
-        guard !self.isPaused, !self.isMovingFast else {
             return
         }
         while self.networkInFlight.count < ThumbnailFiller.networkLimit, let index = self.nearest(in: self.networkEligible, radius: nil) {
@@ -651,15 +721,16 @@ final class ThumbnailFiller {
             switch result {
             case let .image(image):
                 if isCurrent {
-                    self.store.write(image, id: id, version: version)
-                    self.registry.remove(ids: [id])
-                    self.setState(.filled, at: index)
+                    self.writeAndMark(image, index: index, id: id, version: version)
                 } else {
                     self.setState(.missing, at: index)
                 }
             case .unavailable:
                 if isCurrent {
-                    if self.states[index] == .inFlight {
+                    if self.store.version(for: id) == version {
+                        self.registry.remove(ids: [id])
+                        self.setState(.filled, at: index)
+                    } else if self.states[index] == .inFlight {
                         self.recordFailure(id: id, version: version)
                         self.setState(.unavailable, at: index)
                     }
@@ -679,6 +750,27 @@ final class ThumbnailFiller {
         self.onProgress?()
     }
 
+    @discardableResult
+    private func writeAndMark(_ image: CGImage, index: Int, id: String, version: String) -> Bool {
+        self.store.write(image, id: id, version: version)
+        guard self.store.version(for: id) == version else {
+            if self.states[index] == .unavailable {
+                self.networkTried.insert(id)
+                self.networkEligible.remove(index)
+            } else {
+                self.recordFailure(id: id, version: version)
+                self.setState(.unavailable, at: index)
+                self.networkTried.insert(id)
+                self.networkEligible.remove(index)
+            }
+            return false
+        }
+        self.registry.remove(ids: [id])
+        self.retryDue.remove(id)
+        self.setState(.filled, at: index)
+        return true
+    }
+
     private func completeNetwork(id: String, version: String, serial: Int, result: ThumbnailImageResult) {
         guard self.networkInFlight[id]?.serial == serial else {
             return
@@ -690,13 +782,17 @@ final class ThumbnailFiller {
         }
         switch result {
         case let .image(image):
-            self.store.write(image, id: id, version: version)
-            self.registry.remove(ids: [id])
-            self.setState(.filled, at: index)
-            self.onNetworkFill?(id)
+            if self.writeAndMark(image, index: index, id: id, version: version) {
+                self.onNetworkFill?(id)
+            }
         case .unavailable:
-            self.networkTried.insert(id)
-            self.recordFailure(id: id, version: version)
+            if self.store.version(for: id) == version {
+                self.registry.remove(ids: [id])
+                self.setState(.filled, at: index)
+            } else {
+                self.networkTried.insert(id)
+                self.setState(.unavailable, at: index)
+            }
         case .cancelled:
             self.networkEligible.insert(index)
         }
