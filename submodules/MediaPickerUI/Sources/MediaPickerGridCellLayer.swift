@@ -22,7 +22,7 @@ struct MediaPickerGridCellState {
 protocol MediaPickerGridCellStateProvider: AnyObject {
     var cellTheme: PresentationTheme { get }
     func cellState(at index: Int, isCompact: Bool) -> MediaPickerGridCellState?
-    func fitBackground(identifier: String, image: UIImage) -> UIImage?
+    func fitBackground(identifier: String, image: () -> UIImage?) -> UIImage?
 }
 
 private let gridCellLeftShadowImage: UIImage? = {
@@ -224,7 +224,7 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
 
     private func makeImageLayer(_ image: UIImage?) -> CALayer {
         let layer = CALayer()
-        layer.actions = ["contents": NSNull(), "position": NSNull(), "bounds": NSNull(), "opacity": NSNull(), "hidden": NSNull()]
+        layer.actions = ["contents": NSNull(), "contentsRect": NSNull(), "contentsScale": NSNull(), "position": NSNull(), "bounds": NSNull(), "opacity": NSNull(), "hidden": NSNull()]
         layer.contents = image?.cgImage
         layer.contentsGravity = .center
         layer.contentsScale = image?.scale ?? UIScreenScale
@@ -475,9 +475,24 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
         } else {
             imageLayer.contentsRect = self.contentsRect
         }
-        if let image = self.displayedImage, let identifier = self.identifier, let background = self.provider?.fitBackground(identifier: identifier, image: image) {
+        if let identifier = self.identifier, let background = self.provider?.fitBackground(identifier: identifier, image: { self.fitBackgroundSource() }) {
             self.setFitBackground(background, identifier: identifier)
         }
+    }
+
+    private func fitBackgroundSource() -> UIImage? {
+        if let image = self.displayedImage {
+            return image
+        }
+        guard self.isShowingThumbnail, let thumbnail = self.fitThumbnail else {
+            return nil
+        }
+        let rect = thumbnail.contentsRect
+        let pixelRect = CGRect(x: rect.minX * CGFloat(thumbnail.image.width), y: rect.minY * CGFloat(thumbnail.image.height), width: rect.width * CGFloat(thumbnail.image.width), height: rect.height * CGFloat(thumbnail.image.height)).integral
+        guard let cropped = thumbnail.image.cropping(to: pixelRect) else {
+            return nil
+        }
+        return UIImage(cgImage: cropped)
     }
 
     func setFitBackground(_ image: UIImage, identifier: String) {
