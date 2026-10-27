@@ -40,7 +40,7 @@ func mediaGridPaneHoleToLoad(visible: Range<Int>, isLoaded: (Int) -> Bool, holes
     var bestDistance = Int.max
     for hole in holes {
         let distance = abs(hole.anchorIndex - firstEmpty)
-        if distance < bestDistance || (distance == bestDistance && hole.anchorIndex < (best?.anchorIndex ?? Int.max)) {
+        if distance < bestDistance || (distance == bestDistance && hole.anchorIndex > (best?.anchorIndex ?? Int.min)) {
             best = hole
             bestDistance = distance
         }

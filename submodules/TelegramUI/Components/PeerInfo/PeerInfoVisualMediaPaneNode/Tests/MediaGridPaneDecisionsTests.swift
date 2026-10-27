@@ -38,10 +38,10 @@ final class MediaGridPaneDecisionsTests: XCTestCase {
         XCTAssertEqual(hole?.anchorIndex, 35)
     }
 
-    func testHoleToLoadTiePrefersLower() {
+    func testHoleToLoadTiePrefersUpper() {
         let holes = [MediaGridPaneHole(anchorIndex: 50), MediaGridPaneHole(anchorIndex: 30)]
         let hole = mediaGridPaneHoleToLoad(visible: 40 ..< 60, isLoaded: { _ in false }, holes: holes)
-        XCTAssertEqual(hole?.anchorIndex, 30)
+        XCTAssertEqual(hole?.anchorIndex, 50)
     }
 
     func testDateIndexUsesLowerAnchor() {
