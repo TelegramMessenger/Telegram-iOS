@@ -6,8 +6,17 @@ public class RichTextMessageAttribute: MessageAttribute, Equatable {
     public let instantPage: InstantPage
     public var fullInstantPage: InstantPage?
     
+    /// The users the page refers to by id (mention names, "User Profile" buttons), so that a rendered
+    /// message's `peers` carries them: sending lists them in `inputRichMessage.users`.
     public var associatedPeerIds: [PeerId] {
-        return []
+        guard let fullInstantPage = self.fullInstantPage else {
+            return self.instantPage.referencedUserIds
+        }
+        var result = self.instantPage.referencedUserIds
+        for peerId in fullInstantPage.referencedUserIds where !result.contains(peerId) {
+            result.append(peerId)
+        }
+        return result
     }
     
     public var associatedMediaIds: [MediaId] {
@@ -60,10 +69,14 @@ extension RichTextMessageAttribute {
         }
     }
 
-    func apiInputRichMessage() -> Api.InputRichMessage {
+    /// `users`: `apiInputRichMessageUsers(self.instantPage, …)`, the users the page refers to by id.
+    func apiInputRichMessage(users: [Api.InputUser]) -> Api.InputRichMessage {
         var flags: Int32 = 0
         if self.instantPage.rtl {
             flags |= (1 << 0)
+        }
+        if !users.isEmpty {
+            flags |= (1 << 4)
         }
         
         return Api.InputRichMessage.inputRichMessage(Api.InputRichMessage.Cons_inputRichMessage(
@@ -71,7 +84,7 @@ extension RichTextMessageAttribute {
             blocks: self.instantPage.blocks.compactMap { $0.apiInputBlock() },
             photos: nil,
             documents: nil,
-            users: nil
+            users: users.isEmpty ? nil : users
         ))
     }
 }

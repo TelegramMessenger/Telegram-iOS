@@ -940,13 +940,14 @@ section authors three actions, the ones `RichTextEditorCore` names: **URL**, **C
 `inlineButtonTypeUserProfile`). A sent message's tap goes through `performMessageButtonAction`: copy with
 the usual toast, open the user's profile.
 
-- **Sent as a bare `user_id`, unverified for recipients.** `apiInlineButtonType()` writes
-  `inlineButtonTypeUserProfile(user_id)` (as `textMentionName` does) and `inputRichMessage.users` is left
-  empty; the server accepts it and echoes the button back. A tap resolves the user from the LOCAL database
-  only (`ChatMessageItemView.performMessageButtonAction`) and does nothing if it is missing, so a recipient
-  who has never met the user depends on the server shipping it with the message. Checked from the sender's
-  account only. If that fails, the fix is `inputInlineButtonTypeUserProfile(InputUser)` or the `users`
-  vector, which needs the serializer to reach the database.
+- **The user travels as `inputRichMessage.users`.** The button itself is `inlineButtonTypeUserProfile(user_id)`, a
+  bare id, as is a `textMentionName`, so every send lists the users the page refers to again as `InputUser`s
+  (`InstantPage.referencedUserIds`, `apiInputRichMessageUsers`): the pending send and its media upload, edits, drafts,
+  standalone and ephemeral sends. A user the sender's database cannot resolve is left out and is sent by id only. The
+  AI compose requests send no `users`; their page comes back to the composer and the later send lists them.
+  `RichTextMessageAttribute.associatedPeerIds` is the same list, so a rendered message's `peers` carries them. A tap
+  still resolves the user from the LOCAL database only (`ChatMessageItemView.performMessageButtonAction`), so it relies
+  on the server delivering the users with the message; not yet checked from a recipient's account.
 - **Users only.** The schema has no chat or channel profile type; a chat is linked with a URL button and
   its t.me link. The picker is `makePeerSelectionController` filtered to private chats, with global search
   for an @username.
