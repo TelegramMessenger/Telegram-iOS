@@ -678,6 +678,62 @@ final class MediaGridThumbnailStoreTests: XCTestCase {
         XCTAssertEqual(store.decodedPageCount, 5)
     }
 
+    func testPrepareCapsAtBudgetMostImportantFirst() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 256 * 8)
+        let store = MediaGridThumbnailStore(directory: directory, decodedPageBudget: 8)
+        XCTAssertEqual(store.pageImageCapacity, 6)
+        self.load(store)
+        let ids = (0 ..< 8).reversed().map { "\($0 * 256)" }
+        store.prepare(ids: ids)
+        XCTAssertTrue(self.spin(until: { ids.prefix(6).allSatisfy { store.thumbnail(for: $0) != nil } }))
+        self.pause(0.2)
+        XCTAssertEqual(store.decodedPageCount, 6)
+        XCTAssertNil(store.thumbnail(for: "256"))
+        XCTAssertNil(store.thumbnail(for: "0"))
+    }
+
+    func testPrepareReplacesQueueAndSkipsUnchangedList() {
+        let directory = self.makeDirectory()
+        self.fillPersisted(directory, count: 256 * 8)
+        let store = MediaGridThumbnailStore(directory: directory, decodedPageBudget: 32)
+        self.load(store)
+        var order: [Int] = []
+        var released = false
+        let lock = NSLock()
+        let gate = DispatchSemaphore(value: 0)
+        store.didDecodePage = { page, _ in
+            lock.lock()
+            order.append(page)
+            let wait = !released
+            lock.unlock()
+            if wait {
+                gate.wait()
+            }
+        }
+        let first = ["0", "256", "512", "768", "1024"]
+        store.prepare(ids: first)
+        let plans = store.preparePlanCount
+        store.prepare(ids: first)
+        XCTAssertEqual(store.preparePlanCount, plans)
+        store.prepare(ids: ["1280"])
+        XCTAssertEqual(store.preparePlanCount, plans + 1)
+        self.pause(0.05)
+        lock.lock()
+        released = true
+        lock.unlock()
+        gate.signal()
+        gate.signal()
+        gate.signal()
+        XCTAssertTrue(self.spin(until: { store.thumbnail(for: "1280") != nil }))
+        self.pause(0.2)
+        lock.lock()
+        XCTAssertEqual(Set(order), [0, 1, 2, 5])
+        lock.unlock()
+        XCTAssertNil(store.thumbnail(for: "768"))
+        XCTAssertNil(store.thumbnail(for: "1024"))
+    }
+
     func testBudgetEvictsLeastRecent() {
         let directory = self.makeDirectory()
         self.fillPersisted(directory, count: 256 * 8)

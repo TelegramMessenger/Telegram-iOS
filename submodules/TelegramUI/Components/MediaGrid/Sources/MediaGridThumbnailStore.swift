@@ -123,7 +123,8 @@ public final class MediaGridThumbnailStore {
     private var useTick = 0
     private var decodeStack: [Int] = []
     private var decodesInFlight = Set<Int>()
-    private var isPrepareTurnOpen = false
+    private var preparedPageList: [Int] = []
+    private var lastTouchedPage: Int?
     private var preparedPages = Set<Int>()
     private var visibleIds = Set<String>()
     private var observers: [NSObjectProtocol] = []
@@ -358,39 +359,34 @@ public final class MediaGridThumbnailStore {
         self.lock.unlock()
     }
 
+    private(set) var preparePlanCount = 0
+
     public func prepare(ids: [String]) {
         dispatchPrecondition(condition: .onQueue(.main))
-        if !self.isPrepareTurnOpen {
-            self.isPrepareTurnOpen = true
-            self.decodeStack.removeAll()
-            self.preparedPages.removeAll()
-            DispatchQueue.main.async {
-                self.isPrepareTurnOpen = false
-            }
-        }
         var seen = Set<Int>()
-        var wanted: [Int] = []
+        var pages: [Int] = []
         for id in ids {
             guard let placement = self.placements[id] else {
                 continue
             }
             let page = placement.slot / self.slotsPerPage
-            guard seen.insert(page).inserted else {
-                continue
-            }
-            if self.pageImages[page] != nil {
-                self.touch(page: page)
-            } else if !self.decodesInFlight.contains(page) {
-                wanted.append(page)
+            if seen.insert(page).inserted {
+                pages.append(page)
+                if pages.count >= self.pageImageCapacity {
+                    break
+                }
             }
         }
-        if wanted.count > self.pageImageCapacity {
-            wanted.removeLast(wanted.count - self.pageImageCapacity)
+        if pages == self.preparedPageList && pages.allSatisfy({ self.pageImages[$0] != nil || self.decodesInFlight.contains($0) || self.decodeStack.contains($0) }) {
+            return
         }
-        self.preparedPages.formUnion(seen)
-        let wantedSet = Set(wanted)
-        self.decodeStack.removeAll { wantedSet.contains($0) }
-        self.decodeStack.append(contentsOf: wanted.reversed())
+        self.preparePlanCount += 1
+        self.preparedPageList = pages
+        self.preparedPages = seen
+        for page in pages.reversed() where self.pageImages[page] != nil {
+            self.touch(page: page)
+        }
+        self.decodeStack = pages.reversed().filter { self.pageImages[$0] == nil && !self.decodesInFlight.contains($0) }
         self.startDecodes()
     }
 
@@ -444,6 +440,10 @@ public final class MediaGridThumbnailStore {
     }
 
     private func touch(page: Int) {
+        if self.lastTouchedPage == page {
+            return
+        }
+        self.lastTouchedPage = page
         self.useTick += 1
         self.pageUses[page] = self.useTick
     }
@@ -611,6 +611,9 @@ public final class MediaGridThumbnailStore {
             for page in victims {
                 self.pageImages.removeValue(forKey: page)
                 self.pageUses.removeValue(forKey: page)
+                if self.lastTouchedPage == page {
+                    self.lastTouchedPage = nil
+                }
             }
         }
         self.queue.async {
@@ -647,6 +650,9 @@ public final class MediaGridThumbnailStore {
             }
             self.pageImages.removeValue(forKey: victim)
             self.pageUses.removeValue(forKey: victim)
+            if self.lastTouchedPage == victim {
+                self.lastTouchedPage = nil
+            }
         }
     }
 
