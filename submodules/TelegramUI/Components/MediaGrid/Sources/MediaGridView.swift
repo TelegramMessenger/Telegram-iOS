@@ -93,6 +93,9 @@ public final class MediaGridView: UIView {
     private var rotationAnchor: (index: Int, fraction: CGFloat, offset: CGFloat, version: Int)?
     private var defersCellBinding = false
     private var isCellBindingScheduled = false
+    private var hasWaitedForLaunchImages = false
+    static let launchImageWait: TimeInterval = 0.05
+    public private(set) var launchImageWaitDuration: CFTimeInterval?
 
     var scaleOverride: CGFloat? {
         didSet {
@@ -1392,6 +1395,12 @@ public final class MediaGridView: UIView {
         let size = self.bounds.size
         guard size.width > 0.0, size.height > 0.0 else {
             return
+        }
+        if !self.hasWaitedForLaunchImages && self.itemCount > 0 {
+            self.hasWaitedForLaunchImages = true
+            let start = CACurrentMediaTime()
+            self.dataSource.waitForLaunchImages(timeout: MediaGridView.launchImageWait)
+            self.launchImageWaitDuration = CACurrentMediaTime() - start
         }
         let insets = self.geometryInsets
         let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: insets.top, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)

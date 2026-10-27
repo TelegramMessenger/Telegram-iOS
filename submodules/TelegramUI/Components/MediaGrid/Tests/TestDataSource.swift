@@ -38,6 +38,10 @@ final class TestDataSource: MediaGridDataSource {
     private(set) var batchedRequests = 0
     private(set) var cachingPixelSizes: [CGSize] = []
     private var held: [(index: Int, deliver: () -> Void)] = []
+    var launchImages: [Int: MediaGridLaunchImage] = [:]
+    var launchImageProvider: ((Int) -> MediaGridLaunchImage?)?
+    var onWaitForLaunchImages: ((TimeInterval) -> Void)?
+    private(set) var launchWaitTimeouts: [TimeInterval] = []
 
     static let thumbnailPageSide = 16
     static let thumbnailSlotPixelSize = 48
@@ -99,6 +103,19 @@ final class TestDataSource: MediaGridDataSource {
         let x = CGFloat(slot % TestDataSource.thumbnailPageSide) * side + ((side - width) / 2.0).rounded(.down)
         let y = CGFloat(slot / TestDataSource.thumbnailPageSide) * side + ((side - height) / 2.0).rounded(.down)
         return MediaGridThumbnail(image: TestDataSource.thumbnailPage, contentsRect: CGRect(x: x / pageSize, y: y / pageSize, width: width / pageSize, height: height / pageSize))
+    }
+
+    func launchImage(at index: Int) -> MediaGridLaunchImage? {
+        if let provider = self.launchImageProvider {
+            return provider(index)
+        }
+        return self.launchImages[index]
+    }
+
+    func waitForLaunchImages(timeout: TimeInterval) {
+        self.launchWaitTimeouts.append(timeout)
+        self.events.append("wait")
+        self.onWaitForLaunchImages?(timeout)
     }
 
     func prepareThumbnails(ranges: [Range<Int>]) {

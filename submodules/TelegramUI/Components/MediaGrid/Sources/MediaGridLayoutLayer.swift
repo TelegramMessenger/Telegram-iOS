@@ -269,15 +269,22 @@ final class MediaGridLayoutLayer: CALayer {
     }
 
     private func refreshThumbnail(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
-        guard index < layout.count, !cell.hasImage || cell.isShowingThumbnail || cell.isImageStale, let thumbnail = self.dataSource.thumbnail(at: index) else {
+        guard index < layout.count else {
             return
         }
         let frame = layout.frame(at: index)
-        let aspect = MediaGridLayoutLayer.aspect(of: frame)
-        if cell.isShowingThumbnail && thumbnail.contentsRect(fillingAspect: aspect).width * CGFloat(thumbnail.image.width) < cell.thumbnailPixelWidth {
-            return
+        if let launchImage = self.launchImage(at: index, pixelSize: layout.pixelSize(at: index)), cell.isImageStale || CGFloat(launchImage.pixelWidth) > cell.shownPixelWidth(in: frame.size) {
+            cell.setLaunchImage(launchImage)
+        } else {
+            guard !cell.hasImage || cell.isShowingThumbnail || cell.isImageStale, let thumbnail = self.dataSource.thumbnail(at: index) else {
+                return
+            }
+            let aspect = MediaGridLayoutLayer.aspect(of: frame)
+            if cell.isShowingThumbnail && thumbnail.contentsRect(fillingAspect: aspect).width * CGFloat(thumbnail.image.width) < cell.thumbnailPixelWidth {
+                return
+            }
+            cell.setThumbnail(thumbnail, cellAspect: aspect)
         }
-        cell.setThumbnail(thumbnail, cellAspect: aspect)
         if !cell.hasFinalImage, !self.wantsSharpImage(cell, size: frame.size, pixelSize: layout.pixelSize(at: index)) {
             cell.isAwaitingSharpImage = false
             if let request = cell.imageRequest {
@@ -286,6 +293,13 @@ final class MediaGridLayoutLayer: CALayer {
                 request.cancel()
             }
         }
+    }
+
+    private func launchImage(at index: Int, pixelSize: CGSize) -> MediaGridLaunchImage? {
+        guard let launchImage = self.dataSource.launchImage(at: index), CGFloat(launchImage.pixelWidth) <= MediaGridLayoutLayer.donorOversize * pixelSize.width else {
+            return nil
+        }
+        return launchImage
     }
 
     private static func aspect(of frame: CGRect) -> CGFloat {
@@ -303,7 +317,7 @@ final class MediaGridLayoutLayer: CALayer {
             return true
         }
         let shown = cell.shownPixelWidth(in: size)
-        return shown < pixelSize.width || shown > MediaGridLayoutLayer.donorOversize * pixelSize.width
+        return max(shown, cell.launchCoverage) < pixelSize.width || shown > MediaGridLayoutLayer.donorOversize * pixelSize.width
     }
 
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout, keepsImage: Bool = false, reassigned: Bool = false) {
@@ -320,7 +334,9 @@ final class MediaGridLayoutLayer: CALayer {
         }
         if !keeps {
             cell.hasFinalImage = false
-            if let thumbnail = self.dataSource.thumbnail(at: index) {
+            if let launchImage = self.launchImage(at: index, pixelSize: pixelSize) {
+                cell.setLaunchImage(launchImage)
+            } else if let thumbnail = self.dataSource.thumbnail(at: index) {
                 cell.setThumbnail(thumbnail, cellAspect: MediaGridLayoutLayer.aspect(of: frame))
             } else if reassigned {
                 cell.setImage(nil)

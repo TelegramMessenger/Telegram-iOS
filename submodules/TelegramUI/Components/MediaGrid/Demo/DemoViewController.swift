@@ -155,7 +155,7 @@ final class DemoViewController: UIViewController {
         let (empty, visible) = gridView.debugEmptyVisibleCellCount()
         if !self.didReportFirstGridFrame, visible > 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
             self.didReportFirstGridFrame = true
-            print(String(format: "FIRST_GRID_FRAME since_launch=%.0fms visible=%d empty=%d", DemoViewController.timeSinceProcessStart() * 1000.0, visible, empty))
+            print(String(format: "FIRST_GRID_FRAME since_launch=%.0fms visible=%d empty=%d launch_wait=%.2fms", DemoViewController.timeSinceProcessStart() * 1000.0, visible, empty, (gridView.launchImageWaitDuration ?? 0.0) * 1000.0))
             fflush(stdout)
         }
         if !self.didReportFirstFilledFrame, visible > 0, empty == 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
@@ -794,7 +794,16 @@ final class DemoViewController: UIViewController {
                         return
                     }
                     if status == .authorized || status == .limited {
-                        let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult(), thumbnailDirectory: PhotoLibraryDataSource.defaultThumbnailDirectory, registryURL: PhotoLibraryDataSource.defaultRetryRegistryURL, snapshotURL: PhotoLibraryDataSource.defaultSnapshotURL)
+                        var launchCache: MediaGridLaunchCache?
+                        if !ProcessInfo.processInfo.arguments.contains("-noLaunchCache") {
+                            let coverage = MediaGridLaunchCache.coverage(screenSize: self.view.window?.windowScene?.screen.bounds.size ?? self.view.bounds.size, scale: self.traitCollection.displayScale)
+                            launchCache = MediaGridLaunchCache(directory: MediaGridLaunchCache.defaultDirectory, capacity: coverage.capacity, pixelSize: coverage.pixelSize)
+                        }
+                        let dataSource = PhotoLibraryDataSource(fetchResult: PhotoLibraryDataSource.makeFetchResult(), thumbnailDirectory: PhotoLibraryDataSource.defaultThumbnailDirectory, registryURL: PhotoLibraryDataSource.defaultRetryRegistryURL, snapshotURL: PhotoLibraryDataSource.defaultSnapshotURL, launchCache: launchCache)
+                        dataSource.launchKeeper?.onRefresh = { written in
+                            print(String(format: "LAUNCH refresh written=%d since_launch=%.0fms", written ? 1 : 0, DemoViewController.timeSinceProcessStart() * 1000.0))
+                            fflush(stdout)
+                        }
                         self.photoDataSource?.onChange = nil
                         self.photoDataSource = dataSource
                         dataSource.onChange = { [weak self] changes in

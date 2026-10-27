@@ -99,6 +99,14 @@ final class InstrumentedDataSource: MediaGridDataSource {
         self.base.prepareThumbnails(ranges: ranges)
     }
 
+    func launchImage(at index: Int) -> MediaGridLaunchImage? {
+        return self.base.launchImage(at: index)
+    }
+
+    func waitForLaunchImages(timeout: TimeInterval) {
+        self.base.waitForLaunchImages(timeout: timeout)
+    }
+
     func startCaching(indices: [Int], pixelSize: CGSize) {
         self.counters.cachingStarted += indices.count
         if self.forwardsCaching {

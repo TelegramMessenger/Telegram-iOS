@@ -540,7 +540,7 @@ public final class MediaGridThumbnailStore {
         }
         let referenced = Set(state.pageFiles.map { "\($0.key)-\($0.value).jpg" })
         let names = (try? fileManager.contentsOfDirectory(atPath: directory.path)) ?? []
-        for name in names where name != MediaGridThumbnailStore.indexFileName && !referenced.contains(name) {
+        for name in names where name != MediaGridThumbnailStore.indexFileName && name != MediaGridLaunchCache.directoryName && !referenced.contains(name) {
             try? fileManager.removeItem(at: directory.appendingPathComponent(name))
         }
         return state

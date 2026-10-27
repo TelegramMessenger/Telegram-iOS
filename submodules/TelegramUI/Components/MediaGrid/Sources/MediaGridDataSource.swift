@@ -17,6 +17,8 @@ public protocol MediaGridDataSource: AnyObject {
     func performBatch(_ updates: () -> Void)
     func thumbnail(at index: Int) -> MediaGridThumbnail?
     func prepareThumbnails(ranges: [Range<Int>])
+    func launchImage(at index: Int) -> MediaGridLaunchImage?
+    func waitForLaunchImages(timeout: TimeInterval)
 }
 
 public extension MediaGridDataSource {
@@ -29,6 +31,13 @@ public extension MediaGridDataSource {
     }
 
     func prepareThumbnails(ranges: [Range<Int>]) {
+    }
+
+    func launchImage(at index: Int) -> MediaGridLaunchImage? {
+        return nil
+    }
+
+    func waitForLaunchImages(timeout: TimeInterval) {
     }
 }
 

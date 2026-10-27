@@ -58,6 +58,11 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     private let manager = PHImageManager.default()
     private let cache = NSCache<NSString, UIImage>()
     private let scheduler = Scheduler(localLimit: 12, localPrefetchLimit: 6, networkLimit: 4)
+    let launchKeeper: LaunchCacheKeeper?
+    private let launchGroup = DispatchGroup()
+    private let launchLock = NSLock()
+    private var pendingLaunch: (head: [MediaGridLaunchCache.Key], images: [Int: MediaGridLaunchImage], fetchResult: PHFetchResult<PHAsset>, duration: CFTimeInterval)?
+    private var isLaunchInstalled = false
 
     static var defaultThumbnailDirectory: URL {
         return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridThumbnails", isDirectory: true)
@@ -73,7 +78,8 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
 
     static let snapshotHead = 2048
 
-    init(fetchResult: PHFetchResult<PHAsset>, thumbnailDirectory: URL?, registryURL: URL?, snapshotURL: URL?) {
+    init(fetchResult: PHFetchResult<PHAsset>, thumbnailDirectory: URL?, registryURL: URL?, snapshotURL: URL?, launchCache: MediaGridLaunchCache? = nil) {
+        self.launchKeeper = launchCache.map { LaunchCacheKeeper(cache: $0) }
         self.fetchResult = fetchResult
         self.observedFetchResult = fetchResult
         self.snapshotURL = snapshotURL
@@ -120,6 +126,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
         self.backgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main, using: { [weak self] _ in
             self?.saveLaunchSnapshot()
+            self?.launchKeeper?.refreshIfResting()
         })
         self.cache.totalCostLimit = 80 * 1024 * 1024
         self.scheduler.startJob = { [weak self] job in
@@ -134,14 +141,107 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             guard let self, let asset = self.asset(at: key.index) else {
                 return nil
             }
-            let size = CGSize(width: key.width, height: key.height)
+            let size = self.targetSize(at: key.index, pixelSize: CGSize(width: key.width, height: key.height))
             return (self.key(for: asset, size: size), Load(asset: asset, targetSize: size))
         }
         self.scheduler.isCached = { [weak self] key in
             return self?.cache.object(forKey: key.cacheKey) != nil
         }
+        self.startLaunchCache(fetchResult)
         self.startCatalog(fetchResult)
         PHPhotoLibrary.shared().register(self)
+    }
+
+    static let launchQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.launchHead", qos: .userInteractive)
+
+    private func startLaunchCache(_ fetchResult: PHFetchResult<PHAsset>) {
+        guard let keeper = self.launchKeeper else {
+            self.isLaunchInstalled = true
+            return
+        }
+        let cache = keeper.cache
+        let start = CACurrentMediaTime()
+        cache.startLoading()
+        self.launchGroup.enter()
+        PhotoLibraryDataSource.launchQueue.async { [weak self] in
+            let head = PhotoLibraryDataSource.head(of: fetchResult, count: cache.capacity)
+            cache.load()
+            let images = cache.images(matching: head)
+            let duration = CACurrentMediaTime() - start
+            guard let self else {
+                return
+            }
+            self.launchLock.lock()
+            self.pendingLaunch = (head, images, fetchResult, duration)
+            self.launchLock.unlock()
+            self.launchGroup.leave()
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.installPendingLaunch() else {
+                    return
+                }
+                let indices = IndexSet(keeper.images.keys)
+                if !indices.isEmpty {
+                    self.onThumbnailsChanged?(indices)
+                }
+            }
+        }
+    }
+
+    static func head(of fetchResult: PHFetchResult<PHAsset>, count: Int) -> [MediaGridLaunchCache.Key] {
+        let total = fetchResult.count
+        var head: [MediaGridLaunchCache.Key] = []
+        for index in 0 ..< min(count, total) {
+            let asset = fetchResult.object(at: total - 1 - index)
+            head.append(MediaGridLaunchCache.Key(id: asset.localIdentifier, version: PhotoLibraryDataSource.version(of: asset)))
+        }
+        return head
+    }
+
+    @discardableResult
+    private func installPendingLaunch() -> Bool {
+        guard !self.isLaunchInstalled, let keeper = self.launchKeeper else {
+            return false
+        }
+        self.launchLock.lock()
+        let pending = self.pendingLaunch
+        self.pendingLaunch = nil
+        self.launchLock.unlock()
+        guard let pending else {
+            return false
+        }
+        self.isLaunchInstalled = true
+        if pending.fetchResult === self.fetchResult {
+            keeper.install(head: pending.head, images: pending.images)
+        } else {
+            keeper.install(head: pending.head, images: [:])
+            keeper.setHead(self.catalogHead())
+        }
+        print(String(format: "LAUNCH installed matched=%d/%d load=%.1fms decode=%.1fms since_launch=%.0fms", keeper.images.count, pending.head.count, pending.duration * 1000.0, keeper.cache.loadDuration * 1000.0, DemoViewController.timeSinceProcessStart() * 1000.0))
+        fflush(stdout)
+        return true
+    }
+
+    private func catalogHead() -> [MediaGridLaunchCache.Key] {
+        let count = min(self.catalog.count, self.launchKeeper?.capacity ?? 0)
+        return (0 ..< count).map { MediaGridLaunchCache.Key(id: self.catalog.ids[$0], version: self.catalog.versions[$0]) }
+    }
+
+    func waitForLaunchImages(timeout: TimeInterval) {
+        guard !self.isLaunchInstalled else {
+            return
+        }
+        let start = CACurrentMediaTime()
+        let ready = self.launchGroup.wait(timeout: .now() + timeout) == .success
+        let waited = CACurrentMediaTime() - start
+        if ready {
+            self.installPendingLaunch()
+        }
+        print(String(format: "LAUNCH wait=%.2fms ready=%d matched=%d since_launch=%.0fms", waited * 1000.0, ready ? 1 : 0, self.launchKeeper?.images.count ?? 0, DemoViewController.timeSinceProcessStart() * 1000.0))
+        fflush(stdout)
+    }
+
+    func launchImage(at index: Int) -> MediaGridLaunchImage? {
+        return self.launchKeeper?.images[index]
     }
 
     private func startCatalog(_ fetchResult: PHFetchResult<PHAsset>) {
@@ -245,6 +345,9 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         }
         self.catalog = catalog
         self.catalogGeneration = generation
+        if self.isLaunchInstalled, catalog.count >= min(self.fetchResult.count, self.launchKeeper?.capacity ?? 0) {
+            self.launchKeeper?.setHead(self.catalogHead())
+        }
         self.resetPageCache()
         self.prepareStore()
         if !changed.isEmpty {
@@ -371,6 +474,7 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
     func prepareThumbnails(ranges: [Range<Int>]) {
         let start = CACurrentMediaTime()
         self.preparedRanges = ranges
+        self.launchKeeper?.viewportChanged(lowerBound: ranges.first?.lowerBound ?? 0)
         self.filler.setPriority(ranges: ranges)
         self.prepareStore()
         self.scheduleLaunchSnapshotSave()
@@ -548,6 +652,9 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         self.catalog = update.catalog
         self.catalogGeneration = update.catalogGeneration
         self.launchSnapshot = nil
+        if self.isLaunchInstalled {
+            self.launchKeeper?.setHead(self.catalogHead())
+        }
         if let plan = update.plan {
             self.installPlan(plan, removed: update.removedIdentifiers, urgent: update.insertedIdentifiers + update.changedIdentifiers)
         } else if !update.removedIdentifiers.isEmpty {
@@ -658,13 +765,17 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
             completion(nil, false)
             return nil
         }
-        let targetSize = pixelSize
+        let targetSize = self.targetSize(at: index, pixelSize: pixelSize)
         let key = self.key(for: asset, size: targetSize)
         if let image = self.cache.object(forKey: key.cacheKey) {
             completion(image, false)
             return nil
         }
         return self.scheduler.request(key: key, payload: Load(asset: asset, targetSize: targetSize), completion: completion)
+    }
+
+    private func targetSize(at index: Int, pixelSize: CGSize) -> CGSize {
+        return self.launchKeeper?.targetSize(at: index, pixelSize: pixelSize) ?? pixelSize
     }
 
     func performBatch(_ updates: () -> Void) {
@@ -792,7 +903,130 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
         if let image, let cgImage = image.cgImage, job.state == .running, job.attempt == attempt {
             self.cache.setObject(image, forKey: job.key.cacheKey, cost: cgImage.bytesPerRow * cgImage.height)
             self.harvest(image, id: job.key.identifier)
+            if job.key.revision == self.imageRevision(for: job.key.identifier) {
+                self.launchKeeper?.delivered(id: job.key.identifier, image: cgImage, target: job.payload.targetSize)
+            }
         }
         self.scheduler.finish(job, attempt: attempt, image: image)
+    }
+}
+
+final class LaunchCacheKeeper {
+    typealias Key = MediaGridLaunchCache.Key
+
+    static let settleDelay: Double = 1.0
+    static let enlargementFloor: CGFloat = 0.7
+
+    let cache: MediaGridLaunchCache
+    private(set) var head: [Key] = []
+    private(set) var images: [Int: MediaGridLaunchImage] = [:]
+    private(set) var isReleased = false
+    private(set) var isAtTop = true
+    private(set) var refreshCount = 0
+    private var delivered: [String: MediaGridLaunchCache.Delivered] = [:]
+    private var generation = 0
+    var schedule: (Double, @escaping () -> Void) -> Void = { delay, block in
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: block)
+    }
+    var onRefresh: ((Bool) -> Void)?
+
+    init(cache: MediaGridLaunchCache) {
+        self.cache = cache
+    }
+
+    var capacity: Int {
+        return self.cache.capacity
+    }
+
+    func install(head: [Key], images: [Int: MediaGridLaunchImage]) {
+        self.head = Array(head.prefix(self.capacity))
+        self.images = self.isReleased ? [:] : images
+    }
+
+    func setHead(_ head: [Key]) {
+        let head = Array(head.prefix(self.capacity))
+        guard head != self.head else {
+            return
+        }
+        self.head = head
+        if !self.isReleased {
+            var images: [Int: MediaGridLaunchImage] = [:]
+            for (index, key) in head.enumerated() {
+                if let image = self.cache.launchImage(for: key.id, version: key.version) {
+                    images[index] = image
+                }
+            }
+            self.images = images
+        }
+        self.scheduleRefresh()
+    }
+
+    func targetSize(at index: Int, pixelSize: CGSize) -> CGSize {
+        let launch = CGFloat(self.cache.pixelSize)
+        let side = min(pixelSize.width, pixelSize.height)
+        guard index >= 0, index < self.capacity, side > 0.0, side < launch, side >= LaunchCacheKeeper.enlargementFloor * launch else {
+            return pixelSize
+        }
+        let scale = launch / side
+        return CGSize(width: (pixelSize.width * scale).rounded(.up), height: (pixelSize.height * scale).rounded(.up))
+    }
+
+    func delivered(id: String, image: CGImage, target: CGSize) {
+        guard let index = self.head.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        let version = self.head[index].version
+        let delivery = MediaGridLaunchCache.Delivered(version: version, image: image, coverage: Int(min(target.width, target.height)))
+        if let current = self.delivered[id], current.version == version, !delivery.isBetter(than: current) {
+            return
+        }
+        self.delivered[id] = delivery
+        if self.images.removeValue(forKey: index) != nil {
+            self.cache.releaseImages(ids: [id])
+        }
+        self.scheduleRefresh()
+    }
+
+    func viewportChanged(lowerBound: Int) {
+        let isAtTop = lowerBound <= 0
+        if lowerBound >= self.capacity && !self.isReleased {
+            self.isReleased = true
+            self.images = [:]
+            self.cache.releaseImages()
+        }
+        if isAtTop != self.isAtTop {
+            self.isAtTop = isAtTop
+            if isAtTop {
+                self.scheduleRefresh()
+            }
+        }
+    }
+
+    func scheduleRefresh() {
+        self.generation += 1
+        let generation = self.generation
+        self.schedule(LaunchCacheKeeper.settleDelay) { [weak self] in
+            guard let self, self.generation == generation else {
+                return
+            }
+            self.refreshIfResting()
+        }
+    }
+
+    func refreshIfResting() {
+        guard self.isAtTop, !self.head.isEmpty else {
+            return
+        }
+        let current = Set(self.head.map { $0.id })
+        self.delivered = self.delivered.filter { current.contains($0.key) }
+        self.refreshCount += 1
+        let onRefresh = self.onRefresh
+        let delivered = self.delivered
+        self.delivered = [:]
+        self.cache.update(head: self.head, delivered: delivered, completion: { written in
+            DispatchQueue.main.async {
+                onRefresh?(written)
+            }
+        })
     }
 }
