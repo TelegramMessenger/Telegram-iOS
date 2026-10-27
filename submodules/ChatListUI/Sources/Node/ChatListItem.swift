@@ -5550,6 +5550,17 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             return true
                         }), at: 0)
                     }
+                    if strongSelf.contextContainer.isGestureEnabled {
+                        // The long-press menu (pin, mute, ...), as `secondaryAction` opens it: no gesture, so the menu
+                        // shows without peeking into the chat. Off in edit mode, as the gesture is (`setupItem`).
+                        accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                            guard let strongSelf, let item = strongSelf.item, let activateChatPreview = item.interaction.activateChatPreview else {
+                                return false
+                            }
+                            activateChatPreview(item, nil, strongSelf.contextContainer, nil, nil)
+                            return true
+                        }))
+                    }
                     strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                     
                     strongSelf.avatarTapRecognizer?.isEnabled = item.interaction.inlineNavigationLocation == nil
