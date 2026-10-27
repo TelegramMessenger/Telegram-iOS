@@ -48,6 +48,17 @@ final class MediaGridMotionTests: XCTestCase {
         XCTAssertTrue(visible.values.allSatisfy { $0.isAwaitingSharpImage })
     }
 
+    func testMovingFastChangesAreReported() {
+        let (view, _) = self.makeView()
+        var reported: [Bool] = []
+        view.onMovingFastChanged = { reported.append($0) }
+        self.startFastScrub(view)
+        XCTAssertEqual(reported, [true])
+        self.time += 1.0
+        view._testSettleMotion()
+        XCTAssertEqual(reported, [true, false])
+    }
+
     func testSlowScrollRequestsSharpImages() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 1000.0)

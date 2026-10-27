@@ -44,23 +44,23 @@ final class ImageLoadSchedulerTests: XCTestCase {
     func testRequestsForOneKeyShareOneLoad() {
         let scheduler = self.makeScheduler()
         var results: [Bool] = []
-        _ = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { image, isDegraded in
+        _ = scheduler.request(key: "a", payload: 1, completion: { image, isDegraded in
             results.append(isDegraded)
         })
-        _ = scheduler.request(key: "a", payload: 1, isReduced: true, completion: { image, isDegraded in
+        _ = scheduler.request(key: "a", payload: 1, completion: { image, isDegraded in
             results.append(isDegraded)
         })
         XCTAssertEqual(self.started.map { $0.key }, ["a"])
         let job = self.started[0]
         scheduler.finish(job, attempt: job.attempt, image: TestDataSource.sampleImage)
-        XCTAssertEqual(Set(results), [false, true])
+        XCTAssertEqual(results, [false, false])
         XCTAssertEqual(scheduler.localLane.running, 0)
     }
 
     func testLimitAndNewestFirst() {
         let scheduler = self.makeScheduler()
         for key in ["a", "b", "c", "d", "e"] {
-            _ = scheduler.request(key: key, payload: 0, isReduced: false, completion: { _, _ in })
+            _ = scheduler.request(key: key, payload: 0, completion: { _, _ in })
         }
         XCTAssertEqual(self.started.map { $0.key }, ["a", "b"])
         XCTAssertEqual(scheduler.localLane.running, 2)
@@ -73,7 +73,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         let scheduler = self.makeScheduler(localLimit: 2)
         scheduler.batch {
             for key in ["a", "b", "c"] {
-                _ = scheduler.request(key: key, payload: 0, isReduced: false, completion: { _, _ in })
+                _ = scheduler.request(key: key, payload: 0, completion: { _, _ in })
             }
             XCTAssertTrue(self.started.isEmpty)
         }
@@ -82,8 +82,8 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testCancellingQueuedRequestNeverStartsIt() {
         let scheduler = self.makeScheduler(localLimit: 1)
-        _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { _, _ in })
-        let queued = scheduler.request(key: "b", payload: 0, isReduced: false, completion: { _, _ in })
+        _ = scheduler.request(key: "a", payload: 0, completion: { _, _ in })
+        let queued = scheduler.request(key: "b", payload: 0, completion: { _, _ in })
         queued.cancel()
         XCTAssertTrue(self.cancelled.isEmpty)
         scheduler.finish(self.started[0], attempt: 1, image: nil)
@@ -93,8 +93,8 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testCancellingRunningRequestFreesItsSlot() {
         let scheduler = self.makeScheduler(localLimit: 1)
-        let running = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { _, _ in })
-        _ = scheduler.request(key: "b", payload: 0, isReduced: false, completion: { _, _ in })
+        let running = scheduler.request(key: "a", payload: 0, completion: { _, _ in })
+        _ = scheduler.request(key: "b", payload: 0, completion: { _, _ in })
         running.cancel()
         XCTAssertEqual(self.cancelled, ["a"])
         XCTAssertEqual(self.started.map { $0.key }, ["a", "b"])
@@ -105,9 +105,9 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testCancellingOneOfTwoConsumersKeepsTheLoad() {
         let scheduler = self.makeScheduler()
-        let first = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { _, _ in })
+        let first = scheduler.request(key: "a", payload: 0, completion: { _, _ in })
         var delivered = false
-        _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { image, _ in
+        _ = scheduler.request(key: "a", payload: 0, completion: { image, _ in
             delivered = image != nil
         })
         first.cancel()
@@ -118,7 +118,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testPrefetchWaitsForVisibleRequests() {
         let scheduler = self.makeScheduler(localLimit: 2, prefetchLimit: 1)
-        _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { _, _ in })
+        _ = scheduler.request(key: "a", payload: 0, completion: { _, _ in })
         scheduler.startPrefetching([1, 2, 3])
         XCTAssertEqual(self.started.map { $0.key }, ["a"])
         scheduler.finish(self.started[0], attempt: 1, image: nil)
@@ -128,7 +128,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testPrefetchQueueStaysBoundedWhileVisibleWorkBlocksIt() {
         let scheduler = self.makeScheduler(localLimit: 1, prefetchLimit: 1)
-        _ = scheduler.request(key: "busy", payload: 0, isReduced: false, completion: { _, _ in })
+        _ = scheduler.request(key: "busy", payload: 0, completion: { _, _ in })
         let window = 100
         var previous: [Int] = []
         for frame in 0 ..< 200 {
@@ -208,7 +208,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
     func testExternallyCancelledJobRestartsAndIgnoresStaleResults() {
         let scheduler = self.makeScheduler()
         var results: [UIImage?] = []
-        _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { image, _ in
+        _ = scheduler.request(key: "a", payload: 0, completion: { image, _ in
             results.append(image)
         })
         let job = self.started[0]
@@ -227,7 +227,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
     func testRepeatedExternalCancelFinishesWithoutImage() {
         let scheduler = self.makeScheduler()
         var results: [UIImage?] = []
-        _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { image, _ in
+        _ = scheduler.request(key: "a", payload: 0, completion: { image, _ in
             results.append(image)
         })
         let job = self.started[0]
@@ -241,8 +241,8 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testCloudJobMovesToNetworkLane() {
         let scheduler = self.makeScheduler(localLimit: 1, networkLimit: 1)
-        _ = scheduler.request(key: "a", payload: 0, isReduced: false, completion: { _, _ in })
-        _ = scheduler.request(key: "b", payload: 0, isReduced: false, completion: { _, _ in })
+        _ = scheduler.request(key: "a", payload: 0, completion: { _, _ in })
+        _ = scheduler.request(key: "b", payload: 0, completion: { _, _ in })
         let job = self.started[0]
         XCTAssertTrue(scheduler.moveToNetwork(job, attempt: 1))
         XCTAssertTrue(job.usesNetwork)
@@ -257,7 +257,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         let scheduler = self.makeScheduler(localLimit: 1, networkLimit: 1)
         var handles: [MediaGridImageRequest] = []
         for index in 0 ..< 600 {
-            handles.append(scheduler.request(key: "k\(index)", payload: index, isReduced: false, completion: { _, _ in }))
+            handles.append(scheduler.request(key: "k\(index)", payload: index, completion: { _, _ in }))
             let job = self.started.last!
             XCTAssertTrue(scheduler.moveToNetwork(job, attempt: job.attempt))
         }
@@ -267,7 +267,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
         }
         let live = 300
         for index in 0 ..< live {
-            _ = scheduler.request(key: "n\(index)", payload: index, isReduced: false, completion: { _, _ in })
+            _ = scheduler.request(key: "n\(index)", payload: index, completion: { _, _ in })
             let job = self.started.last!
             XCTAssertTrue(scheduler.moveToNetwork(job, attempt: job.attempt))
         }
@@ -304,7 +304,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testPreparationRunsForWantedJob() {
         let scheduler = self.makeScheduler()
-        let handle = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { _, _ in })
+        let handle = scheduler.request(key: "a", payload: 1, completion: { _, _ in })
         let job = self.started[0]
         let result = self.runPreparation(job, attempt: job.attempt, before: {})
         XCTAssertEqual(result.prepared, 1)
@@ -314,7 +314,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testPreparationSkippedAfterCancelWhileQueued() {
         let scheduler = self.makeScheduler()
-        let handle = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { _, _ in })
+        let handle = scheduler.request(key: "a", payload: 1, completion: { _, _ in })
         let job = self.started[0]
         let result = self.runPreparation(job, attempt: job.attempt, before: {
             handle.cancel()
@@ -325,7 +325,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
 
     func testPreparationSkippedForStaleAttempt() {
         let scheduler = self.makeScheduler()
-        let handle = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { _, _ in })
+        let handle = scheduler.request(key: "a", payload: 1, completion: { _, _ in })
         let job = self.started[0]
         let attempt = job.attempt
         let result = self.runPreparation(job, attempt: attempt, before: {
@@ -340,7 +340,7 @@ final class ImageLoadSchedulerTests: XCTestCase {
     func testPreparationSkippedWhenOnlyPrefetchWantsTheJob() {
         let scheduler = self.makeScheduler()
         scheduler.startPrefetching([7])
-        let handle = scheduler.request(key: "p7", payload: 7, isReduced: false, completion: { _, _ in })
+        let handle = scheduler.request(key: "p7", payload: 7, completion: { _, _ in })
         let job = self.started[0]
         XCTAssertEqual(job.key, "p7")
         let result = self.runPreparation(job, attempt: job.attempt, before: {

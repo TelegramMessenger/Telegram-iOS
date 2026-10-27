@@ -260,6 +260,7 @@ public final class MediaGridView: UIView {
     }
 
     public private(set) var isMovingFast = false
+    public var onMovingFastChanged: ((Bool) -> Void)?
 
     public var topVisibleIndex: Int? {
         guard let layout = self.gridLayout, layout.count > 0 else {
@@ -1276,7 +1277,7 @@ public final class MediaGridView: UIView {
     }
 
     #if DEBUG
-    public func debugEmptyVisibleCellCount() -> (empty: Int, visible: Int) {
+    public func debugEmptyVisibleCellCount(counting isCounted: ((Int) -> Bool)? = nil) -> (empty: Int, visible: Int) {
         var empty = 0
         var visible = 0
         let count: (MediaGridLayoutLayer, CGRect) -> Void = { layer, rect in
@@ -1288,7 +1289,7 @@ public final class MediaGridView: UIView {
                     continue
                 }
                 visible += 1
-                if !(layer.visibleCells[index]?.hasImage ?? false) {
+                if !(layer.visibleCells[index]?.hasImage ?? false), isCounted?(index) ?? true {
                     empty += 1
                 }
             }
@@ -1561,7 +1562,11 @@ public final class MediaGridView: UIView {
     }
 
     private func setMovingFast(_ isMovingFast: Bool, upgrade: Bool = true) {
+        let changed = self.isMovingFast != isMovingFast
         self.isMovingFast = isMovingFast
+        if changed {
+            self.onMovingFastChanged?(isMovingFast)
+        }
         self.activeLayoutLayer.suspendsSharpRequests = isMovingFast || self.isCellBindingScheduled
         self.resetPrefetch()
         if upgrade, !isMovingFast, self.transition == nil {

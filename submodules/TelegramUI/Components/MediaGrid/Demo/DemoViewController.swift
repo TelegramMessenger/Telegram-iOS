@@ -34,6 +34,8 @@ final class DemoViewController: UIViewController {
     private var autoScrubEmptyMax = 0
     private var autoScrubEmptyTotal = 0
     private var autoScrubVisibleTotal = 0
+    private var autoScrubIndexedEmptyFrames = 0
+    private var autoScrubIndexedEmptyMax = 0
     private var autoScrubWorkWorst: CFTimeInterval = 0.0
     private var autoScrubMainTotal: CFTimeInterval = 0.0
     private var autoScrubMainWorst: CFTimeInterval = 0.0
@@ -59,6 +61,22 @@ final class DemoViewController: UIViewController {
     private var emptyFrames = 0
     private var autoPinchEmptyFrames = 0
     private var autoPinchEmptyMax = 0
+    private var autoPinchIndexedEmptyFrames = 0
+    private var autoPinchIndexedEmptyMax = 0
+    private var didReportFirstFilledFrame = false
+    private var didReportFirstGridFrame = false
+
+    static func timeSinceProcessStart() -> CFTimeInterval {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else {
+            return 0.0
+        }
+        let start = info.kp_proc.p_un.__p_starttime
+        let started = Double(start.tv_sec) + Double(start.tv_usec) / 1_000_000.0
+        return Date().timeIntervalSince1970 - started
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -89,7 +107,7 @@ final class DemoViewController: UIViewController {
 
         self.hudLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 11.0, weight: .medium)
         self.hudLabel.textColor = .white
-        self.hudLabel.numberOfLines = 3
+        self.hudLabel.numberOfLines = 5
         self.hudLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         self.view.addSubview(self.hudLabel)
         self.resetButton.setTitle("Reset", for: .normal)
@@ -110,7 +128,11 @@ final class DemoViewController: UIViewController {
             guard let self else {
                 return
             }
-            self.hudLabel.text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms\nempty %d  max %d  frames %d", summary.frames, summary.dropped, summary.worst * 1000.0, self.emptyNow, self.emptyMax, self.emptyFrames)
+            var text = String(format: "frames %d  dropped %d\nworst(5s) %.1f ms\nempty %d  max %d  frames %d", summary.frames, summary.dropped, summary.worst * 1000.0, self.emptyNow, self.emptyMax, self.emptyFrames)
+            if self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue, let dataSource = self.photoDataSource {
+                text += String(format: "\nthumbs %d/%d\nno local thumb %d", dataSource.filler.filledCount, dataSource.catalog.count, dataSource.filler.unavailableCount)
+            }
+            self.hudLabel.text = text
         }
         self.frameMonitor.start()
         let emptyLink = CADisplayLink(target: DisplayLinkTarget(owner: self), selector: #selector(DisplayLinkTarget.tick))
@@ -130,7 +152,17 @@ final class DemoViewController: UIViewController {
         guard let gridView = self.gridView else {
             return
         }
-        let empty = gridView.debugEmptyVisibleCellCount().empty
+        let (empty, visible) = gridView.debugEmptyVisibleCellCount()
+        if !self.didReportFirstGridFrame, visible > 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
+            self.didReportFirstGridFrame = true
+            print(String(format: "FIRST_GRID_FRAME since_launch=%.0fms visible=%d empty=%d", DemoViewController.timeSinceProcessStart() * 1000.0, visible, empty))
+            fflush(stdout)
+        }
+        if !self.didReportFirstFilledFrame, visible > 0, empty == 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
+            self.didReportFirstFilledFrame = true
+            print(String(format: "FIRST_FILLED_FRAME since_launch=%.0fms visible=%d decoded_pages=%d", DemoViewController.timeSinceProcessStart() * 1000.0, visible, self.photoDataSource?.store.decodedPageCount ?? 0))
+            fflush(stdout)
+        }
         self.emptyNow = empty
         self.emptyMax = max(self.emptyMax, empty)
         if empty > 0 {
@@ -140,6 +172,11 @@ final class DemoViewController: UIViewController {
             self.autoPinchEmptyMax = max(self.autoPinchEmptyMax, empty)
             if empty > 0 {
                 self.autoPinchEmptyFrames += 1
+            }
+            let indexedEmpty = empty > 0 ? self.countIndexedEmptyCells(gridView) : 0
+            self.autoPinchIndexedEmptyMax = max(self.autoPinchIndexedEmptyMax, indexedEmpty)
+            if indexedEmpty > 0 {
+                self.autoPinchIndexedEmptyFrames += 1
             }
         }
         #endif
@@ -182,6 +219,42 @@ final class DemoViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         self.startBenchmarkIfRequested()
+        if ProcessInfo.processInfo.arguments.contains("-waitForFill") {
+            self.waitForFill(started: CACurrentMediaTime())
+            return
+        }
+        self.startAutomation()
+    }
+
+    private func waitForFill(started: CFTimeInterval) {
+        guard let dataSource = self.photoDataSource, dataSource.filler.isComplete else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.waitForFill(started: started)
+            }
+            return
+        }
+        dataSource.store.flush { [weak self] in
+            guard let self else {
+                return
+            }
+            let directory = PhotoLibraryDataSource.defaultThumbnailDirectory
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+            var bytes: UInt64 = 0
+            var pageFiles = 0
+            for name in names {
+                let attributes = try? FileManager.default.attributesOfItem(atPath: directory.appendingPathComponent(name).path)
+                bytes += (attributes?[.size] as? NSNumber)?.uint64Value ?? 0
+                if name != "index.bin" {
+                    pageFiles += 1
+                }
+            }
+            print(String(format: "WAITFORFILL ready after=%.2fs filled=%d unavailable=%d total=%d fill_time=%@ store_bytes=%llu files=%d decoded_pages=%d", CACurrentMediaTime() - started, dataSource.filler.filledCount, dataSource.filler.unavailableCount, dataSource.catalog.count, dataSource.fillDuration.map { String(format: "%.2fs", $0) } ?? "-", bytes, pageFiles, dataSource.store.decodedPageCount))
+            fflush(stdout)
+            self.startAutomation()
+        }
+    }
+
+    private func startAutomation() {
         if ProcessInfo.processInfo.arguments.contains("-autoScrub") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.startAutoScrub()
@@ -289,13 +362,15 @@ final class DemoViewController: UIViewController {
     private func reportAutoPinchPair() {
         if let pair = self.autoPinchPair {
             let summary = self.frameMonitor.summary
-            print(String(format: "AUTOPINCH pair=%@ frames=%d dropped=%d worst=%.2fms avg=%.2fms drive_worst=%.2fms empty_frames=%d empty_max=%d (simulator-only)", pair, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoPinchDriveWorst * 1000.0, self.autoPinchEmptyFrames, self.autoPinchEmptyMax))
+            print(String(format: "AUTOPINCH pair=%@ frames=%d dropped=%d worst=%.2fms avg=%.2fms drive_worst=%.2fms empty_frames=%d empty_max=%d indexed_empty_frames=%d indexed_empty_max=%d (simulator-only)", pair, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoPinchDriveWorst * 1000.0, self.autoPinchEmptyFrames, self.autoPinchEmptyMax, self.autoPinchIndexedEmptyFrames, self.autoPinchIndexedEmptyMax))
             fflush(stdout)
         }
         self.frameMonitor.reset()
         self.autoPinchDriveWorst = 0.0
         self.autoPinchEmptyFrames = 0
         self.autoPinchEmptyMax = 0
+        self.autoPinchIndexedEmptyFrames = 0
+        self.autoPinchIndexedEmptyMax = 0
     }
 
     @objc private func autoPinchTick(_ link: CADisplayLink) {
@@ -447,6 +522,8 @@ final class DemoViewController: UIViewController {
         self.autoScrubEmptyMax = 0
         self.autoScrubEmptyTotal = 0
         self.autoScrubVisibleTotal = 0
+        self.autoScrubIndexedEmptyFrames = 0
+        self.autoScrubIndexedEmptyMax = 0
         self.autoScrubWorkWorst = 0.0
         self.autoScrubMainTotal = 0.0
         self.autoScrubMainWorst = 0.0
@@ -486,6 +563,17 @@ final class DemoViewController: UIViewController {
         #endif
     }
 
+    private func countIndexedEmptyCells(_ gridView: MediaGridView) -> Int {
+        #if DEBUG
+        guard self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue, let dataSource = self.photoDataSource else {
+            return gridView.debugEmptyVisibleCellCount().empty
+        }
+        return gridView.debugEmptyVisibleCellCount(counting: { dataSource.hasStoredThumbnail(at: $0) }).empty
+        #else
+        return 0
+        #endif
+    }
+
     private func autoScrubFraction(step: Int, steps: Int) -> CGFloat? {
         let target = DemoViewController.argument("-scrubTo").flatMap(Double.init).map { CGFloat($0) }
         let peak = target ?? 1.0
@@ -520,17 +608,25 @@ final class DemoViewController: UIViewController {
         }
         if step > 0 {
             let interval = self.autoScrubLastTimestamp.map { link.timestamp - $0 } ?? 0.0
+            let indexedEmpty = self.countIndexedEmptyCells(gridView)
             if step > 1 {
                 if empty > 0 {
                     self.autoScrubEmptyFrames += 1
                 }
+                if indexedEmpty > 0 {
+                    self.autoScrubIndexedEmptyFrames += 1
+                }
+                self.autoScrubIndexedEmptyMax = max(self.autoScrubIndexedEmptyMax, indexedEmpty)
                 self.autoScrubEmptyMax = max(self.autoScrubEmptyMax, empty)
                 self.autoScrubEmptyTotal += empty
                 self.autoScrubVisibleTotal += visible
             }
-            print(String(format: "AUTOSCRUB_FRAME step=%d empty=%d visible=%d dt=%.2fms fast=%d offset=%.1f", step - 1, empty, visible, interval * 1000.0, gridView.isMovingFast ? 1 : 0, gridView.contentOffset))
+            print(String(format: "AUTOSCRUB_FRAME step=%d empty=%d indexed_empty=%d visible=%d dt=%.2fms fast=%d offset=%.1f", step - 1, empty, indexedEmpty, visible, interval * 1000.0, gridView.isMovingFast ? 1 : 0, gridView.contentOffset))
         } else {
             self.instrumentedDataSource?.resetCounters()
+            self.photoDataSource?.prepareCallWorst = 0.0
+            self.photoDataSource?.prepareCallTotal = 0.0
+            self.photoDataSource?.prepareCalls = 0
         }
         self.autoScrubLastTimestamp = link.timestamp
         let maximum = max(0.0, gridView.contentHeight - gridView.bounds.height)
@@ -548,7 +644,10 @@ final class DemoViewController: UIViewController {
         } else {
             let summary = self.frameMonitor.summary
             let measured = max(1, 2 * steps)
-            print(String(format: "AUTOSCRUB count=%d level=%d frames=%d dropped=%d worst=%.2fms avg=%.2fms work_worst=%.2fms steps=%d empty_frames=%d/%d empty_max=%d empty_fraction=%.3f main_avg=%.2fms main_worst=%.2fms (simulator-only)", gridView.contentHeight > 0.0 ? self.gridItemCount : 0, gridView.level.columns, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoScrubWorkWorst * 1000.0, 2 * steps, self.autoScrubEmptyFrames, measured, self.autoScrubEmptyMax, self.autoScrubVisibleTotal > 0 ? Double(self.autoScrubEmptyTotal) / Double(self.autoScrubVisibleTotal) : 0.0, self.autoScrubMainFrames > 0 ? self.autoScrubMainTotal / Double(self.autoScrubMainFrames) * 1000.0 : 0.0, self.autoScrubMainWorst * 1000.0))
+            print(String(format: "AUTOSCRUB count=%d level=%d frames=%d dropped=%d worst=%.2fms avg=%.2fms work_worst=%.2fms steps=%d empty_frames=%d/%d empty_max=%d empty_fraction=%.3f indexed_empty_frames=%d indexed_empty_max=%d main_avg=%.2fms main_worst=%.2fms (simulator-only)", gridView.contentHeight > 0.0 ? self.gridItemCount : 0, gridView.level.columns, summary.frames, summary.dropped, self.frameMonitor.overallWorst * 1000.0, summary.average * 1000.0, self.autoScrubWorkWorst * 1000.0, 2 * steps, self.autoScrubEmptyFrames, measured, self.autoScrubEmptyMax, self.autoScrubVisibleTotal > 0 ? Double(self.autoScrubEmptyTotal) / Double(self.autoScrubVisibleTotal) : 0.0, self.autoScrubIndexedEmptyFrames, self.autoScrubIndexedEmptyMax, self.autoScrubMainFrames > 0 ? self.autoScrubMainTotal / Double(self.autoScrubMainFrames) * 1000.0 : 0.0, self.autoScrubMainWorst * 1000.0))
+            if let dataSource = self.photoDataSource, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
+                print(String(format: "AUTOSCRUB_PREPARE calls=%d avg=%.3fms worst=%.3fms in_flight=%d", dataSource.prepareCalls, dataSource.prepareCalls > 0 ? dataSource.prepareCallTotal / Double(dataSource.prepareCalls) * 1000.0 : 0.0, dataSource.prepareCallWorst * 1000.0, dataSource.filler.inFlightCount))
+            }
             fflush(stdout)
             self.autoScrubSettleStart = link.timestamp
             return
@@ -588,6 +687,12 @@ final class DemoViewController: UIViewController {
         gridView.onLevelChanged = { [weak self] _ in
             self?.updateZoomButtons()
         }
+        gridView.onMovingFastChanged = { [weak self] isMovingFast in
+            guard let self, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue else {
+                return
+            }
+            self.photoDataSource?.filler.isMovingFast = isMovingFast
+        }
         if let level = self.launchLevel {
             gridView.setLevel(level, animated: false)
         } else {
@@ -624,6 +729,7 @@ final class DemoViewController: UIViewController {
         switch Source(rawValue: self.sourceControl.selectedSegmentIndex) ?? .synthetic {
         case .synthetic:
             self.photoDataSource?.onChange = nil
+            self.photoDataSource?.filler.isMovingFast = false
             self.installGrid(dataSource: self.syntheticDataSource)
         case .photoLibrary:
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
@@ -637,6 +743,12 @@ final class DemoViewController: UIViewController {
                         self.photoDataSource = dataSource
                         dataSource.onChange = { [weak self] changes in
                             self?.photoLibraryChanged(changes)
+                        }
+                        dataSource.onThumbnailsChanged = { [weak self, weak dataSource] indices in
+                            guard let self, let dataSource, self.photoDataSource === dataSource else {
+                                return
+                            }
+                            self.gridView?.thumbnailsDidChange(indices: indices)
                         }
                         let instrumented = InstrumentedDataSource(base: dataSource)
                         instrumented.forwardsCaching = !ProcessInfo.processInfo.arguments.contains("-noCaching")
@@ -677,7 +789,7 @@ final class DemoViewController: UIViewController {
         gridView.updateLayout(size: self.view.bounds.size, safeInsets: insets, isLandscape: isLandscape, transition: self.rotationDuration)
         self.rotationProbe?.noteUpdate(CACurrentMediaTime() - start)
         self.scrubber.frame = CGRect(x: self.view.bounds.width - 220.0, y: insets.top, width: 220.0, height: self.view.bounds.height - insets.top - insets.bottom)
-        self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 46.0)
+        self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 74.0)
         self.resetButton.frame = CGRect(x: 8.0, y: self.hudLabel.frame.maxY + 4.0, width: 60.0, height: 28.0)
         self.zoomInButton.frame = CGRect(x: 8.0, y: self.view.bounds.height - insets.bottom - 40.0, width: 84.0, height: 32.0)
         self.zoomOutButton.frame = CGRect(x: self.zoomInButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 84.0, height: 32.0)

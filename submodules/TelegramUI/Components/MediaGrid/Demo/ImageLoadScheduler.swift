@@ -10,11 +10,9 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
     }
 
     final class Consumer {
-        let isReduced: Bool
         let completion: (UIImage?, Bool) -> Void
 
-        init(isReduced: Bool, completion: @escaping (UIImage?, Bool) -> Void) {
-            self.isReduced = isReduced
+        init(completion: @escaping (UIImage?, Bool) -> Void) {
             self.completion = completion
         }
     }
@@ -141,7 +139,7 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         return self.prefetchWanted.count
     }
 
-    func request(key: Key, payload: @autoclosure () -> Payload, isReduced: Bool, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest {
+    func request(key: Key, payload: @autoclosure () -> Payload, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest {
         let job: Job
         if let existing = self.jobs[key] {
             job = existing
@@ -149,7 +147,7 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
             job = Job(key: key, payload: payload())
             self.jobs[key] = job
         }
-        let consumer = Consumer(isReduced: isReduced, completion: completion)
+        let consumer = Consumer(completion: completion)
         job.consumers[ObjectIdentifier(consumer)] = consumer
         if job.state == .pending {
             self.push(job)
@@ -271,7 +269,7 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
         let consumers = Array(job.consumers.values)
         job.consumers.removeAll()
         for consumer in consumers {
-            consumer.completion(image, image != nil && consumer.isReduced)
+            consumer.completion(image, false)
         }
         self.pump()
     }

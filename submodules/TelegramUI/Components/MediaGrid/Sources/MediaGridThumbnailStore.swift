@@ -276,6 +276,11 @@ public final class MediaGridThumbnailStore {
         return MediaGridThumbnail(image: image, contentsRect: placement.rect)
     }
 
+    public func page(for id: String) -> Int? {
+        dispatchPrecondition(condition: .onQueue(.main))
+        return self.placements[id].map { $0.slot / self.slotsPerPage }
+    }
+
     public func write(_ image: CGImage, id: String, version: String) {
         guard image.width > 0, image.height > 0 else {
             return
