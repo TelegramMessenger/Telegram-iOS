@@ -1946,19 +1946,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var contentHeight: CGFloat = 20.0
         
         let margin: CGFloat = self.appearance?.sideInset ?? 12.0
-        let leftMargin = margin + layout.insets(options: []).left
         
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        let buttonMinX: CGFloat
-        if self.undoButtonNode.supernode != nil {
-            buttonMinX = layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - leftMargin * 2.0
-        } else {
-            buttonMinX = layout.size.width - layout.safeInsets.right - rightInset
-        }
+        let horizontalLayout = undoOverlayHorizontalLayout(width: layout.size.width, safeInsets: layout.safeInsets, intrinsicInsets: layout.insets(options: []), margin: margin, leadingInset: leftInset, trailingInset: rightInset, buttonWidth: self.undoButtonNode.supernode != nil ? buttonTextSize.width : nil, isNarrow: self.appearance?.isNarrow == true)
+        let leftMargin = horizontalLayout.sideMargin
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - leftMargin, height: .greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: horizontalLayout.textMaxWidth, height: .greatestFiniteMagnitude))
         
-        let maxTextSize = CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - leftMargin, height: .greatestFiniteMagnitude)
+        let maxTextSize = CGSize(width: horizontalLayout.textMaxWidth, height: .greatestFiniteMagnitude)
         
         let textSize: CGSize
         if let animatedTextItems = self.animatedTextItems {
@@ -2012,14 +2007,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         
-        var panelWidth = layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right
-        if self.appearance?.isNarrow == true {
-            panelWidth = 210.0
-        }
-        
-        // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this is
-        // the full width's center.
-        let panelX = floorToScreenPixels(layout.safeInsets.left + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right - panelWidth) / 2.0)
+        let panelWidth = horizontalLayout.panelWidth
+        let panelX = horizontalLayout.panelX
         var panelFrame = CGRect(origin: CGPoint(x: panelX, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
         var panelWrapperFrame = CGRect(origin: CGPoint(x: panelX, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
         
