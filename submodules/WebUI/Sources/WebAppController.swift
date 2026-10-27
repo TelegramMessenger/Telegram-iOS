@@ -2416,6 +2416,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 initialUsername: createBot.suggestedUsername,
                                 initialTitle: createBot.suggestedName,
                                 openAutomatically: false,
+                                viaDeeplink: false,
                                 completion: { [weak self] resultId in
                                     guard let self, let controller = self.controller else {
                                         return

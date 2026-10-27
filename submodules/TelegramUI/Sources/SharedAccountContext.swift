@@ -5061,6 +5061,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
+        viaDeeplink: Bool,
         completion: @escaping (EnginePeer.Id?) -> Void
     ) async -> ViewController? {
         return await CreateBotScreen(
@@ -5069,6 +5070,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             initialUsername: initialUsername,
             initialTitle: initialTitle,
             openAutomatically: openAutomatically,
+            viaDeeplink: viaDeeplink,
             completion: completion
         )
     }
