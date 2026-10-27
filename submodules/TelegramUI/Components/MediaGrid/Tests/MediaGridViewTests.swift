@@ -615,36 +615,67 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertTrue(view.activeLayoutLayer === outgoing)
     }
 
-    func testCameraMovesBetweenSlotsAtThreeToFive() {
+    func testCameraFadesBetweenThreeAndFive() {
         let (view, _) = self.makeView(count: 1000)
         let camera = UIView()
         view.cameraView = camera
         view.layoutIfNeeded()
+        XCTAssertEqual(view.level, .three)
         let slots: Set<MediaGridSlot> = [MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]
         guard let sourceFrame = view.currentLayout?.reservedFrame(slots) else {
             XCTFail("no camera frame")
             return
         }
         view.zoomOut()
-        guard let transition = view.transition, let targetFrame = (transition.targetLayout as? MediaGridUniformLayout)?.reservedFrame(slots) else {
+        guard let transition = view.transition else {
             XCTFail("no transition")
             return
         }
-        let shift = view.contentOffset - transition.targetOffset
+        XCTAssertEqual(transition.targetLayout.frame(at: 0), (transition.targetLayout as? MediaGridUniformLayout)?.reservedFrame([MediaGridSlot(row: 0, column: 0)]))
         transition.apply(progress: 0.0)
-        XCTAssertEqual(camera.frame.minX, sourceFrame.minX, accuracy: 1e-6)
-        XCTAssertEqual(camera.frame.minY, sourceFrame.minY, accuracy: 1e-6)
-        XCTAssertEqual(camera.frame.width, sourceFrame.width, accuracy: 1e-6)
-        XCTAssertEqual(camera.frame.height, sourceFrame.height, accuracy: 1e-6)
+        XCTAssertEqual(camera.frame, sourceFrame)
         XCTAssertEqual(camera.alpha, 1.0)
+        transition.apply(progress: 0.5)
+        XCTAssertEqual(camera.alpha, 0.5, accuracy: 1e-6)
         transition.apply(progress: 1.0)
-        XCTAssertEqual(camera.frame.minX, targetFrame.minX, accuracy: 1e-6)
-        XCTAssertEqual(camera.frame.minY, targetFrame.minY + shift, accuracy: 1e-6)
-        XCTAssertEqual(camera.frame.width, targetFrame.width, accuracy: 1e-6)
-        XCTAssertEqual(camera.frame.height, targetFrame.height, accuracy: 1e-6)
+        XCTAssertEqual(camera.alpha, 0.0)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
+        XCTAssertTrue(camera.isHidden)
+        XCTAssertFalse(view.isCameraVisible)
+        view.zoomIn()
+        XCTAssertFalse(camera.isHidden)
+        guard let back = view.transition else {
+            XCTFail("no transition back")
+            return
+        }
+        back.apply(progress: 0.0)
+        XCTAssertEqual(camera.alpha, 0.0)
+        back.apply(progress: 1.0)
         XCTAssertEqual(camera.alpha, 1.0)
         view._testFinishAnimations()
-        XCTAssertEqual(camera.frame, targetFrame)
+        XCTAssertEqual(view.level, .three)
+        XCTAssertEqual(camera.frame, sourceFrame)
+        XCTAssertFalse(camera.isHidden)
+        XCTAssertEqual(camera.alpha, 1.0)
+    }
+
+    func testCameraTakesNoPartBetweenFiveAndFifteen() {
+        let (view, _) = self.makeView(count: 1000)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        view.setLevel(.five, animated: false)
+        XCTAssertTrue(camera.isHidden)
+        view.zoomOut()
+        XCTAssertNil(view.transition?.camera)
+        XCTAssertTrue(camera.isHidden)
+        view._testFinishAnimations()
+        view.zoomIn()
+        XCTAssertNil(view.transition?.camera)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .five)
+        XCTAssertTrue(camera.isHidden)
     }
 
     func testAnchorMapsToItselfAtDeepOffset() {
@@ -732,17 +763,17 @@ final class MediaGridViewTests: XCTestCase {
         let camera = UIView()
         view.cameraView = camera
         view.layoutIfNeeded()
-        view.setLevel(.five, animated: false)
+        view.setLevel(.three, animated: false)
         XCTAssertEqual(camera.alpha, 1.0)
         XCTAssertFalse(camera.isHidden)
-        view.zoomOut()
+        view.setLevel(.fifteen, animated: true)
         XCTAssertEqual(camera.alpha, 0.0)
         XCTAssertNotNil(camera.layer.animation(forKey: "mediaGridZoom.opacity"))
         view._testFinishAnimations()
         XCTAssertEqual(view.level, .fifteen)
         XCTAssertEqual(camera.alpha, 0.0)
         XCTAssertTrue(CATransform3DIsIdentity(camera.layer.transform))
-        view.zoomIn()
+        view.setLevel(.three, animated: true)
         XCTAssertFalse(camera.isHidden)
         XCTAssertEqual(camera.alpha, 1.0)
         view._testFinishAnimations()
@@ -2652,15 +2683,19 @@ final class MediaGridViewTests: XCTestCase {
         view.layoutIfNeeded()
         self.rotate(view, toLandscape: false)
         XCTAssertFalse(camera.isHidden)
+        let portraitFrame = camera.frame
         self.rotate(view, toLandscape: true)
         XCTAssertEqual(view.level, .five)
+        XCTAssertTrue(camera.isHidden)
+        view.setLevel(.three, animated: false)
         XCTAssertFalse(camera.isHidden)
         let frame = view.currentLayout!.reservedFrame([MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)])!
         XCTAssertEqual(camera.frame, frame)
+        XCTAssertNotEqual(camera.frame, portraitFrame)
         view.setLevel(.fifteen, animated: false)
         self.rotate(view, toLandscape: false)
         XCTAssertEqual(view.level, .five)
-        XCTAssertFalse(camera.isHidden)
+        XCTAssertTrue(camera.isHidden)
         self.rotate(view, toLandscape: true)
         XCTAssertEqual(view.level, .fifteen)
         XCTAssertTrue(camera.isHidden)

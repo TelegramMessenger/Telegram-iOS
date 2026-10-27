@@ -1806,6 +1806,13 @@ public class AttachmentController: ViewController, MinimizableController {
         self.node.updateSelectionCount(count, animated: false)
     }
 
+    public func updatePillIsLight(_ isLight: Bool, for controller: AttachmentContainable, transition: ContainedViewLayoutTransition) {
+        guard self.isNodeLoaded else {
+            return
+        }
+        self.node.container.updatePillIsLight(isLight, owner: controller, transition: transition)
+    }
+
     private var node: Node {
         return self.displayNode as! Node
     }

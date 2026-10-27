@@ -128,6 +128,9 @@ final class MediaGridHostAPITests: XCTestCase {
         XCTAssertFalse(view.isCameraVisible)
         view.setLevel(.five, animated: false)
         view.setContentOffset(0.0)
+        XCTAssertFalse(view.isCameraVisible)
+        view.setLevel(.three, animated: false)
+        view.setContentOffset(0.0)
         XCTAssertTrue(view.isCameraVisible)
     }
 
@@ -386,5 +389,132 @@ final class MediaGridHostAPITests: XCTestCase {
         XCTAssertTrue(view.gridGesturesReceiveTouch(in: view))
         XCTAssertTrue(view.gridGesturesReceiveTouch(in: view.engine.contentHost))
         XCTAssertTrue(view.gridGesturesReceiveTouch(in: nil))
+    }
+    func testAccessoryTakesTheFirstSlotWithoutACamera() {
+        let (view, _) = self.makeView(count: 1000)
+        let accessory = UIView()
+        view.accessoryView = accessory
+        view.layoutIfNeeded()
+        guard let first = view.contentFrameForItem(at: 0), let second = view.contentFrameForItem(at: 1) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertFalse(accessory.isHidden)
+        XCTAssertEqual(accessory.frame.minX, 0.0, accuracy: 1e-6)
+        XCTAssertEqual(accessory.frame.minY, first.minY, accuracy: 1e-6)
+        XCTAssertEqual(accessory.frame.size.width, first.width, accuracy: 0.5)
+        XCTAssertEqual(accessory.frame.size.height, first.height, accuracy: 1e-6)
+        XCTAssertGreaterThan(first.minX, accessory.frame.maxX)
+        XCTAssertGreaterThan(second.minX, first.maxX)
+    }
+
+    func testAccessorySitsRightOfTheCamera() {
+        let (view, _) = self.makeView(count: 1000)
+        let camera = UIView()
+        let accessory = UIView()
+        view.cameraView = camera
+        view.accessoryView = accessory
+        view.layoutIfNeeded()
+        guard let first = view.contentFrameForItem(at: 0), let second = view.contentFrameForItem(at: 1) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertEqual(camera.frame.minX, 0.0, accuracy: 1e-6)
+        XCTAssertGreaterThan(accessory.frame.minX, camera.frame.maxX)
+        XCTAssertEqual(accessory.frame.minY, camera.frame.minY, accuracy: 1e-6)
+        XCTAssertEqual(accessory.frame.height, first.height, accuracy: 1e-6)
+        XCTAssertGreaterThan(first.minX, accessory.frame.maxX)
+        XCTAssertEqual(first.minY, accessory.frame.minY, accuracy: 1e-6)
+        XCTAssertGreaterThan(second.minY, first.maxY)
+        XCTAssertGreaterThan(second.minX, camera.frame.maxX)
+        XCTAssertLessThan(second.minX, accessory.frame.maxX)
+    }
+
+    func testAccessoryFollowsItsLevels() {
+        let (view, _) = self.makeView(count: 1000)
+        let accessory = UIView()
+        view.accessoryView = accessory
+        view.layoutIfNeeded()
+        view.setLevel(.five, animated: false)
+        XCTAssertFalse(accessory.isHidden)
+        XCTAssertGreaterThan(view.contentFrameForItem(at: 0)?.minX ?? 0.0, accessory.frame.maxX)
+        view.setLevel(.one, animated: false)
+        XCTAssertTrue(accessory.isHidden)
+        view.setLevel(.three, animated: false)
+        XCTAssertFalse(accessory.isHidden)
+        view.accessoryView = nil
+        view.layoutIfNeeded()
+        XCTAssertNil(accessory.superview)
+        XCTAssertEqual(view.contentFrameForItem(at: 0)?.minX ?? -1.0, 0.0, accuracy: 1e-6)
+    }
+
+    func testCameraLevelsCanIncludeLevelFive() {
+        let (view, _) = self.makeView(count: 1000)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        view.setLevel(.five, animated: false)
+        view.setContentOffset(0.0)
+        XCTAssertFalse(view.isCameraVisible)
+        view.cameraLevels = [.three, .five]
+        view.layoutIfNeeded()
+        XCTAssertTrue(view.isCameraVisible)
+        guard let first = view.contentFrameForItem(at: 0) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertEqual(camera.frame.width, first.width, accuracy: 0.5)
+        XCTAssertEqual(camera.frame.height, first.height * 2.0 + 1.0, accuracy: 0.5)
+        XCTAssertGreaterThan(first.minX, camera.frame.maxX)
+    }
+
+    func testSelectionPanCanBeDisabled() {
+        let (view, _) = self.makeView(count: 1000)
+        XCTAssertTrue(view.selectionGesture.isEnabled)
+        view.isSelectionPanEnabled = false
+        XCTAssertFalse(view.selectionGesture.isEnabled)
+        view.isSelectionPanEnabled = true
+        XCTAssertTrue(view.selectionGesture.isEnabled)
+    }
+
+    func testDisabledZoomKeepsTheLevelAndTheTap() {
+        let (view, _) = self.makeView(count: 1000)
+        view.isZoomEnabled = false
+        var tapped: Int?
+        view.onTapItemAt = { index, _ in
+            tapped = index
+        }
+        XCTAssertFalse(view.canZoomIn)
+        XCTAssertFalse(view.canZoomOut)
+        guard let frame = view.frameForItem(at: 2) else {
+            XCTFail("no frame")
+            return
+        }
+        view._testTap(at: CGPoint(x: frame.midX, y: frame.midY))
+        XCTAssertEqual(tapped, 2)
+        XCTAssertEqual(view.level, .three)
+    }
+
+    func testTallCellsFollowTheCellAspect() {
+        let (view, _) = self.makeView(count: 1000)
+        view.cellAspect = 1.227
+        view.layoutIfNeeded()
+        guard let frame = view.contentFrameForItem(at: 0) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertEqual(frame.height, floor(frame.width * 1.227 * 3.0) / 3.0, accuracy: 0.34)
+    }
+
+    func testGridGesturesIgnoreTouchesInTheAccessory() {
+        let (view, _) = self.makeView(count: 1000)
+        let accessory = UIView()
+        let child = UIView()
+        accessory.addSubview(child)
+        view.accessoryView = accessory
+        view.layoutIfNeeded()
+        XCTAssertFalse(view.gridGesturesReceiveTouch(in: child))
+        XCTAssertFalse(view.gridGesturesReceiveTouch(in: accessory))
+        XCTAssertTrue(view.gridGesturesReceiveTouch(in: view))
     }
 }
