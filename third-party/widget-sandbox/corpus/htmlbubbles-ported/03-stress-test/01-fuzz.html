@@ -4,7 +4,7 @@
   host stylesheet: ../kit.css is prepended to every bubble by the host; images use app:/sf: schemes
   ported: classic widget, see corpus/htmlbubbles-ported/README.md
 -->
-<style>
+<style>[hidden]{display:none!important}
   :root { color-scheme: light dark; --fg: light-dark(#000, #fff); --muted: light-dark(#6e6e73, #98989d); }
   body { margin: 0; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.3; color: var(--fg); }
   .muted { color: var(--muted); } .small { font-size: 12px; }
@@ -36,13 +36,6 @@
   .ty .row2.on { background-color: rgba(0,122,255,0.12); }
   .ty .tag { display: block; width: 92px; font-family: ui-monospace, monospace; font-size: 10.5px; color: #8e8e93; }
   .ty .clip { white-space: nowrap; overflow: hidden; width: 244px; }
-  /* bubble transitions (the host's transition(kind)) */
-  @keyframes tr-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes tr-slide-left { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
-  @keyframes tr-slide-right { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-  @keyframes tr-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-  .tr-fade { animation: tr-fade 0.22s ease-out; } .tr-slide-left { animation: tr-slide-left 0.26s cubic-bezier(.33,1,.68,1); }
-  .tr-slide-right { animation: tr-slide-right 0.26s cubic-bezier(.33,1,.68,1); } .tr-slide-up { animation: tr-slide-up 0.26s cubic-bezier(.33,1,.68,1); }
 </style>
 <div class="ty" id="ty">
   <div class="row between"><b>Aa Type specimen</b><span class="small muted" id="famName">System</span></div>
@@ -123,12 +116,13 @@ const panes = [$('specimen'), $('scale'), $('weights')];
 const setText = (el, s) => { if (el.textContent !== s) el.textContent = s; };
 const setStyle = (el, prop, val) => { if (el.style[prop] !== val) el.style[prop] = val; };
 
-const TR = ['tr-fade', 'tr-slide-left', 'tr-slide-right', 'tr-slide-up'];
-function transition(kind) {
-  root.classList.remove(...TR);
-  requestAnimationFrame(() => root.classList.add('tr-' + kind));
+let panelAnimation = null;
+function transition(kind, target = panes[tab]) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-root.addEventListener('animationend', () => root.classList.remove(...TR));
 
 function buildSlider(el, stops, action) {
   const cell = TRACK / stops.length;
@@ -204,10 +198,9 @@ function handleAction(name, value) {
   if (name === 'tab') {
     const next = Number(value);
     if (next === tab) return;
-    transition(next > tab ? 'slide-left' : 'slide-right');
+    transition(next > tab ? 'slide-left' : 'slide-right', panes[next]);
     tab = next;
-    v.wave = 0;
-    tween(v, { wave: 1 }, 700, ease.outCubic);
+    v.wave = 1;
   } else if (name === 'fam') {
     transition('fade');
     fam = Number(value);
@@ -216,14 +209,14 @@ function handleAction(name, value) {
   else if (name === 'italic') italic = !italic;
   else if (name === 'upper') upper = !upper;
   else if (name === 'under') under = !under;
-  else if (name === 'sample') { transition('slide-up'); sample = (sample + 1) % SAMPLES.length; }
+  else if (name === 'sample') { transition('slide-up', sampleEl); sample = (sample + 1) % SAMPLES.length; }
   else if (name === 'pick') {
     const s = SCALE[Number(value)];
-    transition('slide-right');
+    transition('slide-right', panes[0]);
     tab = 0;
     setSize(s.size); setWeight(s.weight);
   } else if (name === 'pickw') {
-    transition('slide-right');
+    transition('slide-right', panes[0]);
     tab = 0;
     setWeight(Number(value));
   }

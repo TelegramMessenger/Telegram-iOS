@@ -495,7 +495,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
                     var isDice = false
                     for media in message.media {
-                        if media is TelegramMediaDice {
+                        if media is TelegramMediaDice || media is TelegramMediaWidget {
+                            // A widget, as a dice, is never forwarded without its sender (widget-sandbox v0.2).
                             isDice = true
                         } else if (media as? TelegramMediaFile)?.isMusic != true {
                             if !message.text.isEmpty {

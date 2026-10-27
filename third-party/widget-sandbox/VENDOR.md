@@ -1,16 +1,33 @@
-# widget-sandbox v0.1.3 (vendored)
+# widget-sandbox v0.2.3 (vendored)
 
-Taken from `~/build/widget-sandbox` at the tag **`v0.1.3`** (`11aacec5fbdc24e2419ce53c8c0ae3c91279e38f`, 2026-10-24):
-the payload is zlib, vertical drags are always the chat's (decision G2, the gesture policy's `claimOf` never claims
-`y`), and `TelegramWidget.setResizeAnchor` (decision R1, the SDK policy's `checkResizeAnchor`); profile, SDK and protocol
-stay version 1. The widgets client spec (`docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`)
-follows v0.1.0, with this client's v0.1.1, v0.1.2 and v0.1.3 decisions in its later sections; the client's rules are in the message widgets guide
-(`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`). Files come from the tag, never the
-working tree, and the old copy is removed first, so files a tag removed (v0.1.1 split `visual/03, 05, 08, 09` into `-a`
-and `-b`) do not linger in the bundles:
+Taken from `~/build/widget-sandbox` at the tag **`v0.2.3`** (`88285a3b`, 2026-10-27).
+- **v0.2.3:** fixes from the Android beta, with no API change.
+  - Canvas arguments convert as a browser's context converts them. Our context is bound from WebIDL and already did;
+    `CanvasArgumentTests` pins it.
+  - An image a script made loads before it is inserted, and `complete` and `width` follow a browser. Our runtime now
+    has a browser's pending state and the rendered width (the message widgets guide).
+  - The conformance pictures of `visual/06`, `08-canvas-a`, `08-canvas-b` and `13` now show what profile 1 draws.
+    `auto/02-attributes-images-b` gains three checks.
+  - The iOS glue builds its locales with `Locale.Components` (below).
+- **v0.2.0 and v0.2.1:** a widget is fixed code plus changeable state. It has the bot's `chatData` / `publicData` and
+  their events, `request`, `copyText`, `watchPublicData`, previews, and the message's context (`isForward`, `chatType`,
+  `viewer`). The server's side is layer 233.
+- **v0.2.2:** haptics need a touch.
+- **Earlier:** v0.1.3 made the payload zlib, gave vertical drags to the chat (decision G2) and added
+  `TelegramWidget.setResizeAnchor` (decision R1).
+
+Profile, SDK and protocol stay version 1. The widgets client spec
+(`docs/superpowers/specs/2026-10-19-message-widgets-v0.1.0-client-design.md`) follows v0.1.0, with this client's v0.1.1,
+v0.1.2 and v0.1.3 decisions in its later sections. The v0.2 decisions are in
+`docs/superpowers/specs/2026-10-26-message-widgets-v0.2-design.md`. The client's rules are in the message widgets guide
+(`submodules/TelegramUI/Components/MessageWidget/CLAUDE.md`).
+
+Files come from the tag, never the working tree, and the old copy is removed first. That way files a tag removed do not
+linger in the bundles: v0.1.1 split `visual/03, 05, 08, 09` into `-a` and `-b`; v0.2.1 split `auto/23-gestures`, and
+replaced `visual/sdk/16-bot-edit` with `16-state-edit`.
 
 ```sh
-V=v0.1.3
+V=v0.2.3
 W=third-party/widget-sandbox
 X=$(mktemp -d)
 D=packages/desktop/sandbox
@@ -41,15 +58,29 @@ folder lists of `WidgetCorpus` and `CorpusTests`), the run file's `framework`/`c
 ratchet: `conformance_report.sh --record` retires checks a tag renamed (`ConformanceBaseline.compare`).
 
 Taken:
-- `corpus/` (all of it): `attacks/` (99 pages and `mem-cap-probe.js`; TEST FIXTURES ONLY, never in an app bundle),
-  `common/`, `compat/`, `defaults/` (v0.1.1: six widgets with little or no CSS, the examples a widget that should look
-  native starts from), `generated/`, `gestures/` (v0.1.3: games and controls by the touch-action they claim, the
-  `-xy` ones now behaving as their `-x` twins), `htmlbubbles-ported/`, `out-of-profile/` (widgets using what profile 1
-  leaves out), `resize/` (v0.1.3: one widget per resize anchor), `showcase/` and `README.md`. Tests read it through `:WidgetCorpus` and `:CorpusFiles`; the DEBUG app's corpus
-  insertion through `:WidgetCorpusBundle` (attacks excluded).
-- `conformance/` from `packages/conformance/`: the 41 `auto/` widgets, the 20 `visual/` widgets and the 18
-  `visual/sdk/` ones, `refs/` (stage crops and the reference pictures posted beside the visual widgets, drawn on the
-  bubble's colour since v0.1.1), `channel.json` (the 82 posts, in order), `manifest.json`, `catalogue.json`,
+- `corpus/` (all of it):
+  - `attacks/`: 105 pages and `mem-cap-probe.js`. v0.2.0 added the five `request-*` pages and v0.2.2
+    `haptic-timer-buzz`. TEST FIXTURES ONLY, never in an app bundle.
+  - `common/` and `compat/`.
+  - `defaults/` (v0.1.1): six widgets with little or no CSS, the examples a widget that should look native starts from.
+  - `generated/`.
+  - `gestures/` (v0.1.3): games and controls by the touch-action they claim, the `-xy` ones now behaving as their `-x`
+    twins.
+  - `htmlbubbles-ported/`.
+  - `interactive/` (v0.2.0): a poll, tic-tac-toe, a live ticker and a promo code, played against the bot named in
+    `<meta name="tw-bot">`.
+  - `out-of-profile/`: widgets using what profile 1 leaves out.
+  - `resize/` (v0.1.3): one widget per resize anchor.
+  - `showcase/` and `README.md`.
+
+  Tests read it through `:WidgetCorpus` and `:CorpusFiles`, the DEBUG app's corpus insertion through
+  `:WidgetCorpusBundle` (attacks excluded).
+- `conformance/` from `packages/conformance/`:
+  - the 51 `auto/` widgets, the 20 `visual/` widgets and the 26 `visual/sdk/` ones, with their README;
+  - `refs/`: stage crops and the reference pictures posted beside the visual widgets, drawn on the bubble's colour
+    since v0.1.1;
+  - `channel.json`: the 102 posts in order, each with its `message` spec, plus the `bot` table (v0.2.1);
+  - `manifest.json` (tests carry `message` and `bot` since v0.2.1), `catalogue.json`,
   `run.schema.json`, `CLIENTS.md`, `README.md` and `tools/{report,diff,png}.mjs` (the report; Node ≥ 18, no
   dependencies; it reads `manifest.json`, `catalogue.json` and `refs/` relative to `tools/..`). Tests read it through
   `:WidgetConformance`; the DEBUG app's conformance insertion through `:WidgetConformanceBundle`.
@@ -70,17 +101,27 @@ Taken:
   ICU's formatting API is not public on iOS, which is why upstream delegates Intl to the host. `ios/WidgetSandboxIntl.swift`
   is ours: the public entry, and the one member of upstream's `SandboxEngine` the section reads.
 
-  **Upstream's glue traps on a locale tag with a unicode extension** (still so at v0.1.3, whose Intl section is the
-  same as v0.1.1's). Upstream's shim passes tags as written, so on upstream's own client one widget line crashes the
-  app. The glue's `Locale(identifier:)` turns `ar-EG-u-nu-arab` into `ar_EG@numbers=yes`. The glue force-unwraps the
-  resulting nil `dateFormat` (`plainConnector(formatter.dateFormat, …)`) and `NumberFormatter` symbols (`numberParts`),
-  and `RelativeDateTimeFormatter` traps inside Foundation itself. WidgetRuntime never sends a unicode extension
-  (`intl::resolveLocale`).
+  **A locale tag with a unicode extension.** Until v0.2.2 the glue trapped on one: its `Locale(identifier:)` turned
+  `ar-EG-u-nu-arab` into `ar_EG@numbers=yes`, it force-unwrapped the resulting nil `dateFormat` and `NumberFormatter`
+  symbols, and `RelativeDateTimeFormatter` trapped inside Foundation itself.
+  - **v0.2.3 has the fix:** `IntlBridge.bcp47Locale` builds the locale with `Locale(components:
+    Locale.Components(identifier:))` on iOS 16 and later and drops the extension before that. Its tags come from
+    `identifier(.bcp47)`. `intl-cases.json` still passes (`:WidgetSandboxIntlTests`).
+  - **WidgetRuntime sends a tag's unicode extension reduced as ECMA-402's ResolveLocale reduces it**
+    (`intl::resolveLocale`): only the keywords the constructor reads, each with a value from a conservative table.
+    The keys are NumberFormat and RelativeTimeFormat `nu`, DateTimeFormat `ca`/`hc`/`nu`, Collator `co`/`kf`/`kn`,
+    and none for PluralRules or ListFormat. Upstream's shim sends the tag whole. Two reasons not to do the same, both
+    in this glue (`WRIntlExtensionTests` pins them):
+    - a numbering system name Foundation does not know (`en-u-nu-bogus`, a bare `-u-nu`, `yes`) makes
+      `RelativeDateTimeFormatter` trap in `IntlBridge.relative`, crashing the app;
+    - `PluralRules.languageKey` splits the locale identifier on `-` and `_` but not `@`. So `ar-u-nu-arab` becomes
+      `ar@numbers=arab`, matches no rules, and selects `other` for everything; `IntlBridge.relative`'s English
+      quarter check misreads `en-u-nu-thai` the same way.
 
-  The fix is upstream's to make: build the locale with `Locale(components: Locale.Components(identifier:))` (iOS 16+).
-  With it, the crashing requests format with their extensions applied, and `intl-cases.json` still passes on macOS 27,
-  iOS 26.5 and iOS 27.0. When a vendored version has it, `resolveLocale` may keep extensions on iOS 16 and later.
-  The runtime record's Intl section has the details.
+    Both are upstream bugs to report. On iOS 16 and later the glue applies what is kept; before that it drops it.
+    `resolvedOptions()` reports `numberingSystem: "latn"` and `calendar: "gregory"` whatever the glue applied, as
+    upstream's glue answers it.
+  - The runtime record's Intl section has the details.
 
   ```sh
   git -C ~/build/widget-sandbox show "$V":packages/ios/Sources/WidgetSandbox/SandboxEngine.swift \
@@ -95,9 +136,13 @@ Taken:
   `:GesturePolicy` is what WidgetRuntime's `TapState` runs; `:GesturePolicyTests` is upstream's
   `gesture_policy_shared_fixture` over the fixture (`gesture/GesturePolicyTests.cpp`, ours around it).
 - The shared SDK policy, unedited: `gesture/twidget/sdk_policy.h` and `gesture/sdk_policy.cpp` (the C++ copy of
-  `packages/core/src/shared/sdk-policy.ts`) and `fixtures/sdk-policy.json` (its four copies' fixture). `:SdkPolicy` is
-  what WidgetRuntime's `TelegramWidget.setResizeAnchor` checks its edge with (`checkResizeAnchor`); `:SdkPolicyTests`
-  is upstream's `sdk_policy_shared_fixture` over the fixture (`gesture/SdkPolicyTests.cpp`, ours around it).
+  `packages/core/src/shared/sdk-policy.ts`) and `fixtures/sdk-policy.json` (its four copies' fixture).
+  - `:SdkPolicy` is what WidgetRuntime runs:
+    - `TelegramWidget.setResizeAnchor` checks its edge with `checkResizeAnchor`;
+    - since v0.2.2's vendoring, `HostState` runs the `RequestGate` and the `HapticGate` with its press and release, and
+      the state, viewer, chat type, request, copy and answer checks.
+  - `:SdkPolicyTests` is upstream's `sdk_policy_shared_fixture` over the fixture, plus
+    `sdk_request_strings_refuse_surrogates_and_invalid_utf8` (`gesture/SdkPolicyTests.cpp`, ours around them).
 
 Not taken: `packages/conformance/harness/` (inlined into every widget), `results/` (the framework's own reports),
 `catalogue.md`, `probe-fixture.json`, `tools/*.d.mts`, and everything else outside `corpus/` and

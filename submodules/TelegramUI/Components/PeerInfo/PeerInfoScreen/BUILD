@@ -167,6 +167,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/TelegramUI/Components/MediaEditorScreen",
+        "//submodules/TelegramUI/Components/ChatMediaEditorScreen",
         "//submodules/TelegramUI/Components/CameraScreen",
         "//submodules/TelegramUI/Components/PeerInfo/VerifyAlertController",
         "//submodules/TelegramUI/Components/Gifts/GiftViewScreen",

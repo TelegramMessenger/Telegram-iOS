@@ -3,16 +3,6 @@ import SwiftSignalKit
 import Postbox
 internal import TelegramApi
 
-public enum WidgetQueryError: Error {
-    case timeout, rateLimited, notAllowed, failed
-}
-
-public struct WidgetPublicDataResult {
-    public let hash: Int64?
-    public let data: Data?
-    public let period: Int32
-}
-
 public enum EngineOutgoingMessageContent {
     case text(String, [MessageTextEntity])
     case file(FileMediaReference)
@@ -191,59 +181,6 @@ public extension TelegramEngine {
 
         public func sendScheduledMessageNowInteractively(messageId: MessageId) -> Signal<Never, NoError> {
             return _internal_sendScheduledMessageNowInteractively(postbox: self.account.postbox, messageId: messageId)
-        }
-
-        public func requestWidgetQuery(messageId: MessageId, data: Data) -> Signal<Data?, WidgetQueryError> {
-            return self.account.postbox.loadedPeerWithId(messageId.peerId)
-            |> take(1)
-            |> castError(WidgetQueryError.self)
-            |> mapToSignal { peer -> Signal<Data?, WidgetQueryError> in
-                guard let peer = apiInputPeer(peer) else { return .fail(.failed) }
-                return self.account.network.request(Api.functions.messages.getBotWidgetQueryAnswer(peer: peer, msgId: messageId.id, data: Buffer(data: data)), automaticFloodWait: false)
-                |> mapError { error -> WidgetQueryError in
-                    if error.errorDescription.hasPrefix("FLOOD_WAIT") { return .rateLimited }
-                    if error.errorDescription == "WIDGET_RESPONSE_TIMEOUT" { return .timeout }
-                    if error.errorDescription == "WIDGET_QUERY_NOT_ALLOWED" { return .notAllowed }
-                    return .failed
-                }
-                |> map { answer -> Data? in
-                    switch answer {
-                    case let .botWidgetQueryAnswer(value): return value.result?.makeData()
-                    }
-                }
-            }
-        }
-
-        public func storeWidgetPublicData(widgetId: Int64, messageIds: [MessageId], data: Data) -> Signal<Never, NoError> {
-            return self.account.postbox.transaction { transaction in
-                for messageId in Set(messageIds) {
-                    transaction.updateMessage(messageId, update: { message in
-                        let media = message.media.map { media -> Media in
-                            guard let widget = media as? TelegramMediaWidget, widget.widgetId == widgetId else { return media }
-                            return widget.withUpdatedData(publicData: data, chatData: nil)
-                        }
-                        return .update(StoreMessage(id: message.id, customStableId: nil, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, threadId: message.threadId, timestamp: message.timestamp, flags: StoreMessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo.map(StoreMessageForwardInfo.init), authorId: message.author?.id, text: message.text, attributes: message.attributes, media: media))
-                    })
-                }
-            }
-            |> ignoreValues
-        }
-
-        public func requestWidgetPublicData(messageId: MessageId, hash: Int64) -> Signal<WidgetPublicDataResult, WidgetQueryError> {
-            return self.account.postbox.loadedPeerWithId(messageId.peerId)
-            |> take(1)
-            |> castError(WidgetQueryError.self)
-            |> mapToSignal { peer -> Signal<WidgetPublicDataResult, WidgetQueryError> in
-                guard let peer = apiInputPeer(peer) else { return .fail(.failed) }
-                return self.account.network.request(Api.functions.messages.getWidgetPublicData(peer: peer, msgId: messageId.id, hash: hash), automaticFloodWait: false)
-                |> mapError { _ in WidgetQueryError.failed }
-                |> map { result -> WidgetPublicDataResult in
-                    switch result {
-                    case let .widgetPublicData(value): return WidgetPublicDataResult(hash: value.hash, data: value.data.makeData(), period: value.period)
-                    case let .widgetPublicDataNotModified(value): return WidgetPublicDataResult(hash: nil, data: nil, period: value.period)
-                    }
-                }
-            }
         }
 
         public func requestMessageActionCallbackPasswordCheck(messageId: MessageId, isGame: Bool, data: MemoryBuffer?) -> Signal<Never, MessageActionCallbackError> {
@@ -1167,6 +1104,18 @@ public extension TelegramEngine {
         /// messages were added.
         public func debugInsertLocalWidgetMessages(peerId: EnginePeer.Id, posts: [EngineLocalWidgetPost]) -> Signal<Int, NoError> {
             return _internal_debugInsertLocalWidgetMessages(account: self.account, peerId: peerId, posts: posts)
+        }
+
+        /// widget-sandbox v0.2: polls the shared state of the widget `widgetId` (`messages.getWidgetPublicData`) while
+        /// subscribed, with `messageId` as a carrier: a subscription is one widget on screen that watches. A new state is
+        /// written into the stored widget of each registered message.
+        public func pollWidgetPublicData(messageId: EngineMessage.Id, widgetId: Int64) -> Signal<Never, NoError> {
+            return self.account.viewTracker.widgetPublicDataPolling.poll(messageId: messageId, widgetId: widgetId)
+        }
+
+        /// A message widget's request to its bot (widget-sandbox v0.2): the answer's `result`, or why there is none.
+        public func requestBotWidgetQueryAnswer(messageId: EngineMessage.Id, data: Data) -> Signal<Data?, BotWidgetQueryError> {
+            return _internal_requestBotWidgetQueryAnswer(postbox: self.account.postbox, network: self.account.network, messageId: messageId, data: data)
         }
 
         public func debugAddHoles() -> Signal<Never, NoError> {

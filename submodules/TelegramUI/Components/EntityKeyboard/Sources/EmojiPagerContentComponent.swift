@@ -1957,7 +1957,16 @@ public final class EmojiPagerContentComponent: Component {
                 return nil
             }
         }
-        
+
+        public func clearGroupButtonReference(groupId: AnyHashable) -> (view: UIView, insets: UIEdgeInsets)? {
+            guard let groupHeader = self.visibleGroupHeaders[groupId], let clearIconLayer = groupHeader.clearIconLayer else {
+                return nil
+            }
+            let bounds = groupHeader.bounds
+            let clearFrame = clearIconLayer.frame
+            return (groupHeader, UIEdgeInsets(top: clearFrame.minY - bounds.minY, left: clearFrame.minX - bounds.minX, bottom: bounds.maxY - clearFrame.maxY, right: bounds.maxX - clearFrame.maxX))
+        }
+
         public func scrollToTop() {
             guard let _ = self.component, let _ = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
@@ -3517,7 +3526,7 @@ public final class EmojiPagerContentComponent: Component {
                                     color: backgroundColor,
                                     foreground: foregroundColor,
                                     pressedColor: backgroundColor.withMultipliedAlpha(0.8),
-                                    cornerRadius: groupBorderRadius,
+                                    cornerRadius: itemLayout.premiumButtonHeight * 0.5,
                                     isShimmering: gloss,
                                     gradient: backgroundColors.count > 1 ? ButtonComponent.Background.Gradient(colors: backgroundColors) : nil
                                 ),

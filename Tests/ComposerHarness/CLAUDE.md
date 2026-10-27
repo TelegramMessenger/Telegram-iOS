@@ -463,7 +463,7 @@ returns — and reads the build's own exit code. You drive the simulator and wri
   python3 Tests/ComposerHarness/Tools/generate_harness_stubs.py \
     --source submodules/AccountContext/Sources/AccountContext.swift \
     --protocol SharedAccountContext --conformer HarnessSharedAccountContext \
-    --exclude currentPresentationData,immediateExperimentalUISettings,currentChatSettings,energyUsageSettings,mainWindow,accountManager \
+    --exclude currentPresentationData,immediateExperimentalUISettings,currentChatSettings,energyUsageSettings,mainWindow,accountManager,applicationBindings \
     > Tests/ComposerHarness/AppContext/HarnessSharedAccountContext+Generated.swift
   ```
 

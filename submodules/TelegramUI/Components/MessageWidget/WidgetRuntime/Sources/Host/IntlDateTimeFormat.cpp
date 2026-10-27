@@ -84,7 +84,7 @@ DateTimeFormatSetup createDateTimeFormat(JSContext* ctx, JSValueConst locales, J
     }
     getBooleanOption(ctx, o, "hour12", &given);
     getStringOption(ctx, o, "hourCycle", kHourCycles, &given);
-    const std::string locale = resolveLocale(ctx, requested);
+    const std::string locale = resolveLocale(ctx, requested, RelevantKeys::DateTimeFormat);
     std::optional<std::string> zone = getStringOption(ctx, o, "timeZone", {}, &given);
     if (zone && !isTimeZoneName(*zone)) {
         throw RangeError{"Intl.DateTimeFormat: invalid time zone."};

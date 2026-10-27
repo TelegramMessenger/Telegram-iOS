@@ -135,7 +135,7 @@ NumberFormatSetup initializeNumberFormat(JSContext* ctx, JSValueConst locales, J
     if (numberingSystem && !isUnicodeType(*numberingSystem)) {
         throw RangeError{"Intl: the value of numberingSystem is out of range."};
     }
-    const std::string locale = resolveLocale(ctx, requested);
+    const std::string locale = resolveLocale(ctx, requested, RelevantKeys::NumberFormat);
     // SetNumberFormatUnitOptions.
     r.style = uint8_t(optionIndex(getStringOption(ctx, o, "style", kStyles, &given), kStyles, Decimal));
     std::optional<std::string> currency = getStringOption(ctx, o, "currency", {}, &given);

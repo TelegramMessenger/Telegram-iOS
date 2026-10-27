@@ -2166,6 +2166,7 @@ func openResolvedUrlImpl(
                     initialUsername: username,
                     initialTitle: title,
                     openAutomatically: true,
+                    viaDeeplink: true,
                     completion: { _ in
                     }
                 ) else {

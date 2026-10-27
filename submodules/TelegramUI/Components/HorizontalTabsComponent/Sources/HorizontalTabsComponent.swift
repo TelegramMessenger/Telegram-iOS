@@ -341,14 +341,18 @@ public final class HorizontalTabsComponent: Component {
     private struct LayoutData {
         var size: CGSize
         var selectedItemFrame: CGRect
+        /// No tab is selected (`selectedTab` is nil or not among the tabs): the pill is hidden, and `selectedItemFrame`
+        /// is where it last was.
+        var isSelectionHidden: Bool
         
         var lensSize: CGSize {
             return CGSize(width: self.size.width - lensInset * 2.0, height: self.size.height - lensInset * 2.0)
         }
         
-        init(size: CGSize, selectedItemFrame: CGRect) {
+        init(size: CGSize, selectedItemFrame: CGRect, isSelectionHidden: Bool) {
             self.size = size
             self.selectedItemFrame = selectedItemFrame
+            self.isSelectionHidden = isSelectionHidden
         }
     }
     
@@ -685,7 +689,7 @@ public final class HorizontalTabsComponent: Component {
                 return
             }
             var isLifted = self.temporaryLiftTimer != nil
-            if !component.liftWhileSwitching {
+            if !component.liftWhileSwitching || layoutData.isSelectionHidden {
                 isLifted = false
             }
             if #available(iOS 26.0, *) {
@@ -693,7 +697,7 @@ public final class HorizontalTabsComponent: Component {
                 isLifted = false
             }
             let lensSize = layoutData.lensSize
-            self.lensView.update(size: lensSize, selectionOrigin: CGPoint(x:  -self.scrollView.contentOffset.x + layoutData.selectedItemFrame.minX, y: 0.0), selectionSize: CGSize(width: layoutData.selectedItemFrame.width, height: lensSize.height), inset: 0.0, liftedInset: 6.0, isDark: component.theme.overallDarkAppearance, isLifted: isLifted, transition: transition)
+            self.lensView.update(size: lensSize, selectionOrigin: CGPoint(x:  -self.scrollView.contentOffset.x + layoutData.selectedItemFrame.minX, y: 0.0), selectionSize: CGSize(width: layoutData.selectedItemFrame.width, height: lensSize.height), inset: 0.0, liftedInset: 6.0, isDark: component.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: layoutData.isSelectionHidden, transition: transition)
             
             transition.setPosition(view: self.selectedScrollView, position: CGRect(origin: CGPoint(), size: lensSize).center)
             transition.setBounds(view: self.selectedScrollView, bounds: CGRect(origin: CGPoint(x: self.scrollView.contentOffset.x, y: 0.0), size: lensSize))
@@ -957,9 +961,12 @@ public final class HorizontalTabsComponent: Component {
             
             let size = CGSize(width: sizeWidth, height: sizeHeight)
             
+            // Without a selected tab the pill fades out where it was, rather than shrinking into the leading edge: a
+            // zero-sized lens still draws a sliver of its resting background there.
             let layoutData = LayoutData(
                 size: size,
-                selectedItemFrame: selectedItemFrame ?? CGRect()
+                selectedItemFrame: selectedItemFrame ?? self.layoutData?.selectedItemFrame ?? CGRect(),
+                isSelectionHidden: selectedItemFrame == nil
             )
             self.layoutData = layoutData
             let lensSize = layoutData.lensSize

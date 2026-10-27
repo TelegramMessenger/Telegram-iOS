@@ -218,21 +218,33 @@ final class AdjustmentsComponent: Component {
     typealias EnvironmentType = Empty
     
     let tools: [AdjustmentTool]
+    let bottomInset: CGFloat
+    let bottomContentInset: CGFloat?
     let valueUpdated: (EditorToolKey, Float) -> Void
     let isTrackingUpdated: (Bool) -> Void
     
     init(
         tools: [AdjustmentTool],
+        bottomInset: CGFloat = 0.0,
+        bottomContentInset: CGFloat? = nil,
         valueUpdated: @escaping (EditorToolKey, Float) -> Void,
         isTrackingUpdated: @escaping (Bool) -> Void
     ) {
         self.tools = tools
+        self.bottomInset = bottomInset
+        self.bottomContentInset = bottomContentInset
         self.valueUpdated = valueUpdated
         self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: AdjustmentsComponent, rhs: AdjustmentsComponent) -> Bool {
         if lhs.tools != rhs.tools {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if lhs.bottomContentInset != rhs.bottomContentInset {
             return false
         }
         return true
@@ -347,10 +359,15 @@ final class AdjustmentsComponent: Component {
                 origin = origin.offsetBy(dx: 0.0, dy: size.height + 8.0)
             }
             
-            let size = CGSize(width: availableSize.width, height: 180.0)
+            let size = CGSize(width: availableSize.width, height: 180.0 + component.bottomInset)
             let contentSize = CGSize(width: availableSize.width, height: origin.y)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
+            }
+            let insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: component.bottomContentInset ?? component.bottomInset, right: 0.0)
+            if self.scrollView.contentInset != insets {
+                self.scrollView.contentInset = insets
+                self.scrollView.verticalScrollIndicatorInsets = insets
             }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: .zero, size: size))
 

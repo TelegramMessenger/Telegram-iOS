@@ -417,11 +417,22 @@ final class PenTool: DrawingElement {
         }
     }
     
+    func generateMaskImage() -> CGImage? {
+        guard !self.segments.isEmpty else {
+            return nil
+        }
+        let maskContext = DrawingContext(size: self.drawingSize, scale: 1.0, clear: true)
+        maskContext?.withContext { maskContext in
+            self.drawSegments(in: maskContext, from: 0, to: self.segments.count)
+        }
+        return maskContext?.generateImage()?.cgImage
+    }
+
     func draw(in context: CGContext, size: CGSize) {
         guard !self.segments.isEmpty else {
             return
         }
-        
+
         context.saveGState()
         
         if self.isEraser {

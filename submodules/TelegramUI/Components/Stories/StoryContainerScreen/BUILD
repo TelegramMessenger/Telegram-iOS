@@ -42,6 +42,8 @@ swift_library(
         "//submodules/ICloudResources",
         "//submodules/LegacyComponents",
         "//submodules/TelegramUI/Components/LegacyCamera",
+        "//submodules/Camera",
+        "//submodules/TelegramUI/Components/ChatMediaSend",
         "//submodules/TelegramUI/Components/LegacyInstantVideoController",
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/TelegramUI/Components/Stories/StoryFooterPanelComponent",

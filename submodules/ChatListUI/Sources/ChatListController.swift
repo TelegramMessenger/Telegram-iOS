@@ -7103,7 +7103,7 @@ private final class ChatListLocationContext {
                             }
                         }
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: displayArchive ? ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled) : nil)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete, color: .custom(presentationData.theme.actionSheet.destructiveActionTextColor)), middleAction: displayArchive ? ToolbarAction(title: presentationData.strings.ChatList_ArchiveAction, isEnabled: archiveEnabled) : nil)
                 } else if case .forum = strongSelf.location {
                     let leftAction: ToolbarAction
                     switch options.read {
@@ -7112,7 +7112,7 @@ private final class ChatListLocationContext {
                     case let .selective(enabled):
                         leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: nil)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete, color: .custom(presentationData.theme.actionSheet.destructiveActionTextColor)), middleAction: nil)
                 } else {
                     let middleAction = ToolbarAction(title: presentationData.strings.ChatList_UnarchiveAction, isEnabled: !peerIds.isEmpty)
                     let leftAction: ToolbarAction
@@ -7122,7 +7122,7 @@ private final class ChatListLocationContext {
                     case let .selective(enabled):
                         leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
-                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: middleAction)
+                    toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete, color: .custom(presentationData.theme.actionSheet.destructiveActionTextColor)), middleAction: middleAction)
                 }
             } else if let peerView = peerView, let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                 switch channel.participationStatus {

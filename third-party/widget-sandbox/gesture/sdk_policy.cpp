@@ -1,6 +1,7 @@
 #include "twidget/sdk_policy.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace twidget {
 
@@ -85,6 +86,26 @@ bool isThemeColor(const std::string& v) {
 } // namespace
 
 bool isPrivilegedMethod(std::string_view method) { return contains(PRIVILEGED_METHODS, method); }
+bool allowedInPreview(std::string_view method) { return contains(PREVIEW_METHODS, method); }
+
+size_t utf16Length(std::string_view s) {
+    size_t n = 0;
+    for (size_t i = 0; i < s.size();) {
+        size_t len = (unsigned char)s[i] < 0x80 ? 1 : utf8Sequence(s, i);
+        n += len == 4 ? 2 : 1; // a supplementary character is a surrogate pair in UTF-16
+        i += len ? len : 1;
+    }
+    return n;
+}
+
+bool wellFormed(std::string_view s) {
+    for (size_t i = 0; i < s.size();) {
+        size_t len = (unsigned char)s[i] < 0x80 ? 1 : utf8Sequence(s, i);
+        if (len == 0) return false;
+        i += len;
+    }
+    return true;
+}
 
 std::optional<std::string> checkLink(std::string_view method, std::string_view url) {
     if (utf8Length(url) > size_t(MAX_LINK_LENGTH)) return std::nullopt;
@@ -172,24 +193,30 @@ Json BridgeCall::toJson() const {
     if (action) return action->toJson();
     Json o = Json::object();
     if (resizeAnchor) o.set("kind", "setResizeAnchor").set("edge", *resizeAnchor);
+    if (request) o.set("kind", "request").set("id", request->id).set("data", request->data);
+    if (copyText) o.set("kind", "copyText").set("text", *copyText);
+    if (watchPublicData) o.set("kind", "watchPublicData").set("on", *watchPublicData);
     return o;
 }
 
 std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args) {
     if (!args.isArray() || !method.isString()) return std::nullopt;
     const std::string& m = method.asString();
+    BridgeCall call;
     WidgetAction action;
     if (m == "ready") {
         if (args.size() != 0) return std::nullopt;
         action.kind = WidgetAction::Ready;
-        return BridgeCall{action, std::nullopt};
+        call.action = action;
+        return call;
     }
     if (m == "openLink" || m == "openTelegramLink") {
         std::optional<std::string> url = args.size() == 1 ? checkLinkValue(m, args[0]) : std::nullopt;
         if (!url) return std::nullopt;
         action.kind = m == "openLink" ? WidgetAction::OpenLink : WidgetAction::OpenTelegramLink;
         action.url = std::move(*url);
-        return BridgeCall{action, std::nullopt};
+        call.action = action;
+        return call;
     }
     if (m == "haptic") {
         std::optional<HapticCall> h = checkHaptic(args);
@@ -197,20 +224,213 @@ std::optional<BridgeCall> checkBridgeCall(const Json& method, const Json& args) 
         action.kind = WidgetAction::Haptic;
         action.hapticKind = h->haptic;
         action.hapticValue = h->value.value_or("");
-        return BridgeCall{action, std::nullopt};
+        call.action = action;
+        return call;
     }
     if (m == "setResizeAnchor") {
-        std::optional<std::string> edge = args.size() == 1 ? checkResizeAnchorValue(args[0]) : std::nullopt;
-        if (!edge) return std::nullopt;
-        return BridgeCall{std::nullopt, std::move(edge)};
+        call.resizeAnchor = args.size() == 1 ? checkResizeAnchorValue(args[0]) : std::nullopt;
+        if (!call.resizeAnchor) return std::nullopt;
+        return call;
+    }
+    if (m == "request") {
+        // [id, data]: an integer id 1 … 2147483647 (not 1.5, not "1"), then the data's own check.
+        const Json& id = args[0];
+        std::optional<std::string> data = args.size() == 2 ? checkRequestDataValue(args[1]) : std::nullopt;
+        double n = id.asNumber();
+        if (!data || !id.isNumber() || !std::isfinite(n) || std::floor(n) != n || n < 1 || n > double(MAX_REQUEST_ID)) return std::nullopt;
+        call.request = BridgeCall::Request{int64_t(n), std::move(*data)};
+        return call;
+    }
+    if (m == "watchPublicData") {
+        // Exactly one boolean (not "true", not 1).
+        if (args.size() != 1 || !args[0].isBool()) return std::nullopt;
+        call.watchPublicData = args[0].asBool();
+        return call;
+    }
+    if (m == "copyText") {
+        call.copyText = args.size() == 1 ? checkCopyTextValue(args[0]) : std::nullopt;
+        if (!call.copyText) return std::nullopt;
+        return call;
     }
     return std::nullopt;
+}
+
+std::optional<std::string> checkRequestData(std::string_view data) {
+    if (!wellFormed(data)) return std::nullopt;
+    size_t n = utf8Length(data);
+    if (n < 1 || n > size_t(MAX_REQUEST_DATA_BYTES)) return std::nullopt;
+    return std::string(data);
+}
+
+std::optional<std::string> checkRequestDataValue(const Json& data) {
+    return data.isString() ? checkRequestData(data.asString()) : std::nullopt;
+}
+
+std::optional<std::string> checkCopyText(std::string_view text) {
+    if (!wellFormed(text)) return std::nullopt;
+    size_t n = utf16Length(text);
+    if (n < 1 || n > size_t(MAX_COPY_TEXT_LENGTH)) return std::nullopt;
+    return std::string(text);
+}
+
+std::optional<std::string> checkCopyTextValue(const Json& text) {
+    return text.isString() ? checkCopyText(text.asString()) : std::nullopt;
+}
+
+std::optional<std::string> checkWidgetDataValue(std::string_view value) {
+    if (value.empty() || !wellFormed(value) || value.find('\0') != std::string_view::npos || utf8Length(value) > size_t(MAX_WIDGET_DATA_BYTES)) return std::nullopt;
+    return std::string(value);
+}
+
+static Json orNull(const std::optional<std::string>& s) { return s ? Json(*s) : Json(); }
+
+Json CheckedWidgetData::toJson() const {
+    Json o = Json::object();
+    o.set("chatData", orNull(chatData)).set("publicData", orNull(publicData));
+    Json r = Json::array();
+    for (const std::string& field : rejected) r.push(field);
+    o.set("rejected", std::move(r));
+    return o;
+}
+
+CheckedWidgetData checkWidgetData(const WidgetData& data, bool copy) {
+    CheckedWidgetData out;
+    // A field the client set to anything but none ("" included) that fails the check is reported; a copy's chatData never is.
+    auto check = [&](const std::optional<std::string>& v, std::optional<std::string>& field, const char* name) {
+        if (v) field = checkWidgetDataValue(*v);
+        if (!field && v && !v->empty()) out.rejected.emplace_back(name);
+    };
+    if (!copy) check(data.chatData, out.chatData, "chatData");
+    check(data.publicData, out.publicData, "publicData");
+    return out;
+}
+
+CheckedViewer checkViewer(const std::optional<WidgetViewer>& viewer) {
+    CheckedViewer out;
+    if (!viewer || viewer->id < 1 || viewer->id > MAX_VIEWER_ID) return out;
+    WidgetViewer v;
+    v.id = viewer->id;
+    // Names count UTF-16 code units, as the JS `length` does (a lone surrogate arrives as WTF-8 and is refused).
+    auto name = [&](const std::optional<std::string>& s, std::optional<std::string>& field, const char* key) {
+        if (!s) return;
+        size_t n = utf16Length(*s);
+        if (wellFormed(*s) && n >= 1 && n <= size_t(MAX_VIEWER_NAME_LENGTH)) field = *s;
+        else out.rejected.emplace_back(key);
+    };
+    name(viewer->firstName, v.firstName, "first_name");
+    name(viewer->lastName, v.lastName, "last_name");
+    if (viewer->username) {
+        const std::string& u = *viewer->username;
+        bool ok = u.size() >= size_t(MIN_VIEWER_USERNAME_LENGTH) && u.size() <= size_t(MAX_VIEWER_USERNAME_LENGTH);
+        for (char c : u) ok = ok && (isAlpha((unsigned char)c) || isDigit((unsigned char)c) || c == '_');
+        if (ok) v.username = u;
+        else out.rejected.emplace_back("username");
+    }
+    v.isPremium = viewer->isPremium; // a bool: false is left out of the widget's view, never rejected
+    out.viewer = std::move(v);
+    return out;
+}
+
+Json viewerJson(const WidgetViewer& viewer) {
+    Json o = Json::object();
+    o.set("id", viewer.id);
+    if (viewer.firstName) o.set("first_name", *viewer.firstName);
+    if (viewer.lastName) o.set("last_name", *viewer.lastName);
+    if (viewer.username) o.set("username", *viewer.username);
+    if (viewer.isPremium) o.set("is_premium", true);
+    return o;
+}
+
+Json CheckedViewer::toJson() const {
+    Json o = Json::object();
+    Json r = Json::array();
+    for (const std::string& field : rejected) r.push(field);
+    o.set("viewer", viewer ? viewerJson(*viewer) : Json()).set("rejected", std::move(r));
+    return o;
+}
+
+std::string_view viewerFieldRule(std::string_view field) {
+    if (field == "first_name" || field == "last_name") return "not text of 1–64 UTF-16 code units";
+    if (field == "username") return "not 5–32 characters of A–Z, a–z, 0–9 and _";
+    if (field == "is_premium") return "not a boolean";
+    return "broke its rule";
+}
+
+std::optional<std::string> checkChatType(std::string_view chatType) {
+    if (!contains(CHAT_TYPES, chatType)) return std::nullopt;
+    return std::string(chatType);
+}
+
+Json CheckedAnswer::toJson() const {
+    Json o = Json::object();
+    o.set("result", orNull(result));
+    return o;
+}
+
+std::optional<CheckedAnswer> checkRequestAnswer(const WidgetRequestAnswer& answer) {
+    const std::optional<std::string>& r = answer.result;
+    if (r && (!wellFormed(*r) || r->find('\0') != std::string::npos || utf8Length(*r) > size_t(MAX_REQUEST_RESULT_BYTES))) return std::nullopt;
+    return CheckedAnswer{r};
+}
+
+std::string_view requestFailureCode(WidgetRequestFailure failure) {
+    switch (failure) {
+    case WidgetRequestFailure::Timeout: return "TIMEOUT";
+    case WidgetRequestFailure::RateLimited: return "RATE_LIMITED";
+    default: return "FAILED";
+    }
+}
+
+std::string_view requestVerdictName(RequestVerdict verdict) {
+    switch (verdict) {
+    case RequestVerdict::Foreground: return "foreground";
+    case RequestVerdict::Background: return "background";
+    case RequestVerdict::Disabled: return "disabled";
+    case RequestVerdict::Busy: return "busy";
+    case RequestVerdict::NoActivation: return "no-activation";
+    case RequestVerdict::Hidden: return "hidden";
+    case RequestVerdict::RateLimited: return "rate-limited";
+    }
+    return "no-activation";
+}
+
+std::optional<std::string_view> requestRefusal(RequestVerdict verdict) {
+    switch (verdict) {
+    case RequestVerdict::Foreground: case RequestVerdict::Background: return std::nullopt;
+    case RequestVerdict::Busy: return "BUSY";
+    case RequestVerdict::RateLimited: return "RATE_LIMITED";
+    default: return "NOT_ALLOWED";
+    }
+}
+
+RequestVerdict RequestGate::decide(double now, const Conditions& s) {
+    if (!s.canQuery) return RequestVerdict::Disabled;
+    if (inFlight_) return RequestVerdict::Busy;
+    if (s.gesture && s.visible) {
+        inFlight_ = true;
+        return RequestVerdict::Foreground;
+    }
+    if (!s.backgroundQuery) return RequestVerdict::NoActivation;
+    if (!s.visible) return RequestVerdict::Hidden;
+    if (lastBackground_ && now - *lastBackground_ < BACKGROUND_REQUEST_INTERVAL_MS) return RequestVerdict::RateLimited;
+    lastBackground_ = now;
+    inFlight_ = true;
+    return RequestVerdict::Background;
 }
 
 HapticGate::Decision HapticGate::decide(double now, bool visible) {
     if (last_) tokens_ = std::min(double(HAPTIC_BURST), tokens_ + (std::max(0.0, now - *last_) * HAPTIC_PER_SECOND) / 1000);
     last_ = now;
-    if (visible && tokens_ >= 1) {
+    if (down_ && now - *down_ > HAPTIC_PRESS_MAX_MS) release(*down_ + HAPTIC_PRESS_MAX_MS);
+    const bool touching = down_.has_value() || (lifted_ && now - *lifted_ <= HAPTIC_TOUCH_WINDOW_MS);
+    bool allowed = visible;
+    if (allowed && !touching && !(series_ && now - *series_ < HAPTIC_SERIES_MS)) {
+        // A new series: after a touch at any time (one per touch), else 10 s after the last one began.
+        const bool touchedSince = lifted_ && (!series_ || *lifted_ > *series_);
+        if (!series_ || touchedSince || now - *series_ >= HAPTIC_SERIES_GAP_MS) series_ = now;
+        else allowed = false;
+    }
+    if (allowed && tokens_ >= 1) {
         tokens_ -= 1;
         return Decision::Play;
     }

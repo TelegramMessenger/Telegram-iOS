@@ -336,8 +336,8 @@ public final class MediaEditor {
         return self.renderer.finalRenderedImage(mirror: mirror)
     }
 
-    public func getResultCIImage() -> CIImage? {
-        return self.renderer.finalRenderedCIImage()
+    public func resultTexture() -> MTLTexture? {
+        return self.renderer.finalRenderedTexture()
     }
             
     private var wallpapersValue: ((day: UIImage, night: UIImage?))? {
@@ -591,6 +591,7 @@ public final class MediaEditor {
                 cropRotation: 0.0,
                 cropMirroring: false,
                 cropOrientation: nil,
+                cropPerspective: .zero,
                 gradientColors: nil,
                 videoTrimRange: nil,
                 videoBounce: false,
@@ -1191,6 +1192,12 @@ public final class MediaEditor {
     public func setCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) {
         self.updateValues(mode: .forceRendering) { values in
             return values.withUpdatedCrop(offset: offset, scale: scale, rotation: rotation, mirroring: mirroring)
+        }
+    }
+
+    public func setCrop(rect: CGRect?, rotation: CGFloat, orientation: MediaCropOrientation?, mirroring: Bool, perspective: MediaEditorCropPerspective) {
+        self.updateValues(mode: .forceRendering) { values in
+            return values.withUpdatedCrop(rect: rect, rotation: rotation, orientation: orientation, mirroring: mirroring, perspective: perspective)
         }
     }
     

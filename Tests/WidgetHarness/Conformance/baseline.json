@@ -80,6 +80,9 @@
     "auto\/02-attributes-images-b\/light" : {
       "html.el.img · GIF decodes (naturalWidth 1)" : "pass",
       "html.el.img · PNG decodes (naturalWidth 2)" : "pass",
+      "html.el.img · a broken image fires error and is complete, with no natural size" : "pass",
+      "html.el.img · img.width is the rendered width (12, not the attribute's 30)" : "pass",
+      "html.el.img · new Image() loads before it is inserted: naturalWidth, complete, width" : "pass",
       "html.el.img-other-formats · BMP is refused (placeholder, not the 2px image)" : "pass",
       "html.el.img-other-formats · ICO is refused (placeholder, not the 2px image)" : "pass",
       "html.el.img-remote · a remote image becomes the 48px placeholder" : "pass",
@@ -638,15 +641,17 @@
       "tw.theme-params · figcaption is --tg-theme-hint-color" : "pass",
       "tw.theme-params · root: no background (the bubble is the canvas), the text colour" : "pass"
     },
-    "auto\/23-gestures\/light" : {
-      "behaviour.gesture-claim · a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)" : "fail",
+    "auto\/23-gestures-a\/light" : {
       "behaviour.gesture-claim · a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)" : "fail",
-      "behaviour.gesture-claim · a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)" : "fail",
-      "behaviour.gesture-claim · a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel" : "fail",
-      "behaviour.gesture-claim · the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel" : "pass",
       "input.dblclick · a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel" : "pass",
       "input.dblclick · a double tap on touch-action: none: both clicks, then dblclick" : "pass",
       "input.long-press · a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger" : "pass"
+    },
+    "auto\/23-gestures-b\/light" : {
+      "behaviour.gesture-claim · a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)" : "fail",
+      "behaviour.gesture-claim · a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel" : "fail",
+      "behaviour.gesture-claim · the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel" : "pass"
     },
     "auto\/24-resize-anchor\/light" : {
       "tw.resize-anchor · anything but exactly 'top' or 'bottom' throws TypeError" : "pass",
@@ -654,6 +659,79 @@
       "tw.resize-anchor · typeof TelegramWidget.setResizeAnchor is \"function\"" : "pass",
       "tw.resize-anchor · with 'bottom' the widget grows: three lines are 60 px" : "pass",
       "tw.resize-anchor · with 'top' it shrinks back to 0 px" : "pass"
+    },
+    "auto\/25-state-api-a\/light" : {
+      "tw.bot-data · chatData and publicData are text of 1–1024 bytes, or null" : "pass",
+      "tw.bot-data · onEvent takes 'chatDataChanged' and 'publicDataChanged'" : "pass",
+      "tw.bot-data · the state and the context fields are read-only" : "pass",
+      "tw.context · a forward has no chatData and no chatType" : "pass",
+      "tw.context · isForward is a boolean; chatType is private, group, supergroup, channel or null" : "pass",
+      "tw.context · viewer is null or a frozen WebAppUser: id, first_name, last_name, username, is_premium" : "pass",
+      "tw.preview · isPreview is a boolean; a preview is no forward and has no chatType or viewer" : "pass"
+    },
+    "auto\/25-state-api-b\/light" : {
+      "tw.copy-text · copyText outside a tap returns undefined and throws nothing (the client drops it)" : "pass",
+      "tw.copy-text · copyText throws TypeError for anything but 1–256 characters of text" : "pass",
+      "tw.request · a request without a tap settles: { result } (frozen) or a WidgetRequestError with its code" : "pass",
+      "tw.request · request throws TypeError at once for data that is not 1–64 bytes of text" : "pass",
+      "tw.watch-public-data · watchPublicData and unwatchPublicData return undefined and may be called again" : "pass"
+    },
+    "auto\/26-context-copy\/light" : {
+      "tw.bot-data · chatData is null, publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is " : "pass",
+      "tw.context · isForward is true, isPreview false" : "pass",
+      "tw.context · viewer is null" : "pass",
+      "tw.request · a request on a tap is refused with NOT_ALLOWED too" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-group\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is group or supergroup" : "pass",
+      "tw.context · isForward is false, isPreview false" : "pass",
+      "tw.context · viewer is the user (an id)" : "pass",
+      "tw.request · a request on a tap resolves with the bot's { result }" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-live-copy\/light" : {
+      "tw.bot-data · chatData is null, publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is " : "pass",
+      "tw.context · isForward is true, isPreview false" : "pass",
+      "tw.context · viewer is the user (an id)" : "pass",
+      "tw.request · a request on a tap resolves with the bot's { result }" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-no-queries\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is private" : "pass",
+      "tw.context · isForward is false, isPreview false" : "pass",
+      "tw.context · viewer is null" : "pass",
+      "tw.request · a request on a tap is refused with NOT_ALLOWED too" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-preview\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is " : "pass",
+      "tw.context · isForward is false, isPreview true" : "pass",
+      "tw.context · viewer is null" : "pass",
+      "tw.request · a request without a tap is refused with NOT_ALLOWED" : "pass"
+    },
+    "auto\/26-context-private\/light" : {
+      "tw.bot-data · chatData is \"conf-chat\", publicData \"conf-public\"" : "pass",
+      "tw.context · TelegramWidget exists" : "missing",
+      "tw.context · chatType is private" : "pass",
+      "tw.context · isForward is false, isPreview false" : "pass",
+      "tw.context · viewer is the user (an id)" : "pass",
+      "tw.request · a request on a tap resolves with the bot's { result }" : "pass",
+      "tw.request · a request without a tap is not refused (background requests are allowed here)" : "pass"
+    },
+    "auto\/27-haptics-no-touch\/light" : {
+      "host · limit.haptic-rate · no touch: the 5 haptics of the first second reach the client, the ones at 1.2 s and 2.5 s do not" : "pass",
+      "limit.haptic-rate · haptics may be asked for without a touch: no exception (the client decides what plays)" : "pass"
     },
     "visual\/01-boxes\/light" : {
       "load · loads" : "pass"
@@ -772,13 +850,37 @@
     "visual\/sdk\/15-storage-forward\/light" : {
       "load · loads" : "pass"
     },
-    "visual\/sdk\/16-bot-edit\/light" : {
+    "visual\/sdk\/16-state-edit\/light" : {
       "load · loads" : "pass"
     },
     "visual\/sdk\/17-size-hint\/light" : {
       "load · loads" : "pass"
     },
     "visual\/sdk\/18-resize-anchor\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/19-request-tap\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/20-forward-requests\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/21-network-marker\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/22-copy-text\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/23-preview\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/24-watch-public-data\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/25-group-chat-state\/light" : {
+      "load · loads" : "pass"
+    },
+    "visual\/sdk\/26-haptics-no-touch\/light" : {
       "load · loads" : "pass"
     }
   }

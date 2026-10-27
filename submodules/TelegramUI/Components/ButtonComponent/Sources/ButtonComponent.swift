@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import MultilineTextComponent
 import AnimatedTextComponent
 import ActivityIndicator
 import BundleIconComponent
@@ -208,11 +209,12 @@ public final class ButtonTextContentComponent: Component {
             
             let contentSize = self.content.update(
                 transition: .immediate,
-                component: AnyComponent(Text(
-                    text: component.text,
-                    font: Font.semibold(component.fontSize),
-                    color: component.textColor
-                )),
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.text, font: Font.semibold(component.fontSize), textColor: component.textColor)),
+                        maximumNumberOfLines: 1
+                    )
+                ),
                 environment: {},
                 containerSize: availableSize
             )
