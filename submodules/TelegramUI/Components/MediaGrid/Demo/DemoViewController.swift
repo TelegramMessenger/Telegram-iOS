@@ -538,11 +538,13 @@ final class DemoViewController: UIViewController {
         if let fraction = self.autoScrubFraction(step: step, steps: steps) {
             gridView.setContentOffset(maximum * fraction)
             self.autoScrubWorkWorst = max(self.autoScrubWorkWorst, CACurrentMediaTime() - workStart)
-            CATransaction.flush()
-            let main = CACurrentMediaTime() - workStart
-            self.autoScrubMainTotal += main
-            self.autoScrubMainWorst = max(self.autoScrubMainWorst, main)
-            self.autoScrubMainFrames += 1
+            if ProcessInfo.processInfo.arguments.contains("-mainProbe") {
+                CATransaction.flush()
+                let main = CACurrentMediaTime() - workStart
+                self.autoScrubMainTotal += main
+                self.autoScrubMainWorst = max(self.autoScrubMainWorst, main)
+                self.autoScrubMainFrames += 1
+            }
         } else {
             let summary = self.frameMonitor.summary
             let measured = max(1, 2 * steps)

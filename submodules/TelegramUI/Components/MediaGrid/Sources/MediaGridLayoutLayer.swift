@@ -165,7 +165,8 @@ final class MediaGridLayoutLayer: CALayer {
         let cell: MediaGridCellLayer
         if let spare = self.spareCells.popLast() {
             cell = spare
-            cell.prepareForReassignment()
+            cell.resetBinding()
+            cell.prepareForReuse()
             self.bind(cell, index: index, layout: layout, reassigned: true)
         } else {
             cell = self.pool.dequeue()
@@ -268,7 +269,7 @@ final class MediaGridLayoutLayer: CALayer {
     }
 
     private func refreshThumbnail(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout) {
-        guard index < layout.count, !cell.hasImage || cell.isShowingThumbnail, let thumbnail = self.dataSource.thumbnail(at: index) else {
+        guard index < layout.count, !cell.hasImage || cell.isShowingThumbnail || cell.isImageStale, let thumbnail = self.dataSource.thumbnail(at: index) else {
             return
         }
         let frame = layout.frame(at: index)

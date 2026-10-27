@@ -5,31 +5,32 @@ private final class TrackingCellLayer: MediaGridCellLayer {
     var onEmptied: ((Int) -> Void)?
     var onReuse: (() -> Void)?
     private var hasShownImage = false
-    private var isReusing = false
+    var photoState: Int?
+    var checksPhotoState = false
+
+    override func bind(index: Int, detail: MediaGridCellDetail) {
+        if self.checksPhotoState, let state = self.photoState, state != index {
+            XCTFail("per-photo state of index \(state) carried over to \(index)")
+        }
+        super.bind(index: index, detail: detail)
+        self.photoState = index
+    }
 
     override var contents: Any? {
         didSet {
             if self.contents != nil {
                 self.hasShownImage = true
-            } else if self.hasShownImage && !self.isReusing {
+            } else if self.hasShownImage {
                 self.onEmptied?(self.index)
             }
         }
     }
 
-    override func bind(index: Int, detail: MediaGridCellDetail) {
-        if index != self.index {
-            self.hasShownImage = false
-        }
-        super.bind(index: index, detail: detail)
-    }
-
     override func prepareForReuse() {
         self.onReuse?()
-        self.isReusing = true
-        super.prepareForReuse()
-        self.isReusing = false
         self.hasShownImage = false
+        self.photoState = nil
+        super.prepareForReuse()
     }
 }
 
@@ -432,17 +433,32 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
         XCTAssertEqual(dataSource.preparedRanges.first, viewport)
     }
 
+    private func pages(_ range: Range<Int>) -> Set<Int> {
+        guard !range.isEmpty else {
+            return []
+        }
+        return Set(range.lowerBound / TestDataSource.thumbnailPageCapacity ... (range.upperBound - 1) / TestDataSource.thumbnailPageCapacity)
+    }
+
     func testNeighbourPagesDecodedBeforePinch() {
         let (view, dataSource) = self.makeView()
         dataSource.deliveries = []
         dataSource.decodesThumbnailPages = true
+        view.setLevel(.fifteen, animated: false)
+        self.scroll(view, to: 20_000.0, after: 1.0)
         self.scroll(view, to: 20_000.0, after: 1.0)
         for _ in 0 ..< 4 {
             let changed = dataSource.finishThumbnailDecodes()
             view.thumbnailsDidChange(indices: changed)
         }
+        guard let layout = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
         let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
-        for scale in [CGFloat(0.97), 1.03] {
+        let height = view.bounds.height
+        let around = layout.indexRange(intersecting: CGRect(x: 0.0, y: view.contentOffset - height, width: view.bounds.width, height: height * 3.0))
+        for (scale, target) in [(CGFloat(0.52), MediaGridLevel.thirtyOne), (1.03, .five)] {
             dataSource.holdsDeliveries = true
             view._testPinch(.began, center: center)
             view._testPinch(.changed, center: center, scale: scale)
@@ -450,14 +466,84 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
                 XCTFail("no transition at \(scale)")
                 return
             }
+            XCTAssertEqual(transition.targetLevel, target)
             let rect = transition.incomingRect(at: transition.progress)
+            if target == .thirtyOne {
+                let reached = transition.targetLayout.indexRange(intersecting: rect)
+                XCTAssertFalse(self.pages(reached).isSubset(of: self.pages(around)), "incoming \(reached) needs no page beyond level 15's ranges \(around)")
+            }
             let incoming = transition.incoming.visibleCells.filter { $0.value.frame.intersects(rect) }
             XCTAssertFalse(incoming.isEmpty)
             let empty = incoming.filter { $0.value.contents == nil }.map { $0.key }.sorted()
-            XCTAssertEqual(empty, [], "scale \(scale): empty incoming \(empty.prefix(8))")
+            XCTAssertEqual(empty, [], "scale \(scale): empty incoming \(empty.prefix(8)) of \(incoming.count)")
+            view._testPinch(.changed, center: center, scale: 1.0)
             view._testPinch(.ended, center: center, scale: 1.0)
             view._testFinishAnimations()
-            XCTAssertEqual(view.level, .three)
+            XCTAssertEqual(view.level, .fifteen)
+        }
+    }
+
+    func testKeptOversizedImageRerequestsOrFallsBack() {
+        for (source, target, side) in [(MediaGridLevel.one, MediaGridLevel.three, CGFloat(1300.0)), (.three, .fifteen, 400.0)] {
+            let (view, dataSource) = self.makeView()
+            view.setLevel(source, animated: false)
+            var images: [Int: UIImage] = [:]
+            dataSource.imageForIndex = { index in
+                if let image = images[index] {
+                    return image
+                }
+                let image = TestDataSource.distinctImage(index, side: side)
+                images[index] = image
+                return image
+            }
+            view.setContentOffset(view.contentHeight * 0.2)
+            let before = view.activeLayoutLayer.visibleCells
+            XCTAssertTrue(before.values.allSatisfy { !$0.isShowingThumbnail })
+            dataSource.holdsDeliveries = true
+            let requests = dataSource.requests.count
+            view.setLevel(target, animated: false)
+            guard let layout = view.gridLayout else {
+                XCTFail("no layout")
+                return
+            }
+            let targetSize = layout.pixelSize(at: 0)
+            let requested = Set(dataSource.requests[requests...].filter { $0.pixelSize == targetSize }.map { $0.index })
+            var kept = 0
+            for (index, cell) in view.activeLayoutLayer.visibleCells where before[index] === cell {
+                kept += 1
+                if target.isInteractive {
+                    XCTAssertTrue((cell.contents as AnyObject?) === images[index]?.cgImage, "\(target.columns): index \(index) dropped its kept image")
+                    XCTAssertTrue(requested.contains(index), "\(target.columns): index \(index) did not ask for a right-sized image")
+                } else {
+                    XCTAssertTrue(cell.isShowingThumbnail, "\(target.columns): index \(index) kept an oversized image")
+                    XCTAssertFalse(requested.contains(index))
+                }
+            }
+            XCTAssertGreaterThan(kept, 0, "\(source.columns) -> \(target.columns)")
+        }
+    }
+
+    func testStaleSharpCellTakesArrivingThumbnail() {
+        let (view, dataSource) = self.makeView()
+        var available = false
+        dataSource.thumbnailAvailable = { _ in available }
+        dataSource.imageForIndex = { index in
+            return TestDataSource.distinctImage(index, side: 400.0)
+        }
+        view.setContentOffset(20_000.0)
+        let range = view.activeLayoutLayer.visibleRange
+        let changed = IndexSet(integersIn: range.lowerBound + 3 ..< range.lowerBound + 6)
+        dataSource.holdsDeliveries = true
+        view.apply(MediaGridChanges(removed: IndexSet(), inserted: IndexSet(), changed: changed))
+        for index in changed {
+            let cell = view.activeLayoutLayer.visibleCells[index]!
+            XCTAssertFalse(cell.isShowingThumbnail)
+            XCTAssertNotNil(cell.imageRequest)
+        }
+        available = true
+        view.thumbnailsDidChange(indices: changed)
+        for index in changed {
+            XCTAssertTrue(view.activeLayoutLayer.visibleCells[index]!.isShowingThumbnail, "index \(index) kept its stale image")
         }
     }
 
@@ -562,13 +648,16 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
         let before = Set(view.activeLayoutLayer.visibleCells.values.map { ObjectIdentifier($0) })
         let pooled = view.pool.count
         let reuses = self.reuses
+        for cell in view.activeLayoutLayer.visibleCells.values {
+            (cell as? TrackingCellLayer)?.checksPhotoState = true
+        }
         let cancels = dataSource.cancelCount
         view.setContentOffset(60_000.0)
         let after = view.activeLayoutLayer.visibleCells
         let afterIdentities = Set(after.values.map { ObjectIdentifier($0) })
         let excess = max(0, before.count - after.count)
         XCTAssertEqual(afterIdentities.intersection(before).count, min(before.count, after.count))
-        XCTAssertEqual(self.reuses - reuses, excess)
+        XCTAssertEqual(self.reuses - reuses, before.count)
         XCTAssertEqual(view.pool.count - pooled, excess)
         XCTAssertEqual(dataSource.cancelCount - cancels, before.count)
         for (index, cell) in after {

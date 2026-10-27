@@ -111,7 +111,7 @@ open class MediaGridCellLayer: CALayer {
         self.isImageStale = true
     }
 
-    func prepareForReassignment() {
+    func resetBinding() {
         if let request = self.imageRequest {
             self.imageRequest = nil
             request.cancel()
@@ -130,7 +130,7 @@ open class MediaGridCellLayer: CALayer {
         return min(width, height * size.width / size.height)
     }
 
-    private func clearImage() {
+    func clearImage() {
         self.contents = nil
         self.contentsRect = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
         self.isShowingThumbnail = false
@@ -141,11 +141,5 @@ open class MediaGridCellLayer: CALayer {
     }
 
     open func prepareForReuse() {
-        self.imageRequest?.cancel()
-        self.imageRequest = nil
-        self.bindingToken += 1
-        self.hasFinalImage = false
-        self.isAwaitingSharpImage = false
-        self.clearImage()
     }
 }

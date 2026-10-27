@@ -23,7 +23,9 @@ final class MediaGridCellPool {
     }
 
     func enqueue(_ cell: MediaGridCellLayer) {
+        cell.resetBinding()
         cell.prepareForReuse()
+        cell.clearImage()
         if self.cells.count >= 2 * self.visibleCount {
             cell.removeFromSuperlayer()
             return
