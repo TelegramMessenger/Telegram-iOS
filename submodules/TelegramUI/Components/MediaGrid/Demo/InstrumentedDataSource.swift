@@ -35,6 +35,7 @@ final class InstrumentedDataSource: MediaGridDataSource {
     let base: MediaGridDataSource
     var counters = Counters()
     var forwardsCaching = true
+    var providesThumbnails = true
 
     init(base: MediaGridDataSource) {
         self.base = base
@@ -92,10 +93,16 @@ final class InstrumentedDataSource: MediaGridDataSource {
     }
 
     func thumbnail(at index: Int) -> MediaGridThumbnail? {
+        guard self.providesThumbnails else {
+            return nil
+        }
         return self.base.thumbnail(at: index)
     }
 
     func prepareThumbnails(ranges: [Range<Int>]) {
+        guard self.providesThumbnails else {
+            return
+        }
         self.base.prepareThumbnails(ranges: ranges)
     }
 

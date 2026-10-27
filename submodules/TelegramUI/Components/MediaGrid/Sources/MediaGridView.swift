@@ -1285,7 +1285,11 @@ public final class MediaGridView: UIView {
     }
 
     #if DEBUG
-    public func debugEmptyVisibleCellCount(counting isCounted: ((Int) -> Bool)? = nil) -> (empty: Int, visible: Int) {
+    public var debugIsZooming: Bool {
+        return self.transition != nil || self.pinch != nil
+    }
+
+    public func debugEmptyVisibleCellCount(counting isCounted: ((Int) -> Bool)? = nil, treatingAsEmpty isEmpty: ((Int) -> Bool)? = nil) -> (empty: Int, visible: Int) {
         var empty = 0
         var visible = 0
         let count: (MediaGridLayoutLayer, CGRect) -> Void = { layer, rect in
@@ -1297,7 +1301,7 @@ public final class MediaGridView: UIView {
                     continue
                 }
                 visible += 1
-                if !(layer.visibleCells[index]?.hasImage ?? false), isCounted?(index) ?? true {
+                if isEmpty?(index) ?? !(layer.visibleCells[index]?.hasImage ?? false), isCounted?(index) ?? true {
                     empty += 1
                 }
             }

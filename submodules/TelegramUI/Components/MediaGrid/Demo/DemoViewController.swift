@@ -84,6 +84,7 @@ final class DemoViewController: UIViewController {
         self.sourceControl.selectedSegmentIndex = Source.synthetic.rawValue
         self.sourceControl.addTarget(self, action: #selector(self.sourceChanged), for: .valueChanged)
         self.navigationItem.titleView = self.sourceControl
+        self.syntheticDataSource.providesThumbnails = !DemoViewController.disablesThumbnails
         self.syntheticDataSource.onThumbnailsChanged = { [weak self] indices in
             guard let self, self.sourceControl.selectedSegmentIndex == Source.synthetic.rawValue else {
                 return
@@ -135,7 +136,7 @@ final class DemoViewController: UIViewController {
             self.hudLabel.text = text
         }
         self.frameMonitor.start()
-        let emptyLink = CADisplayLink(target: DisplayLinkTarget(owner: self), selector: #selector(DisplayLinkTarget.tick))
+        let emptyLink = CADisplayLink(target: DisplayLinkTarget(owner: self), selector: #selector(DisplayLinkTarget.tick(_:)))
         if #available(iOS 15.0, *) {
             emptyLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
         }
@@ -147,12 +148,27 @@ final class DemoViewController: UIViewController {
         self.emptyLink?.invalidate()
     }
 
-    fileprivate func emptyTick() {
+    private let logsFrames = ProcessInfo.processInfo.arguments.contains("-frameLog")
+    private var frameLogLastTimestamp: CFTimeInterval?
+    private var frameLogCount = 0
+
+    fileprivate func emptyTick(_ link: CADisplayLink) {
         #if DEBUG
         guard let gridView = self.gridView else {
             return
         }
         let (empty, visible) = gridView.debugEmptyVisibleCellCount()
+        if self.logsFrames {
+            let filledEmpty = empty > 0 ? self.countIndexedEmptyCells(gridView) : 0
+            let interval = self.frameLogLastTimestamp.map { link.timestamp - $0 } ?? 0.0
+            self.frameLogLastTimestamp = link.timestamp
+            self.frameLogCount += 1
+            var unfilled = -1
+            if self.frameLogCount % 15 == 0, let dataSource = self.photoDataSource, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
+                unfilled = gridView.debugEmptyVisibleCellCount(counting: { _ in true }, treatingAsEmpty: { !dataSource.hasStoredThumbnail(at: $0) }).empty
+            }
+            print(String(format: "FRAME t=%.4f dt=%.2f expected=%.2f level=%d transition=%d empty=%d filled_empty=%d visible=%d fast=%d offset=%.1f unfilled=%d", link.timestamp, interval * 1000.0, (link.targetTimestamp - link.timestamp) * 1000.0, gridView.level.columns, gridView.debugIsZooming ? 1 : 0, empty, filledEmpty, visible, gridView.isMovingFast ? 1 : 0, gridView.contentOffset, unfilled))
+        }
         if !self.didReportFirstGridFrame, visible > 0, self.sourceControl.selectedSegmentIndex == Source.photoLibrary.rawValue {
             self.didReportFirstGridFrame = true
             print(String(format: "FIRST_GRID_FRAME since_launch=%.0fms visible=%d empty=%d launch_wait=%.2fms requests=%d", DemoViewController.timeSinceProcessStart() * 1000.0, visible, empty, (gridView.launchImageWaitDuration ?? 0.0) * 1000.0, self.instrumentedDataSource?.counters.requests ?? -1))
@@ -181,6 +197,8 @@ final class DemoViewController: UIViewController {
         }
         #endif
     }
+
+    private static let disablesThumbnails = ProcessInfo.processInfo.arguments.contains("-noThumbnails")
 
     private static func argument(_ name: String) -> String? {
         let arguments = ProcessInfo.processInfo.arguments
@@ -300,6 +318,16 @@ final class DemoViewController: UIViewController {
     }
 
     private func startAutomation() {
+        if let fraction = DemoViewController.argument("-startAt").flatMap(Double.init) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                guard let gridView = self?.gridView else {
+                    return
+                }
+                gridView.setContentOffset(CGFloat(fraction) * max(0.0, gridView.contentHeight - gridView.bounds.height))
+                print("STARTAT fraction=\(fraction) top=\(gridView.topVisibleIndex ?? -1)")
+                fflush(stdout)
+            }
+        }
         if let delay = DemoViewController.argument("-sharpProbe").flatMap(Double.init) {
             if ProcessInfo.processInfo.arguments.contains("-noNetworkLane") {
                 self.photoDataSource?.filler.networkGate = { false }
@@ -817,6 +845,10 @@ final class DemoViewController: UIViewController {
                         }
                         let instrumented = InstrumentedDataSource(base: dataSource)
                         instrumented.forwardsCaching = !ProcessInfo.processInfo.arguments.contains("-noCaching")
+                        if DemoViewController.disablesThumbnails {
+                            instrumented.providesThumbnails = false
+                            dataSource.filler.networkGate = { false }
+                        }
                         self.instrumentedDataSource = instrumented
                         self.installGrid(dataSource: instrumented)
                     } else {
@@ -869,8 +901,8 @@ private final class DisplayLinkTarget: NSObject {
         self.owner = owner
     }
 
-    @objc func tick() {
-        self.owner?.emptyTick()
+    @objc func tick(_ link: CADisplayLink) {
+        self.owner?.emptyTick(link)
     }
 }
 

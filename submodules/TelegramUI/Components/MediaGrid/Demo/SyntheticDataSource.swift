@@ -37,6 +37,7 @@ final class SyntheticDataSource: MediaGridDataSource {
     private let queue = DispatchQueue(label: "org.telegram.MediaGridDemo.SyntheticDataSource", qos: .userInitiated)
     private let cache = NSCache<NSString, UIImage>()
     var onThumbnailsChanged: ((IndexSet) -> Void)?
+    var providesThumbnails = true
     private static let slotPixelSize = 48
     private static let pageSide = 16
     private static let slotsPerPage = SyntheticDataSource.pageSide * SyntheticDataSource.pageSide
@@ -124,7 +125,7 @@ final class SyntheticDataSource: MediaGridDataSource {
     }
 
     func thumbnail(at index: Int) -> MediaGridThumbnail? {
-        guard index >= 0, index < self.count else {
+        guard self.providesThumbnails, index >= 0, index < self.count else {
             return nil
         }
         let page = index / SyntheticDataSource.slotsPerPage
@@ -145,6 +146,9 @@ final class SyntheticDataSource: MediaGridDataSource {
     }
 
     func prepareThumbnails(ranges: [Range<Int>]) {
+        guard self.providesThumbnails else {
+            return
+        }
         var seen = Set<Int>()
         var pages: [Int] = []
         outer: for range in ranges {
