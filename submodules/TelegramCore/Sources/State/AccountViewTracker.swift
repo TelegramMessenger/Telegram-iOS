@@ -888,6 +888,10 @@ public final class AccountViewTracker {
                                         return .complete()
                                     }
                                     return account.postbox.transaction { transaction -> Void in
+                                        // The users and chats carry the top paid reactors: a sender who reached the
+                                        // leaderboard after the message was stored is known only from here.
+                                        updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(transaction: transaction, chats: apiUpdatesGroups(updates), users: updates.users))
+                                        
                                         let updateList: [Api.Update]
                                         switch updates {
                                         case let .updates(updatesData):
