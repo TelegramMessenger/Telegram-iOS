@@ -85,3 +85,29 @@ channel for 10 more, up to 60; nothing is ever "newer" than the live window, so 
 read mark is kept under its own cache key (`localChannelsFeedFilterId = -1`) and never sent to the server. The screen
 opens on Added in that case; For you stays the server's and shows its error row for accounts without the feed. The UI
 is the same in both modes: `NewsAddedFeedBinding` chooses the source, nothing else changes.
+
+## Pinch, per-row expansion, and what a mode switch animates (2026-10-26)
+
+- **A pinch on the feed switches the modes** (`NewsFeedPinch` in NewsFeedSupport): the lists' container
+  follows the fingers to 0.8 in (1.25 out), switches there with a `.medium` impact, and rubber-bands past it; on
+  release it springs back to 1. The scale is a `sublayerTransform` and so is about the container's centre — a
+  translation to "scale about the fingers" drifts, because the transform is applied about the layer's anchor point.
+  The pinch recognizes alongside the list's scroll pan but never with the pager, which takes one touch anyway.
+- **A swipe from the left expands one row** (`NewsPostSwipeAction.expand` / `.collapse`, the control's one left
+  option, performed on a full swipe — the left side's primary is the FIRST option). The row's mode is
+  `NewsFeedItemEnvironment.rowDisplayMode(identity)`: the feed's, inverted for `NewsScreenNode.rowModeOverrides`,
+  which a change of the feed's mode clears. Same identity, same component type, so the row morphs as the feed's
+  switch does. With left options `ItemListRevealOptionsItemNode` sets
+  `disablesInteractiveTransitionGestureRecognizer` on its view, which would leave the pager only the screen's edges
+  over every row; `NewsPostRevealView.keepPagerOverClosedRow` clears it (the control's `…Now` closure still blocks
+  the pager while a row is open). Added's rows swipe only for Expand / Collapse (`NewsPostSwipe.hasFeedbackActions`
+  is false), and there the pager's rule is mirrored: a rightward swipe from a row's left-edge zone
+  (`newsPagerDefersToRowLeftReveal`) is the row's, one from the middle pages back to For you. Overrides are kept
+  per tab, so a post in both feeds expands in one.
+- **Every row the switch carries across the screen morphs.** CoreList animates only the union of the old and the
+  new loaded window (a screen + 160 pt): rows the taller layout pushes beyond it left with their old content, rows
+  the shorter one pulled in were made fresh at their final size (no morph, a fade). Before an animated switch
+  `NewsFeedListView.widenRowWindow(for:)` raises `preloadMargin` to four screens and runs an immediate pass, so
+  the rows the old layout keeps below the screen are laid out first; the margin returns after the transition. The
+  cost is laying out several expanded bubbles below the screen synchronously before an Expanded → Compact morph.
+- **Compact text is secondary-coloured**: the preview reads grey; the post reads in full, black, once expanded.

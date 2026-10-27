@@ -248,6 +248,19 @@ final class NewsFeedListView: UIView {
         return false
     }
 
+    /// Whether `point` (in this view) is on a post row with the left side's Expand / Collapse, for Added's pager rule.
+    func hasLeftSwipeableRow(at point: CGPoint) -> Bool {
+        for view in self.coreList.loadedItemViews {
+            guard let row = self.postRow(view), row.hasLeftSwipeAction else {
+                continue
+            }
+            if row.bounds.contains(row.convert(point, from: self)) {
+                return true
+            }
+        }
+        return false
+    }
+
     /// Where the expanded rows' floating avatars stick: the header's current bottom edge, which rises as the
     /// search block scrolls under the top row (`NewsHeaderView.currentBottom`), while the rows' own top inset
     /// stays the resting header's. Without it the avatars would park at the resting inset, under an empty band
@@ -271,6 +284,32 @@ final class NewsFeedListView: UIView {
             }
         }
         return false
+    }
+
+    /// CoreList's own preload margin, back in force once a display-mode switch has run.
+    private lazy var restingPreloadMargin: CGFloat = self.coreList.preloadMargin
+    private var wideRowWindowGeneration = 0
+
+    /// Before a display-mode switch: keeps every row the switch carries across the screen loaded, so each morphs
+    /// (`NewsFeedPostComponent`'s morph runs only in an animated update of a loaded row). CoreList lays out and
+    /// animates only the union of the old loaded window and the new one, a screen plus 160 pt each: the rows the
+    /// taller layout pushes below that leave with their old content, and the rows the shorter layout pulls in from
+    /// below are made fresh at their final size. So the preload margin grows to several screens for the switch, the
+    /// rows the old layout has below the screen are laid out now (immediately, as the rows a scroll loads are),
+    /// and once the morph has run the margin returns; the next pass unloads what is out of reach.
+    func widenRowWindow(for duration: Double) {
+        self.wideRowWindowGeneration += 1
+        let generation = self.wideRowWindowGeneration
+        self.coreList.preloadMargin = max(self.restingPreloadMargin, self.bounds.height * 4.0)
+        self.withSynchronousRowLoading {
+            self.coreList.applyChanges(transition: .immediate)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) { [weak self] in
+            guard let self, self.wideRowWindowGeneration == generation else {
+                return
+            }
+            self.coreList.preloadMargin = self.restingPreloadMargin
+        }
     }
 
     private func withSynchronousRowLoading(_ f: () -> Void) {

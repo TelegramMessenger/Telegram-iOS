@@ -70,14 +70,15 @@ private func newsPostText(component: NewsFeedPostComponent, maxLength: Int) -> N
         let prefix = newsPreviewTextPrefix(message.text, entities: entities, maxLength: maxLength)
         // One character for one, so the entity ranges stay valid.
         let text = prefix.text.replacingOccurrences(of: "\n", with: " ")
-        return chatListPreviewAttributedString(text, entities: prefix.entities, strings: component.strings, dateTimeFormat: component.dateTimeFormat, font: font, italicFont: font, textColor: theme.list.itemPrimaryTextColor, message: message._asMessage())
+        // Secondary: a compact row's text is a preview, read in full once the post is expanded.
+        return chatListPreviewAttributedString(text, entities: prefix.entities, strings: component.strings, dateTimeFormat: component.dateTimeFormat, font: font, italicFont: font, textColor: theme.list.itemSecondaryTextColor, message: message._asMessage())
     }
     guard let message = component.messages.first else {
         return NSAttributedString()
     }
     // A rich message keeps its text in the attribute, so it arrives here as a preview: text, not a label.
-    let (summary, isMediaLabel, _) = descriptionStringForMessage(contentSettings: component.context.currentContentSettings.with { $0 }, message: message, strings: component.strings, nameDisplayOrder: component.nameDisplayOrder, dateTimeFormat: component.dateTimeFormat, accountPeerId: component.context.account.peerId)
-    return NSAttributedString(string: summary.string, font: font, textColor: isMediaLabel ? theme.list.itemSecondaryTextColor : theme.list.itemPrimaryTextColor)
+    let (summary, _, _) = descriptionStringForMessage(contentSettings: component.context.currentContentSettings.with { $0 }, message: message, strings: component.strings, nameDisplayOrder: component.nameDisplayOrder, dateTimeFormat: component.dateTimeFormat, accountPeerId: component.context.account.peerId)
+    return NSAttributedString(string: summary.string, font: font, textColor: theme.list.itemSecondaryTextColor)
 }
 
 /// The time a post row shows now.
@@ -106,7 +107,7 @@ public final class NewsFeedPostComponent: Component {
     public let fading: Bool
     /// When Undo brought the post back: a row created right after fades in and rises.
     public let appearTime: Double?
-    /// The row's swipe actions; nil for rows that do not swipe (Added, search results).
+    /// The row's swipe actions; nil for rows that do not swipe (search results).
     public let swipe: NewsPostSwipe?
     /// Compact (the default) or the expanded post; `expanded` carries what the expanded row needs.
     public let displayMode: NewsFeedDisplayMode
@@ -173,8 +174,8 @@ public final class NewsFeedPostComponent: Component {
         if lhs.appearTime != rhs.appearTime {
             return false
         }
-        // The closures are per post and the list's; only whether the row swipes changes how it looks.
-        if (lhs.swipe == nil) != (rhs.swipe == nil) {
+        // The closures are per post and the list's; only whether and which way the row swipes changes how it looks.
+        if (lhs.swipe == nil) != (rhs.swipe == nil) || lhs.swipe?.hasFeedbackActions != rhs.swipe?.hasFeedbackActions {
             return false
         }
         if lhs.displayMode != rhs.displayMode {
@@ -371,7 +372,13 @@ public final class NewsFeedPostComponent: Component {
 
         // MARK: Swipe (spec §1, §5)
 
+        /// The right side's actions (For you's Interesting / Not Interested), for the pager's right-edge rule.
         public var hasSwipeActions: Bool {
+            return self.component?.swipe?.hasFeedbackActions == true
+        }
+
+        /// The left side's Expand / Collapse, for the pager's left-edge rule in Added.
+        public var hasLeftSwipeAction: Bool {
             return self.component?.swipe != nil
         }
 
@@ -1009,14 +1016,17 @@ public final class NewsFeedPostComponent: Component {
             self.updateSeparatorAlpha()
             // The row places the view; the view lays out inside it (a size change closes an open swipe).
             self.revealView.frame = CGRect(origin: CGPoint(), size: rowSize)
-            self.revealView.update(size: rowSize, options: component.swipe != nil ? newsPostRevealOptions(theme: theme, strings: component.strings) : [], highlightColor: theme.list.itemHighlightedBackgroundColor)
+            let leftOptions = component.swipe != nil ? newsPostLeftRevealOptions(isExpanded: component.displayMode == .expanded, theme: theme, strings: component.strings) : []
+            let rightOptions = component.swipe?.hasFeedbackActions == true ? newsPostRevealOptions(theme: theme, strings: component.strings) : []
+            self.revealView.update(size: rowSize, leftOptions: leftOptions, rightOptions: rightOptions, highlightColor: theme.list.itemHighlightedBackgroundColor)
             self.contentView.frame = CGRect(origin: CGPoint(), size: rowSize)
             self.lensView.frame = self.contentView.bounds
 
             self.accessibilityLabel = component.peer.compactDisplayTitle
             self.accessibilityValue = postText.string.isEmpty ? timeText : "\(timeText), \(postText.string)"
-            if component.swipe != nil {
-                self.accessibilityCustomActions = newsPostSwipeActions.map { action in
+            if let swipe = component.swipe {
+                let actions: [NewsPostSwipeAction] = (swipe.hasFeedbackActions ? newsPostSwipeActions : []) + [component.displayMode == .expanded ? .collapse : .expand]
+                self.accessibilityCustomActions = actions.map { action in
                     return UIAccessibilityCustomAction(name: newsPostSwipeTitle(action, strings: component.strings), actionHandler: { [weak self] _ in
                         self?.component?.swipe?.action(action)
                         return true

@@ -17171,6 +17171,8 @@ Error: %8$@";
 "News.Refresh" = "Refresh";
 "News.Swipe.Interesting" = "Interesting";
 "News.Swipe.NotInterested" = "Not Interested";
+"News.Swipe.Expand" = "Expand";
+"News.Swipe.Collapse" = "Collapse";
 "News.Feedback.Hidden" = "Post hidden. Tell us more?";
 "News.Feedback.HideChannel" = "Don't show posts from %@";
 "News.Feedback.FewerLikeThis" = "Don't show posts like this";

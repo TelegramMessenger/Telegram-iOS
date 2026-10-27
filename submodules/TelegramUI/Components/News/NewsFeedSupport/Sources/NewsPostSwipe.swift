@@ -6,6 +6,9 @@ import CoreGraphics
 public enum NewsPostSwipeAction: Int32 {
     case interesting = 0
     case notInterested = 1
+    /// The left side's one option: the row shows its post expanded (or compact again) while the feed keeps its mode.
+    case expand = 2
+    case collapse = 3
 }
 
 /// The swipe actions in the reveal control's order. The control draws the right side's last option at the row's
@@ -25,6 +28,14 @@ public func newsPagerRevealZoneWidth(width: CGFloat) -> CGFloat {
 public func newsPagerDefersToRowReveal(touchX: CGFloat, width: CGFloat, rightInset: CGFloat, isOnRevealableRow: Bool) -> Bool {
     let rowRightEdge = width - rightInset
     return isOnRevealableRow && touchX >= rowRightEdge - newsPagerRevealZoneWidth(width: rowRightEdge)
+}
+
+/// Added's mirror of `newsPagerDefersToRowReveal`: a rightward swipe from a post row's left edge reveals the row's
+/// Expand, one from the middle pages back to For you. Rows start at the list's left safe inset, so the zone starts
+/// there and is sized from the row's width between the insets. `touchX` is in the list's coordinates.
+public func newsPagerDefersToRowLeftReveal(touchX: CGFloat, width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, isOnRevealableRow: Bool) -> Bool {
+    let rowWidth = width - leftInset - rightInset
+    return isOnRevealableRow && touchX <= leftInset + newsPagerRevealZoneWidth(width: rowWidth)
 }
 
 /// The alpha each loaded post row gives its bottom separator. The separator between two rows is the upper row's,

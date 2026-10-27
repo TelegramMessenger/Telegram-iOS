@@ -70,7 +70,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var isPagerDragging = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
-    /// For you's "Post hidden" flow, for the screen's lifetime (spec §2). Added has none: its rows do not swipe.
+    /// For you's "Post hidden" flow, for the screen's lifetime (spec §2). Added has none: its rows swipe only for
+    /// Expand.
     private let forYouFeedback = NewsPostFeedbackController(tab: .forYou)
     /// Likes and dislikes, sent one at a time in the order they were cast.
     private var voteQueue = NewsPostVoteQueue()
@@ -81,6 +82,14 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     /// Compact rows or expanded posts: the "…" menu's choice, kept across launches (`NewsFeedSettings`).
     private(set) var displayMode: NewsFeedDisplayMode = .compact
     private var hasReceivedDisplayMode = false
+    /// Posts whose row a swipe switched to the other mode (Expand on the left of a compact row, Collapse of an
+    /// expanded one), per tab (0 For you, 1 Added: a post in both expands in one); a change of the feed's mode
+    /// forgets them.
+    private var rowModeOverrides: [Int: Set<AnyHashable>] = [:]
+    /// Pinching the feed switches the modes (`NewsFeedPinch`): the lists' container scales about its centre.
+    private var pinchRecognizer: UIPinchGestureRecognizer?
+    private var pinchState = NewsFeedPinchState()
+    private let pinchHaptic = HapticFeedback()
     /// Posts whose Show more was tapped: their whole text, with its formatting and links.
     private var expandedTextPosts = Set<AnyHashable>()
     /// For the expanded rows' reaction pills and the bubble.
@@ -270,7 +279,12 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         self.displayMode = displayMode
+        self.rowModeOverrides.removeAll()
         self.closeSwipedRows(animated: animated)
+        if animated {
+            // Every row the switch carries across the screen morphs, not only the few loaded in both layouts.
+            self.activeList.widenRowWindow(for: NewsScreenNode.displayModeTransition.duration)
+        }
         self.updateLists(transition: animated ? NewsScreenNode.displayModeTransition : .immediate)
     }
 
@@ -387,24 +401,79 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
                 return .left
             }
+            // Added mirrors it: a swipe from a post row's left edge reveals Expand, one from the middle pages back.
+            let list = self.addedList
+            let pointInList = list.convert(point, from: self.listsContainerNode.view)
+            if newsPagerDefersToRowLeftReveal(touchX: pointInList.x, width: list.bounds.width, leftInset: list.insets.left, rightInset: list.insets.right, isOnRevealableRow: list.hasLeftSwipeableRow(at: pointInList)) {
+                return []
+            }
             return .right
         })
         panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.listsContainerNode.view.addGestureRecognizer(panRecognizer)
+
+        // Pinching the feed switches Compact and Expanded. The pager takes one touch, so the two never meet.
+        let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchGesture(_:)))
+        pinchRecognizer.delegate = self.wrappedGestureRecognizerDelegate
+        self.listsContainerNode.view.addGestureRecognizer(pinchRecognizer)
+        self.pinchRecognizer = pinchRecognizer
+    }
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer === self.pinchRecognizer {
+            return !self.isSearchActive && self.tappedSegment == nil && !self.isPagerDragging && self.pagerFraction == 0.0
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // The pinch rides the list's scroll, as a pinch on Photos' grid does; the pager stays exclusive.
+        if gestureRecognizer === self.pinchRecognizer {
+            return !(otherGestureRecognizer is InteractiveTransitionGestureRecognizer)
+        }
         return false
     }
 
-    // The lists' scrolling waits for the swipe to fail, as it waits for the navigation back swipe.
+    // The lists' scrolling waits for the swipe to fail, as it waits for the navigation back swipe. Not for the pinch:
+    // a single finger would then scroll only once the pinch gave up on a second one.
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if otherGestureRecognizer is InteractiveTransitionGestureRecognizer {
+        if gestureRecognizer === self.pinchRecognizer || otherGestureRecognizer is InteractiveTransitionGestureRecognizer {
             return false
         }
         return otherGestureRecognizer is UIPanGestureRecognizer
+    }
+
+    // MARK: Pinch (Compact ↔ Expanded)
+
+    @objc private func pinchGesture(_ recognizer: UIPinchGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.refreshController.detach()
+            self.closeSwipedRows(animated: true)
+            self.pinchState = NewsFeedPinchState()
+            self.pinchHaptic.prepareImpact(.medium)
+            self.setFeedScale(newsFeedPinchScale(progress: newsFeedPinchProgress(ratio: recognizer.scale)), transition: .immediate)
+        case .changed:
+            let progress = newsFeedPinchProgress(ratio: recognizer.scale)
+            self.setFeedScale(newsFeedPinchScale(progress: progress), transition: .immediate)
+            if self.pinchState.update(progress: progress) {
+                // The rows morph while the feed is still held small: the switch is seen where the fingers are.
+                self.pinchHaptic.impact(.medium)
+                self.setDisplayMode(self.displayMode == .compact ? .expanded : .compact)
+            }
+        case .ended, .cancelled, .failed:
+            self.setFeedScale(1.0, transition: .animated(duration: 0.5, curve: .spring))
+        default:
+            break
+        }
+    }
+
+    /// Scales the lists' container about its centre (a sublayer transform is applied about the layer's anchor point),
+    /// so the feed shrinks evenly from every edge.
+    private func setFeedScale(_ scale: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateSublayerTransformScale(node: self.listsContainerNode, scale: scale, beginWithCurrentState: true)
     }
 
     @objc private func pagerPanGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -626,20 +695,24 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     }
 
     private func itemEnvironment(list: NewsFeedListView) -> NewsFeedItemEnvironment {
-        // For you's rows swipe and have the "Post hidden" flow; Added's rows and search results do neither.
-        let feedbackController: NewsPostFeedbackController? = list === self.forYouList ? self.forYouFeedback : nil
+        // For you's rows swipe both ways and have the "Post hidden" flow; Added's swipe for Expand only; search
+        // results do neither.
+        let segment: Int? = list === self.forYouList ? 0 : (list === self.addedList ? 1 : nil)
+        let feedbackController: NewsPostFeedbackController? = segment == 0 ? self.forYouFeedback : nil
         var postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
         var feedback: NewsFeedItemFeedback?
-        if let feedbackController {
+        if let segment {
             postSwipe = { [weak self, weak list, weak feedbackController] peer, messageId, post in
-                return NewsPostSwipe(action: { action in
-                    self?.postSwipeAction(action, peer: peer, messageId: messageId, post: post, feedback: feedbackController)
+                return NewsPostSwipe(hasFeedbackActions: segment == 0, action: { action in
+                    self?.postSwipeAction(action, peer: peer, messageId: messageId, post: post, segment: segment, feedback: feedbackController)
                 }, opened: { row in
                     list?.closeSwipedRows(except: row, animated: true)
                 }, separatorAlphaChanged: { _ in
                     list?.updateSwipeSeparators()
                 })
             }
+        }
+        if let feedbackController {
             feedback = NewsFeedItemFeedback(state: feedbackController.state, tab: feedbackController.tab, postAppearTimes: feedbackController.postAppearTimes, panelAppearTimes: feedbackController.panelAppearTimes, undo: { [weak feedbackController] post, channel in
                 feedbackController?.undo(post: post, channel: channel)
             }, choose: { [weak feedbackController] post, channel, choice in
@@ -648,19 +721,29 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), rowLoading: list.rowLoading, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
-        }, postSwipe: postSwipe, feedback: feedback, displayMode: self.displayMode, expandedContent: { [weak self] message, identity in
+        }, postSwipe: postSwipe, feedback: feedback, displayMode: self.displayMode, rowModeOverrides: segment.flatMap { self.rowModeOverrides[$0] } ?? [], expandedContent: { [weak self] message, identity in
             return self?.expandedContent(message: message, identity: identity)
         })
     }
 
     /// A post row's swipe action (spec §3). Interesting likes the post; Not Interested starts the tab's "Post hidden"
-    /// flow, which dislikes it.
-    private func postSwipeAction(_ action: NewsPostSwipeAction, peer: EnginePeer, messageId: EngineMessage.Id, post: AnyHashable, feedback: NewsPostFeedbackController?) {
+    /// flow, which dislikes it. Expand and Collapse (the left side) switch that one row's mode, morphing it as the
+    /// feed's switch does.
+    private func postSwipeAction(_ action: NewsPostSwipeAction, peer: EnginePeer, messageId: EngineMessage.Id, post: AnyHashable, segment: Int, feedback: NewsPostFeedbackController?) {
         switch action {
         case .notInterested:
             feedback?.notInterested(post: post, messageId: messageId)
         case .interesting:
             self.castVote(.like, messageId: messageId)
+        case .expand, .collapse:
+            var overrides = self.rowModeOverrides[segment] ?? []
+            if overrides.contains(post) {
+                overrides.remove(post)
+            } else {
+                overrides.insert(post)
+            }
+            self.rowModeOverrides[segment] = overrides
+            self.updateLists(transition: NewsScreenNode.displayModeTransition)
         }
     }
 
@@ -746,9 +829,10 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
 
-    /// Closes an open swipe in For you, the only feed whose rows swipe (spec §5).
+    /// Closes an open swipe in either feed (spec §5).
     private func closeSwipedRows(animated: Bool) {
         self.forYouList.closeSwipedRows(animated: animated)
+        self.addedList.closeSwipedRows(animated: animated)
     }
 
     private func updateLists(transition: CoreListTransition) {
