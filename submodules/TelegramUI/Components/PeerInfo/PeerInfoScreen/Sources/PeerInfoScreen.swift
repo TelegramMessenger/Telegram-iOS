@@ -5338,7 +5338,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     func openMediaCalendar() {
         var initialTimestamp = Int32(Date().timeIntervalSince1970)
 
-        guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode, let calendarSource = pane.calendarSource else {
+        guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPane, let calendarSource = pane.calendarSource else {
             return
         }
         // The grid has no top item while it is empty or still loading; the calendar then opens at
@@ -5361,7 +5361,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     c.dismiss()
                     return
                 }
-                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPane else {
                     c.dismiss()
                     return
                 }
