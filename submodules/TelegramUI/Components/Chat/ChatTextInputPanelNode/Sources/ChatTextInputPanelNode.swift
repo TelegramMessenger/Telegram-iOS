@@ -260,6 +260,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     public let recordMoreButton: ChatRecordingViewOnceButtonNode
     
     private var accessoryPanel: (component: AnyComponentWithIdentity<ChatInputAccessoryPanelEnvironment>, view: ComponentView<ChatInputAccessoryPanelEnvironment>)?
+    private var accessoryPanelStack = ChatTextInputAccessoryPanelStack()
     public var accessoryPanelView: ChatInputAccessoryPanelView? {
         return self.accessoryPanel?.view.view as? ChatInputAccessoryPanelView
     }
@@ -302,7 +303,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     /// as-is. Injected by the panel's owner (only the monolith can reach the BrowserUI-backed parser).
     /// Takes the context explicitly so the panel does not have to capture it.
     public var pastedMarkdownParser: ((AccountContext, String) -> ChatInputContent?)?
-    public var textInputAccessoryPanel: ((_ context: AccountContext, _ chatPresentationInterfaceState: ChatPresentationInterfaceState, _ chatControllerInteraction: ChatControllerInteraction?, _ interfaceInteraction: ChatPanelInterfaceInteraction?) -> AnyComponentWithIdentity<ChatInputAccessoryPanelEnvironment>?)?
+    public var textInputAccessoryPanel: ((_ context: AccountContext, _ chatPresentationInterfaceState: ChatPresentationInterfaceState, _ chatControllerInteraction: ChatControllerInteraction?, _ interfaceInteraction: ChatPanelInterfaceInteraction?) -> [ChatTextInputAccessoryPanelCandidate])?
     public var textInputContextPanel: ((_ context: AccountContext, _ chatPresentationInterfaceState: ChatPresentationInterfaceState, _ chatControllerInteraction: ChatControllerInteraction?, _ interfaceInteraction: ChatPanelInterfaceInteraction?, _ current: ChatInputContextPanelNode?) -> ChatInputContextPanelNode?)?
     
     public var updateActivity: () -> Void = { }
@@ -1689,12 +1690,15 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         var accessoryPanel: AnyComponentWithIdentity<ChatInputAccessoryPanelEnvironment>?
         var contextPanelNode: ChatInputContextPanelNode?
         if let context = self.context {
-            accessoryPanel = self.textInputAccessoryPanel?(
+            let accessoryPanelCandidates = self.textInputAccessoryPanel?(
                 context,
                 interfaceState,
                 self.chatControllerInteraction,
                 self.interfaceInteraction
-            )
+            ) ?? []
+            if let key = self.accessoryPanelStack.update(availableKeys: accessoryPanelCandidates.map(\.key)) {
+                accessoryPanel = accessoryPanelCandidates.first(where: { $0.key == key })?.panel
+            }
             contextPanelNode = self.textInputContextPanel?(
                 context,
                 interfaceState,
