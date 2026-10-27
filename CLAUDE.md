@@ -213,6 +213,8 @@ subsystem from elsewhere.
 - **Photo picker grid (MediaGrid v2)**: the layer grid `submodules/TelegramUI/Components/MediaGrid/CLAUDE.md` (its
   PhotoKit stack `MediaGridPhotoLibrary` is described there too); the picker seam and killswitch
   `submodules/MediaPickerUI/CLAUDE.md`.
+- **Profile Media tab on MediaGrid** (levels 3/5/15, sparse history holes, killswitch):
+  `submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/CLAUDE.md`.
 - **Smaller ones**: links with a login part (`submodules/UrlWhitelist/`), the code-block highlighter's recursion bound
   (`third-party/libprisma/`), an Apple Metal binary-archive bug (`submodules/MetalEngine/`), wallpaper soft light
   (`submodules/GradientBackground/`), app-side tests ([`docs/app-unit-tests.md`](docs/app-unit-tests.md)).
