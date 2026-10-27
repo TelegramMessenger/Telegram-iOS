@@ -98,11 +98,21 @@ Default signaling SCTP timer values (set in `SignalingSctpConnection::Options`):
 
 Retry pattern: 400ms, 750ms, 750ms, 750ms... (~18 attempts in 15s). At 30% loss, 100% success rate over 5000 runs.
 
-These values are configurable via JSON custom parameters (passed to `InstanceV2Impl` and, since
-2026-10-27, `InstanceV2CompatImpl` via `config.customParameters`; 11.0.0 does not read them):
+These values are configurable via JSON custom parameters (`config.customParameters`), read by
+every engine that carries its signaling over SCTP: `InstanceV2Impl` (7–13), `InstanceV2CompatImpl`
+(14), `InstanceV2ReferenceImpl` (11) and `CallCoreHost` (18/19), all through
+`SignalingSctpConnection::Options::fromCustomParameters`. Until 2026-10-27 only the first two read
+them, and 11.0.0 and 18/19 ran the defaults whatever the server sent.
 - `network_sctp_t1_init_ms` — T1-init timeout (0 = use default 400ms)
 - `network_sctp_t1_cookie_ms` — T1-cookie timeout (0 = use default 400ms)
 - `network_sctp_max_backoff_ms` — max timer backoff cap (0 = use default 750ms)
+
+Every connection logs the values it runs with, e.g. `SignalingSctpConnection: initiator, t1_init
+400 ms, t1_cookie 400 ms, max backoff 750 ms`, so a call log shows whether an override arrived.
+Check an engine with `tgcalls_cli --mode p2p --version V --delay 5000-5000 --custom-params
+'{"network_sctp_t1_init_ms":1500,"network_sctp_max_backoff_ms":3000}'` (same for
+`--custom-params2`). The callee's `adding data of 44 bytes` lines, the caller's INIT retries,
+must arrive 1.5 s and then 3.0 s apart. With the defaults they arrive 0.4 s, then every 0.75 s.
 
 `network_signaling_nosctp` drops the SCTP layer altogether (`ExternalSignalingConnection`, same
 gzip + `encryptRawPacket` framing). It changes the wire, so every engine that speaks 13.0.0's
@@ -111,8 +121,7 @@ call under the flag never connected (one side sent SCTP INITs the other could no
 
 Key files:
 - `tgcalls/v2/CustomDcSctpSocket.h/.cpp` — patched `DcSctpSocket` copy
-- `tgcalls/v2/SignalingSctpConnection.cpp` — `CustomDcSctpSocketFactory`, timer option plumbing
-- `tgcalls/v2/InstanceV2Impl.cpp`, `tgcalls/v2/InstanceV2CompatImpl.cpp` — read the JSON params, pass `Options` to `SignalingSctpConnection`
+- `tgcalls/v2/SignalingSctpConnection.h/.cpp` — `CustomDcSctpSocketFactory`, timer option plumbing, `Options::fromCustomParameters`
 
 ## InstanceV2CompatImpl (version 14.0.0)
 
