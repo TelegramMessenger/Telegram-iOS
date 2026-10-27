@@ -25,6 +25,7 @@ import ChatTextInputPanelNode
 /// message) brings the panel over the others again.
 private enum TextInputAccessoryPanelKey: Hashable {
     case linkPreview(url: String)
+    case editLinkPreview(url: String)
     case edit(EngineMessage.Id)
     case forward([EngineMessage.Id])
     case reply(EngineMessage.Id)
@@ -36,20 +37,21 @@ func textInputAccessoryPanel(
     chatPresentationInterfaceState: ChatPresentationInterfaceState,
     chatControllerInteraction: ChatControllerInteraction?,
     interfaceInteraction: ChatPanelInterfaceInteraction?
-) -> [ChatTextInputAccessoryPanelCandidate] {
+) -> [ChatTextInputAccessoryPanelCandidate]? {
+    // nil hides the slot without unsetting anything, so the panels keep their order for when it shows again.
     if case .standard(.previewing) = chatPresentationInterfaceState.mode {
-        return []
+        return nil
     }
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {
-        return []
+        return nil
     }
     if chatPresentationInterfaceState.search != nil {
-        return []
+        return nil
     }
     
     switch chatPresentationInterfaceState.subject {
     case .pinnedMessages, .messageOptions:
-        return []
+        return nil
     default:
         break
     }
@@ -61,7 +63,7 @@ func textInputAccessoryPanel(
     if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage, chatPresentationInterfaceState.interfaceState.postSuggestionState == nil {
         if let editingUrlPreview = chatPresentationInterfaceState.editingUrlPreview, !editMessage.disableUrlPreviews.contains(editingUrlPreview.url) {
             var previousTapTimestamp: Double?
-            candidates.append(ChatTextInputAccessoryPanelCandidate(key: TextInputAccessoryPanelKey.linkPreview(url: editingUrlPreview.url), panel: AnyComponentWithIdentity(id: "linkPreview", component: AnyComponent(ChatInputMessageAccessoryPanel(
+            candidates.append(ChatTextInputAccessoryPanelCandidate(key: TextInputAccessoryPanelKey.editLinkPreview(url: editingUrlPreview.url), panel: AnyComponentWithIdentity(id: "linkPreview", component: AnyComponent(ChatInputMessageAccessoryPanel(
                 context: context,
                 contents: .linkPreview(ChatInputMessageAccessoryPanel.Contents.LinkPreview(
                     url: editingUrlPreview.url,

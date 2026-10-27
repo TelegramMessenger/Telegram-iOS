@@ -59,6 +59,16 @@ final class ChatTextInputAccessoryPanelStackTests: XCTestCase {
         XCTAssertEqual(stack.update(availableKeys: [self.linkPreview, self.reply]), self.linkPreview)
     }
 
+    func testHidingTheSlotKeepsTheOrder() {
+        // Search, selection and previewing hide the slot without unsetting anything: the reply set over the link
+        // preview is still on top afterwards.
+        var stack = ChatTextInputAccessoryPanelStack()
+        _ = stack.update(availableKeys: [self.linkPreview])
+        _ = stack.update(availableKeys: [self.linkPreview, self.reply])
+        XCTAssertNil(stack.update(availableKeys: nil))
+        XCTAssertEqual(stack.update(availableKeys: [self.linkPreview, self.reply]), self.reply)
+    }
+
     func testNothingAvailableShowsNothing() {
         var stack = ChatTextInputAccessoryPanelStack()
         _ = stack.update(availableKeys: [self.reply])

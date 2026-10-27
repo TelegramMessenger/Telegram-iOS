@@ -19,16 +19,20 @@ public struct ChatTextInputAccessoryPanelCandidate {
 
 /// The panels above the input field share one slot. A panel that appears is shown over the one already there,
 /// and dismissing it brings back the one it covered; panels that appear together keep the order they are listed
-/// in, highest priority first.
+/// in, highest priority first. While the slot is hidden (search, selection, previewing) the order is kept.
 public struct ChatTextInputAccessoryPanelStack {
-    /// The keys of the panels that can show, the one on screen last.
+    /// The keys of the panels that can show, oldest first: the last one is on screen.
     private var keys: [AnyHashable] = []
 
     public init() {
     }
 
-    /// `availableKeys` are the panels that can show now, highest priority first. Returns the key to show.
-    public mutating func update(availableKeys: [AnyHashable]) -> AnyHashable? {
+    /// `availableKeys` are the panels that can show now, highest priority first, or nil while the slot is hidden.
+    /// Returns the key to show.
+    public mutating func update(availableKeys: [AnyHashable]?) -> AnyHashable? {
+        guard let availableKeys else {
+            return nil
+        }
         let available = Set(availableKeys)
         var updatedKeys = self.keys.filter { available.contains($0) }
         let known = Set(updatedKeys)
