@@ -295,7 +295,12 @@ final class MediaGridLayoutLayer: CALayer {
         }
     }
 
+    static let launchAspectTolerance: CGFloat = 0.02
+
     private func launchImage(at index: Int, pixelSize: CGSize) -> MediaGridLaunchImage? {
+        guard pixelSize.width > 0.0, pixelSize.height > 0.0, abs(pixelSize.width / pixelSize.height - 1.0) <= MediaGridLayoutLayer.launchAspectTolerance else {
+            return nil
+        }
         guard let launchImage = self.dataSource.launchImage(at: index), CGFloat(launchImage.pixelWidth) <= MediaGridLayoutLayer.donorOversize * pixelSize.width else {
             return nil
         }

@@ -153,6 +153,70 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         XCTAssertTrue(view.activeLayoutLayer.visibleCells.values.allSatisfy { $0.isShowingThumbnail })
     }
 
+    func testLevelOneNonSquareCellsNeverUseLaunchImages() {
+        let dataSource = TestDataSource(count: 1000)
+        dataSource.providesThumbnails = true
+        dataSource.holdsDeliveries = true
+        for index in 0 ..< 40 {
+            dataSource.launchImages[index] = MediaGridLaunchImage(image: MediaGridLaunchCacheTests.makeImage(width: 360, height: 360, color: .blue), coveredPixelWidth: 522)
+        }
+        let view = self.makeGrid(dataSource: dataSource)
+        view.setLevel(.one, animated: false)
+        view.layoutIfNeeded()
+        let cells = view.activeLayoutLayer.visibleCells
+        XCTAssertFalse(cells.isEmpty)
+        for (index, cell) in cells {
+            XCTAssertNotEqual(cell.frame.width, cell.frame.height, accuracy: 1.0)
+            XCTAssertTrue(cell.isShowingThumbnail, "index \(index)")
+        }
+        view.thumbnailsDidChange(indices: nil)
+        XCTAssertTrue(view.activeLayoutLayer.visibleCells.values.allSatisfy { $0.isShowingThumbnail })
+    }
+
+    func testWaitHookIsSpentOnFirstSizedLayoutEvenWhenEmpty() {
+        let dataSource = TestDataSource(count: 0)
+        let view = self.makeGrid(dataSource: dataSource)
+        view.layoutIfNeeded()
+        dataSource.count = 100
+        view.reloadData()
+        view.layoutIfNeeded()
+        XCTAssertEqual(dataSource.launchWaitTimeouts, [])
+    }
+
+    func testUpdateDoesNotResurrectReleasedImages() {
+        let directory = self.makeDirectory()
+        let writer = MediaGridLaunchCache(directory: directory, capacity: 3, pixelSize: 64)
+        self.write(writer, head: self.keys(["a", "b"]), colors: ["a": .red, "b": .green])
+        let cache = MediaGridLaunchCache(directory: directory, capacity: 3, pixelSize: 64)
+        cache.load()
+        XCTAssertEqual(cache.decodedImageCount, 2)
+        cache.willInstall = {
+            cache.releaseImages()
+        }
+        let done = self.expectation(description: "update")
+        cache.update(head: self.keys(["a", "b", "c"]), delivered: ["c": MediaGridLaunchCache.Delivered(version: "1", image: MediaGridLaunchCacheTests.makeImage(width: 64, height: 64, color: .blue))], completion: { written in
+            XCTAssertTrue(written)
+            done.fulfill()
+        })
+        self.wait(for: [done], timeout: 5.0)
+        XCTAssertEqual(cache.storedKeys, self.keys(["a", "b", "c"]))
+        XCTAssertEqual(cache.decodedImageCount, 0)
+    }
+
+    func testFallbackDeliveryCoversOnlyItsOwnSize() {
+        let directory = self.makeDirectory()
+        let (keeper, run) = self.makeKeeper(directory: directory, capacity: 3, pixelSize: 522)
+        keeper.install(head: self.keys(["a", "b"]), images: [:])
+        keeper.delivered(id: "a", image: MediaGridLaunchCacheTests.makeImage(width: 360, height: 480, color: .red), target: CGSize(width: 522.0, height: 522.0))
+        keeper.delivered(id: "b", image: MediaGridLaunchCacheTests.makeImage(width: 120, height: 160, color: .red), target: CGSize(width: 522.0, height: 522.0))
+        run()
+        self.flush(keeper)
+        let reloaded = MediaGridLaunchCache(directory: directory, capacity: 3, pixelSize: 522)
+        reloaded.load()
+        XCTAssertEqual(reloaded.launchImage(for: "a", version: "1")?.coveredPixelWidth, 522)
+        XCTAssertEqual(reloaded.launchImage(for: "b", version: "1")?.coveredPixelWidth, 120)
+    }
+
     func testStaleLaunchEntryIgnored() {
         let directory = self.makeDirectory()
         let writer = MediaGridLaunchCache(directory: directory, capacity: 4, pixelSize: 100)
@@ -263,9 +327,10 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         let start = CACurrentMediaTime()
         view.layoutIfNeeded()
         let elapsed = CACurrentMediaTime() - start
-        XCTAssertGreaterThanOrEqual(elapsed, MediaGridView.launchImageWait * 0.9)
-        XCTAssertLessThan(elapsed, MediaGridView.launchImageWait + 0.04)
-        XCTAssertLessThan(view.launchImageWaitDuration ?? 1.0, MediaGridView.launchImageWait + 0.02)
+        XCTAssertGreaterThanOrEqual(elapsed, 0.04)
+        XCTAssertLessThan(elapsed, 0.25)
+        XCTAssertGreaterThanOrEqual(view.launchImageWaitDuration ?? 0.0, 0.04)
+        XCTAssertLessThan(view.launchImageWaitDuration ?? 1.0, 0.25)
         let viewport = self.viewport(view)
         for index in viewport {
             XCTAssertTrue(view.activeLayoutLayer.visibleCells[index]!.isShowingThumbnail, "index \(index)")
@@ -282,8 +347,8 @@ final class MediaGridLaunchCacheTests: XCTestCase {
         }
     }
 
-    private func makeKeeper(directory: URL, capacity: Int) -> (LaunchCacheKeeper, () -> Void) {
-        let cache = MediaGridLaunchCache(directory: directory, capacity: capacity, pixelSize: 64)
+    private func makeKeeper(directory: URL, capacity: Int, pixelSize: Int = 64) -> (LaunchCacheKeeper, () -> Void) {
+        let cache = MediaGridLaunchCache(directory: directory, capacity: capacity, pixelSize: pixelSize)
         cache.load()
         let keeper = LaunchCacheKeeper(cache: cache)
         var pending: [() -> Void] = []

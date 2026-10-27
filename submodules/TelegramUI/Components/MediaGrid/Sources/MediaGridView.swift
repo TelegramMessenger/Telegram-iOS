@@ -1396,11 +1396,13 @@ public final class MediaGridView: UIView {
         guard size.width > 0.0, size.height > 0.0 else {
             return
         }
-        if !self.hasWaitedForLaunchImages && self.itemCount > 0 {
+        if !self.hasWaitedForLaunchImages {
             self.hasWaitedForLaunchImages = true
-            let start = CACurrentMediaTime()
-            self.dataSource.waitForLaunchImages(timeout: MediaGridView.launchImageWait)
-            self.launchImageWaitDuration = CACurrentMediaTime() - start
+            if self.itemCount > 0 {
+                let start = CACurrentMediaTime()
+                self.dataSource.waitForLaunchImages(timeout: MediaGridView.launchImageWait)
+                self.launchImageWaitDuration = CACurrentMediaTime() - start
+            }
         }
         let insets = self.geometryInsets
         let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: insets.top, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)

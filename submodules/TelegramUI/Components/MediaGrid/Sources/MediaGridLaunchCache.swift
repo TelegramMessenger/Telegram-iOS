@@ -96,6 +96,7 @@ public final class MediaGridLaunchCache {
     private let ioQueue = DispatchQueue(label: "org.telegram.MediaGrid.launchCache", qos: .utility)
     private var measuredLoadDuration: CFTimeInterval = 0.0
     var willDecode: (() -> Void)?
+    var willInstall: (() -> Void)?
 
     public static var defaultDirectory: URL {
         return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridThumbnails", isDirectory: true).appendingPathComponent(MediaGridLaunchCache.directoryName, isDirectory: true)
@@ -318,11 +319,16 @@ public final class MediaGridLaunchCache {
             } else {
                 written = true
             }
+            self.willInstall?()
+            self.condition.lock()
             var entries: [String: Entry] = [:]
             for entry in result {
-                entries[entry.id] = Entry(stored: entry, image: images[entry.id])
+                var image: CGImage?
+                if let carried = images[entry.id], let live = self.entries[entry.id], live.stored.version == entry.version, live.image === carried {
+                    image = carried
+                }
+                entries[entry.id] = Entry(stored: entry, image: image)
             }
-            self.condition.lock()
             self.entries = entries
             self.order = result
             self.condition.unlock()

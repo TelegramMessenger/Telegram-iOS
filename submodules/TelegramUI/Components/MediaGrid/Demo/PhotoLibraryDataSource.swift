@@ -961,6 +961,17 @@ final class LaunchCacheKeeper {
         self.scheduleRefresh()
     }
 
+    static let derivativeTolerance: CGFloat = 0.65
+
+    static func coverage(of image: CGImage, target: CGSize) -> Int {
+        let side = min(image.width, image.height)
+        let targetSide = min(target.width, target.height)
+        if CGFloat(side) >= LaunchCacheKeeper.derivativeTolerance * targetSide {
+            return max(side, Int(targetSide.rounded(.down)))
+        }
+        return side
+    }
+
     func targetSize(at index: Int, pixelSize: CGSize) -> CGSize {
         let launch = CGFloat(self.cache.pixelSize)
         let side = min(pixelSize.width, pixelSize.height)
@@ -976,7 +987,7 @@ final class LaunchCacheKeeper {
             return
         }
         let version = self.head[index].version
-        let delivery = MediaGridLaunchCache.Delivered(version: version, image: image, coverage: Int(min(target.width, target.height)))
+        let delivery = MediaGridLaunchCache.Delivered(version: version, image: image, coverage: LaunchCacheKeeper.coverage(of: image, target: target))
         if let current = self.delivered[id], current.version == version, !delivery.isBetter(than: current) {
             return
         }
