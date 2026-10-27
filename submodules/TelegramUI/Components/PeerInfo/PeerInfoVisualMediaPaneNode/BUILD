@@ -62,6 +62,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/CollectionTabItemComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/DustEffect",
+        "//submodules/TelegramUI/Components/MediaGrid",
     ],
     visibility = [
         "//visibility:public",
