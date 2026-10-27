@@ -265,6 +265,10 @@ final class NewsExpandedPostContentView: UIView {
     private let showMoreView = ComponentView<Empty>()
     private let galleryView = NewsHorizontalStripView()
     private var galleryItemViews: [NewsGalleryItemView] = []
+    /// The first layout places the subviews without animating them from their empty frames: a row morphing from
+    /// compact makes this view during the morph's own animated pass, and the gallery (a scroll view, which clips)
+    /// would show its photos growing out of a corner.
+    private var hasLaidOut = false
 
     /// The gallery's frame in this view, when the post has one, and how far its content has moved from rest: the
     /// floating avatar keeps out of a gallery scrolled under its column (`newsExpandedAvatarOffset`).
@@ -337,6 +341,8 @@ final class NewsExpandedPostContentView: UIView {
         let contentX = metrics.contentX(leftInset: 0.0)
         let contentWidth = metrics.contentWidth(width: width, leftInset: 0.0, rightInset: 0.0)
         let contentMaxX = contentX + contentWidth
+        let frameTransition: ComponentTransition = self.hasLaidOut ? transition : .immediate
+        self.hasLaidOut = true
 
         // The channel line's right part: views, time, chevron.
         let secondaryColor = theme.list.itemSecondaryTextColor
@@ -348,7 +354,7 @@ final class NewsExpandedPostContentView: UIView {
             return CGRect(origin: CGPoint(x: maxX - size.width, y: floorToScreenPixels(headerMidY - size.height * 0.5)), size: size)
         }
         var metaMaxX = contentMaxX
-        transition.setFrame(view: self.chevronView, frame: centred(maxX: metaMaxX, size: chevronSize))
+        frameTransition.setFrame(view: self.chevronView, frame: centred(maxX: metaMaxX, size: chevronSize))
         metaMaxX -= chevronSize.width + 6.0
         let timeFrame = centred(maxX: metaMaxX, size: timeSize)
         metaMaxX -= timeSize.width
@@ -365,13 +371,13 @@ final class NewsExpandedPostContentView: UIView {
             self.viewsLabel.textColor = secondaryColor
             self.viewsLabel.text = compactNumericCountString(viewCount, decimalSeparator: component.dateTimeFormat.decimalSeparator)
             let viewsSize = self.viewsLabel.sizeThatFits(CGSize(width: 100.0, height: 100.0))
-            transition.setFrame(view: self.viewsLabel, frame: centred(maxX: metaMaxX, size: viewsSize))
+            frameTransition.setFrame(view: self.viewsLabel, frame: centred(maxX: metaMaxX, size: viewsSize))
             metaMaxX -= viewsSize.width + 2.0
             // The chat's own view-count icon (the one its status line shows), in the channel line now.
             let eyeImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ImpressionCount"), color: secondaryColor)
             self.viewsIconView.image = eyeImage
             let eyeSize = eyeImage?.size ?? CGSize(width: 14.0, height: 10.0)
-            transition.setFrame(view: self.viewsIconView, frame: centred(maxX: metaMaxX, size: eyeSize))
+            frameTransition.setFrame(view: self.viewsIconView, frame: centred(maxX: metaMaxX, size: eyeSize))
             metaMaxX -= eyeSize.width
             self.viewsLabel.isHidden = false
             self.viewsIconView.isHidden = false
@@ -476,11 +482,13 @@ final class NewsExpandedPostContentView: UIView {
                 containerSize: CGSize(width: contentWidth, height: 100.0)
             )
             if let view = self.showMoreView.view {
+                nextY += metrics.showMoreTopSpacing
+                let showMoreFrame = CGRect(origin: CGPoint(x: contentX, y: nextY), size: showMoreSize)
                 if view.superview == nil {
                     self.addSubview(view)
+                    view.frame = showMoreFrame
                 }
-                nextY += metrics.showMoreTopSpacing
-                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: contentX, y: nextY), size: showMoreSize))
+                transition.setFrame(view: view, frame: showMoreFrame)
                 nextY += showMoreSize.height
             }
         } else if let view = self.showMoreView.view {
@@ -496,20 +504,20 @@ final class NewsExpandedPostContentView: UIView {
             }
             let frame = CGRect(x: 0.0, y: nextY, width: width, height: layout.contentSize.height)
             galleryFrame = frame
-            transition.setFrame(view: self.galleryView, frame: frame)
+            frameTransition.setFrame(view: self.galleryView, frame: frame)
             self.galleryView.contentInset = UIEdgeInsets(top: 0.0, left: contentX, bottom: 0.0, right: metrics.rightInset)
             self.galleryView.contentSize = layout.contentSize
             while self.galleryItemViews.count > parts.gallery.count {
                 self.galleryItemViews.removeLast().removeFromSuperview()
             }
             while self.galleryItemViews.count < parts.gallery.count {
-                let view = NewsGalleryItemView(frame: CGRect())
+                let view = NewsGalleryItemView(frame: layout.items[self.galleryItemViews.count])
                 self.galleryView.addSubview(view)
                 self.galleryItemViews.append(view)
             }
             for (index, media) in parts.gallery.enumerated() {
                 let view = self.galleryItemViews[index]
-                transition.setFrame(view: view, frame: layout.items[index])
+                frameTransition.setFrame(view: view, frame: layout.items[index])
                 view.update(context: context, item: media, size: layout.items[index].size)
                 view.action = {
                     let _ = content.openMedia(media.message, media.media)

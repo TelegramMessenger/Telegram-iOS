@@ -20,11 +20,15 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
   and adds `updateExpanded`; the avatar, channel name, badge and time are the *same* `ComponentView`s, restyled
   and moved, so a mode change is one animated CoreList pass (`NewsScreenNode.displayModeTransition`, the 0.5 s
   spring) in which their frames travel and the row's height rides the spring. `morph(from:to:transition:)` adds
-  the rest: the compact text scales 15 → 17 pt and travels to the bubble's text origin while the bubble fades in
-  over it, the thumbnail travels into the gallery's first photo (its layer keeps the aspect meanwhile), and the
-  row's own avatar grows 16 → 36 pt under the floating one, which fades in and then owns it. The reverse plays
-  the same paths back. Do not give the two modes different item identities or component types: CoreList would
-  replace the row instead of animating it.
+  the rest: the compact text scales 15 pt → the bubble's font size and travels to the bubble's text origin while
+  the bubble fades in over it, the thumbnail travels into the gallery's first photo (its layer keeps the aspect
+  meanwhile), and the row's own avatar grows 16 → 36 pt under the floating one, which fades in and then owns it.
+  The reverse plays the same paths back. **A morph starts from what is on screen** (`MorphOrigin`, read from the
+  layers' presentation while they animate), so a switch flipped back mid-flight turns around where it is instead
+  of jumping to the end of the first path. Do not give the two modes different item identities or component
+  types: CoreList would replace the row instead of animating it. The expanded content view lays its subviews out
+  immediately the first time (`hasLaidOut`): it is made inside the morph's animated pass, and its gallery, a
+  scroll view, would otherwise grow out of a corner.
 - **The bubble container never animates its height.** The item inside is turned by π about the container's
   centre, so a height that animates shows the item above its place by the growth at first (Show more pushed the
   text up). Its origin never changes between layouts, so an immediate frame keeps the content put while the

@@ -722,9 +722,12 @@ public final class NewsFeedPostComponent: Component {
             let avatarFrame = CGRect(x: metrics.avatarInset, y: metrics.avatarTop, width: metrics.avatarSize, height: metrics.avatarSize)
 
             let contentView: NewsExpandedPostContentView
+            let contentFrameTransition: ComponentTransition
             if let current = self.expandedContentView {
                 contentView = current
+                contentFrameTransition = transition
             } else {
+                contentFrameTransition = .immediate
                 contentView = NewsExpandedPostContentView(frame: CGRect())
                 contentView.alpha = 0.0
                 self.lensView.insertSubview(contentView, at: 0)
@@ -752,7 +755,7 @@ public final class NewsFeedPostComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             let layout = contentView.update(component: component, content: content, width: width, timeSize: timeSize, synchronousLoad: component.loading.isSynchronous, transition: transition)
-            transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.height)))
+            contentFrameTransition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.height)))
 
             var credibilitySize = CGSize()
             if component.peer.isVerified {
@@ -800,8 +803,9 @@ public final class NewsFeedPostComponent: Component {
                 }
                 // The list draws an expanded row's avatar, floating over its channel's run (the row's attachment);
                 // the row keeps its own in place, hidden, so a switch back to compact finds it where it was. On the
-                // morph from compact it grows into place first and hides once the floating one is over it.
-                avatarView.isHidden = !self.isMorphing
+                // morph from compact it grows into place first and hides once the floating one is over it; an update
+                // during that growth (the time ticking) leaves it to its completion.
+                avatarView.isHidden = !self.isMorphing && avatarView.layer.animation(forKey: "transform.scale") == nil
                 avatarView.frame = avatarFrame
             }
             let titleFrame = centred(x: contentX, size: titleSize)
@@ -836,15 +840,28 @@ public final class NewsFeedPostComponent: Component {
             return (CGSize(width: width, height: layout.height), separator, postText)
         }
 
-        /// What a mode morph starts from: the row's geometry before the new layout.
+        /// What a mode morph starts from: the row's geometry as on screen before the new layout. A morph that
+        /// interrupts the one before it starts where that one is, not where it was going.
         private struct MorphOrigin {
             let avatarFrame: CGRect?
-            let textFrame: CGRect?
-            let thumbnailFrame: CGRect?
+            /// The compact text while it shows or is still leaving: its frame (its scale included) and alpha.
+            let text: (frame: CGRect, alpha: CGFloat)?
+            /// The thumbnail while it shows or is still travelling.
+            let thumbnail: (frame: CGRect, alpha: CGFloat)?
             let bubbleTextOrigin: CGPoint?
             let galleryItemFrame: CGRect?
+            /// The bubble's font size: the compact text scales to it.
+            let bubbleFontSize: CGFloat?
             /// The expanded content on its way out (a morph to compact): blurred as it fades.
             weak var expandedContentView: NewsExpandedPostContentView?
+        }
+
+        /// A view's frame and alpha as on screen now: its presentation while an animation runs on it, else its own.
+        private func presented(_ view: UIView) -> (frame: CGRect, alpha: CGFloat) {
+            if let keys = view.layer.animationKeys(), !keys.isEmpty, let presentation = view.layer.presentation() {
+                return (presentation.frame, CGFloat(presentation.opacity))
+            }
+            return (view.frame, view.alpha)
         }
 
         private func morphOrigin() -> MorphOrigin {
@@ -854,12 +871,27 @@ public final class NewsFeedPostComponent: Component {
                 bubbleTextOrigin = contentView.bubbleTextOrigin.map { contentView.convert($0, to: self.lensView) }
                 galleryItemFrame = contentView.firstGalleryItemFrame.map { contentView.convert($0, to: self.lensView) }
             }
+            var text: (frame: CGRect, alpha: CGFloat)?
+            if let textView = self.text.view, textView.superview != nil, !textView.isHidden {
+                let presented = self.presented(textView)
+                if presented.alpha > 0.0 {
+                    text = presented
+                }
+            }
+            var thumbnail: (frame: CGRect, alpha: CGFloat)?
+            if !self.thumbnailView.isHidden {
+                let presented = self.presented(self.thumbnailView)
+                if presented.alpha > 0.0 {
+                    thumbnail = presented
+                }
+            }
             return MorphOrigin(
-                avatarFrame: self.avatar.view?.frame,
-                textFrame: self.text.view.flatMap { $0.superview != nil && !$0.isHidden && $0.alpha > 0.0 ? $0.frame : nil },
-                thumbnailFrame: self.thumbnailView.isHidden || self.thumbnailView.alpha == 0.0 ? nil : self.thumbnailView.frame,
+                avatarFrame: self.avatar.view.map { self.presented($0).frame },
+                text: text,
+                thumbnail: thumbnail,
                 bubbleTextOrigin: bubbleTextOrigin,
                 galleryItemFrame: galleryItemFrame,
+                bubbleFontSize: self.component?.expanded?.presentationData.chatFontSize.baseDisplaySize,
                 expandedContentView: self.expandedContentView
             )
         }
@@ -898,11 +930,13 @@ public final class NewsFeedPostComponent: Component {
         }
 
         /// The compact and expanded layouts morph into each other: the avatar, name, badge and time are shared
-        /// views whose frames animate; the compact text scales (15 → 17 pt) and travels to where the bubble's text
-        /// starts while the bubble fades in over it, and the thumbnail travels into the gallery's first photo. The
-        /// reverse plays the same paths backwards. `origin` is the row before the new layout was applied.
+        /// views whose frames animate; the compact text scales (15 pt to the bubble's size) and travels to where the
+        /// bubble's text starts while the bubble fades in over it, and the thumbnail travels into the gallery's first
+        /// photo. The reverse plays the same paths backwards. `origin` is the row as on screen before the new layout
+        /// was applied: a morph interrupting another continues from where it is.
         private func morph(from origin: MorphOrigin, to displayMode: NewsFeedDisplayMode, transition: ComponentTransition) {
-            let textScale = 17.0 / 15.0
+            let bubbleFontSize = self.component?.expanded?.presentationData.chatFontSize.baseDisplaySize ?? origin.bubbleFontSize ?? 17.0
+            let textScale = bubbleFontSize / 15.0
             let blurRadius: CGFloat = 8.0
             var duration = 0.4
             if case let .curve(value, _) = transition.animation {
@@ -925,30 +959,31 @@ public final class NewsFeedPostComponent: Component {
                 if let textView = self.text.view {
                     self.animateBlur(layer: textView.layer, from: 0.0, to: blurRadius, duration: duration)
                 }
-                if let textView = self.text.view, let textFrame = origin.textFrame, let target = contentView.bubbleTextOrigin.map({ contentView.convert($0, to: self.lensView) }) {
+                if let textView = self.text.view, let text = origin.text, let target = contentView.bubbleTextOrigin.map({ contentView.convert($0, to: self.lensView) }) {
                     // Top-left corners meet: the scale is about the centre, so the centre travels to where the
-                    // scaled text's centre would be.
-                    let targetCenter = CGPoint(x: target.x + textFrame.width * textScale * 0.5, y: target.y + textFrame.height * textScale * 0.5)
-                    textView.frame = textFrame
+                    // scaled text's centre would be. The text keeps its compact layout (`bounds`); on screen it may
+                    // still be scaled from an interrupted morph back.
+                    let size = textView.bounds.size
+                    let targetCenter = CGPoint(x: target.x + size.width * textScale * 0.5, y: target.y + size.height * textScale * 0.5)
                     textView.alpha = 0.0
-                    transition.animatePosition(view: textView, from: CGPoint(x: textFrame.midX, y: textFrame.midY), to: targetCenter)
-                    transition.animateScale(view: textView, from: 1.0, to: textScale)
-                    transition.animateAlpha(view: textView, from: 1.0, to: 0.0)
+                    transition.animatePosition(view: textView, from: CGPoint(x: text.frame.midX, y: text.frame.midY), to: targetCenter)
+                    transition.animateScale(view: textView, from: text.frame.width / max(1.0, size.width), to: textScale)
+                    transition.animateAlpha(view: textView, from: text.alpha, to: 0.0)
                 } else if let textView = self.text.view {
                     textView.alpha = 0.0
                 }
-                if let thumbnailFrame = origin.thumbnailFrame, let target = contentView.firstGalleryItemFrame.map({ contentView.convert($0, to: self.lensView) }) {
+                if let thumbnail = origin.thumbnail, let target = contentView.firstGalleryItemFrame.map({ contentView.convert($0, to: self.lensView) }) {
+                    // From its compact frame, or from wherever an interrupted morph back has it (`setFrame` resumes
+                    // a frame in flight).
                     self.thumbnailView.isHidden = false
-                    self.thumbnailView.alpha = 1.0
-                    self.thumbnailView.frame = thumbnailFrame
                     transition.setFrame(view: self.thumbnailView, frame: target, completion: { [weak self] _ in
                         guard let self, self.component?.displayMode == .expanded else {
                             return
                         }
                         self.thumbnailView.isHidden = true
                     })
-                    transition.animateAlpha(view: self.thumbnailView, from: 1.0, to: 0.0, delay: 0.0)
                     self.thumbnailView.alpha = 0.0
+                    transition.animateAlpha(view: self.thumbnailView, from: thumbnail.alpha, to: 0.0)
                 }
                 self.videoLabel.alpha = 0.0
                 contentView.alpha = 1.0
@@ -963,25 +998,32 @@ public final class NewsFeedPostComponent: Component {
                 if let textView = self.text.view {
                     self.animateBlur(layer: textView.layer, from: blurRadius, to: 0.0, duration: duration)
                 }
-                if let textView = self.text.view, let origin = origin.bubbleTextOrigin {
+                if let textView = self.text.view {
+                    // From where the bubble's text starts, at the bubble's size; or from wherever an interrupted
+                    // morph out has it.
                     let textFrame = textView.frame
-                    let fromCenter = CGPoint(x: origin.x + textFrame.width * textScale * 0.5, y: origin.y + textFrame.height * textScale * 0.5)
+                    var from: (center: CGPoint, scale: CGFloat, alpha: CGFloat) = (CGPoint(x: textFrame.midX, y: textFrame.midY), 1.0, 0.0)
+                    if let text = origin.text {
+                        from = (CGPoint(x: text.frame.midX, y: text.frame.midY), text.frame.width / max(1.0, textFrame.width), text.alpha)
+                    } else if let origin = origin.bubbleTextOrigin {
+                        from = (CGPoint(x: origin.x + textFrame.width * textScale * 0.5, y: origin.y + textFrame.height * textScale * 0.5), textScale, 0.0)
+                    }
                     textView.alpha = 1.0
-                    transition.animatePosition(view: textView, from: fromCenter, to: CGPoint(x: textFrame.midX, y: textFrame.midY))
-                    transition.animateScale(view: textView, from: textScale, to: 1.0)
-                    transition.animateAlpha(view: textView, from: 0.0, to: 1.0)
-                } else if let textView = self.text.view {
-                    textView.alpha = 1.0
-                    transition.animateAlpha(view: textView, from: 0.0, to: 1.0)
+                    transition.animatePosition(view: textView, from: from.center, to: CGPoint(x: textFrame.midX, y: textFrame.midY))
+                    transition.animateScale(view: textView, from: from.scale, to: 1.0)
+                    transition.animateAlpha(view: textView, from: from.alpha, to: 1.0)
                 }
                 if !self.thumbnailView.isHidden {
+                    // From the gallery's first photo, or from wherever an interrupted morph out has it.
                     let thumbnailFrame = self.thumbnailView.frame
                     self.thumbnailView.alpha = 1.0
-                    if let from = origin.galleryItemFrame {
-                        transition.animatePosition(view: self.thumbnailView, from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: thumbnailFrame.midX, y: thumbnailFrame.midY))
-                        transition.animateBoundsSize(view: self.thumbnailView, from: from.size, to: thumbnailFrame.size)
+                    if let from = origin.thumbnail ?? origin.galleryItemFrame.map({ (frame: $0, alpha: 0.0) }) {
+                        transition.animatePosition(view: self.thumbnailView, from: CGPoint(x: from.frame.midX, y: from.frame.midY), to: CGPoint(x: thumbnailFrame.midX, y: thumbnailFrame.midY))
+                        transition.animateBoundsSize(view: self.thumbnailView, from: from.frame.size, to: thumbnailFrame.size)
+                        transition.animateAlpha(view: self.thumbnailView, from: from.alpha, to: 1.0)
+                    } else {
+                        transition.animateAlpha(view: self.thumbnailView, from: 0.0, to: 1.0)
                     }
-                    transition.animateAlpha(view: self.thumbnailView, from: 0.0, to: 1.0)
                 }
                 self.videoLabel.alpha = 1.0
                 transition.animateAlpha(view: self.videoLabel, from: 0.0, to: 1.0)
