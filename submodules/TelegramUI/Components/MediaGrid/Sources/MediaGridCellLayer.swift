@@ -21,6 +21,10 @@ open class MediaGridCellLayer: CALayer {
     private(set) var thumbnailPixelSize: CGFloat = 0.0
     private(set) var launchCoverage: CGFloat = 0.0
 
+    public var displayedImage: UIImage? {
+        return self.sharpImage
+    }
+
     var hasImage: Bool {
         return self.isShowingThumbnail || self.sharpImage != nil
     }

@@ -300,4 +300,22 @@ final class MediaGridPhotoLibraryDataSourceTests: XCTestCase {
         XCTAssertFalse(album.reversed)
         XCTAssertTrue(album.store === services.store)
     }
+
+    func testLaunchCoverageIsInjectableUntilTheCacheExists() {
+        let directory = self.makeDirectory()
+        let services = MediaGridPhotoLibraryServices(directory: directory, launchDirectory: directory.appendingPathComponent("launch", isDirectory: true), retryRegistryURL: nil, snapshotURL: nil)
+        XCTAssertTrue(services.configureLaunchCoverage {
+            return MediaGridLaunchCache.Coverage(capacity: 5, pixelSize: 80)
+        })
+        XCTAssertEqual(services.launchCache.capacity, 5)
+        XCTAssertFalse(services.configureLaunchCoverage {
+            return MediaGridLaunchCache.Coverage(capacity: 7, pixelSize: 80)
+        })
+        XCTAssertEqual(services.launchCache.capacity, 5)
+    }
+
+    func testDefaultFileNamesAreNeutral() {
+        XCTAssertEqual(MediaGridPhotoLibraryServices.defaultRetryRegistryURL.lastPathComponent, "MediaGridThumbnailRetries.plist")
+        XCTAssertEqual(MediaGridPhotoLibraryServices.defaultSnapshotURL.lastPathComponent, "MediaGridLaunchSnapshot.plist")
+    }
 }

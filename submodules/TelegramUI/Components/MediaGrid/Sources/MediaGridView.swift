@@ -135,6 +135,34 @@ public final class MediaGridView: UIView {
         }
     }
     public var onSelectionPan: ((Int, Bool) -> Void)?
+    public var onSelectionPanBegan: (() -> Void)?
+    public var onTapItemAt: ((Int, CGPoint) -> Void)?
+    public var onWillBeginDragging: (() -> Void)?
+    public var onDidEndDragging: (() -> Void)?
+    public var bounces = true
+    public var onZoomingChanged: ((Bool) -> Void)?
+    private var reportedZooming = false
+    public let overlayView = UIView()
+
+    public var headerView: UIView? {
+        didSet {
+            if self.headerView !== oldValue {
+                oldValue?.removeFromSuperview()
+                if let headerView = self.headerView {
+                    self.engine.contentHost.insertSubview(headerView, belowSubview: self.overlayView)
+                }
+                self.invalidateGridLayout()
+            }
+        }
+    }
+
+    public var headerHeight: CGFloat = 0.0 {
+        didSet {
+            if self.headerHeight != oldValue {
+                self.invalidateGridLayout()
+            }
+        }
+    }
 
     public var cameraView: UIView? {
         didSet {
@@ -174,6 +202,8 @@ public final class MediaGridView: UIView {
         self.clipsToBounds = true
         self.addSubview(self.engine.contentHost)
         self.engine.contentHost.layer.addSublayer(self.activeLayoutLayer)
+        self.overlayView.isUserInteractionEnabled = false
+        self.engine.contentHost.addSubview(self.overlayView)
         self.tapRecognizer.addTarget(self, action: #selector(self.tapped(_:)))
         self.addGestureRecognizer(self.tapRecognizer)
         self.selectionGesture.sideInset = 44.0
@@ -194,8 +224,15 @@ public final class MediaGridView: UIView {
             guard let self else {
                 return
             }
+            let began = !isEnabled && !self.isSelecting
             self.isSelecting = !isEnabled
+            if began {
+                self.stopScrollAnimation()
+            }
             self.engine.isScrollEnabled = isEnabled && self.transition == nil && self.pinch == nil
+            if began {
+                self.onSelectionPanBegan?()
+            }
             if isEnabled {
                 self.applyAspects()
             }
@@ -217,7 +254,12 @@ public final class MediaGridView: UIView {
             self?.scrolled(to: offset)
         }
         self.engine.onWillBeginDragging = { [weak self] in
-            self?.isDragging = true
+            guard let self else {
+                return
+            }
+            self.stopScrollAnimation()
+            self.isDragging = true
+            self.onWillBeginDragging?()
         }
         self.engine.onDidEndDragging = { [weak self] in
             guard let self else {
@@ -226,6 +268,7 @@ public final class MediaGridView: UIView {
             self.isDragging = false
             self.haltsNextRelease = false
             self.applyAspects()
+            self.onDidEndDragging?()
         }
         self.engine.onFlightChanged = { [weak self] flight in
             self?.flightChanged(settledOffset: flight?.settledOffset)
@@ -240,6 +283,7 @@ public final class MediaGridView: UIView {
     }
 
     deinit {
+        self.scrollAnimationLink?.invalidate()
         self.engine.tearDown()
         self.resetPrefetch()
         if let transition = self.transition {
@@ -299,6 +343,7 @@ public final class MediaGridView: UIView {
     }
 
     public func reloadData() {
+        self.stopScrollAnimation()
         self.endInteraction()
         self.rotationAnchor = nil
         self.itemCount = max(0, self.dataSource.count)
@@ -331,6 +376,7 @@ public final class MediaGridView: UIView {
         if changes.isEmpty {
             return
         }
+        self.stopScrollAnimation()
         self.endInteraction()
         self.rotationAnchor = nil
         var anchor: (index: Int, y: CGFloat)?
@@ -469,6 +515,7 @@ public final class MediaGridView: UIView {
     }
 
     private func stopMotion() {
+        self.stopScrollAnimation()
         if self.isDragging {
             self.haltsNextRelease = true
             let isEnabled = self.engine.isScrollEnabled
@@ -497,14 +544,116 @@ public final class MediaGridView: UIView {
         guard y.isFinite else {
             return
         }
+        self.stopScrollAnimation()
         guard self.gridLayout != nil else {
             self.pendingContentOffset = y
             return
         }
         self.endInteraction()
         let offset = min(max(0.0, y), self.maxOffset)
+        if self.isDragging {
+            self.engine.applyShift(offset - self.engine.offset)
+            self.engine.reanchorDragToCurrentPosition()
+        } else {
+            self.engine.setOffset(offset)
+        }
+        self.scrolled(to: offset)
+    }
+
+    public func reanchorDrag() {
+        if self.isDragging {
+            self.engine.reanchorDragToCurrentPosition()
+        }
+    }
+
+    private func noteZoomingChanged() {
+        let isZooming = self.isZooming
+        if isZooming != self.reportedZooming {
+            self.reportedZooming = isZooming
+            self.onZoomingChanged?(isZooming)
+        }
+    }
+
+    public func scrollToEnd() {
+        self.setContentOffset(CGFloat.greatestFiniteMagnitude)
+    }
+
+    static let scrollToTopDuration: CFTimeInterval = 0.3
+    static let scrollToTopMaxDistance: CGFloat = 2.0
+
+    private var scrollAnimation: (from: CGFloat, start: CFTimeInterval)?
+    private var scrollAnimationLink: CADisplayLink?
+    var requiresWindowForScrollAnimation = true
+
+    public var isAnimatingScroll: Bool {
+        return self.scrollAnimation != nil
+    }
+
+    public func scrollToTop(animated: Bool) {
+        self.stopScrollAnimation()
+        guard animated, self.gridLayout != nil, self.engine.offset > 0.5, self.window != nil || !self.requiresWindowForScrollAnimation else {
+            self.setContentOffset(0.0)
+            return
+        }
+        self.endInteraction()
+        self.engine.haltMotionInPlace()
+        let limit = MediaGridView.scrollToTopMaxDistance * self.bounds.height
+        var from = self.engine.offset
+        if from > limit {
+            from = limit
+            self.engine.setOffset(from)
+            self.scrolled(to: from)
+        }
+        self.scrollAnimation = (from, self.motionClock())
+        if self.window != nil {
+            let link = CADisplayLink(target: MediaGridDisplayLinkTarget(self), selector: #selector(MediaGridDisplayLinkTarget.tick))
+            link.add(to: .main, forMode: .common)
+            self.scrollAnimationLink = link
+        }
+    }
+
+    private func stopScrollAnimation() {
+        self.scrollAnimation = nil
+        self.scrollAnimationLink?.invalidate()
+        self.scrollAnimationLink = nil
+    }
+
+    fileprivate func stepScrollAnimation() {
+        guard let animation = self.scrollAnimation else {
+            self.stopScrollAnimation()
+            return
+        }
+        let t = min(1.0, max(0.0, (self.motionClock() - animation.start) / MediaGridView.scrollToTopDuration))
+        let eased = 1.0 - pow(1.0 - CGFloat(t), 3.0)
+        let offset = animation.from * (1.0 - eased)
+        if t >= 1.0 {
+            self.stopScrollAnimation()
+        }
         self.engine.setOffset(offset)
         self.scrolled(to: offset)
+    }
+
+    func _testStepScrollAnimation() {
+        self.stepScrollAnimation()
+    }
+
+    public var isCameraVisible: Bool {
+        guard let cameraView = self.cameraView, !cameraView.isHidden, cameraView.alpha > 0.0, self.bounds.height > 0.0 else {
+            return false
+        }
+        let viewport = CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height)
+        return viewport.intersects(cameraView.frame)
+    }
+
+    public var isZooming: Bool {
+        return self.transition != nil || self.pinch != nil
+    }
+
+    public func contentFrameForItem(at index: Int) -> CGRect? {
+        guard let layout = self.gridLayout, index >= 0, index < layout.count else {
+            return nil
+        }
+        return layout.frame(at: index)
     }
 
     public func forEachVisibleCell(_ f: (Int, MediaGridCellLayer) -> Void) {
@@ -538,6 +687,7 @@ public final class MediaGridView: UIView {
         }
         if self.layoutLevel.isInteractive {
             self.onTapItem?(index)
+            self.onTapItemAt?(index, point)
             self.updateSelectionForVisibleItems()
         } else if self.isZoomEnabled, let target = self.layoutLevel.zoomedIn {
             self.setLevel(target, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: point))
@@ -819,6 +969,7 @@ public final class MediaGridView: UIView {
         transition.apply(progress: 0.0)
         self.updateGestureAvailability()
         self.engine.isScrollEnabled = false
+        self.noteZoomingChanged()
         return transition
     }
 
@@ -930,6 +1081,7 @@ public final class MediaGridView: UIView {
         if !quiet {
             self.completeZoom()
         }
+        self.noteZoomingChanged()
     }
 
     private func completeZoom() {
@@ -955,6 +1107,7 @@ public final class MediaGridView: UIView {
         if self.level != previousLevel {
             self.onLevelChanged?(self.level)
         }
+        self.noteZoomingChanged()
     }
 
     private static func samePixelSizes(_ lhs: MediaGridLayout?, _ rhs: MediaGridLayout) -> Bool {
@@ -1020,6 +1173,7 @@ public final class MediaGridView: UIView {
         guard self.canBeginPinch else {
             return
         }
+        self.stopScrollAnimation()
         self.engine.haltMotionInPlace()
         self.resetOvershoot()
         self.rotationAnchor = nil
@@ -1044,6 +1198,7 @@ public final class MediaGridView: UIView {
         self.updateThumbnailPreparation()
         self.updateGestureAvailability()
         self.engine.isScrollEnabled = false
+        self.noteZoomingChanged()
     }
 
     private func neighbourPrepareRanges() -> [Range<Int>] {
@@ -1414,7 +1569,10 @@ public final class MediaGridView: UIView {
             }
         }
         let insets = self.geometryInsets
-        let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: insets.top, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
+        let headerHeight = max(0.0, self.headerHeight)
+        let topInset = insets.top + headerHeight
+        let geometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: topInset, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
+        self.headerView?.frame = CGRect(x: 0.0, y: insets.top, width: size.width, height: headerHeight)
         if let transition = self.transition {
             if !self.needsLayoutRebuild && transition.targetLayout.geometry == geometry {
                 return
@@ -1441,8 +1599,8 @@ public final class MediaGridView: UIView {
             if let anchor, anchor.index < layout.count {
                 let frame = layout.frame(at: anchor.index)
                 anchoredOffset = (frame.minY + anchor.fraction * frame.height - geometry.topInset, anchor.index, anchor.fraction)
-            } else if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
-                compensatedOffset = max(0.0, self.engine.offset + (insets.top - lastTopInset))
+            } else if let lastTopInset = self.lastTopInset, lastTopInset != topInset, self.engine.offset > 0.0, self.pendingContentOffset == nil {
+                compensatedOffset = max(0.0, self.engine.offset + (topInset - lastTopInset))
             }
             if let zoom = self.pendingZoom {
                 compensatedOffset = nil
@@ -1451,7 +1609,7 @@ public final class MediaGridView: UIView {
                 let point = CGPoint(x: zoom.anchor.pointInView.x - host.minX, y: zoom.anchor.pointInView.y - host.minY)
                 zoomOffset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: zoom.anchor.index, pointInView: point), in: layout, viewportHeight: size.height, relativePosition: zoom.relativePosition)
             }
-            self.lastTopInset = insets.top
+            self.lastTopInset = topInset
             self.motionSample = nil
             self.resetPrefetch()
             self.gridLayout = layout
@@ -1501,6 +1659,16 @@ public final class MediaGridView: UIView {
     }
 
     private func scrolled(to offset: CGFloat) {
+        var offset = offset
+        if !self.bounces, offset < 0.0, self.transition == nil {
+            if self.isDragging {
+                self.engine.applyShift(-self.engine.offset)
+                self.engine.reanchorDragToCurrentPosition()
+            } else {
+                self.engine.setOffset(0.0)
+            }
+            offset = 0.0
+        }
         if let anchor = self.rotationAnchor, anchor.offset != offset {
             self.rotationAnchor = nil
         }
@@ -1768,6 +1936,18 @@ public final class MediaGridView: UIView {
             return self.bounds.height
         }
         return self.isMovingFast ? 0.0 : self.bounds.height * 0.25
+    }
+}
+
+private final class MediaGridDisplayLinkTarget: NSObject {
+    private weak var view: MediaGridView?
+
+    init(_ view: MediaGridView) {
+        self.view = view
+    }
+
+    @objc func tick() {
+        self.view?.stepScrollAnimation()
     }
 }
 

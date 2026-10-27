@@ -106,18 +106,18 @@ public final class MediaGridPhotoLibraryServices {
     }
 
     static var defaultRetryRegistryURL: URL {
-        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridDemoThumbnailRetries.plist")
+        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridThumbnailRetries.plist")
     }
 
     static var defaultSnapshotURL: URL {
-        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridDemoLaunchSnapshot.plist")
+        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("MediaGridLaunchSnapshot.plist")
     }
 
     public let store: MediaGridThumbnailStore
     public let filler: MediaGridPhotoLibraryFiller
     public let snapshotURL: URL?
     private let launchDirectory: URL?
-    private let launchCoverage: () -> MediaGridLaunchCache.Coverage
+    private var launchCoverage: () -> MediaGridLaunchCache.Coverage
     private var cachedLaunchCache: MediaGridLaunchCache?
 
     public init(directory: URL?, launchDirectory: URL?, retryRegistryURL: URL?, snapshotURL: URL?, launchCoverage: (() -> MediaGridLaunchCache.Coverage)? = nil) {
@@ -139,6 +139,15 @@ public final class MediaGridPhotoLibraryServices {
         let cache = MediaGridLaunchCache(directory: self.launchDirectory, capacity: coverage.capacity, pixelSize: coverage.pixelSize)
         self.cachedLaunchCache = cache
         return cache
+    }
+
+    @discardableResult
+    public func configureLaunchCoverage(_ coverage: @escaping () -> MediaGridLaunchCache.Coverage) -> Bool {
+        guard self.cachedLaunchCache == nil else {
+            return false
+        }
+        self.launchCoverage = coverage
+        return true
     }
 
     public func startLaunchLoading() {

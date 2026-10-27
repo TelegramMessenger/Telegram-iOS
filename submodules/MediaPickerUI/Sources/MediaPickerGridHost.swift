@@ -3,6 +3,8 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import LegacyComponents
+import Photos
+import SparseItemGrid
 
 protocol MediaPickerGridHostItem: AnyObject {
     var identifier: String { get }
@@ -22,6 +24,11 @@ protocol MediaPickerGridHost: AnyObject {
     var cameraHostView: UIView { get }
     var headerHostNode: ASDisplayNode { get }
     var fastScrollView: UIScrollView? { get }
+    var fastScrollTarget: SparseItemGridScrollingTarget? { get }
+    var appliesFastScrollImmediately: Bool { get }
+    var consumesEntries: Bool { get }
+    var usesPickerSelectionGesture: Bool { get }
+    var headerHeight: CGFloat { get set }
 
     var isHidden: Bool { get set }
     var isUserInteractionEnabled: Bool { get set }
@@ -47,6 +54,13 @@ protocol MediaPickerGridHost: AnyObject {
     func visibleContentOffset() -> GridNodeVisibleContentOffset
     func setContentOffset(_ contentOffset: CGPoint, animated: Bool)
     func scrollToTop(animated: Bool)
+
+    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration)
+    func scrollingTag() -> Int32?
+    func isCameraPreviewVisible(_ cameraView: UIView) -> Bool
+    func cameraFrame(for rect: CGRect) -> CGRect
+    func updateItemsSelectionState(animated: Bool)
+    func updateItemsHiddenMedia()
 
     func forEachVisibleItem(_ f: (MediaPickerGridHostItem) -> Void)
     func visibleItem(identifier: String) -> MediaPickerGridHostItem?
@@ -91,6 +105,24 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
     var fastScrollView: UIScrollView? {
         return self.gridNode.scrollView
     }
+
+    var fastScrollTarget: SparseItemGridScrollingTarget? {
+        return nil
+    }
+
+    var appliesFastScrollImmediately: Bool {
+        return false
+    }
+
+    var consumesEntries: Bool {
+        return true
+    }
+
+    var usesPickerSelectionGesture: Bool {
+        return true
+    }
+
+    var headerHeight: CGFloat = 0.0
 
     var isHidden: Bool {
         get {
@@ -206,6 +238,37 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
 
     func scrollToTop(animated: Bool) {
         self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.gridNode.scrollView.contentInset.top), animated: animated)
+    }
+
+    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration) {
+    }
+
+    func scrollingTag() -> Int32? {
+        var tag: Int32?
+        self.forEachVisibleItem { item in
+            tag = item.tag
+        }
+        return tag
+    }
+
+    func isCameraPreviewVisible(_ cameraView: UIView) -> Bool {
+        return self.scrollBounds.intersects(cameraView.frame)
+    }
+
+    func cameraFrame(for rect: CGRect) -> CGRect {
+        return rect
+    }
+
+    func updateItemsSelectionState(animated: Bool) {
+        self.forEachVisibleItem { item in
+            item.updateGridSelectionState(animated: animated)
+        }
+    }
+
+    func updateItemsHiddenMedia() {
+        self.forEachVisibleItem { item in
+            item.updateHiddenMedia()
+        }
     }
 
     func forEachVisibleItem(_ f: (MediaPickerGridHostItem) -> Void) {

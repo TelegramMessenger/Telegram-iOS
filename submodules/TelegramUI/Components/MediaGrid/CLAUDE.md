@@ -12,13 +12,17 @@ xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$
 xcodebuild -project MediaGrid.xcodeproj -scheme MediaGridDemo -destination "id=$SIM" build
 ```
 
-`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 258 tests (2 skipped), MediaGridPhotoLibraryTests 69, CoreList 1048 (unchanged, not re-run in Task 5), 0 failures.
+`-collect-test-diagnostics never` keeps a failing run from sitting in `simctl diagnose`. CoreList's suite (the engine is shared) runs the same way from `../CoreList`: `xcodebuild -project CoreListDemo.xcodeproj -scheme CoreListDemo -destination "id=$SIM" -parallel-testing-enabled NO -collect-test-diagnostics never test`. Expected: MediaGridTests 273 tests (2 skipped), MediaGridPhotoLibraryTests 71, CoreList 1048 (unchanged, not re-run in Task 5), 0 failures.
 
 Run only on the dedicated simulator `MediaGridDemo iPhone 18 Pro 27.0` (UDID above); never on the booted logged-in simulators.
 
 Sources import only UIKit, QuartzCore, Foundation, Photos and CoreList. No Display, AsyncDisplayKit, SwiftSignalKit, Postbox, TelegramCore or LegacyComponents. APIs newer than iOS 13 need `#available` guards, since the sources also compile in the app.
 
 The PhotoKit loading stack (`ImageLoadScheduler`, `MediaGridPhotoLibraryDataSource`, the filler, the launch-match glue) is the sibling module `../MediaGridPhotoLibrary` (Bazel target and an xcodegen framework target here, with its own `MediaGridPhotoLibraryTests`). `MediaGridPhotoLibraryServices.shared` owns the app-session store, filler and launch cache under `<Caches>/MediaGridThumbnails/`; tests inject temporary directories and never touch `shared`. A data source maps grid index `i` to fetch index `count - 1 - i` when `reversed` (Recents, newest first; the demo) and to `i` otherwise (an album). Only a data source given the filler (`isLibrary`) drives it: its catalog decides which stored ids are orphans, so never give the filler an album's data source.
+
+## Host API (the app's photo picker)
+
+`MediaPickerUI`'s `MediaPickerMediaGridHost` embeds the grid. What it relies on: `headerView`/`headerHeight` (a region above the first row, inside the content, after `geometryInsets.top`); `scrollToTop(animated:)` (a display-link ease-out, jumping first to at most two screens away); `scrollToEnd()` (also before the first layout); `onWillBeginDragging`/`onDidEndDragging`; `onSelectionPanBegan`; `onTapItemAt` (index and point); `onZoomingChanged`/`isZooming`; `isCameraVisible`; `bounces` (off clamps the top while dragging, re-anchoring the drag); `reanchorDrag()`; `overlayView` and `contentFrameForItem(at:)` (views in content coordinates above the cells); `MediaGridCellLayer.displayedImage`. `setContentOffset` mid-drag shifts the drag instead of cancelling it. `MediaGridPhotoLibraryServices.configureLaunchCoverage` injects the launch screen until the cache exists (the app passes the main window's screen).
 
 ## Measuring image loading in the demo
 
