@@ -1576,22 +1576,25 @@ Preview bodies are limited to 200 grapheme clusters, with an ellipsis on truncat
 Traversal also limits depth (64), nodes (4,096), and inspected UTF-16 units (16,384).
 Spoilers, custom emoji, dates, italic, underline, and strikethrough survive nesting.
 Dates use supplied presentation settings; nil-format dates retain their literal text.
-Every custom emoji receives the native custom-emoji attribute (its alt text, or
-U+FFFC if empty, is the backing string), with the file when the page or the
-message's associated media has it and without it otherwise. A received rich
-message's emoji files are rarely in either, so the file must not be required:
-entity text nodes resolve it by id, exactly as for an ordinary message's
-`CustomEmoji` entity whose file is not stored (issue #29: requiring it showed
-the alt emoji in the chat list). The textual projection keeps the alt text (`�` if
-empty). The modern composer accessory uses the existing entity-aware text component.
+Unresolved custom emoji keeps its identity in preview metadata and displays alt
+text (or `�` if empty). Only a resolved file receives the native custom-emoji
+attribute: entity text nodes otherwise replace alt text by a blank attachment.
+A rich message's emoji files are resolvable like an ordinary message's (issue #29:
+the chat list showed every one as its alt emoji): `extractEmojiFileIds` takes the
+page's `customEmojiFileIds`, so a received message's unknown emoji files are fetched
+and stored with it, and `RichTextMessageAttribute.associatedMediaIds` lists them, so
+the stored files reach the preview through the message's associated media.
+The modern composer accessory uses the existing entity-aware text component.
 
 A rich message's notification body is the server's plain text of the page. On iOS
 18+ the Notification Service extension turns its custom emoji into image glyphs as
-it does an ordinary message's entities: `InstantPage.customEmojiOccurrences` (reading
-order, repeats kept) is matched in the body by alt text, whole characters only
-(`notificationRichTextCustomEmoji`). An alt text the body holds more often than the
-page has emoji with it is left plain: an ordinary emoji is among those and nothing
-tells which one is custom.
+it does an ordinary message's entities, finding each in the body by its alt text,
+whole characters only (`notificationRichTextCustomEmoji`). The body can leave blocks
+out or be truncated, and the page can hold the same emoji as plain text, so the page's
+occurrences of an alt text are counted in full (`InstantPage.customEmojiTextRuns`,
+plain runs included): when all are one custom emoji, every body occurrence is it (no
+more than the page has); otherwise the body must hold exactly the page's occurrences,
+mapped in order. Anything else stays plain rather than land on the wrong emoji.
 
 `styleInstantPagePreview` applies a consumer's fonts/colors without deleting semantic
 attributes. Formula/table runs use U+FFFC plus icon and fallback metadata, never

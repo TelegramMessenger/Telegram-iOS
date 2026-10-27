@@ -3,45 +3,70 @@ import XCTest
 @testable import NotificationServiceExtensionLib
 
 /// A rich message carries its custom emoji inside the page, not as entities, and its push body is the server's plain
-/// text with each emoji's alt text in its place. The emoji are found in that body in reading order.
+/// text with each emoji's alt text in its place. The emoji are found in that body only where no other occurrence of
+/// the same alt text, in the page or in the body, can be the one in that place.
 final class NotificationRichTextEmojiTests: XCTestCase {
-    private func ranges(_ body: String, from location: Int = 0, _ emoji: [(fileId: Int64, alt: String)]) -> [String] {
-        return notificationRichTextCustomEmoji(body: body, from: location, emoji: emoji).map { item in
+    private typealias Run = (text: String, customEmojiFileId: Int64?)
+
+    private func text(_ text: String) -> Run {
+        return (text, nil)
+    }
+
+    private func emoji(_ fileId: Int64, _ alt: String) -> Run {
+        return (alt, fileId)
+    }
+
+    private func ranges(_ body: String, from location: Int = 0, _ runs: [Run]) -> [String] {
+        return notificationRichTextCustomEmoji(body: body, from: location, runs: runs).map { item in
             let range = NSRange(location: item.range.lowerBound, length: item.range.count)
             return "\(item.fileId):\((body as NSString).substring(with: range))@\(item.range.lowerBound)"
         }
     }
 
     func testMatchesEachEmojiInReadingOrder() {
-        XCTAssertEqual(ranges("Hi 🙂 and 🔥 then 🙂", [(1, "🙂"), (2, "🔥"), (1, "🙂")]), ["1:🙂@3", "2:🔥@10", "1:🙂@18"])
+        let runs = [text("Hi "), emoji(1, "🙂"), text(" and "), emoji(2, "🔥"), text(" then "), emoji(1, "🙂")]
+        XCTAssertEqual(ranges("Hi 🙂 and 🔥 then 🙂", runs), ["1:🙂@3", "2:🔥@10", "1:🙂@18"])
     }
 
     func testRepeatedAltTextMapsToSuccessiveOccurrences() {
-        XCTAssertEqual(ranges("🙂🙂", [(1, "🙂"), (2, "🙂")]), ["1:🙂@0", "2:🙂@2"])
+        XCTAssertEqual(ranges("🙂🙂", [emoji(1, "🙂"), emoji(2, "🙂")]), ["1:🙂@0", "2:🙂@2"])
     }
 
     func testMissingEmojiIsSkippedWithoutLosingTheRest() {
-        XCTAssertEqual(ranges("a 🔥", [(1, "🙂"), (2, "🔥")]), ["2:🔥@2"])
-        XCTAssertEqual(ranges("a 🔥", [(1, ""), (2, "🔥")]), ["2:🔥@2"])
+        XCTAssertEqual(ranges("a 🔥", [text("a "), emoji(1, "🙂"), emoji(2, "🔥")]), ["2:🔥@2"])
+        XCTAssertEqual(ranges("a 🔥", [text("a "), emoji(1, ""), emoji(2, "🔥")]), ["2:🔥@2"])
     }
 
     func testDoesNotMatchInsideALargerEmoji() {
         // "❤" is the first scalar of "❤️" (with VS16) and of a ZWJ sequence; only a whole character matches.
-        XCTAssertEqual(ranges("❤️ x ❤", [(1, "❤")]), ["1:❤@5"])
-        XCTAssertEqual(ranges("👨‍👩‍👧", [(1, "👨")]), [])
+        XCTAssertEqual(ranges("❤️ x ❤", [text("❤️ x "), emoji(1, "❤")]), ["1:❤@5"])
+        XCTAssertEqual(ranges("👨‍👩‍👧", [emoji(1, "👨")]), [])
     }
 
-    func testPlainEmojiWithTheSameAltTextLeavesTheMappingAmbiguous() {
-        // "I ❤️ x [custom ❤️]": the body cannot tell which heart is custom, so neither becomes a glyph.
-        XCTAssertEqual(ranges("I ❤️ x ❤️", [(1, "❤️")]), [])
-        XCTAssertEqual(ranges("I ❤️ x ❤️ 🔥", [(1, "❤️"), (2, "🔥")]), ["2:🔥@10"])
+    func testPlainAndCustomEmojiWithTheSameAltTextMapInOrder() {
+        // "I ❤️ x [custom ❤️]": the page says which heart is custom, and the body has both.
+        XCTAssertEqual(ranges("I ❤️ x ❤️", [text("I ❤️ x "), emoji(1, "❤️")]), ["1:❤️@7"])
     }
 
-    func testTruncatedBodyMapsTheEmojiItKeeps() {
-        XCTAssertEqual(ranges("a 🙂", [(1, "🙂"), (2, "🙂")]), ["1:🙂@2"])
+    func testPlainEmojiMatchesNothingWhenTheCustomOneIsLeftOutOfTheBody() {
+        // "I ❤️ it" with a custom ❤️ in a table cell the body leaves out: the body's heart is the plain one.
+        let runs = [text("I ❤️ it"), emoji(1, "❤️")]
+        XCTAssertEqual(ranges("I ❤️ it", runs), [])
+        XCTAssertEqual(ranges("I ❤️ it 🔥", runs + [emoji(2, "🔥")]), ["2:🔥@8"])
+    }
+
+    func testTruncatedBodyMapsAnEmojiThatHasNoPlainTwin() {
+        XCTAssertEqual(ranges("a 🙂", [text("a "), emoji(1, "🙂"), text(" b "), emoji(1, "🙂")]), ["1:🙂@2"])
+        // Two different emoji with one alt text: which one the truncated body kept is unknown.
+        XCTAssertEqual(ranges("a 🙂", [text("a "), emoji(1, "🙂"), text(" b "), emoji(2, "🙂")]), [])
+    }
+
+    func testAnAltTextInsideAWordIsPlainText() {
+        XCTAssertEqual(ranges("alternative alt", [text("alternative "), emoji(1, "alt")]), ["1:alt@12"])
+        XCTAssertEqual(ranges("alternative", [text("alternative"), emoji(1, "alt")]), [])
     }
 
     func testSearchStartsAfterTheAuthorPrefix() {
-        XCTAssertEqual(ranges("Ann 🙂: 🙂", from: 7, [(1, "🙂")]), ["1:🙂@8"])
+        XCTAssertEqual(ranges("Ann 🙂: 🙂", from: 7, [emoji(1, "🙂")]), ["1:🙂@8"])
     }
 }

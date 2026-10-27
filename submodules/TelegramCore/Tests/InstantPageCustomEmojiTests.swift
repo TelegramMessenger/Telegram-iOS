@@ -32,12 +32,12 @@ final class InstantPageCustomEmojiTests: XCTestCase {
         XCTAssertEqual(result, [1, 2, 3, 4, 5, 6, 7, 8])
     }
 
-    func testOccurrencesKeepRepeatsAndAltText() {
+    func testTextRunsKeepPlainTextRepeatsAndAltText() {
         let result = page([
             .paragraph(.concat([.textCustomEmoji(fileId: 1, alt: "🙂"), .plain(" a "), .bold(.textCustomEmoji(fileId: 2, alt: "🔥"))])),
             .list(items: [.text(.textCustomEmoji(fileId: 1, alt: "🙂"), nil, nil)], ordered: false)
-        ]).customEmojiOccurrences
-        XCTAssertEqual(result.map(\.fileId), [1, 2, 1])
-        XCTAssertEqual(result.map(\.alt), ["🙂", "🔥", "🙂"])
+        ]).customEmojiTextRuns
+        XCTAssertEqual(result.map(\.customEmojiFileId), [1, nil, 2, 1])
+        XCTAssertEqual(result.map(\.text), ["🙂", " a ", "🔥", "🙂"])
     }
 }
