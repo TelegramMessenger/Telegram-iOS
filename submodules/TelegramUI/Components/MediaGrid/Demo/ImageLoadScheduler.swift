@@ -22,17 +22,46 @@ final class ImageLoadScheduler<Key: Hashable, PrefetchKey: Hashable, Payload> {
     final class Job {
         let key: Key
         let payload: Payload
-        fileprivate(set) var consumers: [ObjectIdentifier: Consumer] = [:]
+        fileprivate(set) var consumers: [ObjectIdentifier: Consumer] = [:] {
+            didSet {
+                self.publish()
+            }
+        }
         fileprivate(set) var isPrefetched = false
         fileprivate(set) var usesNetwork = false
-        fileprivate(set) var state: JobState = .pending
-        fileprivate(set) var attempt = 0
+        fileprivate(set) var state: JobState = .pending {
+            didSet {
+                self.publish()
+            }
+        }
+        fileprivate(set) var attempt = 0 {
+            didSet {
+                self.publish()
+            }
+        }
         fileprivate var restarts = 0
         var token: Int32?
+        private let lock = NSLock()
+        private var deliverableAttempt: Int?
 
         init(key: Key, payload: Payload) {
             self.key = key
             self.payload = payload
+        }
+
+        private func publish() {
+            let attempt = self.state == .running && !self.consumers.isEmpty ? self.attempt : nil
+            self.lock.lock()
+            self.deliverableAttempt = attempt
+            self.lock.unlock()
+        }
+
+        func hasConsumers(running attempt: Int) -> Bool {
+            self.lock.lock()
+            defer {
+                self.lock.unlock()
+            }
+            return self.deliverableAttempt == attempt
         }
 
         var isWanted: Bool {

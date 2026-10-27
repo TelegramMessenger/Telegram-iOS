@@ -325,13 +325,8 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
                 }
                 self.handle(job, attempt: attempt, image: image, isDegraded: isDegraded, isCancelled: isCancelled, isInCloud: isInCloud)
             }
-            if let image, !isDegraded, Thread.isMainThread, job.map({ !$0.consumers.isEmpty }) ?? false, PhotoLibraryDataSource.needsPreparation(image) {
-                PhotoLibraryDataSource.preparationQueue.async {
-                    let prepared = PhotoLibraryDataSource.prepare(image)
-                    DispatchQueue.main.async {
-                        handle(prepared)
-                    }
-                }
+            if let image, !isDegraded, Thread.isMainThread, let job, job.hasConsumers(running: attempt), PhotoLibraryDataSource.needsPreparation(image) {
+                PhotoLibraryDataSource.enqueuePreparation(image, job: job, attempt: attempt, queue: PhotoLibraryDataSource.preparationQueue, prepare: PhotoLibraryDataSource.prepare, deliver: handle)
             } else if Thread.isMainThread {
                 handle(image)
             } else {
@@ -347,6 +342,15 @@ final class PhotoLibraryDataSource: NSObject, MediaGridDataSource, PHPhotoLibrar
 
     static let preparationQueue = DispatchQueue(label: "org.telegram.MediaGridDemo.imagePreparation", qos: .userInitiated)
     static let preparationMinPixels = 512 * 512
+
+    static func enqueuePreparation<K, P, L>(_ image: UIImage, job: ImageLoadScheduler<K, P, L>.Job, attempt: Int, queue: DispatchQueue, prepare: @escaping (UIImage) -> UIImage, deliver: @escaping (UIImage) -> Void) {
+        queue.async { [weak job] in
+            let prepared = job?.hasConsumers(running: attempt) == true ? prepare(image) : image
+            DispatchQueue.main.async {
+                deliver(prepared)
+            }
+        }
+    }
 
     static func needsPreparation(_ image: UIImage) -> Bool {
         guard let cgImage = image.cgImage else {

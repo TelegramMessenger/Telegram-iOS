@@ -273,4 +273,81 @@ final class ImageLoadSchedulerTests: XCTestCase {
         }
         XCTAssertLessThanOrEqual(scheduler.networkLane.queuedCount, 2 * live + Scheduler.minimumCompactionThreshold)
     }
+
+    private func runPreparation(_ job: Scheduler.Job, attempt: Int, before: () -> Void) -> (prepared: Int, delivered: UIImage?) {
+        let queue = DispatchQueue(label: "ImageLoadSchedulerTests.preparation")
+        queue.suspend()
+        let source = TestDataSource.distinctImage(1)
+        let output = TestDataSource.distinctImage(2)
+        var prepared = 0
+        let lock = NSLock()
+        var delivered: UIImage?
+        let expectation = self.expectation(description: "delivered")
+        PhotoLibraryDataSource.enqueuePreparation(source, job: job, attempt: attempt, queue: queue, prepare: { _ in
+            lock.lock()
+            prepared += 1
+            lock.unlock()
+            return output
+        }, deliver: { image in
+            delivered = image
+            expectation.fulfill()
+        })
+        before()
+        queue.resume()
+        self.wait(for: [expectation], timeout: 5.0)
+        lock.lock()
+        defer {
+            lock.unlock()
+        }
+        return (prepared, delivered === output ? output : (delivered === source ? source : nil))
+    }
+
+    func testPreparationRunsForWantedJob() {
+        let scheduler = self.makeScheduler()
+        let handle = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { _, _ in })
+        let job = self.started[0]
+        let result = self.runPreparation(job, attempt: job.attempt, before: {})
+        XCTAssertEqual(result.prepared, 1)
+        XCTAssertNotNil(result.delivered)
+        withExtendedLifetime(handle) {}
+    }
+
+    func testPreparationSkippedAfterCancelWhileQueued() {
+        let scheduler = self.makeScheduler()
+        let handle = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { _, _ in })
+        let job = self.started[0]
+        let result = self.runPreparation(job, attempt: job.attempt, before: {
+            handle.cancel()
+        })
+        XCTAssertEqual(result.prepared, 0)
+        XCTAssertEqual(job.state, .finished)
+    }
+
+    func testPreparationSkippedForStaleAttempt() {
+        let scheduler = self.makeScheduler()
+        let handle = scheduler.request(key: "a", payload: 1, isReduced: false, completion: { _, _ in })
+        let job = self.started[0]
+        let attempt = job.attempt
+        let result = self.runPreparation(job, attempt: attempt, before: {
+            scheduler.cancelledExternally(job, attempt: attempt)
+        })
+        XCTAssertEqual(job.state, .running)
+        XCTAssertGreaterThan(job.attempt, attempt)
+        XCTAssertEqual(result.prepared, 0)
+        withExtendedLifetime(handle) {}
+    }
+
+    func testPreparationSkippedWhenOnlyPrefetchWantsTheJob() {
+        let scheduler = self.makeScheduler()
+        scheduler.startPrefetching([7])
+        let handle = scheduler.request(key: "p7", payload: 7, isReduced: false, completion: { _, _ in })
+        let job = self.started[0]
+        XCTAssertEqual(job.key, "p7")
+        let result = self.runPreparation(job, attempt: job.attempt, before: {
+            handle.cancel()
+        })
+        XCTAssertEqual(job.state, .running)
+        XCTAssertEqual(result.prepared, 0)
+        XCTAssertNotNil(result.delivered)
+    }
 }
