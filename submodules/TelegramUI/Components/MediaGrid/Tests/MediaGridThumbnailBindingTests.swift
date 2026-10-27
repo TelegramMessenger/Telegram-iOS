@@ -325,6 +325,24 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
         }
     }
 
+    func testScrubPreparesTwoStepsAheadForACoalescedStep() {
+        let (view, dataSource) = self.makeView()
+        view.setLevel(.fifteen, animated: false)
+        self.scroll(view, to: 10_000.0)
+        dataSource.resetPreparedRanges()
+        self.scroll(view, to: 14_000.0)
+        XCTAssertTrue(view.isMovingFast)
+        let oneStep = self.viewportRange(view, offset: 18_000.0)
+        let twoSteps = self.viewportRange(view, offset: 22_000.0)
+        XCTAssertTrue(self.covers(dataSource.preparedIndices, oneStep), "one step \(oneStep) not in \(dataSource.preparedRanges)")
+        XCTAssertTrue(self.covers(dataSource.preparedIndices, twoSteps), "two steps \(twoSteps) not in \(dataSource.preparedRanges)")
+        let ranges = dataSource.preparedRanges
+        XCTAssertEqual(ranges.first, self.viewportRange(view))
+        let firstTwoStep = ranges.firstIndex(where: { $0.overlaps(twoSteps) }) ?? Int.max
+        let firstWindow = ranges.firstIndex(where: { !$0.overlaps(oneStep) && !$0.overlaps(twoSteps) && $0 != self.viewportRange(view) }) ?? Int.max
+        XCTAssertLessThan(firstTwoStep, firstWindow, "\(ranges)")
+    }
+
     func testPrepareCalledForScrubTargetAndIncomingLevel() {
         let (view, dataSource) = self.makeView()
         self.scroll(view, to: 10_000.0)
@@ -429,6 +447,7 @@ final class MediaGridThumbnailBindingTests: XCTestCase {
         let ahead = self.viewportRange(view, offset: 6_200.0)
         var expected = IndexSet(integersIn: viewport)
         expected.insert(integersIn: ahead)
+        expected.insert(integersIn: self.viewportRange(view, offset: 6_800.0))
         XCTAssertEqual(dataSource.preparedIndices, expected)
         XCTAssertEqual(dataSource.preparedRanges.first, viewport)
     }

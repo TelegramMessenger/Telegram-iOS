@@ -1089,6 +1089,7 @@ public final class MediaGridView: UIView {
             ranges = [layout.indexRange(intersecting: viewport)]
             if self.isMovingFast, self.scrollStep != 0.0, self.scrollStep.isFinite {
                 ranges.append(layout.indexRange(intersecting: viewport.offsetBy(dx: 0.0, dy: self.scrollStep)))
+                ranges.append(layout.indexRange(intersecting: viewport.offsetBy(dx: 0.0, dy: 2.0 * self.scrollStep)))
             }
             if !self.isMovingFast || self.pinch != nil {
                 ranges.append(contentsOf: self.neighbourPrepareRanges())
