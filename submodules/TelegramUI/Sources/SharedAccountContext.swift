@@ -398,7 +398,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         ))
         
-        self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground, presentationData: presentationData)
+        self.mediaManager = MediaManagerImpl(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground, presentationData: presentationData, isPasscodeLocked: appLockContext.isPasscodeLocked)
         
         self.mediaManager.overlayMediaManager.updatePossibleEmbeddingItem = { [weak self] item in
             guard let strongSelf = self else {

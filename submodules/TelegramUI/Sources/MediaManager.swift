@@ -15,6 +15,7 @@ import DeviceProximity
 import MediaResources
 import PhotoResources
 import PeerMessagesMediaPlaylist
+import LocalizedPeerData
 
 enum SharedMediaPlayerGroup: Int {
     case music = 0
@@ -194,7 +195,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
-    init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>, isPasscodeLocked: Signal<Bool, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
         self.presentationData = presentationData
@@ -218,20 +219,41 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             return lhs?.0 === rhs?.0 && lhs?.1 == rhs?.1 && lhs?.2 == rhs?.2
         }))
         
+        // Voice and video messages show their sender on the lock screen and in CarPlay, so they follow the
+        // same rule as notifications: no names when "Names on lock-screen" is off or the app is passcode-locked.
+        let hideNamesInNowPlaying: Signal<Bool, NoError> = combineLatest(
+            accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+            |> map { sharedData -> Bool in
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+                return settings.displayNameOnLockscreen
+            },
+            // The lock state has no value until the app lock has evaluated it; hide names until then rather
+            // than holding back Now Playing (music included) waiting for it.
+            .single(true) |> then(isPasscodeLocked)
+        )
+        |> map { displayNameOnLockscreen, isPasscodeLocked -> Bool in
+            return !displayNameOnLockscreen || isPasscodeLocked
+        }
+        |> distinctUntilChanged
+        
         var baseNowPlayingInfo: [String: Any]?
         
         var previousState: SharedMediaPlayerItemPlaybackState?
         var previousDisplayData: SharedMediaPlaybackDisplayData?
+        var previousHideNames: Bool?
         let globalControlsArtwork = self.globalControlsArtwork
         let globalControlsStatus = self.globalControlsStatus
         
         var currentGlobalControlsOptions = GlobalControlOptions()
         
-        self.globalControlsDisposable.set((combineLatest(self.globalMediaPlayerState, self.presentationData)
-        |> deliverOnMainQueue).startStrict(next: { stateAndType, presentationData in
+        self.globalControlsDisposable.set((combineLatest(self.globalMediaPlayerState, self.presentationData, hideNamesInNowPlaying)
+        |> deliverOnMainQueue).startStrict(next: { stateAndType, presentationData, hideNames in
             var updatedGlobalControlOptions = GlobalControlOptions()
             if let (_, stateOrLoading, type) = stateAndType, case let .state(state) = stateOrLoading {
-                if type == .music {
+                // Voice and video messages are registered too. Without Now Playing, a voice message playlist
+                // stopped after its first item while the device was locked on CarPlay: the next item got the
+                // audio session, but no sound followed.
+                if type == .music || type == .voice {
                     updatedGlobalControlOptions.insert(.previous)
                     updatedGlobalControlOptions.insert(.next)
                     updatedGlobalControlOptions.insert(.seek)
@@ -244,9 +266,10 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 }
             }
             
-            if let (account, stateOrLoading, type) = stateAndType, type == .music, case let .state(state) = stateOrLoading, let displayData = state.item.displayData {
-                if previousDisplayData != displayData {
+            if let (account, stateOrLoading, type) = stateAndType, type == .music || type == .voice, case let .state(state) = stateOrLoading, let displayData = state.item.displayData {
+                if previousDisplayData != displayData || previousHideNames != hideNames {
                     previousDisplayData = displayData
+                    previousHideNames = hideNames
                     
                     var nowPlayingInfo: [String: Any] = [:]
                     
@@ -261,14 +284,50 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                             
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                             nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText
-                        case let .voice(author, _):
-                            let titleText: String = author?.debugDisplayTitle ?? ""
+                        case let .voice(author, peer):
+                            if hideNames {
+                                nowPlayingInfo[MPMediaItemPropertyTitle] = presentationData.strings.Message_Audio
+                                break
+                            }
+                            
+                            let titleText: String = author?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? ""
+                            
+                            var subtitleText = presentationData.strings.Message_Audio
+                            if let peer {
+                                switch peer {
+                                case .legacyGroup:
+                                    subtitleText = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                case let .channel(channel):
+                                    if case .group = channel.info {
+                                        subtitleText = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    }
+                                default:
+                                    break
+                                }
+                            }
                             
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
-                        case let .instantVideo(author, _, _):
-                            let titleText: String = author?.debugDisplayTitle ?? ""
+                            nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText
+                        case let .instantVideo(author, peer, _):
+                            if hideNames {
+                                nowPlayingInfo[MPMediaItemPropertyTitle] = presentationData.strings.Message_VideoMessage
+                                break
+                            }
+                            
+                            let titleText: String = author?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? ""
+                            
+                            var subtitleText = presentationData.strings.Message_VideoMessage
+                            if let peer {
+                                switch peer {
+                                case .legacyGroup, .channel:
+                                    subtitleText = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                default:
+                                    break
+                                }
+                            }
                             
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
+                            nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText
                     }
                     
                     globalControlsArtwork.set(.single(artwork.flatMap({ (account, $0) })))
@@ -285,6 +344,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             } else {
                 previousState = nil
                 previousDisplayData = nil
+                previousHideNames = nil
                 globalControlsStatus.set(.single(nil))
                 globalControlsArtwork.set(.single(nil))
                 
@@ -363,7 +423,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = next.duration as NSNumber
                     switch next.status {
                         case .playing:
-                            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0 as NSNumber
+                            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = next.baseRate as NSNumber
                         case .buffering, .paused:
                             nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0 as NSNumber
                     }
@@ -655,7 +715,17 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         }
     }
     
+    // Remote commands also reach the voice message player, which stays around paused while a reply is
+    // being recorded. Starting playback then would push a playback audio session over the recorder's,
+    // and the recorder stops as soon as its session is deactivated.
+    private var remotePlaybackStartIsBlocked: Bool {
+        return self.voiceMediaPlayer != nil && self.audioSession.getIsRecordingActive()
+    }
+    
     @objc func playCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
+        if self.remotePlaybackStartIsBlocked {
+            return .commandFailed
+        }
         self.playlistControl(.playback(.play), type: nil)
         
         return .success
@@ -668,18 +738,27 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     }
     
     @objc func previousTrackCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
+        if self.remotePlaybackStartIsBlocked {
+            return .commandFailed
+        }
         self.playlistControl(.previous, type: nil)
         
         return .success
     }
     
     @objc func nextTrackCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
+        if self.remotePlaybackStartIsBlocked {
+            return .commandFailed
+        }
         self.playlistControl(.next, type: nil)
         
         return .success
     }
     
     @objc func togglePlayPauseCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
+        if self.remotePlaybackStartIsBlocked {
+            return .commandFailed
+        }
         self.playlistControl(.playback(.togglePlayPause), type: nil)
         
         return .success
