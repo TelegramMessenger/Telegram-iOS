@@ -32,6 +32,7 @@ swift_library(
         ":ComponentFlow",
         "//submodules/Display",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Markdown",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",

@@ -23,7 +23,7 @@ public struct ComponentAccessibility: Equatable {
 
 public extension UIView {
     /// Makes the view a single VoiceOver element (its subviews are not separately reachable), or hides it and its
-    /// subviews when `accessibility.isHidden`. `nil` leaves the element unlabelled.
+    /// subviews when `accessibility.isHidden`. `nil` leaves label, value and hint as they are.
     func apply(accessibility: ComponentAccessibility?, defaultTraits: UIAccessibilityTraits) {
         if let accessibility, accessibility.isHidden {
             self.isAccessibilityElement = false
@@ -35,9 +35,15 @@ public extension UIView {
         }
         self.isAccessibilityElement = true
         self.accessibilityElementsHidden = false
-        self.accessibilityLabel = accessibility?.label
-        self.accessibilityValue = accessibility?.value
-        self.accessibilityHint = accessibility?.hint
-        self.accessibilityTraits = defaultTraits.union(accessibility?.traits ?? [])
+        guard let accessibility else {
+            // Without a description only the element-ness and traits are managed: a label a call site set directly on
+            // the view must survive component updates.
+            self.accessibilityTraits = defaultTraits
+            return
+        }
+        self.accessibilityLabel = accessibility.label
+        self.accessibilityValue = accessibility.value
+        self.accessibilityHint = accessibility.hint
+        self.accessibilityTraits = defaultTraits.union(accessibility.traits)
     }
 }

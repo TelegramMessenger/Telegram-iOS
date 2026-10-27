@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import MultilineTextComponent
+import Markdown
 import ButtonComponent
 import PlainButtonComponent
 import GlassBarButtonComponent
@@ -147,5 +148,53 @@ final class ComponentAccessibilityTests: XCTestCase {
         )).view!
         XCTAssertTrue(titled.isAccessibilityElement)
         XCTAssertNil(titled.accessibilityElements)
+    }
+    
+    func testMarkdownTitleDoesNotLeakMarkup() {
+        let view = self.makeView(ButtonComponent(
+            background: ButtonComponent.Background(style: .legacy, color: .blue, foreground: .white, pressedColor: .blue),
+            content: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(text: .markdown(text: "**Buy**", attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: .systemFont(ofSize: 17.0), textColor: .white), bold: MarkdownAttributeSet(font: .boldSystemFont(ofSize: 17.0), textColor: .white), link: MarkdownAttributeSet(font: .systemFont(ofSize: 17.0), textColor: .white), linkAttribute: { _ in nil }))))),
+            action: {}
+        )).view!
+        XCTAssertNil(view.accessibilityLabel)
+    }
+    
+    func testCallSiteLabelSurvivesUpdateWithNilAccessibility() {
+        let host = ComponentView<Empty>()
+        func update(_ text: String) {
+            let _ = host.update(transition: .immediate, component: AnyComponent(Button(content: AnyComponent(LabelComponent(text: text)), action: {})), environment: {}, containerSize: CGSize(width: 200.0, height: 60.0))
+        }
+        update("A")
+        host.view!.accessibilityLabel = "Set by call site"
+        update("B")
+        XCTAssertEqual(host.view!.accessibilityLabel, "Set by call site")
+        XCTAssertTrue(host.view!.accessibilityTraits.contains(.button))
+        
+        let plainHost = ComponentView<Empty>()
+        func updatePlain(_ text: String) {
+            let _ = plainHost.update(transition: .immediate, component: AnyComponent(PlainButtonComponent(content: AnyComponent(LabelComponent(text: text)), action: {})), environment: {}, containerSize: CGSize(width: 200.0, height: 60.0))
+        }
+        updatePlain("A")
+        plainHost.view!.accessibilityLabel = "Set by call site"
+        updatePlain("B")
+        XCTAssertEqual(plainHost.view!.accessibilityLabel, "Set by call site")
+    }
+    
+    func testGlassBarButtonAccessibilityActivate() {
+        var calls = 0
+        func make(isEnabled: Bool) -> GlassBarButtonComponent.View {
+            return self.makeView(GlassBarButtonComponent(
+                size: CGSize(width: 44.0, height: 44.0),
+                backgroundColor: nil,
+                isDark: false,
+                isEnabled: isEnabled,
+                component: AnyComponentWithIdentity(id: 0, component: AnyComponent(LabelComponent(text: "Inner"))),
+                action: { _ in calls += 1 }
+            )).view as! GlassBarButtonComponent.View
+        }
+        XCTAssertTrue(make(isEnabled: true).accessibilityActivate())
+        XCTAssertEqual(calls, 1)
+        XCTAssertFalse(make(isEnabled: false).accessibilityActivate())
+        XCTAssertEqual(calls, 1)
     }
 }

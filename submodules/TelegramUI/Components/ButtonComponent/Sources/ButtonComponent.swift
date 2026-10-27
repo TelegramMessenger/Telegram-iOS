@@ -744,9 +744,11 @@ public final class ButtonComponent: Component {
             
             // The view is one element: its title, badge and icons are not separately reachable. The label comes from the
             // title content unless the call site supplies one.
-            var accessibility = component.accessibility ?? ComponentAccessibility()
-            if !accessibility.isHidden && accessibility.label == nil {
-                accessibility.label = ButtonComponent.accessibilityText(of: component.content.component)
+            var accessibility = component.accessibility
+            if accessibility?.isHidden != true && accessibility?.label == nil, let title = ButtonComponent.accessibilityText(of: component.content.component) {
+                var derived = accessibility ?? ComponentAccessibility()
+                derived.label = title
+                accessibility = derived
             }
             self.apply(accessibility: accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
                         
@@ -1015,8 +1017,9 @@ public final class ButtonComponent: Component {
             switch content.text {
             case let .plain(string):
                 text = string.string
-            case let .markdown(string, _):
-                text = string
+            case .markdown:
+                // The source has markup the UI does not show; the call site supplies the label.
+                return nil
             }
         case let content as AnimatedTextComponent:
             text = content.items.compactMap { item -> String? in
