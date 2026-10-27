@@ -919,6 +919,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
         self.addSubnode(self.wrappingNode)
         self.wrappingNode.contentNode.addSubnode(self.contentContainerNode)
+        // VoiceOver: this container holds the history, the navigation bar and its accessory panels, which all start at
+        // the top of the screen, so ASDK's frame-sorted collector reads the navigation bar after the history. Keep
+        // UIKit's own order here until the chat screen gets its own VoiceOver pass.
+        self.contentContainerNode.accessibilityUsesViewElements = true
         self.contentContainerNode.contentNode.addSubnode(self.backgroundNode)
         self.contentContainerNode.contentNode.addSubnode(self.historyNodeContainer)
         
