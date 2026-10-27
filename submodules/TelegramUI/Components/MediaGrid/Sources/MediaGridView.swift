@@ -1537,6 +1537,9 @@ public final class MediaGridView: UIView {
             self.scheduleCellBinding()
             return
         }
+        if self.isCellBindingScheduled {
+            return
+        }
         let height = self.bounds.height
         guard offset.isFinite, height > 0.0, height.isFinite else {
             return
@@ -1554,7 +1557,7 @@ public final class MediaGridView: UIView {
             return
         }
         self.isCellBindingScheduled = true
-        DispatchQueue.main.async { [weak self] in
+        let observer = CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault, CFRunLoopActivity.afterWaiting.rawValue, false, 0) { [weak self] _, _ in
             guard let self, self.isCellBindingScheduled else {
                 return
             }
@@ -1564,6 +1567,7 @@ public final class MediaGridView: UIView {
                 self.updatePrefetch(offset: self.engine.offset)
             }
         }
+        CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
     }
 
     private func windowMargin(level: MediaGridLevel) -> CGFloat {

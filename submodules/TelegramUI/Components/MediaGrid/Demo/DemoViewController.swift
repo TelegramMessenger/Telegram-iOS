@@ -179,7 +179,9 @@ final class DemoViewController: UIViewController {
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         self.rotationDuration = coordinator.transitionDuration
-        let probe = RotationProbe(level: self.gridView?.level, top: self.gridView?.topVisibleIndex)
+        let probe = RotationProbe(level: self.gridView?.level, top: self.gridView?.topVisibleIndex, requestCount: { [weak self] in
+            return self?.instrumentedDataSource?.counters.requests ?? 0
+        })
         self.rotationProbe = probe
         super.viewWillTransition(to: size, with: coordinator)
         coordinator.animate(alongsideTransition: nil, completion: { [weak self] _ in
@@ -628,10 +630,15 @@ private final class RotationProbe {
     private var updateTime: CFTimeInterval?
     private let turnStart = CACurrentMediaTime()
     private var turnDuration: Double?
+    private let requestCount: () -> Int
+    private let startRequests: Int
+    private var turnRequests: Int?
 
-    init(level: MediaGridLevel?, top: Int?) {
+    init(level: MediaGridLevel?, top: Int?, requestCount: @escaping () -> Int) {
         self.startLevel = level
         self.startTop = top
+        self.requestCount = requestCount
+        self.startRequests = requestCount()
         let link = CADisplayLink(target: self, selector: #selector(self.tick(_:)))
         if #available(iOS 15.0, *) {
             link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
@@ -642,7 +649,10 @@ private final class RotationProbe {
             guard let self else {
                 return
             }
-            self.turnDuration = (CACurrentMediaTime() - self.turnStart) * 1000.0
+            if self.turnDuration == nil {
+                self.turnDuration = (CACurrentMediaTime() - self.turnStart) * 1000.0
+                self.turnRequests = self.requestCount() - self.startRequests
+            }
         }
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
     }
@@ -676,7 +686,7 @@ private final class RotationProbe {
             }
         }
         if let turn = self.turnDuration {
-            slow += String(format: " turn %.1fms", turn)
+            slow += String(format: " turn %.1fms turn_requests %d", turn, self.turnRequests ?? -1)
         }
         let updates = self.updates.map { String(format: "%.2f", $0) }.joined(separator: ",")
         print(String(format: "rotate %@ -> %@ top %@ -> %@ firstRow %@ updateLayout ms [%@] frames %d median %.2f worst %.2f dropped %d%@", self.startLevel.map { "\($0.rawValue)" } ?? "-", level.map { "\($0.rawValue)" } ?? "-", self.startTop.map { "\($0)" } ?? "-", top.map { "\($0)" } ?? "-", firstRow, updates, self.intervals.count, median, worst, over, slow))

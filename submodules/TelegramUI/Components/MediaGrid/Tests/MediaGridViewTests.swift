@@ -2510,6 +2510,31 @@ final class MediaGridViewTests: XCTestCase {
         window.isHidden = true
     }
 
+    func testAnimatedRotationDefersBindingThroughOwnLayoutPass() {
+        let (view, dataSource, window) = self.makeWindowedSourceView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(view.currentLayout!.frame(at: 900).minY)
+        let requests = dataSource.requests.count
+        let caching = dataSource.startedCachingOrder.count
+        window.frame = CGRect(origin: .zero, size: MediaGridViewTests.landscape)
+        self.rotate(view, toLandscape: true, duration: 0.3)
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.currentLayout?.columns, 5)
+        XCTAssertEqual(dataSource.requests.count, requests)
+        XCTAssertEqual(dataSource.startedCachingOrder.count, caching)
+        self.assertInFirstRow(view, 900)
+        var requestsInNextDispatch: Int?
+        DispatchQueue.main.async {
+            requestsInNextDispatch = dataSource.requests.count
+        }
+        self.spin(0.05)
+        XCTAssertEqual(requestsInNextDispatch, requests)
+        XCTAssertGreaterThan(dataSource.requests.count, requests)
+        self.assertCellsMatchLayout(view, "after the deferred binding")
+        window.isHidden = true
+    }
+
     func testCameraFollowsRotatedLevel() {
         let (view, _) = self.makeView(count: 1000)
         let camera = UIView()
