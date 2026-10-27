@@ -271,6 +271,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
         private let longPressGestureRecognizer: UILongPressGestureRecognizer
         
         private let lineView: UIImageView
+        private let imageNode: TransformImageNode
+        private var previousMediaReference: AnyMediaReference?
         private let titleNode: CompositeTextNode
         private let text = ComponentView<Empty>()
         private let tintText = ComponentView<Empty>()
@@ -296,7 +298,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 titleView: self.titleNode.view,
                 textView: textView,
                 lineView: self.lineView,
-                imageView: nil
+                imageView: self.imageNode.isHidden ? nil : self.imageNode.view
             )
         }
         
@@ -310,12 +312,16 @@ public final class ChatInputMessageAccessoryPanel: Component {
             self.longPressGestureRecognizer = UILongPressGestureRecognizer()
             
             self.lineView = UIImageView()
+            self.imageNode = TransformImageNode()
+            self.imageNode.contentAnimations = [.subsequentUpdates]
+            self.imageNode.isHidden = true
             self.titleNode = CompositeTextNode()
             self.titleNode.displaysAsynchronously = false
             
             super.init(frame: frame)
             
             self.addSubview(self.lineView)
+            self.addSubview(self.imageNode.view)
             self.addSubview(self.titleNode.view)
             
             self.addSubview(self.closeButtonIcon)
@@ -448,6 +454,11 @@ public final class ChatInputMessageAccessoryPanel: Component {
             
             var textString: NSAttributedString
             var isPhoto = false
+            var thumbnailMediaReference: AnyMediaReference?
+            var thumbnailDimensions: CGSize?
+            var isRoundThumbnail = false
+            var thumbnailHasSpoiler = false
+            var thumbnailPeerId: EnginePeer.Id?
             if self.messages.count == 1, let message = self.messages.first {
                 var text = ""
                 let effectiveMessage = message
@@ -465,62 +476,31 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 )
                 text = attributedText.string
                 
-                var updatedMediaReference: AnyMediaReference?
-                var imageDimensions: CGSize?
                 if !message._asMessage().containsSecretMedia {
-                    var candidateMediaReference: AnyMediaReference?
                     for media in message.media {
-                        if media is TelegramMediaImage || media is TelegramMediaFile {
-                            candidateMediaReference = .message(message: MessageReference(message._asMessage()), media: media)
+                        if let image = media as? TelegramMediaImage {
+                            thumbnailMediaReference = .message(message: MessageReference(message._asMessage()), media: image)
+                            if let representation = largestRepresentationForPhoto(image) {
+                                thumbnailDimensions = representation.dimensions.cgSize
+                            }
+                            break
+                        } else if let file = media as? TelegramMediaFile {
+                            thumbnailMediaReference = .message(message: MessageReference(message._asMessage()), media: file)
+                            isRoundThumbnail = file.isInstantVideo
+                            if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker && !file.isAnimatedSticker {
+                                thumbnailDimensions = representation.dimensions.cgSize
+                            }
                             break
                         }
                     }
-                    
-                    if let imageReference = candidateMediaReference?.concrete(TelegramMediaImage.self) {
-                        updatedMediaReference = imageReference.abstract
-                        if let representation = largestRepresentationForPhoto(imageReference.media) {
-                            imageDimensions = representation.dimensions.cgSize
-                        }
-                    } else if let fileReference = candidateMediaReference?.concrete(TelegramMediaFile.self) {
-                        updatedMediaReference = fileReference.abstract
-                        if !fileReference.media.isInstantVideo, let representation = largestImageRepresentation(fileReference.media.previewRepresentations), !fileReference.media.isSticker {
-                            imageDimensions = representation.dimensions.cgSize
-                        }
-                    }
                 }
-                
-                /*let imageNodeLayout = self.imageNode.asyncLayout()
-                 var applyImage: (() -> Void)?
-                 if let imageDimensions = imageDimensions {
-                 let boundingSize = CGSize(width: 35.0, height: 35.0)
-                 applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: imageDimensions.aspectFilled(boundingSize), boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
-                 }
-                 
-                 var mediaUpdated = false
-                 if let updatedMediaReference = updatedMediaReference, let previousMediaReference = self.previousMediaReference {
-                 mediaUpdated = !updatedMediaReference.media.isEqual(to: previousMediaReference.media)
-                 } else if (updatedMediaReference != nil) != (self.previousMediaReference != nil) {
-                 mediaUpdated = true
-                 }
-                 self.previousMediaReference = updatedMediaReference*/
-                
-                let hasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
-                
-                var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-                let _ = updateImageSignal
-                if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
-                    if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: component.context.account, userLocation: MediaResourceUserLocation.peer(message.id.peerId), photoReference: imageReference, blurred: hasSpoiler)
-                        isPhoto = true
-                    } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
-                        if fileReference.media.isVideo {
-                            updateImageSignal = chatMessageVideoThumbnail(account: component.context.account, userLocation: MediaResourceUserLocation.peer(message.id.peerId), fileReference: fileReference, blurred: hasSpoiler)
-                        } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                            updateImageSignal = chatWebpageSnippetFile(account: component.context.account, userLocation: MediaResourceUserLocation.peer(message.id.peerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
-                        }
-                    }
-                } else {
-                    updateImageSignal = .single({ _ in return nil })
+                if thumbnailDimensions == nil {
+                    thumbnailMediaReference = nil
+                }
+                thumbnailHasSpoiler = message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+                thumbnailPeerId = message.id.peerId
+                if thumbnailMediaReference?.concrete(TelegramMediaImage.self) != nil {
+                    isPhoto = true
                 }
                 
                 let isMedia: Bool
@@ -913,7 +893,53 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 }
             }
             
-            let textInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 0.0, right: 44.0)
+            var mediaUpdated = false
+            if let thumbnailMediaReference, let previousMediaReference = self.previousMediaReference {
+                mediaUpdated = !thumbnailMediaReference.media.isEqual(to: previousMediaReference.media)
+            } else if (thumbnailMediaReference != nil) != (self.previousMediaReference != nil) {
+                mediaUpdated = true
+            }
+            self.previousMediaReference = thumbnailMediaReference
+            
+            let imageSize = CGSize(width: 35.0, height: 35.0)
+            var imageTextInset: CGFloat = 0.0
+            if let thumbnailMediaReference, let thumbnailDimensions, let thumbnailPeerId {
+                if mediaUpdated {
+                    var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                    if let imageReference = thumbnailMediaReference.concrete(TelegramMediaImage.self) {
+                        updateImageSignal = chatMessagePhotoThumbnail(account: component.context.account, userLocation: .peer(thumbnailPeerId), photoReference: imageReference, blurred: thumbnailHasSpoiler)
+                    } else if let fileReference = thumbnailMediaReference.concrete(TelegramMediaFile.self) {
+                        if fileReference.media.isVideo {
+                            updateImageSignal = chatMessageVideoThumbnail(account: component.context.account, userLocation: .peer(thumbnailPeerId), fileReference: fileReference, blurred: thumbnailHasSpoiler)
+                        } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                            updateImageSignal = chatWebpageSnippetFile(account: component.context.account, userLocation: .peer(thumbnailPeerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                        }
+                    }
+                    if let updateImageSignal {
+                        self.imageNode.setSignal(updateImageSignal)
+                    }
+                }
+                
+                var radius: CGFloat = 2.0
+                var fittedImageSize = thumbnailDimensions.aspectFilled(imageSize)
+                if isRoundThumbnail {
+                    radius = floor(imageSize.width / 2.0)
+                    fittedImageSize.width += 2.0
+                    fittedImageSize.height += 2.0
+                }
+                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: fittedImageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                self.imageNode.isHidden = false
+                imageTextInset = 9.0 + imageSize.width
+            } else {
+                if mediaUpdated {
+                    self.imageNode.setSignal(.single({ _ in return nil }))
+                }
+                self.imageNode.isHidden = true
+            }
+            let imageFrame = CGRect(origin: CGPoint(x: lineFrame.maxX + 7.0, y: lineFrame.minY + floor((lineFrame.height - imageSize.height) * 0.5)), size: imageSize)
+            transition.setFrame(view: self.imageNode.view, frame: imageFrame)
+            
+            let textInsets = UIEdgeInsets(top: 10.0, left: 8.0 + imageTextInset, bottom: 0.0, right: 44.0)
             
             self.titleNode.components = titleText
             let titleSize = self.titleNode.update(constrainedSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0))
