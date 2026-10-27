@@ -552,8 +552,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     /// may still turn out to be: a non-contact user whose settings have not been fetched yet, as on
     /// the first open of a chat they started. A read cannot be taken back. From the latest history view.
     private let holdsReadsForSender = ValuePromise<Bool>(ignoreRepeated: true)
+    /// Held until the first history view has told otherwise, as the main read path waits for it.
+    private var holdsReadsForSenderValue: Bool = true
+    private var holdsReadsForSenderDisposable: Disposable?
     private var canReadHistoryValue: Bool = false
     private var canReadHistoryDisposable: Disposable?
+    /// Whether the at-bottom read actions, mentions and reactions may mark anything read: the gate the main read
+    /// path (`beginReadHistoryManagement`) applies. `canReadHistoryValue` alone drives playback, which a hold leaves.
+    private var canMarkReadValue: Bool {
+        return self.canReadHistoryValue && !self.holdsReadsForSenderValue
+    }
     
     var suspendReadingReactions: Bool = false {
         didSet {
@@ -1080,7 +1088,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
-                if strongSelf.canReadHistoryValue {
+                if strongSelf.canMarkReadValue {
                     context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
                 } else {
                     strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
@@ -1092,7 +1100,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+            if strongSelf.canMarkReadValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                 strongSelf.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
             } else {
                 strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
@@ -1395,6 +1403,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         self.interactiveReadActionDisposable?.dispose()
         self.interactiveReadReactionsDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
+        self.holdsReadsForSenderDisposable?.dispose()
         self.loadedMessagesFromCachedDataDisposable?.dispose()
         self.preloadAdPeerDisposable.dispose()
         self.preloadRecommendedChannelsDisposable.dispose()
@@ -2692,24 +2701,39 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }).strict())
         
         self.canReadHistoryDisposable?.dispose()
-        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self, weak context] value in
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
                     strongSelf.controllerInteraction.canReadHistory = value
                     strongSelf.updateReadHistoryActions()
                     strongSelf.messageReadMetricsTracker?.setIsActive(strongSelf.canReadHistoryValue)
-
-                    if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
-                        let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
-                        strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
-                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
-                    }
                     
+                    strongSelf.attemptReadingMentions()
                     strongSelf.attemptReadingReactions()
                 }
             }
         }).strict()
+        
+        // A held sender's messages, mentions and reactions wait here, and are read once the hold lifts.
+        self.holdsReadsForSenderDisposable?.dispose()
+        self.holdsReadsForSenderDisposable = (self.holdsReadsForSender.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+            guard let self, self.holdsReadsForSenderValue != value else {
+                return
+            }
+            self.holdsReadsForSenderValue = value
+            self.updateReadHistoryActions()
+            self.attemptReadingMentions()
+            self.attemptReadingReactions()
+        }).strict()
+    }
+    
+    private func attemptReadingMentions() {
+        if self.canMarkReadValue && !self.suspendReadingReactions && !self.messageIdsScheduledForMarkAsSeen.isEmpty {
+            let messageIds = self.messageIdsScheduledForMarkAsSeen
+            self.messageIdsScheduledForMarkAsSeen.removeAll()
+            self.context.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+        }
     }
     
     private func beginPresentationDataManagement(updated: Signal<PresentationData, NoError>) {
@@ -2766,7 +2790,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     }
     
     private func attemptReadingReactions() {
-        if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
+        if self.canMarkReadValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
             let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
             
             let _ = self.displayUnseenReactionAnimations(messageIds: Array(messageIds))
@@ -3519,7 +3543,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             if !messageIdsWithUnseenReactions.isEmpty {
                 self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
-                if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                if self.canMarkReadValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
@@ -4968,7 +4992,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     }
     
     private func updateReadHistoryActions() {
-        let canRead = self.canReadHistoryValue && self.isScrollAtBottomPosition
+        // The at-bottom actions read whatever is stored while they are installed, so a held sender gets none.
+        let canRead = self.canMarkReadValue && self.isScrollAtBottomPosition
         
         if canRead != (self.interactiveReadActionDisposable != nil) {
             if let interactiveReadActionDisposable = self.interactiveReadActionDisposable {
