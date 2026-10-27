@@ -1,4 +1,4 @@
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library", "swift_test")
 
 swift_library(
     name = "PeerInfoVisualMediaPaneNode",
@@ -65,5 +65,16 @@ swift_library(
     ],
     visibility = [
         "//visibility:public",
+    ],
+)
+
+swift_test(
+    name = "MediaGridPaneDecisionsTests",
+    srcs = [
+        "Sources/MediaGridPaneDecisions.swift",
+        "Tests/MediaGridPaneDecisionsTests.swift",
+    ],
+    copts = [
+        "-warnings-as-errors",
     ],
 )
