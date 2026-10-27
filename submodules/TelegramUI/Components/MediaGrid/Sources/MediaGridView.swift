@@ -15,6 +15,7 @@ public final class MediaGridView: UIView {
     private var pinch: PinchSession?
 
     public private(set) var level: MediaGridLevel = .three
+    private var layoutLevel: MediaGridLevel = .three
     private var itemCount: Int
     private(set) var currentLayout: MediaGridUniformLayout?
     private var needsLayoutRebuild = true
@@ -68,7 +69,7 @@ public final class MediaGridView: UIView {
     public var cameraView: UIView? {
         didSet {
             if self.cameraView !== oldValue {
-                self.finishTransition()
+                self.endInteraction()
                 oldValue?.removeFromSuperview()
                 if let cameraView = self.cameraView {
                     self.engine.contentHost.addSubview(cameraView)
@@ -211,7 +212,7 @@ public final class MediaGridView: UIView {
     }
 
     public func reloadData() {
-        self.finishTransition()
+        self.endInteraction()
         self.itemCount = max(0, self.dataSource.count)
         self.needsLayoutRebuild = true
         self.dateCache = [:]
@@ -228,7 +229,7 @@ public final class MediaGridView: UIView {
             self.pendingContentOffset = y
             return
         }
-        self.finishTransition()
+        self.endInteraction()
         let offset = min(max(0.0, y), self.maxOffset)
         self.engine.setOffset(offset)
         self.scrolled(to: offset)
@@ -263,10 +264,10 @@ public final class MediaGridView: UIView {
         guard self.transition == nil, self.pinch == nil, let index = self.index(at: point) else {
             return
         }
-        if self.level.isInteractive {
+        if self.layoutLevel.isInteractive {
             self.onTapItem?(index)
             self.updateSelectionForVisibleItems()
-        } else if self.isZoomEnabled, let target = self.level.zoomedIn {
+        } else if self.isZoomEnabled, let target = self.layoutLevel.zoomedIn {
             self.setLevel(target, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: point))
         }
     }
@@ -280,18 +281,18 @@ public final class MediaGridView: UIView {
     }
 
     public func zoomIn() {
+        self.endInteraction()
         guard self.isZoomEnabled, let target = self.level.zoomedIn else {
             return
         }
-        self.finishTransition()
         self.setLevel(target, animated: true, anchor: self.centreAnchor())
     }
 
     public func zoomOut() {
+        self.endInteraction()
         guard self.isZoomEnabled, let target = self.level.zoomedOut else {
             return
         }
-        self.finishTransition()
         self.setLevel(target, animated: true, anchor: self.centreAnchor())
     }
 
@@ -324,13 +325,14 @@ public final class MediaGridView: UIView {
     }
 
     public func setLevel(_ level: MediaGridLevel, animated: Bool, anchor: MediaGridZoomAnchor? = nil) {
-        self.finishTransition()
+        self.endInteraction()
         guard level != self.level else {
             return
         }
         let resolvedAnchor = anchor ?? self.centreAnchor()
         guard let source = self.currentLayout, self.bounds.width > 0.0, self.bounds.height > 0.0, let resolvedAnchor, resolvedAnchor.index >= 0, resolvedAnchor.index < source.count else {
             self.level = level
+            self.layoutLevel = level
             self.invalidateGridLayout()
             self.updateGridLayout()
             self.onLevelChanged?(level)
@@ -340,13 +342,14 @@ public final class MediaGridView: UIView {
         self.engine.haltMotionInPlace()
         if !animated {
             self.level = level
+            self.layoutLevel = level
             self.pendingZoom = (resolvedAnchor, relative)
             self.needsLayoutRebuild = true
             self.updateGridLayout()
             self.onLevelChanged?(level)
             return
         }
-        let transition = self.beginTransition(to: level, source: source, anchor: resolvedAnchor, relativePosition: relative)
+        let transition = self.beginTransition(to: level, source: source, anchor: resolvedAnchor, relativePosition: relative, binding: 0.0 ... 1.0)
         transition.animate(to: 1.0, completion: { [weak self, weak transition] in
             guard let self, let transition, self.transition === transition else {
                 return
@@ -364,8 +367,8 @@ public final class MediaGridView: UIView {
     }
 
     @discardableResult
-    private func beginTransition(to level: MediaGridLevel, source: MediaGridUniformLayout, anchor: MediaGridZoomAnchor, relativePosition: CGPoint) -> MediaGridZoomTransition {
-        let sourceLevel = self.level
+    private func beginTransition(to level: MediaGridLevel, source: MediaGridUniformLayout, anchor: MediaGridZoomAnchor, relativePosition: CGPoint, binding: ClosedRange<CGFloat>) -> MediaGridZoomTransition {
+        let sourceLevel = self.layoutLevel
 
         let width = self.bounds.width
         let height = self.bounds.height
@@ -385,13 +388,6 @@ public final class MediaGridView: UIView {
         incoming.setLayout(target, pixelSize: pixelSize, detail: level.isInteractive ? .full : .compact)
         MediaGridZoomTransition.resetPivot(incoming, width: width, height: target.contentHeight, originY: shift)
         self.engine.contentHost.layer.insertSublayer(incoming, above: self.activeLayoutLayer)
-
-        let viewport = CGRect(x: 0.0, y: sourceOffset, width: width, height: height)
-        let incomingRect = viewport.union(MediaGridView.scaled(viewport, about: anchorPoint, by: scale)).offsetBy(dx: 0.0, dy: -shift)
-        incoming.updateVisibleRange(target.indexRange(intersecting: incomingRect.insetBy(dx: 0.0, dy: -self.windowMargin(level: level))))
-        let outgoingRect = viewport.union(MediaGridView.scaled(viewport, about: anchorPoint, by: 1.0 / scale))
-        self.activeLayoutLayer.updateVisibleRange(source.indexRange(intersecting: outgoingRect.insetBy(dx: 0.0, dy: -self.windowMargin(level: sourceLevel))))
-        self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count + incoming.visibleCells.count)
 
         var cameraRole: MediaGridZoomTransition.CameraRole = .none
         var cameraAlpha: (CGFloat, CGFloat) = (0.0, 0.0)
@@ -418,19 +414,70 @@ public final class MediaGridView: UIView {
             cameraTakesPart = false
         }
         let transition = MediaGridZoomTransition(sourceLevel: sourceLevel, targetLevel: level, sourceLayout: source, outgoing: self.activeLayoutLayer, outgoingLocalAnchor: anchorPoint, incoming: incoming, incomingLocalAnchor: CGPoint(x: anchorPoint.x, y: anchorPoint.y - shift), anchorPoint: anchorPoint, viewportSize: CGSize(width: width, height: height), scale: scale, targetLayout: target, targetOffset: targetOffset, targetPixelSize: pixelSize, camera: cameraTakesPart ? self.cameraView : nil, cameraRole: cameraRole, cameraAlphaRange: cameraAlpha)
+        transition.viewport = CGRect(x: 0.0, y: sourceOffset, width: width, height: height)
+        transition.shift = shift
         self.transition = transition
         self.transitionAnchor = (anchor, relativePosition)
+        self.bindTransition(transition, covering: binding)
         transition.apply(progress: 0.0)
         self.updateGestureAvailability()
         self.engine.isScrollEnabled = false
         return transition
     }
 
-    private static func scaled(_ rect: CGRect, about point: CGPoint, by scale: CGFloat) -> CGRect {
-        guard scale.isFinite, scale > 0.0 else {
-            return rect
+    private static let bindStep: CGFloat = 0.125
+
+    private func bindTransition(_ transition: MediaGridZoomTransition, covering range: ClosedRange<CGFloat>) {
+        let lower = min(1.0, max(0.0, range.lowerBound))
+        let upper = min(1.0, max(0.0, range.upperBound))
+        if let bound = transition.boundRange, bound.lowerBound <= lower, bound.upperBound >= upper {
+            return
         }
-        return CGRect(x: point.x + (rect.minX - point.x) * scale, y: point.y + (rect.minY - point.y) * scale, width: rect.width * scale, height: rect.height * scale)
+        let step = MediaGridView.bindStep
+        var newLower = max(0.0, floor(lower / step) * step)
+        var newUpper = min(1.0, ceil(upper / step) * step)
+        if let bound = transition.boundRange {
+            newLower = min(newLower, bound.lowerBound)
+            newUpper = max(newUpper, bound.upperBound)
+        }
+        transition.boundRange = newLower ... newUpper
+        let pad = self.bounds.height * 0.05
+        let incomingRect = transition.incomingRect(at: newLower).union(transition.incomingRect(at: newUpper)).insetBy(dx: 0.0, dy: -pad)
+        transition.incoming.updateVisibleRange(transition.targetLayout.indexRange(intersecting: incomingRect))
+        let outgoingRect = transition.outgoingRect(at: newLower).union(transition.outgoingRect(at: newUpper)).insetBy(dx: 0.0, dy: -pad)
+        var outgoingRange = transition.sourceLayout.indexRange(intersecting: outgoingRect)
+        let current = transition.outgoing.visibleRange
+        if !current.isEmpty, current.overlaps(outgoingRange) {
+            outgoingRange = min(current.lowerBound, outgoingRange.lowerBound) ..< max(current.upperBound, outgoingRange.upperBound)
+        }
+        transition.outgoing.updateVisibleRange(outgoingRange)
+        self.pool.setVisibleCount(transition.outgoing.visibleCells.count + transition.incoming.visibleCells.count)
+    }
+
+    private func jumpLayout(to level: MediaGridLevel, anchor: MediaGridZoomAnchor, relativePosition: CGPoint) {
+        guard let source = self.currentLayout else {
+            return
+        }
+        let height = self.bounds.height
+        let host = self.engine.contentHost.frame
+        let target = self.makeLayout(level: level, geometry: source.geometry)
+        let offset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: anchor.index, pointInView: CGPoint(x: anchor.pointInView.x - host.minX, y: anchor.pointInView.y - host.minY)), in: target, viewportHeight: height, relativePosition: relativePosition)
+        self.activeLayoutLayer.removeAllCells()
+        self.activeLayoutLayer.setLayout(target, pixelSize: self.pixelSize(for: target), detail: level.isInteractive ? .full : .compact)
+        self.activeLayoutLayer.frame = CGRect(x: 0.0, y: 0.0, width: self.bounds.width, height: target.contentHeight)
+        self.layoutLevel = level
+        self.currentLayout = target
+        self.engine.setEdges(min: 0.0, max: self.maxOffset)
+        self.engine.setOffset(min(max(0.0, offset), self.maxOffset))
+        self.layoutCamera(layout: target)
+    }
+
+    private func endInteraction() {
+        if self.transition != nil {
+            self.finishTransition()
+        } else if self.pinch != nil {
+            self.completeZoom()
+        }
     }
 
     private func finishTransition(commit: Bool? = nil, quiet: Bool = false) {
@@ -455,7 +502,7 @@ public final class MediaGridView: UIView {
             incoming.opacity = 1.0
             self.activeLayoutLayer = incoming
 
-            self.level = transition.targetLevel
+            self.layoutLevel = transition.targetLevel
             self.currentLayout = transition.targetLayout
             self.engine.setEdges(min: 0.0, max: self.maxOffset)
             self.engine.setOffset(min(max(0.0, transition.targetOffset), self.maxOffset))
@@ -473,20 +520,19 @@ public final class MediaGridView: UIView {
             self.layoutCamera(layout: layout)
         }
         if !quiet {
-            self.completeZoom(notifyFrom: transition.sourceLevel)
+            self.completeZoom()
         }
     }
 
-    private func completeZoom(notifyFrom defaultLevel: MediaGridLevel) {
-        var notifyFrom = defaultLevel
+    private func completeZoom() {
         if let pinch = self.pinch {
             self.pinch = nil
-            notifyFrom = pinch.notifyFrom
             if pinch.isTracking {
-                self.layer.removeAnimation(forKey: MediaGridView.overshootKey)
-                self.layer.sublayerTransform = CATransform3DIdentity
+                self.resetOvershoot()
             }
         }
+        let previousLevel = self.level
+        self.level = self.layoutLevel
         if let layout = self.currentLayout {
             let pixelSize = self.pixelSize(for: layout)
             if pixelSize != self.prefetchPixelSize {
@@ -497,14 +543,14 @@ public final class MediaGridView: UIView {
         self.engine.isScrollEnabled = true
         self.updateGestureAvailability()
         self.scrolled(to: self.engine.offset)
-        if self.level != notifyFrom {
+        if self.level != previousLevel {
             self.onLevelChanged?(self.level)
         }
     }
 
     private func updateGestureAvailability() {
         let idle = self.transition == nil && self.pinch == nil
-        let interactive = self.level.isInteractive
+        let interactive = self.layoutLevel.isInteractive
         self.tapRecognizer.isEnabled = idle && (interactive || self.isZoomEnabled)
         self.selectionGesture.isEnabled = idle && interactive
         self.pinchRecognizer.isEnabled = self.isZoomEnabled
@@ -513,11 +559,17 @@ public final class MediaGridView: UIView {
     private struct PinchSession {
         var state: MediaGridPinchState
         var relativePosition: CGPoint
-        var notifyFrom: MediaGridLevel
         var isTracking: Bool
     }
 
     private static let overshootKey = "mediaGridZoom.overshoot"
+    private static let crossingHysteresis: CGFloat = 0.05
+
+    private func resetOvershoot() {
+        let hostLayer = self.engine.contentHost.layer
+        hostLayer.removeAnimation(forKey: MediaGridView.overshootKey)
+        hostLayer.sublayerTransform = CATransform3DIdentity
+    }
 
     var pinchAnchor: MediaGridZoomAnchor? {
         return self.pinch?.state.anchor
@@ -550,9 +602,7 @@ public final class MediaGridView: UIView {
             return
         }
         self.engine.haltMotionInPlace()
-        let notifyFrom = self.pinch?.notifyFrom ?? self.transition?.sourceLevel ?? self.level
-        self.layer.removeAnimation(forKey: MediaGridView.overshootKey)
-        self.layer.sublayerTransform = CATransform3DIdentity
+        self.resetOvershoot()
         let state: MediaGridPinchState
         let relativePosition: CGPoint
         if let transition = self.transition, let (anchor, relative) = self.transitionAnchor {
@@ -567,10 +617,10 @@ public final class MediaGridView: UIView {
             guard let anchor = self.anchor(at: center) else {
                 return
             }
-            state = MediaGridPinchState(startLevel: self.level, anchor: anchor)
+            state = MediaGridPinchState(startLevel: self.layoutLevel, anchor: anchor)
             relativePosition = self.relativePosition(of: anchor)
         }
-        self.pinch = PinchSession(state: state, relativePosition: relativePosition, notifyFrom: notifyFrom, isTracking: true)
+        self.pinch = PinchSession(state: state, relativePosition: relativePosition, isTracking: true)
         self.updateGestureAvailability()
         self.engine.isScrollEnabled = false
     }
@@ -595,11 +645,23 @@ public final class MediaGridView: UIView {
                 let target = transition.targetLevel
                 if source == from && target == to {
                     transition.apply(progress: progress)
+                    self.bindTransition(transition, covering: progress ... progress)
                     return
                 }
                 if source == to && target == from {
                     transition.apply(progress: 1.0 - progress)
+                    self.bindTransition(transition, covering: (1.0 - progress) ... (1.0 - progress))
                     return
+                }
+                if let shared = [from, to].first(where: { $0 == source || $0 == target }) {
+                    let distance = shared == from ? progress : 1.0 - progress
+                    if distance < MediaGridView.crossingHysteresis {
+                        let span = abs(MediaGridPinchState.position(of: from) - MediaGridPinchState.position(of: to))
+                        let ownSpan = max(1e-6, abs(MediaGridPinchState.position(of: source) - MediaGridPinchState.position(of: target)))
+                        let beyond = distance * span / ownSpan
+                        transition.apply(progress: shared == target ? 1.0 + beyond : -beyond)
+                        return
+                    }
                 }
                 let commit: Bool
                 if source == from || source == to {
@@ -615,25 +677,30 @@ public final class MediaGridView: UIView {
             guard let session = self.pinch, let source = self.currentLayout else {
                 return
             }
-            let next: MediaGridLevel?
-            if self.level == from || self.level == to {
-                next = from == to ? nil : (self.level == from ? to : from)
+            let level = self.layoutLevel
+            let anchor = session.state.anchor
+            if level == from || level == to {
+                guard from != to else {
+                    return
+                }
+                let next = level == from ? to : from
+                let start = level == from ? progress : 1.0 - progress
+                self.beginTransition(to: next, source: source, anchor: anchor, relativePosition: session.relativePosition, binding: start ... start)
+            } else if let next = from > level ? level.zoomedOut : level.zoomedIn {
+                self.jumpLayout(to: next, anchor: anchor, relativePosition: session.relativePosition)
             } else {
-                next = from > self.level ? self.level.zoomedOut : self.level.zoomedIn
-            }
-            guard let next else {
                 return
             }
-            let anchor = session.state.anchor
-            self.beginTransition(to: next, source: source, anchor: anchor, relativePosition: session.relativePosition)
         }
     }
 
     private func applyOvershoot(_ overshoot: CGFloat, about point: CGPoint) {
+        let hostLayer = self.engine.contentHost.layer
         if overshoot == 0.0 {
-            self.layer.sublayerTransform = CATransform3DIdentity
+            hostLayer.sublayerTransform = CATransform3DIdentity
         } else {
-            self.layer.sublayerTransform = MediaGridZoomMath.transform(scale: exp(-overshoot), about: point, layerPosition: CGPoint(x: self.bounds.midX, y: self.bounds.midY))
+            let host = self.engine.contentHost.frame
+            hostLayer.sublayerTransform = MediaGridZoomMath.transform(scale: exp(-overshoot), about: CGPoint(x: point.x - host.minX, y: point.y - host.minY), layerPosition: CGPoint(x: host.width * 0.5, y: host.height * 0.5))
         }
     }
 
@@ -643,24 +710,26 @@ public final class MediaGridView: UIView {
         }
         session.isTracking = false
         self.pinch = session
-        if !CATransform3DIsIdentity(self.layer.sublayerTransform) {
+        let hostLayer = self.engine.contentHost.layer
+        if !CATransform3DIsIdentity(hostLayer.sublayerTransform) {
             let animation = CASpringAnimation(keyPath: "sublayerTransform")
             animation.stiffness = 300.0
             animation.damping = 2.0 * sqrt(animation.stiffness * animation.mass)
-            animation.fromValue = NSValue(caTransform3D: self.layer.sublayerTransform)
+            animation.fromValue = NSValue(caTransform3D: hostLayer.sublayerTransform)
             animation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
             let settling = animation.settlingDuration
             animation.duration = settling
             animation.speed = Float(settling / MediaGridZoomTransition.duration)
-            self.layer.sublayerTransform = CATransform3DIdentity
-            self.layer.add(animation, forKey: MediaGridView.overshootKey)
+            hostLayer.sublayerTransform = CATransform3DIdentity
+            hostLayer.add(animation, forKey: MediaGridView.overshootKey)
         }
         guard let transition = self.transition else {
-            self.completeZoom(notifyFrom: self.level)
+            self.completeZoom()
             return
         }
         let target = session.state.settle(velocity: velocity)
         let destination: CGFloat = target == transition.targetLevel ? 1.0 : 0.0
+        self.bindTransition(transition, covering: min(transition.progress, destination) ... max(transition.progress, destination))
         let progressVelocity = session.state.progressVelocity(scaleVelocity: velocity)
         transition.animate(to: destination, velocity: transition.sourceLevel == session.state.current.from ? progressVelocity : -progressVelocity, completion: { [weak self, weak transition] in
             guard let self, let transition, self.transition === transition else {
@@ -694,7 +763,7 @@ public final class MediaGridView: UIView {
             return
         }
         cameraView.layer.transform = CATransform3DIdentity
-        if !self.reservedSlots(for: self.level).isEmpty, let frame = layout.reservedFrame(MediaGridView.cameraSlots) {
+        if !self.reservedSlots(for: self.layoutLevel).isEmpty, let frame = layout.reservedFrame(MediaGridView.cameraSlots) {
             cameraView.isHidden = false
             cameraView.alpha = 1.0
             cameraView.frame = frame
@@ -740,7 +809,7 @@ public final class MediaGridView: UIView {
     }
 
     private var cellDetail: MediaGridCellDetail {
-        return self.level.isInteractive ? .full : .compact
+        return self.layoutLevel.isInteractive ? .full : .compact
     }
 
     private func invalidateGridLayout() {
@@ -761,11 +830,14 @@ public final class MediaGridView: UIView {
             }
             self.finishTransition()
         }
+        if self.pinch != nil && (self.needsLayoutRebuild || self.currentLayout?.geometry != geometry) {
+            self.completeZoom()
+        }
         var compensatedOffset: CGFloat?
         var zoomOffset: CGFloat?
         if self.needsLayoutRebuild || self.currentLayout?.geometry != geometry {
             self.needsLayoutRebuild = false
-            let layout = self.makeLayout(level: self.level, geometry: geometry)
+            let layout = self.makeLayout(level: self.layoutLevel, geometry: geometry)
             if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
                 compensatedOffset = max(0.0, self.engine.offset + (insets.top - lastTopInset))
             }
@@ -874,7 +946,7 @@ public final class MediaGridView: UIView {
             return
         }
         let viewport = CGRect(x: 0.0, y: offset, width: self.bounds.width, height: height)
-        let range = layout.indexRange(intersecting: viewport.insetBy(dx: 0.0, dy: -self.windowMargin(level: self.level)))
+        let range = layout.indexRange(intersecting: viewport.insetBy(dx: 0.0, dy: -self.windowMargin(level: self.layoutLevel)))
         self.activeLayoutLayer.updateVisibleRange(range)
         self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count)
     }

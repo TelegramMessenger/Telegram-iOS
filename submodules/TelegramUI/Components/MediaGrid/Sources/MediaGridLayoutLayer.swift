@@ -11,7 +11,7 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var detail: MediaGridCellDetail = .full
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
-    private var visibleRange: Range<Int> = 0 ..< 0
+    private(set) var visibleRange: Range<Int> = 0 ..< 0
     private var needsRebind = false
 
     init(dataSource: MediaGridDataSource, pool: MediaGridCellPool) {
