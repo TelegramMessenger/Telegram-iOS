@@ -28,6 +28,8 @@ final class TestDataSource: MediaGridDataSource {
     private(set) var requests: [(index: Int, quality: MediaGridImageQuality)] = []
     private(set) var cachingQualities: [MediaGridImageQuality] = []
     private(set) var startedCachingOrder: [[Int]] = []
+    private(set) var pixelSizes: [(index: Int, size: CGSize)] = []
+    private(set) var cachingPixelSizes: [CGSize] = []
     private var held: [(index: Int, quality: MediaGridImageQuality, deliver: () -> Void)] = []
 
     private static let image: UIImage = {
@@ -55,6 +57,7 @@ final class TestDataSource: MediaGridDataSource {
     func requestImage(at index: Int, pixelSize: CGSize, quality: MediaGridImageQuality, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
         self.requestCount += 1
         self.requests.append((index, quality))
+        self.pixelSizes.append((index, pixelSize))
         self.events.append("request \(index)")
         var deliveries = self.deliveriesByQuality[quality] ?? self.deliveries ?? [(TestDataSource.image, false)]
         if let imageForIndex = self.imageForIndex {
@@ -102,6 +105,7 @@ final class TestDataSource: MediaGridDataSource {
 
     func startCaching(indices: [Int], pixelSize: CGSize, quality: MediaGridImageQuality) {
         self.cachingQualities.append(quality)
+        self.cachingPixelSizes.append(pixelSize)
         self.startedCachingOrder.append(indices)
         self.cachedIndices.formUnion(indices)
     }

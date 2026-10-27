@@ -108,6 +108,10 @@ public struct MediaGridUniformLayout: MediaGridLayout {
         return lower ..< max(lower, upper)
     }
 
+    public func pixelSize(at index: Int) -> CGSize {
+        return CGSize(width: ceil(self.itemSize.width * self.geometry.scale), height: ceil(self.itemSize.height * self.geometry.scale))
+    }
+
     public func index(at point: CGPoint) -> Int? {
         let dx = point.x - self.geometry.sideInset
         let dy = point.y - self.geometry.topInset

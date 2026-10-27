@@ -178,14 +178,13 @@ final class MediaGridZoomTransition {
 
     let sourceLevel: MediaGridLevel
     let targetLevel: MediaGridLevel
-    let sourceLayout: MediaGridUniformLayout
+    let sourceLayout: MediaGridLayout
     let outgoing: MediaGridLayoutLayer
     let incoming: MediaGridLayoutLayer
     let anchorPoint: CGPoint
     let scale: CGFloat
-    let targetLayout: MediaGridUniformLayout
+    let targetLayout: MediaGridLayout
     let targetOffset: CGFloat
-    let targetPixelSize: CGSize
     let camera: UIView?
     let cameraRole: CameraRole
     let cameraAlphaRange: (CGFloat, CGFloat)
@@ -196,7 +195,7 @@ final class MediaGridZoomTransition {
     var boundRange: ClosedRange<CGFloat>?
     private var animationToken = 0
 
-    init(sourceLevel: MediaGridLevel, targetLevel: MediaGridLevel, sourceLayout: MediaGridUniformLayout, outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, targetLayout: MediaGridUniformLayout, targetOffset: CGFloat, targetPixelSize: CGSize, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
+    init(sourceLevel: MediaGridLevel, targetLevel: MediaGridLevel, sourceLayout: MediaGridLayout, outgoing: MediaGridLayoutLayer, outgoingLocalAnchor: CGPoint, incoming: MediaGridLayoutLayer, incomingLocalAnchor: CGPoint, anchorPoint: CGPoint, viewportSize: CGSize, scale: CGFloat, targetLayout: MediaGridLayout, targetOffset: CGFloat, camera: UIView?, cameraRole: CameraRole, cameraAlphaRange: (CGFloat, CGFloat)) {
         self.sourceLevel = sourceLevel
         self.targetLevel = targetLevel
         self.sourceLayout = sourceLayout
@@ -206,7 +205,6 @@ final class MediaGridZoomTransition {
         self.scale = scale
         self.targetLayout = targetLayout
         self.targetOffset = targetOffset
-        self.targetPixelSize = targetPixelSize
         self.camera = camera
         self.cameraRole = cameraRole
         self.cameraAlphaRange = cameraAlphaRange

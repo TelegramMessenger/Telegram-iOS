@@ -515,7 +515,7 @@ final class MediaGridViewTests: XCTestCase {
             return
         }
         view.zoomOut()
-        guard let transition = view.transition, let targetFrame = transition.targetLayout.reservedFrame(slots) else {
+        guard let transition = view.transition, let targetFrame = (transition.targetLayout as? MediaGridUniformLayout)?.reservedFrame(slots) else {
             XCTFail("no transition")
             return
         }
@@ -1332,6 +1332,172 @@ final class MediaGridViewTests: XCTestCase {
         }
         XCTAssertGreaterThan(kept, 0)
         XCTAssertGreaterThanOrEqual(dataSource.cancelCount - cancels, kept)
+    }
+
+    private func makeLevelOneView(count: Int) -> (MediaGridView, TestDataSource, () -> (([Float]) -> Void)?) {
+        let dataSource = TestDataSource(count: count)
+        let view = MediaGridView(dataSource: dataSource, cellFactory: {
+            return MediaGridCellLayer()
+        })
+        var pending: (([Float]) -> Void)?
+        view.aspectLoader = { _, _, completion in
+            pending = completion
+        }
+        view.motionClock = { 0.0 }
+        view.scaleOverride = 3.0
+        view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
+        view.layoutIfNeeded()
+        view.setLevel(.one, animated: false)
+        return (view, dataSource, { pending })
+    }
+
+    private func assertFrame(_ frame: CGRect, _ expected: CGRect, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(frame.minX, expected.minX, accuracy: 1e-6, file: file, line: line)
+        XCTAssertEqual(frame.minY, expected.minY, accuracy: 1e-6, file: file, line: line)
+        XCTAssertEqual(frame.width, expected.width, accuracy: 1e-6, file: file, line: line)
+        XCTAssertEqual(frame.height, expected.height, accuracy: 1e-6, file: file, line: line)
+    }
+
+    private static func testAspects(count: Int) -> [Float] {
+        return (0 ..< count).map { index in [0.5, 2.0, 1.0, 1.5, 0.75][index % 5] }
+    }
+
+    func testLevelOneUsesEstimatesUntilAspectsArrive() {
+        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        XCTAssertEqual(view.level, .one)
+        XCTAssertNotNil(pending())
+        guard let layout = view.gridLayout as? MediaGridAspectLayout else {
+            XCTFail("no aspect layout")
+            return
+        }
+        XCTAssertEqual(layout.frame(at: 0).width, 393.0, accuracy: 1e-9)
+        XCTAssertEqual(layout.frame(at: 0).height, floor(393.0 / 0.75 * 3.0) / 3.0, accuracy: 1e-9)
+        for (index, cell) in self.visibleCells(view) {
+            self.assertFrame(cell.frame, layout.frame(at: index))
+            XCTAssertEqual(cell.contentsGravity, .resizeAspectFill)
+        }
+    }
+
+    func testLevelOneRequestsRowPixelSize() {
+        let (view, dataSource, pending) = self.makeLevelOneView(count: 1000)
+        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        let requests = dataSource.pixelSizes
+        view.setContentOffset(5000.0)
+        guard let layout = view.gridLayout as? MediaGridAspectLayout else {
+            XCTFail("no aspect layout")
+            return
+        }
+        let fresh = dataSource.pixelSizes.dropFirst(requests.count)
+        XCTAssertFalse(fresh.isEmpty)
+        for (index, size) in fresh {
+            let frame = layout.frame(at: index)
+            XCTAssertEqual(size, CGSize(width: (frame.width * 3.0).rounded(), height: (frame.height * 3.0).rounded()), "index \(index)")
+        }
+        let cachedSizes = Set(dataSource.cachingPixelSizes.map { "\($0.width)x\($0.height)" })
+        XCTAssertGreaterThan(cachedSizes.count, 1)
+    }
+
+    func testExactHeightsKeepTopItem() {
+        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        guard let estimated = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(estimated.frame(at: 300).minY)
+        XCTAssertEqual(view.topVisibleIndex, 300)
+        guard let before = view.frameForItem(at: 300) else {
+            XCTFail("no frame")
+            return
+        }
+        let aspects = MediaGridViewTests.testAspects(count: 1000)
+        pending()?(aspects)
+        guard let exact = view.gridLayout as? MediaGridAspectLayout, let after = view.frameForItem(at: 300) else {
+            XCTFail("no exact layout")
+            return
+        }
+        XCTAssertEqual(exact.frame(at: 1).height, floor(393.0 / 2.0 * 3.0) / 3.0, accuracy: 1e-9)
+        XCTAssertLessThan(abs(after.minY - before.minY), 1.0)
+        XCTAssertEqual(view.topVisibleIndex, 300)
+        for (index, cell) in self.visibleCells(view) {
+            self.assertFrame(cell.frame, exact.frame(at: index))
+        }
+        let viewport = self.viewport(view)
+        for index in exact.indexRange(intersecting: viewport) {
+            XCTAssertNotNil(self.visibleCells(view)[index])
+        }
+    }
+
+    func testAspectsArrivingAtOtherLevelApplyOnEntry() {
+        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        view.setLevel(.three, animated: false)
+        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        XCTAssertNotNil(view.currentLayout)
+        view.setLevel(.one, animated: false)
+        guard let layout = view.gridLayout as? MediaGridAspectLayout else {
+            XCTFail("no aspect layout")
+            return
+        }
+        XCTAssertEqual(layout.frame(at: 0).height, 786.0, accuracy: 1e-9)
+    }
+
+    func testZoomOneToThreeAnchors() {
+        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        guard let layout = view.gridLayout else {
+            XCTFail("no layout")
+            return
+        }
+        view.setContentOffset(layout.frame(at: 300).minY - 100.0)
+        guard let frame = view.frameForItem(at: 300) else {
+            XCTFail("no frame")
+            return
+        }
+        let point = CGPoint(x: frame.midX, y: min(frame.midY, view.bounds.height * 0.5))
+        view.setLevel(.three, animated: true, anchor: MediaGridZoomAnchor(index: 300, pointInView: point))
+        XCTAssertNotNil(view.transition)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .three)
+        guard let after = view.frameForItem(at: 300) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertTrue(view.bounds.intersects(after))
+        XCTAssertTrue(after.minY - 1.0 <= point.y && point.y <= after.maxY + 1.0, "\(after) vs \(point)")
+        XCTAssertNotNil(self.visibleCells(view)[300])
+
+        view.setLevel(.one, animated: true, anchor: MediaGridZoomAnchor(index: 300, pointInView: CGPoint(x: after.midX, y: after.midY)))
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .one)
+        guard let back = view.frameForItem(at: 300) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertTrue(back.minY <= after.midY + 1.0 && after.midY <= back.maxY + 1.0)
+    }
+
+    func testPinchThreeToOneSettlesAtOne() {
+        let (view, _, pending) = self.makeLevelOneView(count: 1000)
+        pending()?(MediaGridViewTests.testAspects(count: 1000))
+        view.setLevel(.three, animated: false)
+        view.setContentOffset(3000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        guard let index = view.index(at: centre) else {
+            XCTFail("no index")
+            return
+        }
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 2.0)
+        XCTAssertEqual(view.transition?.targetLevel, .one)
+        view._testPinch(.changed, center: centre, scale: 3.5)
+        view._testPinch(.ended, center: centre, scale: 3.5)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.level, .one)
+        XCTAssertTrue(view.gridLayout is MediaGridAspectLayout)
+        guard let frame = view.frameForItem(at: index) else {
+            XCTFail("no frame")
+            return
+        }
+        XCTAssertTrue(view.bounds.intersects(frame))
     }
 }
 

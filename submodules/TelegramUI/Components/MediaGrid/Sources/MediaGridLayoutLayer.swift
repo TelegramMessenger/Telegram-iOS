@@ -7,7 +7,6 @@ final class MediaGridLayoutLayer: CALayer {
     private let pool: MediaGridCellPool
 
     private(set) var layout: MediaGridLayout?
-    private(set) var pixelSize: CGSize = .zero
     private(set) var detail: MediaGridCellDetail = .full
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
@@ -36,10 +35,17 @@ final class MediaGridLayoutLayer: CALayer {
         return NSNull()
     }
 
-    func setLayout(_ layout: MediaGridLayout, pixelSize: CGSize, detail: MediaGridCellDetail) {
-        let rebind = pixelSize != self.pixelSize || detail != self.detail
+    func setLayout(_ layout: MediaGridLayout, detail: MediaGridCellDetail) {
+        var rebind = detail != self.detail
+        if !rebind, let previous = self.layout {
+            for index in self.visibleCells.keys where index < layout.count && index < previous.count {
+                if previous.pixelSize(at: index) != layout.pixelSize(at: index) {
+                    rebind = true
+                    break
+                }
+            }
+        }
         self.layout = layout
-        self.pixelSize = pixelSize
         self.detail = detail
         if rebind {
             self.needsRebind = true
@@ -184,6 +190,9 @@ final class MediaGridLayoutLayer: CALayer {
     }
 
     private func requestImage(for cell: MediaGridCellLayer, index: Int, quality: MediaGridImageQuality) {
+        guard let layout = self.layout else {
+            return
+        }
         cell.bindingToken += 1
         cell.requestedQuality = quality
         let token = cell.bindingToken
@@ -205,7 +214,7 @@ final class MediaGridLayoutLayer: CALayer {
             }
             cell.setImage(image)
         }
-        let request = self.dataSource.requestImage(at: index, pixelSize: self.pixelSize, quality: quality, completion: { [weak cell] image, isDegraded in
+        let request = self.dataSource.requestImage(at: index, pixelSize: layout.pixelSize(at: index), quality: quality, completion: { [weak cell] image, isDegraded in
             if Thread.isMainThread {
                 apply(cell, image, isDegraded)
             } else {

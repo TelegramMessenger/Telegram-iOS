@@ -20,11 +20,13 @@ public struct MediaGridGeometry: Equatable {
 }
 
 public protocol MediaGridLayout {
+    var geometry: MediaGridGeometry { get }
     var count: Int { get }
     var contentHeight: CGFloat { get }
     func frame(at index: Int) -> CGRect
     func indexRange(intersecting rect: CGRect) -> Range<Int>
     func index(at point: CGPoint) -> Int?
+    func pixelSize(at index: Int) -> CGSize
 }
 
 public struct MediaGridSlot: Hashable {

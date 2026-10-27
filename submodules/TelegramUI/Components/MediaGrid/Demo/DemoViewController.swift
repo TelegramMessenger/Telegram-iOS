@@ -136,6 +136,11 @@ final class DemoViewController: UIViewController {
                 self?.startAutoScrub()
             }
         }
+        if let fraction = DemoViewController.argument("-driftAt").flatMap(Double.init) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                self?.drift(at: CGFloat(fraction), step: 0)
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("-measureAspects") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.measureAspectsPressed()
@@ -230,6 +235,20 @@ final class DemoViewController: UIViewController {
         CATransaction.flush()
         self.autoPinchDriveWorst = max(self.autoPinchDriveWorst, CACurrentMediaTime() - driveStart)
         #endif
+    }
+
+    private func drift(at fraction: CGFloat, step: Int) {
+        guard let gridView = self.gridView, step <= 8 else {
+            return
+        }
+        let scale = gridView.traitCollection.displayScale
+        let base = (fraction * max(0.0, gridView.contentHeight - gridView.bounds.height) * scale).rounded() / scale
+        gridView.setContentOffset(base + CGFloat(step) / scale)
+        print(String(format: "DRIFT step=%d offset=%.4f height=%.1f top=%d", step, gridView.contentOffset, gridView.contentHeight, gridView.topVisibleIndex ?? -1))
+        fflush(stdout)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.drift(at: fraction, step: step + 1)
+        }
     }
 
     @objc private func measureAspectsPressed() {
