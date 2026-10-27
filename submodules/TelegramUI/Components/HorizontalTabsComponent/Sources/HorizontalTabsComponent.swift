@@ -251,8 +251,10 @@ public final class HorizontalTabsComponent: Component {
         public let accessibilityValue: String?
         /// The name of the VoiceOver custom action that does what the delete badge (`deleteAction`) does.
         public let deleteAccessibilityLabel: String?
+        /// The name of the VoiceOver custom action that opens the long-press menu (`contextAction`).
+        public let contextAccessibilityLabel: String?
         
-        public init(id: AnyHashable, content: Content, badge: Badge?, action: @escaping () -> Void, contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)? = nil, deleteAction: (() -> Void)? = nil, accessibilityLabel: String? = nil, accessibilityValue: String? = nil, deleteAccessibilityLabel: String? = nil) {
+        public init(id: AnyHashable, content: Content, badge: Badge?, action: @escaping () -> Void, contextAction: ((ContextExtractedContentContainingView, ContextGesture?) -> Void)? = nil, deleteAction: (() -> Void)? = nil, accessibilityLabel: String? = nil, accessibilityValue: String? = nil, deleteAccessibilityLabel: String? = nil, contextAccessibilityLabel: String? = nil) {
             self.id = id
             self.content = content
             self.badge = badge
@@ -262,6 +264,7 @@ public final class HorizontalTabsComponent: Component {
             self.accessibilityLabel = accessibilityLabel
             self.accessibilityValue = accessibilityValue
             self.deleteAccessibilityLabel = deleteAccessibilityLabel
+            self.contextAccessibilityLabel = contextAccessibilityLabel
         }
         
         public static func ==(lhs: Tab, rhs: Tab) -> Bool {
@@ -283,7 +286,7 @@ public final class HorizontalTabsComponent: Component {
             if lhs.accessibilityLabel != rhs.accessibilityLabel || lhs.accessibilityValue != rhs.accessibilityValue {
                 return false
             }
-            if lhs.deleteAccessibilityLabel != rhs.deleteAccessibilityLabel {
+            if lhs.deleteAccessibilityLabel != rhs.deleteAccessibilityLabel || lhs.contextAccessibilityLabel != rhs.contextAccessibilityLabel {
                 return false
             }
             return true
@@ -736,14 +739,24 @@ public final class HorizontalTabsComponent: Component {
                         }
                         self.scrollView.scrollRectToVisible(regularView.convert(regularView.bounds, to: self.scrollView).insetBy(dx: -16.0, dy: 0.0), animated: true)
                     }
+                    var customActions: [UIAccessibilityCustomAction] = []
                     if let deleteAction = tab.deleteAction, let deleteAccessibilityLabel = tab.deleteAccessibilityLabel {
-                        element.accessibilityCustomActions = [UIAccessibilityCustomAction(name: deleteAccessibilityLabel, actionHandler: { _ in
+                        customActions.append(UIAccessibilityCustomAction(name: deleteAccessibilityLabel, actionHandler: { _ in
                             deleteAction()
                             return true
-                        })]
-                    } else {
-                        element.accessibilityCustomActions = nil
+                        }))
                     }
+                    if let contextAction = tab.contextAction, let contextAccessibilityLabel = tab.contextAccessibilityLabel, let itemComponentView = regularView as? ItemComponent.View {
+                        // The long-press menu, opened without a gesture as other menus are from VoiceOver.
+                        customActions.append(UIAccessibilityCustomAction(name: contextAccessibilityLabel, actionHandler: { [weak itemComponentView] _ in
+                            guard let itemComponentView else {
+                                return false
+                            }
+                            contextAction(itemComponentView.extractedContainerView, nil)
+                            return true
+                        }))
+                    }
+                    element.accessibilityCustomActions = customActions.isEmpty ? nil : customActions
                     elements.append(element)
                 }
                 for id in Array(self.accessibilityTabElements.keys) where !validIds.contains(id) {

@@ -540,6 +540,10 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
         
         super.init()
         
+        // A button that opens the search (its own field appears then), named by its placeholder ("Search").
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
+        
         self.view.addSubview(self.containerView)
         self.containerView.addSubview(self.contentView)
     }
@@ -639,6 +643,9 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     public func updateLayout(placeholderString: NSAttributedString?, compactPlaceholderString: NSAttributedString?, constrainedSize: CGSize, expansionProgress: CGFloat, iconColor: UIColor, foregroundColor: UIColor, backgroundColor: UIColor, controlColor: UIColor, preferClearGlass: Bool = false, displayGlassBackgroundWhenInactive: Bool = false, alignPlaceholderToLeftWhenInactive: Bool = false, transition: ContainedViewLayoutTransition) -> CGFloat {
         let params = Params(placeholderString: placeholderString, compactPlaceholderString: compactPlaceholderString, constrainedSize: constrainedSize, expansionProgress: expansionProgress, iconColor: iconColor, foregroundColor: foregroundColor, backgroundColor: backgroundColor, controlColor: controlColor, preferClearGlass: preferClearGlass, displayGlassBackgroundWhenInactive: displayGlassBackgroundWhenInactive, alignPlaceholderToLeftWhenInactive: alignPlaceholderToLeftWhenInactive)
         self.params = params
+        if (self.accessibilityLabel ?? "").isEmpty, let placeholderString, !placeholderString.string.isEmpty {
+            self.accessibilityLabel = placeholderString.string
+        }
         
         if self.isTakenOut {
             return self.currentLayoutHeight ?? 44.0

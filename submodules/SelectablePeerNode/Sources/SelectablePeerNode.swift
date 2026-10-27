@@ -91,6 +91,15 @@ public final class SelectablePeerNode: ASDisplayNode {
 
     public var toggleSelection: ((Bool) -> Void)?
     
+    /// Opens the long-press menu without a gesture (a VoiceOver custom action); `false` when there is none.
+    public func openContextMenu() -> Bool {
+        guard let contextAction = self.contextAction else {
+            return false
+        }
+        contextAction(self.contextContainer, nil, nil)
+        return true
+    }
+    
     /// The title shown under the avatar, for a host that describes the item to VoiceOver.
     public var displayedTitle: String? {
         return self.textNode.attributedText?.string

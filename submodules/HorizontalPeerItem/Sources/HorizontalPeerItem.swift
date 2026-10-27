@@ -281,6 +281,14 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                         strongSelf.accessibilityValue = nil
                     }
                     strongSelf.accessibilityTraits = item.isPeerSelected(item.peer.id) ? [.button, .selected] : [.button]
+                    if item.contextAction != nil {
+                        // The long-press menu, as a custom action.
+                        strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                            return strongSelf?.peerNode.openContextMenu() ?? false
+                        })]
+                    } else {
+                        strongSelf.view.accessibilityCustomActions = nil
+                    }
                 }
             })
         }

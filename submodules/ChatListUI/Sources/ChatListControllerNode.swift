@@ -1679,7 +1679,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                                 }
                             },
                             accessibilityValue: accessibilityValue,
-                            deleteAccessibilityLabel: self.presentationData.strings.Common_Delete
+                            deleteAccessibilityLabel: self.presentationData.strings.Common_Delete,
+                            contextAccessibilityLabel: self.presentationData.strings.Common_More
                         )
                     },
                     selectedTab: selectedTab,

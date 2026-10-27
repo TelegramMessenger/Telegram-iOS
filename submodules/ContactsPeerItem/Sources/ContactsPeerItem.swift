@@ -2056,6 +2056,35 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                             }
                             
+                            // The swipe options and the long-press menu as VoiceOver custom actions, through the same
+                            // paths as the gestures (`revealOptionSelected`, `secondaryAction`'s menu without a gesture).
+                            var accessibilityCustomActions: [UIAccessibilityCustomAction] = []
+                            let revealOptions: [ItemListRevealOption]
+                            if item.editing.editable {
+                                revealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: .clear, iconColor: .clear, textColor: .clear, isDestructive: true)]
+                            } else {
+                                revealOptions = peerRevealOptions
+                            }
+                            for option in revealOptions {
+                                accessibilityCustomActions.append(UIAccessibilityCustomAction(name: option.title, actionHandler: { [weak strongSelf] _ in
+                                    guard let strongSelf else {
+                                        return false
+                                    }
+                                    strongSelf.revealOptionSelected(option, animated: false)
+                                    return true
+                                }))
+                            }
+                            if item.contextAction != nil {
+                                accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                    guard let strongSelf, let contextAction = strongSelf.item?.contextAction else {
+                                        return false
+                                    }
+                                    contextAction(strongSelf.containerNode, nil, nil)
+                                    return true
+                                }))
+                            }
+                            strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
+                            
                             if item.isAd {
                                 let adButton: HighlightableButtonNode
                                 if let current = strongSelf.adButton {

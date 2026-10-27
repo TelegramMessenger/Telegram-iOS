@@ -100,4 +100,23 @@ final class HorizontalTabsAccessibilityTests: XCTestCase {
         XCTAssertTrue(actions[0].actionHandler?(actions[0]) ?? false)
         XCTAssertEqual(deleted, 1)
     }
+    
+    // A tab's long-press menu is a custom action that opens the same menu, without a gesture.
+    func testContextMenuIsACustomAction() {
+        var openedWithGesture: [Bool] = []
+        let tabs = [
+            HorizontalTabsComponent.Tab(id: AnyHashable(0), content: .title(HorizontalTabsComponent.Tab.Title(text: "All", entities: [], enableAnimations: false)), badge: nil, action: {}, contextAction: { _, gesture in openedWithGesture.append(gesture != nil) }, contextAccessibilityLabel: "More"),
+            HorizontalTabsComponent.Tab(id: AnyHashable(1), content: .title(HorizontalTabsComponent.Tab.Title(text: "Forums", entities: [], enableAnimations: false)), badge: nil, action: {})
+        ]
+        let componentView = ComponentView<Empty>()
+        let _ = componentView.update(transition: .immediate, component: AnyComponent(HorizontalTabsComponent(context: nil, theme: defaultDarkPresentationTheme, tabs: tabs, selectedTab: AnyHashable(0), isEditing: false)), environment: {}, containerSize: CGSize(width: 370.0, height: 44.0))
+        let view = componentView.view as! HorizontalTabsComponent.View
+        let elements = (view.accessibilityElements ?? []).compactMap { $0 as? UIAccessibilityElement }
+        XCTAssertEqual(elements.count, 2)
+        XCTAssertNil(elements[1].accessibilityCustomActions)
+        let actions = elements[0].accessibilityCustomActions ?? []
+        XCTAssertEqual(actions.map { $0.name }, ["More"])
+        XCTAssertTrue(actions[0].actionHandler?(actions[0]) ?? false)
+        XCTAssertEqual(openedWithGesture, [false])
+    }
 }
