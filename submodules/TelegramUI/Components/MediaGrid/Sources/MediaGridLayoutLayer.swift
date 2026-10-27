@@ -107,6 +107,20 @@ final class MediaGridLayoutLayer: CALayer {
         }
     }
 
+    func invalidateImages(_ indices: IndexSet) {
+        var invalidated = false
+        for index in indices where self.visibleCells[index] != nil {
+            self.staleIndices.insert(index)
+            self.changedIndices.insert(index)
+            invalidated = true
+        }
+        if invalidated {
+            self.dataSource.performBatch {
+                self.updateVisibleRange(self.visibleRange)
+            }
+        }
+    }
+
     func refreshSelection() {
         guard self.detail == .full else {
             return

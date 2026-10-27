@@ -318,4 +318,26 @@ final class MediaGridPhotoLibraryDataSourceTests: XCTestCase {
         XCTAssertEqual(MediaGridPhotoLibraryServices.defaultRetryRegistryURL.lastPathComponent, "MediaGridThumbnailRetries.plist")
         XCTAssertEqual(MediaGridPhotoLibraryServices.defaultSnapshotURL.lastPathComponent, "MediaGridLaunchSnapshot.plist")
     }
+
+    func testOnlyTheLatestDataSourceOwnsTheStoreHook() {
+        let store = MediaGridThumbnailStore(directory: nil)
+        weak var weakFirst: MediaGridPhotoLibraryDataSource?
+        weak var weakSecond: MediaGridPhotoLibraryDataSource?
+        autoreleasepool {
+            let first = MediaGridPhotoLibraryDataSource(fetchResult: PHFetchResult<PHAsset>(), reversed: true, store: store, launch: nil)
+            weakFirst = first
+            XCTAssertNotNil(store.onThumbnailsChanged)
+            let second = MediaGridPhotoLibraryDataSource(fetchResult: PHFetchResult<PHAsset>(), reversed: false, store: store, launch: nil)
+            weakSecond = second
+            XCTAssertTrue(store.hookOwner === second)
+        }
+        let deadline = Date(timeIntervalSinceNow: 2.0)
+        while (weakFirst != nil || weakSecond != nil) && Date() < deadline {
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+        }
+        XCTAssertNil(weakFirst)
+        XCTAssertNil(weakSecond)
+        XCTAssertNil(store.hookOwner)
+        XCTAssertNil(store.onThumbnailsChanged)
+    }
 }

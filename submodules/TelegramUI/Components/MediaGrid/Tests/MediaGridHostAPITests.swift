@@ -10,7 +10,7 @@ final class MediaGridHostAPITests: XCTestCase {
         })
         view.motionClock = { 0.0 }
         view.scaleOverride = 3.0
-        view.requiresWindowForScrollAnimation = false
+        view._testAllowsWindowlessScrollAnimation = true
         if layout {
             view.frame = CGRect(x: 0.0, y: 0.0, width: 393.0, height: 852.0)
             view.layoutIfNeeded()
@@ -251,5 +251,82 @@ final class MediaGridHostAPITests: XCTestCase {
         XCTAssertEqual(events, [true, false, true])
         view._testFinishAnimations()
         XCTAssertEqual(events, [true, false, true, false])
+    }
+
+    func testReloadImagesRerequestsVisibleCellsWithoutEndingAZoom() {
+        let (view, dataSource) = self.makeView(count: 1000)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        let replacement = UIGraphicsImageRenderer(size: CGSize(width: 4.0, height: 4.0), format: format).image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0.0, y: 0.0, width: 4.0, height: 4.0))
+        }
+        let offset = view.contentOffset
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: center)
+        XCTAssertTrue(view.isZooming)
+        dataSource.imageForIndex = { _ in replacement }
+        let before = dataSource.requests.filter { $0.index == 4 }.count
+        view.reloadImages(at: IndexSet([4]))
+        XCTAssertTrue(view.isZooming)
+        XCTAssertGreaterThan(dataSource.requests.filter { $0.index == 4 }.count, before)
+        var cell: MediaGridCellLayer?
+        view.forEachVisibleCell { index, visible in
+            if index == 4 {
+                cell = visible
+            }
+        }
+        XCTAssertTrue(cell?.displayedImage === replacement)
+        view._testPinch(.ended, center: center)
+        view._testFinishAnimations()
+        XCTAssertEqual(view.contentOffset, offset, accuracy: 1e-6)
+    }
+
+    func testForEachCellIncludesTheIncomingZoomLayer() {
+        let (view, _) = self.makeView(count: 1000)
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        var visible = 0
+        view.forEachVisibleCell { _, _ in
+            visible += 1
+        }
+        var all = 0
+        view.forEachCell { _, _ in
+            all += 1
+        }
+        XCTAssertEqual(all, visible)
+        view._testPinch(.began, center: center)
+        view._testPinch(.changed, center: center, scale: 0.8)
+        XCTAssertTrue(view.isZooming)
+        var active = 0
+        view.forEachVisibleCell { _, _ in
+            active += 1
+        }
+        var during = 0
+        view.forEachCell { _, _ in
+            during += 1
+        }
+        XCTAssertGreaterThan(during, active)
+        view._testPinch(.ended, center: center, scale: 0.8)
+        view._testFinishAnimations()
+    }
+
+    func testGridGesturesIgnoreTouchesInTheHeaderAndCamera() {
+        let (view, _) = self.makeView(count: 1000)
+        let header = UIView()
+        let button = UIView()
+        header.addSubview(button)
+        view.headerView = header
+        view.headerHeight = 44.0
+        let camera = UIView()
+        let cameraChild = UIView()
+        camera.addSubview(cameraChild)
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        XCTAssertFalse(view.gridGesturesReceiveTouch(in: button))
+        XCTAssertFalse(view.gridGesturesReceiveTouch(in: header))
+        XCTAssertFalse(view.gridGesturesReceiveTouch(in: cameraChild))
+        XCTAssertTrue(view.gridGesturesReceiveTouch(in: view))
+        XCTAssertTrue(view.gridGesturesReceiveTouch(in: view.engine.contentHost))
+        XCTAssertTrue(view.gridGesturesReceiveTouch(in: nil))
     }
 }

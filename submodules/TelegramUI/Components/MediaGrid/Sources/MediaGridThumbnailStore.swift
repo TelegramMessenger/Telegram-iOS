@@ -131,6 +131,7 @@ public final class MediaGridThumbnailStore {
 
     public private(set) var isWritable = true
     public var onThumbnailsChanged: ((Set<String>) -> Void)?
+    public weak var hookOwner: AnyObject?
     public var onWritabilityChanged: ((Bool) -> Void)?
     var didDecodePage: ((Int, Bool) -> Void)?
     var didReadPage: ((Int) -> Void)?

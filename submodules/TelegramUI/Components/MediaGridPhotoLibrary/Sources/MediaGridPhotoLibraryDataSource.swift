@@ -75,6 +75,7 @@ public final class MediaGridPhotoLibraryDataSource: NSObject, MediaGridDataSourc
         self.store.onThumbnailsChanged = { [weak self] ids in
             self?.thumbnailsChanged(ids)
         }
+        self.store.hookOwner = self
         if let filler {
             filler.source.fetchResult = fetchResult
             filler.source.reversed = reversed
@@ -508,6 +509,9 @@ public final class MediaGridPhotoLibraryDataSource: NSObject, MediaGridDataSourc
     }
 
     deinit {
+        if self.store.hookOwner == nil {
+            self.store.onThumbnailsChanged = nil
+        }
         PHPhotoLibrary.shared().unregisterChangeObserver(self)
         if let backgroundObserver = self.backgroundObserver {
             NotificationCenter.default.removeObserver(backgroundObserver)

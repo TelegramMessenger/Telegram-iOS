@@ -181,6 +181,7 @@ public final class MediaGridView: UIView {
     let selectionGesture = MediaGridSelectionGesture()
     private let pinchRecognizer = UIPinchGestureRecognizer()
     private let pinchDelegate = MediaGridPinchDelegate()
+    private let touchFilter = MediaGridTouchFilter()
     private var lastTopInset: CGFloat?
 
     private static let cameraSlots: Set<MediaGridSlot> = [MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)]
@@ -205,6 +206,10 @@ public final class MediaGridView: UIView {
         self.overlayView.isUserInteractionEnabled = false
         self.engine.contentHost.addSubview(self.overlayView)
         self.tapRecognizer.addTarget(self, action: #selector(self.tapped(_:)))
+        self.touchFilter.receivesTouch = { [weak self] view in
+            return self?.gridGesturesReceiveTouch(in: view) ?? true
+        }
+        self.tapRecognizer.delegate = self.touchFilter
         self.addGestureRecognizer(self.tapRecognizer)
         self.selectionGesture.sideInset = 44.0
         self.selectionGesture.itemAt = { [weak self] point in
@@ -237,6 +242,7 @@ public final class MediaGridView: UIView {
                 self.applyAspects()
             }
         }
+        self.selectionGesture.delegate = self.touchFilter
         self.addGestureRecognizer(self.selectionGesture)
         self.pinchRecognizer.addTarget(self, action: #selector(self.pinched(_:)))
         self.pinchDelegate.shouldBegin = { [weak self] in
@@ -583,7 +589,7 @@ public final class MediaGridView: UIView {
 
     private var scrollAnimation: (from: CGFloat, start: CFTimeInterval)?
     private var scrollAnimationLink: CADisplayLink?
-    var requiresWindowForScrollAnimation = true
+    var _testAllowsWindowlessScrollAnimation = false
 
     public var isAnimatingScroll: Bool {
         return self.scrollAnimation != nil
@@ -591,7 +597,7 @@ public final class MediaGridView: UIView {
 
     public func scrollToTop(animated: Bool) {
         self.stopScrollAnimation()
-        guard animated, self.gridLayout != nil, self.engine.offset > 0.5, self.window != nil || !self.requiresWindowForScrollAnimation else {
+        guard animated, self.gridLayout != nil, self.engine.offset > 0.5, self.window != nil || self._testAllowsWindowlessScrollAnimation else {
             self.setContentOffset(0.0)
             return
         }
@@ -660,6 +666,40 @@ public final class MediaGridView: UIView {
         for (index, cell) in self.activeLayoutLayer.visibleCells {
             f(index, cell)
         }
+    }
+
+    public func forEachCell(_ f: (Int, MediaGridCellLayer) -> Void) {
+        for (index, cell) in self.activeLayoutLayer.visibleCells {
+            f(index, cell)
+        }
+        if let incoming = self.transition?.incoming, incoming !== self.activeLayoutLayer {
+            for (index, cell) in incoming.visibleCells {
+                f(index, cell)
+            }
+        }
+    }
+
+    public func reloadImages(at indices: IndexSet) {
+        guard !indices.isEmpty else {
+            return
+        }
+        self.activeLayoutLayer.invalidateImages(indices)
+        if let incoming = self.transition?.incoming, incoming !== self.activeLayoutLayer {
+            incoming.invalidateImages(indices)
+        }
+    }
+
+    func gridGesturesReceiveTouch(in view: UIView?) -> Bool {
+        guard let view else {
+            return true
+        }
+        if let headerView = self.headerView, view.isDescendant(of: headerView) {
+            return false
+        }
+        if let cameraView = self.cameraView, view.isDescendant(of: cameraView) {
+            return false
+        }
+        return true
     }
 
     public func index(at point: CGPoint) -> Int? {
@@ -1948,6 +1988,14 @@ private final class MediaGridDisplayLinkTarget: NSObject {
 
     @objc func tick() {
         self.view?.stepScrollAnimation()
+    }
+}
+
+private final class MediaGridTouchFilter: NSObject, UIGestureRecognizerDelegate {
+    var receivesTouch: (UIView?) -> Bool = { _ in return true }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        return self.receivesTouch(touch.view)
     }
 }
 
