@@ -779,7 +779,11 @@ public final class MediaGridView: UIView {
         incoming.opacity = 1.0
         incoming.setLayout(target, detail: level.isInteractive ? .full : .compact)
         MediaGridZoomTransition.resetPivot(incoming, width: width, height: target.contentHeight, originY: shift)
-        self.engine.contentHost.layer.insertSublayer(incoming, above: self.activeLayoutLayer)
+        if level.columns > sourceLevel.columns {
+            self.engine.contentHost.layer.insertSublayer(incoming, below: self.activeLayoutLayer)
+        } else {
+            self.engine.contentHost.layer.insertSublayer(incoming, above: self.activeLayoutLayer)
+        }
 
         var cameraRole: MediaGridZoomTransition.CameraRole = .none
         var cameraAlpha: (CGFloat, CGFloat) = (0.0, 0.0)

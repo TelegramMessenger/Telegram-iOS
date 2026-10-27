@@ -510,6 +510,66 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertEqual(view.index(at: CGPoint(x: zoomed.midX, y: zoomed.midY)), 4000)
     }
 
+    func testZoomCrossfadeKeepsDenseLevelUnderSparseAndShowsNoBackground() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        for zoomsOut in [true, false] {
+            if zoomsOut {
+                view.zoomOut()
+            } else {
+                view.zoomIn()
+            }
+            guard let transition = view.transition, let sublayers = transition.incoming.superlayer?.sublayers, let incomingIndex = sublayers.firstIndex(where: { $0 === transition.incoming }), let outgoingIndex = sublayers.firstIndex(where: { $0 === transition.outgoing }) else {
+                XCTFail("no transition")
+                return
+            }
+            let dense = zoomsOut ? transition.incoming : transition.outgoing
+            let sparse = zoomsOut ? transition.outgoing : transition.incoming
+            XCTAssertEqual(zoomsOut, incomingIndex < outgoingIndex)
+            for step in 0 ... 40 {
+                let progress = CGFloat(step) / 40.0
+                transition.apply(progress: progress)
+                let background = (1.0 - CGFloat(sparse.opacity)) * (1.0 - CGFloat(dense.opacity))
+                XCTAssertLessThanOrEqual(background, 0.04, "zoomsOut \(zoomsOut) progress \(progress)")
+            }
+            transition.apply(progress: 0.0)
+            XCTAssertEqual(transition.outgoing.opacity, 1.0)
+            XCTAssertEqual(transition.incoming.opacity, 0.0)
+            transition.apply(progress: 1.0)
+            XCTAssertEqual(transition.outgoing.opacity, 0.0)
+            XCTAssertEqual(transition.incoming.opacity, 1.0)
+            view._testFinishAnimations()
+        }
+        XCTAssertEqual(view.level, .three)
+    }
+
+    func testAnimatedZoomOpacityKeyframesShowNoBackground() {
+        let (view, _) = self.makeView(count: 100_000)
+        view.setContentOffset(20_000.0)
+        for zoomsOut in [true, false] {
+            if zoomsOut {
+                view.zoomOut()
+            } else {
+                view.zoomIn()
+            }
+            guard let transition = view.transition, let outgoing = transition.outgoing.animation(forKey: "mediaGridZoom.opacity") as? CAKeyframeAnimation, let incoming = transition.incoming.animation(forKey: "mediaGridZoom.opacity") as? CAKeyframeAnimation, let outgoingValues = outgoing.values as? [NSNumber], let incomingValues = incoming.values as? [NSNumber] else {
+                XCTFail("no opacity keyframes")
+                return
+            }
+            XCTAssertEqual(outgoingValues.count, incomingValues.count)
+            XCTAssertEqual(outgoing.keyTimes, incoming.keyTimes)
+            XCTAssertEqual(outgoingValues.first?.floatValue, 1.0)
+            XCTAssertEqual(incomingValues.first?.floatValue, 0.0)
+            XCTAssertEqual(outgoingValues.last?.floatValue, 0.0)
+            XCTAssertEqual(incomingValues.last?.floatValue, 1.0)
+            for (outgoingValue, incomingValue) in zip(outgoingValues, incomingValues) {
+                let background = (1.0 - CGFloat(outgoingValue.floatValue)) * (1.0 - CGFloat(incomingValue.floatValue))
+                XCTAssertLessThanOrEqual(background, 0.04, "zoomsOut \(zoomsOut)")
+            }
+            view._testFinishAnimations()
+        }
+    }
+
     func testAnimatedZoomBuildsTwoLayersAndSettles() {
         let (view, _) = self.makeView(count: 100_000)
         view.setContentOffset(20_000.0)
@@ -911,7 +971,7 @@ final class MediaGridViewTests: XCTestCase {
         view._testPinch(.began, center: center)
         view._testPinch(.changed, center: center, scale: pow(5.0 / 3.0, 0.3))
         view._testPinch(.ended, center: center, scale: pow(5.0 / 3.0, 0.3), velocity: 2.0)
-        guard let spring = view.transition?.incoming.animation(forKey: "mediaGridZoom.opacity") as? CASpringAnimation else {
+        guard let spring = view.transition?.incoming.animation(forKey: "mediaGridZoom.transform") as? CASpringAnimation else {
             XCTFail("no settle animation")
             return
         }
@@ -946,7 +1006,7 @@ final class MediaGridViewTests: XCTestCase {
         view._testPinch(.began, center: center)
         view._testPinch(.changed, center: center, scale: pow(3.0 / 5.0, 0.4))
         view._testPinch(.ended, center: center, scale: pow(3.0 / 5.0, 0.4), velocity: -2.0)
-        guard let transition = view.transition, let spring = transition.incoming.animation(forKey: "mediaGridZoom.opacity") as? CASpringAnimation else {
+        guard let transition = view.transition, let spring = transition.incoming.animation(forKey: "mediaGridZoom.transform") as? CASpringAnimation else {
             XCTFail("no settle animation")
             return
         }
@@ -1284,8 +1344,8 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertGreaterThan(extrapolated, 1.0)
         view._testPinch(.ended, center: center, scale: band, velocity: 0.0)
         XCTAssertEqual(transition.destination, 1.0)
-        let spring = transition.incoming.animation(forKey: "mediaGridZoom.opacity") as? CASpringAnimation
-        XCTAssertLessThanOrEqual((spring?.fromValue as? NSNumber)?.floatValue ?? 2.0, 1.0)
+        let keyframes = transition.incoming.animation(forKey: "mediaGridZoom.opacity") as? CAKeyframeAnimation
+        XCTAssertLessThanOrEqual((keyframes?.values as? [NSNumber])?.map(\.floatValue).max() ?? 2.0, 1.0)
         CATransaction.flush()
         self.spin(0.01)
         view._testPinch(.began, center: center)

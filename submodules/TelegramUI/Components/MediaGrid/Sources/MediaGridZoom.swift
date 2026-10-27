@@ -186,9 +186,13 @@ final class MediaGridZoomTransition {
     }
 
     static let duration: CFTimeInterval = 0.35
+    static let denseFadeStart: CGFloat = 0.75
 
     let sourceLevel: MediaGridLevel
     let targetLevel: MediaGridLevel
+    var incomingIsDense: Bool {
+        return self.targetLevel.columns > self.sourceLevel.columns
+    }
     let sourceLayout: MediaGridLayout
     let outgoing: MediaGridLayoutLayer
     let incoming: MediaGridLayoutLayer
@@ -296,13 +300,22 @@ final class MediaGridZoomTransition {
         return self.cameraAlphaRange.0 + (self.cameraAlphaRange.1 - self.cameraAlphaRange.0) * progress
     }
 
+    private func opacities(_ progress: CGFloat) -> (outgoing: Float, incoming: Float) {
+        let clamped = min(1.0, max(0.0, progress))
+        let sparse = self.incomingIsDense ? 1.0 - clamped : clamped
+        let excess = max(0.0, sparse - MediaGridZoomTransition.denseFadeStart) / (1.0 - MediaGridZoomTransition.denseFadeStart)
+        let dense = 1.0 - excess * excess
+        return self.incomingIsDense ? (Float(sparse), Float(dense)) : (Float(dense), Float(sparse))
+    }
+
     func apply(progress: CGFloat) {
         self.progress = progress
         self.outgoing.transform = self.outgoingTransform(progress)
         let clamped = min(1.0, max(0.0, progress))
-        self.outgoing.opacity = Float(1.0 - clamped)
+        let opacities = self.opacities(progress)
+        self.outgoing.opacity = opacities.outgoing
         self.incoming.transform = self.incomingTransform(progress)
-        self.incoming.opacity = Float(clamped)
+        self.incoming.opacity = opacities.incoming
         if let camera = self.camera {
             if let frame = self.cameraFrame(progress) {
                 camera.layer.transform = CATransform3DIdentity
@@ -325,6 +338,9 @@ final class MediaGridZoomTransition {
         }
         let start = 1.0 / self.scale
         guard abs(1.0 - start) > 1e-6 else {
+            if self.incomingIsDense {
+                return min(1.0, max(0.0, 1.0 - CGFloat(self.outgoing.presentation()?.opacity ?? 0.0)))
+            }
             return min(1.0, max(0.0, CGFloat(presentation.opacity)))
         }
         return self.clampedExtrapolation((presentation.transform.m11 - start) / (1.0 - start))
@@ -361,9 +377,9 @@ final class MediaGridZoomTransition {
         self.apply(progress: progress)
         self.add(keyPath: "transform", layer: self.outgoing, from: NSValue(caTransform3D: self.outgoingTransform(from)), to: NSValue(caTransform3D: self.outgoing.transform))
         let clampedFrom = min(1.0, max(0.0, from))
-        self.add(keyPath: "opacity", layer: self.outgoing, from: NSNumber(value: Float(1.0 - clampedFrom)), to: NSNumber(value: self.outgoing.opacity))
+        self.addOpacity(layer: self.outgoing, isOutgoing: true, from: from, to: progress)
         self.add(keyPath: "transform", layer: self.incoming, from: NSValue(caTransform3D: self.incomingTransform(from)), to: NSValue(caTransform3D: self.incoming.transform))
-        self.add(keyPath: "opacity", layer: self.incoming, from: NSNumber(value: Float(clampedFrom)), to: NSNumber(value: self.incoming.opacity))
+        self.addOpacity(layer: self.incoming, isOutgoing: false, from: from, to: progress)
         if let camera = self.camera {
             if let fromFrame = self.cameraFrame(from) {
                 self.add(keyPath: "position", layer: camera.layer, from: NSValue(cgPoint: CGPoint(x: fromFrame.midX, y: fromFrame.midY)), to: NSValue(cgPoint: camera.layer.position))
@@ -379,12 +395,43 @@ final class MediaGridZoomTransition {
 
     private var springVelocity: CGFloat = 0.0
 
-    private func add(keyPath: String, layer: CALayer, from: Any, to: Any) {
+    private static func makeSpring(keyPath: String) -> CASpringAnimation {
         let animation = CASpringAnimation(keyPath: keyPath)
         animation.mass = 1.0
         animation.stiffness = 300.0
         animation.damping = 2.0 * sqrt(animation.stiffness * animation.mass)
         animation.initialVelocity = 0.0
+        return animation
+    }
+
+    private func addOpacity(layer: CALayer, isOutgoing: Bool, from: CGFloat, to: CGFloat) {
+        let spring = MediaGridZoomTransition.makeSpring(keyPath: "opacity")
+        let settling = spring.settlingDuration
+        let speed = settling / MediaGridZoomTransition.duration
+        let omega = sqrt(spring.stiffness / spring.mass)
+        let velocity = self.springVelocity / speed
+        let count = 24
+        var values: [NSNumber] = []
+        var keyTimes: [NSNumber] = []
+        for step in 0 ... count {
+            let fraction = CGFloat(step) / CGFloat(count)
+            let time = fraction * settling
+            let position = step == count ? 1.0 : 1.0 - exp(-omega * time) * (1.0 + (omega - velocity) * time)
+            let opacities = self.opacities(from + (to - from) * position)
+            values.append(NSNumber(value: isOutgoing ? opacities.outgoing : opacities.incoming))
+            keyTimes.append(NSNumber(value: Double(fraction)))
+        }
+        let animation = CAKeyframeAnimation(keyPath: "opacity")
+        animation.values = values
+        animation.keyTimes = keyTimes
+        animation.duration = settling
+        animation.speed = Float(speed)
+        animation.isRemovedOnCompletion = true
+        layer.add(animation, forKey: "mediaGridZoom.opacity")
+    }
+
+    private func add(keyPath: String, layer: CALayer, from: Any, to: Any) {
+        let animation = MediaGridZoomTransition.makeSpring(keyPath: keyPath)
         animation.fromValue = from
         animation.toValue = to
         let speed = animation.settlingDuration / MediaGridZoomTransition.duration
