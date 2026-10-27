@@ -693,6 +693,12 @@ func extractEmojiFileIds(message: StoreMessage, fileIds: inout Set<Int64>) {
                     break
                 }
             }
+        } else if let attribute = attribute as? RichTextMessageAttribute {
+            // A rich message's emoji are runs inside its page, not entities.
+            fileIds.formUnion(attribute.instantPage.customEmojiFileIds)
+            if let fullInstantPage = attribute.fullInstantPage {
+                fileIds.formUnion(fullInstantPage.customEmojiFileIds)
+            }
         }
     }
     for media in message.media {

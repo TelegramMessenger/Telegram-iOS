@@ -10,8 +10,18 @@ public class RichTextMessageAttribute: MessageAttribute, Equatable {
         return []
     }
     
+    /// The page's custom emoji files, so that a rendered message's `associatedMedia` carries the stored
+    /// ones (`extractEmojiFileIds` fetches them when the message arrives): a preview draws an emoji whose
+    /// file is known and keeps the alt text of one that is not.
     public var associatedMediaIds: [MediaId] {
-        return []
+        var fileIds = self.instantPage.customEmojiFileIds
+        if let fullInstantPage = self.fullInstantPage {
+            var seen = Set(fileIds)
+            for fileId in fullInstantPage.customEmojiFileIds where seen.insert(fileId).inserted {
+                fileIds.append(fileId)
+            }
+        }
+        return fileIds.map { MediaId(namespace: Namespaces.Media.CloudFile, id: $0) }
     }
     
     public init(instantPage: InstantPage, fullInstantPage: InstantPage?) {

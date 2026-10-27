@@ -634,23 +634,30 @@ private struct NotificationContent: CustomStringConvertible {
                     
                     let sortedEmoji = self.customEmoji.sorted(by: { $0.range.lowerBound < $1.range.lowerBound })
                     
+                    // An emoji repeated in the body is decoded once.
+                    var images: [Int64: UIImage] = [:]
                     for emoji in sortedEmoji.reversed() {
                         if emoji.range.lowerBound < 0 || emoji.range.upperBound > attributedString.length {
                             continue
                         }
-                        guard let filePath = self.resolvedEmojiFiles[emoji.fileId] else {
-                            continue
-                        }
-                        guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
-                            continue
-                        }
                         let image: UIImage
-                        if let lottieImage = convertLottieImage(data: fileData, size: CGSize(width: 40.0, height: 40.0), forceSquare: false, lottieSettings: self.lottieSettings) {
-                            image = lottieImage
-                        } else if let webpImage = WebP.convert(fromWebP: fileData) {
-                            image = webpImage
+                        if let cachedImage = images[emoji.fileId] {
+                            image = cachedImage
                         } else {
-                            continue
+                            guard let filePath = self.resolvedEmojiFiles[emoji.fileId] else {
+                                continue
+                            }
+                            guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
+                                continue
+                            }
+                            if let lottieImage = convertLottieImage(data: fileData, size: CGSize(width: 40.0, height: 40.0), forceSquare: false, lottieSettings: self.lottieSettings) {
+                                image = lottieImage
+                            } else if let webpImage = WebP.convert(fromWebP: fileData) {
+                                image = webpImage
+                            } else {
+                                continue
+                            }
+                            images[emoji.fileId] = image
                         }
                         
                         let emojiRange = NSRange(location: emoji.range.lowerBound, length: emoji.range.upperBound - emoji.range.lowerBound)
@@ -2147,7 +2154,7 @@ private final class NotificationServiceHandler {
                                                 if let media = message.media.first {
                                                     parsedMedia = media
                                                 }
-                                                if enableInlineEmoji, let textEntitiesAttribute = message.textEntitiesAttribute, let author = message.author {
+                                                if enableInlineEmoji, let author = message.author {
                                                     let authorTitle = author.debugDisplayTitle
                                                     var needsPrefix = false
                                                     if message.id.peerId.namespace == Namespaces.Peer.CloudGroup {
@@ -2159,13 +2166,24 @@ private final class NotificationServiceHandler {
                                                     }
                                                     let messagePrefix = needsPrefix ? "\(authorTitle): " : ""
                                                     let messagePrefixLength = (messagePrefix as NSString).length
-                                                    for entity in textEntitiesAttribute.entities {
-                                                        if case let .CustomEmoji(_, fileId) = entity.type {
-                                                            content.customEmoji.append(NotificationContent.CustomEmoji(range: (entity.range.lowerBound + messagePrefixLength) ..< (entity.range.upperBound + messagePrefixLength), fileId: fileId))
+                                                    if let textEntitiesAttribute = message.textEntitiesAttribute {
+                                                        for entity in textEntitiesAttribute.entities {
+                                                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                                                content.customEmoji.append(NotificationContent.CustomEmoji(range: (entity.range.lowerBound + messagePrefixLength) ..< (entity.range.upperBound + messagePrefixLength), fileId: fileId))
+                                                            }
+                                                        }
+                                                        if !content.customEmoji.isEmpty {
+                                                            content.body = messagePrefix + message.text
                                                         }
                                                     }
-                                                    if !content.customEmoji.isEmpty {
-                                                        content.body = messagePrefix + message.text
+                                                    // A rich message's emoji are in its page, and its text is empty: the server's
+                                                    // body is kept, with each emoji found in it by its alt text.
+                                                    if content.customEmoji.isEmpty, let richText = message.richText, let body = content.body {
+                                                        let page = richText.fullInstantPage ?? richText.instantPage
+                                                        let start = body.hasPrefix(messagePrefix) ? messagePrefixLength : 0
+                                                        for emoji in notificationRichTextCustomEmoji(body: body, from: start, runs: page.customEmojiTextRuns) {
+                                                            content.customEmoji.append(NotificationContent.CustomEmoji(range: emoji.range, fileId: emoji.fileId))
+                                                        }
                                                     }
                                                 }
                                             }

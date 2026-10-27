@@ -1579,7 +1579,22 @@ Dates use supplied presentation settings; nil-format dates retain their literal 
 Unresolved custom emoji keeps its identity in preview metadata and displays alt
 text (or `�` if empty). Only a resolved file receives the native custom-emoji
 attribute: entity text nodes otherwise replace alt text by a blank attachment.
+A rich message's emoji files are resolvable like an ordinary message's (issue #29:
+the chat list showed every one as its alt emoji): `extractEmojiFileIds` takes the
+page's `customEmojiFileIds`, so a received message's unknown emoji files are fetched
+and stored with it, and `RichTextMessageAttribute.associatedMediaIds` lists them, so
+the stored files reach the preview through the message's associated media.
 The modern composer accessory uses the existing entity-aware text component.
+
+A rich message's notification body is the server's plain text of the page. On iOS
+18+ the Notification Service extension turns its custom emoji into image glyphs as
+it does an ordinary message's entities, finding each in the body by its alt text,
+whole characters only (`notificationRichTextCustomEmoji`). The body can leave blocks
+out or be truncated, and the page can hold the same emoji as plain text, so the page's
+occurrences of an alt text are counted in full (`InstantPage.customEmojiTextRuns`,
+plain runs included): when all are one custom emoji, every body occurrence is it (no
+more than the page has); otherwise the body must hold exactly the page's occurrences,
+mapped in order. Anything else stays plain rather than land on the wrong emoji.
 
 `styleInstantPagePreview` applies a consumer's fonts/colors without deleting semantic
 attributes. Formula/table runs use U+FFFC plus icon and fallback metadata, never
