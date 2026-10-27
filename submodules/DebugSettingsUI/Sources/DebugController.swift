@@ -741,6 +741,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case chatMediaEditorLegacy(Bool)
     case insertWidgetConformanceSet
     case insertWidgetGames
+    case mediaGridLegacy(Bool)
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
@@ -796,7 +797,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -963,6 +964,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 76
         case .insertWidgetGames:
             return 78
+        case .mediaGridLegacy:
+            return 79
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -1472,6 +1475,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.chatMediaEditorLegacy = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .mediaGridLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Media picker: legacy grid", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.mediaGridLegacy = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -2102,6 +2115,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.chatMediaEditorLegacy(experimentalSettings.chatMediaEditorLegacy))
         entries.append(.insertWidgetConformanceSet)
         entries.append(.insertWidgetGames)
+        entries.append(.mediaGridLegacy(experimentalSettings.mediaGridLegacy))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
