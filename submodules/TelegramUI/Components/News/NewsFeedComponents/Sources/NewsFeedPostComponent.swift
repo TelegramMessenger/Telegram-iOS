@@ -252,6 +252,12 @@ public final class NewsFeedPostComponent: Component {
             self.revealView.selected = { [weak self] action in
                 self?.component?.swipe?.action(action)
             }
+            self.revealView.hasHorizontalScrollingContent = { [weak self] point in
+                guard let self else {
+                    return false
+                }
+                return self.hasHorizontalScrollingContent(at: self.convert(point, from: self.revealView))
+            }
             // One element, so VoiceOver offers the swipe's actions on it (spec §6).
             self.isAccessibilityElement = true
             self.accessibilityTraits = .button
@@ -335,8 +341,8 @@ public final class NewsFeedPostComponent: Component {
             return expandedContentView.hasInteractiveContent(at: touch.location(in: expandedContentView))
         }
 
-        /// Whether `point` (in this row) is on a strip of the expanded post that scrolls sideways (the gallery, the
-        /// reactions): the screen's page swipe leaves it alone.
+        /// Whether `point` (in this row) is on a strip of the expanded post that scrolls sideways (the gallery): the
+        /// screen's page swipe and the row's own swipe leave it alone.
         public func hasHorizontalScrollingContent(at point: CGPoint) -> Bool {
             guard let expandedContentView = self.expandedContentView, expandedContentView.superview != nil else {
                 return false

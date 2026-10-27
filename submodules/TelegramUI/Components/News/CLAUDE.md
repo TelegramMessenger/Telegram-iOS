@@ -65,10 +65,13 @@ and search results through `NewsFeedItemEnvironment.displayMode`.
 - **Show more.** While a post is collapsed its text is cut to its first ten lines as plain text, measured with a
   `TextNode` at the bubble's font and width (`newsCollapsedText`), and the entities are dropped: formatting and
   links come with Show more (`NewsScreenNode.expandedTextPosts`, per post identity, for the screen's lifetime).
-- **Taps.** The row's tap and highlight ignore touches on the bubble, the strips, the pills and Show more
+- **Taps.** The row's tap and highlight ignore touches on the bubble, the gallery and Show more
   (`NewsExpandedPostContentView.hasInteractiveContent`); a tap on plain bubble text comes back as the item's
-  click-through and opens the post. The screen's page swipe yields to a strip that can scroll
-  (`NewsFeedListView.hasHorizontalScrollingRow`), otherwise the gallery could never be scrolled left.
+  click-through and opens the post. The screen's page swipe yields to a gallery that can scroll
+  (`NewsFeedListView.hasHorizontalScrollingRow`), and so does the row's own swipe
+  (`NewsPostRevealView.hasHorizontalScrollingContent`, asked in `gestureRecognizerShouldBegin`: the control's
+  recognizer makes every scroll view's pan wait for it, the gallery's included), otherwise the gallery could never
+  be scrolled.
 
 ## The tab without the server's feed (2026-10-23)
 

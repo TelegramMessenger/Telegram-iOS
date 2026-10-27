@@ -86,6 +86,9 @@ final class NewsPostRevealView: ItemListRevealOptionsItemView {
     var opened: (() -> Void)?
     var separatorAlphaChanged: (() -> Void)?
     var selected: ((NewsPostSwipeAction) -> Void)?
+    /// Whether a point (in this view) is on content that scrolls sideways itself (an expanded post's gallery): no
+    /// swipe starts there, so the content scrolls. An open row still closes from anywhere.
+    var hasHorizontalScrollingContent: ((CGPoint) -> Bool)?
 
     override init() {
         super.init()
@@ -148,7 +151,19 @@ final class NewsPostRevealView: ItemListRevealOptionsItemView {
         self.selected?(action)
     }
 
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if !(gestureRecognizer is UITapGestureRecognizer), !self.isRevealOptionsActive, self.hasHorizontalScrollingContent?(gestureRecognizer.location(in: self)) == true {
+            return false
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+    }
+
     override func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // A strip inside the row that scrolls sideways (the gallery) takes its pan at once: the control would make it
+        // wait 25 pt for the swipe's own decision.
+        if otherGestureRecognizer is UIPanGestureRecognizer, let view = otherGestureRecognizer.view, view !== self, view.isDescendant(of: self) {
+            return false
+        }
         // CoreList scrolls with its own pan on a plain view, and the control only makes a UIScrollView's pan wait for
         // its horizontal check. Make the list's pan wait too, as the chat list's does (vertical movement fails the
         // row's recognizer at 10 pt). Only the touch recognizer, which is neither a tap nor a pan; the pager decides
