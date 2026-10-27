@@ -185,6 +185,55 @@ private struct SingleCameraSwitchRetiming {
     var heldFrame: PendingVideoFrame?
 }
 
+// The highest bit rate the system AAC encoder accepts for this sample rate and channel count.
+private func maximumAACBitRate(sampleRate: Float64, channels: UInt32) -> Int? {
+    guard sampleRate > 0.0, channels > 0 else {
+        return nil
+    }
+    var sourceFormat = AudioStreamBasicDescription(
+        mSampleRate: sampleRate,
+        mFormatID: kAudioFormatLinearPCM,
+        mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked,
+        mBytesPerPacket: 4 * channels,
+        mFramesPerPacket: 1,
+        mBytesPerFrame: 4 * channels,
+        mChannelsPerFrame: channels,
+        mBitsPerChannel: 32,
+        mReserved: 0
+    )
+    var destinationFormat = AudioStreamBasicDescription(
+        mSampleRate: sampleRate,
+        mFormatID: kAudioFormatMPEG4AAC,
+        mFormatFlags: 0,
+        mBytesPerPacket: 0,
+        mFramesPerPacket: 1024,
+        mBytesPerFrame: 0,
+        mChannelsPerFrame: channels,
+        mBitsPerChannel: 0,
+        mReserved: 0
+    )
+    var converter: AudioConverterRef?
+    guard AudioConverterNew(&sourceFormat, &destinationFormat, &converter) == noErr, let converter else {
+        return nil
+    }
+    defer {
+        AudioConverterDispose(converter)
+    }
+
+    var size: UInt32 = 0
+    guard AudioConverterGetPropertyInfo(converter, kAudioConverterApplicableEncodeBitRates, &size, nil) == noErr, size > 0 else {
+        return nil
+    }
+    var ranges = [AudioValueRange](repeating: AudioValueRange(), count: Int(size) / MemoryLayout<AudioValueRange>.size)
+    guard AudioConverterGetProperty(converter, kAudioConverterApplicableEncodeBitRates, &size, &ranges) == noErr else {
+        return nil
+    }
+    guard let maximum = ranges.map({ $0.mMaximum }).max(), maximum > 0.0 else {
+        return nil
+    }
+    return Int(maximum)
+}
+
 final class VideoRecorder {
     enum Result {
         case success(
@@ -209,6 +258,7 @@ final class VideoRecorder {
     private static let maximumPendingAudioDuration: Double = 1.0
     private static let transitionDuration: Double = 0.2
     private static let singleCameraRetimingTimeout: Double = 0.5
+    private static let audioBitRate: Int = 64_000
 
     private let mediaQueue: DispatchQueue
     private let processor: RoundVideoFrameProcessor
@@ -673,11 +723,19 @@ final class VideoRecorder {
 
         var audioSettings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVEncoderBitRateKey: 64_000
+            AVEncoderBitRateKey: Self.audioBitRate
         ]
         if let streamDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) {
-            audioSettings[AVSampleRateKey] = streamDescription.pointee.mSampleRate
-            audioSettings[AVNumberOfChannelsKey] = streamDescription.pointee.mChannelsPerFrame
+            let sampleRate = streamDescription.pointee.mSampleRate
+            let channels = streamDescription.pointee.mChannelsPerFrame
+            audioSettings[AVSampleRateKey] = sampleRate
+            audioSettings[AVNumberOfChannelsKey] = channels
+            // A headset microphone on the Bluetooth call profile delivers 8 or 16 kHz, where AAC
+            // allows at most 24 or 48 kbps for mono. canApply(outputSettings:) still accepts a higher
+            // rate, and startWriting() then fails with "Cannot Encode Media".
+            if let maximumBitRate = maximumAACBitRate(sampleRate: sampleRate, channels: channels), maximumBitRate < Self.audioBitRate {
+                audioSettings[AVEncoderBitRateKey] = maximumBitRate
+            }
         }
 
         var channelLayoutSize = 0
