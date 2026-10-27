@@ -46,6 +46,9 @@ final class DemoViewController: UIViewController {
     private var autoPinchLastTimestamp: CFTimeInterval?
     private var autoPinchDriveWorst: CFTimeInterval = 0.0
     private var benchmark: PhotoLibraryBenchmark?
+    private var rotationDuration: TimeInterval = 0.0
+    private var gridNeedsInitialLevel = false
+    private var rotationProbe: RotationProbe?
     private let sourceControl = UISegmentedControl(items: ["Synthetic 100k", "Photo Library"])
 
     override func viewDidLoad() {
@@ -151,6 +154,58 @@ final class DemoViewController: UIViewController {
                 self?.startAutoPinch()
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("-autoRotate") {
+            let delay = DemoViewController.argument("-rotateDelay").flatMap(Double.init) ?? 3.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.requestOrientation(landscape: true)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                    self?.requestOrientation(landscape: false)
+                }
+            }
+        }
+    }
+
+    private func requestOrientation(landscape: Bool) {
+        guard let scene = self.view.window?.windowScene else {
+            return
+        }
+        if let fraction = DemoViewController.argument("-rotateAt").flatMap(Double.init), landscape, let gridView = self.gridView {
+            gridView.setContentOffset(CGFloat(fraction) * max(0.0, gridView.contentHeight - gridView.bounds.height))
+        }
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: landscape ? .landscapeRight : .portrait)) { error in
+            print("rotate error \(error)")
+        }
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        self.rotationDuration = coordinator.transitionDuration
+        let probe = RotationProbe(level: self.gridView?.level, top: self.gridView?.topVisibleIndex)
+        self.rotationProbe = probe
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: nil, completion: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.rotationDuration = 0.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self, weak probe] in
+                guard let self, let probe, self.rotationProbe === probe else {
+                    return
+                }
+                self.rotationProbe = nil
+                probe.finish(level: self.gridView?.level, top: self.gridView?.topVisibleIndex, firstRow: self.firstRowRange())
+            }
+        })
+    }
+
+    private func firstRowRange() -> String {
+        guard let gridView = self.gridView, let top = gridView.topVisibleIndex, let frame = gridView.frameForItem(at: top) else {
+            return "-"
+        }
+        var last = top
+        while let next = gridView.frameForItem(at: last + 1), abs(next.minY - frame.minY) < 0.5 {
+            last += 1
+        }
+        return "\(top)...\(last) y=\(String(format: "%.1f", frame.minY))"
     }
 
     private func startAutoPinch() {
@@ -467,6 +522,8 @@ final class DemoViewController: UIViewController {
         }
         if let level = self.launchLevel {
             gridView.setLevel(level, animated: false)
+        } else {
+            self.gridNeedsInitialLevel = true
         }
         self.view.insertSubview(gridView, at: 0)
         self.gridView = gridView
@@ -532,6 +589,11 @@ final class DemoViewController: UIViewController {
             return
         }
         gridView.frame = self.view.bounds
+        let isLandscape = self.traitCollection.userInterfaceIdiom == .phone && self.view.bounds.width > self.view.bounds.height
+        if self.gridNeedsInitialLevel, self.view.bounds.width > 0.0 {
+            self.gridNeedsInitialLevel = false
+            gridView.setLevel(MediaGridLevel.defaultLevel(isLandscape: isLandscape), animated: false)
+        }
         self.bannerView.text = "Banner placeholder"
         self.bannerView.textAlignment = .center
         self.bannerView.backgroundColor = UIColor.systemYellow.withAlphaComponent(0.8)
@@ -539,13 +601,60 @@ final class DemoViewController: UIViewController {
             self.view.insertSubview(self.bannerView, aboveSubview: gridView)
         }
         self.bannerView.frame = CGRect(x: 0.0, y: self.view.safeAreaInsets.top, width: self.view.bounds.width, height: 44.0)
-        gridView.geometryInsets = UIEdgeInsets(top: self.view.safeAreaInsets.top + 44.0, left: 0.0, bottom: self.view.safeAreaInsets.bottom, right: 0.0)
+        var geometryInsets = gridView.geometryInsets
+        geometryInsets.top = self.view.safeAreaInsets.top + 44.0
+        gridView.geometryInsets = geometryInsets
         let insets = self.view.safeAreaInsets
+        let start = CACurrentMediaTime()
+        gridView.updateLayout(size: self.view.bounds.size, safeInsets: insets, isLandscape: isLandscape, transition: self.rotationDuration)
+        self.rotationProbe?.noteUpdate(CACurrentMediaTime() - start)
         self.scrubber.frame = CGRect(x: self.view.bounds.width - 220.0, y: insets.top, width: 220.0, height: self.view.bounds.height - insets.top - insets.bottom)
         self.hudLabel.frame = CGRect(x: 8.0, y: insets.top + 8.0, width: 170.0, height: 32.0)
         self.resetButton.frame = CGRect(x: 8.0, y: self.hudLabel.frame.maxY + 4.0, width: 60.0, height: 28.0)
         self.zoomInButton.frame = CGRect(x: 8.0, y: self.view.bounds.height - insets.bottom - 40.0, width: 84.0, height: 32.0)
         self.zoomOutButton.frame = CGRect(x: self.zoomInButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 84.0, height: 32.0)
         self.measureButton.frame = CGRect(x: self.zoomOutButton.frame.maxX + 8.0, y: self.zoomInButton.frame.minY, width: 140.0, height: 32.0)
+    }
+}
+
+private final class RotationProbe {
+    private let startLevel: MediaGridLevel?
+    private let startTop: Int?
+    private var link: CADisplayLink?
+    private var last: CFTimeInterval?
+    private var intervals: [Double] = []
+    private var updates: [Double] = []
+
+    init(level: MediaGridLevel?, top: Int?) {
+        self.startLevel = level
+        self.startTop = top
+        let link = CADisplayLink(target: self, selector: #selector(self.tick(_:)))
+        if #available(iOS 15.0, *) {
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+        }
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    func noteUpdate(_ duration: CFTimeInterval) {
+        self.updates.append(duration * 1000.0)
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        if let last = self.last {
+            self.intervals.append((link.timestamp - last) * 1000.0)
+        }
+        self.last = link.timestamp
+    }
+
+    func finish(level: MediaGridLevel?, top: Int?, firstRow: String) {
+        self.link?.invalidate()
+        self.link = nil
+        let sorted = self.intervals.sorted()
+        let worst = sorted.last ?? 0.0
+        let median = sorted.isEmpty ? 0.0 : sorted[sorted.count / 2]
+        let over = self.intervals.filter { $0 > median * 1.5 }.count
+        let updates = self.updates.map { String(format: "%.2f", $0) }.joined(separator: ",")
+        print(String(format: "rotate %@ -> %@ top %@ -> %@ firstRow %@ updateLayout ms [%@] frames %d median %.2f worst %.2f dropped %d", self.startLevel.map { "\($0.rawValue)" } ?? "-", level.map { "\($0.rawValue)" } ?? "-", self.startTop.map { "\($0)" } ?? "-", top.map { "\($0)" } ?? "-", firstRow, updates, self.intervals.count, median, worst, over))
     }
 }

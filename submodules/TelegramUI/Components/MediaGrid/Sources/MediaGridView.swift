@@ -80,6 +80,9 @@ public final class MediaGridView: UIView {
     private var isNotifyingScroll = false
     private var pendingContentOffset: CGFloat?
     private var dateCache: [Int: Date?] = [:]
+    private var isLandscape: Bool?
+    private var anchorsNextRebuild = false
+    private var haltsNextRelease = false
 
     var scaleOverride: CGFloat? {
         didSet {
@@ -208,6 +211,10 @@ public final class MediaGridView: UIView {
                 return
             }
             self.isDragging = false
+            if self.haltsNextRelease {
+                self.haltsNextRelease = false
+                self.engine.haltMotionInPlace()
+            }
             self.applyAspects()
         }
         self.engine.onFlightChanged = { [weak self] flight in
@@ -389,6 +396,78 @@ public final class MediaGridView: UIView {
 
     private func aspectPatches(since version: Int) -> [MediaGridChanges] {
         return self.changeLog.filter { $0.version > version }.map { $0.changes }
+    }
+
+    public func updateLayout(size: CGSize, safeInsets: UIEdgeInsets, isLandscape: Bool, transition duration: TimeInterval) {
+        let previousLandscape = self.isLandscape
+        self.isLandscape = isLandscape
+        let insets = UIEdgeInsets(top: self.geometryInsets.top, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right)
+        let rotates = previousLandscape.map { $0 != isLandscape } ?? false
+        let resizes = self.gridLayout.map { $0.geometry.width != size.width } ?? false
+        guard rotates || resizes || insets != self.geometryInsets else {
+            return
+        }
+        self.endInteraction()
+        self.stopMotion()
+        let previousLevel = self.level
+        if rotates {
+            let target = self.level.rotated(toLandscape: isLandscape)
+            if target != self.level {
+                self.level = target
+                self.layoutLevel = target
+                self.needsLayoutRebuild = true
+            }
+        }
+        if duration > 0.0, self.gridLayout != nil, self.window != nil {
+            let fade = CATransition()
+            fade.type = .fade
+            fade.duration = duration
+            fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.layer.add(fade, forKey: MediaGridView.resizeFadeKey)
+        }
+        self.anchorsNextRebuild = true
+        self.geometryInsets = insets
+        self.invalidateGridLayout()
+        if self.bounds.size == size {
+            UIView.performWithoutAnimation {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                self.engine.contentHost.frame = self.bounds
+                self.updateGridLayout()
+                CATransaction.commit()
+            }
+        }
+        if self.level != previousLevel {
+            self.updateGestureAvailability()
+            self.onLevelChanged?(self.level)
+        }
+    }
+
+    private static let resizeFadeKey = "mediaGrid.resizeFade"
+
+    private func stopMotion() {
+        if self.isDragging {
+            self.haltsNextRelease = true
+            let isEnabled = self.engine.isScrollEnabled
+            self.engine.isScrollEnabled = false
+            self.engine.isScrollEnabled = isEnabled
+        }
+        self.engine.haltMotionInPlace()
+        if self.isDragging {
+            self.engine.reanchorDragToCurrentPosition()
+        } else {
+            self.haltsNextRelease = false
+        }
+    }
+
+    private func topAnchor(in layout: MediaGridLayout) -> (index: Int, fraction: CGFloat)? {
+        guard let index = self.topVisibleIndex, index < layout.count else {
+            return nil
+        }
+        let frame = layout.frame(at: index)
+        let line = self.engine.offset + layout.geometry.topInset
+        let fraction = frame.height > 0.0 ? min(1.0, max(0.0, (line - frame.minY) / frame.height)) : 0.0
+        return (index, fraction)
     }
 
     public func setContentOffset(_ y: CGFloat) {
@@ -1157,14 +1236,27 @@ public final class MediaGridView: UIView {
         }
         var compensatedOffset: CGFloat?
         var zoomOffset: CGFloat?
+        var anchoredOffset: CGFloat?
         if self.needsLayoutRebuild || self.gridLayout?.geometry != geometry {
             self.needsLayoutRebuild = false
+            var anchor: (index: Int, fraction: CGFloat)?
+            if let previous = self.gridLayout {
+                let old = previous.geometry
+                if self.anchorsNextRebuild || old.width != geometry.width || old.sideInset != geometry.sideInset || old.scale != geometry.scale {
+                    anchor = self.topAnchor(in: previous)
+                }
+            }
+            self.anchorsNextRebuild = false
             let layout = self.makeLayout(level: self.layoutLevel, geometry: geometry)
-            if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
+            if let anchor, anchor.index < layout.count {
+                let frame = layout.frame(at: anchor.index)
+                anchoredOffset = frame.minY + anchor.fraction * frame.height - geometry.topInset
+            } else if let lastTopInset = self.lastTopInset, lastTopInset != insets.top, self.engine.offset > 0.0, self.pendingContentOffset == nil {
                 compensatedOffset = max(0.0, self.engine.offset + (insets.top - lastTopInset))
             }
             if let zoom = self.pendingZoom {
                 compensatedOffset = nil
+                anchoredOffset = nil
                 let host = self.engine.contentHost.frame
                 let point = CGPoint(x: zoom.anchor.pointInView.x - host.minX, y: zoom.anchor.pointInView.y - host.minY)
                 zoomOffset = MediaGridZoomMath.targetOffset(anchor: MediaGridZoomAnchor(index: zoom.anchor.index, pointInView: point), in: layout, viewportHeight: size.height, relativePosition: zoom.relativePosition)
@@ -1185,6 +1277,13 @@ public final class MediaGridView: UIView {
             self.engine.setOffset(min(max(0.0, zoomOffset), self.maxOffset))
             self.scrolled(to: self.engine.offset)
         }
+        if let anchoredOffset {
+            self.engine.setOffset(min(max(0.0, anchoredOffset), self.maxOffset))
+            if self.isDragging {
+                self.engine.reanchorDragToCurrentPosition()
+            }
+            self.scrolled(to: self.engine.offset)
+        }
         if let compensated = compensatedOffset {
             self.engine.setOffset(min(compensated, self.maxOffset))
             self.scrolled(to: self.engine.offset)
@@ -1197,6 +1296,7 @@ public final class MediaGridView: UIView {
         if !self.engine.isDecelerating && self.engine.offset > self.maxOffset {
             self.engine.setOffset(self.maxOffset)
         }
+        self.applyAspects()
         self.updateVisibleCells(offset: self.engine.offset)
         self.updatePrefetch(offset: self.engine.offset)
         self.startAspectLoad()

@@ -2164,6 +2164,237 @@ final class MediaGridViewTests: XCTestCase {
         XCTAssertEqual(view.gridLayout?.count, 500)
         self.assertCellsMatchLayout(view, "after invalid change")
     }
+
+    private static let portrait = CGSize(width: 393.0, height: 852.0)
+    private static let landscape = CGSize(width: 852.0, height: 393.0)
+
+    private func rotate(_ view: MediaGridView, toLandscape: Bool, safeInsets: UIEdgeInsets = .zero, duration: TimeInterval = 0.0) {
+        let size = toLandscape ? MediaGridViewTests.landscape : MediaGridViewTests.portrait
+        view.frame = CGRect(origin: .zero, size: size)
+        view.updateLayout(size: size, safeInsets: safeInsets, isLandscape: toLandscape, transition: duration)
+    }
+
+    private func assertInFirstRow(_ view: MediaGridView, _ index: Int, fraction: CGFloat = 0.0, file: StaticString = #filePath, line: UInt = #line) {
+        guard let frame = view.frameForItem(at: index) else {
+            XCTFail("no frame for \(index)", file: file, line: line)
+            return
+        }
+        XCTAssertEqual(-frame.minY / frame.height, fraction, accuracy: 1.0 / frame.height, "index \(index) frame \(frame)", file: file, line: line)
+        if let top = view.topVisibleIndex, let topFrame = view.frameForItem(at: top) {
+            XCTAssertEqual(topFrame.minY, frame.minY, accuracy: 1e-6, file: file, line: line)
+        } else {
+            XCTFail("no top", file: file, line: line)
+        }
+    }
+
+    func testRotateThreeToFiveKeepsTop() {
+        let (view, _) = self.makeView(count: 10_000)
+        var levels: [MediaGridLevel] = []
+        view.onLevelChanged = { levels.append($0) }
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.level, .three)
+        XCTAssertTrue(levels.isEmpty)
+        let row = view.currentLayout!.frame(at: 900)
+        view.setContentOffset(row.minY + row.height * 0.4)
+        XCTAssertEqual(view.topVisibleIndex, 900)
+        self.rotate(view, toLandscape: true)
+        XCTAssertEqual(view.level, .five)
+        XCTAssertEqual(view.currentLayout?.columns, 5)
+        XCTAssertEqual(view.currentLayout?.geometry.width, 852.0)
+        XCTAssertEqual(levels, [.five])
+        self.assertInFirstRow(view, 900, fraction: 0.4)
+        self.assertCellsMatchLayout(view, "after rotation to landscape")
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.level, .three)
+        XCTAssertEqual(levels, [.five, .three])
+        self.assertInFirstRow(view, 900, fraction: 0.4)
+        self.assertCellsMatchLayout(view, "after rotation back")
+    }
+
+    func testRotateThirtyOneStays() {
+        let (view, _) = self.makeView(count: 100_000)
+        self.rotate(view, toLandscape: false)
+        view.setLevel(.thirtyOne, animated: false)
+        let layout = view.currentLayout!
+        view.setContentOffset(layout.frame(at: 31 * 400).minY)
+        XCTAssertEqual(view.topVisibleIndex, 31 * 400)
+        self.rotate(view, toLandscape: true)
+        XCTAssertEqual(view.level, .thirtyOne)
+        XCTAssertEqual(view.currentLayout?.columns, 31)
+        self.assertInFirstRow(view, 31 * 400)
+        self.assertCellsMatchLayout(view, "31 in landscape")
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.level, .fifteen)
+        self.assertInFirstRow(view, 31 * 400)
+        self.assertCellsMatchLayout(view, "15 in portrait")
+    }
+
+    func testLandscapeOneToPortraitOne() {
+        let harness = LevelOneHarness()
+        let (view, _, _) = self.makeLevelOneView(count: 1000, harness: harness)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        self.rotate(view, toLandscape: true)
+        XCTAssertEqual(view.level, .one)
+        XCTAssertTrue(self.isExact(view))
+        let row = view.gridLayout!.frame(at: 300)
+        view.setContentOffset(row.minY + row.height * 0.25)
+        XCTAssertEqual(view.topVisibleIndex, 300)
+        harness.buildsTablesImmediately = false
+        let builds = harness.tableBuilds
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.level, .one)
+        XCTAssertEqual(view.gridLayout?.geometry.width, 393.0)
+        XCTAssertEqual(harness.tableBuilds, builds)
+        XCTAssertTrue(self.isExact(view))
+        self.assertInFirstRow(view, 300, fraction: 0.25)
+        self.assertCellsMatchLayout(view, "level 1 in portrait")
+    }
+
+    func testRotationOntoLevelOneUsesScaledTableUntilRebuilt() {
+        let harness = LevelOneHarness()
+        let (view, _, _) = self.makeLevelOneView(count: 1000, harness: harness)
+        harness.pendingAspects?(MediaGridViewTests.testAspects(count: 1000))
+        self.rotate(view, toLandscape: false)
+        view.setLevel(.three, animated: false)
+        self.rotate(view, toLandscape: true, safeInsets: UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0))
+        XCTAssertEqual(view.level, .five)
+        view.setLevel(.three, animated: false)
+        let row = view.currentLayout!.frame(at: 300)
+        view.setContentOffset(row.minY + row.height * 0.5)
+        XCTAssertEqual(view.topVisibleIndex, 300)
+        harness.buildsTablesImmediately = false
+        let builds = harness.tableBuilds
+        self.rotate(view, toLandscape: false, safeInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 34.0, right: 10.0))
+        XCTAssertEqual(view.level, .one)
+        XCTAssertEqual(harness.tableBuilds, builds + 1)
+        XCTAssertFalse(self.isExact(view))
+        XCTAssertEqual(view.gridLayout?.frame(at: 0).width ?? 0.0, 373.0, accuracy: 1e-9)
+        self.assertInFirstRow(view, 300, fraction: 0.5)
+        self.assertCellsMatchLayout(view, "scaled level 1")
+        harness.pendingTables.removeFirst()()
+        XCTAssertTrue(self.isExact(view))
+        XCTAssertEqual(view.topVisibleIndex, 300)
+        self.assertInFirstRow(view, 300, fraction: 0.5)
+        self.assertCellsMatchLayout(view, "exact level 1")
+    }
+
+    func testSideInsetsRespected() {
+        let (view, _) = self.makeView(count: 1000)
+        self.rotate(view, toLandscape: false)
+        let insets = UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0)
+        self.rotate(view, toLandscape: true, safeInsets: insets)
+        XCTAssertEqual(view.frameForItem(at: 0)?.minX ?? -1.0, 59.0, accuracy: 1e-6)
+        XCTAssertEqual(view.frameForItem(at: 4)?.maxX ?? -1.0, 852.0 - 59.0, accuracy: 1e-6)
+        let layout = view.currentLayout!
+        XCTAssertEqual(layout.contentHeight, layout.frame(at: 999).maxY + 21.0, accuracy: 1e-6)
+        self.rotate(view, toLandscape: false, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0))
+        XCTAssertEqual(view.frameForItem(at: 0)?.minX ?? -1.0, 0.0, accuracy: 1e-6)
+    }
+
+    func testTopInsetIsKeptAcrossRotation() {
+        let (view, _) = self.makeView(count: 1000)
+        view.geometryInsets = UIEdgeInsets(top: 50.0, left: 0.0, bottom: 0.0, right: 0.0)
+        self.rotate(view, toLandscape: false)
+        self.rotate(view, toLandscape: true, safeInsets: UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0))
+        XCTAssertEqual(view.geometryInsets.top, 50.0)
+        XCTAssertEqual(view.frameForItem(at: 0)?.minY ?? -1.0, 50.0, accuracy: 1e-6)
+    }
+
+    func testRepeatedUpdateIsNoOp() {
+        let (view, dataSource) = self.makeView(count: 1000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(2000.0)
+        let requests = dataSource.requests.count
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.contentOffset, 2000.0)
+        XCTAssertEqual(dataSource.requests.count, requests)
+    }
+
+    func testRotationDuringZoomFinishesItFirst() {
+        let (view, _) = self.makeView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(view.currentLayout!.frame(at: 900).minY)
+        view.setLevel(.five, animated: true)
+        XCTAssertNotNil(view.transition)
+        self.rotate(view, toLandscape: true)
+        XCTAssertNil(view.transition)
+        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertEqual(self.layoutLayerCount(view), 1)
+        self.assertCellsMatchLayout(view, "after rotation mid-zoom")
+    }
+
+    func testRotationDuringPinchEndsIt() {
+        let (view, _) = self.makeView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(20_000.0)
+        let centre = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view._testPinch(.began, center: centre)
+        view._testPinch(.changed, center: centre, scale: 0.8)
+        XCTAssertNotNil(view.transition)
+        self.rotate(view, toLandscape: true)
+        XCTAssertNil(view.transition)
+        XCTAssertNil(view.pinchAnchor)
+        XCTAssertTrue(view.engine.isScrollEnabled)
+        self.assertCellsMatchLayout(view, "after rotation mid-pinch")
+    }
+
+    func testRotationDuringFlingStopsAndKeepsTop() {
+        let (view, _, window) = self.makeWindowedSourceView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(5000.0)
+        self.fling(view, velocity: 3000.0)
+        XCTAssertTrue(view.engine.isDecelerating)
+        self.spin(0.05)
+        guard let top = view.topVisibleIndex, let before = view.frameForItem(at: top) else {
+            XCTFail("no top")
+            return
+        }
+        window.frame = CGRect(origin: .zero, size: MediaGridViewTests.landscape)
+        self.rotate(view, toLandscape: true)
+        XCTAssertFalse(view.engine.isDecelerating)
+        XCTAssertFalse(view.isUserScrolling)
+        self.assertInFirstRow(view, top, fraction: -before.minY / before.height)
+        let offset = view.contentOffset
+        self.spin(0.1)
+        XCTAssertEqual(view.contentOffset, offset)
+        self.assertCellsMatchLayout(view, "after rotation mid-fling")
+        window.isHidden = true
+    }
+
+    func testRotationDuringDragKeepsTop() {
+        let (view, _) = self.makeView(count: 10_000)
+        self.rotate(view, toLandscape: false)
+        view.setContentOffset(view.currentLayout!.frame(at: 900).minY)
+        view.engine.applyPanUpdate(state: .began, translation: .zero, velocity: .zero, forced: false, isIndirect: false)
+        self.rotate(view, toLandscape: true)
+        self.assertInFirstRow(view, 900)
+        let offset = view.contentOffset
+        view.engine.applyPanUpdate(state: .changed, translation: CGPoint(x: 0.0, y: -10.0), velocity: .zero, forced: false, isIndirect: false)
+        XCTAssertEqual(view.contentOffset, offset + 10.0, accuracy: 1.0)
+        view.engine.applyPanUpdate(state: .ended, translation: CGPoint(x: 0.0, y: -10.0), velocity: CGPoint(x: 0.0, y: -3000.0), forced: false, isIndirect: false)
+        XCTAssertFalse(view.engine.isDecelerating)
+    }
+
+    func testCameraFollowsRotatedLevel() {
+        let (view, _) = self.makeView(count: 1000)
+        let camera = UIView()
+        view.cameraView = camera
+        view.layoutIfNeeded()
+        self.rotate(view, toLandscape: false)
+        XCTAssertFalse(camera.isHidden)
+        self.rotate(view, toLandscape: true)
+        XCTAssertEqual(view.level, .five)
+        XCTAssertFalse(camera.isHidden)
+        let frame = view.currentLayout!.reservedFrame([MediaGridSlot(row: 0, column: 0), MediaGridSlot(row: 1, column: 0)])!
+        XCTAssertEqual(camera.frame, frame)
+        view.setLevel(.fifteen, animated: false)
+        self.rotate(view, toLandscape: false)
+        XCTAssertEqual(view.level, .five)
+        XCTAssertFalse(camera.isHidden)
+        self.rotate(view, toLandscape: true)
+        XCTAssertEqual(view.level, .fifteen)
+        XCTAssertTrue(camera.isHidden)
+    }
 }
 
 private final class ImageBank {
