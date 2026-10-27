@@ -87,7 +87,11 @@ These are the user's decisions; a screen that follows them is correct, one that 
    - a **panel that grows upward** (a text input above the keyboard): it takes the band of its actual rows, as the
      chat's input panel does;
    - anything beside the **side tab bar**, which sits in the strip at the bottom of the root screens;
-   - a **caption that can be dragged up** (gallery footers: `GalleryFooterContentNode.screenSideInsets`).
+   - a **caption that can be dragged up** (gallery footers: `GalleryFooterContentNode.screenSideInsets`);
+   - everything at the bottom of the **story camera and story editor** (and their tool panels): laid out as on a phone
+     whose screen is the 9:16 viewfinder's band (`storyControlsBandLayout`), the editor's bar on the camera's bottom row.
+   - the **chat camera** on the folded screen follows the system Camera instead: centred on the screen, the photo preview
+     filling it and the video one 9:16 in the middle, side buttons mirrored on both edges (`CameraScreenChatScreenLayout`).
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
    island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
    row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;

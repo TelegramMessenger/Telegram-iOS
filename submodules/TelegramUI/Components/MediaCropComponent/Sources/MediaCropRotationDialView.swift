@@ -32,6 +32,13 @@ final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
     private var rawDegrees: CGFloat = 0.0
     private var visualDegrees: CGFloat = 0.0
     private var selectedTickIndex = 0
+    var rulerScale: CGFloat = 1.0 {
+        didSet {
+            if self.rulerScale != oldValue {
+                self.render()
+            }
+        }
+    }
     private var tickDeselectionTimes: [Int: Double] = [:]
     private var motion: Motion?
     private var isTouching = false
@@ -121,7 +128,7 @@ final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
     private func render() {
         let now = CACurrentMediaTime()
         let centerX = self.bounds.width / 2.0
-        let originX = centerX + mediaCropDialRulerOffset(degrees: self.visualDegrees)
+        let originX = centerX + mediaCropDialRulerOffset(degrees: self.visualDegrees) * self.rulerScale
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -144,14 +151,14 @@ final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
             }
             let appearance = mediaCropDialTickAppearance(excitation: excitation, isMajor: tick.isMajor)
             let layer = self.tickLayers[offset]
-            layer.frame = CGRect(x: originX + tick.position - mediaCropDialTickWidth / 2.0, y: mediaCropDialTickBottom - appearance.height, width: mediaCropDialTickWidth, height: appearance.height)
+            layer.frame = CGRect(x: originX + tick.position * self.rulerScale - mediaCropDialTickWidth / 2.0, y: mediaCropDialTickBottom - appearance.height, width: mediaCropDialTickWidth, height: appearance.height)
             layer.opacity = Float(appearance.alpha)
         }
         self.zeroDotLayer.frame = CGRect(x: originX - mediaCropDialDotSize / 2.0, y: mediaCropDialDotCenterY - mediaCropDialDotSize / 2.0, width: mediaCropDialDotSize, height: mediaCropDialDotSize)
         self.zeroDotLayer.isHidden = !mediaCropDialShowsZeroDot(visualDegrees: self.visualDegrees)
         CATransaction.commit()
 
-        let markerX = centerX + mediaCropDialMarkerOffset(visualDegrees: self.visualDegrees)
+        let markerX = centerX + mediaCropDialMarkerOffset(visualDegrees: self.visualDegrees) * self.rulerScale
         self.markerView.frame = CGRect(x: markerX - mediaCropDialMarkerSize.width / 2.0, y: mediaCropDialMarkerTop, width: mediaCropDialMarkerSize.width, height: mediaCropDialMarkerSize.height)
 
         self.updateDisplayLink(needsFrames: isExcited || self.motion != nil)
@@ -343,13 +350,13 @@ final class MediaCropRotationDialView: UIView, UIGestureRecognizerDelegate {
             self.begin()
         case .changed:
             self.isPanning = true
-            let translation = gestureRecognizer.translation(in: self).x
+            let translation = gestureRecognizer.translation(in: self).x / self.rulerScale
             gestureRecognizer.setTranslation(.zero, in: self)
             self.setRaw(mediaCropDialDraggedDegrees(rawDegrees: self.rawDegrees, translation: translation))
             self.render()
         case .ended:
             self.isPanning = false
-            self.releaseRuler(velocity: gestureRecognizer.velocity(in: self).x)
+            self.releaseRuler(velocity: gestureRecognizer.velocity(in: self).x / self.rulerScale)
             self.touchEnded()
         case .cancelled:
             self.isPanning = false

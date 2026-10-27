@@ -266,6 +266,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let hasAppeared: Bool
     let isVisible: Bool
     let panelWidth: CGFloat
+    let chatScreenLayout: CameraScreenChatScreenLayout?
     let resolvedCodePeer: EnginePeer?
     let batchCount: Int
     let animateFlipAction: ActionSlot<Void>
@@ -287,6 +288,7 @@ private final class CameraScreenComponent: CombinedComponent {
         hasAppeared: Bool,
         isVisible: Bool,
         panelWidth: CGFloat,
+        chatScreenLayout: CameraScreenChatScreenLayout?,
         resolvedCodePeer: EnginePeer?,
         batchCount: Int,
         animateFlipAction: ActionSlot<Void>,
@@ -307,6 +309,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.hasAppeared = hasAppeared
         self.isVisible = isVisible
         self.panelWidth = panelWidth
+        self.chatScreenLayout = chatScreenLayout
         self.resolvedCodePeer = resolvedCodePeer
         self.batchCount = batchCount
         self.animateFlipAction = animateFlipAction
@@ -340,6 +343,9 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.isVisible != rhs.isVisible {
+            return false
+        }
+        if lhs.chatScreenLayout != rhs.chatScreenLayout {
             return false
         }
         if lhs.panelWidth != rhs.panelWidth {
@@ -1577,7 +1583,14 @@ private final class CameraScreenComponent: CombinedComponent {
             let rightPanelMaxX = availableSize.width - environment.safeInsets.right
             
             var controlsBottomInset: CGFloat = 0.0
-            let previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
+            var previewOriginX: CGFloat = 0.0
+            var previewWidth = availableSize.width
+            var previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
+            if !isTablet, let placement = storyPreviewBandPlacement(containerSize: availableSize, safeInsets: environment.safeInsets) {
+                previewOriginX = placement.x
+                previewWidth = placement.size.width
+                previewHeight = placement.size.height
+            }
             if !isTablet {
                 if availableSize.height < previewHeight + 30.0 {
                     controlsBottomInset = -70.0
@@ -1596,11 +1609,11 @@ private final class CameraScreenComponent: CombinedComponent {
                             accountContext.sharedContext.applicationBindings.openSettings()
                         }
                     ),
-                    availableSize: CGSize(width: availableSize.width, height: previewHeight),
+                    availableSize: CGSize(width: previewWidth, height: previewHeight),
                     transition: context.transition
                 )
                 context.add(placeholder
-                    .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight / 2.0))
+                    .position(CGPoint(x: previewOriginX + previewWidth / 2.0, y: environment.safeInsets.top + previewHeight / 2.0))
                     .clipsToBounds(true)
                     .cornerRadius(cameraScreenPlaceholderCornerRadius(mode: modeKind))
                     .appear(.default(alpha: true))
@@ -1625,7 +1638,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(zoomControl
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: availableSize.height - zoomControl.size.height / 2.0 - 114.0 - environment.safeInsets.bottom))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: component.chatScreenLayout?.zoomCenterY ?? (availableSize.height - zoomControl.size.height / 2.0 - 114.0 - environment.safeInsets.bottom)))
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -1714,6 +1727,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     hasAccess: hasAllRequiredAccess,
                     hideControls: component.cameraState.collageProgress > 1.0 - .ulpOfOne,
                     controlsBottomInset: controlsBottomInset,
+                    bottomRowPlacement: component.chatScreenLayout?.bottomRowPlacement,
                     collageProgress: component.cameraState.collageProgress,
                     collageCount: component.cameraState.isCollageEnabled ? component.cameraState.collageGrid.count : nil,
                     tintColor: controlsTintColor,
@@ -1811,7 +1825,7 @@ private final class CameraScreenComponent: CombinedComponent {
             if isTablet {
                 captureControlsPosition = CGPoint(x: rightPanelMaxX - panelWidth / 2.0, y: availableSize.height / 2.0)
             } else {
-                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66))
+                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: component.chatScreenLayout?.shutterCenterY ?? (availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66)))
             }
             context.add(captureControls
                 .position(captureControlsPosition)
@@ -2089,7 +2103,10 @@ private final class CameraScreenComponent: CombinedComponent {
                             transition: .immediate
                         )
                         
-                        let position = CGPoint(x: isTablet ? rightPanelMaxX - smallPanelWidth / 2.0 : availableSize.width - topControlRightInset - flashButton.size.width / 2.0 - cameraScreenTopFlashTrailingOffset(mode: modeKind, isTablet: isTablet), y: topRowTop + flashButton.size.height / 2.0)
+                        var position = CGPoint(x: isTablet ? rightPanelMaxX - smallPanelWidth / 2.0 : availableSize.width - topControlRightInset - flashButton.size.width / 2.0 - cameraScreenTopFlashTrailingOffset(mode: modeKind, isTablet: isTablet), y: topRowTop + flashButton.size.height / 2.0)
+                        if let chatScreenLayout = component.chatScreenLayout {
+                            position = CGPoint(x: availableSize.width / 2.0, y: chatScreenLayout.topRowCenterY)
+                        }
                         flashButtonPosition = position
                         context.add(flashButton
                             .position(position)
@@ -2354,7 +2371,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             transition: .immediate
                         )
                         context.add(hintLabel
-                            .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom - 136.0))
+                            .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom - 136.0 + floorToScreenPixels(controlsBottomInset * 0.66)))
                             .appear(.default(alpha: true))
                             .disappear(.default(alpha: true))
                         )
@@ -2375,7 +2392,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 // Below the viewfinder, not above the bottom inset, which can be the home indicator's (iPhone Duo): a viewfinder
                 // taller than the screen leaves no room for the hint, and it stays off screen as on home-button phones.
                 context.add(collageReorderHint
-                    .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight + 16.0 + collageReorderHint.size.height / 2.0))
+                    .position(CGPoint(x: previewOriginX + previewWidth / 2.0, y: environment.safeInsets.top + previewHeight + 16.0 + collageReorderHint.size.height / 2.0))
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -2411,7 +2428,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 if isTablet {
                     modeControlPosition = CGPoint(x: rightPanelMaxX - panelWidth / 2.0, y: availableSize.height / 2.0 + modeControl.size.height + 26.0)
                 } else {
-                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0 + controlsBottomInset + 16.0)
+                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: component.chatScreenLayout?.modeRowCenterY ?? (availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0 + controlsBottomInset + 16.0))
                 }
                 context.add(modeControl
                     .position(modeControlPosition)
@@ -4121,7 +4138,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 self.containerLayoutUpdated(layout: layout, transition: .immediate)
             case .ended, .cancelled:
                 self.pipTranslation = nil
-                self.pipPosition = pipPositionForLocation(layout: layout, position: location, velocity: velocity)
+                self.pipPosition = pipPositionForLocation(layout: layout, centerX: self.previewContainerView.convert(CGPoint(x: self.previewContainerView.bounds.midX, y: self.previewContainerView.bounds.midY), to: self.view).x, position: location, velocity: velocity)
                 self.containerLayoutUpdated(layout: layout, transition: .spring(duration: 0.4))
                 
                 self._livestreamMediaSource?.setDualCameraPosition(self.pipPosition)
@@ -4275,6 +4292,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                             duration: 0.3
                         )
                     } else {
+                        if let layout = self.validLayout, layout.safeInsets.left != layout.safeInsets.right {
+                            self.mainPreviewView.bounds = CGRect(origin: .zero, size: self.previewContainerView.bounds.size)
+                        }
                         self.mainPreviewAnimationWrapperView.bounds = self.mainPreviewView.bounds
                         self.mainPreviewAnimationWrapperView.center = CGPoint(x: self.previewContainerView.frame.width / 2.0, y: self.previewContainerView.frame.height / 2.0)
                         
@@ -4772,11 +4792,16 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             let isTablet = layout.metrics.isTablet
             
             var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
-            let previewSize: CGSize
+            var previewSize: CGSize
+            var previewOriginX: CGFloat = 0.0
             if isTablet {
                 previewSize = CGSize(width: floorToScreenPixels(layout.size.height / 1.77778), height: layout.size.height)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+                if let placement = storyPreviewBandPlacement(containerSize: layout.size, safeInsets: layout.safeInsets) {
+                    previewOriginX = placement.x
+                    previewSize = placement.size
+                }
                 if layout.size.height < previewSize.height + 30.0 {
                     topInset = 0.0
                 }
@@ -4794,12 +4819,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             let panelWidth: CGFloat
             var previewFrame: CGRect
             let viewfinderFrame: CGRect
+            var chatScreenLayout: CameraScreenChatScreenLayout?
             if isTablet {
                 previewFrame = CGRect(origin: .zero, size: layout.size)
                 viewfinderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
                 panelWidth = viewfinderFrame.minX
             } else {
-                previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: previewSize)
+                previewFrame = CGRect(origin: CGPoint(x: previewOriginX, y: topInset), size: previewSize)
                 viewfinderFrame = previewFrame
                 panelWidth = 0.0
                 
@@ -4810,8 +4836,20 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 let aspectRatio = cameraScreenPreviewAspectRatio(mode: controller.mode.kind, captureKind: captureKind, isTablet: isTablet)
                 if case .chat = controller.mode, aspectRatio < 1.77 {
                     let aspectHeight = floorToScreenPixels(previewSize.width * aspectRatio)
-                    previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset + floorToScreenPixels((previewSize.height - aspectHeight) / 2.0)), size: CGSize(width: previewSize.width, height: aspectHeight))
+                    previewFrame = CGRect(origin: CGPoint(x: previewOriginX, y: topInset + floorToScreenPixels((previewSize.height - aspectHeight) / 2.0)), size: CGSize(width: previewSize.width, height: aspectHeight))
                 }
+                if case .chat = controller.mode, layout.safeInsets.left != layout.safeInsets.right {
+                    let screenLayout = CameraScreenChatScreenLayout(screenSize: layout.size, captureKind: captureKind)
+                    previewFrame = screenLayout.previewFrame
+                    chatScreenLayout = screenLayout
+                }
+            }
+            
+            var componentLayout = layout
+            var componentOriginX: CGFloat = 0.0
+            if controller.mode.kind != .chat, let band = storyControlsBandLayout(layout) {
+                componentLayout = band.layout
+                componentOriginX = band.originX
             }
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -4822,11 +4860,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: topInset,
-                    left: layout.safeInsets.left,
+                    left: componentLayout.safeInsets.left,
                     bottom: bottomInset,
-                    right: layout.safeInsets.right
+                    right: componentLayout.safeInsets.right
                 ),
-                reservedCorners: layout.reservedCorners,
+                reservedCorners: componentLayout.reservedCorners,
                 navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
@@ -4872,6 +4910,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         hasAppeared: self.hasAppeared,
                         isVisible: self.cameraIsActive && !self.hasGallery && self.postingAvailable,
                         panelWidth: panelWidth,
+                        chatScreenLayout: chatScreenLayout,
                         resolvedCodePeer: controller.resolvedCodePeer,
                         batchCount: self.chatChromeBatchCount,
                         animateFlipAction: self.animateFlipAction,
@@ -4920,7 +4959,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     environment
                 },
                 forceUpdate: forceUpdate,
-                containerSize: layout.size
+                containerSize: componentLayout.size
             )
             if let componentView = self.componentHost.view {
                 if componentView.superview == nil {
@@ -4932,7 +4971,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     componentView.clipsToBounds = true
                 }
             
-                let componentFrame = CGRect(origin: .zero, size: componentSize)
+                let componentFrame = CGRect(origin: CGPoint(x: componentOriginX, y: 0.0), size: componentSize)
                 transition.setFrame(view: componentView, frame: componentFrame)
             }
             if controller.chatBatch != nil {
@@ -5070,25 +5109,27 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             let circleSide = floorToScreenPixels(previewSize.width * dualCameraSize / 393.0)
             let circleOffset = CGPoint(x: previewSize.width * (dualCameraSize + 107.0) / 1080.0, y: previewSize.width * (dualCameraSize + 278.0) / 1080.0)
             
+            let pipLeftInset = max(0.0, layout.safeInsets.left - previewContainerFrame.minX)
+            let pipRightInset = max(0.0, previewContainerFrame.maxX - (layout.size.width - layout.safeInsets.right))
             var origin: CGPoint
             switch self.pipPosition {
             case .topLeft:
-                origin = CGPoint(x: layout.safeInsets.left + circleOffset.x, y: circleOffset.y)
+                origin = CGPoint(x: pipLeftInset + circleOffset.x, y: circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
             case .topRight:
-                origin = CGPoint(x: previewFrame.width - layout.safeInsets.right - circleOffset.x, y: circleOffset.y)
+                origin = CGPoint(x: previewFrame.width - pipRightInset - circleOffset.x, y: circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
             case .bottomLeft:
-                origin = CGPoint(x: layout.safeInsets.left + circleOffset.x, y: previewFrame.height - circleOffset.y)
+                origin = CGPoint(x: pipLeftInset + circleOffset.x, y: previewFrame.height - circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
             case .bottomRight:
-                origin = CGPoint(x: previewFrame.width - layout.safeInsets.right - circleOffset.x, y: previewFrame.height - circleOffset.y)
+                origin = CGPoint(x: previewFrame.width - pipRightInset - circleOffset.x, y: previewFrame.height - circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
@@ -5150,7 +5191,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             if waitsForPreviewTransition {
                 if self.animatedIn {
-                    mainPreviewView.frame = mainPreviewInnerFrame
+                    if chatScreenLayout != nil {
+                        transition.setFrame(view: mainPreviewView, frame: mainPreviewInnerFrame)
+                    } else {
+                        mainPreviewView.frame = mainPreviewInnerFrame
+                    }
                 }
             } else {
                 mainPreviewView.frame = mainPreviewInnerFrame
@@ -6040,11 +6085,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     }
 }
 
-private func pipPositionForLocation(layout: ContainerViewLayout, position: CGPoint, velocity: CGPoint) -> CameraScreenImpl.PIPPosition {
+private func pipPositionForLocation(layout: ContainerViewLayout, centerX: CGFloat, position: CGPoint, velocity: CGPoint) -> CameraScreenImpl.PIPPosition {
     var layoutInsets = layout.insets(options: [.input])
     layoutInsets.bottom += 48.0
     var result = CGPoint()
-    if position.x < layout.size.width / 2.0 {
+    if position.x < centerX {
         result.x = 0.0
     } else {
         result.x = 1.0
@@ -6222,5 +6267,39 @@ private func chatCameraHorizontallyFlippedImage(_ image: UIImage) -> UIImage {
         rendererContext.cgContext.translateBy(x: image.size.width, y: 0.0)
         rendererContext.cgContext.scaleBy(x: -1.0, y: 1.0)
         image.draw(in: CGRect(origin: .zero, size: image.size))
+    }
+}
+
+struct CameraScreenChatScreenLayout: Equatable {
+    var previewFrame: CGRect
+    var topRowCenterY: CGFloat
+    var shutterCenterY: CGFloat
+    var zoomCenterY: CGFloat
+    var modeRowCenterY: CGFloat
+    var bottomRowPlacement: CaptureControlsBottomRowPlacement
+
+    init(screenSize: CGSize, captureKind: CameraScreenCaptureKind) {
+        let modeRowBottomInset: CGFloat = 58.0
+        self.topRowCenterY = 50.0
+        let shutterToModeRowSpacing: CGFloat = 96.0
+        let zoomToShutterSpacing: CGFloat = 92.0
+        let photoSideButtonCenterInset: CGFloat = 58.0
+        let videoSideButtonCenterInset: CGFloat = 40.0
+
+        self.modeRowCenterY = screenSize.height - modeRowBottomInset
+        self.shutterCenterY = self.modeRowCenterY - shutterToModeRowSpacing
+        self.zoomCenterY = self.shutterCenterY - zoomToShutterSpacing
+
+        let sideButtonCenterInset: CGFloat
+        switch captureKind {
+        case .photo:
+            self.previewFrame = CGRect(origin: .zero, size: screenSize)
+            sideButtonCenterInset = photoSideButtonCenterInset
+        default:
+            let width = floorToScreenPixels(screenSize.height / 1.77778)
+            self.previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((screenSize.width - width) / 2.0), y: 0.0), size: CGSize(width: width, height: screenSize.height))
+            sideButtonCenterInset = self.previewFrame.minX + videoSideButtonCenterInset
+        }
+        self.bottomRowPlacement = CaptureControlsBottomRowPlacement(rowCenterOffsetFromShutter: self.modeRowCenterY - self.shutterCenterY, buttonSideCenterInset: sideButtonCenterInset)
     }
 }

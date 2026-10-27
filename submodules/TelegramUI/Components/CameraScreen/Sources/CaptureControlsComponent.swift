@@ -27,6 +27,17 @@ enum ShutterButtonState: Equatable {
 
 private let maximumShutterSize = CGSize(width: 96.0, height: 96.0)
 
+struct CaptureControlsBottomRowPlacement: Equatable {
+    var sideInset: CGFloat
+    var topInset: CGFloat
+
+    init(rowCenterOffsetFromShutter: CGFloat, buttonSideCenterInset: CGFloat) {
+        let buttonSide: CGFloat = 48.0
+        self.sideInset = buttonSideCenterInset - buttonSide / 2.0
+        self.topInset = rowCenterOffsetFromShutter - maximumShutterSize.height / 2.0 - buttonSide / 2.0
+    }
+}
+
 private extension SimpleShapeLayer {
     func animateStrokeStart(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "strokeStart", timingFunction: timingFunction, duration: duration, delay: delay, removeOnCompletion: removeOnCompletion, completion: completion)
@@ -718,6 +729,7 @@ final class CaptureControlsComponent: Component {
     let hasAccess: Bool
     let hideControls: Bool
     let controlsBottomInset: CGFloat
+    let bottomRowPlacement: CaptureControlsBottomRowPlacement?
     let collageProgress: Float
     let collageCount: Int?
     let tintColor: UIColor
@@ -754,6 +766,7 @@ final class CaptureControlsComponent: Component {
         hasAccess: Bool,
         hideControls: Bool,
         controlsBottomInset: CGFloat,
+        bottomRowPlacement: CaptureControlsBottomRowPlacement? = nil,
         collageProgress: Float,
         collageCount: Int?,
         tintColor: UIColor,
@@ -789,6 +802,7 @@ final class CaptureControlsComponent: Component {
         self.hasAccess = hasAccess
         self.hideControls = hideControls
         self.controlsBottomInset = controlsBottomInset
+        self.bottomRowPlacement = bottomRowPlacement
         self.collageProgress = collageProgress
         self.collageCount = collageCount
         self.tintColor = tintColor
@@ -840,6 +854,9 @@ final class CaptureControlsComponent: Component {
             return false
         }
         if lhs.hideControls != rhs.hideControls {
+            return false
+        }
+        if lhs.bottomRowPlacement != rhs.bottomRowPlacement {
             return false
         }
         if lhs.controlsBottomInset != rhs.controlsBottomInset {
@@ -1506,6 +1523,10 @@ final class CaptureControlsComponent: Component {
             if component.controlsBottomInset < 0.0 {
                 bottomButtonSideInset = 9.0
                 bottomButtonTopInset = -2.0 - UIScreenPixel
+            }
+            if let bottomRowPlacement = component.bottomRowPlacement {
+                bottomButtonSideInset = bottomRowPlacement.sideInset
+                bottomButtonTopInset = bottomRowPlacement.topInset
             }
             
             let galleryButtonFrame: CGRect

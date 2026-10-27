@@ -44,7 +44,7 @@ public func chatMediaEditorLayout(
         height: size.height
     )
 
-    let previewFrame = chatMediaEditorFittedFrame(mediaSize: mediaSize, in: availableRect)
+    let previewFrame = chatMediaEditorScreenCenteredFrame(chatMediaEditorFittedFrame(mediaSize: mediaSize, in: availableRect), size: size, safeInsets: safeInsets)
 
     return ChatMediaEditorLayout(previewFrame: previewFrame, toolbarFrame: toolbarFrame, captionPanelFrame: captionPanelFrame)
 }
@@ -126,7 +126,18 @@ public func chatMediaEditorToolPreviewFrame(
             height: max(0.0, bottom - safeInsets.top)
         )
     }
-    return chatMediaEditorFittedFrame(mediaSize: mediaSize, in: availableRect)
+    return chatMediaEditorScreenCenteredFrame(chatMediaEditorFittedFrame(mediaSize: mediaSize, in: availableRect), size: size, safeInsets: safeInsets)
+}
+
+public func chatMediaEditorScreenCenteredFrame(_ frame: CGRect, size: CGSize, safeInsets: UIEdgeInsets) -> CGRect {
+    if safeInsets.left == safeInsets.right {
+        return frame
+    }
+    let x = size.width / 2.0 - frame.width / 2.0
+    if x < safeInsets.left || x + frame.width > size.width - safeInsets.right {
+        return frame
+    }
+    return CGRect(x: x, y: frame.minY, width: frame.width, height: frame.height)
 }
 
 public struct ChatMediaEditorRecipientLayout: Equatable {
@@ -137,7 +148,7 @@ public struct ChatMediaEditorRecipientLayout: Equatable {
 public func chatMediaEditorRecipientLayout(size: CGSize, safeInsets: UIEdgeInsets, arrowSize: CGSize, labelSize: CGSize) -> ChatMediaEditorRecipientLayout {
     let screenWidth = min(size.width, size.height)
     let labelWidth = max(0.0, min(labelSize.width, screenWidth - 150.0))
-    let topInset = safeInsets.top > 20.0 ? safeInsets.top : 0.0
+    let topInset = safeInsets.top
     let arrowFrame = CGRect(origin: CGPoint(x: safeInsets.left + chatMediaEditorScreenEdgeInset, y: topInset + 16.0), size: arrowSize)
     let labelFrame = CGRect(x: arrowFrame.maxX + 6.0, y: arrowFrame.minY - 2.0, width: labelWidth, height: labelSize.height)
     return ChatMediaEditorRecipientLayout(arrowFrame: arrowFrame, labelFrame: labelFrame)
@@ -166,10 +177,17 @@ public func chatMediaEditorCropContainerFrame(size: CGSize, safeInsets: UIEdgeIn
     if hasRotationWheel && hasPerspective {
         panelHeight += mediaCropAdjustmentSelectorHeight + chatMediaEditorCropSelectorDialSpacing
     }
+    var minX = safeInsets.left
+    var width = max(0.0, size.width - safeInsets.left - safeInsets.right)
+    if safeInsets.left != safeInsets.right && size.width > size.height {
+        let sideInset = max(safeInsets.left, safeInsets.right)
+        minX = sideInset
+        width = max(0.0, size.width - sideInset * 2.0)
+    }
     return CGRect(
-        x: safeInsets.left,
+        x: minX,
         y: safeInsets.top,
-        width: max(0.0, size.width - safeInsets.left - safeInsets.right),
+        width: width,
         height: max(0.0, size.height - toolbarHeight - panelHeight - safeInsets.top - safeInsets.bottom)
     )
 }

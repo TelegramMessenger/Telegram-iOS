@@ -179,7 +179,7 @@ public let chatMediaEditorCounterButtonSize = CGSize(width: 64.0, height: 38.0)
 public let chatMediaEditorCounterCircleFrame = CGRect(x: 16.0, y: 1.0, width: 31.0, height: 31.0)
 
 public func chatMediaEditorCheckButtonFrame(size: CGSize, safeInsets: UIEdgeInsets) -> CGRect {
-    let topInset = safeInsets.top > 20.0 ? safeInsets.top : 0.0
+    let topInset = safeInsets.top
     return CGRect(origin: CGPoint(x: size.width - safeInsets.right - chatMediaEditorScreenEdgeInset - (chatMediaEditorCheckButtonSize.width - chatMediaEditorCheckButtonRingInset), y: topInset + 5.0), size: chatMediaEditorCheckButtonSize)
 }
 

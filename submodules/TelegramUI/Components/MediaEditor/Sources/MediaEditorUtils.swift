@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import AVFoundation
 import SwiftSignalKit
 import TelegramCore
@@ -314,4 +315,40 @@ public func mediaEditorAnimatedStickerDurations(entities: [CodableDrawingEntity]
 
 public func makeChatEditorImageComposition(accountContext: AccountContext, input: MediaEditorCompositionInput, values: MediaEditorValues, time: CMTime, maxOutputSide: CGFloat, completion: @escaping (UIImage?) -> Void) {
     makeChatEditorImageComposition(postbox: accountContext.account.postbox, input: input, values: values, time: time, maxOutputSide: maxOutputSide, completion: completion)
+}
+
+public func storyPreviewBandPlacement(containerSize: CGSize, safeInsets: UIEdgeInsets) -> (x: CGFloat, size: CGSize)? {
+    if safeInsets.left == safeInsets.right {
+        return nil
+    }
+    let bandWidth = containerSize.width - safeInsets.left - safeInsets.right
+    if bandWidth <= 0.0 {
+        return nil
+    }
+    var size = CGSize(width: bandWidth, height: floorToScreenPixels(bandWidth * 1.77778))
+    if size.height > containerSize.height {
+        size = CGSize(width: floorToScreenPixels(containerSize.height / 1.77778), height: containerSize.height)
+    }
+    let screenCenteredX = floorToScreenPixels((containerSize.width - size.width) / 2.0)
+    if screenCenteredX >= safeInsets.left && screenCenteredX + size.width <= containerSize.width - safeInsets.right {
+        return (screenCenteredX, size)
+    }
+    return (safeInsets.left + floorToScreenPixels((bandWidth - size.width) / 2.0), size)
+}
+
+public func storyControlsBandLayout(_ layout: ContainerViewLayout) -> (layout: ContainerViewLayout, originX: CGFloat)? {
+    if layout.metrics.isTablet {
+        return nil
+    }
+    guard let placement = storyPreviewBandPlacement(containerSize: layout.size, safeInsets: layout.safeInsets) else {
+        return nil
+    }
+    var bandLayout = layout
+    bandLayout.size = CGSize(width: placement.size.width, height: layout.size.height)
+    bandLayout.safeInsets.left = 0.0
+    bandLayout.safeInsets.right = 0.0
+    bandLayout.intrinsicInsets.left = 0.0
+    bandLayout.intrinsicInsets.right = 0.0
+    bandLayout.reservedCorners = .none
+    return (bandLayout, placement.x)
 }
