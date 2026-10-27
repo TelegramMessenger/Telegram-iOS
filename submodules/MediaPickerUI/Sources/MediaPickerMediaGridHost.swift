@@ -1145,11 +1145,14 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         return MediaPickerGridCellState(identifier: identifier, decorations: decorations, isHidden: identifier == self.interaction.hiddenMediaId)
     }
 
-    func fitBackground(identifier: String, image: UIImage) -> UIImage? {
+    func fitBackground(identifier: String, image: () -> UIImage?) -> UIImage? {
         if let background = self.fitBackgrounds[identifier] {
             return background
         }
         if self.pendingFitBackgrounds.contains(identifier) {
+            return nil
+        }
+        guard let image = image() else {
             return nil
         }
         self.pendingFitBackgrounds.insert(identifier)

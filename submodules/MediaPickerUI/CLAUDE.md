@@ -57,6 +57,7 @@ hierarchy, so the media editor can convert its bounds and add a view to its gran
 snapshot. `defaultTransitionItem()` is the cell at index 0 (the GridNode path keeps `item(at: .zero)`).
 
 **Known limits.** Edits and spoilers at levels 15 and 31 come only from what was cached at 1/3/5. A story's landscape
-photo shows its thumbnail fitted over the placeholder colour until the first sharp image yields its gradient. A
+photo's gradient comes from whichever image the cell shows first, the 48 px thumbnail's slot during a fast scroll, and
+is cached by identifier, so a later sharp image does not recompute it. A
 pasted video (`.media`) has no image; the GridNode path showed no image for any pasted item. A draft has no check even
 in a collage multi-selection (the old cell showed an inert one).
