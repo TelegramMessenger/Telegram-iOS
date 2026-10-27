@@ -77,7 +77,8 @@ are the audit's.
   `EventDeliveryOrderTests`, `StateBarrierCharacterizationTests`, `PollResultLossCharacterizationTests`,
   `ChannelSyncCharacterizationTests`, `ChannelPollSiteTests`, `PinnedForumTopicsPeerTests`,
   `NotificationExtensionPollOutcomeTests`, `PtsTotalLimit*Tests`, `Reset*Tests`, `ArchivedDialogGhostTailTests`,
-  `ChatListRecentDeletionTests`, `RecentEditTests`, `ConfirmationDeletionEventTests`, `StoryUpdateEventTests`.
+  `ChatListRecentDeletionTests`, `RecentEditTests`, `ConfirmationDeletionEventTests`, `StoryUpdateEventTests`,
+  `WidgetDataUpdateTests`.
 - Holes and fills: `ChatListHoleFillTests`, `ChatListForumThreadsTests`, `HistoryFill*Tests`, `ForumHistoryFillTests`,
   `MonoforumHistoryFillTests`, `PreloadFillConfirmationTests`, `ManagedHistoryHoles*Tests`; outside the directory,
   `Tests/AroundHoleFillRangeTests`, `ForumThreadResolutionGuardTests`, `WebpageUpdateEventsTests`.
@@ -252,7 +253,9 @@ reset is pending.
 `finalStateWithUpdateGroups(..., asyncResetChannels: nil)` checks the common-box sequences. `SequenceSpan` is one rule
 for pts, qts and seq: `classify(local:afterHole:)` is `.alreadyApplied` when `local >= end`, `.apply` when not after a
 hole and `local == end - count`, else `.gap`. A pts update is `(pts, pts_count)`; a qts update `(qts, 1)`
-(`apiUpdateQtsRange` matches only `updateNewEncryptedMessage`); an `updates` container `(seq, 1)`; `updatesCombined`
+(`apiUpdateQtsRange` matches only `updateNewEncryptedMessage`; `apiUpdatePtsRange` includes `updateMessageWidgetData`,
+a message widget's state edit, which before 2026-10-26 was unsequenced and opened a pts gap on every push); an `updates`
+container `(seq, 1)`; `updatesCombined`
 `init(seqStart:seq:)`, count `seq - seqStart + 1` (`SequenceSpanTests`). Order: pts updates sorted by end (an
 `.updatePts` group is a span without an update), qts updates sorted by end, seq groups sorted by end. An applied span
 merges its chats and users, collects its updates and advances its own component (a seq group also takes its date); the
@@ -270,12 +273,12 @@ date; for a difference its `other_updates` order) and hands `updatedState` and `
 handed: on the push path the snapshot with the sequencing's chats, users and state advances applied, on the difference
 path with the difference's state, chats, users and messages added. Its channel states are still the snapshot's, which is
 all `updateChannelTooLong` reads from it. `UpdateInterpreter.init` requests a hint-less poll for every
-`channelsToPollExplicitely`. `apply(_:)` has 114 case labels (one covers two constructors) and `default: break`; each
-calls one method in a family: Bots 5, Calls 7, Channels 7, ChatList 9, Messages 22, Payments 11, Peers 18, ReadStates
+`channelsToPollExplicitely`. `apply(_:)` has 115 case labels (one covers two constructors) and `default: break`; each
+calls one method in a family: Bots 5, Calls 7, Channels 7, ChatList 9, Messages 23, Payments 11, Peers 18, ReadStates
 13, Settings 14, Stories 4, Typing 4 (`grep -c 'mutating func apply' Sources/State/Sync/UpdateInterpreter+*`). Typing is
 kept only when `updatesDate != nil` and `updatesDate + 60 > serverTime`; a difference passes nil.
 
-The result is an `AccountMutableState`: an ordered `operations` log of `AccountStateMutationOperation` (86 cases) plus
+The result is an `AccountMutableState`: an ordered `operations` log of `AccountStateMutationOperation` (87 cases) plus
 side tables (`peers`, `channelStates`, `storedMessages`, `namespacesWithHolesFromPreviousState`, `displayAlerts`,
 `preCachedResources`, ...). Every helper that records an operation goes through `addOperation`, whose switch (no
 default) updates the derived tables first (`mergeChats` also writes `apiChats` itself); eight helpers write their side
@@ -331,15 +334,15 @@ the latter. `replayFinalState` runs, in order:
    `applyDeleteMessages` passes `_internal_deleteMessages` an optional, hence escaping, thread-stats callback that
    writes an accumulator through `self`.
 4. `batchContentAndDeferStateOperations`: adjacent `.AddMessages` at one location merge; scheduled and quick-reply adds
-   accumulate; any of the other 79 content operations is a barrier that emits the pending batches in the fixed order
+   accumulate; any of the other 80 content operations is a barrier that emits the pending batches in the fixed order
    AddMessages, AddScheduledMessages, AddQuickReplyMessages, then itself (so their relative order within a run is not
    kept). `.UpdateState`, `.UpdateChannelState`, `.UpdateChannelInvalidationPts` and
    `.UpdateChannelSynchronizedUntilMessage` end no batch and go into `StateAdvance`, last value per kind and channel
    (`ReplayBatchingTests`).
-5. `applyContentOperations`: 86 labels, no default. `walletTonConnectEvents(operation:)` runs first for each operation;
+5. `applyContentOperations`: 87 labels, no default. `walletTonConnectEvents(operation:)` runs first for each operation;
    then a read-state operation for a stored non-member channel (not a monoforum) is skipped (invariant 30);
    `.UpdateAttachMenuBots` and `.UpdateWalletTonConnectEvent` do nothing; the four state labels are unreachable; the
-   other 80 call one family method: Messages 18, Settings 11, Payments 8, ReadStates 8, Calls 7, Peers 7, ChatList 6,
+   other 81 call one family method: Messages 19, Settings 11, Payments 8, ReadStates 8, Calls 7, Peers 7, ChatList 6,
    Threads 5, Stories 4, SecretChats 3, Typing 3.
 6. `applyStateAdvance`, after all content: the account state (`applyUpdateState` force-casts the stored state and keeps
    the stored date under `keepsStoredDate`), then every channel pts, every `invalidatedPts`, every
@@ -385,15 +388,15 @@ skipped, then `messages.receivedQueue(maxQts:)`, errors swallowed (`testAppliedQ
 
 ### Events
 
-`AccountFinalStateEvents` has 35 stored fields (`testStoredFieldCountMatchesEveryInitAndUnion`); `init(state:)` takes 28
+`AccountFinalStateEvents` has 36 stored fields (`testStoredFieldCountMatchesEveryInitAndUnion`); `init(state:)` takes 29
 from `AccountReplayedFinalState` and 7 from the mutable state. `union(with:)` treats `other` as the later replay: lists
-append, sets unite, flags OR, current-state values (balances, wallet and auction state, web pages, typing) take the
+append, sets unite, flags OR, current-state values (balances, wallet, agent settings and auction state, web pages, typing) take the
 later value, read maxima, `updatedMaxMessageId`, `updatedQts`, `delayNotificatonsUntil` the maximum
 (`AccountFinalStateEventsUnionTests`). `isEmpty` decides whether a `dispatchEvents` is queued; `delayNotificatonsUntil`
 and `updatedMaxMessageId` stay as its terms (`testOwnPresenceOnlyBatchStillQueuesProcessEvents`,
 `testAnotherUsersPresenceOnlyBatchQueuesNoProcessEvents`).
 
-`AccountStateEventHub` (built in `Impl.init`, no reference back) has 24 `ValuePipe`s (no replay), 3 replaying `Promise`s
+`AccountStateEventHub` (built in `Impl.init`, no reference back) has 25 `ValuePipe`s (no replay), 3 replaying `Promise`s
 (`termsOfServiceUpdate`, `appUpdateInfo`, `contactBirthdays`) and 6 subscriber contexts (`grep -c '= ValuePipe<'` and
 `grep -c '= Promise<'` on the file). `dispatch(_:completed:)` (1) starts the transaction that reads the notification
 messages; (2) before returning, in order: `reactionNotificationsPipe` (always; only reactions younger than 20 s),
@@ -401,8 +404,8 @@ messages; (2) before returning, in order: `reactionNotificationsPipe` (always; o
 `authorizationListUpdatesPipe`, `deletedMessagesPipe` (each only when non-empty), `updateConfigRequested`,
 `isPremiumUpdated`; (3) on the queue, one `notificationMessagesPipe` value per dispatch (empty included: each incoming
 id's `messagesForNotification`, then the was-scheduled messages as one entry), then `completed()`.
-`dispatchAfterNotificationMessages(_:)` then delivers typing, web pages (a nil page included), balances, wallet updates,
-revenue and auction states, emoji game info (a Postbox write), calls, call signaling, group calls, stories, thread read
+`dispatchAfterNotificationMessages(_:)` then delivers typing, web pages (a nil page included), balances, wallet updates, agent
+settings, revenue and auction states, emoji game info (a Postbox write), calls, call signaling, group calls, stories, thread read
 states, sent scheduled ids, delivery reports and conference invitations, in that order (`AccountStateEventHubTests` pins
 only that web-page updates, nil removals included, arrive before the sent scheduled ids). The hub's subscription
 generators and `modify...` methods hop with `queue.async`, which is always inline (their callers are already on the
@@ -812,7 +815,9 @@ Each: the rule; why; where enforced; what pins it.
     `fetchedMessagesWithoutRecentDeletions` (Postbox's `RecentlyDeletedMessages`: 5 minutes, at most 10 000 ids);
     `fetchedMessagesWithRecentEdits` after it at every one of its calls (Postbox's `RecentlyEditedMessages`: the latest
     edit of each message, 5 minutes, at most 1000 messages; recorded by `applyEditMessage` for every edit, whether a
-    stored message took it or none was stored, and returned only to a fetch whose request went out before it was
+    stored message took it or none was stored, by `applyUpdateMessageWidgetData` for a stored widget whose state it
+    changed, and by the shared-widget poller (`WidgetPublicDataPolling`) for a stored widget whose state a poll
+    changed, and returned only to a fetch whose request went out before it was
     recorded, `since`: the fill's answered attempt, the follow-up's start, the reset's and the chat-list fill's first
     request).
     Pinned: `testResetDeletesAStoredMessageAboveTheTopWithoutAsking`,
@@ -821,7 +826,8 @@ Each: the rule; why; where enforced; what pins it.
     `testChatListFillLeavesMessagesAboveATopUnderAHoleTheNextHistoryFillConfirms`,
     `testFillDeletesWhatTheServerNoLongerHasAndRefreshesWhatItStillHas`,
     `testCandidateWrittenDuringTheConfirmationIsLeftAloneUnderAHole`, `HistoryFillRecentDeletionTests`,
-    `ChatListRecentDeletionTests`, `RecentEditTests`, Postbox's `RecentlyEditedMessagesTests`.
+    `ChatListRecentDeletionTests`, `RecentEditTests`, `WidgetDataUpdateTests`,
+    `testAFillInFlightDoesNotOverwriteAPolledState`, Postbox's `RecentlyEditedMessagesTests`.
 15. **Each reset attempt that gets a chat list writes its state in one transaction after every answer; pts moves in it;
     qts, date, seq are kept.** A `dialogsNotModified` answer writes nothing (pts stays, so the next getDifference meets
     differenceTooLong again); answers too old to store (`FetchedAnswerAge`) write nothing, and the reset starts again. A
@@ -854,7 +860,7 @@ Each: the rule; why; where enforced; what pins it.
 22. **A notification fires only for a message not stored before the replay**, or a replayed message notifies twice.
     Enforced: `filterStoredMessageIds` in the prepass. Pinned:
     `testPrepareListsOnlyIncomingTopMessagesThatAreNotStored`.
-23. **`AccountFinalStateEvents` keeps 35 fields, each set by `init()`, `init(state:)`, `union(with:)` and the test
+23. **`AccountFinalStateEvents` keeps 36 fields, each set by `init()`, `init(state:)`, `union(with:)` and the test
     helper; events union in replay order.** A defaulted field compiles and is dropped at every merge; reversed order
     delivers stale state. Pinned: `testStoredFieldCountMatchesEveryInitAndUnion`, `testUnionMergesEachFieldByItsPolicy`.
 24. **`followUp` precedence: discard, poll, gap wait, apply.** A discarded batch is never replayed; a forced poll

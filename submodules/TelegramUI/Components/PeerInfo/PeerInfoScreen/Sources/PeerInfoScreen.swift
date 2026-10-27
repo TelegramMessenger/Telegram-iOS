@@ -559,6 +559,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openAddBotToGroup: { [weak self] in
                 self?.openAddBotToGroup()
             },
+            openAgentConnect: { [weak self] in
+                self?.openAgentConnect()
+            },
+            setAgentActiveProvider: { [weak self] provider in
+                self?.setAgentActiveProvider(provider)
+            },
+            openAgentProviderContextMenu: { [weak self] provider, node, gesture in
+                self?.openAgentProviderContextMenu(provider: provider, node: node, gesture: gesture)
+            },
             performBotCommand: { [weak self] command in
                 self?.performBotCommand(command: command)
             },

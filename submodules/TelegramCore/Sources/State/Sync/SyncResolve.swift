@@ -542,53 +542,79 @@ func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, source: FetchM
 }
 
 func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, additionalPeers: AccumulatedPeers, result: T) -> Signal<T, NoError> {
-    var storyBuckets: [PeerId: [Int32]] = [:]
-    for id in storyIds {
-        if storyBuckets[id.peerId] == nil {
-            storyBuckets[id.peerId] = []
+    return Signal { subscriber in
+        let cancelled = Atomic<Bool>(value: false)
+        let disposable = (postbox.transaction { transaction -> [PeerId: [Int32]] in
+            guard !cancelled.with({ $0 }) else { return [:] }
+            var buckets: [PeerId: [Int32]] = [:]
+            for id in storyIds where id.id > 0 {
+                if case let .item(item) = transaction.getStory(id: id)?.get(Stories.StoredItem.self), item.id == id.id { continue }
+                if let existing = _internal_existingStoryItem(transaction: transaction, peerId: id.peerId, id: id.id), let entry = CodableEntry(Stories.StoredItem.item(existing)) {
+                    transaction.setStory(id: id, value: entry)
+                } else {
+                    buckets[id.peerId, default: []].append(id.id)
+                }
+            }
+            return buckets
         }
-        storyBuckets[id.peerId]?.append(id.id)
-    }
-    
-    var signals: [Signal<Never, NoError>] = []
-    for (peerId, allIds) in storyBuckets {
-        var idOffset = 0
-        while idOffset < allIds.count {
-            let bucketLength = min(100, allIds.count - idOffset)
-            let ids = Array(allIds[idOffset ..< (idOffset + bucketLength)])
-            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers.get(peerId).flatMap(PeerReference.init), ids: ids, allowFloodWait: false)
-            |> mapToSignal { result -> Signal<Never, NoError> in
-                if let result = result {
-                    return postbox.transaction { transaction -> Void in
-                        for id in ids {
-                            let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))
-                            var updated: CodableEntry?
-                            if let updatedItem = result.first(where: { $0.id == id }) {
-                                if let entry = CodableEntry(updatedItem) {
-                                    updated = entry
-                                }
-                            } else {
-                                updated = CodableEntry(data: Data())
+        |> mapToSignal { buckets -> Signal<T, NoError> in
+            guard !cancelled.with({ $0 }) else { return .complete() }
+            var signals: [Signal<Never, NoError>] = []
+            for (peerId, unsortedIds) in buckets {
+                let allIds = unsortedIds.sorted()
+                var offset = 0
+                while offset < allIds.count {
+                    let length = min(100, allIds.count - offset)
+                    let ids = Array(allIds[offset ..< offset + length])
+                    signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers.get(peerId).flatMap(PeerReference.init), ids: ids, allowFloodWait: false)
+                    |> mapToSignal { fetched -> Signal<Never, NoError> in
+                        guard let fetched else { return .complete() }
+                        let lease = fetched.lease
+                        return postbox.transaction { transaction in
+                            guard !cancelled.with({ $0 }) else { return }
+                            let parsed: StoriesByIdResult
+                            switch fetched.stories {
+                            case let .stories(data):
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(transaction: transaction, chats: data.chats, users: data.users))
+                                parsed = _internal_parseStoriesById(transaction: transaction, peerId: peerId, ids: ids, stories: data.stories)
                             }
-                            if current != updated {
-                                transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                            var snapshots: [Int32: StoryRefreshSnapshot] = [:]
+                            for id in ids where parsed.missingIds.contains(id) || parsed.items.contains(where: { $0.id == id }) {
+                                snapshots[id] = StoryRefreshSnapshot(transaction: transaction, peerId: peerId, id: id)
+                            }
+                            let accepted = lease.context.take(snapshots, for: lease.request)
+                            if !accepted.isEmpty { _internal_invalidatePeerStoryPoll(postbox: postbox, peerId: peerId) }
+                            for id in ids where accepted[id] != nil {
+                                let storyId = StoryId(peerId: peerId, id: id)
+                                let updated: CodableEntry
+                                if let item = parsed.items.first(where: { $0.id == id }), let entry = CodableEntry(item) {
+                                    updated = entry
+                                } else if parsed.missingIds.contains(id) {
+                                    updated = CodableEntry(data: Data())
+                                } else {
+                                    continue
+                                }
+                                if transaction.getStory(id: storyId) != updated { transaction.setStory(id: storyId, value: updated) }
+                                if let previous = snapshots[id] {
+                                    lease.context.advance(peerId: peerId, id: id, from: previous, to: StoryRefreshSnapshot(transaction: transaction, peerId: peerId, id: id))
+                                }
                             }
                         }
-                    }
-                    |> ignoreValues
-                } else {
-                    return .complete()
+                        |> ignoreValues
+                    })
+                    offset += length
                 }
-            })
-            idOffset += bucketLength
+            }
+            return combineLatest(signals)
+            |> ignoreValues
+            |> map { _ -> T in }
+            |> then(.single(result))
+        }).start(next: { subscriber.putNext($0) }, completed: { subscriber.putCompletion() })
+        return ActionDisposable {
+            _ = cancelled.swap(true)
+            disposable.dispose()
         }
     }
-    
-    return combineLatest(signals)
-    |> ignoreValues
-    |> map { _ -> T in
-    }
-    |> then(.single(result))
 }
 
 func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId: PeerId, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {

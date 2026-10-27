@@ -92,6 +92,9 @@ func apiUpdatePtsRange(_ update: Api.Update) -> SequenceSpan? {
         case let .updatePinnedMessages(updatePinnedMessagesData):
             let (pts, ptsCount) = (updatePinnedMessagesData.pts, updatePinnedMessagesData.ptsCount)
             return SequenceSpan(end: pts, count: ptsCount)
+        case let .updateMessageWidgetData(updateMessageWidgetDataData):
+            let (pts, ptsCount) = (updateMessageWidgetDataData.pts, updateMessageWidgetDataData.ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         default:
             return nil
     }

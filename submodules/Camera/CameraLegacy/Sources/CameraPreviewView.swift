@@ -189,9 +189,22 @@ final class LegacyCameraSimplePreviewView: UIView, CameraSimplePreviewView {
         }
     }
     
+    var sessionQueue: Queue?
+
     var isEnabled: Bool = true {
         didSet {
-            self.videoPreviewLayer.connection?.isEnabled = self.isEnabled
+            let isEnabled = self.isEnabled
+            let layer = self.videoPreviewLayer
+            let apply = {
+                if let connection = layer.connection, connection.isEnabled != isEnabled {
+                    connection.isEnabled = isEnabled
+                }
+            }
+            if let sessionQueue = self.sessionQueue {
+                sessionQueue.async(apply)
+            } else {
+                apply()
+            }
         }
     }
     

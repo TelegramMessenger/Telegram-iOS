@@ -189,5 +189,22 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
             attributes.append(previewParameters)
         }
         return .message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+    case let .widget(media, caption, entities, replyMarkup):
+        if let entities = entities {
+            attributes.append(entities)
+        }
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            // A secret chat cannot carry a widget: the result's text alone, without its buttons (as a game's), or nothing.
+            if caption.isEmpty {
+                return nil
+            }
+            return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+        }
+        if let replyMarkup = replyMarkup {
+            attributes.append(replyMarkup)
+        }
+        // widget-sandbox v0.2 (design §4 call 10): the echo is the result's widget, its state and no queries; the
+        // server's message replaces it with its own flags.
+        return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     }
 }

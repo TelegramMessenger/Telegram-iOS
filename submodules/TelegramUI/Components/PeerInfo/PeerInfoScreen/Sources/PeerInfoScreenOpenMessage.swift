@@ -10,6 +10,7 @@ import ChatHistorySearchContainerNode
 import ChatScheduleTimeController
 import MediaResources
 import TelegramUIPreferences
+import ChatMediaEditorScreen
 
 extension PeerInfoScreenNode {
     private func presentMediaScheduleTimePicker(completion: @escaping (Int32, Bool) -> Void) {
@@ -227,6 +228,39 @@ extension PeerInfoScreenNode {
                 if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                     let hasSilentPosting = peer.id != strongSelf.context.account.peerId
                     let hasSchedule = peer.id.namespace != Namespaces.Peer.SecretChat
+                    let isAnimated = (mediaReference.media as? TelegramMediaFile)?.isAnimated ?? false
+                    if strongSelf.context.routesToChatMediaEditorV2(isAnimated ? .animatedFileEditor : .messageMediaEditor), let initialTool = chatMediaEditorInitialTool(.draw) {
+                        presentChatMediaEditor(context: strongSelf.context, media: mediaReference, initialTool: initialTool, initialCaption: NSAttributedString(), recipientName: chatMediaEditorRecipientName(context: strongSelf.context, peer: EnginePeer(peer), threadTitle: message.associatedThreadInfo?.title), getCaptionPanelView: {
+                            return nil
+                        }, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == strongSelf.context.account.peerId, presentSchedulePicker: { [weak self] done in
+                            self?.presentMediaScheduleTimePicker(completion: { time, silentPosting in
+                                done(time, silentPosting)
+                            })
+                        }, isAnimation: chatMediaEditorIsAnimation(mode: .draw, mediaIsAnimated: isAnimated), originalMediaReference: nil, sendMessages: { [weak self] preparedMessages, silentPosting, scheduleTime, _ in
+                            if let strongSelf = self {
+                                strongSelf.enqueueMediaMessageDisposable.set((preparedMessages
+                                |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
+                                    if let strongSelf = self {
+                                        let effectiveScheduleTime = scheduleTime == 0 ? nil : scheduleTime
+                                        let mappedMessages = strongSelf.transformEditedMediaMessages(messages.map(\.message), replyToMessageId: message.id, silentPosting: silentPosting, scheduleTime: effectiveScheduleTime)
+                                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.peerId, messages: mappedMessages)
+                                        |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                                            guard let self, let effectiveScheduleTime, effectiveScheduleTime != scheduleWhenOnlineTimestamp else {
+                                                return
+                                            }
+                                            self.openScheduledMessages()
+                                        })
+                                    }
+                                }))
+                            }
+                        }, present: { [weak self] c, a in
+                            self?.controller?.present(c, in: .window(.root), with: a)
+                            Queue.mainQueue().after(0.35) {
+                                transitionCompletion()
+                            }
+                        })
+                        return
+                    }
                     legacyMediaEditor(context: strongSelf.context, peer: EnginePeer(peer), threadTitle: message.associatedThreadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
 
                         transitionCompletion()

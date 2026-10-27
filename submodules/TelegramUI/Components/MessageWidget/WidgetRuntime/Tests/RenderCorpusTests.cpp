@@ -1,5 +1,5 @@
 // The corpus and attack gates (M1c plan, Task 11). Every non-attack corpus document is booted with a render tree at width
-// 360, run to idle and through one virtual second, and flushed; the 99 attack documents are booted, run a virtual second
+// 360, run to idle and through one virtual second, and flushed; the 105 attack documents are booted, run a virtual second
 // and flushed, and may load nothing. The gates:
 // - the render layer never makes a document stop that does not stop without it;
 // - the build path (litehtml's own parse of the render input) and the mirror (Task 10b) paint what the published
@@ -484,7 +484,7 @@ WR_TEST(testPlainDocumentStyleCharge) {
 WR_TEST(testAttackCorpusLoadsNothing) {
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
     const std::vector<std::string> files = corpusFiles(true);
-    CHECK_EQ(files.size(), size_t(99));
+    CHECK_EQ(files.size(), size_t(105));
     std::set<std::string> seen;
     for (const std::string& file : files) {
         const std::string name = shortName(file);

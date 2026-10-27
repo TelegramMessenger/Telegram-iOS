@@ -383,6 +383,8 @@ struct UpdateInterpreter {
                 self.applyConfig()
             case let .updateMessageExtendedMedia(updateMessageExtendedMediaData):
                 self.applyMessageExtendedMedia(updateMessageExtendedMediaData)
+            case let .updateMessageWidgetData(updateMessageWidgetDataData):
+                self.applyMessageWidgetData(updateMessageWidgetDataData)
             case let .updateStory(updateStoryData):
                 self.applyStory(updateStoryData)
             case let .updateReadStories(updateReadStoriesData):
@@ -411,6 +413,8 @@ struct UpdateInterpreter {
                 self.applyWalletTonConnectPendingDisconnect(data)
             case let .updateWalletState(updateWalletStateData):
                 self.applyWalletState(updateWalletStateData)
+            case let .updateAgentSettings(updateAgentSettingsData):
+                self.applyAgentSettings(updateAgentSettingsData)
             case let .updateStarsRevenueStatus(updateStarsRevenueStatusData):
                 self.applyStarsRevenueStatus(updateStarsRevenueStatusData)
             case let .updatePaidReactionPrivacy(updatePaidReactionPrivacyData):

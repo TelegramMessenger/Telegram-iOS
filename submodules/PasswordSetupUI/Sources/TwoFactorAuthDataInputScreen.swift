@@ -15,6 +15,7 @@ import TelegramCore
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ActivityIndicator
+import AuthorizationUtils
 
 public enum TwoFactorDataInputMode {
     public struct Recovery {
@@ -109,7 +110,13 @@ public final class TwoFactorDataInputScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TwoFactorDataInputScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        let isAuthorizationFlow: Bool
+        if case .unauthorized = self.engine {
+            isAuthorizationFlow = true
+        } else {
+            isAuthorizationFlow = false
+        }
+        self.displayNode = TwoFactorDataInputScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, isAuthorizationFlow: isAuthorizationFlow, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -1272,6 +1279,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
 private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private var presentationData: PresentationData
     private let mode: TwoFactorDataInputMode
+    private let isAuthorizationFlow: Bool
     private let action: () -> Void
     private let skipAction: () -> Void
     private let changeEmailAction: () -> Void
@@ -1310,9 +1318,10 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
     
     private var skipIsHiddenUntilError = false
     
-    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorDataInputMode, action: @escaping () -> Void, skipAction: @escaping () -> Void, changeEmailAction: @escaping () -> Void, resendCodeAction: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorDataInputMode, isAuthorizationFlow: Bool, action: @escaping () -> Void, skipAction: @escaping () -> Void, changeEmailAction: @escaping () -> Void, resendCodeAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
+        self.isAuthorizationFlow = isAuthorizationFlow
         self.action = action
         self.skipAction = skipAction
         self.changeEmailAction = changeEmailAction
@@ -1889,15 +1898,29 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let availableAreaSize = CGSize(width: layout.size.width, height: layout.size.height - layout.insets(options: [.input]).bottom)
         
         // The content above the button lays out in the band between the side insets when they differ (iPhone Duo's
-        // side strip: the fields ran under it); across the screen otherwise.
+        // side strip: the fields ran under it); across the screen otherwise. In the login flow (password recovery) it
+        // is centered on the full width on the unfolded screen, as the other login screens do (authorizationContentBand).
         let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
-        let bandWidth: CGFloat = insetsDiffer ? contentAreaSize.width - layout.safeInsets.left - layout.safeInsets.right : contentAreaSize.width
+        let bandMinX: CGFloat
+        let bandWidth: CGFloat
+        if self.isAuthorizationFlow {
+            (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
+        } else {
+            bandMinX = insetsDiffer ? layout.safeInsets.left : 0.0
+            bandWidth = insetsDiffer ? contentAreaSize.width - layout.safeInsets.left - layout.safeInsets.right : contentAreaSize.width
+        }
         // The button and the actions in its rows span iPhone Duo's side strip; they keep clear only of a corner block
-        // at the bottom.
-        let bottomSideInsets = layout.bottomEdgeSideInsets()
-        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
-        let bottomBandWidth: CGFloat = insetsDiffer ? contentAreaSize.width - bottomSideInsets.left - bottomSideInsets.right : contentAreaSize.width
+        // at the bottom. In the login flow they keep to the content's axis (authorizationBottomBand): unfolded as
+        // above, folded in the content band.
+        let bottomBandMinX: CGFloat
+        let bottomBandWidth: CGFloat
+        if self.isAuthorizationFlow {
+            (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
+        } else {
+            let bottomSideInsets = layout.bottomEdgeSideInsets()
+            bottomBandMinX = insetsDiffer ? bottomSideInsets.left : 0.0
+            bottomBandWidth = insetsDiffer ? contentAreaSize.width - bottomSideInsets.left - bottomSideInsets.right : contentAreaSize.width
+        }
         
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0

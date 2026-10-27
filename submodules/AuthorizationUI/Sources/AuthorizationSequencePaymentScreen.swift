@@ -29,6 +29,7 @@ import PlainButtonComponent
 import StoreKit
 import DeviceModel
 import GlassBarButtonComponent
+import AuthorizationUtils
 
 final class AuthorizationSequencePaymentScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -251,11 +252,22 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.plainBackgroundColor
             }
             
-            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
-            // content is centered in the band between the insets. With equal insets these are the old values.
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
-            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
+            // iPhone Duo: one side's safe inset is the side strip; the content keeps to the band between the insets,
+            // centered on the full width on the unfolded screen (authorizationContentBand). With equal insets these are
+            // the old values.
+            let sideInset: CGFloat
+            let rightSideInset: CGFloat
+            let bandCenterX: CGFloat
+            if environment.safeInsets.left != environment.safeInsets.right {
+                let (bandMinX, bandWidth) = authorizationContentBand(size: availableSize, safeInsets: environment.safeInsets, deviceMetrics: environment.deviceMetrics)
+                sideInset = 16.0 + bandMinX
+                rightSideInset = 16.0 + availableSize.width - bandMinX - bandWidth
+                bandCenterX = bandMinX + bandWidth / 2.0
+            } else {
+                sideInset = 16.0 + environment.safeInsets.left
+                rightSideInset = 16.0 + environment.safeInsets.right
+                bandCenterX = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
+            }
             
             let helpButtonSize = self.helpButton.update(
                 transition: transition,
@@ -443,12 +455,20 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 buttonSubtitle = environment.strings.Login_Fee_GetPremiumNone
             }
             
-            // iPhone Duo: beside a side strip the button is sized from the band it is centered in; with equal insets
-            // it keeps its full width. The bottom button spans the side strip; it keeps clear only of a corner block
-            // at the bottom.
-            let buttonSideInsets = environment.bottomEdgeSideInsets()
-            let buttonBandInset: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? buttonSideInsets.left + buttonSideInsets.right : 0.0
-            let buttonBandCenterX: CGFloat = buttonSideInsets.left + (availableSize.width - buttonSideInsets.left - buttonSideInsets.right) / 2.0
+            // iPhone Duo: beside a side strip the button is sized from the band it is centered in, on the content's axis
+            // (authorizationBottomBand): unfolded it spans the side strip, clear only of a corner block at the bottom;
+            // folded it keeps to the content band. With equal insets it keeps its full width.
+            let buttonBandInset: CGFloat
+            let buttonBandCenterX: CGFloat
+            if environment.safeInsets.left != environment.safeInsets.right {
+                let (buttonBandMinX, buttonBandWidth) = authorizationBottomBand(size: availableSize, safeInsets: environment.safeInsets, bottomEdgeSideInsets: environment.bottomEdgeSideInsets(), deviceMetrics: environment.deviceMetrics)
+                buttonBandInset = availableSize.width - buttonBandWidth
+                buttonBandCenterX = buttonBandMinX + buttonBandWidth / 2.0
+            } else {
+                let buttonSideInsets = environment.bottomEdgeSideInsets()
+                buttonBandInset = 0.0
+                buttonBandCenterX = buttonSideInsets.left + (availableSize.width - buttonSideInsets.left - buttonSideInsets.right) / 2.0
+            }
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             let buttonSize = self.button.update(
                 transition: transition,

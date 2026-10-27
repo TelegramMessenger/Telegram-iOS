@@ -14,7 +14,6 @@ import HexColor
 import PresentationDataUtils
 import MediaPickerUI
 import WallpaperGalleryScreen
-import Photos
 
 public enum WallpaperSelectionResult {
     case remove
@@ -227,29 +226,22 @@ public final class ThemeGridController: ViewController {
                     }
                 }
                 
-                let controller = MediaPickerScreenImpl(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
-                controller.customSelection = { [weak self] _, asset in
-                    guard let strongSelf = self, let asset = asset as? PHAsset else {
-                        return
-                    }
-                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: mode)
-                    controller.requiredLevel = requiredCustomLevel
-                    controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness, _ in
-                        if let strongSelf = self {
-                            if case .peer = mode {
-                                strongSelf.completion(.custom(wallpaperEntry: wallpaper, options: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness))
-                                Queue.mainQueue().after(0.15) {
-                                    dismissControllers()
-                                }
-                            } else {
-                                uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
-                                    dismissControllers()
-                                })
+                let controller = makeCustomWallpaperMediaPicker(context: strongSelf.context, mode: mode, requiredLevel: requiredCustomLevel, push: { [weak self] controller in
+                    self?.push(controller)
+                }, apply: { [weak self] wallpaper, options, editedImage, cropRect, brightness in
+                    if let strongSelf = self {
+                        if case .peer = mode {
+                            strongSelf.completion(.custom(wallpaperEntry: wallpaper, options: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness))
+                            Queue.mainQueue().after(0.15) {
+                                dismissControllers()
                             }
+                        } else {
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
+                                dismissControllers()
+                            })
                         }
                     }
-                    strongSelf.push(controller)
-                }
+                })
                 self?.push(controller)
             }
         }, presentColors: { [weak self] in

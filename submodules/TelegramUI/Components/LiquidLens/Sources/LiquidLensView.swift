@@ -774,6 +774,7 @@ public final class LiquidLensView: UIView {
             
             legacySelectionView.tintColor = UIColor(white: params.isDark ? 1.0 : 0.0, alpha: params.isDark ? 0.1 : 0.075)
             transition.setFrame(view: legacySelectionView, frame: effectiveLensFrame)
+            transition.setAlpha(view: legacySelectionView, alpha: params.isCollapsed ? 0.0 : 1.0)
         }
 
         transition.setFrame(view: self.restingBackgroundView, frame: CGRect(origin: CGPoint(), size: params.size))

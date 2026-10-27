@@ -523,6 +523,28 @@ extension ReplayContext {
         })
     }
     
+    /// widget-sandbox v0.2: the bot's edit of a stored message widget's state, nothing else of the message changed. The
+    /// edit is recorded (`recordMessageEdit`), so a fill already in flight stores it in its older answer's place, as an
+    /// `updateEditMessage` is. A message not stored, without a widget, or left as it was changes nothing.
+    func applyUpdateMessageWidgetData(_ messageId: MessageId, chatData: MessageWidgetDataChange, publicData: MessageWidgetDataChange, publicDataHash: Int64?) {
+        var edited: StoreMessage?
+        transaction.updateMessage(messageId, update: { currentMessage in
+            guard let widget = currentMessage.media.first(where: { $0 is TelegramMediaWidget }) as? TelegramMediaWidget else {
+                return .skip
+            }
+            let updated = widget.withUpdatedState(chatData: chatData, publicData: publicData, publicDataHash: publicDataHash)
+            if updated.isEqual(to: widget) {
+                return .skip
+            }
+            let message = storeMessageReplacingWidget(currentMessage, widget: updated)
+            edited = message
+            return .update(message)
+        })
+        if let edited {
+            transaction.recordMessageEdit(edited)
+        }
+    }
+
     func applyReportMessageDelivery(_ messageIds: [MessageId]) {
         reportMessageDelivery = Set(messageIds)
     }

@@ -3,9 +3,33 @@ import Foundation
 // MARK: - Intl delegation (pure formatting, no I/O)
 
 enum IntlBridge {
+    /// A BCP 47 tag as a Locale. Locale(identifier:) misreads a Unicode extension ("ar-EG-u-nu-arab" becomes
+    /// "ar_EG@numbers=yes") and Foundation traps on the formatters of such a locale; Locale.Components parses it.
+    /// Before macOS 13 the extension is dropped instead, so it never reaches Locale(identifier:).
+    static func bcp47Locale(_ tag: String) -> Locale {
+        if #available(macOS 13, iOS 16, *) {
+            return Locale(components: Locale.Components(identifier: tag))
+        }
+        return Locale(identifier: withoutUnicodeExtension(tag))
+    }
+
+    static func withoutUnicodeExtension(_ tag: String) -> String {
+        var kept: [Substring] = []
+        var inExtension = false
+        for part in tag.split(separator: "-", omittingEmptySubsequences: false) {
+            if part.count == 1 {
+                inExtension = part.lowercased() == "u"
+            }
+            if !inExtension {
+                kept.append(part)
+            }
+        }
+        return kept.joined(separator: "-")
+    }
+
     static func format(requestJson: String) -> String {
         guard let req = SandboxEngine.parse(requestJson) as? [String: Any], let kind = req["kind"] as? String else { return "" }
-        let locale = (req["locale"] as? String).map(Locale.init(identifier:)) ?? ((req["locale"] as? [String])?.first).map(Locale.init(identifier:)) ?? .current
+        let locale = (req["locale"] as? String).map(bcp47Locale) ?? ((req["locale"] as? [String])?.first).map(bcp47Locale) ?? .current
         let opts = req["opts"] as? [String: Any] ?? [:]
         let value = (req["value"] as? NSNumber)?.doubleValue ?? 0
         switch kind {
@@ -141,7 +165,7 @@ enum IntlBridge {
         let negative = value < 0 || (value == 0 && value.sign == .minus)
         let plus = (sign == "always" && !negative) || (sign == "exceptZero" && !negative && !zero)
         let noMinus = sign == "never" || ((sign == "exceptZero" || sign == "negative") && zero)
-        if plus { f.positivePrefix = f.plusSign + f.positivePrefix }
+        if plus { f.positivePrefix = (f.plusSign ?? "+") + (f.positivePrefix ?? "") }
         if noMinus {
             f.negativePrefix = f.positivePrefix
             f.negativeSuffix = f.positiveSuffix
@@ -179,7 +203,10 @@ enum IntlBridge {
     }
 
     private static func languageTag(_ locale: Locale) -> String {
-        locale.identifier.replacingOccurrences(of: "_", with: "-")
+        if #available(macOS 13, iOS 16, *) {
+            return locale.identifier(.bcp47)
+        }
+        return locale.identifier.replacingOccurrences(of: "_", with: "-")
     }
 
     private static func jsonObject(_ object: [String: Any]) -> String {
@@ -197,9 +224,9 @@ enum IntlBridge {
         func push(_ type: String, _ text: String) {
             if let last = out.last, last.0 == type, type == "literal" || type == "currency" { out[out.count - 1].1 += text } else { out.append((type, text)) }
         }
-        let symbols: [(String, String)] = [(f.currencySymbol, "currency"), (f.internationalCurrencySymbol, "currency"), (f.percentSymbol, "percentSign"),
-                                           (f.minusSign, "minusSign"), (f.plusSign, "plusSign"), (f.exponentSymbol, "exponentSeparator"),
-                                           (f.notANumberSymbol, "nan"), ("∞", "infinity")].filter { !$0.0.isEmpty }.sorted { $0.0.count > $1.0.count }
+        let symbols: [(String, String)] = [(f.currencySymbol ?? "", "currency"), (f.internationalCurrencySymbol ?? "", "currency"), (f.percentSymbol ?? "", "percentSign"),
+                                           (f.minusSign ?? "", "minusSign"), (f.plusSign ?? "", "plusSign"), (f.exponentSymbol ?? "", "exponentSeparator"),
+                                           (f.notANumberSymbol ?? "", "nan"), ("∞", "infinity")].filter { !$0.0.isEmpty }.sorted { $0.0.count > $1.0.count }
         var i = s.startIndex
         var fraction = false
         var digits = ""
@@ -207,11 +234,11 @@ enum IntlBridge {
         while i < s.endIndex {
             let rest = s[i...]
             if s[i].isWholeNumber { digits.append(s[i]); i = s.index(after: i); continue }
-            if !fraction, !digits.isEmpty, rest.hasPrefix(f.decimalSeparator), rest.dropFirst(f.decimalSeparator.count).first?.isWholeNumber == true {
-                flush(); push("decimal", f.decimalSeparator); fraction = true; i = s.index(i, offsetBy: f.decimalSeparator.count); continue
+            if !fraction, !digits.isEmpty, let decimal = f.decimalSeparator, !decimal.isEmpty, rest.hasPrefix(decimal), rest.dropFirst(decimal.count).first?.isWholeNumber == true {
+                flush(); push("decimal", decimal); fraction = true; i = s.index(i, offsetBy: decimal.count); continue
             }
-            if !fraction, !digits.isEmpty, !f.groupingSeparator.isEmpty, rest.hasPrefix(f.groupingSeparator), rest.dropFirst(f.groupingSeparator.count).first?.isWholeNumber == true {
-                flush(); push("group", f.groupingSeparator); i = s.index(i, offsetBy: f.groupingSeparator.count); continue
+            if !fraction, !digits.isEmpty, let group = f.groupingSeparator, !group.isEmpty, rest.hasPrefix(group), rest.dropFirst(group.count).first?.isWholeNumber == true {
+                flush(); push("group", group); i = s.index(i, offsetBy: group.count); continue
             }
             flush()
             if let symbol = symbols.first(where: { rest.hasPrefix($0.0) }) {
@@ -353,24 +380,24 @@ enum IntlBridge {
                 formatter.setLocalizedDateFormatFromTemplate(template)
                 // The pattern generator may pick another era width than asked for (en: "GGGGG", a lone "A").
                 if let era = options["era"] as? String {
-                    formatter.dateFormat = replacingField("G", in: formatter.dateFormat, with: era == "long" ? "GGGG" : era == "narrow" ? "GGGGG" : "G")
+                    formatter.dateFormat = replacingField("G", in: formatter.dateFormat ?? "", with: era == "long" ? "GGGG" : era == "narrow" ? "GGGGG" : "G")
                 }
                 // ECMA-402 calls the UTC zone "UTC" (Foundation: "GMT").
                 if options["timeZoneName"] as? String == "short", ["UTC", "GMT", "Etc/UTC", "Etc/GMT"].contains(zone.identifier) {
-                    formatter.dateFormat = replacingField("z", in: formatter.dateFormat, with: "'UTC'")
+                    formatter.dateFormat = replacingField("z", in: formatter.dateFormat ?? "", with: "'UTC'")
                 }
             }
-            formatter.dateFormat = plainConnector(formatter.dateFormat, locale: locale)
+            formatter.dateFormat = plainConnector(formatter.dateFormat ?? "", locale: locale)
         }
         if hourSymbol != "j" || options["hour"] as? String == "2-digit" {
             let defaultTimePattern = DateFormatter.dateFormat(fromTemplate: "jmm", options: 0, locale: locale) ?? ""
-            let inferredPadding = (options["hour"] as? String != "numeric" || defaultTimePattern.contains("h")) && ["hh", "HH", "KK", "kk"].contains(where: formatter.dateFormat.contains)
+            let inferredPadding = (options["hour"] as? String != "numeric" || defaultTimePattern.contains("h")) && ["hh", "HH", "KK", "kk"].contains(where: (formatter.dateFormat ?? "").contains)
             let stylePadding = options["timeStyle"] != nil && (defaultTimePattern.contains("HH") || defaultTimePattern.contains("kk"))
             let paddedHour = options["hour"] as? String == "2-digit" || inferredPadding || stylePadding
             var quoted = false
             var inHour = false
             var pattern = ""
-            for character in formatter.dateFormat {
+            for character in formatter.dateFormat ?? "" {
                 if character == "'" { quoted.toggle() }
                 if !quoted && "hHKk".contains(character) {
                     if !inHour {

@@ -61,6 +61,10 @@ final class MessageWidgetCore {
     private let commitSink: MessageWidgetInstance.StorageCommitSink
     /// The stored areas the session reads at the widget's first touch of each (SDK v1 §3.1).
     private let storage: MessageWidgetStorage
+    /// The message's context, fixed for the widget's life (sdk-v1 §2.14), set on the session before its boot.
+    private let context: MessageWidgetContext
+    /// The bot's state as last set (sdk-v1 §2.13): the one the boot starts with, then each change passed on.
+    private var widgetState: MessageWidgetState = .empty
     /// The restart policy stopped the widget for good (SDK v1 §5.7): its boot makes no session.
     private let startsStopped: Bool
     private var diagnostics: [(kind: String, detail: String)] = []
@@ -90,10 +94,11 @@ final class MessageWidgetCore {
     /// Tests only: the loads the renderer refused (it fetches nothing), as of the last task; -1 without a session.
     private(set) var refusedLoads = -1
 
-    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat) {
+    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat) {
         self.source = source
         self.commitSink = commitSink
         self.storage = storage
+        self.context = context
         self.startsStopped = startsStopped
         self.stoppedLabel = stoppedLabel
         self.maxMessageLength = maxMessageLength
@@ -192,6 +197,10 @@ final class MessageWidgetCore {
         // The first layout's prefers-reduced-motion: the render tree exists already, the boot builds it.
         session.setReducedMotion(reducedMotion)
         session.setStoragePreloadLocal(self.storage.local.map { [$0.key, $0.value] }, session: self.storage.session.map { [$0.key, $0.value] })
+        let context = self.context
+        let viewer = context.viewer.map { WRWidgetViewer(id: $0.id, firstName: $0.firstName, lastName: $0.lastName, username: $0.username, isPremium: $0.isPremium) }
+        session.setContextCopy(context.isCopy, canQuery: context.canQuery, backgroundQuery: context.backgroundQuery, chatType: context.chatType?.rawValue, viewer: viewer, preview: context.isPreview)
+        session.setChatData(self.widgetState.chatData, publicData: self.widgetState.publicData)
         self.session = session
         self.renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
         // A document starts visible; a hidden one is hidden by a task that runs before the boot's scripts.
@@ -242,6 +251,37 @@ final class MessageWidgetCore {
         }
         session.setWorkLimitAfter(self.taskBudget)
         session.setDark(theme.isDark, themeParams: theme.params, buttonTokens: theme.button.dictionary, textTokens: theme.text.dictionary)
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// The bot's state (sdk-v1 §2.13). Before the boot it is the state the boot starts with; after it, a change the
+    /// session puts in place with its events, which run in this task.
+    func setState(_ state: MessageWidgetState) {
+        self.widgetState = state
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setWorkLimitAfter(self.taskBudget)
+        session.setChatData(state.chatData, publicData: state.publicData)
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// The client's outcome for the widget's request `id` (sdk-v1 §2.14), settled in this task.
+    func completeRequest(id: Int64, outcome: MessageWidgetRequestOutcome) {
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setWorkLimitAfter(self.taskBudget)
+        switch outcome {
+        case let .answered(result):
+            session.completeRequest(id, result: result, failure: .none)
+        case .timeout:
+            session.completeRequest(id, result: nil, failure: .timeout)
+        case .rateLimited:
+            session.completeRequest(id, result: nil, failure: .rateLimited)
+        case .failed:
+            session.completeRequest(id, result: nil, failure: .failed)
+        }
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 
@@ -528,8 +568,9 @@ final class MessageWidgetCore {
     }
 
     /// The runtime posts a link call only once it has checked the URL (SDK v1 §2.5) and the press allowed it; the host
-    /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). Any other
-    /// method is ignored.
+    /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). A request, a
+    /// copyText and watchPublicData (widget-sandbox v0.2) arrive checked by the runtime's policy. Any other method is
+    /// ignored.
     fileprivate func bridge(_ method: String, argsJson: String) {
         guard method.count <= MessageWidgetCore.maximumBridgeMethodLength else {
             self.appendDiag("bridge-ignored", String(method.prefix(MessageWidgetCore.maximumBridgeMethodLength)))
@@ -552,6 +593,19 @@ final class MessageWidgetCore {
                 return
             }
             self.bridgeCalls.append(.haptic(kind: first, value: args.count > 1 ? args[1] as? String : nil))
+        case "request":
+            // sdk-v1 §2.14: [id, data], both checked by the runtime (its request gate admitted it).
+            guard args.count == 2, let id = Int64(first), let data = args[1] as? String else {
+                return
+            }
+            self.bridgeCalls.append(.request(id: id, data: Data(data.utf8)))
+        case "copyText":
+            guard !first.isEmpty else {
+                return
+            }
+            self.bridgeCalls.append(.copyText(first))
+        case "watchPublicData":
+            self.bridgeCalls.append(.watchPublicData(first == "true"))
         default:
             self.appendDiag("bridge-ignored", method)
         }

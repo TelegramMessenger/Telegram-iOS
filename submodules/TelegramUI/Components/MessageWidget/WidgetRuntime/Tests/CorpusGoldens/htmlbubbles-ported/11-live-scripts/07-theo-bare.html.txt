@@ -30,11 +30,11 @@ refused-loads 0
 </body></html>
 
 == layout
-html 0 0 360 377.1
+html 0 0 360 360.2
   head 0 0 0 0
     style 0 0 0 0
-  body 0 0 360 377.1
-    div 15 13 330 351.1
+  body 0 0 360 360.2
+    div 15 13 330 334.2
       div 15 13 330 18.2
         b 15 13 136 18.2
         span 281 13.95 64 16.3
@@ -90,17 +90,17 @@ html 0 0 360 377.1
           span 81 326 48 15.6
           span 153 326 32 15.6
         button 292 325.4 40 16.8
-      div 15 347.2 330 16.9
-        span 15 347.2 56 16.9
-          b 15 347.2 0 0
-        span 156 347.2 56 16.9
-        span 297 347.2 48 16.9
-          b 297 347.2 0 0
+      div 0 0 0 0
+        span 0 0 0 0
+          b 0 0 0 0
+        span 0 0 0 0
+        span 0 0 0 0
+          b 0 0 0 0
 
 == paint
-root 360x377.1 items=64
-  solid-fill bounds=(0,0,360,377) layer=(border=(0,0,360,377),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,377),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
-  borders bounds=(0,0,360,377) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,377) root=0
+root 360x360.2 items=58
+  solid-fill bounds=(0,0,360,360) layer=(border=(0,0,360,360),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,360),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,360) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,360) root=0
   solid-fill bounds=(279,320,66,27) layer=(border=(279,320,66,27),radius=(8,8,8,8,8,8,8,8),clip=(279,320,66,27),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
   text bounds=(7,6,48,32) pos=(15,14,32,16) color=#000000ff text="🔨" font=f1 glyphs=4 advance=32
   text bounds=(47,6,64,32) pos=(55,14,48,16) color=#000000ff text="Whack-" font=f1 glyphs=6 advance=48
@@ -133,12 +133,6 @@ root 360x377.1 items=64
   solid-fill bounds=(143,323,52,22) layer=(border=(143,323,52,22),radius=(8,8,8,8,8,8,8,8),clip=(143,323,52,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
   text bounds=(145,318,48,32) pos=(153,326,32,16) color=#000000ff text="Hard" font=f4 glyphs=4 advance=32
   text bounds=(284,317,56,32) pos=(292,325,40,16) color=#ffffffff text="Start" font=f1 glyphs=5 advance=40
-  text bounds=(7,339,56,32) pos=(15,347,40,16) color=#000000ff text="Score" font=f5 glyphs=5 advance=40
-  text bounds=(55,339,24,32) pos=(63,347,8,16) color=#000000ff text="0" font=f6 glyphs=1 advance=8
-  text bounds=(148,339,56,32) pos=(156,347,40,16) color=#6e6e73ff text="Combo" font=f5 glyphs=5 advance=40
-  text bounds=(196,339,24,32) pos=(204,347,8,16) color=#6e6e73ff text="0" font=f5 glyphs=1 advance=8
-  text bounds=(289,339,48,32) pos=(297,347,32,16) color=#000000ff text="Best" font=f5 glyphs=4 advance=32
-  text bounds=(329,339,24,32) pos=(337,347,8,16) color=#000000ff text="0" font=f6 glyphs=1 advance=8
   radial-gradient bounds=(15,41,96,70) layer=(border=(15,41,96,70),radius=(12,12,12,12,12,12,12,12),clip=(15,41,96,70),origin=(15,41,96,70),attachment=0,repeat=0,root=0) points=((0,#5b3a1eff,-),(0.34,#5b3a1eff,-),(0.36,#5b3a1e2e,-),(0.7,#7f7f7f14,-),(1,#7f7f7f14,-)) space=0 hue=0 position=(63,111) radius=(67.8822,98.9949)
   radial-gradient bounds=(132,41,96,70) layer=(border=(132,41,96,70),radius=(12,12,12,12,12,12,12,12),clip=(132,41,96,70),origin=(132,41,96,70),attachment=0,repeat=0,root=0) points=((0,#5b3a1eff,-),(0.34,#5b3a1eff,-),(0.36,#5b3a1e2e,-),(0.7,#7f7f7f14,-),(1,#7f7f7f14,-)) space=0 hue=0 position=(180,111) radius=(67.8822,98.9949)
   radial-gradient bounds=(249,41,96,70) layer=(border=(249,41,96,70),radius=(12,12,12,12,12,12,12,12),clip=(249,41,96,70),origin=(249,41,96,70),attachment=0,repeat=0,root=0) points=((0,#5b3a1eff,-),(0.34,#5b3a1eff,-),(0.36,#5b3a1e2e,-),(0.7,#7f7f7f14,-),(1,#7f7f7f14,-)) space=0 hue=0 position=(297,111) radius=(67.8822,98.9949)
@@ -149,19 +143,19 @@ root 360x377.1 items=64
   radial-gradient bounds=(125,201,96,70) layer=(border=(125,201,96,70),radius=(12,12,12,12,12,12,12,12),clip=(125,201,96,70),origin=(125,201,96,70),attachment=0,repeat=0,root=0) points=((0,#5b3a1eff,-),(0.34,#5b3a1eff,-),(0.36,#5b3a1e2e,-),(0.7,#7f7f7f14,-),(1,#7f7f7f14,-)) space=0 hue=0 position=(173,271) radius=(67.8822,98.9949)
   radial-gradient bounds=(235,201,96,70) layer=(border=(235,201,96,70),radius=(12,12,12,12,12,12,12,12),clip=(235,201,96,70),origin=(235,201,96,70),attachment=0,repeat=0,root=0) points=((0,#5b3a1eff,-),(0.34,#5b3a1eff,-),(0.36,#5b3a1e2e,-),(0.7,#7f7f7f14,-),(1,#7f7f7f14,-)) space=0 hue=0 position=(283,271) radius=(67.8822,98.9949)
   set-clip bounds=(132,121.2,96,70) pos=(132,121.2,96,70) radius=(12,12,12,12,12,12,12,12)
-  text bounds=(156,181,48,32) pos=(164,189,32,16) color=#000000ff text="🐹" font=f7 glyphs=4 advance=32
+  text bounds=(156,181,48,32) pos=(164,189,32,16) color=#000000ff text="🐹" font=f5 glyphs=4 advance=32
   del-clip bounds=(0,0,0,0)
   set-clip bounds=(249,121.2,96,70) pos=(249,121.2,96,70) radius=(12,12,12,12,12,12,12,12)
-  text bounds=(273,165,48,32) pos=(281,173,32,16) color=#000000ff text="🐹" font=f7 glyphs=4 advance=32
+  text bounds=(273,165,48,32) pos=(281,173,32,16) color=#000000ff text="🐹" font=f5 glyphs=4 advance=32
   del-clip bounds=(0,0,0,0)
   set-clip bounds=(15,201.2,96,70) pos=(15,201.2,96,70) radius=(12,12,12,12,12,12,12,12)
-  text bounds=(39,235,48,32) pos=(47,243,32,16) color=#000000ff text="🐹" font=f7 glyphs=4 advance=32
+  text bounds=(39,235,48,32) pos=(47,243,32,16) color=#000000ff text="🐹" font=f5 glyphs=4 advance=32
   del-clip bounds=(0,0,0,0)
   set-clip bounds=(125,201.2,96,70) pos=(125,201.2,96,70) radius=(12,12,12,12,12,12,12,12)
-  text bounds=(149,233,48,32) pos=(157,241,32,16) color=#000000ff text="🐹" font=f7 glyphs=4 advance=32
+  text bounds=(149,233,48,32) pos=(157,241,32,16) color=#000000ff text="🐹" font=f5 glyphs=4 advance=32
   del-clip bounds=(0,0,0,0)
   set-clip bounds=(235,201.2,96,70) pos=(235,201.2,96,70) radius=(12,12,12,12,12,12,12,12)
-  text bounds=(259,239,48,32) pos=(267,247,32,16) color=#000000ff text="🐹" font=f7 glyphs=4 advance=32
+  text bounds=(259,239,48,32) pos=(267,247,32,16) color=#000000ff text="🐹" font=f5 glyphs=4 advance=32
   del-clip bounds=(0,0,0,0)
 
 == fonts
@@ -169,6 +163,4 @@ f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,prede
 f2 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
 f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
 f4 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
-f5 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
-f6 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
-f7 (family="system-ui,sans-serif",size=40,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=40,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body { margin: 0 }
+#box { display: block; width: 200px; height: 120px; background: #cccccc }
+</style>
+</head>
+<body>
+<div id="box">preview</div>
+<script>
+// WidgetHarnessPreviewTests (v0.2 W3 plan, Task 2): what an inline result's preview sees (sdk-v1 §2.16), as
+// isPreview|chatType|viewer.id|chatData|publicData|request outcome|pointer events (down, up and click), in
+// <html data-log>. Each value is written with String(…), so null reads "null". The request is asked at load.
+const T = TelegramWidget;
+let outcome = 'pending';
+let pointers = 0;
+function log() {
+  document.documentElement.dataset.log = [T.isPreview, T.chatType, T.viewer ? T.viewer.id : null, T.chatData, T.publicData, outcome, pointers].map(String).join('|');
+}
+document.addEventListener('pointerdown', () => { pointers++; log(); });
+document.addEventListener('pointerup', () => { pointers++; log(); });
+document.addEventListener('click', () => { pointers++; log(); });
+T.request('ping').then(() => { outcome = 'ok'; log(); }, error => { outcome = String(error.code); log(); });
+// The app's language, as the preview was given it (<html data-language>).
+document.documentElement.dataset.language = navigator.language;
+log();
+</script>
+</body>
+</html>

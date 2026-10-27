@@ -7,7 +7,9 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 BZL=./build-input/bazel-9.2.0-darwin-arm64
-LOGS=$($BZL info bazel-testlogs 2>/dev/null)
+# `bazel info` answers for the default configuration: a run under Make.py's flags (-c dbg …) writes its outputs under
+# another testlogs tree, which WIDGET_HARNESS_TESTLOGS names (`bazel info -c dbg --ios_multi_cpus=sim_arm64 bazel-testlogs`).
+LOGS=${WIDGET_HARNESS_TESTLOGS:-$($BZL info bazel-testlogs 2>/dev/null)}
 OUTPUTS="$LOGS/Tests/WidgetHarness/WidgetHarnessTests/test.outputs"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT

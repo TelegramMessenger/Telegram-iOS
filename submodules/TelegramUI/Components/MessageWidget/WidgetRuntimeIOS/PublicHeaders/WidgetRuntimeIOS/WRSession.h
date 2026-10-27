@@ -49,6 +49,25 @@ typedef NS_ENUM(NSInteger, WRResizeAnchor) {
     WRResizeAnchorBottom,
 };
 
+/// A request the client could not complete (sdk-v1 §2.14): `None` is an answer.
+typedef NS_ENUM(NSInteger, WRRequestFailure) {
+    WRRequestFailureNone = 0,
+    WRRequestFailureTimeout,
+    WRRequestFailureRateLimited,
+    WRRequestFailureFailed,
+};
+
+/// The account looking at the widget (sdk-v1 §2.13, Mini Apps' WebAppUser), as the client passes it; the runtime checks
+/// each field.
+@interface WRWidgetViewer : NSObject
+- (instancetype)initWithId:(int64_t)userId firstName:(nullable NSString *)firstName lastName:(nullable NSString *)lastName username:(nullable NSString *)username isPremium:(BOOL)isPremium;
+@property (nonatomic, readonly) int64_t userId;
+@property (nonatomic, readonly, nullable) NSString *firstName;
+@property (nonatomic, readonly, nullable) NSString *lastName;
+@property (nonatomic, readonly, nullable) NSString *username;
+@property (nonatomic, readonly) BOOL isPremium;
+@end
+
 @class WRSession;
 
 @protocol WRSessionDelegate <NSObject>
@@ -177,6 +196,16 @@ typedef struct {
 /// SDK v1 §2.9: the client's UI language as a BCP 47 tag, navigator.language; a malformed one is en-US. Set it before
 /// the boot.
 - (void)setLocale:(NSString *)locale;
+/// SDK v1 §2.13, §2.14 (widget-sandbox v0.2): the message's context, the server's flags as they are, the chat type
+/// ("private", "group", "supergroup", "channel", or nil) and the viewer; fixed for the widget's life. Set it before the
+/// boot.
+- (void)setContextCopy:(BOOL)isCopy canQuery:(BOOL)canQuery backgroundQuery:(BOOL)backgroundQuery chatType:(nullable NSString *)chatType viewer:(nullable WRWidgetViewer *)viewer preview:(BOOL)preview;
+/// SDK v1 §2.13: the bot's state, as the server's bytes. Before the boot it is the state the widget starts with; after
+/// it, a change: the widget gets chatDataChanged and publicDataChanged for the values that changed, in a task.
+- (void)setChatData:(nullable NSData *)chatData publicData:(nullable NSData *)publicData;
+/// SDK v1 §2.14: the client's outcome for the widget's request `requestId` (its `request` bridge call), settled in a
+/// task; an answer's result is the server's bytes. An id the widget has no request out for is ignored.
+- (void)completeRequest:(int64_t)requestId result:(nullable NSData *)result failure:(WRRequestFailure)failure;
 - (void)setVisible:(BOOL)visible;
 /// One phase of a tap at `point` (CSS px), queued as a task: a touch's.
 - (void)pointer:(WRPointerPhase)phase at:(CGPoint)point pointerId:(int32_t)pointerId primary:(BOOL)primary;

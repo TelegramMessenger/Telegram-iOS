@@ -42,13 +42,15 @@ block to one of these views via a host-registered provider, then positions/sizes
 ## Load-bearing invariants
 
 - **`RichTextMediaContentComponent.==` compares identity only** (`context ===` + `media.id`) plus
-  `isSpoiler`. The editor calls `update(size:)` every layout pass, so equality must hold across resizes.
+  `isSpoiler` and `moreButtonOrigin`. The editor calls `update(size:)` every layout pass, so equality must
+  hold across resizes.
   - **Every `update` re-issues the image fetch** — `fetchDisposable.set(…)` runs unconditionally. The
     `didBind` / `boundMediaId` / `currentSize` fields declared in the `View` are **dead** (assigned
     nowhere before 2026-08-25); an earlier version of this file claimed they guard the fetch, and that
     was wrong. So `==` is the ONLY thing limiting refetches: **anything you add to it refetches the
     poster every time it changes.** `isSpoiler` is acceptable because a spoiler toggle is a rare user
-    action; a per-frame value would not be.
+    action, and `moreButtonOrigin` because it moves only with the container's layout (see "Button
+    layout" below); a per-frame value would not be.
   - **Do not route frequently-changing state through the component.** Pre-upload progress was tried that
     way and failed twice over: the host cannot deliver it (see the seam note below), and putting it in
     `==` would refetch on every tick. It is now owned by the `View`, which subscribes to
@@ -170,6 +172,22 @@ mosaic-only.
   `(items, blockID, displayMode, existing)`.
 
 Spec/plan in-tree: `docs/superpowers/{specs/2026-07-17-richtext-media-layout-toggle-design.md,plans/2026-07-17-richtext-media-layout-toggle.md}`.
+
+## Button layout (`MediaChromeLayout`)
+
+All the glass buttons' geometry is the pure `MediaChromeLayout` (36pt buttons, 8pt inset, 6pt spacing),
+pinned by `//submodules/TelegramUI/Components/RichTextEditorMediaView:RichTextEditorMediaViewTests`, which also
+sweeps the real album layouts (`MosaicCellFrames`, the frame math of `updateMosaic`). The container's "+" and
+toggle sit top-right of the container; each tile's "…" top-left of the tile. A narrow tile in the top-right
+corner (a square photo beside a portrait video, #28) would put its "…" on the container's buttons, so
+`moreButtonOrigins(cellFrames:avoiding:)` moves it: below them at the same inset, else into their row just
+left of them, inside the tile. A tile too small for both (~70–85pt squares in some 4/6/7-item albums) gets the
+row position overflowing its left edge onto its neighbour, by at most `maxOverflow` (27pt); the cell is
+brought above its neighbours and `MediaItemNodeView.hitTest` no longer gates a cell's controls on its
+bounds. Beyond that cap, or where the overflow would land on another tile's "…", the tile keeps its old
+top-left spot and overlap: from 375pt up that never happens; at 320pt, ~0.2% of the swept albums (4/6/7/9
+items) keep it, where before #28 7.5% of them overlapped, at every width. Slideshow pages are full width and
+keep "…" top-left.
 
 ## History
 

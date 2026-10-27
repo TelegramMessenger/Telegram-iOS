@@ -13,6 +13,9 @@ struct FinalStateReplayer {
     let encryptionProvider: EncryptionProvider
     let auxiliaryMethods: AccountAuxiliaryMethods
     let messagesRemovedContext: MessagesRemovedContext
+    var storyReactionContext: StoryReactionContext? = nil
+    var storyRefreshContext: StoryRefreshContext? = nil
+    var storyViewRefreshContext: StoryViewRefreshContext? = nil
 
     /// Replays `finalState` in the caller's `transaction` under `policy` (`replayFinalState`, with the account's media
     /// box), logs a replay that took more than a second, and records the messages it deleted in
@@ -22,7 +25,7 @@ struct FinalStateReplayer {
     /// nothing) stays with the caller. nil: the replay was refused (`ReplayPolicy.verifiesTransaction`).
     func applyReplay(_ finalState: AccountFinalState, policy: ReplayPolicy, removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId], transaction: Transaction) -> AccountReplayedFinalState? {
         let startTime = CFAbsoluteTimeGetCurrent()
-        let result = replayFinalState(accountManager: self.accountManager, postbox: self.postbox, accountPeerId: self.accountPeerId, mediaBox: self.postbox.mediaBox, encryptionProvider: self.encryptionProvider, transaction: transaction, auxiliaryMethods: self.auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, policy: policy)
+        let result = replayFinalState(accountManager: self.accountManager, postbox: self.postbox, accountPeerId: self.accountPeerId, mediaBox: self.postbox.mediaBox, encryptionProvider: self.encryptionProvider, transaction: transaction, auxiliaryMethods: self.auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, policy: policy, storyReactionContext: self.storyReactionContext, storyRefreshContext: self.storyRefreshContext, storyViewRefreshContext: self.storyViewRefreshContext)
         let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
         if deltaTime > 1.0 {
             Logger.shared.log("State", "replayFinalState took \(deltaTime)s")

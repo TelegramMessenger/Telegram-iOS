@@ -314,4 +314,11 @@ extension UpdateInterpreter {
         let (peer, msgId, extendedMedia) = (updateMessageExtendedMediaData.peer, updateMessageExtendedMediaData.msgId, updateMessageExtendedMediaData.extendedMedia)
         updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)
     }
+
+    /// widget-sandbox v0.2: the bot's edit of a message widget's state, in a private chat or basic group (a supergroup's
+    /// comes as an ordinary channel edit). Each field: absent unchanged, empty cleared.
+    mutating func applyMessageWidgetData(_ updateMessageWidgetDataData: Api.Update.Cons_updateMessageWidgetData) {
+        let (peer, msgId) = (updateMessageWidgetDataData.peer, updateMessageWidgetDataData.msgId)
+        updatedState.updateMessageWidgetData(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), chatData: messageWidgetDataChange(updateMessageWidgetDataData.chatData), publicData: messageWidgetDataChange(updateMessageWidgetDataData.publicData), publicDataHash: updateMessageWidgetDataData.publicDataHash)
+    }
 }

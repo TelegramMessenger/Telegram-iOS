@@ -17,6 +17,7 @@ import TextSelectionNode
 import UnsupportedContentPill
 import WallpaperBackgroundNode
 import MessageWidgetStorage
+import UndoUI
 
 /// Whether widget messages render as widgets: on unless the app configuration's kill switch is engaged (on by
 /// default since 2026-10-22, when the debug flag went). Off, a widget message shows as unsupported media with its
@@ -58,6 +59,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private let clipView: UIView
     private let clipMask: CAShapeLayer
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
+    /// The network marker (sdk-v1 §5.11) while the message has can_query.
+    private var networkMarker: MessageWidgetNetworkMarkerView?
     /// Shown instead of the widget when it cannot run.
     private let pillView: UnsupportedContentPillView
     /// Under the widget where the bubble's tail joins its bottom corner: the tail's shape (`chatBubbleMediaCorner`, the
@@ -74,6 +77,19 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private var laidOutResize: (height: MessageWidgetLaidOutHeight, source: String, heightKey: AnyHashable)?
     private var availabilityObserver: NSObjectProtocol?
     private let hapticFeedback = HapticFeedback()
+    /// widget-sandbox v0.2 (W2): the widget's requests on their way to the bot; all are cancelled when the node shows
+    /// another message (its widget is destroyed then) and with the node.
+    private let requests = MessageWidgetRequests()
+    /// The message (its stable id) whose widget the requests in flight belong to.
+    private var requestOwner: AnyHashable?
+    /// widget-sandbox v0.2 (W2): the polling of the widget's shared state while it watches on screen, and what it polls.
+    private let publicDataPolling = MetaDisposable()
+    private var publicDataPollingKey: PublicDataPollingKey?
+
+    private struct PublicDataPollingKey: Equatable {
+        let messageId: EngineMessage.Id
+        let widgetId: Int64
+    }
 
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -133,11 +149,46 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                 item.controllerInteraction.requestMessageUpdate(item.message.id, false, nil)
             }
         })
-        self.registry.onBridge = { [weak self] call in
+        // widget-sandbox v0.2 (W2): the widget's shared state is polled while it watches on screen.
+        self.registry.onPublicDataPollingChange = { [weak self] _, _ in
+            self?.updatePublicDataPolling()
+        }
+        self.registry.onBridge = { [weak self] call, instance in
             guard let self, let item = self.item else {
                 return
             }
             switch call {
+            case let .request(id, data):
+                // widget-sandbox v0.2 (design §4.A): a request the widget's gate admitted goes to its bot
+                // (messages.getBotWidgetQueryAnswer), on a disposable of its own. Exactly one outcome reaches the widget
+                // (the engine's 30 s guard); a widget destroyed meanwhile ignores it.
+                self.requests.send(id: id, MessageWidgetNetwork.requestAnswer(item.context, item.message.id, data), deliver: { [weak instance] outcome in
+                    instance?.completeRequest(id: id, outcome: outcome)
+                })
+            case let .copyText(text):
+                // sdk-v1 §2.15: copy, and a toast that says what was copied, so a widget cannot show one text and copy
+                // another unnoticed. Where the chat forbids copying (the widget's text selection's rule), nothing is
+                // copied and the chat says why.
+                let copyAllowed = (!item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()) || item.message.id.peerId.isVerificationCodes
+                if copyAllowed {
+                    UIPasteboard.general.string = text
+                    item.controllerInteraction.displayUndo(.copy(text: text))
+                } else {
+                    let strings = item.presentationData.strings
+                    let info: String
+                    switch messageWidgetChatType(item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init)) {
+                    case .channel:
+                        info = strings.Conversation_CopyProtectionInfoChannel
+                    case .group, .supergroup:
+                        info = strings.Conversation_CopyProtectionInfoGroup
+                    case .private, .none:
+                        info = strings.Conversation_CopyProtectionInfoPrivate(item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
+                    }
+                    item.controllerInteraction.displayUndo(.info(title: nil, text: info, timeout: nil, customUndoText: nil))
+                }
+            case .watchPublicData:
+                // The polling follows `onPublicDataPollingChange`, which the same change has reported.
+                break
             case let .openLink(url), let .openTelegramLink(url):
                 // A widget's URL is never shown to the user, and opening it reveals the user's IP address to that
                 // host (a t.me link is resolved over the network as well), so the "Open link?" confirmation must
@@ -186,6 +237,8 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         if let availabilityObserver = self.availabilityObserver {
             NotificationCenter.default.removeObserver(availabilityObserver)
         }
+        self.requests.cancelAll()
+        self.publicDataPolling.dispose()
         // A widget's runtime is main-thread only. A node is normally released on main, but one built by an off-main
         // layout can be released there, so hand the teardown to main rather than run it here.
         let registry = self.registry
@@ -283,9 +336,20 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                     registry.onStorageCommit = { commit in
                         storageSink.commit(commit)
                     }
-                    // Another message's stable id (the node was recycled) destroys the runtime. SDK v1 §2.3, §2.4, §5.1:
-                    // the chat's palette and its message text.
+                    // Another message's stable id (the node was recycled) destroys the runtime, and the requests its
+                    // widget has in flight with it. SDK v1 §2.3, §2.4, §5.1: the chat's palette and its message text.
+                    if let self, self.requestOwner != heightKey {
+                        self.requestOwner = heightKey
+                        self.requests.cancelAll()
+                    }
                     registry.beginPass(ownerId: heightKey, theme: messageWidgetTheme(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, incoming: incoming, fontSize: item.presentationData.fontSize, textInsets: layoutConstants.text.bubbleInsets))
+                    // widget-sandbox v0.2 (sdk-v1 §2.13, §2.14): the message's context is part of the widget's key (another
+                    // context, another widget: a forward's echo replaced by the server's message); its state is handed to the
+                    // running widget as a change.
+                    if let widget {
+                        registry.context = messageWidgetContext(widget: widget, chatPeer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init), accountPeer: item.associatedData.accountPeer, accountPeerId: item.context.account.peerId)
+                        registry.state = MessageWidgetState(chatData: widget.chatData, publicData: widget.publicData)
+                    }
                     // Not asked when it may not run: the pass then ends with no widget, which destroys a running one
                     // (the flag was just turned off).
                     if renderable {
@@ -435,6 +499,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                             return
                         }
                         self.item = item
+                        self.updatePublicDataPolling()
                         self.laidOutEnabled = enabled
                         self.laidOutResize = (MessageWidgetLaidOutHeight(autoHeight: anchors.height <= 0, placeholder: showsPlaceholder, pill: showsPill, widgetsEnabled: enabled, height: widgetHeight), source, heightKey)
 
@@ -526,6 +591,37 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
                             self.dateAndStatusNode.frame = statusFrame
                         } else if self.dateAndStatusNode.supernode != nil {
                             self.dateAndStatusNode.removeFromSupernode()
+                        }
+
+                        // widget-sandbox v0.2 (sdk-v1 §5.11): the network marker, exactly where the message has can_query:
+                        // the widget area's bottom-right corner, left of the date pill when the bubble draws one there.
+                        if widget?.canQuery == true && !showsPill {
+                            let marker: MessageWidgetNetworkMarkerView
+                            if let current = self.networkMarker {
+                                marker = current
+                            } else {
+                                marker = MessageWidgetNetworkMarkerView(frame: CGRect(origin: CGPoint(), size: MessageWidgetNetworkMarkerView.size))
+                                self.networkMarker = marker
+                                self.view.addSubview(marker)
+                            }
+                            marker.update(fill: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            marker.accessibilityLabel = item.presentationData.strings.Message_WidgetNetworkMarkerInfo
+                            let size = MessageWidgetNetworkMarkerView.size
+                            var origin = CGPoint(x: widgetFrame.maxX - 8.0 - size.width, y: widgetFrame.maxY - 8.0 - size.height)
+                            if statusApply != nil, statusFrame.maxY <= widgetFrame.maxY + 0.5 {
+                                origin = CGPoint(x: statusFrame.minX - 4.0 - size.width, y: statusFrame.midY - size.height / 2.0)
+                            }
+                            marker.frame = CGRect(origin: origin, size: size)
+                            marker.onTap = { [weak self, weak marker] in
+                                guard let self, let marker, let item = self.item else {
+                                    return
+                                }
+                                // The chat shows a message tooltip only with a node, at `rect` inside it.
+                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Message_WidgetNetworkMarkerInfo, false, self, marker.convert(marker.bounds, to: self.view))
+                            }
+                        } else if let marker = self.networkMarker {
+                            marker.removeFromSuperview()
+                            self.networkMarker = nil
                         }
                     })
                 })
@@ -761,12 +857,38 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         }
     }
 
+    /// widget-sandbox v0.2 (W2, upstream integration.md): polls the shared state of the widget exactly while its message
+    /// is a cloud message with a widget id and the widget watches on screen (`MessageWidgetInstance.wantsPublicDataPolling`:
+    /// effectively visible, so not under a pushed screen or with the app in the background). A subscription is one
+    /// registration; a new state comes back as an edit of the stored message.
+    private func updatePublicDataPolling() {
+        var key: PublicDataPollingKey?
+        if let item = self.item, item.message.id.namespace == Namespaces.Message.Cloud, let widget = item.message.media.first(where: { $0 is TelegramMediaWidget }) as? TelegramMediaWidget, let widgetId = widget.widgetId, self.registry.wantsPublicDataPolling(path: ChatMessageWidgetBubbleContentNode.path) {
+            key = PublicDataPollingKey(messageId: item.message.id, widgetId: widgetId)
+        }
+        if key == self.publicDataPollingKey {
+            return
+        }
+        self.publicDataPollingKey = key
+        if let key, let item = self.item {
+            self.publicDataPolling.set(MessageWidgetNetwork.pollPublicData(item.context, key.messageId, key.widgetId).startStrict())
+        } else {
+            self.publicDataPolling.set(nil)
+        }
+    }
+
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if !self.pillView.isHidden {
             if self.pillView.actionContains(self.view.convert(point, to: self.pillView)) {
                 return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             return ChatMessageBubbleContentTapAction(content: .none)
+        }
+        // The network marker is a button of its own above the widget's corner: its tap is the button's (the bubble's
+        // recognizer fails), never a press in the widget under it, which the estimate at the touch's down would start.
+        // Holding it opens the message's menu, as elsewhere on the bubble.
+        if self.networkMarkerContains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore, hasLongTapAction: false)
         }
         // A live widget takes its own touches (MessageWidgetView): every tap and double tap over it is the widget's
         // (widget-sandbox v0.1.2), so the bubble's tap recognizer fails there (`.ignore`) and the double-tap reaction stays
@@ -803,10 +925,17 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     }
 
     override public func claimsHorizontalDrag(at point: CGPoint) -> Bool {
-        guard self.pillView.isHidden, self.clipView.frame.contains(point), self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path), let widgetView = self.clipView.subviews.first as? MessageWidgetView else {
+        guard self.pillView.isHidden, !self.networkMarkerContains(point), self.clipView.frame.contains(point), self.registry.isLive(path: ChatMessageWidgetBubbleContentNode.path), let widgetView = self.clipView.subviews.first as? MessageWidgetView else {
             return false
         }
         return widgetView.claimsHorizontalDrag(at: self.view.convert(point, to: widgetView))
+    }
+
+    private func networkMarkerContains(_ point: CGPoint) -> Bool {
+        guard let networkMarker = self.networkMarker, !networkMarker.isHidden else {
+            return false
+        }
+        return networkMarker.frame.contains(point)
     }
 
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {

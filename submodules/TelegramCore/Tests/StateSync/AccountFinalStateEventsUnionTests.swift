@@ -81,6 +81,18 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
         }
     }
 
+    private func agentSettings(_ activeProvider: String) -> Api.agent.Settings {
+        return .settings(.init(flags: 1 << 0, keys: [], activeProvider: activeProvider))
+    }
+
+    private func activeProvider(_ settings: Api.agent.Settings?) -> String? {
+        if case let .settings(data)? = settings {
+            return data.activeProvider
+        } else {
+            return nil
+        }
+    }
+
     /// Nil when the value is not `walletStateEmpty`.
     private func walletStateEmptyFlags(_ state: Api.WalletState?) -> Int32? {
         if case let .walletStateEmpty(data)? = state {
@@ -124,6 +136,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
             walletTransferUpdates: [self.gasless(left: 1)],
             walletTonConnectEvents: [.pendingDisconnect(sessionIds: [1])],
             updatedWalletState: .walletStateEmpty(.init(flags: 0)),
+            updatedAgentSettings: self.agentSettings("earlier"),
             updatedStarsRevenueStatus: [self.userA: self.revenue(1), self.userB: self.revenue(10)],
             sentScheduledMessageIds: [self.messageId(3)],
             reportMessageDelivery: [self.messageId(4)],
@@ -169,6 +182,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
             walletTransferUpdates: [self.gasless(left: 2)],
             walletTonConnectEvents: [.pendingDisconnect(sessionIds: [2])],
             updatedWalletState: .walletStateEmpty(.init(flags: 1 << 0)),
+            updatedAgentSettings: self.agentSettings("later"),
             updatedStarsRevenueStatus: [self.userA: self.revenue(2)],
             sentScheduledMessageIds: [self.messageId(13)],
             reportMessageDelivery: [self.messageId(14)],
@@ -215,6 +229,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
         XCTAssertEqual(merged.walletTransferUpdates, later.walletTransferUpdates)
         XCTAssertEqual(merged.walletTonConnectEvents, later.walletTonConnectEvents)
         XCTAssertEqual(self.walletStateEmptyFlags(merged.updatedWalletState), 1)
+        XCTAssertEqual(self.activeProvider(merged.updatedAgentSettings), "later")
         XCTAssertEqual(merged.updatedStarsRevenueStatus, later.updatedStarsRevenueStatus)
         XCTAssertEqual(merged.reportMessageDelivery, later.reportMessageDelivery)
         XCTAssertEqual(merged.addedConferenceInvitationMessagesIds, later.addedConferenceInvitationMessagesIds)
@@ -230,7 +245,7 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
     /// parameter compiles and `union(with:)` drops it. This count fails for a field of any kind.
     func testStoredFieldCountMatchesEveryInitAndUnion() {
         let count = Mirror(reflecting: AccountFinalStateEvents()).children.count
-        XCTAssertEqual(count, 35, "AccountFinalStateEvents has \(count) stored fields, not 35: update init(), init(state:) and union(with:) (AccountIntermediateState.swift) and the test helper AccountFinalStateEvents.testing(...) (Tests/StateSync/AccountFinalStateEvents+Testing.swift) for the changed field, then this count")
+        XCTAssertEqual(count, 36, "AccountFinalStateEvents has \(count) stored fields, not 36: update init(), init(state:) and union(with:) (AccountIntermediateState.swift) and the test helper AccountFinalStateEvents.testing(...) (Tests/StateSync/AccountFinalStateEvents+Testing.swift) for the changed field, then this count")
     }
 
     /// Lists append in replay order, sets unite, flags OR; current-state values (balances, revenue,
@@ -289,18 +304,20 @@ final class AccountFinalStateEventsUnionTests: XCTestCase {
         XCTAssertEqual(merged.updatedStarGiftAuctionState, [1: self.auctionState(averagePrice: 2), 2: self.auctionState(averagePrice: 10)])
         XCTAssertEqual(merged.updatedStarGiftAuctionMyState, [1: self.auctionMyState(bidAmount: 2), 2: self.auctionMyState(bidAmount: 10)])
         XCTAssertEqual(self.walletStateEmptyFlags(merged.updatedWalletState), 1)
+        XCTAssertEqual(self.activeProvider(merged.updatedAgentSettings), "later")
         XCTAssertEqual(merged.updatedEmojiGameInfo, .unavailable)
     }
 
     /// A value only the earlier side holds is kept, and a maximum is a maximum whichever side holds it.
     func testUnionKeepsTheEarlierValueWhenTheLaterHasNone() {
-        let earlier = AccountFinalStateEvents.testing(delayNotificatonsUntil: 30, updatedMaxMessageId: 30, updatedQts: 30, updatedWalletState: .walletStateEmpty(.init(flags: 1 << 0)), updatedEmojiGameInfo: self.emojiGame("earlier"))
+        let earlier = AccountFinalStateEvents.testing(delayNotificatonsUntil: 30, updatedMaxMessageId: 30, updatedQts: 30, updatedWalletState: .walletStateEmpty(.init(flags: 1 << 0)), updatedAgentSettings: self.agentSettings("earlier"), updatedEmojiGameInfo: self.emojiGame("earlier"))
 
         let withNothingLater = earlier.union(with: AccountFinalStateEvents())
         XCTAssertEqual(withNothingLater.delayNotificatonsUntil, 30)
         XCTAssertEqual(withNothingLater.updatedMaxMessageId, 30)
         XCTAssertEqual(withNothingLater.updatedQts, 30)
         XCTAssertEqual(self.walletStateEmptyFlags(withNothingLater.updatedWalletState), 1)
+        XCTAssertEqual(self.activeProvider(withNothingLater.updatedAgentSettings), "earlier")
         XCTAssertEqual(withNothingLater.updatedEmojiGameInfo, self.emojiGame("earlier"))
 
         let withSmallerLater = earlier.union(with: AccountFinalStateEvents.testing(delayNotificatonsUntil: 20, updatedMaxMessageId: 20, updatedQts: 20))

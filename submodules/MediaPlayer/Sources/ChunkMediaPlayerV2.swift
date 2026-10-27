@@ -174,6 +174,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         var notifiedHasSound: Bool = false
         var seekFromMinTimestamp: Double?
         var audioBufferTimingState: AudioBufferTimingState?
+        var videoRotationAngle: Double = 0.0
     }
     
     private static let sharedDataQueue = Queue(name: "ChunkMediaPlayerV2-DataQueue")
@@ -273,6 +274,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         self.audioSessionManager = audioSessionManager
         self.onSeeked = onSeeked
         self.playerNode = playerNode
+        playerNode.externalVideoRotationAngle = 0.0
         
         self.loadedPartsMediaData = QueueLocalObject(queue: self.dataQueue, generate: {
             return LoadedPartsMediaData()
@@ -1125,10 +1127,27 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             }
         
             let didNotifySentVideoFrames = self.didNotifySentVideoFrames
+            let seekId = self.seekId
             videoTarget.stopRequestingMediaData()
             videoTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
                     let bufferFillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
+                    if let rotationAngle = bufferFillResult.videoRotationAngle {
+                        videoTarget.stopRequestingMediaData()
+                        Queue.mainQueue().async { [weak self] in
+                            guard let self, self.seekId == seekId else {
+                                return
+                            }
+                            self.playerNode?.externalVideoRotationAngle = rotationAngle
+                            self.loadedPartsMediaData.with { data in
+                                data.videoRotationAngle = rotationAngle
+                            }
+                            self.videoIsRequestingMediaData = false
+                            self.videoRearmNotBefore = 0.0
+                            self.updateInternalState()
+                        }
+                        return
+                    }
                     if bufferFillResult.bufferIsReadyForMoreData {
                         // The renderer still wants data we do not have. Record the starvation instead of
                         // re-arming from here: re-arming would immediately invoke this block again.
@@ -1185,7 +1204,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         }
     }
     
-    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool) {
+    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool, videoRotationAngle: Double?) {
         var bufferIsReadyForMoreData = true
         var didEnqueue = false
         outer: while true {
@@ -1206,6 +1225,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 }
                 guard let reader = media.reader else {
                     continue
+                }
+                if isVideo, reader.videoRotationAngle != loadedPartsMediaData.videoRotationAngle {
+                    return (bufferIsReadyForMoreData: true, didEnqueue: didEnqueue, videoRotationAngle: reader.videoRotationAngle)
                 }
                 media.didBeginReading = true
                 switch reader.readSampleBuffer() {
@@ -1264,6 +1286,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 guard let reader = media.reader else {
                     break outer
                 }
+                if isVideo, reader.videoRotationAngle != loadedPartsMediaData.videoRotationAngle {
+                    return (bufferIsReadyForMoreData: true, didEnqueue: didEnqueue, videoRotationAngle: reader.videoRotationAngle)
+                }
                 media.didBeginReading = true
                 switch reader.readSampleBuffer() {
                 case let .frame(sampleBuffer):
@@ -1313,7 +1338,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             }
         }
         
-        return (bufferIsReadyForMoreData: bufferIsReadyForMoreData, didEnqueue: didEnqueue)
+        return (bufferIsReadyForMoreData: bufferIsReadyForMoreData, didEnqueue: didEnqueue, videoRotationAngle: nil)
     }
 
     private static func normalizeAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer, state: inout AudioBufferTimingState?) -> CMSampleBuffer {

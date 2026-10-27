@@ -85,7 +85,7 @@ WR_TEST(testResolvedOptions) {
                          "notation,signDisplay,roundingIncrement,roundingMode,roundingPriority,trailingZeroDisplay"));
     CHECK_EQ(env.eval("const ro = new Intl.NumberFormat('en-US-u-nu-thai', { style: 'currency', currency: 'eur' }).resolvedOptions();"
                       "[ro.locale, ro.currency, ro.currencyDisplay, ro.minimumFractionDigits, ro.maximumFractionDigits, ro.useGrouping].join()"),
-             std::string("en-US,EUR,symbol,2,2,auto"));
+             std::string("en-US-u-nu-thai,EUR,symbol,2,2,auto"));
     env.host().intlAnswer = [](std::string_view) {
         return std::string("{\"currency\":\"JPY\",\"locale\":\"ja-JP\",\"maximumFractionDigits\":0,\"minimumFractionDigits\":0,\"other\":1}");
     };
