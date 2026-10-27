@@ -1336,10 +1336,9 @@ public final class ChatTitleComponent: Component {
             }
             self.expansionLayout = ExpansionLayout(titleFrame: titleFrame, statusFrame: subtitleViewFrame, statusTextSize: subtitleSize, containerFrame: component.displayBackground ? CGRect(origin: CGPoint(), size: containerFrame.size) : containerFrame)
             
-            var nextLeftIconX: CGFloat = titleFrame.minX
+            let leadingIconsLayout = chatTitleLeadingIconsLayout(titleFrame: titleFrame, lockIconSize: leftIconSize, lockIconSpacing: leftTitleIconSpacing, verificationIconSize: verifiedIconSize, verificationIconSpacing: statusIconsSpacing)
             
-            if let leftIconSize, let leftIconView = self.leftIcon?.view {
-                let leftIconFrame = CGRect(origin: CGPoint(x: nextLeftIconX - leftTitleIconSpacing - leftIconSize.width, y: titleFrame.minY + leftTitleIconSpacing), size: leftIconSize)
+            if let leftIconFrame = leadingIconsLayout.lockIconFrame, let leftIconView = self.leftIcon?.view {
                 if leftIconView.superview == nil {
                     leftIconView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(leftIconView)
@@ -1353,8 +1352,7 @@ public final class ChatTitleComponent: Component {
                 transition.setScale(view: leftIconView, scale: 1.0)
             }
             
-            if let verifiedIconSize, let verifiedIconView = self.verifiedIcon?.view {
-                let verifiedIconFrame = CGRect(origin: CGPoint(x: nextLeftIconX - statusIconsSpacing - verifiedIconSize.width, y: titleFrame.minY), size: verifiedIconSize)
+            if let verifiedIconFrame = leadingIconsLayout.verificationIconFrame, let verifiedIconView = self.verifiedIcon?.view {
                 if verifiedIconView.superview == nil {
                     verifiedIconView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(verifiedIconView)
@@ -1366,7 +1364,6 @@ public final class ChatTitleComponent: Component {
                 transition.setBounds(view: verifiedIconView, bounds: CGRect(origin: CGPoint(), size: verifiedIconFrame.size))
                 transition.setAlpha(view: verifiedIconView, alpha: 1.0)
                 transition.setScale(view: verifiedIconView, scale: 1.0)
-                nextLeftIconX -= statusIconsSpacing + verifiedIconSize.width
             }
             
             var nextRightIconX: CGFloat = titleFrame.maxX

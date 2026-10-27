@@ -91,7 +91,37 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     
     var presentationData: PresentationData {
         didSet {
-            self.pillView.tintColor = self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(self.presentationData.theme.overallDarkAppearance ? 0.2 : 0.07)
+            self.pillView.tintColor = self.pillColor
+        }
+    }
+
+    private var pillIsLight = false
+    private weak var pillIsLightOwner: AnyObject?
+
+    private var pillColor: UIColor {
+        if self.pillIsLight {
+            return UIColor(white: 1.0, alpha: 0.45)
+        }
+        return self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(self.presentationData.theme.overallDarkAppearance ? 0.2 : 0.07)
+    }
+
+    func updatePillIsLight(_ isLight: Bool, owner: AnyObject, transition: ContainedViewLayoutTransition) {
+        self.pillIsLightOwner = isLight ? owner : nil
+        self.setPillIsLight(isLight, transition: transition)
+    }
+
+    private func setPillIsLight(_ isLight: Bool, transition: ContainedViewLayoutTransition) {
+        guard self.pillIsLight != isLight else {
+            return
+        }
+        self.pillIsLight = isLight
+        let color = self.pillColor
+        if case let .animated(duration, _) = transition {
+            UIView.animate(withDuration: duration, animations: {
+                self.pillView.tintColor = color
+            })
+        } else {
+            self.pillView.tintColor = color
         }
     }
     
@@ -588,6 +618,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     func update(layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if self.isDismissed {
             return
+        }
+        if self.pillIsLight, let owner = self.pillIsLightOwner, controllers.last !== owner {
+            self.pillIsLightOwner = nil
+            self.setPillIsLight(false, transition: transition)
+        } else if self.pillIsLight, self.pillIsLightOwner == nil {
+            self.setPillIsLight(false, transition: transition)
         }
         
         // The sheet's bottom corners follow the screen's.

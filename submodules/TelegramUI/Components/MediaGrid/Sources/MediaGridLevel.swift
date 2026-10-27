@@ -21,12 +21,7 @@ public enum MediaGridLevel: Int, CaseIterable, Comparable {
     }
 
     public var showsCamera: Bool {
-        switch self {
-        case .three, .five:
-            return true
-        case .one, .fifteen, .thirtyOne:
-            return false
-        }
+        return self == .three
     }
 
     private var index: Int {

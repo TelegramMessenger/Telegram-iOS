@@ -60,7 +60,7 @@ public class EdgeEffectView: UIView {
         return self.contentView.layer
     }
     
-    public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, contentGradient: [GradientStop]? = nil, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
+    public func update(content: UIColor?, blur: Bool = false, blurRadius: CGFloat = 1.0, alpha: CGFloat = 0.75, contentGradient: [GradientStop]? = nil, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
         #if DEBUG && false
         let content: UIColor = .blue
         //let blur: Bool = !"".isEmpty
@@ -122,11 +122,23 @@ public class EdgeEffectView: UIView {
             let blurFrame = CGRect(origin: CGPoint(x: 0.0, y: edge == .bottom ? (bounds.height - blurHeight) : 0.0), size: CGSize(width: bounds.width, height: blurHeight))
             
             let blurView: VariableBlurView
-            if let current = self.blurView {
+            var blurTransition = transition
+            if let current = self.blurView, current.maxBlurRadius == blurRadius {
                 blurView = current
             } else {
-                blurView = VariableBlurView(maxBlurRadius: 1.0)
-                self.insertSubview(blurView, at: 0)
+                blurTransition = .immediate
+                blurView = VariableBlurView(maxBlurRadius: blurRadius)
+                blurView.frame = blurFrame
+                if let previous = self.blurView {
+                    self.insertSubview(blurView, aboveSubview: previous)
+                    blurView.alpha = 0.0
+                    transition.setAlpha(view: blurView, alpha: 1.0)
+                    transition.setAlpha(view: previous, alpha: 0.0, completion: { [weak previous] _ in
+                        previous?.removeFromSuperview()
+                    })
+                } else {
+                    self.insertSubview(blurView, at: 0)
+                }
                 self.blurView = blurView
             }
             
@@ -135,9 +147,9 @@ public class EdgeEffectView: UIView {
                 constantHeight: max(1.0, edgeSize - 4.0),
                 isInverted: edge == .bottom,
                 gradient: EdgeEffectView.generateEdgeGradientData(baseHeight: max(1.0, edgeSize - 4.0)),
-                transition: transition.containedViewLayoutTransition
+                transition: blurTransition.containedViewLayoutTransition
             )
-            transition.setFrame(view: blurView, frame: blurFrame)
+            blurTransition.setFrame(view: blurView, frame: blurFrame)
             blurView.transform = self.contentMaskView.transform
         } else if let blurView = self.blurView {
             self.blurView = nil

@@ -9,11 +9,20 @@ struct MediaPickerGridCellState {
     var identifier: String
     var decorations: MediaPickerGridCellDecorations
     var isHidden: Bool
+    var fitAspect: CGFloat?
+
+    init(identifier: String, decorations: MediaPickerGridCellDecorations, isHidden: Bool, fitAspect: CGFloat? = nil) {
+        self.identifier = identifier
+        self.decorations = decorations
+        self.isHidden = isHidden
+        self.fitAspect = fitAspect
+    }
 }
 
 protocol MediaPickerGridCellStateProvider: AnyObject {
     var cellTheme: PresentationTheme { get }
     func cellState(at index: Int, isCompact: Bool) -> MediaPickerGridCellState?
+    func fitBackground(identifier: String, image: () -> UIImage?) -> UIImage?
 }
 
 private let gridCellLeftShadowImage: UIImage? = {
@@ -62,22 +71,34 @@ private func gridCellTypeIconImage(_ icon: MediaPickerGridCellTypeIcon) -> UIIma
     }
 }
 
-private final class GridCellDurationImageCache {
-    static let shared = GridCellDurationImageCache()
+private let gridCellDraftLabelImages = GridCellDurationImageCache(fontSize: 12.0, hasShadow: false)
 
+private final class GridCellDurationImageCache {
+    static let shared = GridCellDurationImageCache(fontSize: 11.0, hasShadow: true)
+
+    private let fontSize: CGFloat
+    private let hasShadow: Bool
     private var images: [String: UIImage] = [:]
+
+    init(fontSize: CGFloat, hasShadow: Bool) {
+        self.fontSize = fontSize
+        self.hasShadow = hasShadow
+    }
 
     func image(for text: String) -> UIImage? {
         if let image = self.images[text] {
             return image
         }
-        let string = NSAttributedString(string: text, font: Font.semibold(11.0), textColor: .white)
+        let hasShadow = self.hasShadow
+        let string = NSAttributedString(string: text, font: Font.semibold(self.fontSize), textColor: .white)
         let textSize = string.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).size
         let padding: CGFloat = 4.0
         let size = CGSize(width: ceil(textSize.width) + padding * 2.0, height: ceil(textSize.height) + padding * 2.0)
         let image = generateImage(size, rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setShadow(offset: CGSize(), blur: 4.0, color: UIColor(white: 0.0, alpha: 0.4).cgColor)
+            if hasShadow {
+                context.setShadow(offset: CGSize(), blur: 4.0, color: UIColor(white: 0.0, alpha: 0.4).cgColor)
+            }
             UIGraphicsPushContext(context)
             string.draw(at: CGPoint(x: padding, y: padding))
             UIGraphicsPopContext()
@@ -129,6 +150,11 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
     private var durationLayer: CALayer?
     private var checkLayer: CheckLayer?
     private var checkTheme: CheckNodeTheme?
+    private var draftLabelLayer: CALayer?
+    private(set) var fitAspect: CGFloat?
+    private var fitBackgroundLayer: CALayer?
+    private var fitImageLayer: CALayer?
+    private var fitThumbnail: MediaGridThumbnail?
 
     override init() {
         super.init()
@@ -161,6 +187,9 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
         self.isHidden = false
         self.opacity = 1.0
         self.applyDecorations(.none, animated: false)
+        self.fitThumbnail = nil
+        self.fitImageLayer?.contents = nil
+        self.fitBackgroundLayer?.contents = nil
     }
 
     func refresh(isCompact: Bool, animated: Bool) {
@@ -176,6 +205,7 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
             self.identifier = nil
             self.isHidden = false
             self.applyDecorations(.none, animated: false)
+            self.updateFitAspect(nil)
             return
         }
         let isSameItem = self.identifier == state.identifier
@@ -183,6 +213,10 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
         self.identifier = state.identifier
         self.isHidden = state.isHidden
         self.applyDecorations(state.decorations, animated: animated && isSameItem)
+        if !isSameItem {
+            self.fitBackgroundLayer?.contents = nil
+        }
+        self.updateFitAspect(state.fitAspect)
         if isSameItem && wasHidden && !state.isHidden {
             self.animateFadeIn(animateCheck: true)
         }
@@ -190,7 +224,7 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
 
     private func makeImageLayer(_ image: UIImage?) -> CALayer {
         let layer = CALayer()
-        layer.actions = ["contents": NSNull(), "position": NSNull(), "bounds": NSNull(), "opacity": NSNull(), "hidden": NSNull()]
+        layer.actions = ["contents": NSNull(), "contentsRect": NSNull(), "contentsScale": NSNull(), "position": NSNull(), "bounds": NSNull(), "opacity": NSNull(), "hidden": NSNull()]
         layer.contents = image?.cgImage
         layer.contentsGravity = .center
         layer.contentsScale = image?.scale ?? UIScreenScale
@@ -277,6 +311,25 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
             layer.removeFromSuperlayer()
         }
 
+        if let draftLabel = decorations.draftLabel {
+            let image = gridCellDraftLabelImages.image(for: draftLabel)
+            if let layer = self.draftLabelLayer {
+                if previous.draftLabel != draftLabel {
+                    layer.contents = image?.cgImage
+                    layer.contentsScale = image?.scale ?? UIScreenScale
+                    layer.bounds = CGRect(origin: CGPoint(), size: image?.size ?? CGSize())
+                }
+            } else {
+                let layer = self.makeImageLayer(image)
+                layer.bounds = CGRect(origin: CGPoint(), size: image?.size ?? CGSize())
+                self.addSublayer(layer)
+                self.draftLabelLayer = layer
+            }
+        } else if let layer = self.draftLabelLayer {
+            self.draftLabelLayer = nil
+            layer.removeFromSuperlayer()
+        }
+
         if let check = decorations.check, let theme = self.provider?.cellTheme {
             let checkTheme = CheckNodeTheme(theme: theme, style: .overlay)
             let checkLayer: CheckLayer
@@ -335,6 +388,15 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
             let padding = MediaPickerGridCellLayer.durationPadding
             layer.frame = CGRect(origin: CGPoint(x: bounds.width - size.width + padding - 6.0, y: bounds.height - size.height + padding - 6.0), size: size)
         }
+        if let layer = self.draftLabelLayer {
+            let size = layer.bounds.size
+            let padding = MediaPickerGridCellLayer.durationPadding
+            layer.frame = CGRect(origin: CGPoint(x: 7.0 - padding, y: 5.0 - padding), size: size)
+        }
+        self.fitImageLayer?.frame = bounds
+        if let layer = self.fitBackgroundLayer {
+            layer.frame = MediaPickerGridCellLayer.fitBackgroundFrame(in: bounds)
+        }
         if let checkLayer = self.checkLayer {
             let frame = MediaPickerGridCellLayer.checkFrame(in: bounds)
             if checkLayer.frame != frame {
@@ -350,12 +412,95 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
         if self.spoilerLayer != nil {
             self.updateSpoilerContents()
         }
+        if self.fitAspect != nil {
+            if !self.isShowingThumbnail {
+                self.fitThumbnail = nil
+            }
+            self.syncFitContents()
+        }
     }
 
     override func setThumbnail(_ thumbnail: MediaGridThumbnail, cellAspect: CGFloat) {
         super.setThumbnail(thumbnail, cellAspect: cellAspect)
         if self.spoilerLayer != nil {
             self.updateSpoilerContents()
+        }
+        self.fitThumbnail = thumbnail
+        if self.fitAspect != nil {
+            self.syncFitContents()
+        }
+    }
+
+    static func fitBackgroundFrame(in bounds: CGRect) -> CGRect {
+        let height = floorToScreenPixels(bounds.height / 9.0 * 16.0)
+        return CGRect(x: 0.0, y: floorToScreenPixels((bounds.height - height) / 2.0), width: bounds.width, height: height)
+    }
+
+    private func updateFitAspect(_ aspect: CGFloat?) {
+        if self.fitAspect != aspect {
+            self.fitAspect = aspect
+            if aspect != nil {
+                if self.fitBackgroundLayer == nil {
+                    let backgroundLayer = self.makeImageLayer(nil)
+                    backgroundLayer.contentsGravity = .resize
+                    backgroundLayer.backgroundColor = self.provider?.cellTheme.list.mediaPlaceholderColor.cgColor
+                    self.insertSublayer(backgroundLayer, at: 0)
+                    self.fitBackgroundLayer = backgroundLayer
+                    let imageLayer = self.makeImageLayer(nil)
+                    imageLayer.contentsGravity = .resizeAspect
+                    self.insertSublayer(imageLayer, above: backgroundLayer)
+                    self.fitImageLayer = imageLayer
+                    self.setNeedsLayout()
+                }
+            } else {
+                self.fitBackgroundLayer?.removeFromSuperlayer()
+                self.fitBackgroundLayer = nil
+                self.fitImageLayer?.removeFromSuperlayer()
+                self.fitImageLayer = nil
+            }
+        }
+        if aspect != nil {
+            self.syncFitContents()
+        }
+    }
+
+    private func syncFitContents() {
+        guard let imageLayer = self.fitImageLayer, let aspect = self.fitAspect else {
+            return
+        }
+        imageLayer.contents = self.contents
+        imageLayer.contentsScale = self.contentsScale
+        if self.isShowingThumbnail, let thumbnail = self.fitThumbnail {
+            imageLayer.contentsRect = thumbnail.contentsRect(fillingAspect: aspect)
+        } else {
+            imageLayer.contentsRect = self.contentsRect
+        }
+        if let identifier = self.identifier, let background = self.provider?.fitBackground(identifier: identifier, image: { self.fitBackgroundSource() }) {
+            self.setFitBackground(background, identifier: identifier)
+        }
+    }
+
+    private func fitBackgroundSource() -> UIImage? {
+        if let image = self.displayedImage {
+            return image
+        }
+        guard self.isShowingThumbnail, let thumbnail = self.fitThumbnail else {
+            return nil
+        }
+        let rect = thumbnail.contentsRect
+        let pixelRect = CGRect(x: rect.minX * CGFloat(thumbnail.image.width), y: rect.minY * CGFloat(thumbnail.image.height), width: rect.width * CGFloat(thumbnail.image.width), height: rect.height * CGFloat(thumbnail.image.height)).integral
+        guard let cropped = thumbnail.image.cropping(to: pixelRect) else {
+            return nil
+        }
+        return UIImage(cgImage: cropped)
+    }
+
+    func setFitBackground(_ image: UIImage, identifier: String) {
+        guard self.identifier == identifier, let layer = self.fitBackgroundLayer else {
+            return
+        }
+        if (layer.contents as AnyObject?) !== image.cgImage {
+            layer.contents = image.cgImage
         }
     }
 
@@ -376,11 +521,26 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
         self.rightShadowLayer?.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.typeIconLayer?.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.durationLayer?.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.draftLabelLayer?.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
     }
 
     func makeSnapshotView(frame: CGRect) -> UIView {
         let view = UIView(frame: frame)
         view.clipsToBounds = true
+        if let imageLayer = self.fitImageLayer, let backgroundLayer = self.fitBackgroundLayer {
+            let backgroundView = UIView(frame: MediaPickerGridCellLayer.fitBackgroundFrame(in: view.bounds))
+            backgroundView.backgroundColor = backgroundLayer.backgroundColor.flatMap { UIColor(cgColor: $0) }
+            backgroundView.layer.contents = backgroundLayer.contents
+            backgroundView.layer.contentsGravity = .resize
+            view.addSubview(backgroundView)
+            let imageView = UIView(frame: view.bounds)
+            imageView.layer.contents = imageLayer.contents
+            imageView.layer.contentsRect = imageLayer.contentsRect
+            imageView.layer.contentsGravity = .resizeAspect
+            imageView.layer.contentsScale = imageLayer.contentsScale
+            view.addSubview(imageView)
+            return view
+        }
         view.layer.contents = self.contents
         view.layer.contentsRect = self.contentsRect
         view.layer.contentsGravity = self.contentsGravity
@@ -397,6 +557,16 @@ final class MediaPickerGridCellLayer: MediaGridCellLayer {
     }
 
     var transitionImage: UIImage? {
+        if self.fitAspect != nil, let image = self.displayedImage, let backgroundImage = gridCellImage(of: self.fitBackgroundLayer?.contents) {
+            let size = CGSize(width: self.bounds.width, height: self.bounds.height / 9.0 * 16.0)
+            if size.width > 0.0, size.height > 0.0, let cgImage = image.cgImage {
+                return generateImage(size, contextGenerator: { size, context in
+                    context.draw(backgroundImage, in: CGRect(origin: CGPoint(), size: size))
+                    let fittedSize = image.size.fitted(size)
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - fittedSize.width) / 2.0, y: (size.height - fittedSize.height) / 2.0), size: fittedSize))
+                })
+            }
+        }
         if let image = self.displayedImage {
             return image
         }

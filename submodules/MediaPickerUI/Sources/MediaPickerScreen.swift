@@ -190,6 +190,17 @@ private func selectedButtonMinX(layout: ContainerViewLayout) -> CGFloat {
 }
 
 public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, AttachmentContainable {
+    fileprivate static let darkTopEdgeGradient: [EdgeEffectView.GradientStop] = [
+        EdgeEffectView.GradientStop(location: 0.0, alpha: 1.0),
+        EdgeEffectView.GradientStop(location: 0.35, alpha: 1.0),
+        EdgeEffectView.GradientStop(location: 0.5, alpha: 0.95),
+        EdgeEffectView.GradientStop(location: 0.6, alpha: 0.86),
+        EdgeEffectView.GradientStop(location: 0.7, alpha: 0.7),
+        EdgeEffectView.GradientStop(location: 0.8, alpha: 0.5),
+        EdgeEffectView.GradientStop(location: 0.9, alpha: 0.27),
+        EdgeEffectView.GradientStop(location: 1.0, alpha: 0.0)
+    ]
+
     public enum Style {
         case glass
         case legacy
@@ -346,6 +357,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private let cancelButtonNode: WebAppCancelButtonNode
     
     private var buttons: ComponentView<Empty>?
+    private var buttonsIsDark: Bool?
     private let moreButtonPlayOnce = ActionSlot<Void>()
     
     private let moreButtonNode: MoreButtonNode
@@ -391,6 +403,20 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     public var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? = nil
     
     fileprivate let usesMediaGridV2: Bool
+    fileprivate let gridModeKind: MediaPickerGridModeKind
+
+    fileprivate var gridAllowsSelection: Bool {
+        var isMultipleSelectionMode = true
+        if case let .assets(_, mode) = self.subject {
+            switch mode {
+            case .default, .files(false), .passport(true):
+                break
+            default:
+                isMultipleSelectionMode = false
+            }
+        }
+        return mediaPickerGridAllowsSelection(isMultipleSelectionMode: isMultipleSelectionMode, explicitMultipleSelection: self.explicitMultipleSelection)
+    }
     
     private let selectedCollection = Promise<PHAssetCollection?>(nil)
     private var selectedCollectionValue: PHAssetCollection? {
@@ -429,6 +455,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         private weak var controller: MediaPickerScreenImpl?
         private var presentationData: PresentationData
         fileprivate let mediaAssetsContext: MediaAssetsContext
+        private let assetsAreFiltered: Bool
         
         private var requestedMediaAccess = false
         private var requestedCameraAccess = false
@@ -467,6 +494,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         private var selectionNode: MediaPickerSelectedListNode?
         
         private var nextStableId: Int = 1
+        private var mediaGridItems: [String: MediaPickerGridExtraItem] = [:]
         private var currentEntries: [MediaPickerGridEntry] = []
         private var enqueuedTransactions: [MediaPickerGridTransaction] = []
         fileprivate var state: State?
@@ -488,6 +516,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         fileprivate var currentContentOffset: GridNodeVisibleContentOffset?
         fileprivate var scrolledToTop = true
         fileprivate var scrolledExactlyToTop = true
+        private var appliedContentUnderBar = false
         fileprivate var isSwitchingAssetGroup = false
         
         private var didSetReady = false
@@ -516,6 +545,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             }
             let mediaAssetsContext = MediaAssetsContext(assetType: assetType)
             self.mediaAssetsContext = mediaAssetsContext
+            self.assetsAreFiltered = assetType != nil
             
             self.containerNode = ASDisplayNode()
             self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
@@ -534,7 +564,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 let initialTheme = controller.presentationData.theme
                 self.gridHost = MediaPickerMediaGridHost(
                     interaction: interaction,
-                    isSelectable: true,
+                    mode: mediaPickerGridModeConfiguration(controller.gridModeKind),
+                    isSelectable: controller.gridAllowsSelection,
+                    draftLabel: controller.presentationData.strings.MediaEditor_Draft,
                     enableAnimations: controller.context.sharedContext.energyUsageSettings.fullTranslucency,
                     getTheme: { [weak controller] in
                         return controller?.presentationData.theme ?? initialTheme
@@ -650,6 +682,16 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             self.gridHost.scrollingInitiated = { [weak self] in
                 self?.dismissInput()
+            }
+            
+            self.gridHost.contentUnderBarChanged = { [weak self] in
+                guard let self else {
+                    return
+                }
+                if self.currentContentOffset == nil {
+                    self.currentContentOffset = self.gridHost.visibleContentOffset()
+                }
+                self.updateTopEdgeEffect()
             }
             
             self.gridHost.visibleContentOffsetChanged = { [weak self] offset in
@@ -848,7 +890,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 avatarEditorPreviewView.tapped = { [weak self] in
                     self?.controller?.openAvatarEditor()
                 }
-                self.gridHost.view.addSubview(avatarEditorPreviewView)
+                self.gridHost.setAccessoryView(avatarEditorPreviewView, layout: { [weak avatarEditorPreviewView] size in
+                    avatarEditorPreviewView?.updateLayout(size: size)
+                })
                 self.avatarEditorPreviewView = avatarEditorPreviewView
             }
             
@@ -1015,10 +1059,17 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if self.placeholderNode != nil {
                 scrolledToTop = true
                 scrolledExactlyToTop = true
+            } else if self.gridHost.isContentUnderBar && self.currentDisplayMode == .all {
+                scrolledToTop = false
+                scrolledExactlyToTop = false
             }
             
             var updated = false
             var transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .easeInOut)
+            if self.gridHost.isContentUnderBar != self.appliedContentUnderBar {
+                self.appliedContentUnderBar = self.gridHost.isContentUnderBar
+                transition = .animated(duration: 0.25, curve: .easeInOut)
+            }
             if self.scrolledToTop != scrolledToTop {
                 self.scrolledToTop = scrolledToTop
                 updated = true
@@ -1240,6 +1291,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     stories = true
                 }
             }
+            (self.gridHost as? MediaPickerMediaGridHost)?.isSelectable = controller.gridAllowsSelection
             
             switch state {
             case let .noAccess(cameraAccess):
@@ -1278,7 +1330,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         if case let .assets(collection, _) = controller.subject {
                             subjectCollectionId = collection?.localIdentifier
                         }
-                        self.gridHost.updateAssets(fetchResult: fetchResult, configuration: mediaPickerGridAssetsConfiguration(subjectCollectionId: subjectCollectionId, selectedCollectionId: controller.selectedCollectionValue?.localIdentifier))
+                        self.gridHost.updateAssets(fetchResult: fetchResult, configuration: mediaPickerGridAssetsConfiguration(subjectCollectionId: subjectCollectionId, selectedCollectionId: controller.selectedCollectionValue?.localIdentifier, isFiltered: self.assetsAreFiltered), extras: drafts.map { .draft($0) })
                     }
                     
                     if case let .assets(previousFetchResult, _, _, _, previousCameraAccess) = previousState, previousFetchResult == nil || previousCameraAccess != cameraAccess {
@@ -1386,9 +1438,23 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.mediaAssetsContext.requestMediaAccess()
                 }
             case let .media(media):
-                let count = media.count
-                for i in 0 ..< count {
-                    entries.append(MediaPickerGridEntry(index: i, content: .media(media[i], i), selectable: true, stories: stories))
+                if self.gridHost.consumesEntries {
+                    let count = media.count
+                    for i in 0 ..< count {
+                        entries.append(MediaPickerGridEntry(index: i, content: .media(media[i], i), selectable: true, stories: stories))
+                    }
+                } else {
+                    var items: [MediaPickerGridExtraItem] = []
+                    for item in media {
+                        if let current = self.mediaGridItems[item.identifier] {
+                            items.append(current)
+                        } else {
+                            let extra = MediaPickerGridExtraItem.media(item, item.asset)
+                            self.mediaGridItems[item.identifier] = extra
+                            items.append(extra)
+                        }
+                    }
+                    self.gridHost.updateMedia(items)
                 }
             }
         
@@ -2190,7 +2256,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         }
         
         fileprivate func defaultTransitionView() -> UIView? {
-            let transitionItem = self.gridHost.item(at: .zero)
+            let transitionItem = self.gridHost.defaultTransitionItem()
             let transitionView = transitionItem?.transitionView(snapshot: false)
             return transitionView
         }
@@ -2441,7 +2507,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             }
             let preloadSize: CGFloat = itemHeight// * 3.0
             self.gridHost.headerHeight = manageHeight
-            self.gridHost.updateLayout(size: bounds.size, insets: gridInsets, preloadSize: preloadSize, itemSize: CGSize(width: itemWidth, height: itemHeight), itemSpacing: itemSpacing, cutouts: cutoutRects, transition: transition, completion: { [weak self] in
+            self.gridHost.updateLayout(size: bounds.size, insets: gridInsets, preloadSize: preloadSize, itemSize: CGSize(width: itemWidth, height: itemHeight), itemSpacing: itemSpacing, cutouts: cutoutRects, hasCamera: cameraRect != nil, transition: transition, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2462,8 +2528,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             })
             
             if let avatarEditorPreviewView = self.avatarEditorPreviewView {
-                avatarEditorPreviewView.frame = CGRect(origin: CGPoint(x: cameraRect != nil ? cameraRect!.maxX + itemSpacing : layout.safeInsets.left, y: 0.0), size: CGSize(width: itemWidth, height: itemWidth))
-                avatarEditorPreviewView.updateLayout(size: CGSize(width: itemWidth, height: itemWidth))
+                self.gridHost.updateAccessoryFrame(avatarEditorPreviewView, frame: CGRect(origin: CGPoint(x: cameraRect != nil ? cameraRect!.maxX + itemSpacing : layout.safeInsets.left, y: 0.0), size: CGSize(width: itemWidth, height: itemWidth)))
             }
             
             if let selectionNode = self.selectionNode, let controller = self.controller {
@@ -2688,8 +2753,12 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             isAssets = true
             isDefaultMode = mode == .default
         }
-        let isChatAttachmentDefaultAssets = mediaPickerIsChatAttachmentDefaultAssets(isAssets: isAssets, isDefaultMode: isDefaultMode, forCollage: forCollage)
-        self.usesMediaGridV2 = mediaPickerUsesMediaGrid(isChatAttachmentDefaultAssets: isChatAttachmentDefaultAssets, isEnabled: context.usesMediaPickerGridV2)
+        var isStoryMode = false
+        if case .assets(_, .story) = subject {
+            isStoryMode = true
+        }
+        self.gridModeKind = mediaPickerGridModeKind(isAssets: isAssets, isDefaultMode: isDefaultMode, isStoryMode: isStoryMode, forCollage: forCollage)
+        self.usesMediaGridV2 = mediaPickerUsesMediaGrid(isEnabled: context.usesMediaPickerGridV2)
         if self.usesMediaGridV2 {
             let services = MediaGridPhotoLibraryServices.shared
             services.configureLaunchCoverage({
@@ -3383,22 +3452,30 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             buttonTransition = .easeInOut(duration: duration)
         }
         
-        self.titleView.updateIsDark(isDark: self.controllerNode.currentDisplayMode == .all && useGlassButtons, animated: true)
+        let isDarkBar = self.controllerNode.currentDisplayMode == .all && useGlassButtons
+        self.titleView.updateIsDark(isDark: isDarkBar, animated: true)
+        (self.parentController() as? AttachmentController)?.updatePillIsLight(isDarkBar, for: self, transition: transition)
         
         let topEdgeColor: UIColor
+        var topEdgeAlpha: CGFloat = 0.8
+        var topEdgeGradient: [EdgeEffectView.GradientStop]?
+        var topEdgeBlurRadius: CGFloat = 1.0
         if self.controllerNode.currentDisplayMode == .all {
             if useGlassButtons {
-                topEdgeColor = UIColor(rgb: 0x000000, alpha: 0.45)
+                topEdgeColor = UIColor(rgb: 0x000000, alpha: 0.48)
+                topEdgeAlpha = 1.0
+                topEdgeBlurRadius = 12.0
+                topEdgeGradient = MediaPickerScreenImpl.darkTopEdgeGradient
             } else {
                 topEdgeColor = self.presentationData.theme.overallDarkAppearance ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.plainBackgroundColor
             }
         } else {
             topEdgeColor = .clear
         }
-        let topEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 80.0))
+        let topEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 77.0))
         transition.updateFrame(view: self.controllerNode.topEdgeEffectView, frame: topEdgeEffectFrame)
         transition.updateAlpha(layer: self.controllerNode.topEdgeEffectView.layer, alpha: self.controllerNode.scrolledExactlyToTop && self.controllerNode.currentDisplayMode == .all ? 0.0 : 1.0)
-        self.controllerNode.topEdgeEffectView.update(content: topEdgeColor, blur: true, alpha: 0.8, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: ComponentTransition(transition))
+        self.controllerNode.topEdgeEffectView.update(content: topEdgeColor, blur: true, blurRadius: topEdgeBlurRadius, alpha: topEdgeAlpha, contentGradient: topEdgeGradient, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: ComponentTransition(transition))
         
         let leftControlItems: [GlassControlGroupComponent.Item] = [
             GlassControlGroupComponent.Item(
@@ -3495,10 +3572,19 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if buttons.view == nil {
                 buttonTransition = .immediate
             }
+            if let previousIsDark = self.buttonsIsDark, previousIsDark != isDarkBar, !buttonTransition.animation.isImmediate, let view = buttons.view, view.superview != nil, let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = view.frame
+                view.superview?.insertSubview(snapshotView, aboveSubview: view)
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+            self.buttonsIsDark = isDarkBar
             let buttonsSize = buttons.update(
                 transition: buttonTransition,
                 component: AnyComponent(GlassControlPanelComponent(
-                    theme: self.presentationData.theme,
+                    theme: isDarkBar ? defaultDarkColorPresentationTheme : self.presentationData.theme,
                     leftItem: GlassControlPanelComponent.Item(
                         items: leftControlItems,
                         background: .panel
@@ -3509,7 +3595,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                         background: .panel
                     ),
                     centerAlignmentIfPossible: true,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
+                    isDark: isDarkBar || self.presentationData.theme.overallDarkAppearance,
                     sideItemsAppearWithBlur: true
                 )),
                 environment: {},

@@ -11,25 +11,174 @@ import AttachmentUI
 import InvisibleInkDustNode
 import MediaGrid
 import MediaGridPhotoLibrary
+import MediaEditor
+import RadialStatusNode
+import MediaAssetsContext
+
+enum MediaPickerGridExtraItem {
+    case draft(MediaEditorDraft)
+    case media(MediaPickerScreenImpl.Subject.Media, TGMediaSelectableItem)
+
+    var identifier: String {
+        switch self {
+        case let .draft(draft):
+            return draft.path
+        case let .media(_, item):
+            return item.uniqueIdentifier
+        }
+    }
+
+    var image: UIImage? {
+        switch self {
+        case let .draft(draft):
+            return draft.thumbnail
+        case let .media(media, _):
+            if case let .image(image) = media {
+                return image
+            }
+            return nil
+        }
+    }
+
+    var aspectRatio: CGFloat {
+        guard let size = self.image?.size, size.width > 0.0, size.height > 0.0 else {
+            return 1.0
+        }
+        return size.width / size.height
+    }
+
+    var date: Date? {
+        if case let .draft(draft) = self {
+            return Date(timeIntervalSince1970: Double(draft.timestamp))
+        }
+        return nil
+    }
+
+    var selectableItem: TGMediaSelectableItem? {
+        if case let .media(_, item) = self {
+            return item
+        }
+        return nil
+    }
+
+    static func sameItems(_ lhs: [MediaPickerGridExtraItem], _ rhs: [MediaPickerGridExtraItem]) -> Bool {
+        if lhs.count != rhs.count {
+            return false
+        }
+        for i in 0 ..< lhs.count {
+            if lhs[i].identifier != rhs[i].identifier {
+                return false
+            }
+            if case let .draft(lhsDraft) = lhs[i], case let .draft(rhsDraft) = rhs[i], lhsDraft.thumbnail !== rhsDraft.thumbnail {
+                return false
+            }
+        }
+        return true
+    }
+}
 
 final class MediaPickerMediaGridDataSource: MediaGridDataSource {
-    let base: MediaGridPhotoLibraryDataSource
+    let base: MediaGridPhotoLibraryDataSource?
+    private(set) var extras: [MediaPickerGridExtraItem]
     weak var host: MediaPickerMediaGridHost?
 
-    init(base: MediaGridPhotoLibraryDataSource) {
+    init(base: MediaGridPhotoLibraryDataSource?, extras: [MediaPickerGridExtraItem]) {
         self.base = base
+        self.extras = extras
+    }
+
+    var extraCount: Int {
+        return self.extras.count
+    }
+
+    var assetCount: Int {
+        return self.base?.count ?? 0
     }
 
     var count: Int {
-        return self.base.count
+        return self.extraCount + self.assetCount
+    }
+
+    func slot(at index: Int) -> MediaPickerGridSlot? {
+        return mediaPickerGridSlot(index: index, extraCount: self.extraCount, assetCount: self.assetCount)
+    }
+
+    func asset(at index: Int) -> PHAsset? {
+        if case let .asset(assetIndex) = self.slot(at: index) {
+            return self.base?.asset(at: assetIndex)
+        }
+        return nil
+    }
+
+    func extra(at index: Int) -> MediaPickerGridExtraItem? {
+        if case let .extra(extraIndex) = self.slot(at: index) {
+            return self.extras[extraIndex]
+        }
+        return nil
+    }
+
+    func identifier(at index: Int) -> String? {
+        switch self.slot(at: index) {
+        case let .extra(extraIndex):
+            return self.extras[extraIndex].identifier
+        case let .asset(assetIndex):
+            return self.base?.asset(at: assetIndex)?.localIdentifier
+        case .none:
+            return nil
+        }
+    }
+
+    func assetIndex(at index: Int) -> Int? {
+        if case let .asset(assetIndex) = self.slot(at: index) {
+            return assetIndex
+        }
+        return nil
+    }
+
+    func gridChanges(fromAssetChanges changes: MediaGridChanges) -> MediaGridChanges {
+        let offset = self.extraCount
+        return MediaGridChanges(removed: mediaPickerGridShifted(changes.removed, by: offset), inserted: mediaPickerGridShifted(changes.inserted, by: offset), changed: mediaPickerGridShifted(changes.changed, by: offset))
+    }
+
+    func gridIndices(fromAssetIndices indices: IndexSet) -> IndexSet {
+        return mediaPickerGridShifted(indices, by: self.extraCount)
+    }
+
+    func updateExtras(_ extras: [MediaPickerGridExtraItem]) -> MediaGridChanges? {
+        if MediaPickerGridExtraItem.sameItems(self.extras, extras) {
+            self.extras = extras
+            return nil
+        }
+        let change = mediaPickerGridPrefixChange(oldCount: self.extras.count, newCount: extras.count)
+        self.extras = extras
+        return MediaGridChanges(removed: change.removed, inserted: change.inserted, changed: IndexSet())
     }
 
     func date(at index: Int) -> Date? {
-        return self.base.date(at: index)
+        switch self.slot(at: index) {
+        case let .extra(extraIndex):
+            return self.extras[extraIndex].date
+        case let .asset(assetIndex):
+            return self.base?.date(at: assetIndex)
+        case .none:
+            return nil
+        }
     }
 
     func aspectRatioReader() -> MediaGridAspectRatioReader {
-        return self.base.aspectRatioReader()
+        let extraAspects = self.extras.map { $0.aspectRatio }
+        let extraCount = extraAspects.count
+        guard let baseReader = self.base?.aspectRatioReader() else {
+            return { index in
+                return index >= 0 && index < extraCount ? extraAspects[index] : 1.0
+            }
+        }
+        return { index in
+            if index >= 0 && index < extraCount {
+                return extraAspects[index]
+            }
+            return baseReader(index - extraCount)
+        }
     }
 
     func requestImage(at index: Int, pixelSize: CGSize, completion: @escaping (UIImage?, Bool) -> Void) -> MediaGridImageRequest? {
@@ -37,41 +186,101 @@ final class MediaPickerMediaGridDataSource: MediaGridDataSource {
             completion(image, false)
             return nil
         }
-        return self.base.requestImage(at: index, pixelSize: pixelSize, completion: completion)
+        switch self.slot(at: index) {
+        case let .extra(extraIndex):
+            completion(self.extras[extraIndex].image, false)
+            return nil
+        case let .asset(assetIndex):
+            guard let base = self.base else {
+                completion(nil, false)
+                return nil
+            }
+            return base.requestImage(at: assetIndex, pixelSize: pixelSize, completion: completion)
+        case .none:
+            completion(nil, false)
+            return nil
+        }
     }
 
     func startCaching(indices: [Int], pixelSize: CGSize) {
-        self.base.startCaching(indices: indices, pixelSize: pixelSize)
+        guard let base = self.base else {
+            return
+        }
+        let assetIndices = mediaPickerGridAssetIndices(indices, extraCount: self.extraCount, assetCount: self.assetCount)
+        if !assetIndices.isEmpty {
+            base.startCaching(indices: assetIndices, pixelSize: pixelSize)
+        }
     }
 
     func stopCaching(indices: [Int], pixelSize: CGSize) {
-        self.base.stopCaching(indices: indices, pixelSize: pixelSize)
+        guard let base = self.base else {
+            return
+        }
+        let assetIndices = mediaPickerGridAssetIndices(indices, extraCount: self.extraCount, assetCount: self.assetCount)
+        if !assetIndices.isEmpty {
+            base.stopCaching(indices: assetIndices, pixelSize: pixelSize)
+        }
     }
 
     func performBatch(_ updates: () -> Void) {
-        self.base.performBatch(updates)
+        if let base = self.base {
+            base.performBatch(updates)
+        } else {
+            updates()
+        }
     }
 
     func thumbnail(at index: Int) -> MediaGridThumbnail? {
+        guard let base = self.base, case let .asset(assetIndex) = self.slot(at: index) else {
+            return nil
+        }
         if self.host?.editedImage(at: index) != nil {
             return nil
         }
-        return self.base.thumbnail(at: index)
+        return base.thumbnail(at: assetIndex)
     }
 
     func prepareThumbnails(ranges: [Range<Int>]) {
-        self.base.prepareThumbnails(ranges: ranges)
+        self.base?.prepareThumbnails(ranges: mediaPickerGridAssetRanges(ranges, extraCount: self.extraCount, assetCount: self.assetCount))
     }
 
     func launchImage(at index: Int) -> MediaGridLaunchImage? {
+        guard let base = self.base, case let .asset(assetIndex) = self.slot(at: index) else {
+            return nil
+        }
         if self.host?.editedImage(at: index) != nil {
             return nil
         }
-        return self.base.launchImage(at: index)
+        return base.launchImage(at: assetIndex)
     }
 
     func waitForLaunchImages(timeout: TimeInterval) {
-        self.base.waitForLaunchImages(timeout: timeout)
+        self.base?.waitForLaunchImages(timeout: timeout)
+    }
+}
+
+final class MediaPickerMediaGridAccessoryContainerView: UIView {
+    let contentView: UIView
+    let layout: (CGSize) -> Void
+
+    init(contentView: UIView, layout: @escaping (CGSize) -> Void) {
+        self.contentView = contentView
+        self.layout = layout
+        super.init(frame: CGRect())
+        self.addSubview(contentView)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let bounds = self.bounds
+        if self.contentView.frame != bounds {
+            self.contentView.frame = bounds
+        }
+        self.layout(bounds.size)
     }
 }
 
@@ -210,35 +419,60 @@ private struct MediaPickerGridItemInfo {
     var edit: MediaPickerGridEditInfo?
 }
 
+enum MediaPickerMediaGridItemContent {
+    case asset(PHAsset)
+    case extra(MediaPickerGridExtraItem)
+}
+
 final class MediaPickerMediaGridItem: MediaPickerGridHostItem {
     private weak var host: MediaPickerMediaGridHost?
     let index: Int
     let cell: MediaPickerGridCellLayer
-    let asset: PHAsset
+    let content: MediaPickerMediaGridItemContent
 
-    init(host: MediaPickerMediaGridHost, index: Int, cell: MediaPickerGridCellLayer, asset: PHAsset) {
+    init(host: MediaPickerMediaGridHost, index: Int, cell: MediaPickerGridCellLayer, content: MediaPickerMediaGridItemContent) {
         self.host = host
         self.index = index
         self.cell = cell
-        self.asset = asset
+        self.content = content
     }
 
     var identifier: String {
-        return self.asset.localIdentifier
+        switch self.content {
+        case let .asset(asset):
+            return asset.localIdentifier
+        case let .extra(item):
+            return item.identifier
+        }
     }
 
     var tag: Int32? {
-        guard let localTimestamp = self.asset.creationDate?.timeIntervalSince1970 else {
+        let date: Date?
+        switch self.content {
+        case let .asset(asset):
+            date = asset.creationDate
+        case let .extra(item):
+            date = item.date
+        }
+        guard let localTimestamp = date?.timeIntervalSince1970 else {
             return nil
         }
         return Month(localTimestamp: Int32(exactly: floor(localTimestamp)) ?? 0).packedValue
     }
 
     var selectableItem: TGMediaSelectableItem? {
-        return TGMediaAsset(phAsset: self.asset)
+        switch self.content {
+        case let .asset(asset):
+            return TGMediaAsset(phAsset: asset)
+        case let .extra(item):
+            return item.selectableItem
+        }
     }
 
     func transitionView(snapshot: Bool) -> UIView {
+        if !snapshot, let view = self.host?.proxyView(index: self.index, cell: self.cell) {
+            return view
+        }
         return self.host?.snapshotView(index: self.index, cell: self.cell) ?? UIView()
     }
 
@@ -274,9 +508,20 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     private let cameraContainerView: MediaPickerMediaGridCameraView
     private let interaction: MediaPickerInteraction
     private let getTheme: () -> PresentationTheme
-    private let isSelectable: Bool
+    private let mode: MediaPickerGridModeConfiguration
+    private let draftLabel: String
     private let enableAnimations: Bool
     private let selectionPanBegan: () -> Void
+    private var accessoryContainerView: MediaPickerMediaGridAccessoryContainerView?
+
+    var isSelectable: Bool {
+        didSet {
+            if self.isSelectable != oldValue {
+                self.gridView?.isSelectionPanEnabled = self.isSelectable
+                self.refreshVisibleCells(animated: false)
+            }
+        }
+    }
 
     private var gridView: MediaGridView?
     private var dataSource: MediaPickerMediaGridDataSource?
@@ -285,6 +530,13 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     private weak var levelInitializedGrid: MediaGridView?
 
     private var layoutState: (size: CGSize, insets: UIEdgeInsets, isLandscape: Bool, hasCamera: Bool)?
+    private var fitBackgrounds: [String: UIImage] = [:]
+    private var pendingFitBackgrounds = Set<String>()
+    private var downloadDisposables: [String: Disposable] = [:]
+    private var downloadProgress: [String: Float] = [:]
+    private var downloadIndices: [String: Int] = [:]
+    private var downloadOverlays: [String: RadialStatusNode] = [:]
+    private var isDownloadTrackingScheduled = false
     private var selectionNumbers: [String: Int] = [:]
     private var itemInfos: [String: MediaPickerGridItemInfo] = [:]
     private var editedThumbnails: [String: UIImage] = [:]
@@ -300,10 +552,14 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
     var visibleItemsUpdated: (() -> Void)?
     var headerHeight: CGFloat = 0.0
+    var contentUnderBarChanged: (() -> Void)?
+    private(set) var isContentUnderBar = false
 
-    init(interaction: MediaPickerInteraction, isSelectable: Bool, enableAnimations: Bool, getTheme: @escaping () -> PresentationTheme, selectionPanBegan: @escaping () -> Void) {
+    init(interaction: MediaPickerInteraction, mode: MediaPickerGridModeConfiguration, isSelectable: Bool, draftLabel: String, enableAnimations: Bool, getTheme: @escaping () -> PresentationTheme, selectionPanBegan: @escaping () -> Void) {
         self.interaction = interaction
+        self.mode = mode
         self.isSelectable = isSelectable
+        self.draftLabel = draftLabel
         self.enableAnimations = enableAnimations
         self.getTheme = getTheme
         self.selectionPanBegan = selectionPanBegan
@@ -324,6 +580,9 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             disposable.dispose()
         }
         for (_, disposable) in self.pendingThumbnailDisposables {
+            disposable.dispose()
+        }
+        for (_, disposable) in self.downloadDisposables {
             disposable.dispose()
         }
     }
@@ -452,10 +711,10 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         transition.updateFrame(node: self.containerNode, frame: frame)
     }
 
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, itemSize: CGSize, itemSpacing: CGFloat, cutouts: [CGRect], transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, preloadSize: CGFloat, itemSize: CGSize, itemSpacing: CGFloat, cutouts: [CGRect], hasCamera: Bool, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let contentWidth = size.width - insets.left - insets.right
         let columns = itemSize.width > 0.0 ? Int(((contentWidth + itemSpacing) / (itemSize.width + itemSpacing)).rounded()) : 3
-        self.layoutState = (size, insets, columns >= MediaGridLevel.five.columns, !cutouts.isEmpty)
+        self.layoutState = (size, insets, columns >= MediaGridLevel.five.columns, hasCamera)
         var duration: TimeInterval = 0.0
         if case let .animated(value, _) = transition {
             duration = value
@@ -490,35 +749,70 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         gridView.updateLayout(size: layoutState.size, safeInsets: insets, isLandscape: layoutState.isLandscape, transition: duration)
         gridView.layoutIfNeeded()
         self.updateOverlays()
+        self.updateDownloadTracking()
     }
 
-    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration) {
+    func updateAssets(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration, extras: [MediaPickerGridExtraItem]) {
         guard mediaPickerGridNeedsInstall(current: self.configuration, hasGrid: self.gridView != nil, new: configuration) else {
+            self.updateExtras(extras)
             return
         }
         self.configuration = configuration
-        self.installGrid(fetchResult: fetchResult, configuration: configuration)
+        self.installGrid(fetchResult: fetchResult, configuration: configuration, extras: extras)
     }
 
-    private func installGrid(fetchResult: PHFetchResult<PHAsset>, configuration: MediaPickerGridAssetsConfiguration) {
+    func updateMedia(_ items: [MediaPickerGridExtraItem]) {
+        if self.gridView == nil || self.configuration != nil {
+            self.configuration = nil
+            self.installGrid(fetchResult: nil, configuration: nil, extras: items)
+        } else {
+            self.updateExtras(items)
+        }
+    }
+
+    private func updateExtras(_ extras: [MediaPickerGridExtraItem]) {
+        guard let gridView = self.gridView, let dataSource = self.dataSource, let changes = dataSource.updateExtras(extras) else {
+            return
+        }
+        self.itemInfos.removeAll()
+        gridView.apply(changes)
+        self.refreshVisibleCells(animated: false)
+        self.visibleItemsUpdated?()
+        self.updateDownloadTracking()
+    }
+
+    func setAccessoryView(_ view: UIView, layout: @escaping (CGSize) -> Void) {
+        let containerView = MediaPickerMediaGridAccessoryContainerView(contentView: view, layout: layout)
+        self.accessoryContainerView = containerView
+        self.gridView?.accessoryView = containerView
+    }
+
+    func updateAccessoryFrame(_ view: UIView, frame: CGRect) {
+    }
+
+    private func installGrid(fetchResult: PHFetchResult<PHAsset>?, configuration: MediaPickerGridAssetsConfiguration?, extras: [MediaPickerGridExtraItem]) {
         if let previous = self.gridView {
             self.level = previous.level
             previous.cameraView = nil
             previous.headerView = nil
+            previous.accessoryView = nil
         }
-        self.dataSource?.base.onChange = nil
-        self.dataSource?.base.onThumbnailsChanged = nil
-        self.dataSource?.base.filler?.isMovingFast = false
+        self.dataSource?.base?.onChange = nil
+        self.dataSource?.base?.onThumbnailsChanged = nil
+        self.dataSource?.base?.filler?.isMovingFast = false
         self.containerView.gridView = nil
         self.gridView = nil
         self.dataSource = nil
         self.itemInfos.removeAll()
         self.spoilerIdentifiers.removeAll()
         self.removeOverlays()
+        self.removeDownloadTracking()
 
-        let services = MediaGridPhotoLibraryServices.shared
-        let base = services.makeDataSource(fetchResult: fetchResult, reversed: configuration.isReversed, isLibrary: configuration.isLibrary)
-        let dataSource = MediaPickerMediaGridDataSource(base: base)
+        var base: MediaGridPhotoLibraryDataSource?
+        if let fetchResult, let configuration {
+            base = MediaGridPhotoLibraryServices.shared.makeDataSource(fetchResult: fetchResult, reversed: configuration.isReversed, isLibrary: configuration.isLibrary)
+        }
+        let dataSource = MediaPickerMediaGridDataSource(base: base, extras: extras)
         dataSource.host = self
         self.dataSource = dataSource
 
@@ -528,29 +822,35 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             return cell
         })
         gridView.backgroundColor = .clear
-        gridView.isZoomEnabled = true
+        gridView.isZoomEnabled = self.mode.isZoomEnabled
+        gridView.cellAspect = self.mode.cellAspect
+        gridView.cameraLevels = Set(self.mode.cameraColumns.compactMap { MediaGridLevel(rawValue: $0) })
+        gridView.isSelectionPanEnabled = self.isSelectable
+        gridView.accessoryView = self.accessoryContainerView
         gridView.headerView = self.headerNode.view
+        gridView.compactLevelTopInset = 0.0
         self.gridView = gridView
         self.containerView.gridView = gridView
 
-        base.onChange = { [weak self, weak base] changes in
-            guard let self, let base, self.dataSource?.base === base, let gridView = self.gridView else {
+        base?.onChange = { [weak self, weak base] changes in
+            guard let self, let base, let dataSource = self.dataSource, dataSource.base === base, let gridView = self.gridView else {
                 return
             }
             self.itemInfos.removeAll()
             if let changes {
-                gridView.apply(changes)
+                gridView.apply(dataSource.gridChanges(fromAssetChanges: changes))
             } else {
                 gridView.reloadData()
             }
             self.refreshVisibleCells(animated: false)
             self.visibleItemsUpdated?()
+            self.updateDownloadTracking()
         }
-        base.onThumbnailsChanged = { [weak self, weak base] indices in
-            guard let self, let base, self.dataSource?.base === base else {
+        base?.onThumbnailsChanged = { [weak self, weak base] indices in
+            guard let self, let base, let dataSource = self.dataSource, dataSource.base === base else {
                 return
             }
-            self.gridView?.thumbnailsDidChange(indices: indices)
+            self.gridView?.thumbnailsDidChange(indices: dataSource.gridIndices(fromAssetIndices: indices))
         }
 
         gridView.isItemSelected = { [weak self] index in
@@ -580,6 +880,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             if !self.spoilerIdentifiers.isEmpty || !self.overlays.isEmpty {
                 self.updateOverlays()
             }
+            self.updateDownloadTracking()
         }
         gridView.onLevelChanged = { [weak self] level in
             guard let self else {
@@ -588,10 +889,18 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             self.level = level
             self.visibleItemsUpdated?()
             self.updateOverlays()
+            self.updateDownloadTracking()
         }
         gridView.onZoomingChanged = { [weak self] _ in
             self?.updateOverlays()
         }
+        gridView.onTargetLevelChanged = { [weak self, weak gridView] level in
+            guard let self, let gridView, self.gridView === gridView else {
+                return
+            }
+            self.updateContentUnderBar(level: level)
+        }
+        self.updateContentUnderBar(level: gridView.targetLevel)
         gridView.onMovingFastChanged = { [weak self, weak base] isMovingFast in
             guard let self, let base, self.dataSource?.base === base else {
                 return
@@ -600,7 +909,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         }
 
         self.updateSelectionNumbers()
-        if configuration.scrollsToEnd {
+        if configuration?.scrollsToEnd == true {
             gridView.scrollToEnd()
         }
         self.applyLayout(duration: 0.0)
@@ -666,49 +975,73 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         }
     }
 
+    private func content(at index: Int) -> MediaPickerMediaGridItemContent? {
+        guard let dataSource = self.dataSource else {
+            return nil
+        }
+        if let asset = dataSource.asset(at: index) {
+            return .asset(asset)
+        }
+        if let extra = dataSource.extra(at: index) {
+            return .extra(extra)
+        }
+        return nil
+    }
+
+    private func visibleCell(at index: Int) -> MediaPickerGridCellLayer? {
+        var result: MediaPickerGridCellLayer?
+        self.gridView?.forEachVisibleCell { visibleIndex, cell in
+            if visibleIndex == index {
+                result = cell as? MediaPickerGridCellLayer
+            }
+        }
+        return result
+    }
+
     func forEachVisibleItem(_ f: (MediaPickerGridHostItem) -> Void) {
-        guard let gridView = self.gridView, let dataSource = self.dataSource else {
+        guard let gridView = self.gridView else {
             return
         }
         gridView.forEachVisibleCell { index, cell in
-            if let cell = cell as? MediaPickerGridCellLayer, let asset = dataSource.base.asset(at: index) {
-                f(MediaPickerMediaGridItem(host: self, index: index, cell: cell, asset: asset))
+            if let cell = cell as? MediaPickerGridCellLayer, let content = self.content(at: index) {
+                f(MediaPickerMediaGridItem(host: self, index: index, cell: cell, content: content))
             }
         }
     }
 
     func visibleItem(identifier: String) -> MediaPickerGridHostItem? {
-        guard let gridView = self.gridView, let dataSource = self.dataSource else {
+        guard let gridView = self.gridView else {
             return nil
         }
         var result: MediaPickerGridHostItem?
         gridView.forEachVisibleCell { index, cell in
-            if let cell = cell as? MediaPickerGridCellLayer, cell.identifier == identifier, let asset = dataSource.base.asset(at: index) {
-                result = MediaPickerMediaGridItem(host: self, index: index, cell: cell, asset: asset)
+            if let cell = cell as? MediaPickerGridCellLayer, cell.identifier == identifier, let content = self.content(at: index) {
+                result = MediaPickerMediaGridItem(host: self, index: index, cell: cell, content: content)
             }
         }
         return result
     }
 
     func item(at point: CGPoint) -> MediaPickerGridHostItem? {
-        guard let gridView = self.gridView, let dataSource = self.dataSource else {
+        guard let gridView = self.gridView else {
             return nil
         }
         let gridPoint = gridView.convert(point, from: self.containerView)
-        guard let index = gridView.index(at: gridPoint), let asset = dataSource.base.asset(at: index) else {
+        guard let index = gridView.index(at: gridPoint), let content = self.content(at: index), let cell = self.visibleCell(at: index) else {
             return nil
         }
-        var result: MediaPickerGridHostItem?
-        gridView.forEachVisibleCell { visibleIndex, cell in
-            if visibleIndex == index, let cell = cell as? MediaPickerGridCellLayer {
-                result = MediaPickerMediaGridItem(host: self, index: index, cell: cell, asset: asset)
-            }
+        return MediaPickerMediaGridItem(host: self, index: index, cell: cell, content: content)
+    }
+
+    func defaultTransitionItem() -> MediaPickerGridHostItem? {
+        guard let content = self.content(at: 0), let cell = self.visibleCell(at: 0) else {
+            return nil
         }
-        return result
+        return MediaPickerMediaGridItem(host: self, index: 0, cell: cell, content: content)
     }
 
     private func identifier(at index: Int) -> String? {
-        return self.dataSource?.base.asset(at: index)?.localIdentifier
+        return self.dataSource?.identifier(at: index)
     }
 
     private func updateSelectionNumbers() {
@@ -718,6 +1051,14 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         }
         let identifiers = (selectionState.selectedItemsIdentifiers()?.array as? [String]) ?? []
         self.selectionNumbers = mediaPickerGridSelectionNumbers(identifiers)
+    }
+
+    private func updateContentUnderBar(level: MediaGridLevel) {
+        let isContentUnderBar = !level.isInteractive
+        if self.isContentUnderBar != isContentUnderBar {
+            self.isContentUnderBar = isContentUnderBar
+            self.contentUnderBarChanged?()
+        }
     }
 
     private var isCompact: Bool {
@@ -743,7 +1084,13 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     }
 
     func cellState(at index: Int, isCompact: Bool) -> MediaPickerGridCellState? {
-        guard let dataSource = self.dataSource, let asset = dataSource.base.asset(at: index) else {
+        guard let dataSource = self.dataSource else {
+            return nil
+        }
+        guard let asset = dataSource.asset(at: index) else {
+            if let extra = dataSource.extra(at: index) {
+                return self.extraCellState(extra, isCompact: isCompact)
+            }
             return nil
         }
         let identifier = asset.localIdentifier
@@ -767,7 +1114,69 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         if decorations.showsSpoilerBlur || decorations.showsSpoilerOverlay {
             self.spoilerIdentifiers.insert(identifier)
         }
+        var fitAspect: CGFloat?
+        if mediaPickerGridFitsImage(fitsLandscapeImages: self.mode.fitsLandscapeImages, pixelWidth: asset.pixelWidth, pixelHeight: asset.pixelHeight) {
+            fitAspect = CGFloat(asset.pixelWidth) / CGFloat(asset.pixelHeight)
+        }
+        return MediaPickerGridCellState(identifier: identifier, decorations: decorations, isHidden: identifier == self.interaction.hiddenMediaId, fitAspect: fitAspect)
+    }
+
+    private func extraCellState(_ extra: MediaPickerGridExtraItem, isCompact: Bool) -> MediaPickerGridCellState {
+        let identifier = extra.identifier
+        let decorations: MediaPickerGridCellDecorations
+        switch extra {
+        case let .draft(draft):
+            decorations = mediaPickerGridDraftDecorations(isCompact: isCompact, isVideo: draft.isVideo, duration: draft.duration, draftLabel: self.draftLabel)
+        case let .media(_, item):
+            let number = self.selectionNumbers[identifier]
+            let selection = MediaPickerGridSelectionInfo(isSelected: number != nil, number: number, count: self.selectionNumbers.count)
+            let edit: MediaPickerGridEditInfo
+            if let cached = self.itemInfos[identifier]?.edit {
+                edit = cached
+            } else {
+                edit = (item as? TGMediaEditableItem).flatMap { self.editInfo(for: $0, identifier: identifier) } ?? MediaPickerGridEditInfo()
+                self.itemInfos[identifier] = MediaPickerGridItemInfo(asset: MediaPickerGridAssetInfo(), edit: edit)
+            }
+            decorations = mediaPickerGridMediaDecorations(isCompact: isCompact, isSelectable: self.isSelectable && self.interaction.selectionState != nil, selection: selection, edit: edit)
+            if decorations.showsSpoilerBlur || decorations.showsSpoilerOverlay {
+                self.spoilerIdentifiers.insert(identifier)
+            }
+        }
         return MediaPickerGridCellState(identifier: identifier, decorations: decorations, isHidden: identifier == self.interaction.hiddenMediaId)
+    }
+
+    func fitBackground(identifier: String, image: () -> UIImage?) -> UIImage? {
+        if let background = self.fitBackgrounds[identifier] {
+            return background
+        }
+        if self.pendingFitBackgrounds.contains(identifier) {
+            return nil
+        }
+        guard let image = image() else {
+            return nil
+        }
+        self.pendingFitBackgrounds.insert(identifier)
+        Queue.concurrentDefaultQueue().async { [weak self] in
+            let colors = mediaEditorGetGradientColors(from: image)
+            let background = mediaEditorGenerateGradientImage(size: CGSize(width: 3.0, height: 128.0), colors: colors.array)
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                self.pendingFitBackgrounds.remove(identifier)
+                guard let background else {
+                    return
+                }
+                if self.fitBackgrounds.count >= 512 {
+                    self.fitBackgrounds.removeAll()
+                }
+                self.fitBackgrounds[identifier] = background
+                self.gridView?.forEachCell { _, cell in
+                    (cell as? MediaPickerGridCellLayer)?.setFitBackground(background, identifier: identifier)
+                }
+            }
+        }
+        return nil
     }
 
     private func itemInfo(for asset: PHAsset) -> MediaPickerGridItemInfo {
@@ -790,7 +1199,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
                 isLivePhoto: subtypes.contains(.photoLive)
             )
         }
-        let info = MediaPickerGridItemInfo(asset: assetInfo, edit: self.editInfo(for: asset))
+        let info = MediaPickerGridItemInfo(asset: assetInfo, edit: TGMediaAsset(phAsset: asset).flatMap { self.editInfo(for: $0, identifier: identifier) } ?? MediaPickerGridEditInfo())
         if self.itemInfos.count >= MediaPickerMediaGridHost.itemInfoLimit {
             self.itemInfos.removeAll(keepingCapacity: true)
         }
@@ -798,12 +1207,8 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         return info
     }
 
-    private func editInfo(for asset: PHAsset) -> MediaPickerGridEditInfo {
+    private func editInfo(for item: TGMediaEditableItem, identifier: String) -> MediaPickerGridEditInfo {
         let editingState = self.interaction.editingState
-        guard let item = TGMediaAsset(phAsset: asset) else {
-            return MediaPickerGridEditInfo()
-        }
-        let identifier = asset.localIdentifier
         let hasSpoiler = editingState.spoiler(for: item)
         let price = (editingState.price(for: item) as NSNumber?)?.int64Value
         var isLivePhotoModeOn: Bool?
@@ -869,7 +1274,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         }
         var changed = IndexSet()
         gridView.forEachVisibleCell { index, cell in
-            if (cell as? MediaPickerGridCellLayer)?.identifier == identifier || dataSource.base.asset(at: index)?.localIdentifier == identifier {
+            if (cell as? MediaPickerGridCellLayer)?.identifier == identifier || dataSource.identifier(at: index) == identifier {
                 changed.insert(index)
             }
         }
@@ -900,7 +1305,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         if let gridView = self.gridView, let dataSource = self.dataSource {
             let isCompact = self.isCompact
             gridView.forEachVisibleCell { index, _ in
-                if !isCompact, let asset = dataSource.base.asset(at: index) {
+                if !isCompact, let asset = dataSource.asset(at: index) {
                     let _ = self.itemInfo(for: asset)
                 }
             }
@@ -909,35 +1314,54 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         self.refreshVisibleCells(animated: false)
     }
 
+    private func selectableItem(at index: Int) -> TGMediaSelectableItem? {
+        guard let dataSource = self.dataSource else {
+            return nil
+        }
+        if let asset = dataSource.asset(at: index) {
+            return TGMediaAsset(phAsset: asset)
+        }
+        return dataSource.extra(at: index)?.selectableItem
+    }
+
     private func selectionPanned(index: Int, selected: Bool) {
-        guard let asset = self.dataSource?.base.asset(at: index), let item = TGMediaAsset(phAsset: asset) else {
+        guard self.isSelectable, let item = self.selectableItem(at: index) else {
             return
         }
         self.interaction.selectionState?.setItem(item, selected: selected, animated: true, sender: nil)
     }
 
     private func tapped(index: Int, point: CGPoint) {
-        guard let gridView = self.gridView, let dataSource = self.dataSource, let asset = dataSource.base.asset(at: index) else {
+        guard let gridView = self.gridView, let dataSource = self.dataSource, let content = self.content(at: index) else {
             return
         }
-        var cell: MediaPickerGridCellLayer?
-        gridView.forEachVisibleCell { visibleIndex, visibleCell in
-            if visibleIndex == index {
-                cell = visibleCell as? MediaPickerGridCellLayer
-            }
-        }
+        let cell = self.visibleCell(at: index)
         if let cell, cell.decorations.check != nil, let frame = gridView.frameForItem(at: index) {
             let localPoint = CGPoint(x: point.x - frame.minX, y: point.y - frame.minY)
             let checkFrame = MediaPickerGridCellLayer.checkFrame(in: CGRect(origin: CGPoint(), size: frame.size)).insetBy(dx: -8.0, dy: -8.0)
-            if checkFrame.contains(localPoint), let item = TGMediaAsset(phAsset: asset) {
-                let isSelected = self.selectionNumbers[asset.localIdentifier] != nil
+            if checkFrame.contains(localPoint), let item = self.selectableItem(at: index) {
+                let isSelected = self.selectionNumbers[item.uniqueIdentifier] != nil
                 let _ = self.interaction.toggleSelection(item, !isSelected, false)
                 return
             }
         }
-        let fetchResult = dataSource.base.fetchResult
-        let fetchIndex = mediaPickerGridFetchIndex(gridIndex: index, count: fetchResult.count, isReversed: dataSource.base.reversed)
-        self.interaction.openMedia(fetchResult, fetchIndex, cell?.transitionImage)
+        switch content {
+        case let .asset(asset):
+            if self.downloadProgress[asset.localIdentifier] != nil {
+                self.interaction.downloadManager.cancel(identifier: asset.localIdentifier)
+                return
+            }
+            guard let base = dataSource.base, let assetIndex = dataSource.assetIndex(at: index) else {
+                return
+            }
+            let fetchResult = base.fetchResult
+            let fetchIndex = mediaPickerGridFetchIndex(gridIndex: assetIndex, count: fetchResult.count, isReversed: base.reversed)
+            self.interaction.openMedia(fetchResult, fetchIndex, cell?.transitionImage)
+        case let .extra(extra):
+            if case let .draft(draft) = extra {
+                self.interaction.openDraft(draft, cell?.transitionImage)
+            }
+        }
     }
 
     func snapshotView(index: Int, cell: MediaPickerGridCellLayer) -> UIView {
@@ -983,6 +1407,110 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             view.removeFromSuperview()
         }
         self.proxyViews.removeAll()
+    }
+
+    private func removeDownloadTracking() {
+        for (_, disposable) in self.downloadDisposables {
+            disposable.dispose()
+        }
+        self.downloadDisposables.removeAll()
+        self.downloadProgress.removeAll()
+        self.downloadIndices.removeAll()
+        for (_, overlay) in self.downloadOverlays {
+            overlay.view.removeFromSuperview()
+        }
+        self.downloadOverlays.removeAll()
+    }
+
+    private func scheduleDownloadTracking() {
+        if self.isDownloadTrackingScheduled {
+            return
+        }
+        self.isDownloadTrackingScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                return
+            }
+            self.isDownloadTrackingScheduled = false
+            self.updateDownloadTracking()
+        }
+    }
+
+    private static let downloadStatusSize = CGSize(width: 40.0, height: 40.0)
+
+    private func downloadStatusFrame(index: Int) -> CGRect? {
+        guard let frame = self.gridView?.contentFrameForItem(at: index) else {
+            return nil
+        }
+        let size = MediaPickerMediaGridHost.downloadStatusSize
+        return CGRect(origin: CGPoint(x: floorToScreenPixels(frame.midX - size.width / 2.0), y: floorToScreenPixels(frame.midY - size.height / 2.0)), size: size)
+    }
+
+    private func updateDownloadTracking() {
+        guard self.mode.tracksDownloads, let gridView = self.gridView, let dataSource = self.dataSource, dataSource.base != nil else {
+            return
+        }
+        var visible: [String: Int] = [:]
+        gridView.forEachVisibleCell { index, _ in
+            if let asset = dataSource.asset(at: index) {
+                visible[asset.localIdentifier] = index
+            }
+        }
+        self.downloadIndices = visible
+        for (identifier, disposable) in self.downloadDisposables where visible[identifier] == nil {
+            disposable.dispose()
+            self.downloadDisposables.removeValue(forKey: identifier)
+            self.downloadProgress.removeValue(forKey: identifier)
+            if let overlay = self.downloadOverlays.removeValue(forKey: identifier) {
+                overlay.view.removeFromSuperview()
+            }
+        }
+        for (identifier, index) in visible {
+            if self.downloadDisposables[identifier] == nil {
+                self.downloadDisposables[identifier] = (self.interaction.downloadManager.downloadProgress(identifier: identifier)
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    self?.downloadStatusChanged(identifier: identifier, status: status)
+                })
+            }
+            if let overlay = self.downloadOverlays[identifier], let frame = self.downloadStatusFrame(index: index), overlay.view.frame != frame {
+                overlay.view.frame = frame
+            }
+        }
+    }
+
+    private func downloadStatusChanged(identifier: String, status: AssetDownloadStatus) {
+        guard self.downloadDisposables[identifier] != nil else {
+            return
+        }
+        switch status {
+        case let .progress(value):
+            self.downloadProgress[identifier] = value
+            let overlay: RadialStatusNode
+            if let current = self.downloadOverlays[identifier] {
+                overlay = current
+            } else {
+                overlay = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
+                overlay.isUserInteractionEnabled = false
+                self.downloadOverlays[identifier] = overlay
+                self.gridView?.overlayView.addSubview(overlay.view)
+            }
+            if let index = self.downloadIndices[identifier], let frame = self.downloadStatusFrame(index: index) {
+                overlay.view.frame = frame
+            }
+            overlay.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, CGFloat(value)), cancelEnabled: true, animateRotation: true))
+        case .none, .completed, .failed:
+            self.downloadProgress.removeValue(forKey: identifier)
+            if let overlay = self.downloadOverlays.removeValue(forKey: identifier) {
+                overlay.transitionToState(.none, animated: true, completion: { [weak overlay] in
+                    overlay?.view.removeFromSuperview()
+                })
+            }
+            if case .none = status {
+                break
+            }
+            self.downloadDisposables.removeValue(forKey: identifier)?.dispose()
+            self.scheduleDownloadTracking()
+        }
     }
 
     func updateOverlays() {

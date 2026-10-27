@@ -9,6 +9,7 @@ import TelegramPresentationData
 import LegacyComponents
 import SolidRoundedButtonNode
 import RMIntro
+import AuthorizationUtils
 
 public final class AuthorizationSequenceSplashController: ViewController {
     private var controllerNode: AuthorizationSequenceSplashControllerNode {
@@ -148,12 +149,11 @@ public final class AuthorizationSequenceSplashController: ViewController {
     }
     
     // iPhone Duo: beside a side strip the intro (logo, pages, Start Messaging) keeps to the band between the
-    // side insets. With equal insets (every other phone) it fills the window as before.
+    // side insets, centered on the full width on the unfolded screen (authorizationContentBand). With equal insets
+    // (every other phone) it fills the window as before.
     private func introFrame(layout: ContainerViewLayout) -> CGRect {
-        if layout.safeInsets.left != layout.safeInsets.right {
-            return CGRect(origin: CGPoint(x: layout.safeInsets.left, y: 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
-        }
-        return CGRect(origin: CGPoint(), size: layout.size)
+        let (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
+        return CGRect(origin: CGPoint(x: bandMinX, y: 0.0), size: CGSize(width: bandWidth, height: layout.size.height))
     }
     
     private func addControllerIfNeeded() {

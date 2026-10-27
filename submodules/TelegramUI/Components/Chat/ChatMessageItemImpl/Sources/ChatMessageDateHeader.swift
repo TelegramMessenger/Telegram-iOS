@@ -15,6 +15,7 @@ import WallpaperBackgroundNode
 import ChatControllerInteraction
 import AvatarVideoNode
 import ChatMessageItem
+import ChatMessageItemCommon
 import AvatarNode
 import ComponentFlow
 import EmojiStatusComponent
@@ -409,6 +410,7 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var text: String
+    private var labelMaxWidth: CGFloat = 320.0
     
     init(context: AccountContext, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, displayHeader: ChatMessageDateHeader.HeaderData) {
         self.context = context
@@ -502,15 +504,9 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
             }
         }
         self.addSubnode(self.labelNode)
-                
-        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
-        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
-        let labelLayout = TextNode.asyncLayout(self.labelNode)
-                
-        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let _ = apply()
-        self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
+        let labelSize = self.layoutLabel()
+        self.labelNode.frame = CGRect(origin: CGPoint(), size: labelSize)
         
         let arrowIcon = UIImageView(image: ChatMessagePeerContentNode.arrowImage)
         self.arrowIcon = arrowIcon
@@ -528,17 +524,22 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
-        let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
-        
-        let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
-        let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
-        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let _ = apply()
+        let labelSize = self.layoutLabel()
         
         if presentationData.fontSize != previousPresentationData.fontSize {
-            self.labelNode.bounds = CGRect(origin: CGPoint(), size: size.size)
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: labelSize)
         }
+    }
+    
+    private func layoutLabel() -> CGSize {
+        let titleFont = Font.medium(min(18.0, floor(self.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
+        
+        let attributedString = NSAttributedString(string: self.text, font: titleFont, textColor: bubbleVariableColor(variableColor: self.presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: self.presentationData.theme.wallpaper))
+        let labelLayout = TextNode.asyncLayout(self.labelNode)
+        
+        let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: self.labelMaxWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let _ = apply()
+        return size.size
     }
     
     func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
@@ -560,6 +561,12 @@ private final class ChatMessagePeerContentNode: ASDisplayNode {
             avatarInset = 4.0
         }
         let avatarSpacing: CGFloat = 4.0
+        
+        let labelMaxWidth = chatMessageHeaderTitleMaxWidth(width: size.width, leftInset: leftInset, rightInset: rightInset, chromeWidth: avatarInset + avatarDiameter + avatarSpacing + chatDateInset + arrowSpacing, margin: 8.0)
+        if self.labelMaxWidth != labelMaxWidth {
+            self.labelMaxWidth = labelMaxWidth
+            self.labelNode.bounds = CGRect(origin: CGPoint(), size: self.layoutLabel())
+        }
         
         let labelSize = self.labelNode.bounds.size
         let backgroundSize = CGSize(width: avatarInset + avatarDiameter + avatarSpacing + labelSize.width + chatDateInset + arrowSpacing, height: chatDateSize)

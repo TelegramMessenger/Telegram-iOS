@@ -77,6 +77,12 @@ These are the user's decisions; a screen that follows them is correct, one that 
    its own button uses `sideColumnNavigationButtonFrame`.
 2. **Content keeps to the band** between the side insets: lists, headers, top rows, centred texts. Scrolling content
    stays in the band too (it would otherwise pass under the corner block).
+   The login flow on the unfolded screen is the exception: its content is centred on the full width, in line with its
+   bottom button and the keyboard, inset by the larger side inset on both sides, when that leaves room for its 430pt
+   column (`authorizationContentBand` in AuthorizationUtils). Folded, it keeps to the band. This covers every
+   AuthorizationUI screen, also where Settings reuses them (Change Number, login email setup), and
+   `TwoFactorDataInputScreen` and `TwoFactorAuthSplashScreen` with an unauthorized engine (password recovery during
+   login).
 3. **A button or panel anchored at the bottom spans the strip** and keeps clear only of a corner block that reaches
    its row, which at the bottom is only FL's bottom-right block (`bottomEdgeSideInsets()`). This covers primary
    bottom buttons, bottom toolbars, selection panels, short bottom sheets and their buttons.
@@ -92,6 +98,11 @@ These are the user's decisions; a screen that follows them is correct, one that 
      whose screen is the 9:16 viewfinder's band (`storyControlsBandLayout`), the editor's bar on the camera's bottom row.
    - the **chat camera** on the folded screen follows the system Camera instead: centred on the screen, the photo preview
      filling it and the video one 9:16 in the middle, side buttons mirrored on both edges (`CameraScreenChatScreenLayout`).
+   - the **login flow's bottom button** on the folded screen (with the divider and Sign in with Apple beside it, and the
+     actions in the password-recovery button rows): it keeps to the content band so the title, the fields and the
+     button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
+     of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
+     rule 2's exception.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
    island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
    row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;
@@ -120,6 +131,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
 
 - Symmetric left inset: `X + safeInsets.left` used for both sides, or `right: safeInsets.left`.
 - Band-sized but screen-centred: width `W - L - R` placed at `(W - w) / 2`, 42pt toward the strip.
+- A presenting context's side insets counted on top of `safeInsets`: a chat hands its presentation context (toasts,
+  tooltips) its history list's insets, whose left and right hold the safe insets swapped, so `intrinsicInsets.left` is
+  FP's 84pt strip. Counting it on both sides again left the undo toast no width for its text (one letter per line);
+  `undoOverlayHorizontalLayout` takes the strip (the side safe insets' difference) out of it.
 - Trailing control at `W - safeInsets.left - N`.
 - Side insets ignored in a full-screen surface: controls under a corner block.
 - Two status heights mixed in unfolded portrait (compact for one part, full for the other).
@@ -154,4 +169,6 @@ other device stays byte-identical; the band helpers above are built that way.
 - Screens no link reaches: a temporary Darwin-notification hook that pushes the screen (marked for removal and
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
-  (side tab bar and its edit toolbar per posture).
+  (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
+  widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
+  flow's content and bottom-button bands per posture).

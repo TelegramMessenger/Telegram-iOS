@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 enum MediaPickerGridCellTypeIcon: Equatable {
     case video
@@ -63,8 +64,9 @@ struct MediaPickerGridCellDecorations: Equatable {
     var showsSpoilerOverlay: Bool
     var showsPrice: Bool
     var price: Int64?
+    var draftLabel: String?
 
-    static let none = MediaPickerGridCellDecorations(check: nil, durationText: nil, typeIcon: nil, showsLeftShadow: false, showsRightShadow: false, showsSpoilerBlur: false, showsSpoilerOverlay: false, showsPrice: false, price: nil)
+    static let none = MediaPickerGridCellDecorations(check: nil, durationText: nil, typeIcon: nil, showsLeftShadow: false, showsRightShadow: false, showsSpoilerBlur: false, showsSpoilerOverlay: false, showsPrice: false, price: nil, draftLabel: nil)
 }
 
 func mediaPickerGridDurationText(_ duration: TimeInterval) -> String {
@@ -129,8 +131,30 @@ func mediaPickerGridCellDecorations(isCompact: Bool, isSelectable: Bool, selecti
         showsSpoilerBlur: hasSpoilerContent,
         showsSpoilerOverlay: hasSpoilerContent,
         showsPrice: selectedPrice != nil,
-        price: isSingle ? selectedPrice : nil
+        price: isSingle ? selectedPrice : nil,
+        draftLabel: nil
     )
+}
+
+func mediaPickerGridDraftDecorations(isCompact: Bool, isVideo: Bool, duration: Double?, draftLabel: String) -> MediaPickerGridCellDecorations {
+    var result = MediaPickerGridCellDecorations.none
+    if isCompact {
+        return result
+    }
+    result.draftLabel = draftLabel
+    if isVideo {
+        result.typeIcon = .video
+        result.durationText = mediaPickerGridDurationText(duration ?? 0.0)
+        result.showsRightShadow = true
+    }
+    return result
+}
+
+func mediaPickerGridMediaDecorations(isCompact: Bool, isSelectable: Bool, selection: MediaPickerGridSelectionInfo, edit: MediaPickerGridEditInfo) -> MediaPickerGridCellDecorations {
+    var result = mediaPickerGridCellDecorations(isCompact: isCompact, isSelectable: isSelectable, selection: selection, asset: MediaPickerGridAssetInfo(), edit: edit, displaysLivePhotoIcon: false, isForceLivePhotoEnabled: false)
+    result.typeIcon = nil
+    result.showsLeftShadow = false
+    return result
 }
 
 struct MediaPickerGridAssetsConfiguration: Equatable {
@@ -140,12 +164,12 @@ struct MediaPickerGridAssetsConfiguration: Equatable {
     var scrollsToEnd: Bool
 }
 
-func mediaPickerGridAssetsConfiguration(subjectCollectionId: String?, selectedCollectionId: String?) -> MediaPickerGridAssetsConfiguration {
+func mediaPickerGridAssetsConfiguration(subjectCollectionId: String?, selectedCollectionId: String?, isFiltered: Bool) -> MediaPickerGridAssetsConfiguration {
     let isReversed = subjectCollectionId == nil
     return MediaPickerGridAssetsConfiguration(
         key: selectedCollectionId ?? subjectCollectionId ?? "",
         isReversed: isReversed,
-        isLibrary: isReversed && selectedCollectionId == nil,
+        isLibrary: isReversed && selectedCollectionId == nil && !isFiltered,
         scrollsToEnd: !isReversed
     )
 }
@@ -154,12 +178,107 @@ func mediaPickerGridFetchIndex(gridIndex: Int, count: Int, isReversed: Bool) -> 
     return isReversed ? count - gridIndex - 1 : gridIndex
 }
 
-func mediaPickerUsesMediaGrid(isChatAttachmentDefaultAssets: Bool, isEnabled: Bool) -> Bool {
-    return isChatAttachmentDefaultAssets && isEnabled
+func mediaPickerUsesMediaGrid(isEnabled: Bool) -> Bool {
+    return isEnabled
 }
 
 func mediaPickerIsChatAttachmentDefaultAssets(isAssets: Bool, isDefaultMode: Bool, forCollage: Bool) -> Bool {
     return isAssets && isDefaultMode && !forCollage
+}
+
+enum MediaPickerGridModeKind: Equatable {
+    case chatAttachment
+    case story
+    case other
+}
+
+func mediaPickerGridModeKind(isAssets: Bool, isDefaultMode: Bool, isStoryMode: Bool, forCollage: Bool) -> MediaPickerGridModeKind {
+    if mediaPickerIsChatAttachmentDefaultAssets(isAssets: isAssets, isDefaultMode: isDefaultMode, forCollage: forCollage) {
+        return .chatAttachment
+    }
+    if isAssets && isStoryMode {
+        return .story
+    }
+    return .other
+}
+
+struct MediaPickerGridModeConfiguration: Equatable {
+    var isZoomEnabled: Bool
+    var cellAspect: CGFloat
+    var fitsLandscapeImages: Bool
+    var tracksDownloads: Bool
+    var cameraColumns: Set<Int>
+}
+
+func mediaPickerGridModeConfiguration(_ kind: MediaPickerGridModeKind) -> MediaPickerGridModeConfiguration {
+    switch kind {
+    case .chatAttachment:
+        return MediaPickerGridModeConfiguration(isZoomEnabled: true, cellAspect: 1.0, fitsLandscapeImages: false, tracksDownloads: false, cameraColumns: [3])
+    case .story:
+        return MediaPickerGridModeConfiguration(isZoomEnabled: false, cellAspect: 1.227, fitsLandscapeImages: true, tracksDownloads: true, cameraColumns: [3, 5])
+    case .other:
+        return MediaPickerGridModeConfiguration(isZoomEnabled: false, cellAspect: 1.0, fitsLandscapeImages: false, tracksDownloads: true, cameraColumns: [3, 5])
+    }
+}
+
+func mediaPickerGridAllowsSelection(isMultipleSelectionMode: Bool, explicitMultipleSelection: Bool) -> Bool {
+    return isMultipleSelectionMode || explicitMultipleSelection
+}
+
+func mediaPickerGridFitsImage(fitsLandscapeImages: Bool, pixelWidth: Int, pixelHeight: Int) -> Bool {
+    return fitsLandscapeImages && pixelWidth > pixelHeight
+}
+
+enum MediaPickerGridSlot: Equatable {
+    case extra(Int)
+    case asset(Int)
+}
+
+func mediaPickerGridSlot(index: Int, extraCount: Int, assetCount: Int) -> MediaPickerGridSlot? {
+    if index < 0 {
+        return nil
+    }
+    if index < extraCount {
+        return .extra(index)
+    }
+    let assetIndex = index - extraCount
+    return assetIndex < assetCount ? .asset(assetIndex) : nil
+}
+
+func mediaPickerGridShifted(_ indices: IndexSet, by offset: Int) -> IndexSet {
+    if offset == 0 {
+        return indices
+    }
+    var result = IndexSet()
+    for range in indices.rangeView {
+        result.insert(integersIn: (range.lowerBound + offset) ..< (range.upperBound + offset))
+    }
+    return result
+}
+
+func mediaPickerGridAssetRanges(_ ranges: [Range<Int>], extraCount: Int, assetCount: Int) -> [Range<Int>] {
+    var result: [Range<Int>] = []
+    for range in ranges {
+        let lower = max(0, range.lowerBound - extraCount)
+        let upper = min(assetCount, range.upperBound - extraCount)
+        if lower < upper {
+            result.append(lower ..< upper)
+        }
+    }
+    return result
+}
+
+func mediaPickerGridAssetIndices(_ indices: [Int], extraCount: Int, assetCount: Int) -> [Int] {
+    return indices.compactMap { index in
+        if case let .asset(assetIndex) = mediaPickerGridSlot(index: index, extraCount: extraCount, assetCount: assetCount) {
+            return assetIndex
+        }
+        return nil
+    }
+}
+
+func mediaPickerGridPrefixChange(oldCount: Int, newCount: Int) -> (removed: IndexSet, inserted: IndexSet) {
+    return (IndexSet(integersIn: 0 ..< max(0, oldCount)), IndexSet(integersIn: 0 ..< max(0, newCount)))
 }
 
 func mediaPickerGridNeedsInstall(current: MediaPickerGridAssetsConfiguration?, hasGrid: Bool, new: MediaPickerGridAssetsConfiguration) -> Bool {

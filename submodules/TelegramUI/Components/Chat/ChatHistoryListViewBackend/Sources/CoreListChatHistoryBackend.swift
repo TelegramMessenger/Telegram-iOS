@@ -1759,7 +1759,33 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     func isStrictlyScrolledToPinToEdgeItem() -> Bool {
         return self.coreList.isStrictlyPinnedToBottomEdge
     }
-    func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool { return false }
+    // Parity with ListViewImpl.scrollWithDirection (Display/Source/ListView.swift:5436). Its one chat
+    // caller is the two-finger selection's edge auto-scroll (`ChatHistoryListNodeImpl
+    // .setupSelectionScrolling`); a hard `false` here, left from the PoC, stopped that selection at the
+    // rows already on screen. `.up` lowers ListViewImpl's contentOffset, towards index 0, which is content
+    // moving DOWN in CoreList's space: `scroll(by:)`'s positive sign.
+    //
+    // `scroll(by:)` runs as a drag frame, so `onVisibleWindowChanged` makes the reports a scroll owes
+    // (range, content offset, trailing space), and the date headers flash and the bubbles tilt as under a
+    // drag. ListViewImpl does neither here (its scroller is not dragging), which is a deliberate
+    // difference: the dates show while a selection crosses days.
+    //
+    // That callback also marks the drag witness, which is restored: no drag moved the content. This
+    // diverges from ListViewImpl, whose tracking pan also begins on the two-finger selection and so
+    // accumulates the auto-scroll into `trackingOffset`. The one consumer of the witness
+    // (`ChatControllerNode`'s keyboard snap-back) also needs `dismissedInputByDragging`, which a
+    // selection cannot produce, so the two agree in effect.
+    //
+    // A step that catches a momentum flight ends it, unbraked, which reports `didEndScrolling` as any
+    // caught flight does. Rare: the fingers landing catch the motion (`noteTouchDown`), and what remains is
+    // an overscroll bounce relaunched when the scroll pan fails to the two-finger selection.
+    func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
+        let didMoveContentDuringDrag = self.didMoveContentDuringDrag
+        defer {
+            self.didMoveContentDuringDrag = didMoveContentDuringDrag
+        }
+        return self.coreList.scroll(by: direction == .up ? distance : -distance)
+    }
 }
 
 // A CoreListItem wrapping a ListViewItem.
