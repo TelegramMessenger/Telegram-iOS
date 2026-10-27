@@ -49,30 +49,70 @@ WR_TEST(testALongLocaleListIsCharged) {
     CHECK(JS_GetWorkUnits(rt) - before >= 100000 * wr::work::kNodeVisit);
 }
 
-/// A request names the first requested locale, else the host's, never with a unicode extension (Foundation's Locale,
-/// the glue's, misreads one into a locale it cannot format with, and the glue traps on that).
+/// A request names the first requested locale, else the host's, with the unicode extension keywords its constructor
+/// reads (ECMA-402 ResolveLocale; testOnlyARelevantSupportedKeywordReachesTheHost).
 WR_TEST(testTheLocaleARequestNames) {
     HostEnv env;
     wr::HostState::of(env.ctx()).setLocale("ru-RU");
-    CHECK_EQ(wr::intl::resolveLocale(env.ctx(), {}), std::string("ru-RU"));
-    CHECK_EQ(wr::intl::resolveLocale(env.ctx(), {"de-CH-1996", "fr"}), std::string("de-CH-1996"));
+    CHECK_EQ(wr::intl::resolveLocale(env.ctx(), {}, wr::intl::RelevantKeys::NumberFormat), std::string("ru-RU"));
+    CHECK_EQ(wr::intl::resolveLocale(env.ctx(), {"de-CH-1996", "fr"}, wr::intl::RelevantKeys::NumberFormat), std::string("de-CH-1996"));
     wr::HostState::of(env.ctx()).setLocale("not a tag");
-    CHECK_EQ(wr::intl::resolveLocale(env.ctx(), {}), std::string("en-US"));
-    CHECK_EQ(wr::intl::withoutUnicodeExtensions("th-TH-u-nu-thai-ca-buddhist-x-y"), std::string("th-TH-x-y"));
+    CHECK_EQ(wr::intl::resolveLocale(env.ctx(), {}, wr::intl::RelevantKeys::NumberFormat), std::string("en-US"));
     env.host().intlAnswer = wr_test::echoIntl;
     wr::HostState::of(env.ctx()).setLocale("ru-RU");
     env.eval("(1).toLocaleString(); new Intl.NumberFormat(['ar-EG-u-nu-latn', 'en']).format(1)");
     CHECK_EQ(env.host().intlRequests.size(), size_t(2));
     CHECK_EQ(env.host().intlRequests[0], std::string("{\"kind\":\"number\",\"locale\":\"ru-RU\",\"opts\":{},\"value\":1}"));
-    CHECK_EQ(env.host().intlRequests[1], std::string("{\"kind\":\"number\",\"locale\":\"ar-EG\",\"opts\":{},\"value\":1}"));
+    // The tag as the widget wrote it, extension and all (as upstream's shim sends it; follow-ups plan, Task 3).
+    CHECK_EQ(env.host().intlRequests[1], std::string("{\"kind\":\"number\",\"locale\":\"ar-EG-u-nu-latn\",\"opts\":{},\"value\":1}"));
     env.eval("new Date(0).toLocaleDateString('hi-IN-u-nu-deva-ca-indian-x-y', { dateStyle: 'full' }); new Intl.Collator('de-u-co-phonebk-kn').compare('a', 'b')");
     CHECK_EQ(env.host().intlRequests[2],
-             std::string("{\"kind\":\"dateMethod\",\"method\":\"toLocaleDateString\",\"locale\":\"hi-IN-x-y\",\"opts\":{\"dateStyle\":\"full\"},\"value\":0}"));
-    CHECK_EQ(env.host().intlRequests[3], std::string("{\"kind\":\"compare\",\"locale\":\"de\",\"opts\":{},\"a\":\"a\",\"b\":\"b\"}"));
+             std::string("{\"kind\":\"dateMethod\",\"method\":\"toLocaleDateString\",\"locale\":\"hi-IN-u-ca-indian-nu-deva-x-y\",\"opts\":{\"dateStyle\":\"full\"},\"value\":0}"));
+    CHECK_EQ(env.host().intlRequests[3], std::string("{\"kind\":\"compare\",\"locale\":\"de-u-co-phonebk-kn\",\"opts\":{},\"a\":\"a\",\"b\":\"b\"}"));
 }
 
 /// The final review's C1: the locale list is deduplicated through a hash set and holds at most kMaxLocaleList distinct
 /// tags (a RangeError beyond), so many distinct tags cost linear work, not the quadratic compares of a list search.
+/// ECMA-402 ResolveLocale (follow-ups review, C1 and I1): a request keeps only the unicode extension keywords its
+/// constructor reads (NumberFormat and RelativeTimeFormat nu; DateTimeFormat ca, hc, nu; Collator co, kf, kn; PluralRules
+/// and ListFormat none), each with a value this client supports, sorted by key. Other keywords, attributes and unknown
+/// values never reach the glue: an unknown numbering system makes Foundation's relative formatter trap (the app's
+/// crash), and the glue reads plural rules from a language key an extension breaks. Other extensions and private use
+/// stay.
+WR_TEST(testOnlyARelevantSupportedKeywordReachesTheHost) {
+    HostEnv env;
+    env.host().intlAnswer = wr_test::echoIntl;
+    auto localeOf = [&](const char* script) {
+        env.host().intlRequests.clear();
+        env.eval(script);
+        if (env.host().intlRequests.empty()) {
+            return std::string("no request");
+        }
+        const std::string& request = env.host().intlRequests.back();
+        const size_t at = request.find("\"locale\":\"");
+        if (at == std::string::npos) {
+            return std::string("no locale");
+        }
+        return request.substr(at + 10, request.find('"', at + 10) - at - 10);
+    };
+    CHECK_EQ(localeOf("new Intl.NumberFormat('en-u-nu-bogus').format(1)"), std::string("en"));
+    CHECK_EQ(localeOf("new Intl.NumberFormat('en-u-nu').format(1)"), std::string("en"));
+    CHECK_EQ(localeOf("new Intl.NumberFormat('en-u-ca-japanese-nu-thai').format(1)"), std::string("en-u-nu-thai"));
+    CHECK_EQ(localeOf("new Intl.NumberFormat('en-u-attr-nu-thai').format(1)"), std::string("en-u-nu-thai"));
+    CHECK_EQ(localeOf("new Intl.DateTimeFormat('en-u-nu-japanfin-hc-h23-ca-japanese').format(0)"), std::string("en-u-ca-japanese-hc-h23"));
+    CHECK_EQ(localeOf("new Intl.DateTimeFormat('en-u-ca-bogus-hc-h99').format(0)"), std::string("en"));
+    CHECK_EQ(localeOf("new Intl.DateTimeFormat('ar-u-ca-islamic-civil').format(0)"), std::string("ar-u-ca-islamic-civil"));
+    CHECK_EQ(localeOf("new Intl.RelativeTimeFormat('en-u-nu-yes').format(1, 'day')"), std::string("en"));
+    CHECK_EQ(localeOf("new Intl.RelativeTimeFormat('fa-u-nu-arabext').format(1, 'day')"), std::string("fa-u-nu-arabext"));
+    CHECK_EQ(localeOf("new Intl.PluralRules('ar-u-nu-arab').select(2)"), std::string("ar"));
+    CHECK_EQ(localeOf("new Intl.ListFormat('en-u-nu-thai').format(['a'])"), std::string("en"));
+    CHECK_EQ(localeOf("new Intl.Collator('de-u-co-bogus-kn-false').compare('a', 'b')"), std::string("de-u-kn-false"));
+    CHECK_EQ(localeOf("new Intl.Collator('de-u-kn-true-co-phonebk').compare('a', 'b')"), std::string("de-u-co-phonebk-kn"));
+    CHECK_EQ(localeOf("new Intl.NumberFormat('de-t-en-u-nu-thai-x-a').format(1)"), std::string("de-t-en-u-nu-thai-x-a"));
+    CHECK_EQ(localeOf("(1).toLocaleString('en-u-nu-bogus')"), std::string("en"));
+    CHECK_EQ(localeOf("new Date(0).toLocaleDateString('en-u-nu-bogus-ca-roc')"), std::string("en-u-ca-roc"));
+}
+
 WR_TEST(testManyDistinctLocalesAreRefused) {
     HostEnv env;
     env.eval(kErr);

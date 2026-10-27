@@ -137,34 +137,6 @@ std::optional<std::string> canonicalTag(std::string_view tag) {
     return out;
 }
 
-} // namespace
-
-std::string withoutUnicodeExtensions(const std::string& tag) {
-    std::string out;
-    size_t start = 0;
-    bool inUnicode = false;
-    for (size_t i = 0; i <= tag.size(); i++) {
-        if (i == tag.size() || tag[i] == '-') {
-            const std::string_view subtag(tag.data() + start, i - start);
-            if (subtag.size() == 1) {
-                inUnicode = (subtag[0] == 'u' || subtag[0] == 'U');
-            }
-            if (subtag == "x" || subtag == "X") {
-                out += tag.substr(start - (start ? 1 : 0));
-                return out;
-            }
-            if (!inUnicode) {
-                out += (out.empty() ? "" : "-");
-                out += subtag;
-            }
-            start = i + 1;
-        }
-    }
-    return out;
-}
-
-namespace {
-
 JSValue arrayOf(JSContext* ctx, const std::vector<std::string>& list) {
     Value array = Value::adopt(ctx, checked(ctx, JS_NewArray(ctx)));
     for (uint32_t i = 0; i < list.size(); i++) {
@@ -227,12 +199,131 @@ std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst loc
     return seen;
 }
 
-std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested) {
+namespace {
+
+// The keyword values this client sends to the glue (resolveLocale). Conservative on purpose: what Foundation formats
+// on every iOS this app runs on, not what the newest one accepts, since an unknown value can trap inside Foundation.
+
+/// The numbering systems with simple digit mappings of ECMA-402's first editions' table (today's lists more): numeric
+/// systems every iOS this app runs on formats.
+constexpr std::string_view kNumberingSystems[] = {"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru",
+                                                  "hanidec", "khmr", "knda", "laoo", "latn", "limb", "mlym", "mong",
+                                                  "mymr", "orya", "tamldec", "telu", "thai", "tibt"};
+/// CLDR's calendars that Foundation's Calendar.Identifier has on iOS 15 (no dangi before iOS 18, no islamic-rgsa).
+constexpr std::string_view kCalendars[] = {"buddhist", "chinese", "coptic", "ethioaa", "ethiopic", "gregory", "hebrew",
+                                           "indian", "islamic", "islamic-civil", "islamic-tbla", "islamic-umalqura",
+                                           "iso8601", "japanese", "persian", "roc"};
+constexpr std::string_view kHourCycles[] = {"h11", "h12", "h23", "h24"};
+/// CLDR's collations but the two ECMA-402 excludes (standard, search).
+constexpr std::string_view kCollations[] = {"big5han", "compat", "dict", "direct", "ducet", "emoji", "eor", "gb2312",
+                                            "phonebk", "phonetic", "pinyin", "reformed", "searchjl", "stroke", "trad",
+                                            "unihan", "zhuyin"};
+constexpr std::string_view kNumerics[] = {"true", "false"};
+constexpr std::string_view kCaseFirstValues[] = {"upper", "lower", "false"};
+
+template <size_t N>
+bool listed(const std::string_view (&table)[N], std::string_view value) {
+    return std::find(std::begin(table), std::end(table), value) != std::end(table);
+}
+
+/// Whether the keyword `key`-`value` ("true" for a key with no type) is one the constructor reads with a value sent.
+bool keptKeyword(std::string_view key, std::string_view value, RelevantKeys keys) {
+    const bool numbers = keys == RelevantKeys::NumberFormat || keys == RelevantKeys::DateTimeFormat ||
+                         keys == RelevantKeys::RelativeTimeFormat;
+    if (key == "nu") {
+        return numbers && listed(kNumberingSystems, value);
+    }
+    if (keys == RelevantKeys::DateTimeFormat) {
+        return (key == "ca" && listed(kCalendars, value)) || (key == "hc" && listed(kHourCycles, value));
+    }
+    if (keys == RelevantKeys::Collator) {
+        return (key == "co" && listed(kCollations, value)) || (key == "kn" && listed(kNumerics, value)) ||
+               (key == "kf" && listed(kCaseFirstValues, value));
+    }
+    return false;
+}
+
+/// `tag` (canonical, structurally valid) with its unicode extension reduced to the keywords keptKeyword keeps, sorted
+/// by key, a "true" type dropped (UTS 35's canonical form), and of a repeated key the first kept occurrence (UTS 35 takes
+/// the first occurrence; a dropped one leaves the key to a later one here, which is never less safe); the extensions in
+/// singleton order and private use last, as UTS 35 orders them. Other singletons (`-a-`…) stay: Foundation reads them
+/// as `@va=`, which spoils the glue's plural language key as `-u-` did, without a trap (follow-ups fix-wave review).
+std::string withRelevantKeywords(std::string_view tag, RelevantKeys keys) {
+    std::vector<std::string_view> subtags;
+    for (size_t start = 0, i = 0; i <= tag.size(); i++) {
+        if (i == tag.size() || tag[i] == '-') {
+            subtags.push_back(tag.substr(start, i - start));
+            start = i + 1;
+        }
+    }
+    std::string language;
+    std::vector<std::pair<char, std::string>> extensions;
+    std::vector<std::pair<std::string, std::string>> keywords;
+    std::string privateUse;
+    char singleton = 0;
+    std::string key, value;
+    auto endKeyword = [&]() {
+        if (key.empty()) {
+            return;
+        }
+        const std::string type = value.empty() ? "true" : value;
+        const bool repeated = std::any_of(keywords.begin(), keywords.end(), [&](const auto& k) { return k.first == key; });
+        if (!repeated && keptKeyword(key, type, keys)) {
+            keywords.emplace_back(key, type == "true" ? "" : type);
+        }
+        key.clear();
+        value.clear();
+    };
+    for (std::string_view subtag : subtags) {
+        if (singleton != 'x' && subtag.size() == 1) {
+            endKeyword();
+            singleton = subtag[0];
+            if (singleton == 'x') {
+                privateUse = "-x";
+            } else if (singleton != 'u') {
+                extensions.emplace_back(singleton, std::string());
+            }
+            continue;
+        }
+        if (singleton == 0) {
+            language += (language.empty() ? "" : "-") + std::string(subtag);
+        } else if (singleton == 'x') {
+            privateUse += "-" + std::string(subtag);
+        } else if (singleton != 'u') {
+            extensions.back().second += "-" + std::string(subtag);
+        } else if (subtag.size() == 2) {
+            endKeyword();
+            key = std::string(subtag);
+        } else if (!key.empty()) {
+            value += (value.empty() ? "" : "-") + std::string(subtag);
+        }
+        // A type before any key is an attribute: no constructor reads one.
+    }
+    endKeyword();
+    if (!keywords.empty()) {
+        std::sort(keywords.begin(), keywords.end());
+        std::string u;
+        for (const auto& [k, v] : keywords) {
+            u += "-" + k + (v.empty() ? "" : "-" + v);
+        }
+        extensions.emplace_back('u', u);
+    }
+    std::stable_sort(extensions.begin(), extensions.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::string out = language;
+    for (const auto& [s, text] : extensions) {
+        out += "-" + std::string(1, s) + text;
+    }
+    return out + privateUse;
+}
+
+} // namespace
+
+std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested, RelevantKeys keys) {
     if (!requested.empty()) {
-        return withoutUnicodeExtensions(requested.front());
+        return withRelevantKeywords(requested.front(), keys);
     }
     if (std::optional<std::string> host = canonicalTag(HostState::of(ctx).locale())) {
-        return withoutUnicodeExtensions(*host);
+        return withRelevantKeywords(*host, keys);
     }
     return "en-US";
 }

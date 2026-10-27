@@ -96,14 +96,35 @@ public final class ConformanceRunner {
         /// calls `onBridge`, each through a `DispatchQueue.main.async`; finishing at once dropped them (the 20 haptics
         /// of 16-sdk-taps-c's boot went unseen on some runs), so a run is finished `settleSpins` spins after it is over.
         var spinsSinceOver: Int?
+        /// The bot this run's requests go to, and the message's state as its edits left it (widget-sandbox v0.2.1).
+        let bot: ConformanceMockBot
+        var state: MessageWidgetState
 
-        init(test: ConformanceTest, run: ConformanceRun, instance: MessageWidgetInstance?, view: UIView?, deadline: Date) {
+        init(test: ConformanceTest, run: ConformanceRun, instance: MessageWidgetInstance?, view: UIView?, deadline: Date, bot: ConformanceMockBot, state: MessageWidgetState) {
             self.test = test
             self.run = run
             self.instance = instance
             self.view = view
             self.deadline = deadline
+            self.bot = bot
+            self.state = state
         }
+    }
+
+    /// Who looks at every run's widget (CLIENTS.md: "a viewer, as you would for such a message").
+    public static let viewer = MessageWidgetViewer(id: 777000, firstName: "Conformance", lastName: nil, username: "conformance_runner", isPremium: false)
+
+    /// A test's message context and state (CLIENTS.md, "The message context"): its first spec's kind, else the private
+    /// chat's original with no state; an unknown kind runs as the private chat's and is a run error.
+    static func message(of test: ConformanceTest) -> (context: MessageWidgetContext, state: MessageWidgetState, error: String?) {
+        guard let spec = test.message else {
+            return (MessageWidgetMessageKind.private.context(viewer: ConformanceRunner.viewer), .empty, nil)
+        }
+        let state = MessageWidgetState(chatData: spec.chatData.map { Data($0.utf8) }, publicData: spec.publicData.map { Data($0.utf8) })
+        guard let kind = spec.kind else {
+            return (MessageWidgetMessageKind.private.context(viewer: ConformanceRunner.viewer), state, "runner: unknown message kind \(spec.kindName); run as the private chat's")
+        }
+        return (kind.context(viewer: ConformanceRunner.viewer), state, nil)
     }
 
     /// CLIENTS.md step 1, "the theme as in production" (ruling R6): the app's own theme for a widget in an incoming
@@ -172,20 +193,51 @@ public final class ConformanceRunner {
         var run = ConformanceRun(id: test.id, theme: theme, width: width)
         // CLIENTS.md step 2: the chat input has the focus before the widget loads.
         self.chatInput.becomeFirstResponder()
+        let bot = ConformanceMockBot(table: test.bot, viewer: ConformanceRunner.viewer)
+        let message = ConformanceRunner.message(of: test)
+        if let error = message.error {
+            run.errors.append(error)
+        }
         guard let source = try? String(contentsOf: test.fileURL, encoding: .utf8) else {
             run.errors.append("the widget's file could not be read: \(test.fileURL.lastPathComponent)")
-            return Active(test: test, run: run, instance: nil, view: nil, deadline: Date())
+            return Active(test: test, run: run, instance: nil, view: nil, deadline: Date(), bot: bot, state: message.state)
         }
-        guard let instance = MessageWidgetInstance(source: source, theme: ConformanceRunner.theme(theme), stoppedLabel: "Widget stopped", maxMessageLength: 4096) else {
+        guard let instance = MessageWidgetInstance(source: source, theme: ConformanceRunner.theme(theme), stoppedLabel: "Widget stopped", maxMessageLength: 4096, context: message.context, state: message.state) else {
             run.errors.append("the widget runtime could not be created")
-            return Active(test: test, run: run, instance: nil, view: nil, deadline: Date())
+            return Active(test: test, run: run, instance: nil, view: nil, deadline: Date(), bot: bot, state: message.state)
         }
         let view = instance.view
         // In the window: a widget is visible only there, and every auto widget's harness waits for its frames.
         self.host?.insertSubview(view, at: 0)
-        let active = Active(test: test, run: run, instance: instance, view: view, deadline: Date(timeIntervalSinceNow: timeout))
-        instance.onBridge = { [weak active] call in
+        let active = Active(test: test, run: run, instance: instance, view: view, deadline: Date(timeIntervalSinceNow: timeout), bot: bot, state: message.state)
+        instance.onBridge = { [weak active, weak instance] call in
             switch call {
+            case let .request(id, data):
+                // The bot edits first, then answers (upstream's test bot): the edit reaches the widget before the result.
+                guard let active, let instance else {
+                    return
+                }
+                let reply = active.bot.answer(data, current: active.state)
+                if let edit = reply.edit {
+                    active.state = edit
+                    instance.setState(edit)
+                }
+                if let repeatAction = reply.repeat, repeatAction.times > 1 {
+                    for index in 1 ..< repeatAction.times {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + repeatAction.every * Double(index)) { [weak active, weak instance] in
+                            guard let active, let instance, let edit = active.bot.repeated(data, current: active.state) else {
+                                return
+                            }
+                            active.state = edit
+                            instance.setState(edit)
+                        }
+                    }
+                }
+                instance.completeRequest(id: id, outcome: .answered(reply.result))
+            case let .copyText(text):
+                active?.run.observed.bridge.append(ConformanceRun.BridgeCall(method: "copyText", args: [text]))
+            case .watchPublicData:
+                break
             case let .openLink(url):
                 active?.run.observed.bridge.append(ConformanceRun.BridgeCall(method: "openLink", args: [url]))
             case let .openTelegramLink(url):

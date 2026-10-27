@@ -50,10 +50,12 @@ final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         }
         videoInput.expectsMediaDataInRealTime = false
 
-        let sourcePixelBufferAttributes = [
+        let sourcePixelBufferAttributes: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
             kCVPixelBufferWidthKey as String: UInt32(dimensions.width),
-            kCVPixelBufferHeightKey as String: UInt32(dimensions.height)
+            kCVPixelBufferHeightKey as String: UInt32(dimensions.height),
+            kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any](),
+            kCVPixelBufferMetalCompatibilityKey as String: true
         ]
         self.adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput, sourcePixelBufferAttributes: sourcePixelBufferAttributes)
         

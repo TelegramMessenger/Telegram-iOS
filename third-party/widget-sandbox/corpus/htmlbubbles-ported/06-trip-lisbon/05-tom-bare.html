@@ -20,7 +20,7 @@
   .sep { border-top: 1px solid var(--sep); }
   .seg span, .day { cursor: pointer; }
 
-  .wx { width: 420px; max-width: 100%; }
+  .wx { width: 100%; box-sizing: border-box; }
   .wx .seg { display: inline-block; padding: 2px; border-radius: 8px; background-color: rgba(127,127,127,0.14); }
   .wx .seg span { display: inline-block; padding: 2px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; }
   .wx .seg span:hover { background-color: rgba(127,127,127,0.2); }
@@ -38,13 +38,11 @@
   .wx .rng div { height: 4px; border-radius: 2px; width: 0; background: linear-gradient(90deg, #5ac8fa, #ffcc00, #ff9500); transition: width 850ms cubic-bezier(.33,1,.68,1); }
   .wx .hourly { padding: 0 14px 12px 14px; }
   .wx .plot { position: relative; height: 92px; margin-top: 6px; }
-  .wx .plot svg { display: block; width: 392px; max-width: 100%; height: 92px; }
+  .wx .plot svg { display: block; width: 100%; height: 92px; }
   .wx .val { position: absolute; width: 44px; text-align: center; font-size: 10px; font-weight: 700; }
   .wx .hrs { display: flex; }
   .wx .hrs div { flex-grow: 1; flex-basis: 0; text-align: center; font-size: 10px; }
 
-  .tr-fade { animation: tr-fade 260ms ease-out; }
-  @keyframes tr-fade { from { opacity: 0; } }
 </style>
 <div class="card wx" id="root">
   <div class="pad row">
@@ -87,7 +85,7 @@ const METRICS = { temp: { label: 'Temp', color: '#ff9500', lo: 12, hi: 30 }, rai
 const W = 392, H = 92, TOP = 20, BOT = 6;
 let sel = 0, metric = 'temp', unit = 'C', open = true, run = 0;
 let ys = Array(8).fill(0), vals = Array(8).fill(0), col = '#ff9500';
-let f = 0, intro = 0;
+let f = 0, intro = 0, unitRun = 0;
 
 const $ = id => document.getElementById(id);
 const root = $('root');
@@ -98,7 +96,7 @@ const animate = (duration, onFrame, easing) => new Promise(resolve => {
   const start = performance.now();
   const step = () => {
     const t = Math.min(1, (performance.now() - start) / Math.max(1, duration));
-    onFrame(easing(t), t);
+    if (onFrame(easing(t), t) === false) return resolve();
     if (t < 1) requestAnimationFrame(step); else resolve();
   };
   step();
@@ -109,12 +107,6 @@ const T = c => Math.round(c + f * (c * 0.8 + 32)) + '°';
 const speed = v => Math.round(v * (1 - 0.379 * f));
 const speedUnit = () => f > 0.5 ? 'mph' : 'km/h';
 const f1 = n => n.toFixed(1);
-
-function bubble(kind) {
-  if (root.classList.contains('tr-' + kind)) { root.classList.remove('tr-' + kind); void root.offsetWidth; }
-  root.classList.add('tr-' + kind);
-}
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('tr-fade'); });
 
 // --- static parts ---
 $('days').innerHTML = DAYS.map((d, i) => {
@@ -153,7 +145,7 @@ function drawChart() {
   pts.forEach((p, i) => {
     dots[i].setAttribute('cx', f1(p[0])); dots[i].setAttribute('cy', f1(p[1]));
     const l = labels[i];
-    l.style.left = Math.round(p[0] - 22) + 'px'; l.style.top = Math.round(p[1] - 18) + 'px'; l.style.color = col;
+    l.style.left = (p[0] / W * 100).toFixed(3) + '%'; l.style.marginLeft = '-22px'; l.style.top = Math.round(p[1] - 18) + 'px'; l.style.color = col;
     l.textContent = label(vals[i]);
   });
 }
@@ -190,7 +182,7 @@ function morph(ms) {
   const fromY = ys.slice(), fromV = vals.slice(), fromC = col;
   const toV = DAYS[sel][metric], toY = toV.map(v => clamp((v - M.lo) / (M.hi - M.lo), 0, 1));
   return animate(ms, p => {
-    if (me !== run) return;
+    if (me !== run) return false;
     ys = fromY.map((y, i) => lerp(y, toY[i], p));
     vals = fromV.map((v, i) => lerp(v, toV[i], p));
     col = mix(fromC, M.color, p);
@@ -210,24 +202,24 @@ $('units').addEventListener('click', e => {
   const t = e.target.closest('[data-unit]');
   if (!t || t.dataset.unit === unit) return;
   unit = t.dataset.unit;
-  const from = f, to = unit === 'F' ? 1 : 0;
-  animate(650, p => { f = lerp(from, to, p); applyUnits(); }, ease.inOutCubic);
+  const me = ++unitRun, from = f, to = unit === 'F' ? 1 : 0;
+  animate(160, p => { if (me !== unitRun) return false; f = lerp(from, to, p); applyUnits(); }, ease.outCubic);
 });
 $('days').addEventListener('click', e => {
   const t = e.target.closest('[data-day]');
   if (!t) return;
   const d = Number(t.dataset.day);
-  if (d === sel) { bubble('fade'); open = !open; renderHourly(); return; }
-  if (!open) { bubble('fade'); open = true; }
+  if (d === sel) { open = !open; renderHourly(); return; }
+  if (!open) open = true;
   sel = d;
   renderHourly();
-  morph(650);
+  morph(180);
 });
 $('metrics').addEventListener('click', e => {
   const t = e.target.closest('[data-metric]');
   if (!t || t.dataset.metric === metric) return;
   metric = t.dataset.metric;
   renderHourly();
-  morph(550);
+  morph(180);
 });
 </script>

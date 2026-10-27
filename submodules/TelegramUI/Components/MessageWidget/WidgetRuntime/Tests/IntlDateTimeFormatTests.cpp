@@ -72,7 +72,7 @@ WR_TEST(testWhatECMA402Refuses) {
 WR_TEST(testResolvedOptions) {
     HostEnv env;
     CHECK_EQ(env.eval("JSON.stringify(new Intl.DateTimeFormat('en-US-u-ca-buddhist', { timeZone: 'UTC', hourCycle: 'h23', hour: 'numeric' }).resolvedOptions())"),
-             std::string("{\"locale\":\"en-US\",\"calendar\":\"gregory\",\"numberingSystem\":\"latn\",\"timeZone\":\"UTC\",\"hourCycle\":\"h23\",\"hour\":\"numeric\"}"));
+             std::string("{\"locale\":\"en-US-u-ca-buddhist\",\"calendar\":\"gregory\",\"numberingSystem\":\"latn\",\"timeZone\":\"UTC\",\"hourCycle\":\"h23\",\"hour\":\"numeric\"}"));
     env.host().intlAnswer = [](std::string_view) {
         return std::string("{\"calendar\":\"gregory\",\"day\":\"numeric\",\"locale\":\"en-US\",\"localeMatcher\":\"x\",\"month\":\"numeric\","
                            "\"numberingSystem\":\"latn\",\"timeZone\":\"Asia/Tokyo\",\"year\":\"numeric\"}");

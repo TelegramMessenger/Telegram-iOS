@@ -66,6 +66,9 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//Telegram/NotificationService:NotificationServiceTests`,
 `//submodules/TelegramUI/Components/Chat/EditableTokenListNode:EditableTokenListNodeTests`,
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests`, `//submodules/MediaPlayer:UniversalMediaPlayerTests`,
+`//submodules/UndoUI:UndoUITests`,
+`//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests`,
+`//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen:ChatSendStarsScreenTests`,
 `//submodules/MtProtoKit:MtProtoKitTests` (also `swift test` in `submodules/MtProtoKit` on macOS), and the targets the
 subsystem guides name. `PresentationStrings` cannot be built in a test process (it asserts without the app bundle's
 `PresentationStrings.data`), so keep a decision under test strings-free. The RichTextEditor SwiftPM package keeps its
@@ -205,9 +208,14 @@ subsystem from elsewhere.
 - **CI VMs, CI compiler-crash repro**: `build-system/Make/CLAUDE.md`; xctestrunner patch: `build-system/bazel-patches/`.
 - **Composer harness** (`Tests/ComposerHarness`, a loginless app hosting the real chat composer, for regression
   tests): [`Tests/ComposerHarness/CLAUDE.md`](Tests/ComposerHarness/CLAUDE.md).
+- **MediaGrid** (`submodules/TelegramUI/Components/MediaGrid`, the layer-based photo grid on CoreList's scroll engine,
+  with its demo app): `submodules/TelegramUI/Components/MediaGrid/CLAUDE.md`.
 - **Framework export lists** (`TelegramUIFramework` and `TelegramCoreFramework` export only what their clients use, in
   release builds only): `Telegram/CLAUDE.md`. A new extension, app library or framework must be added to the rule's
   lists or the *release* link fails; nothing may look up the app's own symbols by name at runtime (`dlsym`).
+- **Photo picker grid (MediaGrid v2)**: the layer grid `submodules/TelegramUI/Components/MediaGrid/CLAUDE.md` (its
+  PhotoKit stack `MediaGridPhotoLibrary` is described there too); the picker seam and killswitch
+  `submodules/MediaPickerUI/CLAUDE.md`.
 - **Smaller ones**: links with a login part (`submodules/UrlWhitelist/`), the code-block highlighter's recursion bound
   (`third-party/libprisma/`), an Apple Metal binary-archive bug (`submodules/MetalEngine/`), wallpaper soft light
   (`submodules/GradientBackground/`), app-side tests ([`docs/app-unit-tests.md`](docs/app-unit-tests.md)).

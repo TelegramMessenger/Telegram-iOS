@@ -539,6 +539,7 @@ private final class CreateBotSheetComponent: Component {
     let initialUsername: String?
     let initialTitle: String?
     let openAutomatically: Bool
+    let viaDeeplink: Bool
     let completion: (EnginePeer.Id?) -> Void
 
     init(
@@ -547,6 +548,7 @@ private final class CreateBotSheetComponent: Component {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
+        viaDeeplink: Bool,
         completion: @escaping (EnginePeer.Id?) -> Void
     ) {
         self.context = context
@@ -554,6 +556,7 @@ private final class CreateBotSheetComponent: Component {
         self.initialUsername = initialUsername
         self.initialTitle = initialTitle
         self.openAutomatically = openAutomatically
+        self.viaDeeplink = viaDeeplink
         self.completion = completion
     }
 
@@ -665,7 +668,7 @@ private final class CreateBotSheetComponent: Component {
                 name: params.name,
                 username: params.username,
                 managerPeerId: component.parentPeer.id,
-                viaDeeplink: true
+                viaDeeplink: component.viaDeeplink
             )
             |> deliverOnMainQueue).startStrict(next: { [weak self] botPeer in
                 guard let self, let component = self.component, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
@@ -875,12 +878,16 @@ private final class CreateBotSheetComponent: Component {
 public class CreateBotScreen: ViewControllerComponentContainer {
     private let context: AccountContext
 
+    /// `viaDeeplink` is set only when the sheet was opened from a managed bot creation link. A peer
+    /// request (a Mini App's `requestChat`) passes false: the `messages.sendBotRequestedPeer` that follows
+    /// creation produces the manager bot's "bot created" service message, and the flag would add a second one.
     public init?(
         context: AccountContext,
         parentBot: EnginePeer.Id,
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
+        viaDeeplink: Bool,
         completion: @escaping (EnginePeer.Id?) -> Void
     ) async {
         self.context = context
@@ -899,6 +906,7 @@ public class CreateBotScreen: ViewControllerComponentContainer {
                 initialUsername: initialUsername,
                 initialTitle: initialTitle,
                 openAutomatically: openAutomatically,
+                viaDeeplink: viaDeeplink,
                 completion: completion
             ),
             navigationBarAppearance: .none,

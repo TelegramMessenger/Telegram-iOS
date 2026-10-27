@@ -18,6 +18,7 @@
 #include "Sources/Host/EventLoop.h"
 #include "Sources/Host/ThemeParams.h"
 #include "Sources/Runtime/Runtime.h"
+#include "twidget/sdk_policy.h"
 
 namespace wr {
 
@@ -69,6 +70,10 @@ public:
     /// widget queues nothing.
     void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary,
                  twidget::PointerKind kind = twidget::PointerKind::Touch, int16_t button = 0) {
+        // SDK v1 §2.16: a preview gets no input.
+        if (m_widgetContext.preview) {
+            return;
+        }
         m_taps.pointer(ctx, phase, x, y, pointerId, primary, kind, button);
     }
     /// The gesture claim of the last press (TapState::claim), once its down task has run.
@@ -99,10 +104,64 @@ public:
         uint64_t saved;
     };
     bool consumeActivation(JSContext* ctx);
-    /// SDK v1 §2.6, sdk-policy.ts HapticGate: true while the widget is visible and the bucket has a token (taken);
-    /// otherwise the haptic is dropped, and haptic-limit reported unless it was in the last second. On the step's clock
-    /// (EventLoop::currentTime).
+    /// SDK v1 §2.6, the vendored SDK policy's HapticGate on the step's clock (EventLoop::currentTime): true while the
+    /// widget is visible, the bucket (5, refilled at 10 per second) has a token and there is a touch (widget-sandbox
+    /// v0.2.2: a finger down and 5 s after its lift, else a 1 s series that waits for a touch or 10 s); otherwise the
+    /// haptic is dropped, and haptic-limit reported at most once per second.
     bool admitHaptic(JSContext* ctx);
+    /// The primary pointer's press went down on the widget, or ended (lifted or cancelled): trusted input for the haptic
+    /// gate, from TapState's down, up and cancel.
+    void hapticPressed() { m_hapticGate.press(m_loop.currentTime()); }
+    void hapticReleased() { m_hapticGate.release(m_loop.currentTime()); }
+    /// SDK v1 §2.13, §2.14 (widget-sandbox v0.2): the message's context as the widget sees it, after the glue's stripping
+    /// (upstream's SandboxEngine.widgetContext): a preview's flags are ignored; a copy and a preview have no chat type;
+    /// the viewer is there only where the widget may send requests.
+    struct WidgetContextState {
+        bool isForward = false;
+        bool canQuery = false;
+        bool backgroundQuery = false;
+        bool preview = false;
+        std::optional<std::string> chatType;
+        std::optional<twidget::WidgetViewer> viewer;
+    };
+    /// The host's, before the boot's scripts: the context for the runtime's life (sdk-v1 §2.14: fixed for the host's
+    /// life), checked by the SDK policy; a viewer field that breaks its rule is left out and reported (`data-rejected`).
+    void setContext(JSContext* ctx, const twidget::WidgetContext& context);
+    /// The host's, before the boot's scripts: the bot's state, checked by the SDK policy (`data-rejected` for a field
+    /// that is not text of at most 1024 bytes; a copy's chatData is dropped silently).
+    void setInitialData(JSContext* ctx, const twidget::WidgetData& data);
+    /// The host's, after the boot (sdk-v1 §2.13): the full new state, checked as setInitialData's. A task puts it in
+    /// place and fires chatDataChanged, then publicDataChanged, each only for a value that changed. Never throws, and a
+    /// stopped widget queues nothing.
+    void setData(JSContext* ctx, const twidget::WidgetData& data);
+    const WidgetContextState& widgetContext() const { return m_widgetContext; }
+    bool isPreview() const { return m_widgetContext.preview; }
+    const std::optional<std::string>& chatData() const { return m_chatData; }
+    const std::optional<std::string>& publicData() const { return m_publicData; }
+    /// Counts the changes of the context, so TelegramWidget keeps one viewer object between them.
+    uint64_t contextGeneration() const { return m_contextGeneration; }
+    /// SDK v1 §2.14: the request gate (the SDK policy's RequestGate) on the step's clock (EventLoop::currentTime), with
+    /// this context's flags and `gesture` as activationAvailable. The caller consumes the press on Foreground.
+    twidget::sdk::RequestVerdict decideRequest(JSContext* ctx);
+    /// The request in flight has its outcome: the gate takes the next.
+    void finishRequest() { m_requestGate.finish(); }
+    /// The next request's number, 1 … MAX_REQUEST_ID (then 1 again); every call gets one, refused or not.
+    int64_t nextRequestId();
+    /// The host's: the client's outcome for request `id` (sdk-v1 §2.14; HostState's only way in for it). Queues the task
+    /// that settles its promise (TelegramWidget::settleRequest); an id that is not an outgoing request still pending
+    /// changes nothing. Never throws, and a stopped widget queues nothing.
+    void completeRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome);
+    /// Queues the task that rejects refused request `id` with `code`: every outcome reaches the widget in a task of its
+    /// own, never inside the call (upstream's glue).
+    void queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code);
+    /// A press is active, its activation not consumed, on a visible widget: the request gate's `gesture`, peeked
+    /// (consumeActivation takes it).
+    bool activationAvailable(JSContext* ctx) const;
+    /// SDK v1 §2.13: whether the widget watches its shared state (watchPublicData), for the host's diagnostics.
+    bool watchesPublicData() const { return m_watchesPublicData; }
+    void setWatchesPublicData(bool on) { m_watchesPublicData = on; }
+    /// request-blocked and preview-blocked, each posted to the host at most MAX_REJECTION_REPORTS times.
+    void reportCapped(JSContext* ctx, std::string_view kind, const std::string& detail);
     /// SDK v1 §2.9: the client's UI language, navigator.language. sdk-policy.ts checkLocale: a tag of at most 35
     /// characters shaped /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/; anything else (an empty one too) is en-US.
     void setLocale(std::string_view locale);
@@ -182,6 +241,8 @@ public:
 private:
     /// themeChanged and setThemeParams.
     void applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, ThemeButtonTokens tokens, ThemeTextTokens text);
+    /// The SDK policy's checkWidgetData for this context, its rejections reported (`data-rejected`).
+    twidget::sdk::CheckedWidgetData checkedData(JSContext* ctx, const twidget::WidgetData& data);
 
     JSContext* m_ctx;
     /// Not counted: the window is the global object, alive for the context's life.
@@ -203,11 +264,18 @@ private:
     std::vector<uint64_t> m_consumedPresses;
     uint32_t m_activationBlockedReports = 0;
     uint32_t m_navigationBlockedReports = 0;
+    WidgetContextState m_widgetContext;
+    uint64_t m_contextGeneration = 0;
+    std::optional<std::string> m_chatData;
+    std::optional<std::string> m_publicData;
+    twidget::sdk::RequestGate m_requestGate;
+    int64_t m_lastRequestId = 0;
+    bool m_watchesPublicData = false;
+    uint32_t m_requestBlockedReports = 0;
+    uint32_t m_previewBlockedReports = 0;
     std::string m_locale = "en-US";
     std::unique_ptr<intl::IntlState> m_intl;
-    double m_hapticTokens = 5;
-    std::optional<double> m_hapticLast;
-    std::optional<double> m_hapticReported;
+    twidget::sdk::HapticGate m_hapticGate;
     UserActions m_userActions;
     /// Its construction needs only the context, and a queued task's destruction needs none of the members above.
     /// Destroyed with the host state, before the context, so what a task captured is released while it is alive.

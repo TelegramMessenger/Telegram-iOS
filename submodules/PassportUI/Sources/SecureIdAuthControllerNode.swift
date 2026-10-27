@@ -661,7 +661,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             })
             
             if let attachmentType = attachmentType, let type = attachmentTarget {
-                presentLegacySecureIdAttachmentMenu(context: strongSelf.context, present: { [weak self] c in
+                presentSecureIdAttachmentMenu(context: strongSelf.context, present: { [weak self] c in
                     self?.interaction.present(c, nil)
                     }, validLayout: validLayout, type: attachmentType, recognizeDocumentData: true, completion: { [weak self] resources, recognizedData in
                         guard let strongSelf = self else {

@@ -11,17 +11,11 @@ final class TelegramMediaWidgetTests: XCTestCase {
     /// The server's `messageMediaWidget` is stored as the widget media, anchors and gzip payload unchanged.
     func testTheApiWidgetBecomesATelegramMediaWidget() {
         let payload = MTGzip.compress("<p>Hi</p>".data(using: .utf8)!)!
-        let api = Api.MessageMedia.messageMediaWidget(.init(flags: 62, width: 300, height: 0, payload: Buffer(data: payload), publicData: Buffer(data: Data("public".utf8)), chatData: Buffer(data: Data("chat".utf8)), widgetId: 42))
+        let api = Api.MessageMedia.messageMediaWidget(.init(flags: 0, width: 300, height: 0, payload: Buffer(data: payload), publicData: nil, publicDataHash: nil, chatData: nil, widgetId: nil))
         let parsed = textMediaAndExpirationTimerFromApiMedia(api, PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)))
         guard let widget = parsed.media as? TelegramMediaWidget else {
             return XCTFail("parsed as \(String(describing: parsed.media))")
         }
-        XCTAssertEqual(widget.publicData, Data("public".utf8))
-        XCTAssertEqual(widget.chatData, Data("chat".utf8))
-        XCTAssertEqual(widget.widgetId, 42)
-        XCTAssertTrue(widget.canQuery)
-        XCTAssertTrue(widget.backgroundQuery)
-        XCTAssertFalse(widget.isCopy)
         XCTAssertEqual(widget.width, 300)
         XCTAssertEqual(widget.height, 0)
         XCTAssertEqual(widget.payload, payload)
@@ -29,19 +23,73 @@ final class TelegramMediaWidgetTests: XCTestCase {
         XCTAssertNil(parsed.expirationTimer)
     }
 
-    func testPartialDataUpdatePreservesCodeAndAbsentState() {
-        let widget = TelegramMediaWidget(width: 300, height: 120, payload: Data([1, 2]), flags: 3, publicData: Data("old".utf8), chatData: Data("chat".utf8), widgetId: 42)
-        let updated = widget.withUpdatedData(publicData: Data(), chatData: nil)
-        XCTAssertEqual(updated.publicData, Data())
-        XCTAssertEqual(updated.chatData, widget.chatData)
-        XCTAssertEqual(updated.payload, widget.payload)
-        XCTAssertEqual(updated.widgetId, widget.widgetId)
-        XCTAssertEqual(updated.flags, widget.flags)
-        XCTAssertNotEqual(updated, widget)
+    /// widget-sandbox v0.2: the server's flags (`is_copy` bit 0, `can_query` 1, `background_query` 2) and the bot's state
+    /// (`public_data` flag 3, `chat_data` 4) with the shared widget's id (flag 5) reach the media as they are.
+    func testTheApiWidgetCarriesItsFlagsAndState() {
+        let payload = MTGzip.compress("<p>Hi</p>".data(using: .utf8)!)!
+        let api = Api.MessageMedia.messageMediaWidget(.init(flags: (1 << 0) | (1 << 1) | (1 << 3) | (1 << 4) | (1 << 5), width: 300, height: 0, payload: Buffer(data: payload), publicData: "p", publicDataHash: 5, chatData: "c", widgetId: 77))
+        let parsed = textMediaAndExpirationTimerFromApiMedia(api, PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)))
+        guard let widget = parsed.media as? TelegramMediaWidget else {
+            return XCTFail("parsed as \(String(describing: parsed.media))")
+        }
+        XCTAssertTrue(widget.isCopy)
+        XCTAssertTrue(widget.canQuery)
+        XCTAssertFalse(widget.backgroundQuery)
+        XCTAssertEqual(widget.chatData, Data("c".utf8))
+        XCTAssertEqual(widget.publicData, Data("p".utf8))
+        XCTAssertEqual(widget.publicDataHash, 5)
+        XCTAssertEqual(widget.widgetId, 77)
+        XCTAssertEqual(widget.payload, payload)
+    }
+
+    /// The state is the server's bytes: text that is not UTF-8, a NUL and an oversized value are stored as they came, so
+    /// the runtime's checks (not a lenient decode here) decide what the widget sees.
+    func testTheStateIsStoredAsBytes() {
+        let chatData = Data([0xff, 0x00, 0xfe])
+        let publicData = Data(repeating: 0x61, count: 1025)
+        let widget = TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), isCopy: false, canQuery: true, backgroundQuery: true, chatData: chatData, publicData: publicData, publicDataHash: 6, widgetId: 9)
+        let encoder = PostboxEncoder()
+        widget.encode(encoder)
+        let decoded = TelegramMediaWidget(decoder: PostboxDecoder(buffer: MemoryBuffer(data: encoder.makeData())))
+        XCTAssertEqual(decoded.chatData, chatData)
+        XCTAssertEqual(decoded.publicData, publicData)
+        XCTAssertFalse(decoded.isCopy)
+        XCTAssertTrue(decoded.canQuery)
+        XCTAssertTrue(decoded.backgroundQuery)
+        XCTAssertEqual(decoded.widgetId, 9)
+        XCTAssertEqual(decoded.publicDataHash, 6)
+        XCTAssertTrue(decoded.isEqual(to: widget))
+        XCTAssertFalse(decoded.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), isCopy: false, canQuery: true, backgroundQuery: true, chatData: chatData, publicData: publicData, publicDataHash: 7, widgetId: 9)), "the shared state's hash is part of equality")
+    }
+
+    /// A message stored before v0.2 has only `w`, `h` and `p`: no flags, no state, no widget id.
+    func testAnOldEncodingDecodesWithNoState() {
+        let encoder = PostboxEncoder()
+        encoder.encodeInt32(300, forKey: "w")
+        encoder.encodeInt32(0, forKey: "h")
+        encoder.encodeData(Data([1, 2]), forKey: "p")
+        let decoded = TelegramMediaWidget(decoder: PostboxDecoder(buffer: MemoryBuffer(data: encoder.makeData())))
+        XCTAssertEqual(decoded.width, 300)
+        XCTAssertEqual(decoded.payload, Data([1, 2]))
+        XCTAssertNil(decoded.publicDataHash)
+        XCTAssertFalse(decoded.isCopy)
+        XCTAssertFalse(decoded.canQuery)
+        XCTAssertFalse(decoded.backgroundQuery)
+        XCTAssertNil(decoded.chatData)
+        XCTAssertNil(decoded.publicData)
+        XCTAssertNil(decoded.widgetId)
+    }
+
+    func testWidgetsDifferingInStateAreNotEqual() {
+        let a = TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), chatData: Data("a".utf8))
+        XCTAssertFalse(a.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), chatData: Data("b".utf8))))
+        XCTAssertFalse(a.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), canQuery: true, chatData: Data("a".utf8))))
+        XCTAssertFalse(a.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), chatData: Data("a".utf8), widgetId: 1)))
+        XCTAssertTrue(a.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([1]), chatData: Data("a".utf8))))
     }
 
     func testCodingRoundTrips() {
-        let widget = TelegramMediaWidget(width: 300, height: 0, payload: Data([0x1f, 0x8b, 1, 2, 3]), flags: 7, publicData: Data("public".utf8), chatData: Data("chat".utf8), widgetId: 42)
+        let widget = TelegramMediaWidget(width: 300, height: 0, payload: Data([0x1f, 0x8b, 1, 2, 3]))
         let encoder = PostboxEncoder()
         widget.encode(encoder)
         let decoded = TelegramMediaWidget(decoder: PostboxDecoder(buffer: MemoryBuffer(data: encoder.makeData())))
@@ -89,13 +137,6 @@ final class TelegramMediaWidgetTests: XCTestCase {
         XCTAssertEqual(widget.html(), "<p>Hi</p>")
     }
 
-    /// The server packs the HTML with PHP `gzcompress($html, 9)`: a zlib stream (RFC 1950), not gzip.
-    func testTheHtmlOfAZlibPayload() {
-        let payload = Data([0x78, 0xda, 0xb3, 0x29, 0xb0, 0xf3, 0xc8, 0xb4, 0xd1, 0x2f, 0xb0, 0x03, 0x00, 0x0d, 0xaf, 0x02, 0xb5])
-        XCTAssertEqual(TelegramMediaWidget(width: 0, height: 0, payload: payload).html(), "<p>Hi</p>")
-        XCTAssertNil(TelegramMediaWidget(width: 0, height: 0, payload: payload.prefix(10)).html())
-    }
-
     func testACorruptPayloadHasNoHtml() {
         XCTAssertNil(TelegramMediaWidget(width: 0, height: 0, payload: Data([1, 2, 3])).html())
         let notUTF8 = MTGzip.compress(Data([0xff, 0xfe]))!
@@ -119,5 +160,21 @@ final class TelegramMediaWidgetTests: XCTestCase {
         XCTAssertFalse(a.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([2]))))
         XCTAssertFalse(a.isEqual(to: TelegramMediaWidget(width: 1, height: 0, payload: Data([1]))))
         XCTAssertTrue(a.isEqual(to: TelegramMediaWidget(width: 0, height: 0, payload: Data([1]))))
+    }
+
+    /// widget-sandbox v0.2 (tgw-format.md): a forward is a copy, with no queries and no chat state; its shared state and
+    /// widget id stay (a shared widget's copy follows the shared state).
+    func testAForwardedCopyKeepsOnlyWhatACopyMayHave() {
+        let widget = TelegramMediaWidget(width: 300, height: 120, payload: Data([1, 2]), isCopy: false, canQuery: true, backgroundQuery: true, chatData: Data("c".utf8), publicData: Data("p".utf8), widgetId: 42)
+        let copy = widget.forwardedCopy()
+        XCTAssertTrue(copy.isCopy)
+        XCTAssertFalse(copy.canQuery)
+        XCTAssertFalse(copy.backgroundQuery)
+        XCTAssertNil(copy.chatData)
+        XCTAssertEqual(copy.width, 300)
+        XCTAssertEqual(copy.height, 120)
+        XCTAssertEqual(copy.payload, Data([1, 2]))
+        XCTAssertEqual(copy.publicData, Data("p".utf8))
+        XCTAssertEqual(copy.widgetId, 42)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import AVFoundation
 import SwiftSignalKit
 import TelegramCore
@@ -149,26 +150,51 @@ func pixelBufferToMTLTexture(pixelBuffer: CVPixelBuffer, textureCache: CVMetalTe
     return nil
 }
 
-func getTextureCIImage(texture: MTLTexture, mirror: Bool = false) -> CIImage? {
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    guard let ciImage = CIImage(mtlTexture: texture, options: [.colorSpace: colorSpace]) else {
-        return nil
-    }
-    let transform: CGAffineTransform
-    if mirror {
-        transform = CGAffineTransform(-1.0, 0.0, 0.0, -1.0, ciImage.extent.width, ciImage.extent.height)
-    } else {
-        transform = CGAffineTransform(1.0, 0.0, 0.0, -1.0, 0.0, ciImage.extent.height)
-    }
-    return ciImage.transformed(by: transform)
-}
-
 func getTextureImage(device: MTLDevice, texture: MTLTexture, mirror: Bool = false) -> UIImage? {
-    let context = CIContext(mtlDevice: device, options: [:])
-    guard let ciImage = getTextureCIImage(texture: texture, mirror: mirror), let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+    let bitmapInfo: UInt32
+    switch texture.pixelFormat {
+    case .bgra8Unorm, .bgra8Unorm_srgb:
+        bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
+    case .rgba8Unorm, .rgba8Unorm_srgb:
+        bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue
+    default:
         return nil
     }
-    return UIImage(cgImage: cgImage)
+    let width = texture.width
+    let height = texture.height
+    guard width > 0, height > 0 else {
+        return nil
+    }
+    let bytesPerRow = width * 4
+    guard let buffer = device.makeBuffer(length: bytesPerRow * height, options: .storageModeShared), let commandQueue = device.makeCommandQueue(), let commandBuffer = commandQueue.makeCommandBuffer(), let encoder = commandBuffer.makeBlitCommandEncoder() else {
+        return nil
+    }
+    encoder.copy(from: texture, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0), sourceSize: MTLSize(width: width, height: height, depth: 1), to: buffer, destinationOffset: 0, destinationBytesPerRow: bytesPerRow, destinationBytesPerImage: bytesPerRow * height)
+    encoder.endEncoding()
+    commandBuffer.commit()
+    commandBuffer.waitUntilCompleted()
+    guard commandBuffer.status == .completed else {
+        return nil
+    }
+    var data = Data(bytes: buffer.contents(), count: bytesPerRow * height)
+    if mirror {
+        data.withUnsafeMutableBytes { bytes in
+            let pixels = bytes.bindMemory(to: UInt32.self)
+            for row in 0 ..< height {
+                var left = row * width
+                var right = left + width - 1
+                while left < right {
+                    pixels.swapAt(left, right)
+                    left += 1
+                    right -= 1
+                }
+            }
+        }
+    }
+    guard let provider = CGDataProvider(data: data as CFData), let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: bitmapInfo), provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent) else {
+        return nil
+    }
+    return UIImage(cgImage: image)
 }
 
 public func getChatWallpaperImage(context: AccountContext, peerId: EnginePeer.Id) -> Signal<(CGSize, UIImage?, UIImage?), NoError> {
@@ -277,4 +303,52 @@ public func getChatWallpaperImage(context: AccountContext, peerId: EnginePeer.Id
             return EmptyDisposable
         }
     }
+}
+
+public func mediaEditorAnimatedStickerDurations(accountContext: AccountContext, entities: [CodableDrawingEntity]) -> Signal<[Double], NoError> {
+    return mediaEditorAnimatedStickerDurations(postbox: accountContext.account.postbox, entities: entities.map { $0.entity })
+}
+
+public func mediaEditorAnimatedStickerDurations(entities: [CodableDrawingEntity], fileDuration: @escaping (TelegramMediaFile) -> Signal<Double?, NoError>) -> Signal<[Double], NoError> {
+    return mediaEditorAnimatedStickerDurations(entities: entities.map { $0.entity }, fileDuration: fileDuration)
+}
+
+public func makeChatEditorImageComposition(accountContext: AccountContext, input: MediaEditorCompositionInput, values: MediaEditorValues, time: CMTime, maxOutputSide: CGFloat, completion: @escaping (UIImage?) -> Void) {
+    makeChatEditorImageComposition(postbox: accountContext.account.postbox, input: input, values: values, time: time, maxOutputSide: maxOutputSide, completion: completion)
+}
+
+public func storyPreviewBandPlacement(containerSize: CGSize, safeInsets: UIEdgeInsets) -> (x: CGFloat, size: CGSize)? {
+    if safeInsets.left == safeInsets.right {
+        return nil
+    }
+    let bandWidth = containerSize.width - safeInsets.left - safeInsets.right
+    if bandWidth <= 0.0 {
+        return nil
+    }
+    var size = CGSize(width: bandWidth, height: floorToScreenPixels(bandWidth * 1.77778))
+    if size.height > containerSize.height {
+        size = CGSize(width: floorToScreenPixels(containerSize.height / 1.77778), height: containerSize.height)
+    }
+    let screenCenteredX = floorToScreenPixels((containerSize.width - size.width) / 2.0)
+    if screenCenteredX >= safeInsets.left && screenCenteredX + size.width <= containerSize.width - safeInsets.right {
+        return (screenCenteredX, size)
+    }
+    return (safeInsets.left + floorToScreenPixels((bandWidth - size.width) / 2.0), size)
+}
+
+public func storyControlsBandLayout(_ layout: ContainerViewLayout) -> (layout: ContainerViewLayout, originX: CGFloat)? {
+    if layout.metrics.isTablet {
+        return nil
+    }
+    guard let placement = storyPreviewBandPlacement(containerSize: layout.size, safeInsets: layout.safeInsets) else {
+        return nil
+    }
+    var bandLayout = layout
+    bandLayout.size = CGSize(width: placement.size.width, height: layout.size.height)
+    bandLayout.safeInsets.left = 0.0
+    bandLayout.safeInsets.right = 0.0
+    bandLayout.intrinsicInsets.left = 0.0
+    bandLayout.intrinsicInsets.right = 0.0
+    bandLayout.reservedCorners = .none
+    return (bandLayout, placement.x)
 }

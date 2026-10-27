@@ -23,6 +23,9 @@ import WalletContext
 import CpuProfiler
 import CrashReporting
 import ContextUI
+import ImageObjectSeparation
+import ImageInpainting
+import FaceScanScreen
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -735,8 +738,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case coreListChatBackend(Bool)
     case springSendAnimation(Bool)
     case fakeWalletTransfers(Bool)
+    case chatMediaEditorLegacy(Bool)
     case insertWidgetConformanceSet
     case insertWidgetGames
+    case mediaGridLegacy(Bool)
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
@@ -764,6 +769,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case networkEngineInfo(String)
     case ptsTotalLimitOverride(Int32?)
     case restorePurchases(PresentationTheme)
+    case removeDownloadedModels
     case logTranslationRecognition(Bool)
     case resetTranslationStates
     case hostInfo(PresentationTheme, String)
@@ -783,7 +789,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logs.rawValue
-        case .resetAppHeader, .resetDatabase, .resetDatabaseAndCache, .clearTips, .resetNotifications, .fillLocalSavedMessageCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .optimizeDatabase, .restorePurchases:
+        case .resetAppHeader, .resetDatabase, .resetDatabaseAndCache, .clearTips, .resetNotifications, .fillLocalSavedMessageCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .optimizeDatabase, .restorePurchases, .removeDownloadedModels:
             return DebugControllerSection.resetApp.rawValue
         case .webViewInspection, .resetWebViewCache:
             return DebugControllerSection.web.rawValue
@@ -791,7 +797,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
-        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .insertWidgetConformanceSet, .insertWidgetGames:
+        case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -908,6 +914,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 53
         case .restorePurchases:
             return 54
+        case .removeDownloadedModels:
+            return 113
         case .logTranslationRecognition:
             return 68
         case .resetTranslationStates:
@@ -950,10 +958,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .fakeWalletTransfers:
             // Appended right after `springSendAnimation`; see the ordering note above.
             return 74
+        case .chatMediaEditorLegacy:
+            return 75
         case .insertWidgetConformanceSet:
             return 76
         case .insertWidgetGames:
             return 78
+        case .mediaGridLegacy:
+            return 79
         case .disableVideoAspectScaling:
             return 104
         case .enableNetworkFramework:
@@ -994,6 +1006,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .reindexCache: return 10
         case .optimizeDatabase: return 11
         case .restorePurchases: return 12
+        case .removeDownloadedModels: return 13
         default: return self.stableId
         }
     }
@@ -1332,6 +1345,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     WKWebsiteDataTypeServiceWorkerRegistrations
                 ], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
             })
+        case .removeDownloadedModels:
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Remove Downloaded Models", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                removeDownloadedCutoutModel()
+                removeDownloadedImageInpaintingModel()
+                removeDownloadedAgeVerificationModels()
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                arguments.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+            })
         case .optimizeDatabase:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1444,6 +1465,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.coreListChatBackend = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .chatMediaEditorLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: legacy media editor", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.chatMediaEditorLegacy = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .mediaGridLegacy(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Media picker: legacy grid", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.mediaGridLegacy = value
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
@@ -1987,6 +2028,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
     entries.append(.optimizeDatabase(presentationData.theme))
     if isMainApp {
         entries.append(.restorePurchases(presentationData.theme))
+        entries.append(.removeDownloadedModels)
     }
 
     entries.append(.experimentsHeader(presentationData.theme))
@@ -2070,8 +2112,10 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         if let data = context?.currentAppConfiguration.with({ $0 }).data, let isDev = data["dev"] as? Double, isDev == 1.0 {
             entries.append(.fakeWalletTransfers(experimentalSettings.fakeWalletTransfers))
         }
+        entries.append(.chatMediaEditorLegacy(experimentalSettings.chatMediaEditorLegacy))
         entries.append(.insertWidgetConformanceSet)
         entries.append(.insertWidgetGames)
+        entries.append(.mediaGridLegacy(experimentalSettings.mediaGridLegacy))
         
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)

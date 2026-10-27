@@ -160,9 +160,6 @@ private final class SheetContent: CombinedComponent {
                     let _ = disableUrlPreview
                     let _ = previewParameters
                     replyMarkup = replyMarkupValue
-                case let .widget(widget, replyMarkupValue):
-                    media = [widget]
-                    replyMarkup = replyMarkupValue
                 case let .contact(contact, replyMarkupValue):
                     media = [contact]
                     replyMarkup = replyMarkupValue
@@ -173,6 +170,11 @@ private final class SheetContent: CombinedComponent {
                     media = [invoice]
                     replyMarkup = replyMarkupValue
                 case let .webpage(textValue, entitiesValue, _, _, replyMarkupValue):
+                    text = textValue
+                    entities = entitiesValue
+                    replyMarkup = replyMarkupValue
+                case let .widget(_, textValue, entitiesValue, replyMarkupValue):
+                    // A widget result's text alone, as before widget results existed (its preview is the results lists').
                     text = textValue
                     entities = entitiesValue
                     replyMarkup = replyMarkupValue
@@ -193,9 +195,6 @@ private final class SheetContent: CombinedComponent {
                     let _ = disableUrlPreview
                     let _ = previewParameters
                     replyMarkup = replyMarkupValue
-                case let .widget(widget, replyMarkupValue):
-                    media = [widget]
-                    replyMarkup = replyMarkupValue
                 case let .contact(contact, replyMarkupValue):
                     media = [contact]
                     replyMarkup = replyMarkupValue
@@ -206,6 +205,11 @@ private final class SheetContent: CombinedComponent {
                     media = [invoice]
                     replyMarkup = replyMarkupValue
                 case let .webpage(textValue, entitiesValue, _, _, replyMarkupValue):
+                    text = textValue
+                    entities = entitiesValue
+                    replyMarkup = replyMarkupValue
+                case let .widget(_, textValue, entitiesValue, replyMarkupValue):
+                    // A widget result's text alone, as before widget results existed (its preview is the results lists').
                     text = textValue
                     entities = entitiesValue
                     replyMarkup = replyMarkupValue

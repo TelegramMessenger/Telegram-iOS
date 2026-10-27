@@ -72,6 +72,20 @@ struct UpdatedApiPresence {
     }
 }
 
+/// How `updateMessageWidgetData` changes one of a message widget's two states (upstream integration.md): a field it
+/// leaves out is unchanged, an empty one clears it (stored as none, as a message parsed without it), any other replaces it.
+enum MessageWidgetDataChange: Equatable {
+    case unchanged
+    case set(Data?)
+}
+
+func messageWidgetDataChange(_ text: String?) -> MessageWidgetDataChange {
+    guard let text else {
+        return .unchanged
+    }
+    return .set(text.isEmpty ? nil : Data(text.utf8))
+}
+
 enum AccountStateMutationOperation {
     case AddMessages([StoreMessage], AddMessagesLocation)
     case AddScheduledMessages([StoreMessage])
@@ -136,8 +150,8 @@ enum AccountStateMutationOperation {
     case UpdateAttachMenuBots
     case UpdateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String)
     case UpdateConfig
-    case UpdateMessageWidgetData(MessageId, Data?, Data?)
     case UpdateExtendedMedia(MessageId, [Api.MessageExtendedMedia])
+    case UpdateMessageWidgetData(MessageId, chatData: MessageWidgetDataChange, publicData: MessageWidgetDataChange, publicDataHash: Int64?)
     case ResetForumTopic(topicId: PeerAndBoundThreadId, data: StoreMessageHistoryThreadData, pts: Int32?)
     case UpdateStory(peerId: PeerId, story: Api.StoryItem)
     case UpdateReadStories(peerId: PeerId, maxId: Int32)
@@ -679,12 +693,12 @@ struct AccountMutableState {
         self.addOperation(.UpdateConfig)
     }
     
-    mutating func updateMessageWidgetData(_ messageId: MessageId, publicData: Data?, chatData: Data?) {
-        self.addOperation(.UpdateMessageWidgetData(messageId, publicData, chatData))
-    }
-
     mutating func updateExtendedMedia(_ messageId: MessageId, extendedMedia: [Api.MessageExtendedMedia]) {
         self.addOperation(.UpdateExtendedMedia(messageId, extendedMedia))
+    }
+
+    mutating func updateMessageWidgetData(_ messageId: MessageId, chatData: MessageWidgetDataChange, publicData: MessageWidgetDataChange, publicDataHash: Int64?) {
+        self.addOperation(.UpdateMessageWidgetData(messageId, chatData: chatData, publicData: publicData, publicDataHash: publicDataHash))
     }
     
     mutating func updateStory(peerId: PeerId, story: Api.StoryItem) {

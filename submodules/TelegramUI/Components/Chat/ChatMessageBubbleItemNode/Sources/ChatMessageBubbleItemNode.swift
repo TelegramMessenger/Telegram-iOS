@@ -2027,6 +2027,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             allowFullWidth = true
         }
 
+        // A widget message (messageMediaWidget) is an interactive surface of its own: no share button beside it (it is
+        // shared from its menu), and it may take the full width, as a channel post does (a widget of width 0 is as wide
+        // as its bubble).
+        if item.message.media.contains(where: { $0 is TelegramMediaWidget }) {
+            needsShareButton = false
+            allowFullWidth = true
+        }
+
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth

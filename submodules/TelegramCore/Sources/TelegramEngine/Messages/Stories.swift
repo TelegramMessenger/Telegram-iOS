@@ -3711,8 +3711,6 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 if wasAccepted {
                     let storyReactionContext = account.storyReactionContext
                     let stateManager: AccountStateManager = account.stateManager
-                    // A declared weak reference: this closure captures `account` strongly, and Swift 6.4
-                    // rejects a `[weak account]` capture list nested in it (ImplicitStrongCapture).
                     weak let weakAccount = account
                     let _ = (replayReady.get()
                     |> filter { $0 }

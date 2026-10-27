@@ -1017,6 +1017,49 @@ public class MediaEditorTransitionOutExternalState {
     }
 }
 
+public struct ChatCameraParams {
+    public let allowPhoto: Bool
+    public let allowVideo: Bool
+    public let isSingleShot: Bool
+    public let maxCount: Int
+    public let hasAudio: Bool
+    public let saveCapturedMedia: Bool
+    public let recognizedQRCode: (String) -> Bool
+    public let prefersFrontCamera: Bool
+    public let mirrorsFrontResult: Bool
+    public let documentFrame: ChatCameraDocumentFrame?
+    public let locksPortrait: Bool
+    public let fixesCameraPosition: Bool
+
+    public init(
+        allowPhoto: Bool,
+        allowVideo: Bool,
+        isSingleShot: Bool,
+        maxCount: Int = 100,
+        hasAudio: Bool,
+        saveCapturedMedia: Bool,
+        recognizedQRCode: @escaping (String) -> Bool,
+        prefersFrontCamera: Bool = false,
+        mirrorsFrontResult: Bool = true,
+        documentFrame: ChatCameraDocumentFrame? = nil,
+        locksPortrait: Bool = false,
+        fixesCameraPosition: Bool = false
+    ) {
+        self.allowPhoto = allowPhoto
+        self.allowVideo = allowVideo
+        self.isSingleShot = isSingleShot
+        self.maxCount = maxCount
+        self.hasAudio = hasAudio
+        self.saveCapturedMedia = saveCapturedMedia
+        self.recognizedQRCode = recognizedQRCode
+        self.prefersFrontCamera = prefersFrontCamera
+        self.mirrorsFrontResult = mirrorsFrontResult
+        self.documentFrame = documentFrame
+        self.locksPortrait = locksPortrait
+        self.fixesCameraPosition = fixesCameraPosition
+    }
+}
+
 public enum CameraScreenMode {
     case story
     case sticker
@@ -1546,7 +1589,6 @@ public protocol SharedAccountContext: AnyObject {
     func openAddContact(context: AccountContext, peer: EnginePeer?, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: EnginePeer.Id, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
-    func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
     func displaySetPhoto(
         parentController: ViewController,
         context: AccountContext,
@@ -1563,6 +1605,17 @@ public protocol SharedAccountContext: AnyObject {
         completion: @escaping (UIImage?) -> Void,
         completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
     )
+    func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        canDelete: Bool,
+        performDelete: @escaping () -> Void,
+        options: SetPhotoOptions,
+        completion: @escaping (UIImage?) -> Void,
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
+    )
+    func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any, @escaping () -> Void) -> Void) -> ViewController?
     func openAddPeerMembers(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, parentController: ViewController, groupPeer: EnginePeer, selectAddMemberDisposable: MetaDisposable, addMemberDisposable: MetaDisposable)
     func makeInstantPageController(context: AccountContext, message: EngineMessage, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController?
     func makeInstantPageController(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation) -> ViewController
@@ -1582,7 +1635,12 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, subject: BoostSubject, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], actionTitle: String?, isEditing: Bool, expandIfNeeded: Bool, parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?, actionPerformed: (([StickerPackScreenActionResult]) -> Void)?) -> ViewController
     func makeCameraScreen(context: AccountContext, mode: CameraScreenMode, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, completion: @escaping (Any, @escaping () -> Void) -> Void, transitionedOut: (() -> Void)?) -> ViewController
+    func makeChatCameraScreen(context: AccountContext, parameters: ChatCameraScreenParameters, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, transitionedOut: (() -> Void)?) -> ViewController
     func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController
+    func makeQrCodePhotoPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController
+    func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([TelegramMediaResource]) -> Void) -> Void
+    func makeChatMediaGalleryController(context: AccountContext, parameters: ChatMediaGalleryParameters) -> ViewController?
+    func makeWallpaperMediaEditor(context: AccountContext, asset: PHAsset, screenImage: UIImage, cropRect: CGRect, previousState: Any?, referenceView: UIView, apply: @escaping (UIImage?, Any?) -> Void, fullSizeApply: @escaping (UIImage?) -> Void, beginTransitionOut: @escaping (Bool) -> Void, finishTransitionOut: @escaping () -> Void) -> ViewController
     func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, remainingCount: Int32, completion: @escaping ([MediaEditorScreenResult], MediaEditorTransitionOutExternalState, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController
     func makeBotPreviewEditorScreen(context: AccountContext, source: Any?, target: Stories.PendingTarget, transitionArguments: (UIView, CGRect, UIImage?)?, transitionOut: @escaping () -> BotPreviewEditorTransitionOut?, externalState: MediaEditorTransitionOutExternalState, completion: @escaping (MediaEditorScreenResult, @escaping (@escaping () -> Void) -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
     func makeStickerEditorScreen(context: AccountContext, source: Any?, mode: StickerEditorMode, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
@@ -1715,6 +1773,7 @@ public protocol SharedAccountContext: AnyObject {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
+        viaDeeplink: Bool,
         completion: @escaping (EnginePeer.Id?) -> Void
     ) async -> ViewController?
     func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController

@@ -55,18 +55,21 @@ IntlState& intlState(JSContext* ctx);
 /// read. Throws TypeError (an entry neither a string nor an object), RangeError (not a structurally valid tag, or longer
 /// than kMaxLocaleTag) and Thrown.
 std::vector<std::string> canonicalizeLocaleList(JSContext* ctx, JSValueConst locales);
-/// The locale a request names: the first requested tag, else the host's locale (HostState::locale(), the app's
-/// language) when it is a valid tag, else "en-US"; without its unicode extensions either way. The host's glue makes it
-/// its formatters' Locale(identifier:), which misreads some unicode extensions ("ar-EG-u-nu-arab" is
-/// "ar_EG@numbers=yes"). The glue force-unwraps that locale's nil patterns and symbols, and Foundation's
-/// RelativeDateTimeFormatter traps on it: either takes the app down. The options carry what ECMA-402 lets an extension
-/// set. (Upstream's glue would be safe with Locale(components: Locale.Components(identifier:)), iOS 16+; then the
-/// extensions could stay there. widget-sandbox VENDOR.md.)
+/// ECMA-402's [[RelevantExtensionKeys]] of the constructor a locale is resolved for: NumberFormat and RelativeTimeFormat
+/// read nu; DateTimeFormat ca, hc and nu; Collator co, kf and kn; PluralRules and ListFormat none.
+enum class RelevantKeys : uint8_t { None, NumberFormat, DateTimeFormat, RelativeTimeFormat, Collator };
+/// The locale a request names (ECMA-402 ResolveLocale): the first requested tag, else the host's locale
+/// (HostState::locale(), the app's language) when it is a valid tag, else "en-US". Its unicode extension keeps only the
+/// keywords `keys` names, each with a value this client supports (kNumberingSystems and the other tables in
+/// IntlCore.cpp), sorted by key; attributes and anything else are dropped, other extensions and private use stay. The
+/// glue builds its locale with Locale.Components (iOS 16 and later; before, it drops the extension) and applies what is
+/// left. A value it does not know is never sent: a numbering system name Foundation does not know (bogus, a bare `nu`,
+/// yes) makes its RelativeDateTimeFormatter trap, and the glue reads plural rules from a language key an extension
+/// breaks (follow-ups review, C1 and I1); algorithmic systems (jpanfin, hanidays) are not in the table either.
+/// WRIntlExtensionTests runs every call a widget can make on iOS.
 /// With no list of available locales here, every structurally valid tag is taken as one (widget-sandbox's shim does
 /// the same).
-std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested);
-/// `tag` without its unicode extension sequences ("-u-…" up to the next singleton).
-std::string withoutUnicodeExtensions(const std::string& tag);
+std::string resolveLocale(JSContext* ctx, const std::vector<std::string>& requested, RelevantKeys keys);
 /// ECMA-402 SupportedLocales, for every supportedLocalesOf: the canonical requested tags, a new array. Throws Thrown.
 JSValue supportedLocales(JSContext* ctx, JSValueConst locales, JSValueConst options);
 

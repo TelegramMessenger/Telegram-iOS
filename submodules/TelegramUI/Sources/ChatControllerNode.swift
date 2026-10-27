@@ -581,8 +581,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         })
 
                         var messageText = message.text
-                        var messageMedia = message.media
-                        var hasDice = false
+                        // widget-sandbox v0.2: a widget is previewed as the copy the forward makes (no queries, no chat
+                        // state), as its local echo shows it.
+                        var messageMedia = message.media.map { media -> Media in
+                            return (media as? TelegramMediaWidget)?.forwardedCopy() ?? media
+                        }
+                        // Dice and widgets keep their sender under "hide sender names": the server keeps the header
+                        // (widget-sandbox v0.2, tgw-format.md).
+                        var keepsSender = false
                         
                         if hideNames || options.hideCaptions {
                             for media in message.media {
@@ -597,15 +603,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                     updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, textEntities: poll.textEntities, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil, hasUnseenVotes: false, canViewStats: false), isClosed: false, deadlineTimeout: nil, deadlineDate: nil, pollHash: poll.pollHash))
                                     messageMedia = updatedMedia
                                 }
-                                if let _ = media as? TelegramMediaDice {
-                                    hasDice = true
+                                if media is TelegramMediaDice || media is TelegramMediaWidget {
+                                    keepsSender = true
                                 }
                             }
                         }
 
                         let ephemeralParams = ephemeralForwardParams(message)
                         if ephemeralParams != nil {
-                            if message.id.namespace == Namespaces.Message.EphemeralLocal || (hideNames && !hasDice) {
+                            if message.id.namespace == Namespaces.Message.EphemeralLocal || (hideNames && !keepsSender) {
                                 attributes.removeAll(where: { $0 is InlineBotMessageAttribute })
                             } else if let inlineBotPeerId = ephemeralParams?.inlineBotPeerId, !attributes.contains(where: { $0 is InlineBotMessageAttribute }) {
                                 attributes.append(InlineBotMessageAttribute(peerId: inlineBotPeerId, title: nil))
@@ -620,7 +626,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         } else {
                             forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: message.timestamp, authorSignature: nil, psaType: nil, flags: [])
                         }
-                        if hideNames && !hasDice {
+                        if hideNames && !keepsSender {
                             forwardInfo = nil
                         }
                         
@@ -3350,6 +3356,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                                 var state = state
                                 state = state.updatedDisplayHistoryFilterAsList(false)
+                                if let search = state.search, let resultsState = search.resultsState, let currentId = chatSearchResultsCurrentId(selecting: message.id, in: resultsState.messageIndices) {
+                                    state = state.updatedSearch(search.withUpdatedResultsState(ChatSearchResultsState(messageIndices: resultsState.messageIndices, currentId: currentId, state: resultsState.state, totalCount: resultsState.totalCount, completed: resultsState.completed)))
+                                }
                                 if let channel = state.renderedPeer?.peer as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = self.chatPresentationInterfaceState.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
                                     state = state.updatedSearch(nil)
                                 }

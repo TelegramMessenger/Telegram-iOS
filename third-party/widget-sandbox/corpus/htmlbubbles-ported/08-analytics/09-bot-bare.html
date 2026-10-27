@@ -44,8 +44,6 @@
   .co .x:hover { background-color: rgba(127,127,127,0.2); }
   .co svg { display: block; flex-shrink: 0; }
 
-  @keyframes tw-fade { from { opacity: 0; } to { opacity: 1; } }
-  .tr-fade { animation: tw-fade 0.25s ease-out; }
 </style>
 <div class="card pad co" id="root">
   <div class="row"><b class="grow" style="font-size: 16px">Retention by cohort</b><span class="badge purple" id="hbadge"></span></div>
@@ -202,11 +200,13 @@ function tweenDim(to, ms) {
   const me = ++dimRun, from = dim;
   animate(ms, e => { if (me === dimRun) { dim = lerp(from, to, e); paintCells(); } }, ease.outCubic);
 }
-function transition() {
-  root.classList.remove('tr-fade');
-  requestAnimationFrame(() => root.classList.add('tr-fade'));
+let panelAnimation = null;
+function transition(kind = 'fade', target = table) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('tr-fade'); });
 
 root.addEventListener('click', ev => {
   const t = ev.target.closest('[data-act]');
@@ -221,9 +221,8 @@ root.addEventListener('click', ev => {
     dim = 0; ++dimRun;
     buildTable();
     paintRows();
-    intro = 0;
+    intro = 1; ++introRun;
     paintCells();
-    play();
   } else if (name === 'units') {
     transition();
     users = !users;
@@ -232,7 +231,7 @@ root.addEventListener('click', ev => {
   } else if (name === 'row') {
     const r = Number(value);
     if (!(r >= 0 && r < MODES[mode].cohorts.length)) return;
-    transition();
+    transition('pop', $('det'));
     if (r === row) { row = -1; paintRows(); tweenDim(0, 300); return; }
     row = r;
     paintRows();

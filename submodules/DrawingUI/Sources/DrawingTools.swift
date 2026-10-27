@@ -149,3 +149,46 @@ final class FillTool: DrawingElement {
         context.setBlendMode(.normal)
     }
 }
+
+final class CleanupTool: DrawingElement {
+    let uuid: UUID
+    
+    let drawingSize: CGSize
+    let patchImage: UIImage
+    let patchRect: CGRect
+    
+    var translation = CGPoint()
+    
+    var isValid: Bool {
+        return true
+    }
+    
+    var bounds: CGRect {
+        return normalizeDrawingRect(self.patchRect, drawingSize: self.drawingSize)
+    }
+    
+    init(drawingSize: CGSize, patchImage: UIImage, patchRect: CGRect) {
+        self.uuid = UUID()
+        self.drawingSize = drawingSize
+        self.patchImage = patchImage
+        self.patchRect = patchRect
+    }
+    
+    func setupRenderView(screenSize: CGSize) -> DrawingRenderView? {
+        return nil
+    }
+    
+    func setupRenderLayer() -> DrawingRenderLayer? {
+        return nil
+    }
+    
+    func updatePath(_ path: DrawingPoint, state: DrawingGesturePipeline.DrawingGestureState, zoomScale: CGFloat) {
+    }
+    
+    func draw(in context: CGContext, size: CGSize) {
+        context.saveGState()
+        context.setBlendMode(.normal)
+        self.patchImage.draw(in: self.patchRect)
+        context.restoreGState()
+    }
+}

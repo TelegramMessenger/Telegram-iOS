@@ -2,9 +2,23 @@ import UIKit
 import Display
 import QrCode
 
+// Mirrors QrStudioCodeView.playReveal: modules grow out of the center as rounded windows
+// over the final raster, and the finder eyes scale in on the same front.
 final class WalletReceiveQrRevealView: UIView {
+    static let revealTime: Double = 0.6
+
+    private struct Cell {
+        let center: CGPoint
+        let distance: Double
+    }
+
     private let image: UIImage
     private let moduleCount: Int
+
+    private let revealMask = CAShapeLayer()
+    private var cells: [Cell] = []
+    private var eyes: [(layer: CALayer, distance: Double)] = []
+    private var unit: CGFloat = 0.0
 
     init(image: UIImage, moduleCount: Int) {
         self.image = image
@@ -19,28 +33,66 @@ final class WalletReceiveQrRevealView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func animateIn(delay: Double, duration: Double) {
+    private static func backOut(_ x: Double) -> Double {
+        let c1 = 1.70158
+        let c3 = c1 + 1.0
+        let u = x - 1.0
+        return 1.0 + c3 * u * u * u + c1 * u * u
+    }
+
+    private static func clamp01(_ x: Double) -> Double {
+        return min(1.0, max(0.0, x))
+    }
+
+    private static func darkModules(cgImage: CGImage, imageSize: CGSize, centers: [CGPoint]) -> [Bool]? {
+        let width = cgImage.width
+        let height = cgImage.height
+        guard width > 0, height > 0, let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ), let bytes = context.data else {
+            return nil
+        }
+        context.setFillColor(gray: 1.0, alpha: 1.0)
+        context.fill(CGRect(x: 0.0, y: 0.0, width: CGFloat(width), height: CGFloat(height)))
+        context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: CGFloat(width), height: CGFloat(height)))
+        let pixels = bytes.assumingMemoryBound(to: UInt8.self)
+        let scaleX = CGFloat(width) / imageSize.width
+        let scaleY = CGFloat(height) / imageSize.height
+        return centers.map { point in
+            let x = min(width - 1, max(0, Int(point.x * scaleX)))
+            let y = min(height - 1, max(0, Int(point.y * scaleY)))
+            return pixels[y * context.bytesPerRow + x] < 128
+        }
+    }
+
+    func prepare() -> Bool {
         let imageSize = self.image.size
         let (_, _, moduleSide) = qrCodeCutout(size: self.moduleCount, dimensions: imageSize, scale: self.image.scale)
         guard let cgImage = self.image.cgImage, moduleSide > 0.0, self.moduleCount >= 21 else {
-            return
+            return false
         }
-        let padding = round((imageSize.width - moduleSide * CGFloat(self.moduleCount)) * 0.5 * self.image.scale) / self.image.scale
+        let n = self.moduleCount
+        let padding = round((imageSize.width - moduleSide * CGFloat(n)) * 0.5 * self.image.scale) / self.image.scale
+        let center = Double(n - 1) / 2.0
+        let reach = hypot(center, center)
+        self.unit = moduleSide
 
-        // Include each finder's white separator so the rounded marker can grow as one piece.
-        let markerModuleCount = 9
-        let markerOrigins = [
-            CGPoint(x: 0.0, y: 0.0),
-            CGPoint(x: CGFloat(self.moduleCount - markerModuleCount), y: 0.0),
-            CGPoint(x: 0.0, y: CGFloat(self.moduleCount - markerModuleCount))
-        ]
-        let markerFrames = markerOrigins.map { origin in
-            return CGRect(
-                x: padding + origin.x * moduleSide,
-                y: padding + origin.y * moduleSide,
-                width: CGFloat(markerModuleCount) * moduleSide,
-                height: CGFloat(markerModuleCount) * moduleSide
-            )
+        var candidates: [(x: Int, y: Int)] = []
+        var centers: [CGPoint] = []
+        for y in 0 ..< n {
+            for x in 0 ..< n where !QrCodeMatrix.isEye(x: x, y: y, size: n) {
+                candidates.append((x, y))
+                centers.append(CGPoint(x: padding + (CGFloat(x) + 0.5) * moduleSide, y: padding + (CGFloat(y) + 0.5) * moduleSide))
+            }
+        }
+        guard let dark = Self.darkModules(cgImage: cgImage, imageSize: imageSize, centers: centers) else {
+            return false
+        }
+        self.cells = []
+        for i in 0 ..< candidates.count where dark[i] {
+            let cell = candidates[i]
+            self.cells.append(Cell(center: centers[i], distance: hypot(Double(cell.x) - center, Double(cell.y) - center) / reach))
         }
 
         let codeLayer = CALayer()
@@ -49,80 +101,58 @@ final class WalletReceiveQrRevealView: UIView {
         codeLayer.contentsScale = self.image.scale
         self.layer.addSublayer(codeLayer)
 
-        let revealMask = CALayer()
-        revealMask.frame = codeLayer.bounds
-        revealMask.contentsScale = self.image.scale
-        codeLayer.mask = revealMask
+        // The eyes' modules are left out of the mask and grow as whole layers instead.
+        self.revealMask.frame = codeLayer.bounds
+        self.revealMask.path = nil
+        codeLayer.mask = self.revealMask
 
-        // Keep every module at its final position and size; only fade its mask in.
-        // Using the original raster preserves both rounded corners and concave joins.
-        let batchCount = 48
-        var batches = Array(repeating: [CGRect](), count: batchCount)
-        let center = CGFloat(self.moduleCount - 1) * 0.5
-        for y in 0 ..< self.moduleCount {
-            for x in 0 ..< self.moduleCount {
-                if (y < markerModuleCount && (x < markerModuleCount || x >= self.moduleCount - markerModuleCount))
-                    || (y >= self.moduleCount - markerModuleCount && x < markerModuleCount) {
-                    continue
-                }
-                let frame = CGRect(
-                    x: padding + CGFloat(x) * moduleSide,
-                    y: padding + CGFloat(y) * moduleSide,
-                    width: moduleSide,
-                    height: moduleSide
-                )
-                // Sweep inward while winding the reveal clockwise around the stone.
-                // Keep a little jitter so individual modules appear organically.
-                let distanceToEdge = min(min(x, y), min(self.moduleCount - 1 - x, self.moduleCount - 1 - y))
-                let inwardProgress = Double(CGFloat(distanceToEdge) / center)
-                let dx = Double(CGFloat(x) - center)
-                let dy = Double(CGFloat(y) - center)
-                let angle = (atan2(dy, dx) + Double.pi) / (2.0 * Double.pi)
-                let radius = hypot(dx, dy) / Double(center)
-                let spiralPosition = angle + radius * 1.25
-                let spiralPhase = spiralPosition - floor(spiralPosition)
-                let phase = inwardProgress * 0.55 + spiralPhase * 0.4 + Double.random(in: 0.0 ... 0.05)
-                let batchIndex = min(batchCount - 1, Int(phase * Double(batchCount - 1)))
-                batches[batchIndex].append(frame)
-            }
-        }
-
-        for (index, frames) in batches.enumerated() {
-            let path = CGMutablePath()
-            for frame in frames {
-                path.addRect(frame)
-            }
-
-            let batchLayer = CAShapeLayer()
-            batchLayer.frame = revealMask.bounds
-            batchLayer.contentsScale = self.image.scale
-            batchLayer.fillColor = UIColor.black.cgColor
-            batchLayer.path = path
-            revealMask.addSublayer(batchLayer)
-            batchLayer.animateAlpha(
-                from: 0.0,
-                to: 1.0,
-                duration: 0.12,
-                delay: delay + Double(index) / Double(batchCount - 1) * max(0.0, duration - 0.12),
-                timingFunction: CAMediaTimingFunctionName.easeOut.rawValue
+        for (eyeX, eyeY) in [(0, 0), (n - 7, 0), (0, n - 7)] {
+            let frame = CGRect(
+                x: padding + CGFloat(eyeX) * moduleSide,
+                y: padding + CGFloat(eyeY) * moduleSide,
+                width: 7.0 * moduleSide,
+                height: 7.0 * moduleSide
             )
-        }
-
-        for frame in markerFrames {
-            let markerLayer = CALayer()
-            markerLayer.frame = frame
-            markerLayer.contents = cgImage
-            markerLayer.contentsScale = self.image.scale
-            markerLayer.contentsRect = CGRect(
+            let eyeLayer = CALayer()
+            eyeLayer.frame = frame
+            eyeLayer.contents = cgImage
+            eyeLayer.contentsScale = self.image.scale
+            eyeLayer.contentsRect = CGRect(
                 x: frame.minX / imageSize.width,
                 y: frame.minY / imageSize.height,
                 width: frame.width / imageSize.width,
                 height: frame.height / imageSize.height
             )
-            self.layer.addSublayer(markerLayer)
-
-            markerLayer.animateScale(from: 0.01, to: 1.0, duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
-            markerLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12, delay: delay)
+            eyeLayer.transform = CATransform3DMakeScale(0.001, 0.001, 1.0)
+            self.layer.addSublayer(eyeLayer)
+            self.eyes.append((eyeLayer, hypot(Double(eyeX) + 3.0 - center, Double(eyeY) + 3.0 - center) / reach))
         }
+        return true
+    }
+
+    func update(time: Double) {
+        let k = Self.clamp01(time / Self.revealTime)
+        func grow(_ distance: Double) -> Double {
+            return Self.backOut(Self.clamp01((k - 0.5 * distance) / 0.5))
+        }
+        let unit = self.unit
+        let windows = CGMutablePath()
+        for cell in self.cells {
+            let s = grow(cell.distance)
+            guard s > 0.01 else {
+                continue
+            }
+            let w = unit * 1.5 * CGFloat(s)
+            let r = min(w * 0.5, w * 0.5 * CGFloat(1.0 - 0.7 * Self.clamp01(s)))
+            windows.addRoundedRect(in: CGRect(x: cell.center.x - w * 0.5, y: cell.center.y - w * 0.5, width: w, height: w), cornerWidth: r, cornerHeight: r)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        self.revealMask.path = windows
+        for eye in self.eyes {
+            let s = max(0.001, CGFloat(grow(eye.distance)))
+            eye.layer.transform = CATransform3DMakeScale(s, s, 1.0)
+        }
+        CATransaction.commit()
     }
 }
