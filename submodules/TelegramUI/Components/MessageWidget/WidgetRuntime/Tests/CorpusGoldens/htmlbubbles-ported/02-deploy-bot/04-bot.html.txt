@@ -1,0 +1,145 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p style="margin-bottom: 4px"><b>deploy.log</b> <span style="color: #8e8e93; font-size: 12px">— last 6 lines</span></p>
+<pre style="background-color: #1e1e2e; color: #cdd6f4; font-size: 11.5px"><span style="color: #6c7086">10:01:58</span> <span style="color: #89b4fa">INFO </span> pulling image litechat:1842
+<span style="color: #6c7086">10:02:03</span> <span style="color: #89b4fa">INFO </span> starting 10 pods (rolling, maxSurge=2)
+<span style="color: #6c7086">10:02:41</span> <span style="color: #f9e2af">WARN </span> pod-7 readiness probe slow (1.8s)
+<span style="color: #6c7086">10:02:52</span> <span style="color: #f38ba8">ERROR</span> pod-9 OOMKilled — retrying with 512Mi
+<span style="color: #6c7086">10:03:20</span> <span style="color: #89b4fa">INFO </span> pod-9 healthy
+<span style="color: #6c7086">10:03:21</span> <span style="color: #a6e3a1">OK   </span> canary at 10% ✔</pre>
+<p style="font-size: 12px; color: #8e8e93">Tip: click <b>Promote</b>, <b>View logs</b> or <b>Rollback</b> on the build card above ☝️</p>
+</body></html>
+
+== layout
+html 0 0 360 227.475
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 227.475
+    p 0 0 360 18.2
+      b 0 0 0 0
+      span 0 0 0 0
+    pre 10 30.2 340 150.075
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+      span 10 30.2 0 0
+    p 0 196.275 360 31.2
+      b 0 196.275 0 0
+      b 0 196.275 0 0
+      b 0 196.275 0 0
+
+== paint
+root 360x227.875 items=95
+  solid-fill bounds=(0,22,360,166) layer=(border=(0,22,360,166),radius=(8,8,8,8,8,8,8,8),clip=(0,22,360,166),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#1e1e2eff
+  text bounds=(-8,-7,96,32) pos=(0,1,80,16) color=#000000ff text="deploy.log" font=f1 glyphs=10 advance=80
+  text bounds=(80,-7,40,32) pos=(88,1,24,16) color=#8e8e93ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(112,-7,48,32) pos=(120,1,32,16) color=#8e8e93ff text="last" font=f2 glyphs=4 advance=32
+  text bounds=(152,-7,24,32) pos=(160,1,8,16) color=#8e8e93ff text="6" font=f2 glyphs=1 advance=8
+  text bounds=(168,-7,56,32) pos=(176,1,40,16) color=#8e8e93ff text="lines" font=f2 glyphs=5 advance=40
+  text bounds=(2,22,80,32) pos=(10,30,64,16) color=#6c7086ff text="10:01:58" font=f3 glyphs=8 advance=64
+  text bounds=(66,22,24,32) pos=(74,30,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,22,48,32) pos=(82,30,32,16) color=#89b4faff text="INFO" font=f3 glyphs=4 advance=32
+  text bounds=(106,22,24,32) pos=(114,30,8,16) color=#89b4faff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(114,22,24,32) pos=(122,30,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(122,22,72,32) pos=(130,30,56,16) color=#cdd6f4ff text="pulling" font=f3 glyphs=7 advance=56
+  text bounds=(178,22,24,32) pos=(186,30,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(186,22,56,32) pos=(194,30,40,16) color=#cdd6f4ff text="image" font=f3 glyphs=5 advance=40
+  text bounds=(226,22,24,32) pos=(234,30,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(234,22,120,32) pos=(242,30,104,16) color=#cdd6f4ff text="litechat:1842" font=f3 glyphs=13 advance=104
+  text bounds=(2,39,80,32) pos=(10,47,64,16) color=#6c7086ff text="10:02:03" font=f3 glyphs=8 advance=64
+  text bounds=(66,39,24,32) pos=(74,47,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,39,48,32) pos=(82,47,32,16) color=#89b4faff text="INFO" font=f3 glyphs=4 advance=32
+  text bounds=(106,39,24,32) pos=(114,47,8,16) color=#89b4faff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(114,39,24,32) pos=(122,47,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(122,39,80,32) pos=(130,47,64,16) color=#cdd6f4ff text="starting" font=f3 glyphs=8 advance=64
+  text bounds=(186,39,24,32) pos=(194,47,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(194,39,32,32) pos=(202,47,16,16) color=#cdd6f4ff text="10" font=f3 glyphs=2 advance=16
+  text bounds=(210,39,24,32) pos=(218,47,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(218,39,48,32) pos=(226,47,32,16) color=#cdd6f4ff text="pods" font=f3 glyphs=4 advance=32
+  text bounds=(250,39,24,32) pos=(258,47,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(258,39,88,32) pos=(266,47,72,16) color=#cdd6f4ff text="(rolling," font=f3 glyphs=9 advance=72
+  text bounds=(330,39,24,32) pos=(338,47,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(2,56,104,32) pos=(10,64,88,16) color=#cdd6f4ff text="maxSurge=2)" font=f3 glyphs=11 advance=88
+  text bounds=(2,72,80,32) pos=(10,80,64,16) color=#6c7086ff text="10:02:41" font=f3 glyphs=8 advance=64
+  text bounds=(66,72,24,32) pos=(74,80,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,72,48,32) pos=(82,80,32,16) color=#f9e2afff text="WARN" font=f3 glyphs=4 advance=32
+  text bounds=(106,72,24,32) pos=(114,80,8,16) color=#f9e2afff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(114,72,24,32) pos=(122,80,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(122,72,56,32) pos=(130,80,40,16) color=#cdd6f4ff text="pod-7" font=f3 glyphs=5 advance=40
+  text bounds=(162,72,24,32) pos=(170,80,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(170,72,88,32) pos=(178,80,72,16) color=#cdd6f4ff text="readiness" font=f3 glyphs=9 advance=72
+  text bounds=(242,72,24,32) pos=(250,80,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(250,72,56,32) pos=(258,80,40,16) color=#cdd6f4ff text="probe" font=f3 glyphs=5 advance=40
+  text bounds=(290,72,24,32) pos=(298,80,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(298,72,48,32) pos=(306,80,32,16) color=#cdd6f4ff text="slow" font=f3 glyphs=4 advance=32
+  text bounds=(330,72,24,32) pos=(338,80,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(2,89,64,32) pos=(10,97,48,16) color=#cdd6f4ff text="(1.8s)" font=f3 glyphs=6 advance=48
+  text bounds=(2,106,80,32) pos=(10,114,64,16) color=#6c7086ff text="10:02:52" font=f3 glyphs=8 advance=64
+  text bounds=(66,106,24,32) pos=(74,114,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,106,56,32) pos=(82,114,40,16) color=#f38ba8ff text="ERROR" font=f3 glyphs=5 advance=40
+  text bounds=(114,106,24,32) pos=(122,114,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(122,106,56,32) pos=(130,114,40,16) color=#cdd6f4ff text="pod-9" font=f3 glyphs=5 advance=40
+  text bounds=(162,106,24,32) pos=(170,114,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(170,106,88,32) pos=(178,114,72,16) color=#cdd6f4ff text="OOMKilled" font=f3 glyphs=9 advance=72
+  text bounds=(242,106,24,32) pos=(250,114,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(250,106,40,32) pos=(258,114,24,16) color=#cdd6f4ff text="—" font=f3 glyphs=3 advance=24
+  text bounds=(274,106,24,32) pos=(282,114,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(2,122,80,32) pos=(10,130,64,16) color=#cdd6f4ff text="retrying" font=f3 glyphs=8 advance=64
+  text bounds=(66,122,24,32) pos=(74,130,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,122,48,32) pos=(82,130,32,16) color=#cdd6f4ff text="with" font=f3 glyphs=4 advance=32
+  text bounds=(106,122,24,32) pos=(114,130,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(114,122,56,32) pos=(122,130,40,16) color=#cdd6f4ff text="512Mi" font=f3 glyphs=5 advance=40
+  text bounds=(2,139,80,32) pos=(10,147,64,16) color=#6c7086ff text="10:03:20" font=f3 glyphs=8 advance=64
+  text bounds=(66,139,24,32) pos=(74,147,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,139,48,32) pos=(82,147,32,16) color=#89b4faff text="INFO" font=f3 glyphs=4 advance=32
+  text bounds=(106,139,24,32) pos=(114,147,8,16) color=#89b4faff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(114,139,24,32) pos=(122,147,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(122,139,56,32) pos=(130,147,40,16) color=#cdd6f4ff text="pod-9" font=f3 glyphs=5 advance=40
+  text bounds=(162,139,24,32) pos=(170,147,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(170,139,72,32) pos=(178,147,56,16) color=#cdd6f4ff text="healthy" font=f3 glyphs=7 advance=56
+  text bounds=(2,156,80,32) pos=(10,164,64,16) color=#6c7086ff text="10:03:21" font=f3 glyphs=8 advance=64
+  text bounds=(66,156,24,32) pos=(74,164,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(74,156,32,32) pos=(82,164,16,16) color=#a6e3a1ff text="OK" font=f3 glyphs=2 advance=16
+  text bounds=(90,156,24,32) pos=(98,164,8,16) color=#a6e3a1ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(98,156,24,32) pos=(106,164,8,16) color=#a6e3a1ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(106,156,24,32) pos=(114,164,8,16) color=#a6e3a1ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(114,156,24,32) pos=(122,164,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(122,156,64,32) pos=(130,164,48,16) color=#cdd6f4ff text="canary" font=f3 glyphs=6 advance=48
+  text bounds=(170,156,24,32) pos=(178,164,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(178,156,32,32) pos=(186,164,16,16) color=#cdd6f4ff text="at" font=f3 glyphs=2 advance=16
+  text bounds=(194,156,24,32) pos=(202,164,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(202,156,40,32) pos=(210,164,24,16) color=#cdd6f4ff text="10%" font=f3 glyphs=3 advance=24
+  text bounds=(226,156,24,32) pos=(234,164,8,16) color=#cdd6f4ff text=" " font=f3 glyphs=1 advance=8
+  text bounds=(234,156,40,32) pos=(242,164,24,16) color=#cdd6f4ff text="✔" font=f3 glyphs=3 advance=24
+  text bounds=(-8,188,48,32) pos=(0,196,32,16) color=#8e8e93ff text="Tip:" font=f2 glyphs=4 advance=32
+  text bounds=(32,188,56,32) pos=(40,196,40,16) color=#8e8e93ff text="click" font=f2 glyphs=5 advance=40
+  text bounds=(80,188,72,32) pos=(88,196,56,16) color=#8e8e93ff text="Promote" font=f4 glyphs=7 advance=56
+  text bounds=(136,188,24,32) pos=(144,196,8,16) color=#8e8e93ff text="," font=f2 glyphs=1 advance=8
+  text bounds=(152,188,48,32) pos=(160,196,32,16) color=#8e8e93ff text="View" font=f4 glyphs=4 advance=32
+  text bounds=(192,188,48,32) pos=(200,196,32,16) color=#8e8e93ff text="logs" font=f4 glyphs=4 advance=32
+  text bounds=(232,188,32,32) pos=(240,196,16,16) color=#8e8e93ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(256,188,80,32) pos=(264,196,64,16) color=#8e8e93ff text="Rollback" font=f4 glyphs=8 advance=64
+  text bounds=(328,188,32,32) pos=(336,196,16,16) color=#8e8e93ff text="on" font=f2 glyphs=2 advance=16
+  text bounds=(-8,204,40,32) pos=(0,212,24,16) color=#8e8e93ff text="the" font=f2 glyphs=3 advance=24
+  text bounds=(24,204,56,32) pos=(32,212,40,16) color=#8e8e93ff text="build" font=f2 glyphs=5 advance=40
+  text bounds=(72,204,48,32) pos=(80,212,32,16) color=#8e8e93ff text="card" font=f2 glyphs=4 advance=32
+  text bounds=(112,204,56,32) pos=(120,212,40,16) color=#8e8e93ff text="above" font=f2 glyphs=5 advance=40
+  text bounds=(160,204,64,32) pos=(168,212,48,16) color=#8e8e93ff text="☝️" font=f2 glyphs=6 advance=48
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=11.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

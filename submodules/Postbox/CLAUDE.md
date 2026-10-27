@@ -29,7 +29,7 @@ Tested in `Postbox/Tests/SqliteValueBoxRecoveryPolicyTests.swift`. The app and i
 ## Postbox shared-media removal (deferred design: tombstones)
 
 `Transaction.updateMedia(id, update: nil)` is meant to remove a media from every message that carries it. Its one use:
-the server answers a web-page update with `webPageEmpty` (no preview for that URL) and `AccountStateManagementUtils`
+the server answers a web-page update with `webPageEmpty` (no preview for that URL) and `UpdateInterpreter`
 turns it into a nil media update (replayed through `updateMessageMedia(transaction:id:media:)`). The intended end state
 matches a fresh store of such a message, which has no web-page media.
 

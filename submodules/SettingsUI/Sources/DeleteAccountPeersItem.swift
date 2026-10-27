@@ -88,12 +88,14 @@ class DeleteAccountPeersItem: ListViewItem, ItemListItem {
     
     let context: AccountContext
     let theme: PresentationTheme
+    let systemStyle: ItemListSystemStyle
     let strings: PresentationStrings
     let peers: [EnginePeer]
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peers: [EnginePeer], sectionId: ItemListSectionId) {
+    init(context: AccountContext, theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, strings: PresentationStrings, peers: [EnginePeer], sectionId: ItemListSectionId) {
         self.context = context
         self.theme = theme
+        self.systemStyle = systemStyle
         self.strings = strings
         self.peers = peers
         self.sectionId = sectionId
@@ -229,6 +231,7 @@ class DeleteAccountPeersItemNode: ListViewItemNode, ItemListItemNode {
             let contentSize: CGSize
             var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
+            let separatorRightInset: CGFloat = item.systemStyle == .glass ? 16.0 : 0.0
                     
             contentSize = CGSize(width: params.width, height: 109.0)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -284,12 +287,12 @@ class DeleteAccountPeersItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - separatorRightInset, height: separatorHeight))
                     
                     let listInsets = UIEdgeInsets(top: params.leftInset, left: 0.0, bottom: params.rightInset, right: 0.0)
                     strongSelf.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: params.width)

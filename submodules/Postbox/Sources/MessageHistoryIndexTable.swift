@@ -220,6 +220,57 @@ final class MessageHistoryIndexTable: Table {
     func exists(_ id: MessageId) -> Bool {
         return self.valueBox.exists(self.table, key: self.key(id))
     }
+
+    func messageIdsInRange(peerId: PeerId, namespace: MessageId.Namespace, range: ClosedRange<MessageId.Id>, limit: Int, fromUpperBound: Bool) -> [MessageId] {
+        // Keys hold the id as big-endian signed bytes, so negative ids sort after positive ones and a range
+        // that crosses zero would iterate the wrong span.
+        assert(range.lowerBound >= 0)
+        // `SqliteValueBox` binds the limit as `Int32(limit)`, which traps above `Int32.max`; such a limit
+        // asks for every id anyway.
+        let limit = limit > Int(Int32.max) ? 0 : limit
+        var result: [MessageId] = []
+        // The range bounds of `ValueBox.range` are exclusive.
+        let lowerKey = self.key(MessageId(peerId: peerId, namespace: namespace, id: range.lowerBound)).predecessor
+        let upperKey = self.key(MessageId(peerId: peerId, namespace: namespace, id: range.upperBound)).successor
+        self.valueBox.range(self.table, start: fromUpperBound ? upperKey : lowerKey, end: fromUpperBound ? lowerKey : upperKey, keys: { key in
+            result.append(MessageId(peerId: peerId, namespace: namespace, id: key.getInt32(8 + 4)))
+            return true
+        }, limit: limit)
+        return result
+    }
+
+    // Kept beside `indexForId(higherThan:)` and `earlierEntries(id:count:)` for the negative-id guard: those
+    // can return a negative id (sorted after every positive one), these two never do.
+
+    /// The stored message of `peerId` in `namespace` with the highest non-negative id below `id`.
+    func closestIndex(peerId: PeerId, namespace: MessageId.Namespace, below id: MessageId.Id) -> MessageIndex? {
+        if id <= 0 {
+            return nil
+        }
+        var index: MessageIndex?
+        self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: id)), end: self.lowerBound(peerId, namespace: namespace), values: { key, value in
+            index = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value)
+            return false
+        }, limit: 1)
+        return index
+    }
+
+    /// The stored message of `peerId` in `namespace` with the lowest id above `id`. Negative ids sort after
+    /// the positive ones, so one is never returned here.
+    func closestIndex(peerId: PeerId, namespace: MessageId.Namespace, above id: MessageId.Id) -> MessageIndex? {
+        if id == Int32.max {
+            return nil
+        }
+        var index: MessageIndex?
+        self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: id)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+            index = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value)
+            return false
+        }, limit: 1)
+        if let found = index, found.id.id <= id {
+            return nil
+        }
+        return index
+    }
     
     func incomingMessageCountInRange(_ peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) -> (Int, Bool) {
         var count = 0

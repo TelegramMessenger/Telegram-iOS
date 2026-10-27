@@ -1,0 +1,123 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad sdk" id="root">
+  <div class="hd"><b class="grow" style="font-size: 16px">🔢 Sudoku <span class="muted small" id="pnum">#1</span></b><span class="small muted" style="margin-right: 6px">⏱ <span id="clock">0:00</span></span><span class="badge orange" id="status">medium</span></div>
+  <table class="su" id="table"><tr><td class="" data-base="" data-i="0"><div class="h g pop-a" style="--ms: 300ms; --delay: 0ms;" data-alt="a">5</div></td><td class="" data-base="" data-i="1"><div class="h g pop-a" style="--ms: 300ms; --delay: 30ms;" data-alt="a">3</div></td><td class="br" data-base="br " data-i="2"><div class="h m pop-a" style="--ms: 300ms; --delay: 60ms;" data-alt="a">4</div></td><td class="" data-base="" data-i="3"><div class="h m pop-a" style="--ms: 300ms; --delay: 90ms;" data-alt="a">6</div></td><td class="" data-base="" data-i="4"><div class="h g pop-a" style="--ms: 300ms; --delay: 120ms;" data-alt="a">7</div></td><td class="br" data-base="br " data-i="5"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="6"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="7"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="8"><div class="h m">&nbsp;</div></td></tr><tr><td class="" data-base="" data-i="9"><div class="h g pop-a" style="--ms: 300ms; --delay: 30ms;" data-alt="a">6</div></td><td class="" data-base="" data-i="10"><div class="h m pop-a" style="--ms: 300ms; --delay: 60ms;" data-alt="a">7</div></td><td class="br" data-base="br " data-i="11"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="12"><div class="h g pop-a" style="--ms: 300ms; --delay: 120ms;" data-alt="a">1</div></td><td class="" data-base="" data-i="13"><div class="h g pop-a" style="--ms: 300ms; --delay: 150ms;" data-alt="a">9</div></td><td class="br" data-base="br " data-i="14"><div class="h g pop-a" style="--ms: 300ms; --delay: 180ms;" data-alt="a">5</div></td><td class="" data-base="" data-i="15"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="16"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="17"><div class="h m">&nbsp;</div></td></tr><tr><td class="bb" data-base="bb" data-i="18"><div class="h m pop-a" style="--ms: 300ms; --delay: 60ms;" data-alt="a">1</div></td><td class="bb" data-base="bb" data-i="19"><div class="h g pop-a" style="--ms: 300ms; --delay: 90ms;" data-alt="a">9</div></td><td class="br bb" data-base="br bb" data-i="20"><div class="h g pop-a" style="--ms: 300ms; --delay: 120ms;" data-alt="a">8</div></td><td class="bb" data-base="bb" data-i="21"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="22"><div class="h m">&nbsp;</div></td><td class="br bb" data-base="br bb" data-i="23"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="24"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="25"><div class="h g pop-a" style="--ms: 300ms; --delay: 270ms;" data-alt="a">6</div></td><td class="bb" data-base="bb" data-i="26"><div class="h m">&nbsp;</div></td></tr><tr><td class="" data-base="" data-i="27"><div class="h g pop-a" style="--ms: 300ms; --delay: 90ms;" data-alt="a">8</div></td><td class="" data-base="" data-i="28"><div class="h m">&nbsp;</div></td><td class="br" data-base="br " data-i="29"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="30"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="31"><div class="h g pop-a" style="--ms: 300ms; --delay: 210ms;" data-alt="a">6</div></td><td class="br" data-base="br " data-i="32"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="33"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="34"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="35"><div class="h g pop-a" style="--ms: 300ms; --delay: 330ms;" data-alt="a">3</div></td></tr><tr><td class="" data-base="" data-i="36"><div class="h g pop-a" style="--ms: 300ms; --delay: 120ms;" data-alt="a">4</div></td><td class="" data-base="" data-i="37"><div class="h m">&nbsp;</div></td><td class="br" data-base="br " data-i="38"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="39"><div class="h g pop-a" style="--ms: 300ms; --delay: 210ms;" data-alt="a">8</div></td><td class="" data-base="" data-i="40"><div class="h m">&nbsp;</div></td><td class="br" data-base="br " data-i="41"><div class="h g pop-a" style="--ms: 300ms; --delay: 270ms;" data-alt="a">3</div></td><td class="" data-base="" data-i="42"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="43"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="44"><div class="h g pop-a" style="--ms: 300ms; --delay: 360ms;" data-alt="a">1</div></td></tr><tr><td class="bb" data-base="bb" data-i="45"><div class="h g pop-a" style="--ms: 300ms; --delay: 150ms;" data-alt="a">7</div></td><td class="bb" data-base="bb" data-i="46"><div class="h m">&nbsp;</div></td><td class="br bb" data-base="br bb" data-i="47"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="48"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="49"><div class="h g pop-a" style="--ms: 300ms; --delay: 270ms;" data-alt="a">2</div></td><td class="br bb" data-base="br bb" data-i="50"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="51"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="52"><div class="h m">&nbsp;</div></td><td class="bb" data-base="bb" data-i="53"><div class="h g pop-a" style="--ms: 300ms; --delay: 390ms;" data-alt="a">6</div></td></tr><tr><td class="" data-base="" data-i="54"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="55"><div class="h g pop-a" style="--ms: 300ms; --delay: 210ms;" data-alt="a">6</div></td><td class="br" data-base="br " data-i="56"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="57"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="58"><div class="h m">&nbsp;</div></td><td class="br" data-base="br " data-i="59"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="60"><div class="h g pop-a" style="--ms: 300ms; --delay: 360ms;" data-alt="a">2</div></td><td class="" data-base="" data-i="61"><div class="h g pop-a" style="--ms: 300ms; --delay: 390ms;" data-alt="a">8</div></td><td class="" data-base="" data-i="62"><div class="h m">&nbsp;</div></td></tr><tr><td class="" data-base="" data-i="63"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="64"><div class="h m">&nbsp;</div></td><td class="br" data-base="br " data-i="65"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="66"><div class="h g pop-a" style="--ms: 300ms; --delay: 300ms;" data-alt="a">4</div></td><td class="" data-base="" data-i="67"><div class="h g pop-a" style="--ms: 300ms; --delay: 330ms;" data-alt="a">1</div></td><td class="br" data-base="br " data-i="68"><div class="h g pop-a" style="--ms: 300ms; --delay: 360ms;" data-alt="a">9</div></td><td class="" data-base="" data-i="69"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="70"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="71"><div class="h g pop-a" style="--ms: 300ms; --delay: 450ms;" data-alt="a">5</div></td></tr><tr><td class="" data-base="" data-i="72"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="73"><div class="h m">&nbsp;</div></td><td class="br" data-base="br " data-i="74"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="75"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="76"><div class="h g pop-a" style="--ms: 300ms; --delay: 360ms;" data-alt="a">8</div></td><td class="br" data-base="br " data-i="77"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="78"><div class="h m">&nbsp;</div></td><td class="" data-base="" data-i="79"><div class="h g pop-a" style="--ms: 300ms; --delay: 450ms;" data-alt="a">7</div></td><td class="" data-base="" data-i="80"><div class="h g pop-a" style="--ms: 300ms; --delay: 480ms;" data-alt="a">9</div></td></tr></table>
+  <div class="keys" id="keys"><div class="nk" data-d="1">1<div class="c">5</div></div><div class="nk" data-d="2">2<div class="c">7</div></div><div class="nk" data-d="3">3<div class="c">6</div></div><div class="nk" data-d="4">4<div class="c">6</div></div><div class="nk" data-d="5">5<div class="c">6</div></div><div class="nk" data-d="6">6<div class="c">3</div></div><div class="nk" data-d="7">7<div class="c">5</div></div><div class="nk" data-d="8">8<div class="c">4</div></div><div class="nk" data-d="9">9<div class="c">5</div></div><div class="nk" data-erase="">⌫<div class="c">&nbsp;</div></div></div>
+  <div class="banner" id="banner" hidden=""><b class="t-green" id="bannerT"></b><div class="small muted" id="bannerS"></div></div>
+  <div class="ctl"><span class="small muted grow" id="hint">Tap a cell · 34/81</span>
+    <button id="checkBtn">Check</button><button id="solveBtn">Solve</button><button id="newBtn" class="">New</button></div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 149.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 149.7
+    div 15 13 300 123.7
+      div 15 13 300 20.8
+        b 15 13 166 20.8
+          span 15 13 0 0
+        span 181 15.6 64 15.6
+          span 181 15.6 0 0
+        span 259 16.25 48 14.3
+      table 17 45.4 0 0
+      div 15 57.4 300 38.1
+        div 15 61.4 27 32.1
+          div 15 83.5 27 10
+        div 45.3333 61.4 27 32.1
+          div 45.3333 83.5 27 10
+        div 75.6667 61.4 27 32.1
+          div 75.6667 83.5 27 10
+        div 106 61.4 27 32.1
+          div 106 83.5 27 10
+        div 136.333 61.4 27 32.1
+          div 136.333 83.5 27 10
+        div 166.667 61.4 27 32.1
+          div 166.667 83.5 27 10
+        div 197 61.4 27 32.1
+          div 197 83.5 27 10
+        div 227.333 61.4 27 32.1
+          div 227.333 83.5 27 10
+        div 257.667 61.4 27 32.1
+          div 257.667 83.5 27 10
+        div 288 61.4 27 32.1
+          div 288 83.5 27 10
+      div 0 0 0 0
+        b 0 0 0 0
+        div 0 0 0 0
+      div 15 105.5 300 31.2
+        span 15 105.5 112 31.2
+        button 144 113.3 40 15.6
+        button 212 113.3 40 15.6
+        button 280 113.3 24 15.6
+
+== paint
+root 360x149.7 items=52
+  solid-fill bounds=(0,0,330,150) layer=(border=(0,0,330,150),radius=(14,14,14,14,14,14,14,14),clip=(0,0,330,150),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,330,150) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,330,150) root=0
+  solid-fill bounds=(251,15,64,17) layer=(border=(251,15,64,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(251,15,64,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff95002e
+  solid-fill bounds=(15,43,4,4) layer=(border=(15,43,4,4),radius=(0,0,0,0,0,0,0,0),clip=(15,43,4,4),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(15,43,4,4) borders=(left=(2,4,#1c1c1eff),top=(2,4,#1c1c1eff),right=(2,4,#1c1c1eff),bottom=(2,4,#1c1c1eff),radius=(0,0,0,0,0,0,0,0)) pos=(15,43,4,4) root=0
+  solid-fill bounds=(15,57,27,39) layer=(border=(15,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(15,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(45,57,27,39) layer=(border=(45,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(45,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(76,57,27,39) layer=(border=(76,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(76,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(106,57,27,39) layer=(border=(106,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(106,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(136,57,27,39) layer=(border=(136,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(136,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(167,57,27,39) layer=(border=(167,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(167,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(197,57,27,39) layer=(border=(197,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(197,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(227,57,27,39) layer=(border=(227,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(227,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(258,57,27,39) layer=(border=(258,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(258,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(288,57,27,39) layer=(border=(288,57,27,39),radius=(8,8,8,8,8,8,8,8),clip=(288,57,27,39),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f21
+  solid-fill bounds=(133,109,62,24) layer=(border=(133,109,62,24),radius=(8,8,8,8,8,8,8,8),clip=(133,109,62,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  solid-fill bounds=(201,109,62,24) layer=(border=(201,109,62,24),radius=(8,8,8,8,8,8,8,8),clip=(201,109,62,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  solid-fill bounds=(269,109,46,24) layer=(border=(269,109,46,24),radius=(8,8,8,8,8,8,8,8),clip=(269,109,46,24),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f29
+  text bounds=(7,7,48,32) pos=(15,15,32,16) color=#000000ff text="🔢" font=f1 glyphs=4 advance=32
+  text bounds=(47,7,64,32) pos=(55,15,48,16) color=#000000ff text="Sudoku" font=f1 glyphs=6 advance=48
+  text bounds=(103,7,32,32) pos=(111,15,16,16) color=#6e6e73ff text="#1" font=f2 glyphs=2 advance=16
+  text bounds=(173,8,40,32) pos=(181,16,24,16) color=#6e6e73ff text="⏱" font=f3 glyphs=3 advance=24
+  text bounds=(205,8,48,32) pos=(213,16,32,16) color=#6e6e73ff text="0:00" font=f3 glyphs=4 advance=32
+  text bounds=(251,8,64,32) pos=(259,16,48,16) color=#ff9500ff text="medium" font=f4 glyphs=6 advance=48
+  text bounds=(16.5,56,24,32) pos=(24.5,64,8,16) color=#000000ff text="1" font=f5 glyphs=1 advance=8
+  text bounds=(16.5,73,24,32) pos=(24.5,81,8,16) color=#8e8e93ff text="5" font=f6 glyphs=1 advance=8
+  text bounds=(46.8333,56,24,32) pos=(54.8333,64,8,16) color=#000000ff text="2" font=f5 glyphs=1 advance=8
+  text bounds=(46.8333,73,24,32) pos=(54.8333,81,8,16) color=#8e8e93ff text="7" font=f6 glyphs=1 advance=8
+  text bounds=(77.1667,56,24,32) pos=(85.1667,64,8,16) color=#000000ff text="3" font=f5 glyphs=1 advance=8
+  text bounds=(77.1667,73,24,32) pos=(85.1667,81,8,16) color=#8e8e93ff text="6" font=f6 glyphs=1 advance=8
+  text bounds=(107.5,56,24,32) pos=(115.5,64,8,16) color=#000000ff text="4" font=f5 glyphs=1 advance=8
+  text bounds=(107.5,73,24,32) pos=(115.5,81,8,16) color=#8e8e93ff text="6" font=f6 glyphs=1 advance=8
+  text bounds=(137.833,56,24,32) pos=(145.833,64,8,16) color=#000000ff text="5" font=f5 glyphs=1 advance=8
+  text bounds=(137.833,73,24,32) pos=(145.833,81,8,16) color=#8e8e93ff text="6" font=f6 glyphs=1 advance=8
+  text bounds=(168.167,56,24,32) pos=(176.167,64,8,16) color=#000000ff text="6" font=f5 glyphs=1 advance=8
+  text bounds=(168.167,73,24,32) pos=(176.167,81,8,16) color=#8e8e93ff text="3" font=f6 glyphs=1 advance=8
+  text bounds=(198.5,56,24,32) pos=(206.5,64,8,16) color=#000000ff text="7" font=f5 glyphs=1 advance=8
+  text bounds=(198.5,73,24,32) pos=(206.5,81,8,16) color=#8e8e93ff text="5" font=f6 glyphs=1 advance=8
+  text bounds=(228.833,56,24,32) pos=(236.833,64,8,16) color=#000000ff text="8" font=f5 glyphs=1 advance=8
+  text bounds=(228.833,73,24,32) pos=(236.833,81,8,16) color=#8e8e93ff text="4" font=f6 glyphs=1 advance=8
+  text bounds=(259.167,56,24,32) pos=(267.167,64,8,16) color=#000000ff text="9" font=f5 glyphs=1 advance=8
+  text bounds=(259.167,73,24,32) pos=(267.167,81,8,16) color=#8e8e93ff text="5" font=f6 glyphs=1 advance=8
+  text bounds=(281.5,56,40,32) pos=(289.5,64,24,16) color=#000000ff text="⌫" font=f5 glyphs=3 advance=24
+  text bounds=(285.5,73,32,32) pos=(293.5,81,16,16) color=#8e8e93ff text=" " font=f6 glyphs=2 advance=16
+  text bounds=(7,98,40,32) pos=(15,106,24,16) color=#6e6e73ff text="Tap" font=f3 glyphs=3 advance=24
+  text bounds=(39,98,24,32) pos=(47,106,8,16) color=#6e6e73ff text="a" font=f3 glyphs=1 advance=8
+  text bounds=(55,98,48,32) pos=(63,106,32,16) color=#6e6e73ff text="cell" font=f3 glyphs=4 advance=32
+  text bounds=(95,98,32,32) pos=(103,106,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(7,113,56,32) pos=(15,121,40,16) color=#6e6e73ff text="34/81" font=f3 glyphs=5 advance=40
+  text bounds=(136,105,56,32) pos=(144,113,40,16) color=#000000ff text="Check" font=f7 glyphs=5 advance=40
+  text bounds=(204,105,56,32) pos=(212,113,40,16) color=#000000ff text="Solve" font=f7 glyphs=5 advance=40
+  text bounds=(272,105,40,32) pos=(280,113,24,16) color=#000000ff text="New" font=f7 glyphs=3 advance=24
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=17,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=9,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

@@ -132,4 +132,20 @@ void HostEnv::frame(double ms) {
     this->drain();
 }
 
+std::string echoIntl(std::string_view request) {
+    const std::string kind = std::string(request.substr(9, request.find('"', 9) - 9));  // {"kind":"…"
+    const std::string text(request);
+    if (kind.size() > 5 && kind.compare(kind.size() - 5, 5, "Parts") == 0) {
+        std::string quoted;
+        for (char c : text) {
+            quoted += (c == '"' || c == '\\') ? std::string("\\") + c : std::string(1, c);
+        }
+        return "[{\"type\":\"literal\",\"value\":\"" + quoted + "\"}]";
+    }
+    if (kind.size() > 7 && kind.compare(kind.size() - 7, 7, "Options") == 0) {
+        return "{\"request\":" + text + "}";
+    }
+    return text;
+}
+
 } // namespace wr_test

@@ -1,0 +1,185 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Year Countdown</title>
+<style></style>
+</head>
+<body>
+<div class="stars" id="stars"><div class="star" style="left: 28.083505005035935%; top: 67.11372530266763%; animation-delay: 1.4516922905667333s;"></div><div class="star" style="left: 30.352929996579903%; top: 5.6176763098259475%; animation-delay: 1.5656523458945033s;"></div><div class="star" style="left: 81.37618808145193%; top: 67.36076457438614%; animation-delay: 0.6773282452073217s;"></div><div class="star" style="left: 74.9919069991212%; top: 49.88284374983185%; animation-delay: 0.35410767027653156s;"></div><div class="star" style="left: 15.48882092609507%; top: 73.6163016585712%; animation-delay: 1.7495662313529157s;"></div><div class="star" style="left: 63.2465003890097%; top: 18.404615034726746%; animation-delay: 0.17200845023128153s;"></div><div class="star" style="left: 50.36337465367578%; top: 88.70354624433543%; animation-delay: 0.9531173568021596s;"></div><div class="star" style="left: 30.807783772769113%; top: 66.79600634410083%; animation-delay: 0.19750778196512453s;"></div><div class="star" style="left: 20.138691995208525%; top: 84.51438870843242%; animation-delay: 1.0522291643634087s;"></div><div class="star" style="left: 88.52516412737339%; top: 37.81553276379912%; animation-delay: 0.5573579237716348s;"></div><div class="star" style="left: 27.944548493599463%; top: 33.37515313191639%; animation-delay: 1.8336402916756742s;"></div><div class="star" style="left: 26.65731305004271%; top: 29.15058267470232%; animation-delay: 0.07179619810704718s;"></div><div class="star" style="left: 0.7158575374098586%; top: 33.07166494095173%; animation-delay: 1.079710311387383s;"></div><div class="star" style="left: 37.09787739390069%; top: 75.31496392716024%; animation-delay: 0.4915583680490947s;"></div><div class="star" style="left: 56.93559052074511%; top: 78.62632607062989%; animation-delay: 0.800643546693355s;"></div><div class="star" style="left: 27.51778215822498%; top: 84.15292364618445%; animation-delay: 1.1113489854821448s;"></div><div class="star" style="left: 98.06963385227317%; top: 83.15866560754684%; animation-delay: 1.0074738950196513s;"></div><div class="star" style="left: 52.63855662362329%; top: 59.361178346126444%; animation-delay: 1.9803171895017422s;"></div><div class="star" style="left: 70.13865870671981%; top: 5.949593242244444%; animation-delay: 0.43162360724886195s;"></div><div class="star" style="left: 52.12000530275742%; top: 79.62341931425499%; animation-delay: 1.5730904186207897s;"></div><div class="star" style="left: 6.956461927082347%; top: 80.68690316863483%; animation-delay: 0.8587592083736584s;"></div><div class="star" style="left: 60.51262828060333%; top: 52.121311973658145%; animation-delay: 0.4894489111273228s;"></div><div class="star" style="left: 42.905140500205576%; top: 99.87330566420071%; animation-delay: 1.2895067290509212s;"></div><div class="star" style="left: 53.40303566397282%; top: 32.5657608739177%; animation-delay: 0.33586256638489864s;"></div><div class="star" style="left: 5.4321644720503715%; top: 64.93732106745122%; animation-delay: 1.2171002442278582s;"></div><div class="star" style="left: 60.71646278943674%; top: 79.55834273280512%; animation-delay: 1.210244646070953s;"></div><div class="star" style="left: 98.33179672384725%; top: 55.74770808520819%; animation-delay: 0.5308664192342007s;"></div><div class="star" style="left: 95.67367671149698%; top: 69.81984222324888%; animation-delay: 1.7803894219160035s;"></div><div class="star" style="left: 14.39183483259523%; top: 56.14877608007327%; animation-delay: 0.0818958225792299s;"></div><div class="star" style="left: 4.259589890297022%; top: 45.89258353770236%; animation-delay: 1.993345210148234s;"></div><div class="star" style="left: 96.76628492081065%; top: 19.703644435122758%; animation-delay: 1.3111424376073981s;"></div><div class="star" style="left: 22.301341991541147%; top: 93.79802749467852%; animation-delay: 1.5236455630758252s;"></div><div class="star" style="left: 31.419865363731002%; top: 59.555770027764424%; animation-delay: 1.157060906817856s;"></div><div class="star" style="left: 82.19090046044832%; top: 29.856088014604886%; animation-delay: 0.680924853990041s;"></div><div class="star" style="left: 81.44656096611918%; top: 2.164364808446617%; animation-delay: 1.2937039259883472s;"></div><div class="star" style="left: 65.40004934636323%; top: 60.91295435843123%; animation-delay: 0.9988930176173385s;"></div><div class="star" style="left: 56.40737975865291%; top: 16.824776540732024%; animation-delay: 0.5134927273884742s;"></div><div class="star" style="left: 29.656621878483435%; top: 63.87198254382669%; animation-delay: 0.48183970603007253s;"></div><div class="star" style="left: 98.16381913379439%; top: 34.927551747976125%; animation-delay: 1.2971625313369253s;"></div><div class="star" style="left: 65.92246456082931%; top: 23.664107895661623%; animation-delay: 0.2649956317718307s;"></div></div>
+<h2>🎆 Countdown to New Year</h2>
+<div class="sub" id="target">Until {"kind":"dateMethod","method":"toLocaleDateString","locale":"en-US","opts":{"weekday":"long","year":"numeric","month":"long","day":"numeric"},"value":1798729200000}</div>
+<div class="grid">
+  <div class="box"><div class="num" id="d">364</div><div class="lbl">Days</div></div>
+  <div class="box"><div class="num" id="h">14</div><div class="lbl">Hours</div></div>
+  <div class="box"><div class="num" id="m">59</div><div class="lbl">Minutes</div></div>
+  <div class="box"><div class="num" id="s">59</div><div class="lbl">Seconds</div></div>
+</div>
+<script></script>
+
+
+</body></html>
+
+== layout
+html 0 0 360 295.65
+  head 0 0 0 0
+    style 0 0 0 0
+  body 16 24 328 247.65
+    div 0 0 360 0
+      div 101.101 0 2 2
+      div 109.271 0 2 2
+      div 292.954 0 2 2
+      div 269.971 0 2 2
+      div 55.7598 0 2 2
+      div 227.687 0 2 2
+      div 181.308 0 2 2
+      div 110.908 0 2 2
+      div 72.4993 0 2 2
+      div 318.691 0 2 2
+      div 100.6 0 2 2
+      div 95.9663 0 2 2
+      div 2.57709 0 2 2
+      div 133.552 0 2 2
+      div 204.968 0 2 2
+      div 99.064 0 2 2
+      div 353.051 0 2 2
+      div 189.499 0 2 2
+      div 252.499 0 2 2
+      div 187.632 0 2 2
+      div 25.0433 0 2 2
+      div 217.845 0 2 2
+      div 154.459 0 2 2
+      div 192.251 0 2 2
+      div 19.5558 0 2 2
+      div 218.579 0 2 2
+      div 353.994 0 2 2
+      div 344.425 0 2 2
+      div 51.8106 0 2 2
+      div 15.3345 0 2 2
+      div 348.359 0 2 2
+      div 80.2848 0 2 2
+      div 113.112 0 2 2
+      div 295.887 0 2 2
+      div 293.208 0 2 2
+      div 235.44 0 2 2
+      div 203.067 0 2 2
+      div 106.764 0 2 2
+      div 353.39 0 2 2
+      div 237.321 0 2 2
+    h2 16 24 328 25
+    div 16 55 328 105.3
+    div 16 182.3 328 89.35
+      div 21 197.3 66 59.35
+        div 21 197.3 66 40.5
+        div 21 241.8 66 14.85
+      div 105 197.3 66 59.35
+        div 105 197.3 66 40.5
+        div 105 241.8 66 14.85
+      div 189 197.3 66 59.35
+        div 189 197.3 66 40.5
+        div 189 241.8 66 14.85
+      div 273 197.3 66 59.35
+        div 273 197.3 66 40.5
+        div 273 241.8 66 14.85
+
+== paint
+root 371.994x295.65 items=70
+  radial-gradient bounds=(0,0,360,296) layer=(border=(0,0,360,296),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,296),origin=(0,0,360,296),attachment=0,repeat=0,root=1) points=((0,#1e1b4bff,-),(1,#0f0a2eff,-)) space=0 hue=0 position=(180,0) radius=(254.558,418.607)
+  suspend-clips bounds=(0,0,0,0)
+  solid-fill bounds=(101,0,2,2) layer=(border=(101,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(101,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(109,0,2,2) layer=(border=(109,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(109,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.3397 matrix=(1,0,0,1,0,0) backface=0 bounds=(290.954,-2,6,6) exact=1
+    solid-fill bounds=(293,0,2,2) layer=(border=(293,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(293,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.6205 matrix=(1,0,0,1,0,0) backface=0 bounds=(267.971,-2,6,6) exact=1
+    solid-fill bounds=(270,0,2,2) layer=(border=(270,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(270,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(56,0,2,2) layer=(border=(56,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(56,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.743 matrix=(1,0,0,1,0,0) backface=0 bounds=(225.687,-2,6,6) exact=1
+    solid-fill bounds=(228,0,2,2) layer=(border=(228,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(228,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.2023 matrix=(1,0,0,1,0,0) backface=0 bounds=(179.308,-2,6,6) exact=1
+    solid-fill bounds=(181,0,2,2) layer=(border=(181,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(181,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.728 matrix=(1,0,0,1,0,0) backface=0 bounds=(108.908,-2,6,6) exact=1
+    solid-fill bounds=(111,0,2,2) layer=(border=(111,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(111,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(72,0,2,2) layer=(border=(72,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(72,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.4447 matrix=(1,0,0,1,0,0) backface=0 bounds=(316.691,-2,6,6) exact=1
+    solid-fill bounds=(319,0,2,2) layer=(border=(319,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(319,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(101,0,2,2) layer=(border=(101,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(101,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.7958 matrix=(1,0,0,1,0,0) backface=0 bounds=(93.9663,-2,6,6) exact=1
+    solid-fill bounds=(96,0,2,2) layer=(border=(96,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(96,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(3,0,2,2) layer=(border=(3,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(3,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.5046 matrix=(1,0,0,1,0,0) backface=0 bounds=(131.552,-2,6,6) exact=1
+    solid-fill bounds=(134,0,2,2) layer=(border=(134,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(134,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.2563 matrix=(1,0,0,1,0,0) backface=0 bounds=(202.968,-2,6,6) exact=1
+    solid-fill bounds=(205,0,2,2) layer=(border=(205,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(205,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(99,0,2,2) layer=(border=(99,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(99,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(353,0,2,2) layer=(border=(353,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(353,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(189,0,2,2) layer=(border=(189,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(189,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.5573 matrix=(1,0,0,1,0,0) backface=0 bounds=(250.499,-2,5.99998,6) exact=1
+    solid-fill bounds=(252,0,2,2) layer=(border=(252,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(252,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(188,0,2,2) layer=(border=(188,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(188,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.2294 matrix=(1,0,0,1,0,0) backface=0 bounds=(23.0433,-2,6,6) exact=1
+    solid-fill bounds=(25,0,2,2) layer=(border=(25,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(25,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.5065 matrix=(1,0,0,1,0,0) backface=0 bounds=(215.845,-2,6,6) exact=1
+    solid-fill bounds=(218,0,2,2) layer=(border=(218,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(218,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(154,0,2,2) layer=(border=(154,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(154,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.6344 matrix=(1,0,0,1,0,0) backface=0 bounds=(190.251,-2,6,6) exact=1
+    solid-fill bounds=(192,0,2,2) layer=(border=(192,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(192,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(20,0,2,2) layer=(border=(20,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(20,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(219,0,2,2) layer=(border=(219,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(219,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.4689 matrix=(1,0,0,1,0,0) backface=0 bounds=(351.994,-2,6,6) exact=1
+    solid-fill bounds=(354,0,2,2) layer=(border=(354,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(354,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(344,0,2,2) layer=(border=(344,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(344,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.7909 matrix=(1,0,0,1,0,0) backface=0 bounds=(49.8106,-2,6,6) exact=1
+    solid-fill bounds=(52,0,2,2) layer=(border=(52,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(52,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(15,0,2,2) layer=(border=(15,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(15,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(348,0,2,2) layer=(border=(348,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(348,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(80,0,2,2) layer=(border=(80,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(80,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(113,0,2,2) layer=(border=(113,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(113,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.3368 matrix=(1,0,0,1,0,0) backface=0 bounds=(293.887,-2,6,6) exact=1
+    solid-fill bounds=(296,0,2,2) layer=(border=(296,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(296,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(293,0,2,2) layer=(border=(293,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(293,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(235,0,2,2) layer=(border=(235,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(235,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.4848 matrix=(1,0,0,1,0,0) backface=0 bounds=(201.067,-2,6,6) exact=1
+    solid-fill bounds=(203,0,2,2) layer=(border=(203,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(203,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.5133 matrix=(1,0,0,1,0,0) backface=0 bounds=(104.764,-2,6,6) exact=1
+    solid-fill bounds=(107,0,2,2) layer=(border=(107,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(107,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(353,0,2,2) layer=(border=(353,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(353,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  group opacity=0.685 matrix=(1,0,0,1,0,0) backface=0 bounds=(235.321,-2,6,6) exact=1
+    solid-fill bounds=(237,0,2,2) layer=(border=(237,0,2,2),radius=(1,1,1,1,1,1,1,1),clip=(237,0,2,2),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  resume-clips bounds=(0,0,0,0)
+  solid-fill bounds=(16,182,76,90) layer=(border=(16,182,76,90),radius=(12,12,12,12,12,12,12,12),clip=(16,182,76,90),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff14
+  borders bounds=(16,182,76,90) borders=(left=(1,4,#ffffff26),top=(1,4,#ffffff26),right=(1,4,#ffffff26),bottom=(1,4,#ffffff26),radius=(12,12,12,12,12,12,12,12)) pos=(16,182,76,90) root=0
+  solid-fill bounds=(100,182,76,90) layer=(border=(100,182,76,90),radius=(12,12,12,12,12,12,12,12),clip=(100,182,76,90),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff14
+  borders bounds=(100,182,76,90) borders=(left=(1,4,#ffffff26),top=(1,4,#ffffff26),right=(1,4,#ffffff26),bottom=(1,4,#ffffff26),radius=(12,12,12,12,12,12,12,12)) pos=(100,182,76,90) root=0
+  solid-fill bounds=(184,182,76,90) layer=(border=(184,182,76,90),radius=(12,12,12,12,12,12,12,12),clip=(184,182,76,90),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff14
+  borders bounds=(184,182,76,90) borders=(left=(1,4,#ffffff26),top=(1,4,#ffffff26),right=(1,4,#ffffff26),bottom=(1,4,#ffffff26),radius=(12,12,12,12,12,12,12,12)) pos=(184,182,76,90) root=0
+  solid-fill bounds=(268,182,76,90) layer=(border=(268,182,76,90),radius=(12,12,12,12,12,12,12,12),clip=(268,182,76,90),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffff14
+  borders bounds=(268,182,76,90) borders=(left=(1,4,#ffffff26),top=(1,4,#ffffff26),right=(1,4,#ffffff26),bottom=(1,4,#ffffff26),radius=(12,12,12,12,12,12,12,12)) pos=(268,182,76,90) root=0
+  text bounds=(68,20,48,32) pos=(76,28,32,16) color=#ffffffff text="🎆" font=f1 glyphs=4 advance=32
+  text bounds=(108,20,88,32) pos=(116,28,72,16) color=#ffffffff text="Countdown" font=f1 glyphs=9 advance=72
+  text bounds=(188,20,32,32) pos=(196,28,16,16) color=#ffffffff text="to" font=f1 glyphs=2 advance=16
+  text bounds=(212,20,40,32) pos=(220,28,24,16) color=#ffffffff text="New" font=f1 glyphs=3 advance=24
+  text bounds=(244,20,48,32) pos=(252,28,32,16) color=#ffffffff text="Year" font=f1 glyphs=4 advance=32
+  text bounds=(152,47,56,32) pos=(160,55,40,16) color=#a5b4fcff text="Until" font=f2 glyphs=5 advance=40
+  text bounds=(8,65,344,32) pos=(16,73,328,16) color=#a5b4fcff text="{\"kind\":\"dateMethod\",\"method\":\"toLocaleDa" font=f2 glyphs=41 advance=328
+  text bounds=(80,82,200,32) pos=(88,90,184,16) color=#a5b4fcff text="teString\",\"locale\":\"en-" font=f2 glyphs=23 advance=184
+  text bounds=(8,100,344,32) pos=(16,108,328,16) color=#a5b4fcff text="US\",\"opts\":{\"weekday\":\"long\",\"year\":\"nume" font=f2 glyphs=41 advance=328
+  text bounds=(8,117,344,32) pos=(16,125,328,16) color=#a5b4fcff text="ric\",\"month\":\"long\",\"day\":\"numeric\"},\"val" font=f2 glyphs=41 advance=328
+  text bounds=(100,135,160,32) pos=(108,143,144,16) color=#a5b4fcff text="ue\":1798729200000}" font=f2 glyphs=18 advance=144
+  text bounds=(34,201,40,32) pos=(42,209,24,16) color=#fbbf24ff text="364" font=f3 glyphs=3 advance=24
+  text bounds=(30,234,48,32) pos=(38,242,32,16) color=#c7d2feff text="DAYS" font=f4 glyphs=4 advance=32
+  text bounds=(122,201,32,32) pos=(130,209,16,16) color=#fbbf24ff text="14" font=f3 glyphs=2 advance=16
+  text bounds=(110,234,56,32) pos=(118,242,40,16) color=#c7d2feff text="HOURS" font=f4 glyphs=5 advance=40
+  text bounds=(206,201,32,32) pos=(214,209,16,16) color=#fbbf24ff text="59" font=f3 glyphs=2 advance=16
+  text bounds=(186,234,72,32) pos=(194,242,56,16) color=#c7d2feff text="MINUTES" font=f4 glyphs=7 advance=56
+  text bounds=(290,201,32,32) pos=(298,209,16,16) color=#fbbf24ff text="59" font=f3 glyphs=2 advance=16
+  text bounds=(270,234,72,32) pos=(278,242,56,16) color=#c7d2feff text="SECONDS" font=f4 glyphs=7 advance=56
+
+== fonts
+f1 (family="system-ui,sans-serif",size=20,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=30,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=1,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

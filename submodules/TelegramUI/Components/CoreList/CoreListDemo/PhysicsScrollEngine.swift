@@ -4,7 +4,7 @@ import UIKit
 /// deceleration). Drives `contentHost.bounds.origin.y` exactly like a `UIScrollView`, so the list's
 /// layout math is unchanged — only the driver differs. Touch only; trackpad and `.keyframe`
 /// deceleration during virtualization are future increments.
-final class PhysicsScrollEngine: NSObject, ScrollEngine {
+public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     private let host = UIView()
     private let core: PhysicsScrollCore
     private let pan = PhysicsPanGestureRecognizer(target: nil, action: nil)
@@ -40,8 +40,8 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// main thread once per frame (the original behaviour); `.keyframe` precomputes the whole path and
     /// plays it as a render-server `CAKeyframeAnimation` on the host's `bounds.origin.y`, driving the
     /// shared `KeyframeFlight` so the list can re-base its coordinate mid-flight (rebake-and-splice).
-    enum DecelerationMode { case stepped, keyframe }
-    var decelerationMode: DecelerationMode = .stepped
+    public enum DecelerationMode { case stepped, keyframe }
+    public var decelerationMode: DecelerationMode = .stepped
 
     // Keyframe-flight state (nil/zero unless a `.keyframe` deceleration is in flight). `flightGeneration`
     // is the ENGINE-owned cross-flight staleness guard (launch/re-emit/catch); `KeyframeFlight.generation`
@@ -83,7 +83,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// reading it via `convertTime` keeps the flight sampler on CA's rendered position under slow-mo.
     private func localNow() -> CFTimeInterval { host.layer.convertTime(CACurrentMediaTime(), from: nil) }
 
-    override init() {
+    public override init() {
         core = PhysicsScrollCore(contentHost: host)
         super.init()
         pan.addTarget(self, action: #selector(handlePan(_:)))
@@ -119,17 +119,17 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
 
     // MARK: - ScrollEngine
 
-    var onScroll: ((CGFloat) -> Void)? {
+    public var onScroll: ((CGFloat) -> Void)? {
         get { core.onScroll }
         set { core.onScroll = newValue }
     }
 
     /// Published only in `.keyframe` mode, where the render server plays the trajectory.
-    var onFlightChanged: ((ScrollFlight?) -> Void)?
-    var onDidEndDecelerating: (() -> Void)?
-    var onWillBeginDragging: (() -> Void)?
-    var onDidEndDragging: (() -> Void)?
-    var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
+    public var onFlightChanged: ((ScrollFlight?) -> Void)?
+    public var onDidEndDecelerating: (() -> Void)?
+    public var onWillBeginDragging: (() -> Void)?
+    public var onDidEndDragging: (() -> Void)?
+    public var shouldStopScrollingOnRelease: ((CGFloat) -> Bool)?
     /// The physics scroll position, advanced once per frame by whichever driver is running — NEVER a sample of
     /// the flight. Consumers may read this as many times as they like within a frame and get one coherent
     /// value; a consumer that reads it twice around its own work (the list does, three times per mutation
@@ -140,12 +140,13 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
     ///
     /// The instantaneous position is deliberately NOT exposed: `catchFlight` samples
     /// `flight.liveOffset(now: localNow())` directly, which is the one operation that genuinely needs it.
-    var offset: CGFloat { core.offset }
-    var contentHost: UIView { host }
+    public var offset: CGFloat { core.offset }
+    public var contentHost: UIView { host }
 
-    /// Whether any driver is running. Exposed for the seam tests; production reads motion state
-    /// through `onFlightChanged` / the drag pair.
-    var isDecelerating: Bool { flight != nil || core.isDecelerating }
+    /// Whether any driver is running. Exposed for the seam tests and for MediaGrid, which reads it to
+    /// tell a fling from rest when it clamps, shifts or re-anchors the offset; the list reads motion
+    /// state through `onFlightChanged` / the drag pair.
+    public var isDecelerating: Bool { flight != nil || core.isDecelerating }
     /// Where the current release projects to. Exists for the seam tests and for nothing in
     /// production, which plays the baked trajectory rather than the analytic landing.
     var projectedRestOffset: CGFloat { core.projectedTarget() }
@@ -188,7 +189,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
         if caughtMovingContentAtTouchDown { catchMotionForFingerRest() }
     }
 
-    func setOffset(_ y: CGFloat) {
+    public func setOffset(_ y: CGFloat) {
         // The list's one-viewport delta-clamp routes here; during a flight, catch first (plain catch —
         // the clamp is unreachable at realistic flick speeds, so a relaunch is unnecessary). After
         // halting the drivers (catchFlight removes the CA animation; stopDisplayLink invalidates the
@@ -202,11 +203,19 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
         core.cancelDeceleration()
         core.setOffset(y)
     }
-    func reanchorDragToCurrentPosition() {
+    public func reanchorDragToCurrentPosition() {
         core.reanchorDragToCurrentPosition()
     }
 
-    func haltMotionInPlace() {
+    public var isScrollEnabled: Bool {
+        get { pan.isEnabled }
+        set {
+            if !newValue { haltMotionInPlace() }
+            pan.isEnabled = newValue
+        }
+    }
+
+    public func haltMotionInPlace() {
         // Same teardown as `setOffset` minus the offset write: `catchFlight` already snaps the physics and
         // the layer model to the live position and removes the animation, so the content does not move.
         if flight != nil { catchFlight() }
@@ -218,7 +227,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
         // animation is untouched, so the flight keeps playing — only the value the list reads becomes current.
         flight?.beginTick(now: localNow())
     }
-    func applyShift(_ dy: CGFloat) {
+    public func applyShift(_ dy: CGFloat) {
         if flight != nil {
             // With two open edges this is a rigid coordinate translation and needs no re-emit. A finite
             // edge stays fixed while the offset moves, however, so its relative geometry changes and the
@@ -247,7 +256,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
             core.applyShift(dy)
         }
     }
-    func setEdges(min: CGFloat?, max: CGFloat?) {
+    public func setEdges(min: CGFloat?, max: CGFloat?) {
         if core.setEdges(min: min, max: max) {
             noteFlightEdgesChanged()
         }
@@ -763,7 +772,7 @@ final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// doesn't keep stepping/sampling a detached host until its in-flight deceleration settles. A live
     /// `.keyframe` flight is caught first so its CA animation is removed (the link retains its target,
     /// so without this the engine lingers — and keeps firing — until the decel ends on its own).
-    func tearDown() {
+    public func tearDown() {
         if flight != nil { catchFlight() }
         stopDisplayLink()
     }
@@ -792,8 +801,8 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// `false` is UIKit's default, so this method is redundant in the strict sense. It stays as the
     /// marker in the exact spot both bugs were introduced, and because the policy tests need
     /// something to call.
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                                  shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
         return false
     }
 
@@ -810,7 +819,7 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// transition machinery as a natural begin, so a tracking control can deny a grab on moving
     /// content. `ListViewImpl` behaves identically — `UIScrollView`'s decelerating-grab passes
     /// through this same override.
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard gestureRecognizer === pan, let view = pan.view else { return true }
         if let recognizers = view.gestureRecognizers {
             for other in recognizers where other !== pan {
@@ -843,7 +852,7 @@ extension PhysicsScrollEngine: UIGestureRecognizerDelegate {
     /// A mouse wheel (`.discrete`) takes this path too, its first notch standing in for the finger-down.
     /// The forced `.began` and the translation baseline were measured on the trackpad only; how a wheel
     /// notch landing on moving content behaves here is unverified on a device.
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive event: UIEvent) -> Bool {
         guard gestureRecognizer.state == .possible, flight != nil || core.isDecelerating else { return true }
         catchMotionForFingerRest()
         // Mark the forced-began path so handlePan(.began) captures the recognizer's stale translation as

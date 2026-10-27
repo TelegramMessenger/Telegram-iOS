@@ -322,14 +322,17 @@ extension HarnessSharedAccountContext {
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
         fatalError("harness: SharedAccountContext.presentContactsWarningSuppression is not provided")
     }
-    public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
-        fatalError("harness: SharedAccountContext.openImagePicker is not provided")
-    }
     public func displaySetPhoto( parentController: ViewController, context: AccountContext, peer: EnginePeer, completion: @escaping (UIImage?) -> Void, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? ) {
         fatalError("harness: SharedAccountContext.displaySetPhoto is not provided")
     }
     public func displaySetPhoto( parentController: ViewController, context: AccountContext, peer: EnginePeer, canDelete: Bool, performDelete: @escaping () -> Void, completion: @escaping (UIImage?) -> Void, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? ) {
         fatalError("harness: SharedAccountContext.displaySetPhoto is not provided")
+    }
+    public func displaySetPhoto( parentController: ViewController, context: AccountContext, peer: EnginePeer, canDelete: Bool, performDelete: @escaping () -> Void, options: SetPhotoOptions, completion: @escaping (UIImage?) -> Void, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? ) {
+        fatalError("harness: SharedAccountContext.displaySetPhoto is not provided")
+    }
+    public func makeSuggestedAvatarEditor(context: AccountContext, message: EngineMessage, image: TelegramMediaImage, senderName: String, sourceView: UIView?, completion: @escaping (Any, @escaping () -> Void) -> Void) -> ViewController? {
+        fatalError("harness: SharedAccountContext.makeSuggestedAvatarEditor is not provided")
     }
     public func openAddPeerMembers(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, parentController: ViewController, groupPeer: EnginePeer, selectAddMemberDisposable: MetaDisposable, addMemberDisposable: MetaDisposable) {
         fatalError("harness: SharedAccountContext.openAddPeerMembers is not provided")
@@ -388,8 +391,23 @@ extension HarnessSharedAccountContext {
     public func makeCameraScreen(context: AccountContext, mode: CameraScreenMode, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, completion: @escaping (Any, @escaping () -> Void) -> Void, transitionedOut: (() -> Void)?) -> ViewController {
         fatalError("harness: SharedAccountContext.makeCameraScreen is not provided")
     }
+    public func makeChatCameraScreen(context: AccountContext, parameters: ChatCameraScreenParameters, cameraHolder: Any?, transitionIn: CameraScreenTransitionIn?, transitionOut: @escaping (Bool) -> CameraScreenTransitionOut?, transitionedOut: (() -> Void)?) -> ViewController {
+        fatalError("harness: SharedAccountContext.makeChatCameraScreen is not provided")
+    }
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeMediaPickerScreen is not provided")
+    }
+    public func makeQrCodePhotoPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController {
+        fatalError("harness: SharedAccountContext.makeQrCodePhotoPickerScreen is not provided")
+    }
+    public func makePassportAttachmentFlow(context: AccountContext, intent: PassportCaptureIntent, present: @escaping (ViewController) -> Void, completion: @escaping ([TelegramMediaResource]) -> Void) -> Void {
+        fatalError("harness: SharedAccountContext.makePassportAttachmentFlow is not provided")
+    }
+    public func makeChatMediaGalleryController(context: AccountContext, parameters: ChatMediaGalleryParameters) -> ViewController? {
+        fatalError("harness: SharedAccountContext.makeChatMediaGalleryController is not provided")
+    }
+    public func makeWallpaperMediaEditor(context: AccountContext, asset: PHAsset, screenImage: UIImage, cropRect: CGRect, previousState: Any?, referenceView: UIView, apply: @escaping (UIImage?, Any?) -> Void, fullSizeApply: @escaping (UIImage?) -> Void, beginTransitionOut: @escaping (Bool) -> Void, finishTransitionOut: @escaping () -> Void) -> ViewController {
+        fatalError("harness: SharedAccountContext.makeWallpaperMediaEditor is not provided")
     }
     public func makeStoryMediaEditorScreen(context: AccountContext, source: Any?, text: String?, link: (url: String, name: String?)?, remainingCount: Int32, completion: @escaping ([MediaEditorScreenResult], MediaEditorTransitionOutExternalState, @escaping (@escaping () -> Void) -> Void) -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeStoryMediaEditorScreen is not provided")
@@ -721,7 +739,7 @@ extension HarnessSharedAccountContext {
     public func makeTextProcessingScreen( context: AccountContext, theme: PresentationTheme?, mode: TextProcessingScreenMode, inputText: ComposedRichMessage, copyResult: ((ComposedRichMessage) -> Void)?, translateChat: ((String) -> Void)? ) async -> ViewController {
         fatalError("harness: SharedAccountContext.makeTextProcessingScreen is not provided")
     }
-    public func makeCreateBotScreen( context: AccountContext, parentBot: EnginePeer.Id, initialUsername: String?, initialTitle: String?, openAutomatically: Bool, completion: @escaping (EnginePeer.Id?) -> Void ) async -> ViewController? {
+    public func makeCreateBotScreen( context: AccountContext, parentBot: EnginePeer.Id, initialUsername: String?, initialTitle: String?, openAutomatically: Bool, viaDeeplink: Bool, completion: @escaping (EnginePeer.Id?) -> Void ) async -> ViewController? {
         fatalError("harness: SharedAccountContext.makeCreateBotScreen is not provided")
     }
     public func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController {

@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import TelegramUIPreferences
+import ChatMessageItemCommon
 import MessageWidget
 @testable import WidgetHarnessLib
 
@@ -95,6 +96,25 @@ final class WidgetHarnessSizingTests: XCTestCase {
         XCTAssertEqual(bubbles[3].width, 300)
         XCTAssertGreaterThan(bubbles[0].width, 300)
         XCTAssertEqual(bubbles[0].width, bubbles[1].width)
+    }
+
+    /// A widget message has no share button beside it and may take the chat's full width, as a channel post does (the
+    /// user, 2026-10-26). A bot's incoming widget is the case that otherwise gets both the button and the narrower bubble.
+    func testAWidgetBubbleHasNoShareButtonAndTheFullWidth() throws {
+        var options = WidgetHarnessLaunchOptions()
+        options.set = .fixture
+        options.postFilter = "box-240"
+        options.incoming = true
+        options.botChat = true
+        options.captions = false
+        let root = try self.root()
+        let lines = try self.load(options, until: { lines in lines.contains { $0.contains("box-240") && $0.contains(" widget") } })
+        let line = try XCTUnwrap(lines.first { $0.contains("box-240") }, lines.joined(separator: "\n"))
+        XCTAssertFalse(line.contains("+share"), line)
+        // Without the full width a bubble is at most `maximumWidthFill` of the list (the list's width less 36 pt on a
+        // phone), and the widget fills its bubble: a wider widget area is a full-width bubble.
+        let narrowMaximum = ChatMessageItemLayoutConstants.default.bubble.maximumWidthFill.widthFor(root.view.bounds.width)
+        XCTAssertGreaterThan(CGFloat(self.parse(line).width), narrowMaximum, line)
     }
 
     func testTheKillSwitchShowsThePillWithTheCaption() throws {
@@ -208,18 +228,18 @@ final class WidgetHarnessSizingTests: XCTestCase {
         options.set = .conformance
         let root = try self.root()
         // Its boot has reported a height (until then the bubble is the 160 pt placeholder).
-        let first = try self.load(options, until: { lines in lines.contains { $0.contains("auto/21-no-keyboard") && $0.contains(" widget") && !$0.contains("x160 ") } })
-        let before = try XCTUnwrap(first.first { $0.contains("auto/21-no-keyboard") }.map(self.parse))
+        let first = try self.load(options, until: { lines in lines.contains { $0.contains("auto/27-haptics-no-touch") && $0.contains(" widget") && !$0.contains("x160 ") } })
+        let before = try XCTUnwrap(first.first { $0.contains("auto/27-haptics-no-touch") }.map(self.parse), first.joined(separator: "\n"))
         XCTAssertNotEqual(before.height, 160)
         let host = try XCTUnwrap(root.listHost)
         host.scrollTo(messageIndex: 0)
         root.view.layoutIfNeeded()
         let farAway = root.readoutLines().filter { $0.hasPrefix("bubble ") }
-        XCTAssertFalse(farAway.contains { $0.contains("auto/21-no-keyboard") }, "still on screen: \(farAway)")
+        XCTAssertFalse(farAway.contains { $0.contains("auto/27-haptics-no-touch") }, "still on screen: \(farAway)")
         host.scrollTo(messageIndex: Int.max)
         root.view.layoutIfNeeded()
         let back = root.readoutLines().filter { $0.hasPrefix("bubble ") }
-        let after = try XCTUnwrap(back.first { $0.contains("auto/21-no-keyboard") }.map(self.parse), back.joined(separator: "\n"))
+        let after = try XCTUnwrap(back.first { $0.contains("auto/27-haptics-no-touch") }.map(self.parse), back.joined(separator: "\n"))
         XCTAssertEqual(after.height, before.height)
     }
 }

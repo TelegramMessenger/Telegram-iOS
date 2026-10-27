@@ -1,0 +1,24 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><code>/deploy status</code>
+</body></html>
+
+== layout
+html 0 0 360 18.2
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 18.2
+    code 0 0 0 0
+
+== paint
+root 360x18.2 items=3
+  solid-fill bounds=(0,0,120,18) layer=(border=(0,0,120,18),radius=(4,4,4,4,4,4,4,4),clip=(0,0,120,18),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f26
+  text bounds=(-4,-7,72,32) pos=(4,1,56,16) color=#000000ff text="/deploy" font=f1 glyphs=7 advance=56
+  text bounds=(60,-7,64,32) pos=(68,1,48,16) color=#000000ff text="status" font=f1 glyphs=6 advance=48
+
+== fonts
+f1 (family="ui-monospace,monospace",size=13,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

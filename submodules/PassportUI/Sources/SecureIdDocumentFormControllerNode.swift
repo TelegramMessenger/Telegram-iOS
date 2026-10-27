@@ -2600,7 +2600,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             case .translation:
                 attachmentType = .multiple
         }
-        presentLegacySecureIdAttachmentMenu(context: self.context, present: { [weak self] c in
+        presentSecureIdAttachmentMenu(context: self.context, present: { [weak self] c in
             self?.view.endEditing(true)
             self?.present(c, nil)
             }, validLayout: validLayout, type: attachmentType, recognizeDocumentData: recognizeDocumentData, completion: { [weak self] resources, recognizedData in

@@ -4,7 +4,7 @@
   host stylesheet: ../kit.css is prepended to every bubble by the host; images use app:/sf: schemes
   ported: classic widget, see corpus/htmlbubbles-ported/README.md
 -->
-<style>
+<style>[hidden]{display:none!important}
   :root { color-scheme: light dark;
     --fg: light-dark(#000, #fff); --muted: light-dark(#6e6e73, #98989d);
     --card: light-dark(#fff, #1c1c1e); --border: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.14));
@@ -50,10 +50,6 @@
   .ttt .result { margin-top: 8px; padding: 10px; border-radius: 12px; text-align: center; }
   .ttt .result .t { font-size: 18px; font-weight: 800; }
 
-  .fx-fade { animation: tw-fade 220ms ease-out; }
-  .fx-pop { animation: tw-pop 260ms cubic-bezier(.34,1.56,.64,1); }
-  @keyframes tw-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes tw-pop { from { transform: scale(0.94); opacity: 0.4; } to { transform: none; opacity: 1; } }
 </style>
 <div class="card pad ttt" id="root">
   <div class="row between"><b>Tic-tac-toe</b><span class="small muted" id="status">Your move (✕)</span></div>
@@ -81,11 +77,13 @@ const $ = id => document.getElementById(id);
 const root = $('root'), boardEl = $('board'), status = $('status'), foot = $('foot'), result = $('result'), hintBtn = $('hintBtn');
 const cells = [...boardEl.querySelectorAll('td')], marks = cells.map(td => td.firstElementChild);
 const scoreEl = { X: $('sX'), O: $('sO'), draw: $('sD') };
-function transition(kind) {
-  root.classList.remove('fx-fade', 'fx-pop');
-  requestAnimationFrame(() => root.classList.add('fx-' + kind));
+let panelAnimation = null;
+function transition(kind, target = boardEl) {
+  if (panelAnimation) panelAnimation.cancel();
+  const from = kind === 'slide-left' ? 'translateX(6px)' : kind === 'slide-right' ? 'translateX(-6px)' : kind === 'slide-up' ? 'translateY(4px)' : kind === 'pop' ? 'scale(0.985)' : 'none';
+  if (from === 'none') return;
+  panelAnimation = target.animate([{ transform: from }, { transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
 }
-root.addEventListener('animationend', e => { if (e.target === root) root.classList.remove('fx-fade', 'fx-pop'); });
 function replay(el, cls) { el.classList.remove(cls); requestAnimationFrame(() => el.classList.add(cls)); }
 
 function outcome(b) {
@@ -163,7 +161,7 @@ function place(i, who) {
   replay(marks[i], 'in');
   const r = outcome(board);
   if (!r) { paint(); return; }
-  transition('pop');
+  transition('pop', result);
   winner = r.who; line = r.line; score[r.who]++;
   streak = r.who === 'X' ? streak + 1 : 0;
   paint();

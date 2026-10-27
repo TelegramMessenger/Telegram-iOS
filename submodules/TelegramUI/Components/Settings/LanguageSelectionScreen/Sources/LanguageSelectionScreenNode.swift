@@ -60,7 +60,7 @@ private enum LanguageListEntry: Comparable, Identifiable {
         case let .localizationTitle(text, section):
             return ItemListSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), text: text, sectionId: section)
         case let .localization(_, info, type, isEnabled):
-            return LocalizationListItem(presentationData: ItemListPresentationData(presentationData), id: info?.languageCode ?? "", title: info?.title ?? " ", subtitle: info?.localizedTitle ?? " ", checked: false, activity: false, loading: info == nil, editing: LocalizationListItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: isEnabled, sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
+            return LocalizationListItem(presentationData: ItemListPresentationData(presentationData), systemStyle: .glass, id: info?.languageCode ?? "", title: info?.title ?? " ", subtitle: info?.localizedTitle ?? " ", checked: false, activity: false, loading: info == nil, editing: LocalizationListItemEditing(editable: false, editing: false, revealed: false, reorderable: false), enabled: isEnabled, sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
                 if let info {
                     selectLocalization(info)
                 }

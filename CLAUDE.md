@@ -55,7 +55,7 @@ is the single pin.
 Host `swift_test`s run the same way (`… bazel-9.2.0-darwin-arm64 test //submodules/MetalEngine:MetalPipelineCacheTests`; one test
 via `--test_filter=MetalPipelineCacheTests/<name>`, comma lists are not supported): `MetalPipelineCacheTests` (runs
 on the Mac's GPU), `//submodules/MTProtoRustEngine:MTProtoRustEngineMappingTests`,
-`//submodules/UrlWhitelist:UrlWhitelistTests`.
+`//submodules/UrlWhitelist:UrlWhitelistTests`, `//third-party/widget-sandbox:WidgetSandboxIntlTests`.
 
 **App-side `ios_unit_test` targets**, each run via `--target` (what each one pins, and what app code can and cannot do
 in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submodules/TextFormat:TextFormatTests`,
@@ -66,6 +66,7 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//Telegram/NotificationService:NotificationServiceTests`,
 `//submodules/TelegramUI/Components/Chat/EditableTokenListNode:EditableTokenListNodeTests`,
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests`, `//submodules/MediaPlayer:UniversalMediaPlayerTests`,
+`//submodules/UndoUI:UndoUITests`,
 `//submodules/MtProtoKit:MtProtoKitTests` (also `swift test` in `submodules/MtProtoKit` on macOS), and the targets the
 subsystem guides name. `PresentationStrings` cannot be built in a test process (it asserts without the app bundle's
 `PresentationStrings.data`), so keep a decision under test strings-free. The RichTextEditor SwiftPM package keeps its
@@ -183,6 +184,11 @@ subsystem from elsewhere.
 - **Opening chats, history fills** (holes, poll gate, forum topics and skeletons, News feed opens, non-member read
   state): `submodules/TelegramCore/Sources/State/CLAUDE.md`; a post's comments:
   `submodules/TelegramCore/Sources/TelegramEngine/Messages/CLAUDE.md`.
+- **Account state sync** (`AccountStateManager`, `Sources/State/Sync/`: updates, getDifference, the
+  `differenceTooLong` reset, history fills confirming stored messages; `Tests/StateSync`): the same
+  `submodules/TelegramCore/Sources/State/CLAUDE.md`, and the map [`docs/state-sync.md`](docs/state-sync.md). **The
+  rule is that nothing in it gives up on an error** (logout aside; the guide names today's exceptions), and the
+  notification extension never resets the account.
 - **Rich-text messages, InstantPage V2**: `submodules/InstantPageUI/CLAUDE.md`,
   [`docs/instantpage-richtext.md`](docs/instantpage-richtext.md).
 - **Message widgets** (incl. `ChatMessageWidgetBubbleContentNode`):
@@ -200,12 +206,26 @@ subsystem from elsewhere.
 - **CI VMs, CI compiler-crash repro**: `build-system/Make/CLAUDE.md`; xctestrunner patch: `build-system/bazel-patches/`.
 - **Composer harness** (`Tests/ComposerHarness`, a loginless app hosting the real chat composer, for regression
   tests): [`Tests/ComposerHarness/CLAUDE.md`](Tests/ComposerHarness/CLAUDE.md).
+- **MediaGrid** (`submodules/TelegramUI/Components/MediaGrid`, the layer-based photo grid on CoreList's scroll engine,
+  with its demo app): `submodules/TelegramUI/Components/MediaGrid/CLAUDE.md`.
 - **Framework export lists** (`TelegramUIFramework` and `TelegramCoreFramework` export only what their clients use, in
   release builds only): `Telegram/CLAUDE.md`. A new extension, app library or framework must be added to the rule's
   lists or the *release* link fails; nothing may look up the app's own symbols by name at runtime (`dlsym`).
+- **Photo picker grid (MediaGrid v2)**: the layer grid `submodules/TelegramUI/Components/MediaGrid/CLAUDE.md` (its
+  PhotoKit stack `MediaGridPhotoLibrary` is described there too); the picker seam and killswitch
+  `submodules/MediaPickerUI/CLAUDE.md`.
 - **Smaller ones**: links with a login part (`submodules/UrlWhitelist/`), the code-block highlighter's recursion bound
   (`third-party/libprisma/`), an Apple Metal binary-archive bug (`submodules/MetalEngine/`), wallpaper soft light
   (`submodules/GradientBackground/`), app-side tests ([`docs/app-unit-tests.md`](docs/app-unit-tests.md)).
+
+## The system ICU: only the SDK's headers are public
+
+`libicucore` ships with iOS, but only the functions `$SDK/usr/include/unicode/*.h` declare (character properties, case
+mapping, UTF, IDNA, regex) are public API. Any other (`unumf_*`, `udat_*`, `ucol_*`, `ubidi_*`, `uloc_*`, …) links,
+since the SDK's `libicucore.tbd` exports it, and App Store review then rejects the build ("Non-public API usage"). Never
+declare an ICU function by hand: locale formatting goes through Foundation, as message widgets' Intl does.
+`build-system/Make/ICUImportCheck.py` fails `Make.py build` on any libicucore import of the built `.ipa` that the
+SDK's headers do not declare.
 
 ## iOS 26/27 windows and touch delivery
 
@@ -229,9 +249,11 @@ Three measured facts that are invisible from the code
 
 ## iPhone Duo layout (reserved corners)
 
-`ContainerViewLayout.reservedCorners` carries iPhone Duo's corner blocks (the status corner: clock, camera) from a
-per-posture table, because the system's own regions are transitional for up to 0.6s after every rotation and fold;
-`safeInsets` stay exactly the system's. The rules, the layout API and how to check a screen are in
+`ContainerViewLayout.reservedCorners` carries iPhone Duo's corner blocks (the status corner: clock, camera), additional
+to `safeInsets`. Both take the system's sizes (occlusion regions, safe area) whenever the system's report fits the
+window's posture; a per-posture table names the posture and stands in with its settled sizes for the up to 0.65s after
+every rotation and fold that the report is transitional (`iPhoneDuoReservedArea`). Never hardcode the island's size: read
+`reservedCorners`. The rules, the layout API and how to check a screen are in
 [`docs/iphone-duo-layout.md`](docs/iphone-duo-layout.md); the all-screens audit is
 [`docs/superpowers/duo-screen-audit-2026-10.md`](docs/superpowers/duo-screen-audit-2026-10.md). None of this shows up
 as a build error:

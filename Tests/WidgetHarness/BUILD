@@ -103,10 +103,12 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode",
         "//submodules/TelegramUI/Components/Chat/ChatHistoryListViewBackend",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageShareButton",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         "//submodules/TelegramUI/Components/UnsupportedContentPill",
         "//submodules/TextSelectionNode",
+        "//submodules/UndoUI",
     ],
     visibility = ["//Tests:__subpackages__"],
 )
@@ -152,11 +154,17 @@ swift_library(
         # The app's widget theme, for the conformance runner's tests.
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
+        # AccountContext, in MessageWidgetNetwork's signatures, for the network tests.
+        "//submodules/AccountContext",
         # MessageWidgetKillSwitch and MessageWidgetView, for the availability tests.
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
         # TextSelectionNodeView and its node, for the selection tests.
         "//submodules/AsyncDisplayKit",
+        # TapLongTapOrDoubleTapGestureRecognizer's long-tap policy, for the gesture tests.
+        "//submodules/Display",
         "//submodules/TextSelectionNode",
+        # WRSession and WREffectStore, for the effect tests (CSS filters paint only where there is a Metal device).
+        "//submodules/TelegramUI/Components/MessageWidget/WidgetRuntimeIOS",
     ],
 )
 
@@ -182,6 +190,8 @@ swift_library(
 ios_ui_test(
     name = "WidgetHarnessUITests",
     env = {"REUSE_GLOBAL_SIMULATOR": "1"},
+    # Every test launches the harness app (36, about 300 s on a loaded machine: past medium's limit).
+    size = "large",
     minimum_os_version = "15.0",
     runner = ":WidgetHarnessUITestRunner",
     test_host = ":WidgetHarness",

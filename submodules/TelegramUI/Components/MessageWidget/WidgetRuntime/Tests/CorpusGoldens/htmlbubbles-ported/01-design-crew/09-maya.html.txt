@@ -1,0 +1,51 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><p>Moodboard for the offsite deck 🎨</p>
+<table style="border-collapse: separate; border-spacing: 4px; margin: -4px">
+  <tbody><tr><td><div class="tile aurora" style="border-radius: 12px 4px 4px 4px"></div></td><td><div class="tile ocean" style="border-radius: 4px 12px 4px 4px"></div></td></tr>
+  <tr><td><div class="tile dunes" style="border-radius: 4px 4px 4px 12px"></div></td><td><div class="tile forest" style="border-radius: 4px 4px 12px 4px"></div></td></tr>
+</tbody></table>
+</body></html>
+
+== layout
+html 0 0 360 291.4
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 291.4
+    p 0 0 360 18.2
+    table -4 22.2 267.219 269.2
+      tbody 0 0 0 0
+        tr 0 0 0 0
+          td 0 31 118.009 118
+            div 0 31 118 118
+          td 141.209 31 118.009 118
+            div 141.209 31 118 118
+        tr 0 0 0 0
+          td 0 163.6 118.009 118
+            div 0 163.6 118 118
+          td 141.209 163.6 118.009 118
+            div 141.209 163.6 118 118
+
+== paint
+root 360x291.4 items=14
+  borders bounds=(0,26,128,129) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(0,26,128,129) root=0
+  linear-gradient bounds=(0,31,118,118) layer=(border=(0,31,118,118),radius=(12,12,4,4,4,4,4,4),clip=(0,31,118,118),origin=(0,31,118,118),attachment=0,repeat=0,root=0) points=((0,#06122bff,-),(0.35,#0f2d5cff,-),(0.62,#1fd1a3ff,-),(0.85,#7b5cffff,-),(1,#2a1a5eff,-)) space=0 hue=0 start=(40.2977,20.2022) end=(77.7023,159.798)
+  borders bounds=(132,26,127,129) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(132,26,127,129) root=0
+  linear-gradient bounds=(141,31,118,118) layer=(border=(141,31,118,118),radius=(4,4,12,12,4,4,4,4),clip=(141,31,118,118),origin=(141,31,118,118),attachment=0,repeat=0,root=0) points=((0,#8ed6ffff,-),(0.35,#2f9ff0ff,-),(0.7,#0b63c1ff,-),(1,#063a7aff,-)) space=0 hue=0 start=(141,31) end=(141,149)
+  borders bounds=(0,159,128,128) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(0,159,128,128) root=0
+  linear-gradient bounds=(0,164,118,118) layer=(border=(0,164,118,118),radius=(4,4,4,4,4,4,12,12),clip=(0,164,118,118),origin=(0,164,118,118),attachment=0,repeat=0,root=0) points=((0,#ffe8a3ff,-),(0.4,#f3c15eff,-),(0.72,#d9903aff,-),(1,#a8601fff,-)) space=0 hue=0 start=(47.1313,155.689) end=(70.8687,290.311)
+  borders bounds=(132,159,127,128) borders=(left=(0,0,#000000ff),top=(0,0,#000000ff),right=(0,0,#000000ff),bottom=(1,4,#e7e7e7ff),radius=(0,0,0,0,0,0,0,0)) pos=(132,159,127,128) root=0
+  linear-gradient bounds=(141,164,118,118) layer=(border=(141,164,118,118),radius=(4,4,4,4,12,12,4,4),clip=(141,164,118,118),origin=(141,164,118,118),attachment=0,repeat=0,root=0) points=((0,#b7e36bff,-),(0.4,#4caf50ff,-),(0.72,#2e7d32ff,-),(1,#14402aff,-)) space=0 hue=0 start=(141,164) end=(141,282)
+  text bounds=(-8,-7,88,32) pos=(0,1,72,16) color=#000000ff text="Moodboard" font=f1 glyphs=9 advance=72
+  text bounds=(72,-7,40,32) pos=(80,1,24,16) color=#000000ff text="for" font=f1 glyphs=3 advance=24
+  text bounds=(104,-7,40,32) pos=(112,1,24,16) color=#000000ff text="the" font=f1 glyphs=3 advance=24
+  text bounds=(136,-7,72,32) pos=(144,1,56,16) color=#000000ff text="offsite" font=f1 glyphs=7 advance=56
+  text bounds=(200,-7,48,32) pos=(208,1,32,16) color=#000000ff text="deck" font=f1 glyphs=4 advance=32
+  text bounds=(240,-7,48,32) pos=(248,1,32,16) color=#000000ff text="🎨" font=f1 glyphs=4 advance=32
+
+== fonts
+f1 (family="system-ui,sans-serif",size=14,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

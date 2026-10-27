@@ -60,6 +60,8 @@ public final class WidgetHarnessRootViewController: UIViewController {
             self?.listHost?.record("back")
         }
         self.backSwipe.install(on: self.view)
+        // The chat's lock while a widget control is held (ChatControllerNode installs the same on the chat's view).
+        self.view.addGestureRecognizer(MessageWidgetChatLockRecognizer())
 
         self.accountDisposable = (HarnessAccount.make()
         |> deliverOnMainQueue).start(next: { [weak self] harnessAccount in
@@ -100,6 +102,9 @@ public final class WidgetHarnessRootViewController: UIViewController {
         let host = WidgetHarnessListHost(context: context)
         host.holdsMenu = self.options.holdsMenu
         host.copyProtected = self.options.copyProtected
+        host.canQuery = self.options.canQuery
+        host.backgroundQuery = self.options.backgroundQuery
+        host.botChat = self.options.botChat
         host.onContextMenuChange = { [weak self] open in
             self?.contextMenuChanged(open: open)
         }
@@ -109,6 +114,9 @@ public final class WidgetHarnessRootViewController: UIViewController {
         self.listHost = host
         self.view.insertSubview(host.node.view, belowSubview: self.readoutLabel)
         self.layoutList()
+        if let raw = self.options.textSize, let textSize = PresentationFontSize(rawValue: raw) {
+            host.setFontSize(textSize)
+        }
         host.load(posts: WidgetHarnessPosts.load(self.options), incoming: self.options.incoming)
         self.updateOpenMenuButton(menuOpen: false)
         self.updateReadout()

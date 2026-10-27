@@ -46,12 +46,12 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    # DEBUG builds only: widget-sandbox's corpus and conformance set, for Debug Settings' widget insertion
+    # DEBUG builds only: widget-sandbox's conformance set and the client's game examples, for Debug Settings' widget insertion
     # (DebugSettingsUI/Sources/WidgetDebugPosts.swift reads them from this framework's bundle).
     data = select({
         "//third-party/widget-sandbox:debug_build": [
-            "//third-party/widget-sandbox:WidgetCorpusBundle",
             "//third-party/widget-sandbox:WidgetConformanceBundle",
+            "//submodules/TelegramUI/Components/MessageWidget/Fixtures:WidgetGamesBundle",
         ],
         "//conditions:default": [],
     }),
@@ -330,6 +330,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/TelegramUI/Components/CameraScreen",
         "//submodules/TelegramUI/Components/MediaEditorScreen",
+        "//submodules/TelegramUI/Components/ChatMediaEditorScreen",
+        "//submodules/TelegramUI/Components/MediaEditorBottomControls",
+        "//submodules/TelegramUI/Components/ChatMediaSend",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/ICloudResources",
         "//submodules/TelegramUI/Components/LegacyCamera",
@@ -552,6 +555,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AdPanelHeaderPanelComponent",
         "//submodules/TelegramUI/Components/MessageFeeHeaderPanelComponent",
         "//submodules/TelegramUI/Components/MessageWidget/MessageWidget",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageWidgetBubbleContentNode",
         "//submodules/TelegramUI/Components/LegacyChatHeaderPanelComponent",
         "//submodules/TelegramUI/Components/GroupCallHeaderPanelComponent",
         "//submodules/TelegramUI/Components/Chat/ChatSearchNavigationContentNode",
@@ -560,6 +564,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiGameStakeScreen",
         "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/TelegramUI/Components/AlertComponent/AlertHeaderComponent",
+        "//submodules/TelegramUI/Components/AlertComponent/AlertCheckComponent",
         "//submodules/TelegramUI/Components/Chat/ChatAgeRestrictionAlertController",
         "//submodules/TelegramUI/Components/CocoonInfoScreen",
         "//submodules/TelegramUI/Components/ProxyServerPreviewScreen",

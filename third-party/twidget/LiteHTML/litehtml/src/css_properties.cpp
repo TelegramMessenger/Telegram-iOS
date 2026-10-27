@@ -15,12 +15,13 @@
 // which no charge on the declaring element bounds. Every inherited std::string computed member goes through this: a
 // value over 1 KiB is cut at a comma or a character boundary; a URL (or a value holding url()) over 1 KiB is dropped for
 // `fallback`, because a cut URL loads another image.
+static constexpr size_t max_inherited_string_bytes = 1024;
+
 static void bound_inherited_string(const litehtml::html_tag* el, litehtml::string_id name, std::string& value, bool is_url, const char* fallback)
 {
     // A value the element declares itself is charged to the style-byte budget; the copies descendants inherit are not.
     if(el->declares_value(name))
         return;
-    constexpr size_t max_inherited_string_bytes = 1024;
     if(value.size() <= max_inherited_string_bytes)
         return;
     if(is_url || value.find("url(") != std::string::npos)
@@ -37,6 +38,44 @@ static void bound_inherited_string(const litehtml::html_tag* el, litehtml::strin
     }
     value.resize(cut);
     value.shrink_to_fit();
+}
+
+// Telegram (VENDOR.md edit 60): an image bullet set on a list reaches its items however long its URL. The element's
+// list-style-image as get_property<std::string> resolves it (its own string; nothing for initial; else its parent's), the
+// parent's shared rather than copied. The copies cost a pointer, but a list item hashes and copies the URL as it lays out
+// and paints its marker, so a list item inheriting one over 1 KiB is charged its length (style_charge_bullet).
+static std::shared_ptr<const std::string> computed_list_style_image(const litehtml::html_tag* el, bool list_item)
+{
+    const litehtml::property_value& value = el->own_property(litehtml::_list_style_image_);
+    if(value.is<std::string>())
+    {
+        const std::string& url = value.get<std::string>();
+        return url.empty() ? nullptr : std::make_shared<const std::string>(url);
+    }
+    if(value.is<litehtml::initial>())
+        return nullptr;
+    const auto parent = el->parent();
+    if(!parent)
+        return nullptr;
+    std::shared_ptr<const std::string> url = parent->css().get_list_style_image_shared();
+    if(url && list_item && url->size() > max_inherited_string_bytes && !el->charge_inherited(url->size()))
+        return nullptr;
+    return url;
+}
+
+// Out of line (edit 60): an empty string a header's inline function held as a static would be constant-initialized in
+// read-only memory by a C++20 caller and constructed at run time by a C++17 one (the fork), which then writes to it.
+const std::string& litehtml::css_properties::get_list_style_image() const
+{
+    static const std::string none;
+    return m_list_style_image ? *m_list_style_image : none;
+}
+
+void litehtml::css_properties::charge_inherited_list_style_image(const html_tag* el)
+{
+    if(m_list_style_image && m_display == display_list_item && m_list_style_image->size() > max_inherited_string_bytes &&
+       !el->declares_value(_list_style_image_) && !el->charge_inherited(m_list_style_image->size()))
+        m_list_style_image.reset();
 }
 
 void litehtml::css_properties::compute(const html_tag* el, const document::ptr& doc)
@@ -332,14 +371,25 @@ void litehtml::css_properties::compute(const html_tag* el, const document::ptr& 
     m_list_style_position = static_cast<list_style_position>(
         el->get_property<int>(_list_style_position_, true, list_style_position_outside, offset(m_list_style_position)));
 
+#if 0
     m_list_style_image = el->get_property<std::string>(_list_style_image_, true, "", offset(m_list_style_image));
     bound_inherited_string(el, _list_style_image_, m_list_style_image, true, ""); // Telegram (VENDOR.md edit 21)
     if(!m_list_style_image.empty())
+#else
+    m_list_style_image = computed_list_style_image(el, m_display == display_list_item); // Telegram (VENDOR.md edit 60)
+    if(m_list_style_image)
+#endif
     {
         m_list_style_image_baseurl =
             el->get_property<std::string>(_list_style_image_baseurl_, true, "", offset(m_list_style_image_baseurl));
         bound_inherited_string(el, _list_style_image_baseurl_, m_list_style_image_baseurl, true, ""); // Telegram (VENDOR.md edit 21)
-        doc->container()->load_image(m_list_style_image.c_str(), m_list_style_image_baseurl.c_str(), true);
+#if 0
+        doc->container()->load_image(get_list_style_image().c_str(), m_list_style_image_baseurl.c_str(), true);
+#else
+        // Telegram (VENDOR.md edit 60): only a list item draws the image; the others only pass the string on.
+        if(m_display == display_list_item)
+            doc->container()->load_image(get_list_style_image().c_str(), m_list_style_image_baseurl.c_str(), true);
+#endif
     }
 
     m_order = el->get_property<int>(_order_, false, 0, offset(m_order));

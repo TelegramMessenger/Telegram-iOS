@@ -570,6 +570,9 @@ static void testSetAttributeMatchesFresh() {
                         "[hidden]{display:none} a:link{color:#909} input:checked{outline:1px solid #f00}";
     // A class toggle (added, swapped, removed) and an id change.
     attributePatchedMatchesFresh(sheet, "p", {}, "class", "a");
+    // Edit 31.5: matched again in place, an element with text is still not :empty.
+    attributePatchedMatchesFresh("span:empty{padding:9px} p:not(:empty){margin:7px} .k{color:#c00}", "span", {}, "class", "k");
+    attributePatchedMatchesFresh("span:empty{padding:9px} p:not(:empty){margin:7px} .k{color:#c00}", "p", {}, "class", "k");
     attributePatchedMatchesFresh(sheet, "div", {{"class", "a"}}, "class", "b");
     attributePatchedMatchesFresh(sheet, "div", {{"class", "a"}}, "class", "a c");
     attributePatchedMatchesFresh(sheet, "div", {{"class", "b"}}, "class", nullptr);
@@ -700,9 +703,11 @@ static void testSetAttributeFixRound() {
     attributePatchedMatchesFresh("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}}, "xlink:title", "t");
     attributePatchedMatchesFresh("", "circle", {{"cx", "20"}, {"cy", "20"}, {"r", "10"}, {"Fill", "red"}}, "Fill", "blue");
 
-    // I2: while a ::before or ::after rule with content could match, no patch is made: near the text-piece cap a patch and
-    // a rebuild cut at different words. The shapes that got past a byte bound: function name case and spacing, and a
-    // second element's rule whose content overlaps in a fresh build.
+    // I2: with a ::before or ::after rule with content, a patch is made unless a cap has been reached (freed pieces would
+    // go to later content in a fresh build). A build makes pseudo-element content after all text, in document order, so a
+    // patch whose content reaches a cap cut it where a build would cut other content: it posts the limit, and the caller
+    // rebuilds. Below the caps the patched document equals a fresh build. The shapes that got past a byte bound: function
+    // name case and spacing, and a second element's rule whose content overlaps in a fresh build.
     {
         const char* sheets[] = {
             ".x::before{content:\"a b c d\"} .x{color:#c00}",
@@ -711,22 +716,52 @@ static void testSetAttributeFixRound() {
             "[title]::before{content:attr(title)} .k::before{content:attr(title)} .x::before{content:\"a b c d\"}",
             ".x:after{content:\"a b c d\"}",
         };
+        const litehtml::string_map title = {{"title", "t t t t t t t t t t"}};
+        int compared = 0, refused = 0;
         for (const char* sheet : sheets) {
             for (int words : {0, 4000, 4990, 5004}) {
                 fillerWords = words;
-                PaintContainer c;
-                element::ptr target;
-                auto doc = attrDocument(c, sheet, "div", {{"title", "t t t t t t t t t t"}}, target);
+                PaintContainer c, fresh, textFresh;
+                element::ptr target, expected, textExpected;
+                auto doc = attrDocument(c, sheet, "div", title, target);
+                litehtml::string_map classed = title;
+                classed["class"] = "x";
+                auto reference = attrDocument(fresh, sheet, "div", classed, expected);
+                beforeText = "other words";
+                auto textReference = attrDocument(textFresh, sheet, "div", classed, textExpected);
+                beforeText = "before";
                 CHECK(doc->pseudo_content_possible());
-                if (doc->can_set_element_attribute(target, "class", "x")) std::printf("  accepted with pseudo content: %s\n", sheet);
-                CHECK(!doc->can_set_element_attribute(target, "class", "x"));
-                CHECK(!doc->set_element_attribute(target, "class", "x"));
-                // The same for a text patch (edit 16).
+                auto p = doc->root()->select_one("p");
+                if (doc->text_limited() || doc->pseudo_limited()) {
+                    CHECK(!doc->can_set_element_attribute(target, "class", "x"));
+                    CHECK(!doc->set_element_attribute(target, "class", "x"));
+                    CHECK(!doc->can_replace_text(p, 0, p->children().size(), "other words"));
+                    refused++;
+                    continue;
+                }
+                const size_t posted = c.limits.size();
+                CHECK(doc->set_element_attribute(target, "class", "x"));
+                doc->commit_patch();
+                doc->render(litehtml::pixel_t(160.0f));
+                if (c.limits.size() != posted) {
+                    continue;   // a cap reached: the caller rebuilds
+                }
+                CHECK(dump_of(doc) == dump_of(reference));
+                CHECK(painted(c, doc) == painted(fresh, reference));
+                // Then a text patch (edit 16), below the caps too.
                 std::vector<element::ptr> pieces;
-                CHECK(!doc->can_replace_text(target, 0, target->children().size(), "other words"));
-                CHECK(!doc->replace_text(target, 0, target->children().size(), "other words", pieces));
+                CHECK(doc->can_replace_text(p, 0, p->children().size(), "other words"));
+                CHECK(doc->replace_text(p, 0, p->children().size(), "other words", pieces));
+                doc->commit_patch();
+                doc->render(litehtml::pixel_t(160.0f));
+                CHECK(c.limits.size() == posted);
+                CHECK(dump_of(doc) == dump_of(textReference));
+                CHECK(painted(c, doc) == painted(textFresh, textReference));
+                compared++;
             }
         }
+        CHECK(compared > 0);
+        CHECK(refused > 0);
         fillerWords = 0;
         // What is not content does not count: a pseudo-element rule without `content`, with `content:none`, and content
         // on a real element; and then patches work near the cap and equal a fresh build, limits included.
@@ -776,14 +811,15 @@ static void testSetAttributeFixRound() {
             doc->finalize_from_external_root(root, litehtml::telegram_master_css());
             doc->render(litehtml::pixel_t(160.0f));
             CHECK(doc->pseudo_content_possible());
-            CHECK(!doc->can_set_element_attribute(p, "class", "x"));
-            CHECK(!doc->can_replace_text(p, 0, 1, "other"));
+            CHECK(doc->can_set_element_attribute(p, "class", "x"));
+            CHECK(doc->can_replace_text(p, 0, 1, "other"));
         }
     }
 
-    // A control makes its lh-* parts when it is matched again: a rule for one counts wherever a control could make it, and the
-    // flag is read afresh after each commit. type text -> range in one patch, then a text patch near the cap: whatever
-    // is accepted equals a fresh build with the same text.
+    // A control makes its lh-* parts when it is matched again: a rule for one counts wherever a control could make it, and
+    // a build counts the parts' content beyond what it keeps, so with such a rule nothing patches (part_content_possible).
+    // type text -> range in one patch, then a text patch near the cap: whatever is accepted equals a fresh build with the
+    // same text.
     {
         const char* sheet = "lh-range-thumb::before{content:\"B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20\"}"
                             " input lh-range-thumb::before{content:\"q\"}";
@@ -797,6 +833,7 @@ static void testSetAttributeFixRound() {
             beforeText = newText;
             auto reference = attrDocument(fresh, sheet, "input", {{"type", "range"}}, expected);
             beforeText = "before";
+            CHECK(doc->part_content_possible());
             if (doc->set_element_attribute(target, "type", "range")) {
                 typed++;
                 doc->commit_patch();
@@ -816,7 +853,7 @@ static void testSetAttributeFixRound() {
         }
         fillerWords = 0;
         std::printf("  range shape: %d type patches, %d text patches accepted\n", typed, texted);
-        CHECK(typed == 0 && texted == 0);   // the flag is set from the start: the document has a control
+        CHECK(typed == 0 && texted == 0);   // the document has a control and a part rule from the start
     }
 
     // The table-cell cap: a span change that would take the cells past 200,000 is refused; below it, equal to fresh.
@@ -2092,10 +2129,27 @@ static void testObserverReportsEveryRenderTreeChange() {
         CHECK(observer.rebuilt == 1);
         CHECK(observer.added.empty() && observer.removed.empty());
         observer.clear();
-        CHECK(doc->set_element_attribute(childAt(body, 1), "style", "padding:4px"));
+        CHECK(doc->set_element_attribute(childAt(body, 1), "style", "float:left"));
         doc->commit_patch();
         doc->render(litehtml::pixel_t(200.0f));
         CHECK(observer.rebuilt == 1);
+        doc->set_render_observer(nullptr);
+    }
+    // Edit 63: a style patch of a box's geometry alone keeps the render tree, and the layout reports every box it moved
+    // or resized, the ones after it included.
+    {
+        PaintContainer c;
+        element::ptr body;
+        auto doc = structureDocument(c, sheet, {el("p", "one"), el("div", "x"), el("p", "two")}, body);
+        RecordingObserver observer;
+        doc->set_render_observer(&observer);
+        const auto before = renderItems(doc);
+        const auto was = geometryOf(before);
+        CHECK(doc->set_element_attribute(childAt(body, 1), "style", "padding:4px"));
+        doc->commit_patch();
+        doc->render(litehtml::pixel_t(200.0f));
+        CHECK(observer.rebuilt == 0);
+        checkReports(doc, observer, before, was, "padding style patch");
         doc->set_render_observer(nullptr);
     }
 }
@@ -2261,22 +2315,23 @@ static void testRefreshAfterTheLimitEqualsARebuild() {
 static void testInheritedStringsAreBounded() {
     const int kElements = 9000;
     const std::string a(16 * 1024, 'a');
-    struct Case { const char* name; std::string css; };
+    // `bullet`: the list's image URL, kept and charged instead (edit 60, testInheritedUrlsAreSharedAndCharged).
+    struct Case { const char* name; std::string css; bool bullet = false; };
     const Case cases[] = {
         {"cursor", "html{cursor:" + a + "}"},
         {"cursor url", "html{cursor:url(" + a + "),auto}"},
         {"text-emphasis-style", "html{text-emphasis-style:\"" + a + "\"}"},
         {"text-emphasis shorthand", "html{text-emphasis:\"" + a + "\" red}"},
         {"font-variant-numeric", "html{font-variant-numeric:" + a + "}"},
-        {"list-style-image", "html{list-style-image:url(" + a + ")}"},
-        {"list-style shorthand", "html{list-style:url(" + a + ")}"},
+        {"list-style-image", "html{list-style-image:url(" + a + ")}", true},
+        {"list-style shorthand", "html{list-style:url(" + a + ")}", true},
         {"font-family", "html{font-family:" + a + "}"},
         {"font shorthand", "html{font:12px " + a + "}"},
         // An unresolved var() leaves a token list, not a string: the element declares no string, so it inherits (cut).
         {"cursor var(--nope)", "html{cursor:" + a + "} *{cursor:var(--nope)}"},
         {"text-emphasis-style var(--nope)", "html{text-emphasis-style:\"" + a + "\"} *{text-emphasis-style:var(--nope)}"},
         {"font-variant-numeric var(--nope)", "html{font-variant-numeric:" + a + "} *{font-variant-numeric:var(--nope)}"},
-        {"list-style-image var(--nope)", "html{list-style-image:url(" + a + ")} *{list-style-image:var(--nope)}"},
+        {"list-style-image var(--nope)", "html{list-style-image:url(" + a + ")} *{list-style-image:var(--nope)}", true},
     };
     const std::string body = many_elements(kElements);
     size_t baseline = 0;
@@ -2300,7 +2355,8 @@ static void testInheritedStringsAreBounded() {
         CHECK(b != nullptr);
         if (b) {
             CHECK(b->css().get_cursor().size() <= 1024);
-            CHECK(b->css().get_list_style_image().size() <= 1024);
+            if (!k.bullet)
+                CHECK(b->css().get_list_style_image().size() <= 1024);
             CHECK(b->css().get_text_emphasis_style().size() <= 1024);
             CHECK(b->css().font_family().size() <= 1024);
         }
@@ -2320,6 +2376,89 @@ static void testInheritedStringsAreBounded() {
             CHECK(b->css().get_text_emphasis_style() == "filled");
             CHECK(b->css().font_family() == "Foo,Bar" || b->css().font_family() == "Foo, Bar");
         }
+    }
+}
+
+// Edit 60: an inherited URL over 1 KiB (an image bullet set on a list) is kept: the elements holding it share one
+// string, and each list item among them (only a marker reads the URL) is charged its length to the style budget, given
+// back when it is computed again. Past half the budget an item falls back to no image, and the budget does not latch.
+static void testInheritedUrlsAreSharedAndCharged() {
+    const std::string url = "data:image/png;base64," + std::string(16 * 1024, 'A');
+    const std::string css = "<style>html{list-style:url(" + url + ")} b{display:list-item}</style>";
+    {
+        LimitContainer c;
+        auto doc = litehtml::document::createFromString(litehtml::estring(css + many_elements(100)), &c,
+                                                        litehtml::telegram_master_css());
+        doc->render(litehtml::pixel_t(300.0f));
+        const litehtml::elements_list bs = doc->root()->select_all("b");
+        CHECK(bs.size() == 100);
+        if (bs.size() == 100) {
+            CHECK(bs.front()->css().get_list_style_image() == url);
+            CHECK(&bs.front()->css().get_list_style_image() == &bs.back()->css().get_list_style_image());
+        }
+        CHECK(c.limits.empty());
+        const size_t charged = doc->style_bytes_charged();
+        // html's own declaration and the 100 <b>s, which are list items; head and body hold the string uncharged.
+        if (charged < 101 * url.size() || charged >= 102 * url.size()) std::printf("inherited url: %zu bytes charged\n", charged);
+        CHECK(charged >= 101 * url.size() && charged < 102 * url.size());
+        CHECK(doc->root()->select_one("body")->css().get_list_style_image() == url);
+        doc->root()->compute_styles();
+        CHECK(doc->style_bytes_charged() == charged);
+        doc->refresh_all_styles();
+        doc->root()->compute_styles();
+        CHECK(doc->style_bytes_charged() == charged);
+    }
+    {
+        const std::string body = many_elements(9000);
+        size_t baseline = 0;
+        {
+            LimitContainer c;
+            const size_t before = heap_in_use();
+            auto doc = litehtml::document::createFromString(litehtml::estring("<style>b{display:list-item}</style>" + body), &c,
+                                                            litehtml::telegram_master_css());
+            doc->render(litehtml::pixel_t(300.0f));
+            baseline = heap_in_use() - before;
+        }
+        LimitContainer c;
+        const size_t before = heap_in_use();
+        auto doc = litehtml::document::createFromString(litehtml::estring(css + body), &c, litehtml::telegram_master_css());
+        doc->render(litehtml::pixel_t(300.0f));
+        const double over = double(heap_in_use() - before) - double(baseline);
+        std::printf("inherited url over 9000 elements: +%.1f MB over the baseline, %zu bytes charged\n", over / 1048576,
+                    doc->style_bytes_charged());
+        // One shared string: the copies cost a pointer each.
+        CHECK(over < 2.0 * 1048576);
+        CHECK(c.limits.empty() && !doc->style_bytes_limited());
+        CHECK(doc->style_bytes_charged() <= litehtml::document::max_style_bytes / 2);
+        const litehtml::elements_list bs = doc->root()->select_all("b");
+        CHECK(!bs.empty() && bs.front()->css().get_list_style_image() == url);
+        CHECK(!bs.empty() && bs.back()->css().get_list_style_image().empty());
+    }
+    // A template document's class changes, back and forth: each turn charges the items' bullet and gives it back alike.
+    {
+        LimitContainer c;
+        const auto page = [&](const char* cls) {
+            return "<style>.on{list-style:url(" + url + ")}</style><body><ul class=\"" + std::string(cls) +
+                   "\"><li></li><li></li></ul></body>";
+        };
+        auto doc = litehtml::document::createUpdatableFromString(page("off"), &c, litehtml::telegram_master_css());
+        doc->render(litehtml::pixel_t(300.0f));
+        const size_t off = doc->style_bytes_charged();
+        size_t on = 0;
+        for (int i = 0; i < 3; i++) {
+            bool changed = false;
+            doc->update_from_string(page("on"), &changed);
+            doc->render(litehtml::pixel_t(300.0f));
+            if (i == 0)
+                on = doc->style_bytes_charged();
+            if (doc->style_bytes_charged() != on) std::printf("class change %d on: %zu charged, first %zu\n", i, doc->style_bytes_charged(), on);
+            CHECK(doc->style_bytes_charged() == on);
+            doc->update_from_string(page("off"), &changed);
+            doc->render(litehtml::pixel_t(300.0f));
+            if (doc->style_bytes_charged() != off) std::printf("class change %d off: %zu charged, first %zu\n", i, doc->style_bytes_charged(), off);
+            CHECK(doc->style_bytes_charged() == off);
+        }
+        CHECK(on >= off + 2 * url.size());
     }
 }
 
@@ -2354,6 +2493,7 @@ int main() {
     testStyleBudgetIsDeterministic();
     testVarSplicesAreBudgeted();
     testInheritedStringsAreBounded();
+    testInheritedUrlsAreSharedAndCharged();
     testRefreshAfterTheLimitEqualsARebuild();
     if (failures) {
         std::printf("%d failure(s)\n", failures);

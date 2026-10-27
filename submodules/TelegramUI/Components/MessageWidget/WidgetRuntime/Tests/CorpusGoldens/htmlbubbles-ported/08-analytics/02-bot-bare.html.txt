@@ -1,0 +1,249 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card pad kp" id="root">
+  <div id="overview">
+    <div class="row between"><span><b style="font-size: 16px">Key numbers</b> <span class="small muted">LiteChat</span></span>
+      <span class="seg" id="seg1"><span class="" data-act="period" data-value="0">Day</span><span class="on" data-act="period" data-value="1">Week</span><span class="" data-act="period" data-value="2">Month</span></span></div>
+    <div class="tiles" id="tiles"><div class="kt" data-act="focus" data-value="0"><div class="caps"><span class="dot" style="background-color: #007aff"></span>Active users</div>
+    <div class="row"><span class="big grow">48,213</span><span class="badge green">+12.4%</span></div>
+    <svg class="spark" width="168" height="34" viewBox="0 0 168 34"><polygon fill="#007aff" fill-opacity="0.15" points="3.0,34 3.0,26.0 15.5,26.6 27.9,26.0 40.4,27.0 52.8,30.0 65.3,25.8 77.8,13.1 90.2,5.0 102.7,6.7 115.2,8.6 127.6,6.7 140.1,6.7 152.5,8.3 165.0,6.5 165.0,34"></polygon><polyline fill="none" stroke="#007aff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="3.0,26.0 15.5,26.6 27.9,26.0 40.4,27.0 52.8,30.0 65.3,25.8 77.8,13.1 90.2,5.0 102.7,6.7 115.2,8.6 127.6,6.7 140.1,6.7 152.5,8.3 165.0,6.5"></polyline><circle r="3" fill="#007aff" cx="165.0" cy="6.5"></circle></svg>
+    <div class="tiny muted">vs previous week</div></div><div class="kt" data-act="focus" data-value="1"><div class="caps"><span class="dot" style="background-color: #34c759"></span>Revenue</div>
+    <div class="row"><span class="big grow">€182.4k</span><span class="badge green">+8.1%</span></div>
+    <svg class="spark" width="168" height="34" viewBox="0 0 168 34"><polygon fill="#34c759" fill-opacity="0.15" points="3.0,34 3.0,27.4 15.5,28.5 27.9,30.0 40.4,25.7 52.8,13.4 65.3,6.3 77.8,11.5 90.2,16.4 102.7,13.6 115.2,12.1 127.6,14.8 140.1,12.7 152.5,6.2 165.0,5.0 165.0,34"></polygon><polyline fill="none" stroke="#34c759" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="3.0,27.4 15.5,28.5 27.9,30.0 40.4,25.7 52.8,13.4 65.3,6.3 77.8,11.5 90.2,16.4 102.7,13.6 115.2,12.1 127.6,14.8 140.1,12.7 152.5,6.2 165.0,5.0"></polyline><circle r="3" fill="#34c759" cx="165.0" cy="5.0"></circle></svg>
+    <div class="tiny muted">vs previous week</div></div><div class="kt" data-act="focus" data-value="2"><div class="caps"><span class="dot" style="background-color: #ff9500"></span>Conversion</div>
+    <div class="row"><span class="big grow">3.41%</span><span class="badge red">−0.3 pp</span></div>
+    <svg class="spark" width="168" height="34" viewBox="0 0 168 34"><polygon fill="#ff9500" fill-opacity="0.15" points="3.0,34 3.0,9.5 15.5,9.0 27.9,5.4 40.4,5.0 52.8,13.1 65.3,21.3 77.8,22.6 90.2,24.0 102.7,29.2 115.2,30.0 127.6,24.4 140.1,22.1 152.5,25.8 164.6,28.2 164.6,34"></polygon><polyline fill="none" stroke="#ff9500" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="3.0,9.5 15.5,9.0 27.9,5.4 40.4,5.0 52.8,13.1 65.3,21.3 77.8,22.6 90.2,24.0 102.7,29.2 115.2,30.0 127.6,24.4 140.1,22.1 152.5,25.8 164.6,28.2"></polyline><circle r="3" fill="#ff9500" cx="164.6" cy="28.2"></circle></svg>
+    <div class="tiny muted">vs previous week</div></div><div class="kt" data-act="focus" data-value="3"><div class="caps"><span class="dot" style="background-color: #af52de"></span>NPS</div>
+    <div class="row"><span class="big grow">60</span><span class="badge green">+4</span></div>
+    <svg class="spark" width="168" height="34" viewBox="0 0 168 34"><polygon fill="#af52de" fill-opacity="0.15" points="3.0,34 3.0,26.0 15.5,24.5 27.9,27.1 40.4,30.0 52.8,27.2 65.3,23.3 77.8,22.7 90.2,19.2 102.7,10.1 115.2,5.0 127.6,8.6 140.1,12.5 152.5,12.0 162.4,11.1 162.4,34"></polygon><polyline fill="none" stroke="#af52de" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="3.0,26.0 15.5,24.5 27.9,27.1 40.4,30.0 52.8,27.2 65.3,23.3 77.8,22.7 90.2,19.2 102.7,10.1 115.2,5.0 127.6,8.6 140.1,12.5 152.5,12.0 162.4,11.1"></polyline><circle r="3" fill="#af52de" cx="162.4" cy="11.1"></circle></svg>
+    <div class="tiny muted">vs previous week</div></div></div>
+    <div class="tiny muted center">Click a number to focus it</div>
+  </div>
+  <div id="detail" hidden="">
+    <div class="row between"><a class="back" href="#" data-act="back">‹ All numbers</a>
+      <span class="seg" id="seg2"><span class="" data-act="period" data-value="0">Day</span><span class="on" data-act="period" data-value="1">Week</span><span class="" data-act="period" data-value="2">Month</span></span></div>
+    <div class="row" style="margin-top: 12px"><span class="caps grow"><span class="dot" id="d-dot"></span><span id="d-name"></span></span>
+      <span class="nav" data-act="step" data-value="-1">‹</span><span class="tiny muted" id="d-pos"></span><span class="nav" data-act="step" data-value="1">›</span></div>
+    <div class="row"><span class="hero" id="d-hero"></span><span style="margin-left: 10px"><span class="badge green" id="d-badge"></span></span><span class="tiny muted" style="margin-left: 6px" id="d-vs"></span></div>
+    <svg id="d-chart" width="390" height="104" viewBox="0 0 390 104" style="margin-top: 6px"><line x1="0" x2="390" y1="34.3" y2="34.3" stroke="#8e8e93" stroke-opacity="0.2"></line><line x1="0" x2="390" y1="68.6" y2="68.6" stroke="#8e8e93" stroke-opacity="0.2"></line><line x1="0" x2="390" y1="0" y2="0" stroke="#8e8e93" stroke-opacity="0.75" stroke-dasharray="4 4"></line><polygon fill="#007aff" fill-opacity="0.15" points=""></polygon><polyline fill="none" stroke="#007aff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points=""></polyline><circle r="4" fill="none" stroke="#007aff" stroke-width="1.5" visibility="hidden"></circle><circle r="4" fill="none" stroke="#007aff" stroke-width="1.5" visibility="hidden"></circle><circle r="4.5" fill="#007aff"></circle></svg>
+    <div class="row between tiny muted"><span id="d-from"></span><span>┄ average</span><span id="d-to"></span></div>
+    <div class="st">
+      <div><div class="caps">High</div><b id="d-high"></b></div>
+      <div><div class="caps">Low</div><b id="d-low"></b></div>
+      <div><div class="caps">Average</div><b id="d-avg"></b></div>
+    </div>
+    <div class="note small" id="d-note"></div>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 568.7
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 568.7
+    div 15 13 330 542.7
+      div 15 13 330 542.7
+        div 15 13 330 25.6
+          span 15 15.4 160 20.8
+            b 15 15.4 0 0
+            span 15 15.4 0 0
+          span 187 15 156 21.6
+            span 197 18 24 15.6
+            span 241 18 32 15.6
+            span 293 18 40 15.6
+        div 15 48.6 330 492.8
+          div 27 58.6 168 97.2
+            div 27 58.6 168 14.3
+              span 27 63.6 7 7
+            div 27 72.9 168 28.6
+              span 27 72.9 104 28.6
+              span 139 80.05 48 14.3
+            svg 27 107.5 168 34
+              polygon 0 0 0 0
+              polyline 0 0 0 0
+              circle 0 0 0 0
+            div 27 141.5 168 14.3
+          div 27 181.8 168 97.2
+            div 27 181.8 168 14.3
+              span 27 186.8 7 7
+            div 27 196.1 168 28.6
+              span 27 196.1 112 28.6
+              span 147 203.25 40 14.3
+            svg 27 230.7 168 34
+              polygon 0 0 0 0
+              polyline 0 0 0 0
+              circle 0 0 0 0
+            div 27 264.7 168 14.3
+          div 27 305 168 97.2
+            div 27 305 168 14.3
+              span 27 310 7 7
+            div 27 319.3 168 28.6
+              span 27 319.3 80 28.6
+              span 115 326.45 72 14.3
+            svg 27 353.9 168 34
+              polygon 0 0 0 0
+              polyline 0 0 0 0
+              circle 0 0 0 0
+            div 27 387.9 168 14.3
+          div 27 428.2 168 97.2
+            div 27 428.2 168 14.3
+              span 27 433.2 7 7
+            div 27 442.5 168 28.6
+              span 27 442.5 136 28.6
+              span 171 449.65 16 14.3
+            svg 27 477.1 168 34
+              polygon 0 0 0 0
+              polyline 0 0 0 0
+              circle 0 0 0 0
+            div 27 511.1 168 14.3
+        div 15 541.4 330 14.3
+      div 0 0 0 0
+        div 0 0 0 0
+          a 0 0 0 0
+          span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+            span 0 0 0 0
+            span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+            span 0 0 0 0
+          span 0 0 0 0
+        svg 0 0 0 0
+          line 0 0 0 0
+          line 0 0 0 0
+          line 0 0 0 0
+          polygon 0 0 0 0
+          polyline 0 0 0 0
+          circle 0 0 0 0
+          circle 0 0 0 0
+          circle 0 0 0 0
+        div 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+          span 0 0 0 0
+        div 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+            b 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+            b 0 0 0 0
+          div 0 0 0 0
+            div 0 0 0 0
+            b 0 0 0 0
+        div 0 0 0 0
+
+== paint
+root 360x568.7 items=82
+  solid-fill bounds=(0,0,360,569) layer=(border=(0,0,360,569),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,569),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,569) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,569) root=0
+  set-clip bounds=(1,1,358,566.7) pos=(1,1,358,566.7) radius=(13,13,13,13,13,13,13,13)
+  solid-fill bounds=(185,13,160,26) layer=(border=(185,13,160,26),radius=(9,9,9,9,9,9,9,9),clip=(185,13,160,26),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f24
+  solid-fill bounds=(15,49,192,115) layer=(border=(15,49,192,115),radius=(12,12,12,12,12,12,12,12),clip=(15,49,192,115),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f0a
+  borders bounds=(15,49,192,115) borders=(left=(1,4,#7f7f7f33),top=(1,4,#7f7f7f33),right=(1,4,#7f7f7f33),bottom=(1,4,#7f7f7f33),radius=(12,12,12,12,12,12,12,12)) pos=(15,49,192,115) root=0
+  solid-fill bounds=(131,79,64,16) layer=(border=(131,79,64,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(131,79,64,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  set-clip bounds=(27,107.5,168,34) pos=(27,107.5,168,34) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(27,107.5,168,34)
+    group opacity=1 matrix=(1,0,0,1,27,107.5) backface=0 bounds=(0,0,168,34) exact=0
+      path bounds=(2,4,164,31) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4) points=(3,34,3,26,15.5,26.6,27.9,26,40.4,27,52.8,30,65.3,25.8,77.8,13.1,90.2,5,102.7,6.7,115.2,8.6,127.6,6.7,140.1,6.7,152.5,8.3,165,6.5,165,34) fill=1 fill-color=#007aff26 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-2,0,172,35) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1) points=(3,26,15.5,26.6,27.9,26,40.4,27,52.8,30,65.3,25.8,77.8,13.1,90.2,5,102.7,6.7,115.2,8.6,127.6,6.7,140.1,6.7,152.5,8.3,165,6.5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#007affff stroke-width=2 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(161,2.5,8,8) ops=(0,3,3,3,3,4) points=(168,6.5,168,8.15685,166.657,9.5,165,9.5,163.343,9.5,162,8.15685,162,6.5,162,4.84315,163.343,3.5,165,3.5,166.657,3.5,168,4.84315,168,6.5) fill=1 fill-color=#007affff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(15,172,192,115) layer=(border=(15,172,192,115),radius=(12,12,12,12,12,12,12,12),clip=(15,172,192,115),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f0a
+  borders bounds=(15,172,192,115) borders=(left=(1,4,#7f7f7f33),top=(1,4,#7f7f7f33),right=(1,4,#7f7f7f33),bottom=(1,4,#7f7f7f33),radius=(12,12,12,12,12,12,12,12)) pos=(15,172,192,115) root=0
+  solid-fill bounds=(139,202,56,17) layer=(border=(139,202,56,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(139,202,56,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  set-clip bounds=(27,230.7,168,34) pos=(27,230.7,168,34) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(27,230.7,168,34)
+    group opacity=1 matrix=(1,0,0,1,27,230.7) backface=0 bounds=(0,0,168,34) exact=0
+      path bounds=(2,4,164,31) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4) points=(3,34,3,27.4,15.5,28.5,27.9,30,40.4,25.7,52.8,13.4,65.3,6.3,77.8,11.5,90.2,16.4,102.7,13.6,115.2,12.1,127.6,14.8,140.1,12.7,152.5,6.2,165,5,165,34) fill=1 fill-color=#34c75926 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-2,0,172,35) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1) points=(3,27.4,15.5,28.5,27.9,30,40.4,25.7,52.8,13.4,65.3,6.3,77.8,11.5,90.2,16.4,102.7,13.6,115.2,12.1,127.6,14.8,140.1,12.7,152.5,6.2,165,5) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#34c759ff stroke-width=2 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(161,1,8,8) ops=(0,3,3,3,3,4) points=(168,5,168,6.65685,166.657,8,165,8,163.343,8,162,6.65685,162,5,162,3.34315,163.343,2,165,2,166.657,2,168,3.34315,168,5) fill=1 fill-color=#34c759ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(15,295,192,115) layer=(border=(15,295,192,115),radius=(12,12,12,12,12,12,12,12),clip=(15,295,192,115),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f0a
+  borders bounds=(15,295,192,115) borders=(left=(1,4,#7f7f7f33),top=(1,4,#7f7f7f33),right=(1,4,#7f7f7f33),bottom=(1,4,#7f7f7f33),radius=(12,12,12,12,12,12,12,12)) pos=(15,295,192,115) root=0
+  solid-fill bounds=(107,325,88,17) layer=(border=(107,325,88,17),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(107,325,88,17),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff3b3029
+  set-clip bounds=(27,353.9,168,34) pos=(27,353.9,168,34) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(27,353.9,168,34)
+    group opacity=1 matrix=(1,0,0,1,27,353.9) backface=0 bounds=(0,0,168,34) exact=0
+      path bounds=(2,4,163.6,31) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4) points=(3,34,3,9.5,15.5,9,27.9,5.4,40.4,5,52.8,13.1,65.3,21.3,77.8,22.6,90.2,24,102.7,29.2,115.2,30,127.6,24.4,140.1,22.1,152.5,25.8,164.6,28.2,164.6,34) fill=1 fill-color=#ff950026 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-2,0,171.6,35) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1) points=(3,9.5,15.5,9,27.9,5.4,40.4,5,52.8,13.1,65.3,21.3,77.8,22.6,90.2,24,102.7,29.2,115.2,30,127.6,24.4,140.1,22.1,152.5,25.8,164.6,28.2) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ff9500ff stroke-width=2 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(160.6,24.2,8,8) ops=(0,3,3,3,3,4) points=(167.6,28.2,167.6,29.8569,166.257,31.2,164.6,31.2,162.943,31.2,161.6,29.8569,161.6,28.2,161.6,26.5431,162.943,25.2,164.6,25.2,166.257,25.2,167.6,26.5431,167.6,28.2) fill=1 fill-color=#ff9500ff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  solid-fill bounds=(15,418,192,115) layer=(border=(15,418,192,115),radius=(12,12,12,12,12,12,12,12),clip=(15,418,192,115),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f0a
+  borders bounds=(15,418,192,115) borders=(left=(1,4,#7f7f7f33),top=(1,4,#7f7f7f33),right=(1,4,#7f7f7f33),bottom=(1,4,#7f7f7f33),radius=(12,12,12,12,12,12,12,12)) pos=(15,418,192,115) root=0
+  solid-fill bounds=(163,449,32,16) layer=(border=(163,449,32,16),radius=(8.15,8.15,8.15,8.15,8.15,8.15,8.15,8.15),clip=(163,449,32,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c7592e
+  set-clip bounds=(27,477.1,168,34) pos=(27,477.1,168,34) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(27,477.1,168,34)
+    group opacity=1 matrix=(1,0,0,1,27,477.1) backface=0 bounds=(0,0,168,34) exact=0
+      path bounds=(2,4,161.4,31) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4) points=(3,34,3,26,15.5,24.5,27.9,27.1,40.4,30,52.8,27.2,65.3,23.3,77.8,22.7,90.2,19.2,102.7,10.1,115.2,5,127.6,8.6,140.1,12.5,152.5,12,162.4,11.1,162.4,34) fill=1 fill-color=#af52de26 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-2,0,169.4,35) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1) points=(3,26,15.5,24.5,27.9,27.1,40.4,30,52.8,27.2,65.3,23.3,77.8,22.7,90.2,19.2,102.7,10.1,115.2,5,127.6,8.6,140.1,12.5,152.5,12,162.4,11.1) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#af52deff stroke-width=2 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(158.4,7.1,8,8) ops=(0,3,3,3,3,4) points=(165.4,11.1,165.4,12.7569,164.057,14.1,162.4,14.1,160.743,14.1,159.4,12.7569,159.4,11.1,159.4,9.44315,160.743,8.1,162.4,8.1,164.057,8.1,165.4,9.44315,165.4,11.1) fill=1 fill-color=#af52deff evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(1,1,358,566.7) pos=(1,1,358,566.7) radius=(13,13,13,13,13,13,13,13)
+  text bounds=(7,9,40,32) pos=(15,17,24,16) color=#000000ff text="Key" font=f1 glyphs=3 advance=24
+  text bounds=(39,9,72,32) pos=(47,17,56,16) color=#000000ff text="numbers" font=f1 glyphs=7 advance=56
+  text bounds=(103,9,80,32) pos=(111,17,64,16) color=#6e6e73ff text="LiteChat" font=f2 glyphs=8 advance=64
+  text bounds=(189,10,40,32) pos=(197,18,24,16) color=#000000ff text="Day" font=f3 glyphs=3 advance=24
+  solid-fill bounds=(231,15,52,22) layer=(border=(231,15,52,22),radius=(7,7,7,7,7,7,7,7),clip=(231,15,52,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#5856d6ff
+  text bounds=(233,10,48,32) pos=(241,18,32,16) color=#ffffffff text="Week" font=f3 glyphs=4 advance=32
+  text bounds=(285,10,56,32) pos=(293,18,40,16) color=#000000ff text="Month" font=f3 glyphs=5 advance=40
+  solid-fill bounds=(27,64,7,7) layer=(border=(27,64,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,64,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#007affff
+  text bounds=(31,51,64,32) pos=(39,59,48,16) color=#6e6e73ff text="ACTIVE" font=f4 glyphs=6 advance=48
+  text bounds=(87,51,56,32) pos=(95,59,40,16) color=#6e6e73ff text="USERS" font=f4 glyphs=5 advance=40
+  text bounds=(19,71,64,32) pos=(27,79,48,16) color=#000000ff text="48,213" font=f5 glyphs=6 advance=48
+  text bounds=(131,72,64,32) pos=(139,80,48,16) color=#34c759ff text="+12.4%" font=f4 glyphs=6 advance=48
+  text bounds=(19,134,32,32) pos=(27,142,16,16) color=#6e6e73ff text="vs" font=f6 glyphs=2 advance=16
+  text bounds=(43,134,80,32) pos=(51,142,64,16) color=#6e6e73ff text="previous" font=f6 glyphs=8 advance=64
+  text bounds=(115,134,48,32) pos=(123,142,32,16) color=#6e6e73ff text="week" font=f6 glyphs=4 advance=32
+  solid-fill bounds=(27,187,7,7) layer=(border=(27,187,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,187,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  text bounds=(31,174,72,32) pos=(39,182,56,16) color=#6e6e73ff text="REVENUE" font=f4 glyphs=7 advance=56
+  text bounds=(19,194,88,32) pos=(27,202,72,16) color=#000000ff text="€182.4k" font=f5 glyphs=9 advance=72
+  text bounds=(139,195,56,32) pos=(147,203,40,16) color=#34c759ff text="+8.1%" font=f4 glyphs=5 advance=40
+  text bounds=(19,257,32,32) pos=(27,265,16,16) color=#6e6e73ff text="vs" font=f6 glyphs=2 advance=16
+  text bounds=(43,257,80,32) pos=(51,265,64,16) color=#6e6e73ff text="previous" font=f6 glyphs=8 advance=64
+  text bounds=(115,257,48,32) pos=(123,265,32,16) color=#6e6e73ff text="week" font=f6 glyphs=4 advance=32
+  solid-fill bounds=(27,310,7,7) layer=(border=(27,310,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,310,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ff9500ff
+  text bounds=(31,297,96,32) pos=(39,305,80,16) color=#6e6e73ff text="CONVERSION" font=f4 glyphs=10 advance=80
+  text bounds=(19,317,56,32) pos=(27,325,40,16) color=#000000ff text="3.41%" font=f5 glyphs=5 advance=40
+  text bounds=(107,318,64,32) pos=(115,326,48,16) color=#ff3b30ff text="−0.3" font=f4 glyphs=6 advance=48
+  text bounds=(163,318,32,32) pos=(171,326,16,16) color=#ff3b30ff text="pp" font=f4 glyphs=2 advance=16
+  text bounds=(19,380,32,32) pos=(27,388,16,16) color=#6e6e73ff text="vs" font=f6 glyphs=2 advance=16
+  text bounds=(43,380,80,32) pos=(51,388,64,16) color=#6e6e73ff text="previous" font=f6 glyphs=8 advance=64
+  text bounds=(115,380,48,32) pos=(123,388,32,16) color=#6e6e73ff text="week" font=f6 glyphs=4 advance=32
+  solid-fill bounds=(27,433,7,7) layer=(border=(27,433,7,7),radius=(3.5,3.5,3.5,3.5,3.5,3.5,3.5,3.5),clip=(27,433,7,7),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#af52deff
+  text bounds=(31,420,40,32) pos=(39,428,24,16) color=#6e6e73ff text="NPS" font=f4 glyphs=3 advance=24
+  text bounds=(19,440,32,32) pos=(27,448,16,16) color=#000000ff text="60" font=f5 glyphs=2 advance=16
+  text bounds=(163,442,32,32) pos=(171,450,16,16) color=#34c759ff text="+4" font=f4 glyphs=2 advance=16
+  text bounds=(19,503,32,32) pos=(27,511,16,16) color=#6e6e73ff text="vs" font=f6 glyphs=2 advance=16
+  text bounds=(43,503,80,32) pos=(51,511,64,16) color=#6e6e73ff text="previous" font=f6 glyphs=8 advance=64
+  text bounds=(115,503,48,32) pos=(123,511,32,16) color=#6e6e73ff text="week" font=f6 glyphs=4 advance=32
+  text bounds=(68,533,56,32) pos=(76,541,40,16) color=#6e6e73ff text="Click" font=f6 glyphs=5 advance=40
+  text bounds=(116,533,24,32) pos=(124,541,8,16) color=#6e6e73ff text="a" font=f6 glyphs=1 advance=8
+  text bounds=(132,533,64,32) pos=(140,541,48,16) color=#6e6e73ff text="number" font=f6 glyphs=6 advance=48
+  text bounds=(188,533,32,32) pos=(196,541,16,16) color=#6e6e73ff text="to" font=f6 glyphs=2 advance=16
+  text bounds=(212,533,56,32) pos=(220,541,40,16) color=#6e6e73ff text="focus" font=f6 glyphs=5 advance=40
+  text bounds=(260,533,32,32) pos=(268,541,16,16) color=#6e6e73ff text="it" font=f6 glyphs=2 advance=16
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=11,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=22,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f6 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

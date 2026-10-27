@@ -72,6 +72,7 @@ current offset. `ReleaseSuppressionTests`.
   (touch delivery, unholdable); the ABSORB of the stopping tap is the forced `.began`
   (`shouldBeginImmediately`), plain exclusion — the engine grants no simultaneity and deliberately has no
   `shouldBeRequiredToFailBy`. Read the limbo gotcha before adding either or moving anything onto `.began`.
+- `PhysicsScrollEngine` and `ScrollFlight` are public so `MediaGrid` can scroll on the same engine; the `ScrollEngine` protocol stays module-internal. `applyShift` and `reanchorDragToCurrentPosition` are public for MediaGrid's library changes, which re-base the offset and edges mid-drag or mid-flight. `shouldStopScrollingOnRelease` is public so MediaGrid can release a drag it cancelled on rotation at zero velocity. `isScrollEnabled` (setting `false` first calls `haltMotionInPlace()`, then disables the pan) exists for hosts that run their own gestures, such as a pinch.
 - `.keyframe` plays `KeyframeFlight`. A coordinate-only rebase updates its persistent shift without a
   restart, but only while both edges are open; with a finite edge, shift and latest edges fold into one
   continuous rebake. A real edge change is a durable invalidation (survives sampling ticks, coalesces,
@@ -127,10 +128,10 @@ Two mechanisms answer two questions (cf. `ListViewImpl`'s `experimentalSnapScrol
 `calculatePinToEdgeTopInset`); merging them into one number is a known defect family.
 
 - **`holdsPinnedRow`, a latch: WHERE the row goes.** Engaged by `scrollTo` at `lowestPinnedItemIndex`;
-  released, **permanently** for that pin, on `engine.onWillBeginDragging`, the row leaving, or a full
-  replace. The TOUCH releases it, so programmatic writes keep it. While engaged, `resolveAnchor` returns
-  `.resolved` on the pinned row (below `scrollTo`, above `preserveVisibleContent`), placed from its own
-  height only (no loading precondition).
+  released, **permanently** for that pin, on a user-driven scroll (`engine.onWillBeginDragging`, or a
+  `scroll(by:)` that can move at the presented position), the row leaving, or a full replace. Programmatic
+  writes keep it. While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below `scrollTo`,
+  above `preserveVisibleContent`), placed from its own height only (no loading precondition).
 - **`bottomEdgePinSlack`, top-inset slack: is there ROOM.** Positive only while content above the pin is
   shorter than the viewport; `max(0, …)`-clamped; read from intra-window offsets and folded into the
   effective top inset at `buildWindow`'s `topEdge`, `loadedEdgeRange`'s `minimum` and
@@ -179,7 +180,7 @@ above `preserveVisibleContent`). Keyed by identity, never index.
   earlier holds and zeroed `holdSlack`). Elsewhere it arms normally.
 - Released by: a drag beginning (`onWillBeginDragging`; physics: `.began` after hysteresis, or at once on
   moving content — a tap keeps it), any later `scrollTo`, the identity leaving, a full replace,
-  `rebuildFromScratch`, `releaseScrollHold()`.
+  `rebuildFromScratch`, `releaseScrollHold()`, a `scroll(by:)` that can move at the presented position.
 
 While held, `buildWindow` skips the underfill alignments and loaded-top pin; `heldWindowSlack` turns their
 gaps into scroll room (`holdSlack`, both edges, ≥0, measured against the unfolded edges), folded into
@@ -202,6 +203,15 @@ release/retire path is unchecked on device.
 For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
 - `onVisibleWindowChanged` (after each rebalance); `onLoadedEdgeReached`; `willBeginDragging`/
   `didEndDragging` (the finger-down interval); `shouldStopScrolling` → `shouldStopScrollingOnRelease`.
+- `scroll(by:)`: a user-driven scroll with no drag (the chat's two-finger selection auto-scroll, via
+  `scrollWithDirection`). A drag frame without the finger: if the step can move (judged at the presented
+  position, clamped to the declared edges, never pulled back from overscroll), it releases the pin latch and
+  the hold, halts momentum, writes the offset and runs `handleUserScroll` (rebalance, slack retirement,
+  `onVisibleWindowChanged`; at most `preloadMargin` per call, so it cannot pass an edge not yet declared,
+  up to one frame of flight travel after catching a keyframe flight);
+  a step that cannot move at the presented position changes nothing. Not an `additionalScrollDistance`
+  pass, which after the latch's release re-anchors on the natural newest edge and drops a short reply's pin
+  slack in one jump. `ScrollByTests`.
 - `isScrollDecelerating` (at `didEndDragging`, every mode); `isScrollFlightActive` (`.keyframe` only);
   `didEndScrolling` fires when a flight ends AND when `.stepped`/UIKit deceleration rests
   (`onDidEndDecelerating`; `SteppedDecelerationEndTests`).

@@ -102,6 +102,53 @@ WR_TEST(testRepaintingRepublishes) {
     CHECK_EQ(env.render().buildCount(), builds);
 }
 
+/// A repaint republishes the canvas's box alone: no build, no new mirror, only Content operations, and the published tree
+/// is what a fresh mirror of the document draws, the canvas's current snapshot included.
+WR_TEST(testARepaintIsTheCanvasBoxAlone) {
+    RenderEnv env(kPage);
+    env.env().eval("var ctx = a.getContext('2d'); ctx.fillRect(0, 0, 10, 10); 1");
+    env.flush();
+    const uint64_t builds = env.render().buildCount();
+    const uint64_t walks = env.render().mirrorWalks();
+    for (int frame = 0; frame < 3; frame++) {
+        env.env().eval("ctx.fillRect(" + std::to_string(20 + frame * 10) + ", 20, 10, 10); 1");
+        env.flush();
+        CHECK_EQ(env.render().buildCount(), builds);
+        CHECK_EQ(env.render().mirrorWalks(), walks);
+        const std::vector<wr::LayerOp>& ops = env.render().layerOps();
+        CHECK(!ops.empty());
+        for (const wr::LayerOp& op : ops) {
+            CHECK(op.kind == wr::LayerOp::Content);
+        }
+        std::vector<const wr::PaintItem*> found = images(env);
+        CHECK_EQ(found.size(), size_t(1));
+        if (found.size() == 1) {
+            CHECK(std::get<wr::ImageItem>(found[0]->payload).image.image == FakeCanvas::live().back()->snapshot());
+        }
+        std::shared_ptr<const wr::LayerTree> fresh = env.render().freshMirrorForTesting();
+        CHECK(fresh && env.render().layerTree() && fresh->dump() == env.render().layerTree()->dump());
+    }
+}
+
+/// A repaint in the same flush as a patch (a text change, an element inserted) is published with it: the canvas draws
+/// its current snapshot, and nothing rebuilds.
+WR_TEST(testARepaintRidesAPatch) {
+    RenderEnv env("<!doctype html><html><head></head><body><p id=p>text</p><canvas id=a width=40 height=30></canvas>"
+                  "<script>for (const e of document.querySelectorAll('[id]')) window[e.id] = e;</script></body></html>");
+    env.env().eval("var ctx = a.getContext('2d'); ctx.fillRect(0, 0, 10, 10); 1");
+    env.flush();
+    const uint64_t builds = env.render().buildCount();
+    for (const char* change : {"p.firstChild.data = 'other'", "p.appendChild(document.createElement('b')).textContent = 'b'"}) {
+        env.env().eval(std::string("ctx.fillRect(20, 20, 5, 5); ") + change + "; 1");
+        std::vector<const wr::PaintItem*> found = images(env);
+        CHECK_EQ(found.size(), size_t(1));
+        if (found.size() == 1) {
+            CHECK(std::get<wr::ImageItem>(found[0]->payload).image.image == FakeCanvas::live().back()->snapshot());
+        }
+        CHECK_EQ(env.render().buildCount(), builds);
+    }
+}
+
 /// Review Focus 3: an animation loop keeps one bitmap and a bounded number of snapshots.
 WR_TEST(testAnAnimationLoopStaysFlat) {
     RenderEnv env(kPage);

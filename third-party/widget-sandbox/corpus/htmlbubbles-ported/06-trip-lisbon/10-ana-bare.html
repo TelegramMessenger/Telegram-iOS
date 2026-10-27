@@ -14,7 +14,7 @@
   .card { background-color: var(--card); border: 1px solid var(--border); border-radius: 14px; color: var(--fg); }
   .pad { padding: 12px 14px; }
   .fg { color: var(--fg); } .muted { color: var(--muted); } .small { font-size: 12px; } .tiny { font-size: 11px; }
-  .row { display: flex; align-items: center; } .grow { flex-grow: 1; }
+  .row { display: flex; align-items: center; } .grow { flex-grow: 1; min-width: 0; }
   .t-green { color: var(--green); }
   button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 5px 13px; border: 0; border-radius: 9px; background-color: rgba(127,127,127,0.16); color: var(--fg); text-align: center; cursor: pointer; }
   button:hover { background-color: rgba(127,127,127,0.28); }
@@ -22,29 +22,26 @@
   button:active { background-color: rgba(127,127,127,0.40); } button.primary:active { background-color: var(--blue-h); }
   .cat, .item, .banner { cursor: pointer; }
 
-  .pk { width: 380px; max-width: 100%; position: relative; overflow: hidden; }
+  .pk { width: 100%; box-sizing: border-box; position: relative; overflow: hidden; }
+  .pk #items { width: 100%; box-sizing: border-box; }
   .pk .ring { position: relative; width: 60px; height: 60px; margin-right: 12px; flex-shrink: 0; }
   .pk .ring svg { display: block; }
   .pk .ring .pc { position: absolute; left: 0; top: 0; width: 60px; line-height: 60px; text-align: center; font-size: 14px; font-weight: 800; }
   .pk .cats { display: flex; margin: 12px 0 6px 0; }
-  .pk .cat { flex-grow: 1; flex-basis: 0; text-align: center; padding: 4px 0; margin-right: 5px; border-radius: 9px; font-size: 12px; font-weight: 600; background-color: rgba(127,127,127,0.12); }
+  .pk .cat { flex-grow: 1; flex-basis: 0; min-width: 0; box-sizing: border-box; text-align: center; padding: 4px 0; margin-right: 5px; border-radius: 9px; font-size: 12px; font-weight: 600; background-color: rgba(127,127,127,0.12); }
   .pk .cat:last-child { margin-right: 0; }
   .pk .cat:hover { background-color: rgba(127,127,127,0.24); }
   .pk .cat.on { background-color: #34c759; color: #ffffff; }
   .pk .cat .n { font-size: 10px; font-weight: 700; }
-  .pk .item { display: flex; align-items: center; padding: 7px 4px; border-top: 1px solid rgba(127,127,127,0.15); }
+  .pk .item { width: 100%; min-width: 0; box-sizing: border-box; display: flex; align-items: center; padding: 7px 4px; border-top: 1px solid rgba(127,127,127,0.15); }
   .pk .item:hover { background-color: rgba(127,127,127,0.08); }
-  .pk .box { width: 16px; height: 16px; border-radius: 9px; border: 2px solid rgba(127,127,127,0.5); margin-right: 10px; text-align: center; line-height: 16px; font-size: 11px; color: #ffffff; font-weight: 800; flex-shrink: 0; }
+  .pk .box { box-sizing: border-box; flex: 0 0 20px; min-width: 20px; max-width: 20px; width: 20px; height: 20px; border-radius: 9px; border: 2px solid rgba(127,127,127,0.5); margin-right: 10px; text-align: center; line-height: 16px; font-size: 11px; color: #ffffff; font-weight: 800; flex-shrink: 0; }
   .pk .box.on { background-color: #34c759; border-color: #34c759; }
-  .pk .box.pop { animation: box-pop 360ms linear; }
-  @keyframes box-pop { 0% { font-size: 1px; } 25% { font-size: 9px; } 50% { font-size: 12px; } 60% { font-size: 12.1px; } 75% { font-size: 11.7px; } 100% { font-size: 11px; } }
   .pk .txt.done { text-decoration: line-through; color: #8e8e93; }
-  .pk .who { font-size: 11px; margin-left: 8px; white-space: nowrap; }
+  .pk .who { flex: none; max-width: 30%; overflow: hidden; text-overflow: ellipsis; font-size: 11px; margin-left: 8px; white-space: nowrap; }
   .pk .banner { display: flex; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: 12px; background-color: rgba(52,199,89,0.15); }
   .pk .banner:hover { background-color: rgba(52,199,89,0.24); }
   .pk .plane { display: inline-block; font-size: 26px; margin-right: 10px; }
-  .pk .plane.pop { animation: plane-pop 650ms linear; }
-  @keyframes plane-pop { 0% { transform: scale(.05); } 25% { transform: scale(.82); } 50% { transform: scale(1.09); } 60% { transform: scale(1.1); } 75% { transform: scale(1.06); } 85% { transform: scale(1.03); } 100% { transform: scale(1); } }
   .pk .bit { position: absolute; border-radius: 2px; pointer-events: none; }
   .pk .lnk { font-weight: 600; color: #0a84ff; }
   .pk .lnk:hover { text-decoration: underline; }
@@ -110,19 +107,6 @@ const esc = v => String(v === undefined || v === null ? '' : v).replace(/&/g, '&
 const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => 'rgb(' + rgb(a).map((q, i) => Math.round(clamp(q + (rgb(b)[i] - q) * t, 0, 255))).join(',') + ')';
 
-const TR = ['tr-fade', 'tr-pop', 'tr-slide-left', 'tr-slide-right'];
-function bubble(kind) {
-  if (TR.some(c => root.classList.contains(c))) { root.classList.remove(...TR); void root.offsetWidth; }
-  root.classList.add('tr-' + kind);
-}
-function restart(el, cls) {
-  if (el.classList.contains(cls)) { el.classList.remove(cls); void el.offsetWidth; }
-  el.classList.add(cls);
-}
-root.addEventListener('animationend', e => {
-  if (e.target === root) root.classList.remove(...TR);
-  else if (e.target.classList) e.target.classList.remove('pop');
-});
 
 // --- progress ring ---
 const C = 2 * Math.PI * 25;
@@ -133,9 +117,9 @@ function drawRing() {
   arc.setAttribute('stroke', mix('#34c759', '#ffcc00', glow));
   $('pc').textContent = Math.round(ring * 100) + '%';
 }
-function ringTo(ms) {
-  const me = ++ringRun, from = ring, to = done.size / ITEMS.length;
-  return animate(ms, p => { if (me !== ringRun) return; ring = lerp(from, to, p); drawRing(); }, ease.outCubic);
+function ringTo() {
+  ring = done.size / ITEMS.length;
+  drawRing();
 }
 
 // --- confetti ---
@@ -197,15 +181,12 @@ function renderRow(id, popped) {
   const on = done.has(id), box = row.querySelector('.box');
   box.classList.toggle('on', on);
   box.innerHTML = on ? '✓' : '&nbsp;';
-  if (popped) restart(box, 'pop');
   row.querySelector('.txt').classList.toggle('done', on);
 }
 
 function celebrate() {
   party = true;
-  bubble('pop');
   renderHeader();
-  restart($('plane'), 'pop');
   burst();
   animate(1500, p => { glow = Math.abs(Math.sin(p * Math.PI * 3)) * (1 - p); drawRing(); }, ease.linear);
 }
@@ -216,7 +197,7 @@ function tick(id, on) {
   renderRow(id, on);
   ringTo(500);
   if (done.size === ITEMS.length && !party) celebrate();
-  else if (done.size < ITEMS.length && party) { bubble('fade'); party = false; renderHeader(); }
+  else if (done.size < ITEMS.length && party) { party = false; renderHeader(); }
   else renderHeader();
 }
 async function packAll() {
@@ -224,13 +205,12 @@ async function packAll() {
   const todo = ITEMS.filter(i => !done.has(i.id));
   if (!todo.length) return burst();
   packing = true; renderHeader();
-  if (cat !== 'all') { bubble('fade'); cat = 'all'; renderHeader(); renderRows(); }
+  if (cat !== 'all') { cat = 'all'; renderHeader(); renderRows(); }
   for (const it of todo) { await sleep(120); tick(it.id, true); }
   packing = false; renderHeader();
 }
 
-renderHeader(); renderRows(); drawRing();
-setTimeout(() => ringTo(850), 250);
+renderHeader(); renderRows(); ringTo();
 
 root.addEventListener('click', e => {
   const t = e.target;
@@ -241,7 +221,6 @@ root.addEventListener('click', e => {
     const v = c.dataset.cat;
     if (v === cat) return;
     const order = CATS.map(x => x[0]);
-    bubble(order.indexOf(v) > order.indexOf(cat) ? 'slide-left' : 'slide-right');
     cat = v; renderHeader(); renderRows();
     return;
   }
@@ -249,7 +228,6 @@ root.addEventListener('click', e => {
   if (t.closest('#banner')) { burst(); return; }
   if (t.closest('#reset')) {
     if (packing) return;
-    bubble('fade');
     done.clear(); START.forEach(i => done.add(i)); party = false;
     renderHeader(); renderRows(); ringTo(600);
   }

@@ -20,7 +20,7 @@ std::string idAt(RenderEnv& env, double x, double y) {
     if (node && node == wr::DOMState::of(env.ctx()).document().documentElementNode()) {
         return "html";
     }
-    for (const char* id : {"b", "s", "none", "v", "r", "i", "u", "a", "t"}) {
+    for (const char* id : {"b", "s", "none", "v", "r", "i", "u", "a", "t", "c", "d", "e"}) {
         if (node && node == byId(env, id)) {
             return id;
         }
@@ -130,4 +130,74 @@ WR_TEST(testUnrenderedNodeHasNoBox) {
     CHECK(env.render().borderBox(*p).has_value());
     // A Text node has no box either.
     CHECK(!env.render().borderBox(*p->firstChildNode()).has_value());
+}
+
+// A table's top caption moves its rows down (twidget edit 59): its cells' boxes and hits are where they are drawn, as
+// the same table's under a block as tall as the caption.
+WR_TEST(testACaptionedTablesCellsAreWhereTheyAreDrawn) {
+    const std::string table = "<table style='border-spacing:0;margin:0'>";
+    const std::string rows = "<tr><td id=c style='height:30px;width:60px;padding:0'>x</td><td id=d style='padding:0'>y</td></tr>"
+                             "<tr><td id=e style='height:20px;padding:0'>z</td></tr></table></body>";
+    RenderEnv captioned("<!doctype html><body style='margin:0'><p style='margin:0;height:5px'></p>" + table +
+                        "<caption style='height:40px;padding:0'>cap</caption>" + rows);
+    RenderEnv underABlock("<!doctype html><body style='margin:0'><p style='margin:0;height:45px'></p>" + table + rows);
+    captioned.flush();
+    underABlock.flush();
+    for (const char* id : {"c", "d", "e"}) {
+        const std::optional<wr::RenderBox> box = captioned.render().borderBox(*byId(captioned, id));
+        const std::optional<wr::RenderBox> expected = underABlock.render().borderBox(*byId(underABlock, id));
+        CHECK(box.has_value() && expected.has_value());
+        if (!box || !expected) {
+            continue;
+        }
+        CHECK_EQ(box->x, expected->x);
+        CHECK_EQ(box->y, expected->y);
+        CHECK_EQ(box->width, expected->width);
+        CHECK_EQ(box->height, expected->height);
+        // Where it is drawn: the cells draw where the other table's are.
+        CHECK_EQ(idAt(captioned, expected->x + expected->width / 2, expected->y + expected->height / 2), std::string(id));
+    }
+}
+
+// A table row's box spans the table's columns over the row's own height, and a row group's its rows, as in browsers
+// (twidget edit 61): litehtml keeps a row's cells in the table's grid, so a row's own box was 0×0 at the table's corner.
+WR_TEST(testATableRowsAndGroupsHaveTheirBoxes) {
+    RenderEnv env("<!doctype html><body style='margin:0'><p style='margin:0;height:5px'></p>"
+                  "<table style='border-spacing:0;margin:0'><caption style='height:40px;padding:0'>cap</caption>"
+                  "<thead id=h><tr id=hr><td id=h1 style='padding:0'>h</td><td id=h2 style='padding:0'>i</td></tr></thead>"
+                  "<tbody id=g><tr id=r1><td id=a style='height:30px;width:60px;padding:0'>x</td>"
+                  "<td id=b style='width:40px;padding:0'>y</td></tr>"
+                  "<tr id=r2><td id=c rowspan=2 style='padding:0'>z</td><td id=d style='height:20px;padding:0'>w</td></tr>"
+                  "<tr id=r3><td id=e style='height:25px;padding:0'>v</td></tr></tbody></table></body>");
+    env.flush();
+    const auto box = [&](const char* id) { return env.render().borderBox(*byId(env, id)); };
+    const auto unite = [](const wr::RenderBox& p, const wr::RenderBox& q) {
+        const double x = std::min(p.x, q.x), y = std::min(p.y, q.y);
+        return wr::RenderBox{x, y, std::max(p.x + p.width, q.x + q.width) - x, std::max(p.y + p.height, q.y + q.height) - y};
+    };
+    const auto same = [](const std::optional<wr::RenderBox>& got, const wr::RenderBox& want, const char* what) {
+        const bool equal = got && std::abs(got->x - want.x) < 0.01 && std::abs(got->y - want.y) < 0.01 &&
+                           std::abs(got->width - want.width) < 0.01 && std::abs(got->height - want.height) < 0.01;
+        if (!equal) {
+            std::printf("    %s: got %s, want %g,%g %gx%g\n", what,
+                        got ? (std::to_string(got->x) + "," + std::to_string(got->y) + " " + std::to_string(got->width) + "x" +
+                               std::to_string(got->height)).c_str() : "none",
+                        want.x, want.y, want.width, want.height);
+        }
+        CHECK(equal);
+    };
+    const auto a = box("a"), b = box("b"), d = box("d"), e = box("e"), h1 = box("h1"), h2 = box("h2");
+    CHECK(a && b && d && e && h1 && h2);
+    if (!a || !b || !d || !e || !h1 || !h2) {
+        return;
+    }
+    // A row with no spanning cell: its cells' union. Under the 40 px caption, as its cells are (edit 59).
+    same(box("r1"), unite(*a, *b), "r1");
+    same(box("hr"), unite(*h1, *h2), "hr");
+    // The rows a cell spans: each across both columns, over its own height only.
+    same(box("r2"), wr::RenderBox{a->x, d->y, b->x + b->width - a->x, d->height}, "r2");
+    same(box("r3"), wr::RenderBox{a->x, e->y, b->x + b->width - a->x, e->height}, "r3");
+    // A group: its rows.
+    same(box("g"), wr::RenderBox{a->x, a->y, b->x + b->width - a->x, e->y + e->height - a->y}, "g");
+    same(box("h"), unite(*h1, *h2), "h");
 }

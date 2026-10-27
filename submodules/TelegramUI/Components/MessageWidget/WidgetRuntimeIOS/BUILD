@@ -1,6 +1,7 @@
 # The platform half of WidgetRuntime on iOS (M1d plan, Tasks 5–7): the CoreText and ImageIO RenderHost, the layer-tree
 # painter over LHContainer's CoreGraphics code, and the WRSession facade Swift calls.
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
 load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
 
@@ -41,6 +42,18 @@ objc_library(
     deps = [":WidgetRuntimeIOS"],
 )
 
+# The Intl cases end to end (WRIntlCasesTests.swift): Swift, because its delegate answers through widget-sandbox's iOS
+# glue as the app's does. Its resources are the library's above.
+swift_library(
+    name = "WidgetRuntimeIOSSwiftTestsLib",
+    testonly = True,
+    srcs = glob(["Tests/*.swift"]),
+    deps = [
+        ":WidgetRuntimeIOS",
+        "//third-party/widget-sandbox:WidgetSandboxIntl",
+    ],
+)
+
 ios_test_runner(
     name = "WidgetRuntimeIOSTestRunner",
     device_type = "iPhone 17",
@@ -51,5 +64,8 @@ ios_unit_test(
     name = "WidgetRuntimeIOSTests",
     minimum_os_version = "15.0",
     runner = ":WidgetRuntimeIOSTestRunner",
-    deps = [":WidgetRuntimeIOSTestsLib"],
+    deps = [
+        ":WidgetRuntimeIOSSwiftTestsLib",
+        ":WidgetRuntimeIOSTestsLib",
+    ],
 )

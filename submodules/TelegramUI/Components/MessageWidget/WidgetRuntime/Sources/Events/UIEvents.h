@@ -139,7 +139,9 @@ public:
     int32_t persistentDeviceId(JSContext*) { return m_persistentDeviceId; }
 
     // Native: a touch pointer, as a tap makes it.
-    void setTouchPointer(JSContext* ctx, int32_t pointerId, bool primary, double pressure);
+    /// A trusted pointer event's pointer: its id, whether it is primary, its pressure and its type ("touch", "pen",
+    /// "mouse").
+    void setPointer(JSContext* ctx, int32_t pointerId, bool primary, double pressure, std::string_view pointerType);
     void trace(JSRuntime* rt, JS_MarkFunc* mark) const override;
     void dispose(JSRuntime* rt) override;
 

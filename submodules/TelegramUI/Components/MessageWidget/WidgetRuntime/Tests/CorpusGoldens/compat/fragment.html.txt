@@ -1,0 +1,78 @@
+stop -
+drive idle
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <h3>Bare fragment</h3>
+  <p>No <code>&lt;html&gt;</code>, <code>&lt;head&gt;</code> or <code>&lt;body&gt;</code> — just elements, a style block and a script.</p>
+  <span class="pill">one</span><span class="pill">two</span><span class="pill">three</span>
+  <div class="row">
+    <button id="btn">Clicked <span id="n">0</span> times</button>
+    <span id="status">load fired</span>
+  </div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 185.5
+  head 0 0 0 0
+    style 0 0 0 0
+  body 12 8 336 169.5
+    div 27 23 306 139.5
+      h3 27 23 306 20
+      p 27 52 306 40.5
+        code 27 52 0 0
+        code 27 52 0 0
+        code 27 52 0 0
+      span 35 103.5 24 16.2
+      span 79 103.5 24 16.2
+      span 123 103.5 40 16.2
+      div 27 131.7 306 30.8
+        button 40 138.7 120 16.8
+          span 40 138.7 0 0
+        span 181 136.975 80 20.25
+
+== paint
+root 360x185.5 items=32
+  linear-gradient bounds=(12,8,336,170) layer=(border=(12,8,336,170),radius=(10,10,10,10,10,10,10,10),clip=(12,8,336,170),origin=(13,9,334,168),attachment=0,repeat=0,root=0) points=((0,#f7f9fcff,-),(1,#eef2f7ff,-)) space=0 hue=0 start=(54.5,-32.5) end=(305.5,218.5)
+  borders bounds=(12,8,336,170) borders=(left=(1,4,#ddddddff),top=(1,4,#ddddddff),right=(1,4,#ddddddff),bottom=(1,4,#ddddddff),radius=(10,10,10,10,10,10,10,10)) pos=(12,8,336,170) root=0
+  solid-fill bounds=(27,132,146,31) layer=(border=(27,132,146,31),radius=(8,8,8,8,8,8,8,8),clip=(27,132,146,31),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(27,132,146,31) borders=(left=(1,4,#bbbbbbff),top=(1,4,#bbbbbbff),right=(1,4,#bbbbbbff),bottom=(1,4,#bbbbbbff),radius=(8,8,8,8,8,8,8,8)) pos=(27,132,146,31) root=0
+  text bounds=(19,17,48,32) pos=(27,25,32,16) color=#222222ff text="Bare" font=f1 glyphs=4 advance=32
+  text bounds=(59,17,80,32) pos=(67,25,64,16) color=#222222ff text="fragment" font=f1 glyphs=8 advance=64
+  text bounds=(19,46,32,32) pos=(27,54,16,16) color=#222222ff text="No" font=f2 glyphs=2 advance=16
+  text bounds=(43,46,64,32) pos=(51,54,48,16) color=#222222ff text="<html>" font=f3 glyphs=6 advance=48
+  text bounds=(91,46,24,32) pos=(99,54,8,16) color=#222222ff text="," font=f2 glyphs=1 advance=8
+  text bounds=(107,46,64,32) pos=(115,54,48,16) color=#222222ff text="<head>" font=f3 glyphs=6 advance=48
+  text bounds=(163,46,32,32) pos=(171,54,16,16) color=#222222ff text="or" font=f2 glyphs=2 advance=16
+  text bounds=(187,46,64,32) pos=(195,54,48,16) color=#222222ff text="<body>" font=f3 glyphs=6 advance=48
+  text bounds=(243,46,40,32) pos=(251,54,24,16) color=#222222ff text="—" font=f2 glyphs=3 advance=24
+  text bounds=(275,46,48,32) pos=(283,54,32,16) color=#222222ff text="just" font=f2 glyphs=4 advance=32
+  text bounds=(19,66,88,32) pos=(27,74,72,16) color=#222222ff text="elements," font=f2 glyphs=9 advance=72
+  text bounds=(99,66,24,32) pos=(107,74,8,16) color=#222222ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(115,66,56,32) pos=(123,74,40,16) color=#222222ff text="style" font=f2 glyphs=5 advance=40
+  text bounds=(163,66,56,32) pos=(171,74,40,16) color=#222222ff text="block" font=f2 glyphs=5 advance=40
+  text bounds=(211,66,40,32) pos=(219,74,24,16) color=#222222ff text="and" font=f2 glyphs=3 advance=24
+  text bounds=(243,66,24,32) pos=(251,74,8,16) color=#222222ff text="a" font=f2 glyphs=1 advance=8
+  text bounds=(259,66,72,32) pos=(267,74,56,16) color=#222222ff text="script." font=f2 glyphs=7 advance=56
+  solid-fill bounds=(27,102,40,20) layer=(border=(27,102,40,20),radius=(10.1,10.1,10.1,10.1,10.1,10.1,10.1,10.1),clip=(27,102,40,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(27,96,40,32) pos=(35,104,24,16) color=#ffffffff text="one" font=f4 glyphs=3 advance=24
+  solid-fill bounds=(71,102,40,20) layer=(border=(71,102,40,20),radius=(10.1,10.1,10.1,10.1,10.1,10.1,10.1,10.1),clip=(71,102,40,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(71,96,40,32) pos=(79,104,24,16) color=#ffffffff text="two" font=f4 glyphs=3 advance=24
+  solid-fill bounds=(115,102,56,20) layer=(border=(115,102,56,20),radius=(10.1,10.1,10.1,10.1,10.1,10.1,10.1,10.1),clip=(115,102,56,20),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#2481ccff
+  text bounds=(115,96,56,32) pos=(123,104,40,16) color=#ffffffff text="three" font=f4 glyphs=5 advance=40
+  text bounds=(32,131,72,32) pos=(40,139,56,16) color=#222222ff text="Clicked" font=f5 glyphs=7 advance=56
+  text bounds=(96,131,24,32) pos=(104,139,8,16) color=#222222ff text="0" font=f5 glyphs=1 advance=8
+  text bounds=(112,131,56,32) pos=(120,139,40,16) color=#222222ff text="times" font=f5 glyphs=5 advance=40
+  text bounds=(173,131,48,32) pos=(181,139,32,16) color=#222222ff text="load" font=f2 glyphs=4 advance=32
+  text bounds=(213,131,56,32) pos=(221,139,40,16) color=#222222ff text="fired" font=f2 glyphs=5 advance=40
+
+== fonts
+f1 (family="system-ui,sans-serif",size=16,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=15,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="ui-monospace,monospace",size=13.5,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f5 (family="system-ui,sans-serif",size=14,style=0,weight=500,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

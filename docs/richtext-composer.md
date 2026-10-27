@@ -466,7 +466,7 @@ Two layers (see `SyncCore_SynchronizeableChatInputState.swift`, `ChatInterfaceSt
 
 > **Invariant — `saveDraft` sends `message: ""` / no entities (clears the `1<<3` flag) when `richMessage` is
 > set.** The InstantPage already carries the text; the receiver builds the draft **purely** from `richMessage`
-> when present (`AccountStateManagementUtils` ignores `message`/`entities`), so sending the flat text duplicates
+> when present (`UpdateInterpreter` ignores `message`/`entities`), so sending the flat text duplicates
 > it on the wire.
 
 ### Cross-device media sync

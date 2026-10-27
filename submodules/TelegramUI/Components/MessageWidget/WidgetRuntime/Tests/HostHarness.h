@@ -32,7 +32,6 @@ public:
 
     double monotonicNow() override { return now; }
     double wallClockNow() override { return wall + now; }
-    std::string defaultTimeZone() override { return "UTC"; }
     void log(wr::LogLevel level, std::string_view text) override;
     void diagnostic(std::string_view kind, std::string_view detail) override;
     wr::ScriptLoader* scriptLoader() override { return loader; }
@@ -51,10 +50,23 @@ public:
     void bridgeCall(std::string_view method, std::string_view argsJson) override {
         bridgeCalls.emplace_back(std::string(method), std::string(argsJson));
     }
+    /// widget-sandbox's `intl` capability: every request, in order, answered by `intlAnswer` ("" without one: no locale
+    /// data, as the default host).
+    std::vector<std::string> intlRequests;
+    std::function<std::string(std::string_view)> intlAnswer;
+    std::string intl(std::string_view requestJson) override {
+        intlRequests.emplace_back(requestJson);
+        return intlAnswer ? intlAnswer(requestJson) : std::string();
+    }
 
     /// Whether a line at `level` was logged containing `text`.
     bool hasLog(wr::LogLevel level, std::string_view text) const;
 };
+
+/// An `intl` answer for tests (TestHost::intlAnswer) that shows the request to the widget: a format answers the request
+/// itself; formatToParts one literal part holding it; resolvedOptions `{"request": …}` (a key resolvedOptions drops: it
+/// shows ours alone).
+std::string echoIntl(std::string_view request);
 
 /// A ScriptLoader over a map: a URL it has serves its text (as that URL), any other is refused. Records every request.
 class MapScriptLoader : public wr::ScriptLoader {

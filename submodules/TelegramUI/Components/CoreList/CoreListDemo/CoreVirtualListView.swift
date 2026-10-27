@@ -132,8 +132,9 @@ public enum CoreListAnchorMode: Equatable {
 /// Released when a drag begins (`ScrollEngine.onWillBeginDragging`: under `PhysicsScrollEngine` the
 /// pan's `.began` — after its movement hysteresis, or at once for a finger landing on moving content —
 /// and under `UIKitScrollEngine`, `scrollViewWillBeginDragging`; a tap that never becomes a drag keeps
-/// it), by any later `scrollTo` (a holding one arms a new hold), by the row leaving the collection, by a
-/// full replace, and by `releaseScrollHold()`.
+/// it), by a `scroll(by:)` that can move at the presented position, by any later `scrollTo` (a holding
+/// one arms a new hold), by the row leaving the collection, by a full replace, and by
+/// `releaseScrollHold()`.
 public struct CoreListScrollHold {
     public enum Edge {
         /// `viewportInsets.top` — under the chat's π rotation, the input-panel edge.
@@ -413,6 +414,12 @@ public final class CoreVirtualListView: UIView {
     }
 
     static func firstDuplicatePair(in items: [CoreListItem]) -> (first: Int, second: Int)? {
+        // Every pass with new items runs this on the main thread: answer the common case (no duplicate) in linear
+        // time, and search for the pair the precondition reports only when there is one.
+        var identities = Set<AnyHashable>(minimumCapacity: items.count)
+        guard items.contains(where: { !identities.insert($0.identity).inserted }) else {
+            return nil
+        }
         for first in items.indices {
             for second in items.indices where second > first {
                 if items[first].identity == items[second].identity {
@@ -540,9 +547,10 @@ public final class CoreVirtualListView: UIView {
     /// row's index shifts every time a message arrives, and `lowestPinnedItemIndex` is already
     /// re-derived per pass, so there is nothing here to go stale.
     ///
-    /// Engaged by an explicit `scrollTo` at the pinned index; released on finger-down, on the pinned
-    /// row leaving the collection, and on a full replace. Release is PERMANENT for that pin —
-    /// scrolling back to the edge does not re-engage it, matching `ListViewImpl`.
+    /// Engaged by an explicit `scrollTo` at the pinned index; released on finger-down, by a `scroll(by:)`
+    /// that can move at the presented position, on the pinned row leaving the collection, and on a full
+    /// replace. Release is PERMANENT for that pin — scrolling back to the edge does not re-engage it,
+    /// matching `ListViewImpl`.
     ///
     /// This answers WHERE the pinned row goes. `bottomEdgePinSlack` answers whether the list has
     /// scroll ROOM to rest there, and is deliberately independent of this flag.
@@ -572,6 +580,64 @@ public final class CoreVirtualListView: UIView {
     /// scroll when the list already rests at its newest edge.
     public func releaseScrollHold() {
         heldRow = nil
+    }
+
+    /// A scroll the user drives without dragging the list: the chat's two-finger message selection
+    /// auto-scrolls while the fingers hold near an edge (`ListViewImpl.scrollWithDirection` on the other
+    /// backend). Moves content by `distance` points, positive DOWN as for `additionalScrollDistance`,
+    /// stopping at the declared edges, and returns whether it moved. One call travels at most
+    /// `preloadMargin`, the distance loaded content reaches past the viewport, so a step cannot pass an
+    /// edge the window has not loaded and declared yet (up to one frame of flight travel when the step
+    /// catches a keyframe flight, since the window was last rebalanced at the previous sampling tick).
+    ///
+    /// It is a drag frame without the finger: the offset write goes through `handleUserScroll`, exactly as
+    /// `engine.onScroll` does, so the window rebalances, slack retires and `onVisibleWindowChanged` fires
+    /// as they do under a drag. A mutation pass with
+    /// `additionalScrollDistance` is NOT equivalent: once the pin latch is released it re-anchors onto the
+    /// natural newest edge and drops a short reply's pin slack in one jump. And like a drag's start
+    /// (`engine.onWillBeginDragging`) it releases the pin latch and the scroll hold, which would otherwise
+    /// own placement and leave the bounds pinned around their row.
+    ///
+    /// A step that cannot move at the presented position (held against an edge, called every frame)
+    /// changes nothing, as ListViewImpl writes nothing when it cannot scroll: the latch and hold stay, and a
+    /// spring-back keeps playing. If ending a flight moves an edge onto the caught offset (hold slack
+    /// retiring), the step returns false with the release and the halt standing, as a drag's start would
+    /// leave them. A step INTO content from an overscroll does halt the spring-back, and
+    /// nothing restarts it if the steps stop while still overscrolled (until the next touch); accepted, as
+    /// the chat's selection rarely starts inside a bounce.
+    @discardableResult
+    public func scroll(by distance: CGFloat) -> Bool {
+        guard distance != 0.0, !isApplyingChanges, !activeWindow.isEmpty else { return false }
+        let distance = max(-preloadMargin, min(preloadMargin, distance))
+        // Never further past an edge than the offset already is, and never pulled back from overscroll.
+        func target(from current: CGFloat) -> CGFloat {
+            var target = current - distance
+            if let minimum = declaredEdges.min {
+                target = max(target, min(minimum, current))
+            }
+            if let maximum = declaredEdges.max {
+                target = min(target, max(maximum, current))
+            }
+            return target
+        }
+        // The presented position, so a keyframe flight is judged where it is on screen.
+        engine.syncToPresentedPosition()
+        guard abs(target(from: engine.offset) - engine.offset) > 1e-6 else { return false }
+        holdsPinnedRow = false
+        heldRow = nil
+        if engine.isDecelerating || activeScrollFlight != nil {
+            // Ending a flight retires hold slack, which can move an edge, so the target is taken after it.
+            engine.haltMotionInPlace()
+        }
+        let current = engine.offset
+        let target = target(from: current)
+        guard abs(target - current) > 1e-6 else { return false }
+        // The presented-position sync and the halt above move the engine offset without a scroll frame, so
+        // `previousOffset` can trail it; the step must be measured from where the list is.
+        previousOffset = current
+        engine.setOffset(target)
+        handleUserScroll(engine.offset)
+        return true
     }
 
     /// The settled screen Y of a hold's edge under the CURRENT geometry.
@@ -1046,8 +1112,9 @@ public final class CoreVirtualListView: UIView {
         }
         engine.onWillBeginDragging = { [weak self] in
             // Mirrors `ListViewImpl.scrollViewWillBeginDragging` (`Display/Source/ListView.swift:879`).
-            // The TOUCH releases the pin, not the movement: a programmatic offset write keeps it, which
-            // is what every self-update flush and inset change is. The scroll hold releases the same way.
+            // The USER releases the pin, not the movement: a programmatic offset write keeps it, which
+            // is what every self-update flush and inset change is. The touch is one release, `scroll(by:)`
+            // the other. The scroll hold releases the same way.
             self?.holdsPinnedRow = false
             self?.heldRow = nil
             self?.willBeginDragging?()

@@ -125,6 +125,39 @@ class LimitsTests: MessageWidgetTestCase {
         XCTAssertLessThan(host, 2.0 * js)
     }
 
+    /// Intl's requests (Host::intl), answered by widget-sandbox's iOS glue with Foundation's formatters: a loop of each
+    /// kind, the formatter caches defeated where the glue has one (a date's options vary past its 64 formatters) and the
+    /// largest inputs, spends at most twice the reference's wall time per unit (work::kIntlRequest, kIntlByte,
+    /// kIntlListItem).
+    func testAnIntlRequestLoopCostsNoMorePerUnitThanJS() throws {
+        let js = self.nanosecondsPerUnit(LimitsTests.referenceLoop)
+        // 512 option sets in turn: every request misses the glue's 64 cached date formatters.
+        let zones = "const zones = ['UTC', 'Europe/Lisbon', 'Europe/Paris', 'Asia/Tokyo', 'America/New_York', 'Australia/Sydney', 'Asia/Kolkata', 'America/Sao_Paulo'];"
+            + " const styles = ['full', 'long', 'medium', 'short'], cycles = ['h11', 'h12', 'h23', 'h24'];"
+        let loops: [(String, String)] = [
+            ("number", "for (let i = 0; ; i++) (i * 1.5).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })"),
+            ("number parts", "const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }); for (let i = 0; ; i++) nf.formatToParts(i * 1234.567)"),
+            ("date, cached", "const d = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'Europe/Lisbon' }); for (let i = 0; ; i++) d.format(i * 86400000)"),
+            ("date, every formatter new", zones + " for (let i = 0; ; i++) new Date(i).toLocaleString('en-US', { timeZone: zones[i % 8], dateStyle: styles[(i >> 3) % 4], timeStyle: styles[(i >> 5) % 4], hourCycle: cycles[(i >> 7) % 4] })"),
+            ("date parts", "const p = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }); for (let i = 0; ; i++) p.formatToParts(i * 3600000)"),
+            ("plural", "const pr = new Intl.PluralRules('ru', { minimumFractionDigits: 1 }); for (let i = 0; ; i++) pr.select(i)"),
+            ("plural categories", "for (;;) new Intl.PluralRules('ar').resolvedOptions()"),
+            ("relative", "const r = new Intl.RelativeTimeFormat('en', { numeric: 'auto' }); for (let i = 0; ; i++) r.format(i % 7 - 3, 'day')"),
+            ("compare", "const c = new Intl.Collator('de', { sensitivity: 'base' }); for (let i = 0; ; i++) c.compare('äpfel' + i, 'apfel' + i)"),
+            ("compare, a megabyte", "const s = 'ab'.repeat(500000), t = s + 'c'; for (;;) s.localeCompare(t)"),
+            ("list, 10,000 items", "const l = new Intl.ListFormat('en'); const items = Array.from({ length: 10000 }, (_, i) => 'item' + i); for (;;) l.format(items)"),
+            ("list, 10,000 empty", "const l = new Intl.ListFormat('en', { type: 'disjunction' }); const items = new Array(10000).fill(''); for (;;) l.format(items)"),
+        ]
+        var worst = 0.0
+        for (name, code) in loops {
+            let ns = self.nanosecondsPerUnit(code)
+            worst = max(worst, ns)
+            print(String(format: "ns per unit: js %.2f, intl %@ %.2f (%.2f×)", js, name, ns, ns / js))
+            XCTAssertLessThan(ns, 2.0 * js, name)
+        }
+        print(String(format: "ns per unit: intl worst %.2f (%.2f×)", worst, worst / js))
+    }
+
     /// Final review I2: litehtml makes an element per tag, per word and per whitespace character, so a rebuild of
     /// word-dense markup costs far more than its bytes; WidgetRuntime charges each build by its boxes and text. A loop of such
     /// rebuilds (a mutation, then a query that lays the document out) spends at most twice the reference's time per unit.

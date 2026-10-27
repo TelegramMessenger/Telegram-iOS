@@ -30,6 +30,7 @@ open class ContextControllerSourceNode: ContextReferenceContentNode {
     public weak var additionalActivationProgressLayer: CALayer?
     public var targetNodeForActivationProgress: ASDisplayNode?
     public var targetNodeForActivationProgressContentRect: CGRect?
+    public var activationProgressScaleInset: CGFloat = 15.0
     
     private var ignoreCurrentActivationProcess: Bool = false
     
@@ -95,7 +96,7 @@ open class ContextControllerSourceNode: ContextReferenceContentNode {
                 }
                 
                 let scaleSide = targetContentRect.width
-                let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+                let minScale: CGFloat = max(0.7, (scaleSide - strongSelf.activationProgressScaleInset) / scaleSide)
                 let currentScale = 1.0 * (1.0 - progress) + minScale * progress
                 
                 let originalCenterOffsetX: CGFloat = targetNode.bounds.width / 2.0 - targetContentRect.midX

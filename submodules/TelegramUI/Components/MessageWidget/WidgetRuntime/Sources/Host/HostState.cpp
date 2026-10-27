@@ -73,6 +73,10 @@ void HostState::setVisible(JSContext* ctx, bool visible) {
                 return;
             }
             document.setHidden(!visible);
+            if (visible) {
+                // SDK v1 §2.14: the widget appeared on screen, so its next background request may go out at once.
+                HostState::of(ctx).m_requestGate.show();
+            }
             Atom type = Atom::fromUTF8(ctx, "visibilitychange");
             fireEvent(ctx, document, type.get(), true, false);
             // SDK v1 §2.7: isActive and activated / deactivated follow, after visibilitychange.
@@ -96,11 +100,67 @@ void HostState::bridgeCall(JSContext* ctx, std::string_view method, std::string_
 }
 
 bool HostState::consumeActivation(JSContext* ctx) {
-    if (m_activePress == 0 || m_activePress <= m_consumedPress || DOMState::of(ctx).document().isHidden()) {
+    if (m_activePress == 0 || DOMState::of(ctx).document().isHidden() ||
+        std::find(m_consumedPresses.begin(), m_consumedPresses.end(), m_activePress) != m_consumedPresses.end()) {
         return false;
     }
-    m_consumedPress = m_activePress;
+    m_consumedPresses.push_back(m_activePress);
     return true;
+}
+
+void HostState::endPress(uint64_t press) {
+    m_consumedPresses.erase(std::remove(m_consumedPresses.begin(), m_consumedPresses.end(), press), m_consumedPresses.end());
+}
+
+bool HostState::activationAvailable(JSContext* ctx) const {
+    return m_activePress != 0 && !DOMState::of(ctx).document().isHidden() &&
+           std::find(m_consumedPresses.begin(), m_consumedPresses.end(), m_activePress) == m_consumedPresses.end();
+}
+
+twidget::sdk::RequestVerdict HostState::decideRequest(JSContext* ctx) {
+    twidget::sdk::RequestGate::Conditions conditions;
+    conditions.gesture = this->activationAvailable(ctx);
+    conditions.visible = !DOMState::of(ctx).document().isHidden();
+    conditions.canQuery = m_widgetContext.canQuery;
+    conditions.backgroundQuery = m_widgetContext.backgroundQuery;
+    return m_requestGate.decide(m_loop.currentTime(), conditions);
+}
+
+int64_t HostState::nextRequestId() {
+    m_lastRequestId = m_lastRequestId >= twidget::sdk::MAX_REQUEST_ID ? 1 : m_lastRequestId + 1;
+    return m_lastRequestId;
+}
+
+void HostState::completeRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome) {
+    if (Runtime::from(ctx).stopReason() != StopReason::None) {
+        return;
+    }
+    try {
+        m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, outcome](JSContext* ctx) {
+            HostState::of(ctx).window().TelegramWidget(ctx)->settleRequest(ctx, id, outcome);
+        }));
+    } catch (...) {
+        try {
+            abortForCaughtException(ctx);
+        } catch (const Aborted&) {
+        }
+    }
+}
+
+void HostState::queueRequestRefusal(JSContext* ctx, int64_t id, const std::string& code) {
+    // From inside a binding: a failure to queue is the binding's (a budget or memory stop), thrown through.
+    m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [id, code](JSContext* ctx) {
+        HostState::of(ctx).window().TelegramWidget(ctx)->refuseRequest(ctx, id, code);
+    }));
+}
+
+void HostState::reportCapped(JSContext* ctx, std::string_view kind, const std::string& detail) {
+    uint32_t& reports = kind == "preview-blocked" ? m_previewBlockedReports : m_requestBlockedReports;
+    if (reports >= uint32_t(twidget::sdk::MAX_REJECTION_REPORTS)) {
+        return;
+    }
+    reports++;
+    Runtime::from(ctx).host().diagnostic(kind, detail);
 }
 
 namespace {
@@ -142,24 +202,90 @@ void HostState::setLocale(std::string_view locale) {
     m_locale = isLocaleTag(locale) ? std::string(locale) : std::string("en-US");
 }
 
+void HostState::setContext(JSContext* ctx, const twidget::WidgetContext& context) {
+    // WidgetContext.effective: a preview's flags are ignored. Whatever the widget knows can reach the bot in a request:
+    // no copy tells where it was forwarded, and the widget knows its viewer only where it may send requests.
+    WidgetContextState state;
+    state.preview = context.preview;
+    state.isForward = !context.preview && context.isCopy;
+    state.canQuery = !context.preview && context.canQuery;
+    state.backgroundQuery = !context.preview && context.backgroundQuery;
+    if (!state.preview && !state.isForward) {
+        state.chatType = twidget::sdk::checkChatType(context.chatType);
+    }
+    if (state.canQuery) {
+        twidget::sdk::CheckedViewer checked = twidget::sdk::checkViewer(context.viewer);
+        for (const std::string& field : checked.rejected) {
+            Runtime::from(ctx).host().diagnostic("data-rejected", "viewer." + field + ": " + std::string(twidget::sdk::viewerFieldRule(field)) +
+                                                                      "; the widget does not see it");
+        }
+        state.viewer = std::move(checked.viewer);
+    }
+    m_widgetContext = std::move(state);
+    m_contextGeneration++;
+}
+
+twidget::sdk::CheckedWidgetData HostState::checkedData(JSContext* ctx, const twidget::WidgetData& data) {
+    twidget::sdk::CheckedWidgetData checked = twidget::sdk::checkWidgetData(data, m_widgetContext.isForward);
+    if (!checked.rejected.empty()) {
+        std::string fields;
+        for (const std::string& field : checked.rejected) {
+            fields += (fields.empty() ? "" : " and ") + field;
+        }
+        Runtime::from(ctx).host().diagnostic("data-rejected", fields + ": not text of at most " + std::to_string(twidget::sdk::MAX_WIDGET_DATA_BYTES) +
+                                                                  " bytes (UTF-8, no NUL); the widget sees null");
+    }
+    return checked;
+}
+
+void HostState::setInitialData(JSContext* ctx, const twidget::WidgetData& data) {
+    twidget::sdk::CheckedWidgetData checked = this->checkedData(ctx, data);
+    m_chatData = std::move(checked.chatData);
+    m_publicData = std::move(checked.publicData);
+}
+
+void HostState::setData(JSContext* ctx, const twidget::WidgetData& data) {
+    if (Runtime::from(ctx).stopReason() != StopReason::None) {
+        return;
+    }
+    twidget::sdk::CheckedWidgetData checked = this->checkedData(ctx, data);
+    try {
+        // The bridge task of upstream's shim (sdk-v1 §3.3): the values change, then the events fire, in one task.
+        m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [chatData = std::move(checked.chatData), publicData = std::move(checked.publicData)](JSContext* ctx) {
+            HostState& host = HostState::of(ctx);
+            const bool chatChanged = chatData != host.m_chatData;
+            const bool publicChanged = publicData != host.m_publicData;
+            host.m_chatData = chatData;
+            host.m_publicData = publicData;
+            TelegramWidget* widget = host.window().TelegramWidget(ctx);
+            if (chatChanged) {
+                widget->runEvent(ctx, TelegramWidget::Event::ChatDataChanged);
+            }
+            if (publicChanged) {
+                widget->runEvent(ctx, TelegramWidget::Event::PublicDataChanged);
+            }
+        }));
+    } catch (...) {
+        try {
+            abortForCaughtException(ctx);
+        } catch (const Aborted&) {
+        }
+    }
+}
+
 bool HostState::admitHaptic(JSContext* ctx) {
     // The step's time: a burst inside one task sees no refill however long it runs.
-    const double now = m_loop.currentTime();
-    if (m_hapticLast) {
-        m_hapticTokens = std::min(kHapticBurst, m_hapticTokens + std::max(0.0, now - *m_hapticLast) * kHapticPerSecond / 1000);
-    }
-    m_hapticLast = now;
     const bool visible = !DOMState::of(ctx).document().isHidden();
-    if (visible && m_hapticTokens >= 1) {
-        m_hapticTokens -= 1;
+    switch (m_hapticGate.decide(m_loop.currentTime(), visible)) {
+    case twidget::sdk::HapticGate::Decision::Play:
         return true;
-    }
-    if (m_hapticReported && now - *m_hapticReported < kHapticReportMs) {
+    case twidget::sdk::HapticGate::Decision::Drop:
         return false;
+    case twidget::sdk::HapticGate::Decision::Report:
+        break;
     }
-    m_hapticReported = now;
-    Runtime::from(ctx).host().diagnostic("haptic-limit", visible ? "haptics over 5 per burst or 10 per second are dropped"
-                                            : "haptics of a hidden widget are dropped");
+    Runtime::from(ctx).host().diagnostic("haptic-limit", visible ? "haptics over 5 per burst or 10 per second, or outside a touch after a 1 s series, are dropped"
+                                                                 : "haptics of a hidden widget are dropped");
     return false;
 }
 
@@ -206,6 +332,23 @@ void HostState::applyTheme(JSContext* ctx, Theme theme, ThemePalette palette, Th
         m_loop.queueTask(TaskSource::UserInteraction, makeTask(ctx, [](JSContext* ctx) {
             HostState::of(ctx).window().TelegramWidget(ctx)->runEvent(ctx, TelegramWidget::Event::ThemeChanged);
         }));
+    } catch (...) {
+        try {
+            abortForCaughtException(ctx);
+        } catch (const Aborted&) {
+        }
+    }
+}
+
+void HostState::setReducedMotion(JSContext* ctx, bool reduced) {
+    if (Runtime::from(ctx).stopReason() != StopReason::None) {
+        return;
+    }
+    try {
+        if (m_render) {
+            m_render->setReducedMotion(ctx, reduced);
+        }
+        m_loop.queueTask(TaskSource::Rendering, makeTask(ctx, [](JSContext*) {}));
     } catch (...) {
         try {
             abortForCaughtException(ctx);

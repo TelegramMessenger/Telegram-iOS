@@ -108,10 +108,10 @@ const $ = id => document.getElementById(id);
 const ease = { outCubic: t => 1 - Math.pow(1 - t, 3) };
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-function bubble(kind) {
-  for (const c of [...root.classList]) if (c.startsWith('tr-')) root.classList.remove(c);
-  void root.offsetWidth;
-  root.classList.add('tr-' + kind);
+function bubble(kind, target = $('msg')) {
+  for (const c of [...target.classList]) if (c.startsWith('tr-')) target.classList.remove(c);
+  void target.offsetWidth;
+  target.classList.add('tr-' + kind);
 }
 function animate(duration, onFrame, easing) {
   const start = performance.now();
@@ -189,7 +189,6 @@ function settle(result, goals) {
   const mult = a === b && b === c ? PAY[SYM[a]] || 10 : a === b || b === c || a === c ? 2 : 0;
   if (mult) {
     const win = bet * mult;
-    bubble('pop');
     coins += win;
     bestWin = Math.max(bestWin, win);
     big = mult >= 10;
@@ -248,7 +247,7 @@ root.addEventListener('click', e => {
     restart($('bet'), 'pop');
     return ui();
   }
-  if (name === 'pay') { bubble(paytable ? 'slide-up' : 'slide-down'); paytable = !paytable; $('pay').hidden = !paytable; ui(); }
+  if (name === 'pay') { paytable = !paytable; $('pay').hidden = !paytable; ui(); }
 });
 // intro: the message springs in and the bulbs sweep once (chase 0 → 11 over 800 ms outCubic)
 setTimeout(() => {

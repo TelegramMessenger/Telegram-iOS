@@ -5,7 +5,7 @@ import Postbox
 enum UpdateGroup {
     case withPts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])
     case withQts(updates: [Api.Update], users: [Api.User], chats: [Api.Chat])
-    case withSeq(updates: [Api.Update], seqRange: (Int32, Int32), date: Int32, users: [Api.User], chats: [Api.Chat])
+    case withSeq(updates: [Api.Update], seqRange: SequenceSpan, date: Int32, users: [Api.User], chats: [Api.Chat])
     case withDate(updates: [Api.Update], date: Int32, users: [Api.User], chats: [Api.Chat])
     case reset
     case updatePts(pts: Int32, ptsCount: Int32)
@@ -58,49 +58,54 @@ enum UpdateGroup {
     }
 }
 
-func apiUpdatePtsRange(_ update: Api.Update) -> (Int32, Int32)? {
+/// The pts span of a common-box update that carries one.
+func apiUpdatePtsRange(_ update: Api.Update) -> SequenceSpan? {
     switch update {
         case let .updateDeleteMessages(updateDeleteMessagesData):
             let (pts, ptsCount) = (updateDeleteMessagesData.pts, updateDeleteMessagesData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateNewMessage(updateNewMessageData):
             let (pts, ptsCount) = (updateNewMessageData.pts, updateNewMessageData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateReadHistoryInbox(updateReadHistoryInboxData):
             let (pts, ptsCount) = (updateReadHistoryInboxData.pts, updateReadHistoryInboxData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateReadHistoryOutbox(updateReadHistoryOutboxData):
             let (pts, ptsCount) = (updateReadHistoryOutboxData.pts, updateReadHistoryOutboxData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateEditMessage(updateEditMessageData):
             let (pts, ptsCount) = (updateEditMessageData.pts, updateEditMessageData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateReadMessagesContents(updateReadMessagesContentsData):
             let (pts, ptsCount) = (updateReadMessagesContentsData.pts, updateReadMessagesContentsData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateWebPage(updateWebPageData):
             let (pts, ptsCount) = (updateWebPageData.pts, updateWebPageData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         case let .updateFolderPeers(updateFolderPeersData):
             let (pts, ptsCount) = (updateFolderPeersData.pts, updateFolderPeersData.ptsCount)
             if ptsCount != 0 {
-                return (pts, ptsCount)
+                return SequenceSpan(end: pts, count: ptsCount)
             } else {
                 return nil
             }
         case let .updatePinnedMessages(updatePinnedMessagesData):
             let (pts, ptsCount) = (updatePinnedMessagesData.pts, updatePinnedMessagesData.ptsCount)
-            return (pts, ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
+        case let .updateMessageWidgetData(updateMessageWidgetDataData):
+            let (pts, ptsCount) = (updateMessageWidgetDataData.pts, updateMessageWidgetDataData.ptsCount)
+            return SequenceSpan(end: pts, count: ptsCount)
         default:
             return nil
     }
 }
 
-func apiUpdateQtsRange(_ update: Api.Update) -> (Int32, Int32)? {
+/// The qts span of an update that carries one.
+func apiUpdateQtsRange(_ update: Api.Update) -> SequenceSpan? {
     switch update {
         case let .updateNewEncryptedMessage(updateNewEncryptedMessageData):
             let qts = updateNewEncryptedMessageData.qts
-            return (qts, 1)
+            return SequenceSpan(end: qts, count: 1)
         case _:
             return nil
     }
@@ -108,21 +113,21 @@ func apiUpdateQtsRange(_ update: Api.Update) -> (Int32, Int32)? {
 
 struct PtsUpdate {
     let update: Api.Update?
-    let ptsRange: (Int32, Int32)
+    let ptsRange: SequenceSpan
     let users: [Api.User]
     let chats: [Api.Chat]
 }
 
 struct QtsUpdate {
     let update: Api.Update
-    let qtsRange: (Int32, Int32)
+    let qtsRange: SequenceSpan
     let users: [Api.User]
     let chats: [Api.Chat]
 }
 
 struct SeqUpdates {
     let updates: [Api.Update]
-    let seqRange: (Int32, Int32)
+    let seqRange: SequenceSpan
     let date: Int32
     let users: [Api.User]
     let chats: [Api.Chat]
@@ -140,13 +145,13 @@ func ptsUpdates(_ groups: [UpdateGroup]) -> [PtsUpdate] {
                 }
             }
         case let .updatePts(pts, ptsCount):
-                result.append(PtsUpdate(update: nil, ptsRange: (pts, ptsCount), users: [], chats: []))
+                result.append(PtsUpdate(update: nil, ptsRange: SequenceSpan(end: pts, count: ptsCount), users: [], chats: []))
         case _:
             break
         }
     }
     
-    result.sort(by: { $0.ptsRange.0 < $1.ptsRange.0 })
+    result.sort(by: { $0.ptsRange.end < $1.ptsRange.end })
     
     return result
 }
@@ -168,7 +173,7 @@ func qtsUpdates(_ groups: [UpdateGroup]) -> [QtsUpdate] {
         }
     }
     
-    result.sort(by: { $0.qtsRange.0 < $1.qtsRange.0 })
+    result.sort(by: { $0.qtsRange.end < $1.qtsRange.end })
     
     return result
 }
@@ -203,7 +208,7 @@ func dateGroups(_ groups: [UpdateGroup]) -> [UpdateGroup] {
     return result
 }
 
-func groupUpdates(_ updates: [Api.Update], users: [Api.User], chats: [Api.Chat], date: Int32, seqRange: (Int32, Int32)?) -> [UpdateGroup] {
+func groupUpdates(_ updates: [Api.Update], users: [Api.User], chats: [Api.Chat], date: Int32, seqRange: SequenceSpan?) -> [UpdateGroup] {
     var updatesWithPts: [Api.Update] = []
     var updatesWithQts: [Api.Update] = []
     var otherUpdates: [Api.Update] = []

@@ -231,7 +231,7 @@ class PeerThreadsSummaryTable: Table {
         for peerId in peerIds {
             var totalUnreadCount: Int32 = 0
             var hasUnmutedUnread: Bool = false
-            var tagSummaries: [StoredPeerThreadsSummary.ThreadsTagSummary] = []
+            let tagSummaries: [StoredPeerThreadsSummary.ThreadsTagSummary] = []
             for item in indexTable.fetch(peerId: peerId, namespace: 0, start: .upperBound, end: .lowerBound, limit: 20) {
                 if item.info.summary.totalUnreadCount > 0 {
                     totalUnreadCount += 1
@@ -239,14 +239,6 @@ class PeerThreadsSummaryTable: Table {
                         hasUnmutedUnread = true
                     }
                 }
-                
-                for tag in self.seedConfiguration.messageTagsWithThreadSummary {
-                    if let value = tagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: item.threadId, namespace: 0, customTag: nil)) {
-                        tagSummaries.append(StoredPeerThreadsSummary.ThreadsTagSummary(tag: tag, count: value.count))
-                    }
-                }
-                
-                tagSummaries.removeAll()
             }
             let current = self.get(peerId: peerId)
             if current?.totalUnreadCount != totalUnreadCount || current?.hasUnmutedUnread != hasUnmutedUnread || current?.tagSummaries != tagSummaries {

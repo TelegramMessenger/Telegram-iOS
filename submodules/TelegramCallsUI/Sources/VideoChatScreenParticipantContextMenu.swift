@@ -450,6 +450,28 @@ extension VideoChatScreenComponent.View {
                 return
             }
             
+            if currentCall.accountContext.routesToChatMediaEditorV2(.videoChatAvatar), let parentController = environment.controller() {
+                self.endEditing(true)
+                let context = currentCall.accountContext
+                context.sharedContext.displaySetPhoto(
+                    parentController: parentController,
+                    context: context,
+                    peer: peer,
+                    canDelete: videoChatAvatarCanDelete(hasPhotos: !peer.profileImageRepresentations.isEmpty, fromGallery: fromGallery),
+                    performDelete: { [weak self] in
+                        self?.presentAvatarRemovalConfirmation(peerId: peerId)
+                    },
+                    options: SetPhotoOptions(forceDark: true, allowsEmojiAvatar: false, splitsVideoExportProgress: true),
+                    completion: { _ in },
+                    completedWithUploadingImage: { [weak self] image, uploadStatus in
+                        completion()
+                        self?.displayUploadingAvatar(image: image, uploadStatus: uploadStatus)
+                        return nil
+                    }
+                )
+                return
+            }
+            
             let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
             
             let legacyController = LegacyController(presentation: .custom, theme: environment.theme)
@@ -535,6 +557,71 @@ extension VideoChatScreenComponent.View {
                 }
             }
         })
+    }
+    
+    private func presentAvatarRemovalConfirmation(peerId: EnginePeer.Id) {
+        guard let currentCall = self.currentCall, let environment = self.environment else {
+            return
+        }
+        let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+        
+        let proceed = { [weak self] in
+            guard let self, let currentCall = self.currentCall else {
+                return
+            }
+            self.updateAvatarDisposable.set((currentCall.accountContext.engine.peers.updatePeerPhoto(peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                return mapResourceToAvatarSizes(engine: currentCall.accountContext.engine, resource: resource, representations: representations)
+            })
+            |> deliverOnMainQueue).start())
+        }
+        
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        let items: [ActionSheetItem] = [
+            ActionSheetButtonItem(title: environment.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                proceed()
+            })
+        ]
+        
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        environment.controller()?.present(actionSheet, in: .window(.root))
+    }
+    
+    private func displayUploadingAvatar(image: UIImage, uploadStatus: Signal<PeerInfoAvatarUploadStatus, NoError>) {
+        guard let currentCall = self.currentCall else {
+            return
+        }
+        guard let data = image.jpegData(compressionQuality: 0.6) else {
+            return
+        }
+        
+        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+        currentCall.accountContext.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data)
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
+        
+        self.currentUpdatingAvatar = (representation, 0.0)
+        
+        self.updateAvatarDisposable.set((uploadStatus
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let self else {
+                return
+            }
+            if let progress = videoChatAvatarUploadProgress(status) {
+                self.currentUpdatingAvatar = (representation, Float(progress))
+            } else {
+                self.currentUpdatingAvatar = nil
+            }
+            self.state?.updated(transition: .spring(duration: 0.4))
+        }))
+        
+        self.state?.updated(transition: .spring(duration: 0.4))
     }
     
     private func updateProfilePhoto(_ image: UIImage) {

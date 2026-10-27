@@ -642,21 +642,31 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         if layout.size.width > 320.0 {
             items.insert(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)), at: 0)
             self.proceedNode.isHidden = false
-            self.animationNode.isHidden = false
-            self.animationNode.visibility = true
         } else {
             insets.top = navigationBarHeight
             self.proceedNode.isHidden = true
-            self.animationNode.isHidden = true
-            self.managedAnimationNode.isHidden = true
         }
-        
+
         let contactSyncSize = self.contactSyncNode.updateLayout(width: maximumWidth)
         if self.hasOtherAccounts {
             self.contactSyncNode.isHidden = false
             items.append(AuthorizationLayoutItem(node: self.contactSyncNode, size: contactSyncSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 14.0, maxValue: 14.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         } else {
             self.contactSyncNode.isHidden = true
+        }
+
+        if layout.size.width > 320.0, !authorizationLayoutItemsFit(height: layout.size.height - insets.top - insets.bottom - additionalBottomInset, items: items) {
+            items.removeFirst()
+            insets.top = navigationBarHeight
+        }
+        if items.first?.node === self.animationNode {
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
+            // The intro animation hands over to the managed one once it completes (and leaves its supernode).
+            self.managedAnimationNode.isHidden = self.animationNode.supernode != nil
+        } else {
+            self.animationNode.isHidden = true
+            self.managedAnimationNode.isHidden = true
         }
         
         let buttonFrame: CGRect

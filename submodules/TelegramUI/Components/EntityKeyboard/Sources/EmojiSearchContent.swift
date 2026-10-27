@@ -169,7 +169,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                     }
                 }
             },
-            clearGroup: { _ in
+            clearGroup: { _, _, _ in
             },
             editAction: { _ in },
             pushController: { _ in

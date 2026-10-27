@@ -320,10 +320,12 @@ namespace {
 
 std::optional<std::string> CSSStyleDeclaration::computedValue(JSContext* ctx, const std::string& name) {
     RenderTree* render = layoutForQuery(ctx);
-    std::optional<std::string> value = render ? render->computedStyleValue(*m_element, name, m_pseudo) : std::nullopt;
-    // The serialization counts against the query budget by its length (the fix-wave review's I-3).
+    uint64_t walked = 0;
+    std::optional<std::string> value = render ? render->computedStyleValue(*m_element, name, m_pseudo, &walked) : std::nullopt;
+    // The serialization counts against the query budget by its length (the fix-wave review's I-3), and the walks and
+    // scans behind it by their elements and bytes (the computed-style final review's I4).
     if (value) {
-        chargeQueryRead(ctx, (uint64_t(value->size()) / 8 + 1) * work::kScanEightUnits);
+        chargeQueryRead(ctx, (uint64_t(value->size()) / 8 + 1) * work::kScanEightUnits + walked);
     }
     return value;
 }

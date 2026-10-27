@@ -4,8 +4,8 @@ import XCTest
 class RegistryTests: MessageWidgetTestCase {
     private func makeRegistry() -> MessageWidgetRegistry {
         let pool = self.pool!, turn = self.turn!
-        return MessageWidgetRegistry(factory: { source, theme, label, max, locale, storage, _ in
-            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
+        return MessageWidgetRegistry(factory: { source, theme, label, max, locale, storage, context, state, _ in
+            MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, locale: locale, storage: storage, context: context, state: state, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
         })
     }
 
@@ -77,6 +77,50 @@ class RegistryTests: MessageWidgetTestCase {
         registry.destroyAll()
     }
 
+    /// widget-sandbox v0.2 (sdk-v1 §2.13): the bot's state is not part of a widget's key. A pass with a new state hands it
+    /// to the running widget, which keeps its page.
+    func testAStateChangeKeepsTheWidget() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><p>x</p>"
+        registry.context = MessageWidgetContext(canQuery: true, chatType: .private)
+        registry.state = MessageWidgetState(chatData: Data("c1".utf8), publicData: nil)
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let first = self.instance(in: registry, path: [], source: source)
+        _ = first?.evaluateForTesting("window.mark = 7; 1")
+        registry.state = MessageWidgetState(chatData: Data("c2".utf8), publicData: Data("p2".utf8))
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let instance = self.instance(in: registry, path: [], source: source)
+        XCTAssertTrue(first === instance, "a state change restarted the widget")
+        XCTAssertEqual(instance?.evaluateForTesting("[TelegramWidget.chatData, TelegramWidget.publicData, window.mark].join()"), "c2,p2,7")
+        registry.destroyAll()
+    }
+
+    /// The message's context is fixed for a widget's life (sdk-v1 §2.14): a pass with another context (a forward's echo
+    /// replaced by the server's message) makes a new widget.
+    func testAContextChangeRestartsTheWidget() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><p>x</p>"
+        registry.context = MessageWidgetContext(isCopy: true, chatType: .private)
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let first = self.instance(in: registry, path: [], source: source)
+        XCTAssertEqual(first?.evaluateForTesting("String(TelegramWidget.isForward)"), "true")
+        registry.context = MessageWidgetContext(isCopy: true, canQuery: true, chatType: .private)
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        registry.endPass()
+        let instance = self.instance(in: registry, path: [], source: source)
+        XCTAssertNotNil(instance)
+        XCTAssertFalse(first === instance)
+        XCTAssertEqual(registry.layoutVersions.count, 1)
+        registry.destroyAll()
+    }
+
     private func instance(in registry: MessageWidgetRegistry, path: [Int], source: String) -> MessageWidgetInstance? {
         return (registry.view(path: path, source: source) as? MessageWidgetView)?.instance
     }
@@ -126,7 +170,7 @@ class RegistryTests: MessageWidgetTestCase {
         self.lowerTheParseCeiling()
         let pool = self.pool!, turn = self.turn!
         var calls = 0
-        let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _ in
+        let registry = MessageWidgetRegistry(factory: { source, theme, label, max, _, _, _, _, _ in
             calls += 1
             return MessageWidgetInstance(source: source, theme: theme, stoppedLabel: label, maxMessageLength: max, pool: pool, waitPolicy: .unbounded, turn: turn, scale: 1.0)
         })
@@ -151,9 +195,32 @@ class RegistryTests: MessageWidgetTestCase {
         XCTAssertEqual(calls, 3)
     }
 
+    /// A bubble's next update reads its widget as the registry has it: the report and the edge once it has run (the
+    /// edge from its script), and a start that failed, which the next layout turns into the pill.
+    func testTheRunStateFollowsTheWidget() {
+        let registry = self.makeRegistry()
+        let source = "<!doctype html><script>TelegramWidget.setResizeAnchor('bottom')</script><div style=\"height:120px\"></div>"
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNil(registry.runState(path: [], source: source))
+        XCTAssertNotNil(registry.size(path: [], source: source, width: 300.0))
+        XCTAssertEqual(registry.runState(path: [], source: source), MessageWidgetRunState(reportedHeight: 136.0, resizeAnchor: .bottom, failedToStart: false))
+        registry.endPass()
+        registry.destroyAll()
+    }
+
+    func testAFailedStartIsInTheRunState() {
+        self.lowerTheParseCeiling()
+        let registry = self.makeRegistry()
+        let source = self.unstartableSource("<!doctype html><p>one</p>")
+        registry.beginPass(ownerId: 1, theme: .light)
+        XCTAssertNil(registry.size(path: [0], source: source, width: 360.0))
+        XCTAssertEqual(registry.runState(path: [0], source: source), MessageWidgetRunState(reportedHeight: nil, resizeAnchor: .top, failedToStart: true))
+        registry.endPass()
+    }
+
     func testNilFromTheFactoryIsNotRetriedEveryPass() {
         var calls = 0
-        let registry = MessageWidgetRegistry(factory: { _, _, _, _, _, _, _ in
+        let registry = MessageWidgetRegistry(factory: { _, _, _, _, _, _, _, _, _ in
             calls += 1
             return nil
         })

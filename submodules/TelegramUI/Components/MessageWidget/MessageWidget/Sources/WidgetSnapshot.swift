@@ -13,6 +13,8 @@ struct WidgetSnapshot {
         case frame
         case visibility
         case event
+        /// The bot's state changed (sdk-v1 §2.13), or a request's outcome came (§2.14): the widget's events run.
+        case state
         /// Draws the tiles the tasks before it changed (MessageWidgetInstance queues one, never waited for, after a
         /// snapshot that needs it): drawing is off the critical path, which is the size.
         case draw
@@ -34,6 +36,8 @@ struct WidgetSnapshot {
     let width: CGFloat
     /// The document's size after the task; nil without a renderer (a start that failed).
     let size: CGSize?
+    /// The edge the widget asked to stay put when its height changes (sdk-v1 §5.6), reported with the size.
+    let resizeAnchor: MessageWidgetResizeAnchor
     /// The tiles a `.draw` task drew (nil for every other kind, and without a renderer).
     let frame: WidgetFrame?
     /// The task left tiles to draw: main queues a `.draw` task when it applies this snapshot.

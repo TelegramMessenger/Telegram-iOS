@@ -36,7 +36,9 @@ public final class HLSPlaybackController {
         // A start with no opening on disk takes the level the class's estimate picks only when that level's key is above
         // this one; otherwise it takes the preload level (the owner's rule).
         public var estimateStartAboveKey: Int = 480
-
+        // The seconds ahead `ChunkMediaPlayerV2` needs to play; `startNotBefore` keeps that much when the next part lands.
+        public var playerMinimumBuffer: Double = 1.0
+        
         public init() {
         }
     }
@@ -441,6 +443,11 @@ self.playlists = Array(repeating: nil, count: levels.count)
         return self.buffer.part(at: position)?.key.level
     }
     
+    // Seconds buffered ahead of the playhead, through the gaps the player plays over.
+    public var forwardBufferLength: Double {
+        return self.buffer.forwardLength(from: self.position)
+    }
+    
     // MARK: State
     
     private var maxAutoLevel: Int {
@@ -494,6 +501,39 @@ self.playlists = Array(repeating: nil, count: levels.count)
         let remaining = Double(max(0, load.expectedNetworkBytes - load.networkBytes))
         return remaining * 8.0 / self.estimator.estimate <= 0.15
     }
+    
+    // D14: when the player's clock may start after an open or a seek. A position inside a part leaves only the rest of
+    // it ahead (an open at 3 s into a 5 s segment: 2 s), and a clock started at `playerMinimumBuffer` then stalls when
+    // the next part needs longer than what is left to play. While that part is the only one ahead, the earliest moment
+    // the clock can start and still have `playerMinimumBuffer` ahead when the next part lands at the current estimate
+    // (in flight: what it still owes; not yet issued: the next segment at the part's level, as the level choice charges
+    // it); nil when nothing needs holding. The wait never outlasts the next part: once it lands, two parts are ahead.
+    public var startNotBefore: Double? {
+        guard let estimate = self.estimate, estimate > 0.0, let part = self.buffer.part(at: self.position) else {
+            return nil
+        }
+        // Entered at the part's start (an open at 0, or at a segment boundary), it holds a whole segment.
+        guard self.position - part.start > HLSPlaybackController.startGateEntryMargin, let runEnd = self.buffer.forwardEnd(from: self.position), runEnd <= part.end + 0.001 else {
+            return nil
+        }
+        let now = self.environment.now
+        let landing: Double
+        if let load = self.loads.first(where: { $0.request.nominalStart <= runEnd + HLSBufferModel.maxHole && $0.request.nominalEnd > runEnd + HLSBufferModel.maxHole }) {
+            // A load that has received nothing still owes its first byte, as the level choice charges it.
+            let firstByte = load.networkBytes > 0 ? 0.0 : self.configuration.levelChoiceTTFB
+            landing = load.isDataDone ? now : now + firstByte + Double(max(0, load.expectedNetworkBytes - load.networkBytes)) * 8.0 / estimate
+        } else if let segment = self.nextSegment(level: part.key.level, after: runEnd), segment.start <= runEnd + HLSBufferModel.maxHole {
+            landing = now + self.configuration.levelChoiceTTFB + Double(segment.byteRange.count) * 8.0 / estimate
+        } else {
+            return nil
+        }
+        let notBefore = landing - (runEnd - self.position - self.configuration.playerMinimumBuffer)
+        return notBefore > now ? notBefore : nil
+    }
+    
+    // How far into a part a position must be for `startNotBefore` to hold the clock: the player's own tolerance for
+    // joining parts, so an open at a segment boundary is never held.
+    static let startGateEntryMargin: Double = 0.5
     
     // MARK: Segments
     
@@ -684,7 +724,7 @@ self.playlists = Array(repeating: nil, count: levels.count)
         }
         return result
     }
-
+    
     private func isPending(_ key: HLSSegmentKey) -> Bool {
         return self.pendingRequests.contains(where: { $0.key == key })
     }
@@ -707,7 +747,7 @@ self.playlists = Array(repeating: nil, count: levels.count)
         }
         return true
     }
-
+    
     // The buffer the level choice judges a segment against (seconds of playback): with loads in flight, the buffer as
     // it will be once they land, less the time the link still needs for what they owe. With none, the buffer, as hls.js.
     private func levelChoiceBuffer(bufferEnd: Double) -> Double {
@@ -742,7 +782,7 @@ self.playlists = Array(repeating: nil, count: levels.count)
         if let plannedEnd, let endPart = planned.part(at: max(position, plannedEnd - 0.001)), let endPlaylist = self.playlists[endPart.key.level], endPart.key.index == endPlaylist.segments.count - 1 {
             return
         }
-
+        
         var level: Int
         if let manualLevel = self.manualLevel {
             level = manualLevel
@@ -1194,16 +1234,19 @@ self.playlists = Array(repeating: nil, count: levels.count)
                 self.firstSegmentSource = source
                 self.log("first segment level=\(self.levelKey(level)) index=\(request.key.index) source=\(source == .disk ? "disk" : "network")")
             }
+            let reportsAppend = !self.flushAfterAppend
             if self.flushAfterAppend {
                 self.flushAfterAppend = false
                 self.flushForward()
-            } else {
-                self.emitBufferChanged()
             }
             self.updatePartAtPosition()
             self.updateAbandonWatch()
             self.appendNextReady()
             self.scheduleNext()
+            // After the next load is chosen: the node reads `startNotBefore` with the parts, and it charges that load.
+            if reportsAppend {
+                self.emitBufferChanged()
+            }
         case .failed:
             // The bytes may be gone from disk (a cleared cache): judge the level's init from disk again.
             self.loadedInits.remove(level)

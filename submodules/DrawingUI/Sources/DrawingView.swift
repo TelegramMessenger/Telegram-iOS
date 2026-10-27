@@ -7,6 +7,7 @@ import LegacyComponents
 import AppBundle
 import ImageBlur
 import MediaEditor
+import ImageInpainting
 
 protocol DrawingRenderLayer: CALayer {
     
@@ -71,6 +72,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
 
     var shouldBegin: (CGPoint) -> Bool = { _ in return true }
     var getFullImage: () -> UIImage? = { return nil }
+    var getCleanupSourceImage: () -> UIImage? = { return nil }
+    
+    public var cleanupEnabled = false
+    private var isProcessingCleanup = false
+    private let cleanupDisposable = MetaDisposable()
+    private lazy var cleanupHighlightImage: UIImage? = generateSingleColorImage(size: CGSize(width: 1.0, height: 1.0), color: UIColor(white: 1.0, alpha: 0.45))
     
     var requestedColorPicker: () -> Void = {}
     var requestedEraserToggle: () -> Void = {}
@@ -195,7 +202,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 if !strongSelf.shouldBegin(point) {
                     return false
                 }
-                if strongSelf.undoStack.isEmpty && !strongSelf.hasOpaqueData && strongSelf.tool == .eraser {
+                if strongSelf.undoStack.isEmpty && !strongSelf.hasOpaqueData && strongSelf.isErasing {
+                    return false
+                }
+                if strongSelf.isCleanupTool && (strongSelf.isProcessingCleanup || !strongSelf.isCleanupReady) {
                     return false
                 }
                 if strongSelf.tool == .blur, strongSelf.preparedBlurredImage == nil {
@@ -238,7 +248,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                         strongSelf.currentDrawingRenderView = nil
                         currentDrawingView.removeFromSuperview()
                     }
-                    if strongSelf.tool == .eraser {
+                    if strongSelf.isErasing {
                         strongSelf.currentDrawingViewContainer.removeFromSuperview()
                         strongSelf.currentDrawingViewContainer.backgroundColor = .white
                         
@@ -246,9 +256,9 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                         
                         strongSelf.currentDrawingViewContainer.addSubview(renderView)
                         strongSelf.mask = strongSelf.currentDrawingViewContainer
-                    } else if strongSelf.tool == .blur {
+                    } else if strongSelf.drawsThroughMask {
                         strongSelf.currentDrawingViewContainer.mask = renderView
-                        strongSelf.currentDrawingViewContainer.image = strongSelf.preparedBlurredImage
+                        strongSelf.currentDrawingViewContainer.image = strongSelf.maskedPreviewImage
                     } else {
                         strongSelf.currentDrawingViewContainer.addSubview(renderView)
                     }
@@ -260,7 +270,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                         strongSelf.currentDrawingLayer = nil
                         currentDrawingLayer.removeFromSuperlayer()
                     }
-                    if strongSelf.tool == .eraser {
+                    if strongSelf.isErasing {
                         strongSelf.currentDrawingViewContainer.removeFromSuperview()
                         strongSelf.currentDrawingViewContainer.backgroundColor = .white
                         
@@ -268,9 +278,9 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                         
                         strongSelf.currentDrawingViewContainer.layer.addSublayer(renderLayer)
                         strongSelf.mask = strongSelf.currentDrawingViewContainer
-                    } else if strongSelf.tool == .blur {
+                    } else if strongSelf.drawsThroughMask {
                         strongSelf.currentDrawingViewContainer.layer.mask = renderLayer
-                        strongSelf.currentDrawingViewContainer.image = strongSelf.preparedBlurredImage
+                        strongSelf.currentDrawingViewContainer.image = strongSelf.maskedPreviewImage
                     } else {
                         strongSelf.currentDrawingViewContainer.layer.addSublayer(renderLayer)
                     }
@@ -358,7 +368,13 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 strongSelf.strokeRecognitionTimer = nil
                 strongSelf.uncommitedElement?.updatePath(point, state: state, zoomScale: strongSelf.zoomScale)
                 
-                if strongSelf.uncommitedElement?.isValid == true {
+                if strongSelf.isCleanupTool {
+                    if strongSelf.uncommitedElement?.isValid == true {
+                        strongSelf.startCleanup()
+                    } else {
+                        strongSelf.cancelDrawing()
+                    }
+                } else if strongSelf.uncommitedElement?.isValid == true {
                     let bounds = strongSelf.uncommitedElement?.bounds
                     Queue.mainQueue().after(0.05) {
                         if let bounds = bounds {
@@ -398,6 +414,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     deinit {
         self.longPressTimer?.invalidate()
         self.strokeRecognitionTimer?.invalidate()
+        self.cleanupDisposable.dispose()
     }
     
     private var clearImage: UIImage?
@@ -489,6 +506,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         case .began:
             self.longPressTimer?.invalidate()
             self.longPressTimer = nil
+            
+            if self.isCleanupTool {
+                break
+            }
             
             if self.longPressTimer == nil {
                 var toolColor = self.toolColor
@@ -587,12 +608,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 self.layer.contents = updatedImage.cgImage
                 
                 if let currentDrawingRenderView = self.currentDrawingRenderView {
-                    if case .eraser = self.tool {
+                    if self.isErasing {
                         currentDrawingRenderView.removeFromSuperview()
                         self.mask = nil
                         self.insertSubview(self.currentDrawingViewContainer, at: 0)
                         self.currentDrawingViewContainer.backgroundColor = .clear
-                    } else if case .blur = self.tool {
+                    } else if self.drawsThroughMask {
                         self.currentDrawingViewContainer.mask = nil
                         self.currentDrawingViewContainer.image = nil
                     } else {
@@ -607,12 +628,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                     self.currentDrawingRenderView = nil
                 }
                 if let currentDrawingLayer = self.currentDrawingLayer {
-                    if case .eraser = self.tool {
+                    if self.isErasing {
                         currentDrawingLayer.removeFromSuperlayer()
                         self.mask = nil
                         self.insertSubview(self.currentDrawingViewContainer, at: 0)
                         self.currentDrawingViewContainer.backgroundColor = .clear
-                    } else if case .blur = self.tool {
+                    } else if self.drawsThroughMask {
                         self.currentDrawingViewContainer.layer.mask = nil
                         self.currentDrawingViewContainer.image = nil
                     } else {
@@ -641,12 +662,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         self.uncommitedElement = nil
         
         if let currentDrawingRenderView = self.currentDrawingRenderView {
-            if case .eraser = self.tool {
+            if self.isErasing {
                 currentDrawingRenderView.removeFromSuperview()
                 self.mask = nil
                 self.insertSubview(self.currentDrawingViewContainer, at: 0)
                 self.currentDrawingViewContainer.backgroundColor = .clear
-            } else if case .blur = self.tool {
+            } else if self.drawsThroughMask {
                 self.currentDrawingViewContainer.mask = nil
                 self.currentDrawingViewContainer.image = nil
             } else {
@@ -655,12 +676,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             self.currentDrawingRenderView = nil
         }
         if let currentDrawingLayer = self.currentDrawingLayer {
-            if self.tool == .eraser {
+            if self.isErasing {
                 currentDrawingLayer.removeFromSuperlayer()
                 self.mask = nil
                 self.insertSubview(self.currentDrawingViewContainer, at: 0)
                 self.currentDrawingViewContainer.backgroundColor = .clear
-            } else if self.tool == .blur {
+            } else if self.drawsThroughMask {
                 self.currentDrawingViewContainer.mask = nil
                 self.currentDrawingViewContainer.image = nil
             } else {
@@ -1029,19 +1050,75 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             )
             element = penTool
         case .eraser:
+            let isCleanup = self.isCleanupTool
             let penTool = PenTool(
                 drawingSize: self.imageSize,
-                color: self.toolColor,
+                color: isCleanup ? DrawingColor(color: .white) : self.toolColor,
                 lineWidth: self.toolBrushSize * scale,
                 hasArrow: false,
-                isEraser: true,
-                isBlur: false,
+                isEraser: !isCleanup,
+                isBlur: isCleanup,
                 blurredImage: nil,
                 animationsEnabled: self.animationsEnabled
             )
             element = penTool
         }
         return element
+    }
+    
+    private var isCleanupTool: Bool {
+        #if DEBUG
+        if #available(iOS 17.0, *) {
+            return self.tool == .eraser && self.cleanupEnabled
+        }
+        #endif
+        return false
+    }
+    
+    private var isCleanupReady: Bool {
+        if #available(iOS 17.0, *) {
+            return ImageInpainter.shared != nil
+        }
+        return false
+    }
+    
+    private var isErasing: Bool {
+        return self.tool == .eraser && !self.isCleanupTool
+    }
+    
+    private var drawsThroughMask: Bool {
+        return self.tool == .blur || self.isCleanupTool
+    }
+    
+    private var maskedPreviewImage: UIImage? {
+        return self.isCleanupTool ? self.cleanupHighlightImage : self.preparedBlurredImage
+    }
+    
+    private func startCleanup() {
+        guard #available(iOS 17.0, *), let element = self.uncommitedElement as? PenTool, let inpainter = ImageInpainter.shared, let maskImage = element.generateMaskImage(), let sourceImage = self.getCleanupSourceImage()?.cgImage else {
+            self.cancelDrawing()
+            return
+        }
+        self.isProcessingCleanup = true
+        let elementId = element.uuid
+        self.cleanupDisposable.set((inpainter.inpaint(image: sourceImage, strokeMask: maskImage)
+        |> deliverOnMainQueue).start(next: { [weak self] patch in
+            guard let self else {
+                return
+            }
+            self.isProcessingCleanup = false
+            guard self.uncommitedElement?.uuid == elementId else {
+                return
+            }
+            guard let patch else {
+                self.cancelDrawing()
+                self.updateInternalState()
+                return
+            }
+            let cleanupElement = CleanupTool(drawingSize: self.imageSize, patchImage: UIImage(cgImage: patch.image), patchRect: patch.rect)
+            self.uncommitedElement = cleanupElement
+            self.finishDrawing(rect: cleanupElement.bounds, synchronous: true)
+        }))
     }
     
     func setBrushSizePreview(_ size: CGFloat?) {

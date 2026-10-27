@@ -387,11 +387,11 @@ WR_TEST(testScriptsEffectChangesSurviveARebuild) {
     checkEval(env, "[a.effect.getTiming().duration, $('c').getAnimations()[0] === a].join()", "20000,true");
 }
 
-/// I1: on a page whose patches litehtml refuses (generated content), every animated frame is a rebuild; the style-change
-/// step still runs only when the frame changed something it reads.
+/// I1: on a page whose patches litehtml refuses (a sibling combinator), every animated frame is a rebuild; the
+/// style-change step still runs only when the frame changed something it reads.
 WR_TEST(testARebuildFromAnAnimatedFrameRunsNoStyleStep) {
     int steps = 0;
-    RenderEnv env(page("<div id=m class=box style='animation:grow 10s linear'></div><p id=p>x</p>", "#p::before{content:'>'}"), {}, true,
+    RenderEnv env(page("<div id=m class=box style='animation:grow 10s linear'></div><p id=p>x</p>", "#m + p{color:#c00}"), {}, true,
                   [&](wr_test::HostEnv& host) {
                       wr::animation::AnimationState::of(host.ctx()).setStyleObserverForTesting([&](const wr::animation::StyleChange&) { steps++; });
                   });

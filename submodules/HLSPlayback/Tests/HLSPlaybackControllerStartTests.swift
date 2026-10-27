@@ -581,4 +581,21 @@ final class HLSPlaybackControllerStartTests: XCTestCase {
         let expected = Int64(playlist.segments[0].byteRange.count + playlist.segments[1].byteRange.count)
         XCTAssertEqual(h.controller.diskBytesAppended, expected)
     }
+
+    // What the node reads to decide whether the playing video goes ahead in the download queue: seconds buffered from
+    // the playhead on.
+    func testForwardBufferLengthIsWhatIsBufferedAheadOfThePlayhead() {
+        let h = ControllerHarness()
+        h.environment.bandwidth = 1000.0
+        h.cache(level: 2, seconds: 20.0)
+        h.setPlaylists()
+        XCTAssertEqual(h.controller.forwardBufferLength, 0.0)
+        h.controller.start()
+        h.environment.advance(by: 1.0)
+
+        XCTAssertEqual(h.controller.forwardBufferLength, 20.0, accuracy: 0.001)
+        h.controller.updatePlayback(position: 3.0, isPlaying: true, rate: 1.0)
+        XCTAssertEqual(h.controller.forwardBufferLength, 17.0, accuracy: 0.001)
+        h.assertInvariants()
+    }
 }

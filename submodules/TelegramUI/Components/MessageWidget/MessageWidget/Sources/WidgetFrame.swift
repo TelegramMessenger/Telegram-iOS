@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import MessageWidgetRendering
+import WidgetRuntimeIOS
 
 /// A widget's pixels as 128 pt tiles (spec 2026-10-15 D4), each a CGImage the renderer rasterized into a bitmap context
 /// of its own at `scale`. As a task's result it holds the tiles the task changed; as main's frame, every tile.
@@ -83,8 +84,9 @@ final class WidgetTileDrawer {
         }
         // The tiles are drawn in parallel (the user's goal, 2026-10-19: minimal boot and update latency; a boot draws
         // every tile, ~2/3 of the slowest boots' time): a published tree paints on any thread, and each tile is a
-        // bitmap of its own.
+        // bitmap of its own. They share one effect store, so a filter or backdrop several tiles show is made once.
         let scale = self.scale
+        let effects = WREffectStore()
         let images = UnsafeMutableBufferPointer<CGImage?>.allocate(capacity: keys.count)
         images.initialize(repeating: nil)
         defer {
@@ -93,10 +95,10 @@ final class WidgetTileDrawer {
         }
         if keys.count > 1 {
             DispatchQueue.concurrentPerform(iterations: keys.count) { i in
-                images[i] = renderer.image(rect: WidgetFrame.rect(forKey: keys[i], size: size), scale: scale)
+                images[i] = renderer.image(rect: WidgetFrame.rect(forKey: keys[i], size: size), scale: scale, effects: effects)
             }
         } else if let key = keys.first {
-            images[0] = renderer.image(rect: WidgetFrame.rect(forKey: key, size: size), scale: scale)
+            images[0] = renderer.image(rect: WidgetFrame.rect(forKey: key, size: size), scale: scale, effects: effects)
         }
         var tiles: [Int: CGImage] = [:]
         for (i, key) in keys.enumerated() {
@@ -109,32 +111,57 @@ final class WidgetTileDrawer {
         self.drawnSize = size
         self.drawnCanvas = renderer.canvas
         if size.width >= 1.0 && size.height >= 1.0 {
-            self.drawnCorners = (WidgetTileDrawer.color(of: renderer, at: CGRect(x: 0.0, y: size.height - 1.0, width: 1.0, height: 1.0)),
-                                 WidgetTileDrawer.color(of: renderer, at: CGRect(x: size.width - 1.0, y: size.height - 1.0, width: 1.0, height: 1.0)))
+            // From the tiles just drawn; a corner whose tile was not drawn keeps its colour, its pixels unchanged (a new
+            // size draws every tile).
+            let scale = self.scale
+            func corner(_ point: CGPoint, kept: CGColor?) -> CGColor? {
+                let key = WidgetFrame.key(row: Int(point.y / WidgetFrame.tileSize), column: Int(point.x / WidgetFrame.tileSize))
+                guard let image = tiles[key] else {
+                    return kept
+                }
+                return WidgetTileDrawer.color(of: image, tile: WidgetFrame.rect(forKey: key, size: size), at: point, scale: scale)
+            }
+            self.drawnCorners = (corner(CGPoint(x: 0.0, y: size.height - 1.0), kept: self.drawnCorners.left),
+                                 corner(CGPoint(x: size.width - 1.0, y: size.height - 1.0), kept: self.drawnCorners.right))
         } else {
             self.drawnCorners = (nil, nil)
         }
         return WidgetFrame(size: size, scale: self.scale, tiles: tiles, canvasColor: self.drawnCanvas?.color, canvasTop: self.drawnCanvas?.top ?? 0.0, bottomLeftColor: self.drawnCorners.left, bottomRightColor: self.drawnCorners.right)
     }
 
-    /// The colour `renderer` paints over `rect` (one pixel at 1x), unpremultiplied; nil where it is transparent.
-    static func color(of renderer: WidgetTreeRenderer, at rect: CGRect) -> CGColor? {
-        guard let image = renderer.image(rect: rect, scale: 1.0) else {
+    /// The colour of the 1 pt square at `point` (document coordinates) in `image`, the tile drawn of `tile` at `scale`:
+    /// its pixels averaged (8 bits a channel), unpremultiplied; nil where it is transparent.
+    static func color(of image: CGImage, tile: CGRect, at point: CGPoint, scale: CGFloat) -> CGColor? {
+        let x0 = max(0, Int(floor((point.x - tile.minX) * scale))), x1 = min(image.width, Int(ceil((point.x + 1.0 - tile.minX) * scale)))
+        let y0 = max(0, Int(floor((point.y - tile.minY) * scale))), y1 = min(image.height, Int(ceil((point.y + 1.0 - tile.minY) * scale)))
+        guard x1 > x0, y1 > y0, let block = image.cropping(to: CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)) else {
             return nil
         }
-        var pixel: [UInt8] = [0, 0, 0, 0]
-        let drawn = pixel.withUnsafeMutableBytes { bytes -> Bool in
-            guard let context = CGContext(data: bytes.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+        let width = x1 - x0, height = y1 - y0
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = pixels.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
                 return false
             }
-            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+            context.draw(block, in: CGRect(x: 0.0, y: 0.0, width: CGFloat(width), height: CGFloat(height)))
             return true
         }
-        guard drawn, pixel[3] > 0 else {
+        guard drawn else {
+            return nil
+        }
+        let count = width * height
+        var sums = [0, 0, 0, 0]
+        for i in 0 ..< count {
+            for c in 0 ..< 4 {
+                sums[c] += Int(pixels[i * 4 + c])
+            }
+        }
+        let pixel = sums.map { ($0 + count / 2) / count }
+        guard pixel[3] > 0 else {
             return nil
         }
         let alpha = CGFloat(pixel[3]) / 255.0
-        let channel: (UInt8) -> CGFloat = { min(1.0, CGFloat($0) / 255.0 / alpha) }
+        let channel: (Int) -> CGFloat = { min(1.0, CGFloat($0) / 255.0 / alpha) }
         return CGColor(srgbRed: channel(pixel[0]), green: channel(pixel[1]), blue: channel(pixel[2]), alpha: alpha)
     }
 }

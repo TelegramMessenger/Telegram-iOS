@@ -22,6 +22,7 @@ final class ShareScreenSendCoordinator {
     var present: ((ViewController) -> Void)?
     var premiumRequired: ((EnginePeer) -> Void)?
     var navigationController: (() -> NavigationController?)?
+    var sent: (([EnginePeer.Id]) -> Void)?
     var enqueued: (([EnginePeer.Id], [Int64]) -> Void)?
     var mediaStartTimestamp: Int32?
     var willEnqueue: (([EnginePeer.Id]) -> Void)?
@@ -110,7 +111,8 @@ final class ShareScreenSendCoordinator {
             guard let self else { return }
             let data = context.sharedContext.currentPresentationData.with { $0 }
             var stars: [EnginePeer.Id: StarsAmount] = [:]
-            for peer in peers {
+            for selectedPeer in peers {
+                let peer = (currentPeers[selectedPeer.id] ?? nil) ?? selectedPeer
                 if case .premium = requirements[peer.id] {
                     self.isSending = false
                     self.updated?()
@@ -316,12 +318,62 @@ final class ShareScreenSendCoordinator {
             }
             signals.append(enqueueMessages(account: self.context.account, peerId: peer.id, messages: messages))
         }
-        self.disposable.set((combineLatest(signals) |> deliverOnMainQueue).start(next: { [weak self] _ in
+        self.disposable.set((combineLatest(signals) |> deliverOnMainQueue).start(next: { [weak self] messageIds in
             guard let self else { return }
             self.isEnqueuing = false
             self.isSending = false
             self.updated?()
-            self.enqueued?(peers.map(\.id), correlationIds)
+            self.sent?(peers.map(\.id))
+            self.awaitDelivery(messageIds: messageIds.flatMap { $0.compactMap { $0 } }, peers: peers, correlationIds: correlationIds)
         }))
+    }
+
+    private func awaitDelivery(messageIds: [EngineMessage.Id], peers: [EnginePeer], correlationIds: [Int64]) {
+        let context = self.context
+        let enqueued = self.enqueued
+        let present: (ViewController) -> Void = { [weak self] controller in
+            if let mainWindow = context.sharedContext.mainWindow {
+                mainWindow.present(controller, on: .root)
+            } else {
+                self?.present?(controller)
+            }
+        }
+        let outcomes = messageIds.map { id -> Signal<(EngineMessage.Id, Bool, PendingMessageFailureReason?), NoError> in
+            return combineLatest(
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: id)),
+                context.account.pendingMessageManager.pendingMessageStatus(id)
+            )
+            |> mapToSignal { message, status -> Signal<(EngineMessage.Id, Bool, PendingMessageFailureReason?), NoError> in
+                if let message, message.flags.contains(.Failed) {
+                    return .single((id, true, status.1))
+                } else if message == nil || !message!.flags.contains(.Unsent) {
+                    return .single((id, false, nil))
+                } else {
+                    return .complete()
+                }
+            }
+            |> take(1)
+        }
+        let _ = (combineLatest(outcomes)
+        |> deliverOnMainQueue).startStandalone(next: { outcomes in
+            let failed = outcomes.filter { $0.1 }
+            guard let first = failed.first else {
+                enqueued?(peers.map(\.id), correlationIds)
+                return
+            }
+            let _ = context.engine.messages.deleteMessagesInteractively(messageIds: failed.map { $0.0 }, type: .forEveryone).startStandalone()
+            guard let peer = peers.first(where: { $0.id == first.0.peerId }) else { return }
+            let data = context.sharedContext.currentPresentationData.with { $0 }
+            let text: String
+            switch failed.lazy.compactMap({ $0.2 }).first {
+            case .slowmodeActive:
+                text = data.strings.Chat_SlowmodeSendError
+            case .flood:
+                text = data.strings.Conversation_SendMessageErrorFlood
+            default:
+                text = data.strings.Chat_SendNotAllowedPeerText(peer.compactDisplayTitle).string
+            }
+            present(standardTextAlertController(theme: AlertControllerTheme(presentationData: data), title: peer.compactDisplayTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: data.strings.Common_OK, action: {})]))
+        })
     }
 }

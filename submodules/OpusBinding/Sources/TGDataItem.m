@@ -33,4 +33,12 @@
     return _data;
 }
 
+- (bool)replaceData:(NSData *)data {
+    if (data == nil) {
+        return false;
+    }
+    [_data setData:data];
+    return true;
+}
+
 @end

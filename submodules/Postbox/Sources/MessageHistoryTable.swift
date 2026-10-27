@@ -92,6 +92,10 @@ final class MessageHistoryTable: Table {
     let textIndexTable: MessageHistoryTextIndexTable
     let summaryTable: MessageHistoryTagsSummaryTable
     let pendingActionsTable: PendingMessageActionsTable
+    /// What was deleted in the last few minutes, in memory only (RecentlyDeletedMessages.swift):
+    /// `removeMessages` and `removeMessagesInRange` record into it, `Transaction.deleteMessagesWithGlobalIds`
+    /// adds the global ids, and `wasDeletedRecently` reads it.
+    let recentlyDeletedMessages = RecentlyDeletedMessages()
     
     init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, threadsTable: MessageHistoryThreadsTable, threadTagsTable: MessageHistoryThreadTagsTable, customTagTable: MessageCustomTagTable, customTagWithTagTable: MessageCustomTagWithTagTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, timeBasedAttributesTable: TimestampBasedMessageAttributesTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
         self.seedConfiguration = seedConfiguration
@@ -468,7 +472,18 @@ final class MessageHistoryTable: Table {
         return globallyUniqueIdToMessageId
     }
     
+    /// Whether `id` was deleted in the last few minutes (RecentlyDeletedMessages.swift). Its global id counts
+    /// only where its peer and message namespaces have global ids (in TelegramCore: private chats and basic
+    /// groups, Cloud namespace).
+    func wasDeletedRecently(_ id: MessageId) -> Bool {
+        let matchesGlobalId = self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: id.peerId.namespace, messageIdNamespace: id.namespace))
+        return self.recentlyDeletedMessages.contains(id, matchesGlobalId: matchesGlobalId)
+    }
+
     func removeMessages(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation], timestampBasedMessageAttributesOperations: inout [TimestampBasedMessageAttributesOperation], forEachMedia: ((Media) -> Void)?) {
+        // Every requested id, stored or not: a fetch in flight may be bringing back one never stored here.
+        // The bulk removals (clearHistory, removeAllMessagesWith...) pass the ids they remove.
+        self.recentlyDeletedMessages.add(ids: messageIds)
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             
@@ -493,6 +508,10 @@ final class MessageHistoryTable: Table {
     }
     
     func removeMessagesInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation], timestampBasedMessageAttributesOperations: inout [TimestampBasedMessageAttributesOperation], forEachMedia: ((Media) -> Void)?) {
+        if minId <= maxId {
+            // The whole range, stored or not (the replay's UpdateMinAvailableMessage deletes up to an id).
+            self.recentlyDeletedMessages.add(peerId: peerId, namespace: namespace, range: minId ... maxId)
+        }
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operations: &operations)
         if let forEachMedia = forEachMedia {

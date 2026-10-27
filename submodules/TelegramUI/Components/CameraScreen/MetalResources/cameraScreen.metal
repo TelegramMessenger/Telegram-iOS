@@ -1,22 +1,31 @@
 #include <metal_stdlib>
 using namespace metal;
 
-typedef struct {
-    packed_float2 position;
-} Vertex;
-
-struct RasterizerData
-{
+struct CameraBlobRasterizerData {
     float4 position [[position]];
+    float2 localPosition;
 };
 
-vertex RasterizerData cameraBlobVertex
-(
-    constant Vertex *vertexArray[[buffer(0)]],
-    uint vertexID [[ vertex_id ]]
+constant static float2 cameraBlobQuadVertices[6] = {
+    float2(0.0, 0.0),
+    float2(1.0, 0.0),
+    float2(0.0, 1.0),
+    float2(1.0, 0.0),
+    float2(0.0, 1.0),
+    float2(1.0, 1.0)
+};
+
+vertex CameraBlobRasterizerData cameraBlobVertex(
+    constant float4 &rect [[buffer(0)]],
+    constant float2 &resolution [[buffer(1)]],
+    uint vertexID [[vertex_id]]
 ) {
-    RasterizerData out;
-    out.position = vector_float4(vertexArray[vertexID].position[0], vertexArray[vertexID].position[1], 0.0, 1.0);
+    float2 quadVertex = cameraBlobQuadVertices[vertexID];
+    
+    CameraBlobRasterizerData out;
+    float2 position = rect.xy + quadVertex * rect.zw;
+    out.position = float4(-1.0 + position.x * 2.0, -1.0 + position.y * 2.0, 0.0, 1.0);
+    out.localPosition = float2(quadVertex.x, 1.0 - quadVertex.y) * resolution;
     return out;
 }
 
@@ -47,22 +56,22 @@ float map(float2 uv, float4 primaryParameters, float2 primaryOffset, float3 seco
     return metaballs;
 }
 
-fragment half4 cameraBlobFragment(RasterizerData in[[stage_in]],
-                              constant uint2 &resolution[[buffer(0)]],
+fragment half4 cameraBlobFragment(CameraBlobRasterizerData in[[stage_in]],
+                              constant float2 &resolution[[buffer(0)]],
                               constant float4 &primaryParameters[[buffer(1)]],
                               constant float2 &primaryOffset[[buffer(2)]],
                               constant float3 &primaryColor[[buffer(3)]],
                               constant float3 &secondaryParameters[[buffer(4)]],
                               constant float2 &secondaryOffset[[buffer(5)]])
 {
-    float2 R = float2(resolution);
+    float2 R = resolution;
     float2 uv;
     float axis;
     if (R.x > R.y) {
-        uv   = (2.0 * in.position.xy - R) / R.y;
+        uv   = (2.0 * in.localPosition - R) / R.y;
         axis = uv.x;
     } else {
-        uv   = (2.0 * in.position.xy - R) / R.x;
+        uv   = (2.0 * in.localPosition - R) / R.x;
         axis = uv.y;
     }
     

@@ -36,6 +36,7 @@ public final class ListTextFieldItemComponent: Component {
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
     public let returnKeyType: UIReturnKeyType
+    public let isSecureTextEntry: Bool
     public let contentInsets: UIEdgeInsets
     public let updated: ((String) -> Void)?
     public let shouldUpdateText: (String) -> Bool
@@ -53,6 +54,7 @@ public final class ListTextFieldItemComponent: Component {
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
         returnKeyType: UIReturnKeyType = .default,
+        isSecureTextEntry: Bool = false,
         contentInsets: UIEdgeInsets = .zero,
         updated: ((String) -> Void)?,
         shouldUpdateText: @escaping (String) -> Bool = { _ in return true },
@@ -69,6 +71,7 @@ public final class ListTextFieldItemComponent: Component {
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
         self.returnKeyType = returnKeyType
+        self.isSecureTextEntry = isSecureTextEntry
         self.contentInsets = contentInsets
         self.updated = updated
         self.shouldUpdateText = shouldUpdateText
@@ -105,6 +108,9 @@ public final class ListTextFieldItemComponent: Component {
             return false
         }
         if lhs.returnKeyType != rhs.returnKeyType {
+            return false
+        }
+        if lhs.isSecureTextEntry != rhs.isSecureTextEntry {
             return false
         }
         if lhs.contentInsets != rhs.contentInsets {
@@ -248,6 +254,9 @@ public final class ListTextFieldItemComponent: Component {
             }
             if self.textField.returnKeyType != component.returnKeyType {
                 self.textField.returnKeyType = component.returnKeyType
+            }
+            if self.textField.isSecureTextEntry != component.isSecureTextEntry {
+                self.textField.isSecureTextEntry = component.isSecureTextEntry
             }
             
             let themeUpdated = component.theme !== previousComponent?.theme

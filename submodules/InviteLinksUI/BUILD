@@ -63,6 +63,8 @@ swift_library(
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [

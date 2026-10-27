@@ -1,0 +1,62 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card" id="root"><div class="sk img"></div><div class="row" style="margin-top: 10px"><div class="sk av"></div><div class="grow"><div class="sk line" style="width: 40%; margin-top: 0"></div><div class="sk line" style="width: 25%"></div></div></div>
+  <div class="sk line" style="width: 70%; height: 16px; margin-top: 12px"></div><div class="sk line"></div><div class="sk line" style="width: 92%"></div><div class="sk line" style="width: 60%"></div>
+  <div class="row" style="margin-top: 10px"><div class="sk line" style="width: 70px; height: 22px; margin: 0 6px 0 0"></div><div class="sk line" style="width: 54px; height: 22px; margin: 0 6px 0 0"></div><div class="sk line" style="width: 80px; height: 22px; margin: 0"></div></div>
+  <div class="facts"><div class="sk" style="height: 44px"></div><div class="sk" style="height: 44px"></div><div class="sk" style="height: 44px"></div></div>
+  <div class="tiny muted" style="margin-top: 10px" id="st">loading…</div></div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 422.3
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 422.3
+    div 15 13 330 396.3
+      div 15 13 330 140
+      div 15 163 330 36
+        div 15 163 36 36
+        div 61 165 284 32
+          div 61 165 113.6 12
+          div 61 185 71 12
+      div 15 211 231 16
+      div 15 235 330 12
+      div 15 255 303.6 12
+      div 15 275 198 12
+      div 15 297 330 22
+        div 15 297 70 22
+        div 91 297 54 22
+        div 151 297 80 22
+      div 15 327 330 58
+        div 15 334 106 44
+        div 127 334 106 44
+        div 239 334 106 44
+      div 15 395 330 14.3
+
+== paint
+root 360x422.3 items=17
+  solid-fill bounds=(0,0,360,422) layer=(border=(0,0,360,422),radius=(14,14,14,14,14,14,14,14),clip=(0,0,360,422),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  borders bounds=(0,0,360,422) borders=(left=(1,4,#0000001a),top=(1,4,#0000001a),right=(1,4,#0000001a),bottom=(1,4,#0000001a),radius=(14,14,14,14,14,14,14,14)) pos=(0,0,360,422) root=0
+  solid-fill bounds=(15,13,330,140) layer=(border=(15,13,330,140),radius=(12,12,12,12,12,12,12,12),clip=(15,13,330,140),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,163,36,36) layer=(border=(15,163,36,36),radius=(18,18,18,18,18,18,18,18),clip=(15,163,36,36),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(61,165,114,12) layer=(border=(61,165,114,12),radius=(6,6,6,6,6,6,6,6),clip=(61,165,114,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(61,185,71,12) layer=(border=(61,185,71,12),radius=(6,6,6,6,6,6,6,6),clip=(61,185,71,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,211,231,16) layer=(border=(15,211,231,16),radius=(6,6,6,6,6,6,6,6),clip=(15,211,231,16),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,235,330,12) layer=(border=(15,235,330,12),radius=(6,6,6,6,6,6,6,6),clip=(15,235,330,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,255,304,12) layer=(border=(15,255,304,12),radius=(6,6,6,6,6,6,6,6),clip=(15,255,304,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,275,198,12) layer=(border=(15,275,198,12),radius=(6,6,6,6,6,6,6,6),clip=(15,275,198,12),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,297,70,22) layer=(border=(15,297,70,22),radius=(6,6,6,6,6,6,6,6),clip=(15,297,70,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(91,297,54,22) layer=(border=(91,297,54,22),radius=(6,6,6,6,6,6,6,6),clip=(91,297,54,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(151,297,80,22) layer=(border=(151,297,80,22),radius=(6,6,6,6,6,6,6,6),clip=(151,297,80,22),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(15,327,106,58) layer=(border=(15,327,106,58),radius=(10,10,10,10,10,10,10,10),clip=(15,327,106,58),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(127,327,106,58) layer=(border=(127,327,106,58),radius=(10,10,10,10,10,10,10,10),clip=(127,327,106,58),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  solid-fill bounds=(239,327,106,58) layer=(border=(239,327,106,58),radius=(10,10,10,10,10,10,10,10),clip=(239,327,106,58),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#7f7f7f1f
+  text bounds=(7,387,96,32) pos=(15,395,80,16) color=#6e6e73ff text="loading…" font=f1 glyphs=10 advance=80
+
+== fonts
+f1 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=0,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

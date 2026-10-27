@@ -33,6 +33,14 @@ enum LabStreams {
     ]
     static let seconds: Double = 120.0
     static let preloadLevel = 2
+
+    // The simulator's test video (the 3:39:25 interview): three levels, the preload quality 720p.
+    static let testVideoLadder: [HLSLevel] = [
+        HLSLevel(key: 480, width: 854, height: 480, bandwidth: 530_000),
+        HLSLevel(key: 720, width: 1280, height: 720, bandwidth: 870_000),
+        HLSLevel(key: 1080, width: 1920, height: 1080, bandwidth: 1_120_000)
+    ]
+    static let testVideoPreloadLevel = 1
 }
 
 enum LabCache: Equatable {
@@ -57,21 +65,29 @@ struct LabResult: Equatable {
 
 // The controller over the shared link, with a player that follows ChunkMediaPlayerV2's measured rules: the clock moves
 // while the contiguous run of parts from the position (gaps up to 0.5 s) holds at least 1.0 s, or reaches the end; the
-// first such moment is the start, and dropping out of it before the end is a stall. The player reports its position to
+// first such moment is the start, and dropping out of it before the end is a stall. Before the start the clock also
+// waits for the controller's `startNotBefore`, taken at each buffer change as the node hands it to the player. The player reports its position to
 // the controller when it moved 0.25 s or more, as `HLSNativePlayerSource` does, and keeps reporting `isPlaying` while
 // it buffers (it is the requested state).
 final class PlaybackLab {
     let harness: ControllerHarness
     private let profile: LabProfile
     private let cache: LabCache
+    private let levels: [HLSLevel]
+    private let preloadLevel: Int
+    private let startPosition: Double
     // The first time a part was buffered.
     private(set) var firstPartTime: Double?
 
-    // `store`: nil runs on a store of its own, so runs never see each other's samples.
-    init(profile: LabProfile, cache: LabCache, configuration: HLSPlaybackController.Configuration = HLSPlaybackController.Configuration(), store: HLSBandwidthStore? = nil, appendDelay: Double = 0.05) {
+    // `store`: nil runs on a store of its own, so runs never see each other's samples. `startPosition`: where the open
+    // starts, as a gallery open at a timestamp does (the controller seeks there before it starts).
+    init(profile: LabProfile, cache: LabCache, configuration: HLSPlaybackController.Configuration = HLSPlaybackController.Configuration(), store: HLSBandwidthStore? = nil, appendDelay: Double = 0.05, levels: [HLSLevel] = LabStreams.ladder, preloadLevel: Int = LabStreams.preloadLevel, seconds: Double = LabStreams.seconds, startPosition: Double = 0.0) {
         self.profile = profile
         self.cache = cache
-        self.harness = ControllerHarness(levels: LabStreams.ladder, seconds: LabStreams.seconds, preloadLevel: LabStreams.preloadLevel, configuration: configuration, store: store ?? HLSBandwidthStore())
+        self.levels = levels
+        self.preloadLevel = preloadLevel
+        self.startPosition = startPosition
+        self.harness = ControllerHarness(levels: levels, seconds: seconds, preloadLevel: preloadLevel, configuration: configuration, store: store ?? HLSBandwidthStore())
         self.harness.environment.link = profile.makeLink()
         self.harness.environment.appendDelay = appendDelay
     }
@@ -100,16 +116,26 @@ final class PlaybackLab {
         let controller = self.harness.controller
         let environment = self.harness.environment
         if case let .preloadOpening(seconds) = self.cache {
-            self.harness.cache(level: LabStreams.preloadLevel, seconds: seconds)
+            self.harness.cache(level: self.preloadLevel, seconds: seconds)
+        }
+        if self.startPosition > 0.0 {
+            controller.seek(to: self.startPosition)
         }
         self.harness.setPlaylists()
-        controller.updatePlayback(position: 0.0, isPlaying: true, rate: 1.0)
+        controller.updatePlayback(position: self.startPosition, isPlaying: true, rate: 1.0)
         controller.start()
         let duration = self.harness.playlists.map(\.totalDuration).max() ?? 0.0
 
         var time = 0.0
-        var position = 0.0
-        var reportedPosition = 0.0
+        var position = self.startPosition
+        var reportedPosition = self.startPosition
+        // Taken with each buffer change, as the node hands it to the player with the parts.
+        var startNotBefore: Double?
+        let recordBufferChange = controller.onBufferChanged
+        controller.onBufferChanged = { [weak controller] parts, duration in
+            recordBufferChange?(parts, duration)
+            startNotBefore = controller?.startNotBefore
+        }
         var isPlaying = false
         var startTime: Double?
         var stallCount = 0
@@ -125,7 +151,8 @@ final class PlaybackLab {
                 self.firstPartTime = time
             }
             let playable = PlaybackLab.playable(parts, position: position, duration: duration)
-            if playable.seconds >= 1.0 || (playable.reachesEnd && playable.seconds > 0.0) {
+            let isHeld = startTime == nil && startNotBefore.map { environment.now < $0 } == true
+            if (playable.seconds >= 1.0 && !isHeld) || (playable.reachesEnd && playable.seconds > 0.0) {
                 if startTime == nil {
                     startTime = time
                 }
@@ -134,8 +161,8 @@ final class PlaybackLab {
                 let advance = min(step, playable.seconds)
                 position += advance
                 playedSeconds += advance
-                if let level, level >= 0, level < LabStreams.ladder.count {
-                    bitTime += Double(LabStreams.ladder[level].bandwidth) * advance
+                if let level, level >= 0, level < self.levels.count {
+                    bitTime += Double(self.levels[level].bandwidth) * advance
                 }
                 if position >= duration - 0.5 {
                     break

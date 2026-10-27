@@ -291,15 +291,20 @@ public enum RenameStickerSetError {
 }
 
 func _internal_renameStickerSet(account: Account, packReference: StickerPackReference, title: String) -> Signal<Never, RenameStickerSetError> {
+    return _internal_renameStickerSetWithResult(account: account, packReference: packReference, title: title)
+    |> ignoreValues
+}
+
+func _internal_renameStickerSetWithResult(account: Account, packReference: StickerPackReference, title: String) -> Signal<Bool, RenameStickerSetError> {
     return account.network.request(Api.functions.stickers.renameStickerSet(stickerset: packReference.apiInputStickerSet, title: title))
     |> mapError { error -> RenameStickerSetError in
         return .generic
     }
-    |> mapToSignal { result -> Signal<Never, RenameStickerSetError> in
+    |> mapToSignal { result -> Signal<Bool, RenameStickerSetError> in
         guard let (info, items) = parseStickerSetInfoAndItems(apiStickerSet: result) else {
             return .complete()
         }
-        return account.postbox.transaction { transaction -> Void in
+        return account.postbox.transaction { transaction -> Bool in
             let collectionNamespace = Namespaces.ItemCollection.CloudStickerPacks
             var currentInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
             if let index = currentInfos.firstIndex(where: { $0.id == info.id }) {
@@ -307,9 +312,9 @@ func _internal_renameStickerSet(account: Account, packReference: StickerPackRefe
             }
             transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: currentInfos.map { ($0.id, $0) })
             cacheStickerPack(transaction: transaction, info: info, items: items)
+            return true
         }
         |> castError(RenameStickerSetError.self)
-        |> ignoreValues
     }
 }
 
@@ -487,6 +492,11 @@ public enum ReplaceStickerError {
 }
 
 func _internal_replaceSticker(account: Account, previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Never, ReplaceStickerError> {
+    return _internal_replaceStickerWithResult(account: account, previousSticker: previousSticker, sticker: sticker)
+    |> ignoreValues
+}
+
+func _internal_replaceStickerWithResult(account: Account, previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Bool, ReplaceStickerError> {
     let uploadSticker: Signal<UploadStickerStatus, ReplaceStickerError>
     if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
         uploadSticker = .single(.complete(EngineMediaResource(resource), sticker.mimeType))
@@ -516,18 +526,18 @@ func _internal_replaceSticker(account: Account, previousSticker: FileMediaRefere
         |> mapError { error -> ReplaceStickerError in
             return .generic
         }
-        |> mapToSignal { result -> Signal<Never, ReplaceStickerError> in
+        |> mapToSignal { result -> Signal<Bool, ReplaceStickerError> in
             guard let (info, items) = parseStickerSetInfoAndItems(apiStickerSet: result) else {
                 return .complete()
             }
-            return account.postbox.transaction { transaction -> Void in
+            return account.postbox.transaction { transaction -> Bool in
                 if transaction.getItemCollectionInfo(collectionId: info.id) != nil {
                     transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
                 }
                 cacheStickerPack(transaction: transaction, info: info, items: items)
+                return true
             }
             |> castError(ReplaceStickerError.self)
-            |> ignoreValues
         }
     }
 }

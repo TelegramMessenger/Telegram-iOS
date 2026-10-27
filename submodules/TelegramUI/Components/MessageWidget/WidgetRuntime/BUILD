@@ -138,8 +138,10 @@ cc_library(
         "//third-party/gumbo",
         # Selectors parse with litehtml's CSS Syntax tokenizer (Sources/DOM/Selectors.cpp), the policy layer's.
         "//third-party/twidget:litehtml_fork",
+        "//third-party/widget-sandbox:GesturePolicy",
+        "//third-party/widget-sandbox:SdkPolicy",
     ],
-    # Intl and URL's IDNA (V5b): the system ICU.
+    # The system ICU's public part only (Sources/Host/ICU.h): URL's IDNA, case mapping, the bidi classes.
     linkopts = ["-licucore"],
     visibility = ["//visibility:public"],
 )
@@ -153,9 +155,11 @@ cc_test(
         "Tests/BuilderHtml5libTests.cpp",
         "Tests/CorpusBootTests.cpp",
         "Tests/RenderCorpusTests.cpp",
+        "Tests/CorpusGoldenTests.cpp",
         "Tests/NoIOScanTests.cpp",
         "Tests/URLDataTests.cpp",
         "Tests/IntlCasesTests.cpp",
+        "Tests/BidiTests.cpp",
     ]) + [
         "Tests/DOMHarness.cpp",
         "Tests/DOMHarness.h",
@@ -306,8 +310,22 @@ cc_test(
     ],
 )
 
-# widget-sandbox v0.1.1's Intl parity fixture over the host's ICU (v0.1.1 plan, Task 10; Tests/IntlCasesTests.cpp),
-# with the drift list Tests/intl-cases-expected-failures.txt.
+# UAX #9 (Sources/Render/Bidi.cpp) against a sample of Unicode's BidiCharacterTest.txt; the whole file through
+# --test_env=WR_BIDI_CHARACTER_TEST=<path> (Tests/BidiTests.cpp).
+cc_test(
+    name = "WidgetRuntimeBidiTests",
+    srcs = ["Tests/BidiTests.cpp"],
+    copts = WR_COPTS,
+    data = ["Tests/bidi-character-test-sample.txt"],
+    env = {"WR_BIDI_CHARACTER_TEST": "$(rootpath Tests/bidi-character-test-sample.txt)"},
+    deps = [
+        ":WidgetRuntime",
+        ":WidgetRuntimeTestSupport",
+    ],
+)
+
+# widget-sandbox v0.1.1's Intl fixture as a protocol check (Tests/IntlCasesTests.cpp): every case as a widget makes it,
+# over a host answering only the fixture's own requests.
 cc_test(
     name = "WidgetRuntimeIntlCasesTests",
     srcs = [
@@ -332,7 +350,7 @@ cc_test(
     ],
 )
 
-# The Intl cases' mapping and drift list, for the host test above and WidgetRuntimeIOS's WRIntlCasesTests.
+# The Intl cases' mapping and drift list, for the host test above and WidgetRuntimeIOS's WRIntlCasesTests.swift.
 filegroup(
     name = "IntlCasesSupport",
     testonly = True,
@@ -387,6 +405,33 @@ cc_test(
     ],
     copts = WR_COPTS,
     data = ["//third-party/widget-sandbox:CorpusFiles"],
+    env = {"WR_CORPUS_FILES": "$(locations //third-party/widget-sandbox:CorpusFiles)"},
+    deps = [
+        ":WidgetRuntime",
+        ":WidgetRuntimeTestSupport",
+    ],
+)
+
+# The corpus goldens (spec section 9 item 2): every non-attack corpus document's results in deterministic mode, compared
+# with Tests/CorpusGoldens/. `WR_GOLDENS_UPDATE=1 bazel run` this target to record them (the header of the source).
+cc_test(
+    name = "WidgetRuntimeCorpusGoldenTests",
+    size = "large",
+    srcs = [
+        "Tests/CorpusGoldenTests.cpp",
+        "Tests/DOMHarness.cpp",
+        "Tests/DOMHarness.h",
+        "Tests/FakeRenderHost.cpp",
+        "Tests/FakeRenderHost.h",
+        "Tests/HostHarness.cpp",
+        "Tests/HostHarness.h",
+        "Tests/RenderHarness.cpp",
+        "Tests/RenderHarness.h",
+        "Tests/VirtualTime.cpp",
+        "Tests/VirtualTime.h",
+    ],
+    copts = WR_COPTS,
+    data = ["//third-party/widget-sandbox:CorpusFiles"] + glob(["Tests/CorpusGoldens/**"], allow_empty = True),
     env = {"WR_CORPUS_FILES": "$(locations //third-party/widget-sandbox:CorpusFiles)"},
     deps = [
         ":WidgetRuntime",

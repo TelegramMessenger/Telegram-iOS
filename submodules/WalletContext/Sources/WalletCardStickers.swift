@@ -148,9 +148,7 @@ extension WalletContextImpl {
     }
 
     private func applyServerCard(_ card: WalletCard, address: String) {
-        self.cardStickersByWallet[address] = card.stickers.compactMap {
-            WalletContext.CardSticker(serverSticker: $0, backgroundNftAddress: card.backgroundNft?.address)
-        }
+        self.cardStickersByWallet[address] = walletCardStickers(serverCard: card)
     }
 
     private func publishCardState() {
@@ -257,4 +255,13 @@ extension WalletContextImpl {
             now: ProcessInfo.processInfo.systemUptime, requestInFlight: self.cardStickerSavingAddress != nil) else { return }
         await self.saveCardStickers(walletAddress: address)
     }
+}
+
+/// A server card's stickers as the stored state keeps them: validated like a local edit, since decoding the stored
+/// state validates them again and anything it drops would differ after a restart.
+@available(macOS 10.15, *)
+func walletCardStickers(serverCard card: WalletCard) -> [WalletContext.CardSticker] {
+    return WalletContext.CardSticker.validated(card.stickers.compactMap {
+        WalletContext.CardSticker(serverSticker: $0, backgroundNftAddress: card.backgroundNft?.address)
+    })
 }

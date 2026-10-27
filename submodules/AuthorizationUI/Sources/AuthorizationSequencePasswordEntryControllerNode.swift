@@ -227,11 +227,18 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         if layout.size.width > 320.0 {
             items.insert(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)), at: 0)
             self.proceedNode.isHidden = false
-            self.animationNode.isHidden = false
-            self.animationNode.visibility = true
+            if !authorizationLayoutItemsFit(height: layout.size.height - insets.top - insets.bottom - additionalBottomInset, items: items) {
+                items.removeFirst()
+                insets.top = navigationBarHeight
+            }
         } else {
             insets.top = navigationBarHeight
             self.proceedNode.isHidden = true
+        }
+        if items.first?.node === self.animationNode {
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
+        } else {
             self.animationNode.isHidden = true
         }
         

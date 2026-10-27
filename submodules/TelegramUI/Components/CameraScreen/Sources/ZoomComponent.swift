@@ -7,15 +7,18 @@ final class ZoomComponent: Component {
     let availableValues: [Float]
     let value: Float
     let tag: AnyObject?
+    let selected: (Float) -> Void
     
     init(
         availableValues: [Float],
         value: Float,
-        tag: AnyObject?
+        tag: AnyObject?,
+        selected: @escaping (Float) -> Void
     ) {
         self.availableValues = availableValues
         self.value = value
         self.tag = tag
+        self.selected = selected
     }
     
     static func ==(lhs: ZoomComponent, rhs: ZoomComponent) -> Bool {
@@ -30,6 +33,8 @@ final class ZoomComponent: Component {
 
     final class View: UIView, UIGestureRecognizerDelegate, ComponentTaggedView {
         final class ItemView: HighlightTrackingButton {
+            var level: Float = 1.0
+            
             init() {
                 super.init(frame: .zero)
                 
@@ -73,35 +78,14 @@ final class ZoomComponent: Component {
             self.layer.allowsGroupOpacity = true
 
             self.addSubview(self.backgroundView)
-            
-            let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
-            pressGestureRecognizer.minimumPressDuration = 0.01
-            pressGestureRecognizer.delegate = self
-            self.addGestureRecognizer(pressGestureRecognizer)
-            
-            let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-            panGestureRecognizer.delegate = self
-            self.addGestureRecognizer(panGestureRecognizer)
         }
 
         required init?(coder aDecoder: NSCoder) {
             preconditionFailure()
         }
         
-        @objc func handlePress(_ gestureRecognizer: UILongPressGestureRecognizer) {
-
-        }
-        
-        @objc func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-
-        }
-        
-        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            return true
-        }
-        
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            return true
+        @objc private func itemPressed(_ itemView: ItemView) {
+            self.component?.selected(itemView.level)
         }
         
         func animateIn() {
@@ -121,31 +105,25 @@ final class ZoomComponent: Component {
             let buttonSize = CGSize(width: 37.0, height: 37.0)
             let size: CGSize = CGSize(width: buttonSize.width * CGFloat(component.availableValues.count) + spacing * CGFloat(component.availableValues.count - 1) + sideInset * 2.0, height: 43.0)
             
+            let selectedLevel = chatCameraSelectedZoomLevel(levels: component.availableValues, scale: component.value)
             var i = 0
             var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: 3.0), size: buttonSize)
             for value in component.availableValues {
                 let itemView: ItemView
                 if self.itemViews.count == i {
                     itemView = ItemView()
+                    itemView.addTarget(self, action: #selector(self.itemPressed(_:)), for: .touchUpInside)
                     self.addSubview(itemView)
                     self.itemViews.append(itemView)
                 } else {
                     itemView = self.itemViews[i]
                 }
-                let text: String
-                if value > 0.5 {
-                    if value == 1.0 {
-                        text = "1×"
-                    } else {
-                        text = "\(Int(value))"
-                    }
-                } else {
-                    text = String(format: "%0.1f", value)
-                }
-                itemView.update(value: text, selected: value == 1.0)
+                let isSelected = value == selectedLevel
+                itemView.level = value
+                itemView.update(value: chatCameraZoomLabel(level: value, selected: isSelected, scale: component.value), selected: isSelected)
                 itemView.bounds = CGRect(origin: .zero, size: itemFrame.size)
                 itemView.center = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
-                if value == 1.0 {
+                if isSelected {
                     itemView.transform = CGAffineTransformIdentity
                 } else {
                     itemView.transform = CGAffineTransform(scaleX: 0.7, y: 0.7)

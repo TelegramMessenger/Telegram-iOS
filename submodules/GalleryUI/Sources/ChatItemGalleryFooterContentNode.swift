@@ -32,6 +32,7 @@ import TelegramNotices
 import SolidRoundedButtonNode
 import UrlHandling
 import GlassControls
+import ContextUI
 import ComponentFlow
 import ComponentDisplayAdapters
 import EdgeEffect
@@ -1382,10 +1383,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         guard let self, let buttonPanelView = self.buttonPanel.view as? GlassControlPanelComponent.View else {
                             return
                         }
-                        if let centerItemView = buttonPanelView.centerItemView, let itemView = centerItemView.itemView(id: AnyHashable("settings")) {
-                            self.settingsButtonPressed(sourceView: itemView)
-                        } else if let rightItemView = buttonPanelView.rightItemView, let itemView = rightItemView.itemView(id: AnyHashable("settings")) {
-                            self.settingsButtonPressed(sourceView: itemView)
+                        if let centerItemView = buttonPanelView.centerItemView, centerItemView.itemView(id: AnyHashable("settings")) != nil {
+                            self.settingsButtonPressed(sourceView: centerItemView.menuSourceView)
+                        } else if let rightItemView = buttonPanelView.rightItemView, rightItemView.itemView(id: AnyHashable("settings")) != nil {
+                            self.settingsButtonPressed(sourceView: rightItemView.menuSourceView)
                         }
                     }
                 ))
@@ -1607,10 +1608,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     } else {
                         strongSelf.interacting?(true)
                         
-                        var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        if !presentationData.theme.overallDarkAppearance {
-                            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-                        }
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
                         
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
@@ -1645,45 +1643,62 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             }
                         }
                     
-                        let actionSheet = ActionSheetController(presentationData: presentationData)
-                        actionSheet.dismissed = { [weak self] _ in
-                            self?.interacting?(false)
-                        }
-                        let items: [ActionSheetItem] = [
-                            ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                                deleteAction([EngineMessage(currentMessage)])
-                            }),
-                            ActionSheetButtonItem(title: multipleText, color: .destructive, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                                deleteAction(messages)
-                            })
-                        ]
-                    
-                        actionSheet.setItemGroups([
-                            ActionSheetItemGroup(items: items),
-                            ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
+                        let items: [ContextMenuItem] = [
+                            .action(ContextMenuActionItem(text: singleText, textColor: .destructive, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            }, action: { c, _ in
+                                c?.dismiss(completion: {
+                                    deleteAction([EngineMessage(currentMessage)])
                                 })
-                            ])
-                        ])
-                        strongSelf.controllerInteraction?.presentController(actionSheet, nil)
+                            })),
+                            .action(ContextMenuActionItem(text: multipleText, textColor: .destructive, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            }, action: { c, _ in
+                                c?.dismiss(completion: {
+                                    deleteAction(messages)
+                                })
+                            }))
+                        ]
+                        strongSelf.presentDeleteContextMenu(items: items, presentationData: presentationData)
                     }
                 }
             })
         }
     }
 
+    private func deleteButtonSourceView() -> UIView? {
+        guard let buttonPanelView = self.buttonPanel.view as? GlassControlPanelComponent.View else {
+            return nil
+        }
+        if let rightItemView = buttonPanelView.rightItemView, let itemView = rightItemView.itemView(id: AnyHashable("delete")) {
+            return itemView
+        } else if let centerItemView = buttonPanelView.centerItemView, let itemView = centerItemView.itemView(id: AnyHashable("delete")) {
+            return itemView
+        }
+        return buttonPanelView
+    }
+    
+    private func presentDeleteContextMenu(items: [ContextMenuItem], presentationData: PresentationData) {
+        guard let controller = self.controllerInteraction?.controller(), let sourceView = self.deleteButtonSourceView() else {
+            self.interacting?(false)
+            return
+        }
+        let contextController = makeContextController(
+            presentationData: presentationData,
+            source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, actionsOnTop: true)),
+            items: .single(ContextController.Items(content: .list(items)))
+        )
+        contextController.dismissed = { [weak self] in
+            self?.interacting?(false)
+        }
+        controller.presentInGlobalOverlay(contextController)
+    }
+    
     private func commitDeleteMessages(_ messages: [EngineMessage], ask: Bool) {
         self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id }), keepUpdated: false) |> deliverOnMainQueue).start(next: { [weak self] actions in
-            if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
-                var presentationData = strongSelf.presentationData
-                if !presentationData.theme.overallDarkAppearance {
-                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-                }
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                var items: [ActionSheetItem] = []
+            if let strongSelf = self, let _ = strongSelf.controllerInteraction, !actions.options.isEmpty {
+                let presentationData = strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                var items: [ContextMenuItem] = []
                 var personalPeerName: String?
                 var isChannel = false
                 let peerId: EnginePeer.Id = messages[0].id.peerId
@@ -1702,13 +1717,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     } else {
                         globalTitle = strongSelf.strings.Conversation_DeleteMessagesForEveryone
                     }
-                    items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                    items.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { _, f in
+                        f(.default)
                         if let strongSelf = self {
                             let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messages.map { $0.id }, type: .forEveryone).start()
                             strongSelf.controllerInteraction?.dismissController()
                         }
-                    }))
+                    })))
                 }
                 if actions.options.contains(.deleteLocally) {
                     var localOptionText = strongSelf.strings.Conversation_DeleteMessagesForMe
@@ -1717,28 +1734,22 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     } else if strongSelf.context.account.peerId == peerId {
                         localOptionText = strongSelf.strings.Conversation_Moderate_Delete
                     }
-                    items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
+                    items.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { _, f in
+                        f(.default)
                         if let strongSelf = self {
                             let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messages.map { $0.id }, type: .forLocalPeer).start()
                             strongSelf.controllerInteraction?.dismissController()
                         }
-                    }))
+                    })))
                 }
                 if !ask && items.count == 1 {
                     let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: messages.map { $0.id }, type: .forEveryone).start()
                     strongSelf.controllerInteraction?.dismissController()
                 } else if !items.isEmpty {
                     strongSelf.interacting?(true)
-                    actionSheet.dismissed = { [weak self] _ in
-                        self?.interacting?(false)
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                    controllerInteration.presentController(actionSheet, nil)
+                    strongSelf.presentDeleteContextMenu(items: items, presentationData: presentationData)
                 }
             }
         }))

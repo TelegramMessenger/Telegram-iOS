@@ -552,31 +552,20 @@ public final class CallListController: TelegramBaseController {
             beginClear(true)
         })))
         
-        final class ExtractedContentSourceImpl: ContextExtractedContentSource {
-            var keepInPlace: Bool
-            let ignoreContentTouches: Bool = true
-            let blurBackground: Bool
+        final class ReferenceContentSourceImpl: ContextReferenceContentSource {
+            private let sourceView: UIView
             
-            private let controller: ViewController
-            private let sourceNode: ContextExtractedContentContainingNode
-            
-            init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
-                self.controller = controller
-                self.sourceNode = sourceNode
-                self.keepInPlace = keepInPlace
-                self.blurBackground = blurBackground
+            init(sourceView: UIView) {
+                self.sourceView = sourceView
             }
             
-            func takeView() -> ContextControllerTakeViewInfo? {
-                return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
-            }
-            
-            func putBack() -> ContextControllerPutBackViewInfo? {
-                return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
+            func transitionInfo() -> ContextControllerReferenceViewInfo? {
+                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
             }
         }
     
-        let contextController = makeContextController(presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        let sourceView = self.navigationBar?.navigationButtonContextContainer(sourceView: buttonNode.view) ?? buttonNode.view
+        let contextController = makeContextController(presentationData: self.presentationData, source: .reference(ReferenceContentSourceImpl(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.presentInGlobalOverlay(contextController)
     }
     

@@ -10,8 +10,8 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
+        "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/ComponentFlow",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",

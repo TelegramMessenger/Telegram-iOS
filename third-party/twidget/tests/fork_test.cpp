@@ -2,6 +2,7 @@
 
 #include <litehtml/css_parser.h>
 #include <litehtml/render_item.h>
+#include <litehtml/render_table.h>
 
 #include <chrono>
 #include <cmath>
@@ -33,6 +34,17 @@ struct GradientContainer : litehtml_test::TestContainer {
     }
     void draw_linear_gradient(litehtml::uint_ptr, const litehtml::background_layer&, const litehtml::background_layer::linear_gradient& g) override { record(g); }
     void draw_conic_gradient(litehtml::uint_ptr, const litehtml::background_layer&, const litehtml::background_layer::conic_gradient& g) override { record(g); }
+};
+
+// Records the fill colour of every path the document draws, as "r,g,b" joined by spaces.
+struct PathContainer : litehtml_test::TestContainer {
+    std::string fills;
+    void draw_path(litehtml::uint_ptr, const litehtml::vector_path& path) override {
+        if (!path.fill) return;
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%s%d,%d,%d", fills.empty() ? "" : " ", path.fill_color.red, path.fill_color.green, path.fill_color.blue);
+        fills += buf;
+    }
 };
 
 // Text pieces (el_text, el_space) reachable from `el`, ::before/::after content included.
@@ -558,6 +570,96 @@ int main() {
         CHECK(std::abs(text_x("t3") + 16.0f) < 0.5f);
         const auto f = by_id(doc, "f");
         CHECK(f && std::abs(float(f->css().get_font_size()) - 22.0f) < 0.01f);
+    }
+
+    // Edit 56: a translation whose length mixes a percentage with a length (calc(), nested with a product, and through
+    // the translate property) is its share of the box's own size plus the length, as a width's calc is; the fold of one
+    // unit refused it, and the whole transform was dropped.
+    for (const char* style : {"transform:translateX(calc(100% + 10px))", "transform:translateX(calc(50% - 1 * (100% + 10px) + 50px))",
+                              "translate:calc(100% + 10px) 0", "transform:translate(min(150%, 30px), calc(50% - 4px))"}) {
+        GroupContainer g;
+        auto doc = litehtml_test::layout(g, std::string("<body style='margin:0'><div style='width:20px;height:8px;") + style + "'></div></body>");
+        doc->draw(0, litehtml::pixel_t(0.0f), litehtml::pixel_t(0.0f), nullptr);
+        const bool ok = g.groups.size() == 1 && std::abs(g.groups[0].tx - 30.0f) < 0.01f && std::abs(g.groups[0].ty) < 0.01f;
+        if (!ok) std::printf("  %s: %zu groups, tx %g ty %g\n", style, g.groups.size(), g.groups.empty() ? 0.0 : double(g.groups[0].tx), g.groups.empty() ? 0.0 : double(g.groups[0].ty));
+        CHECK(ok);
+    }
+
+    // Edit 57: a declaration whose var() never resolves is invalid at computed-value time, so the property is unset: a
+    // shorthand's longhands too, over earlier ones (it left them in force), while a longhand written after it stands and
+    // a fallback still applies.
+    {
+        auto doc = litehtml_test::layout(c, "<html><body style='margin:0'><div style='display:flex'>"
+                                            "<div id=f1 style='flex-grow:3;flex:var(--nope)'>a</div>"
+                                            "<div id=f2 style='flex:var(--nope);flex-grow:2'>b</div>"
+                                            "<div id=f3 style='flex-grow:3;flex:var(--nope, 4)'>c</div></div>"
+                                            "<div id=m style='margin-left:10px;margin:var(--nope)'>m</div>"
+                                            "<div id=b style='border-top:5px solid red;border:var(--nope)'>b</div>"
+                                            "</body></html>", 300);
+        const auto grow = [&](const char* id) { auto el = by_id(doc, id); return el ? el->css().get_flex_grow() : -1.0f; };
+        CHECK(grow("f1") == 0.0f);
+        CHECK(grow("f2") == 2.0f);
+        CHECK(grow("f3") == 4.0f);
+        const auto m = by_id(doc, "m");
+        CHECK(m && float(m->get_placement().x) == 0.0f);
+        const auto b = by_id(doc, "b");
+        CHECK(b && b->css().get_borders().top.style == litehtml::border_style_none);
+        if (grow("f1") != 0.0f || grow("f2") != 2.0f || grow("f3") != 4.0f)
+            std::printf("  unresolved var(): flex-grow %g %g %g\n", grow("f1"), grow("f2"), grow("f3"));
+    }
+
+    // Edit 58: a <use>'s instance inherits from the use, not from where its target sits: a symbol's path with no fill of
+    // its own takes each use's fill, while a fill set inside the symbol stands.
+    {
+        PathContainer p;
+        auto doc = litehtml_test::layout(p, "<body style='margin:0'><svg width='100' height='50' viewBox='0 0 100 50'><defs>"
+                                            "<symbol id='s' viewBox='0 0 10 10'><path d='M0 0H10V10Z'/></symbol>"
+                                            "<symbol id='k' viewBox='0 0 10 10'><path fill='#00ff00' d='M0 0H10V10Z'/></symbol></defs>"
+                                            "<use href='#s' width='10' height='10' fill='#ff0000'/>"
+                                            "<use href='#s' x='20' width='10' height='10' fill='#0000ff'/>"
+                                            "<use href='#k' x='40' width='10' height='10' fill='#ff0000'/>"
+                                            "<symbol id='c' viewBox='0 0 10 10'><path fill='currentColor' d='M0 0H10V10Z'/></symbol>"
+                                            "<use href='#c' x='60' width='10' height='10' style='color:#ff00ff'/></svg></body>");
+        doc->draw(0, litehtml::pixel_t(0.0f), litehtml::pixel_t(0.0f), nullptr);
+        // currentColor too: the use's colour.
+        if (p.fills != "255,0,0 0,0,255 0,255,0 255,0,255") std::printf("  use fills: %s\n", p.fills.c_str());
+        CHECK(p.fills == "255,0,0 0,0,255 0,255,0 255,0,255");
+    }
+
+    // Edit 59: a top caption moves a table's rows down by its height once: the cells' positions carry it, so a cell's
+    // placement, and a hit where it is drawn, are those of the same table under a block as tall as the caption.
+    {
+        const std::string rows = "<tr><td id=c style='height:30px;width:60px;padding:0'>x</td></tr></table></body>";
+        auto captioned = litehtml_test::layout(c, "<body style='margin:0'><table style='border-spacing:0'>"
+                                                  "<caption style='height:40px;padding:0'>c</caption>" + rows);
+        auto block = litehtml_test::layout(c, "<body style='margin:0'><div style='height:40px'></div><table style='border-spacing:0'>" + rows);
+        const float y = float(by_id(captioned, "c")->get_placement().y), expected = float(by_id(block, "c")->get_placement().y);
+        if (y != expected) std::printf("  captioned cell y %g, under a block %g\n", y, expected);
+        CHECK(y == expected);
+        const auto any = [](const std::shared_ptr<litehtml::render_item>&) { return true; };
+        const litehtml::pixel_t x(40.0f), at(expected + 15.0f);
+        const auto hit = captioned->root_render()->get_element_by_point(x, at, x, at, any);
+        CHECK(hit && hit == by_id(captioned, "c"));
+    }
+
+    // Edit 61: a row and a row group have a box, from the table's grid, placed as their cells are: a row across the
+    // columns over its height, a group over its rows.
+    {
+        auto doc = litehtml_test::layout(c, "<body style='margin:0'><table id=t style='border-spacing:0'>"
+                                            "<caption style='height:40px;padding:0'>c</caption><tbody id=g>"
+                                            "<tr id=r1><td id=a style='height:30px;width:60px;padding:0'>x</td><td id=b style='width:20px;padding:0'>y</td></tr>"
+                                            "<tr id=r2><td id=d style='height:20px;padding:0'>z</td><td style='padding:0'>w</td></tr></tbody></table></body>");
+        const auto table = std::dynamic_pointer_cast<litehtml::render_item_table>(by_id(doc, "t")->get_render_item());
+        litehtml::position r1, g;
+        CHECK(table && table->part_placement(by_id(doc, "r1").get(), r1) && table->part_placement(by_id(doc, "g").get(), g));
+        const auto a = by_id(doc, "a")->get_placement(), b = by_id(doc, "b")->get_placement(), d = by_id(doc, "d")->get_placement();
+        if (float(r1.y) != float(a.y) || float(r1.x) != float(a.x) || float(r1.width) != float(b.right() - a.x) || float(r1.height) != float(a.height))
+            std::printf("  row box %g,%g %gx%g\n", float(r1.x), float(r1.y), float(r1.width), float(r1.height));
+        CHECK(float(r1.x) == float(a.x) && float(r1.y) == float(a.y));
+        CHECK(float(r1.width) == float(b.right() - a.x) && float(r1.height) == float(a.height));
+        CHECK(float(g.y) == float(a.y) && float(g.bottom()) == float(d.bottom()) && float(g.width) == float(r1.width));
+        litehtml::position none;
+        CHECK(table && !table->part_placement(by_id(doc, "a").get(), none));
     }
 
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }

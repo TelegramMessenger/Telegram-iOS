@@ -524,6 +524,13 @@ gutter avatars (`ChatMessageDateHeader.swift:676,1220`) stay tappable while the 
 this backend they are absorbed like any other tap. That has never worked here, so it is not a
 regression — it needs a host-supplied predicate seam, deferred deliberately. Not runtime-confirmed.
 
+What stays is the 0.3s after content stops, while a parked date pill is still flashing and hittable. A
+touch there that slides less than the scroll pan's 10pt hysteresis never begins the pan, so a plain
+`UITapGestureRecognizer` (which tolerates far more movement) took a slight swipe off the pill as a tap and
+`navigateToFirstDateMessage` jumped the chat to that date. `ListViewTapGestureRecognizer` therefore fails a
+touch that moves more than 2pt, the slop `TapLongTapOrDoubleTapGestureRecognizer` gives message bubbles
+(`ListViewTapGestureRecognizerTests`); a still tap on the pill or a gutter avatar works as before.
+
 ## Item-node enumeration
 
 `forEachItemNode` / `enumerateItemNodes` / `forEachVisibleItemNode` are real (they were no-op stubs

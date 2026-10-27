@@ -23,9 +23,9 @@
   }
  },
  "coverage": {
-  "auto": 245,
-  "visual": 114,
-  "catalogue": 255,
+  "auto": 253,
+  "visual": 126,
+  "catalogue": 267,
   "external": {
    "limit.nodes": "corpus/attacks (pnpm test:attacks): node flood",
    "limit.cpu": "corpus/attacks and tests/lifecycle.spec.ts: CPU quota, deferral, kill",
@@ -35,7 +35,12 @@
    "behaviour.gesture-claim": "visual/sdk/12-drag-gestures (client behaviour)",
    "behaviour.storage-persist": "visual/sdk/07, 08, 09 (client behaviour)",
    "behaviour.storage-forward": "visual/sdk/15-storage-forward (client behaviour)",
-   "behaviour.message-edit": "visual/sdk/16-bot-edit (client behaviour)",
+   "behaviour.message-edit": "visual/sdk/16-state-edit (client behaviour)",
+   "behaviour.data-edit": "visual/sdk/16-state-edit, 24-watch-public-data, 25-group-chat-state (client behaviour)",
+   "behaviour.forward-copy": "visual/sdk/20-forward-requests and auto/26-context-copy, -live-copy viewed as forwards (client behaviour)",
+   "behaviour.preview": "visual/sdk/23-preview and auto/26-context-preview in the inline results (client behaviour)",
+   "behaviour.network-marker": "visual/sdk/21-network-marker (client behaviour)",
+   "behaviour.resize-anchor": "visual/sdk/18-resize-anchor (client behaviour)",
    "behaviour.size-hint": "visual/sdk/17-size-hint (client behaviour)"
   },
   "notInAuto": [],
@@ -175,8 +180,7 @@
    ],
    "stages": [],
    "bytes": 7747,
-   "gzip": 3505,
-   "gzip6": 3506
+   "zlib": 3493
   },
   {
    "id": "auto/01-html-elements-b",
@@ -319,8 +323,7 @@
    ],
    "stages": [],
    "bytes": 6873,
-   "gzip": 3225,
-   "gzip6": 3225
+   "zlib": 3213
   },
   {
    "id": "auto/01-html-elements-c",
@@ -494,8 +497,7 @@
    ],
    "stages": [],
    "bytes": 8050,
-   "gzip": 3513,
-   "gzip6": 3517
+   "zlib": 3501
   },
   {
    "id": "auto/02-attributes-images-a",
@@ -656,8 +658,7 @@
    ],
    "stages": [],
    "bytes": 8018,
-   "gzip": 3436,
-   "gzip6": 3437
+   "zlib": 3424
   },
   {
    "id": "auto/02-attributes-images-b",
@@ -726,6 +727,27 @@
      "native": {
       "chromium": "skip"
      }
+    },
+    {
+     "id": "html.el.img",
+     "name": "img.width is the rendered width (12, not the attribute's 30)",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.img",
+     "name": "a broken image fires error and is complete, with no natural size",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "html.el.img",
+     "name": "new Image() loads before it is inserted: naturalWidth, complete, width",
+     "native": {
+      "chromium": "pass"
+     }
     }
    ],
    "stages": [
@@ -778,9 +800,8 @@
      "nativeVsTemplate": 0.9853
     }
    ],
-   "bytes": 9014,
-   "gzip": 3504,
-   "gzip6": 3510
+   "bytes": 10242,
+   "zlib": 3792
   },
   {
    "id": "auto/03-layout-a",
@@ -980,8 +1001,7 @@
     }
    ],
    "bytes": 10072,
-   "gzip": 3588,
-   "gzip6": 3597
+   "zlib": 3576
   },
   {
    "id": "auto/03-layout-b",
@@ -1188,8 +1208,7 @@
     }
    ],
    "bytes": 8497,
-   "gzip": 3458,
-   "gzip6": 3461
+   "zlib": 3446
   },
   {
    "id": "auto/03-layout-c",
@@ -1371,8 +1390,7 @@
     }
    ],
    "bytes": 9306,
-   "gzip": 3651,
-   "gzip6": 3653
+   "zlib": 3639
   },
   {
    "id": "auto/04-values-units",
@@ -1630,8 +1648,7 @@
    ],
    "stages": [],
    "bytes": 9391,
-   "gzip": 3744,
-   "gzip6": 3746
+   "zlib": 3732
   },
   {
    "id": "auto/05-colour-backgrounds-a",
@@ -1810,8 +1827,7 @@
     }
    ],
    "bytes": 6957,
-   "gzip": 2834,
-   "gzip6": 2836
+   "zlib": 2822
   },
   {
    "id": "auto/05-colour-backgrounds-b",
@@ -1931,7 +1947,7 @@
      "refs": {
       "chromium": "refs/auto/05-colour-backgrounds-b/clip-text.chromium.png"
      },
-     "nativeVsTemplate": 0.5998
+     "nativeVsTemplate": 0.5997
     },
     {
      "name": "linear",
@@ -2074,8 +2090,7 @@
     }
    ],
    "bytes": 8321,
-   "gzip": 3207,
-   "gzip6": 3206
+   "zlib": 3195
   },
   {
    "id": "auto/06-text-fonts-a",
@@ -2226,8 +2241,7 @@
    ],
    "stages": [],
    "bytes": 7968,
-   "gzip": 3211,
-   "gzip6": 3212
+   "zlib": 3199
   },
   {
    "id": "auto/06-text-fonts-b",
@@ -2395,8 +2409,7 @@
    ],
    "stages": [],
    "bytes": 8395,
-   "gzip": 3362,
-   "gzip6": 3364
+   "zlib": 3350
   },
   {
    "id": "auto/06-text-fonts-c",
@@ -2594,8 +2607,7 @@
     }
    ],
    "bytes": 7215,
-   "gzip": 3171,
-   "gzip6": 3173
+   "zlib": 3159
   },
   {
    "id": "auto/07-selectors-a",
@@ -2734,8 +2746,7 @@
    ],
    "stages": [],
    "bytes": 5981,
-   "gzip": 2617,
-   "gzip6": 2619
+   "zlib": 2605
   },
   {
    "id": "auto/07-selectors-b",
@@ -2912,8 +2923,7 @@
    ],
    "stages": [],
    "bytes": 8471,
-   "gzip": 3473,
-   "gzip6": 3473
+   "zlib": 3461
   },
   {
    "id": "auto/08-at-rules",
@@ -3120,8 +3130,7 @@
    ],
    "stages": [],
    "bytes": 9580,
-   "gzip": 3698,
-   "gzip6": 3701
+   "zlib": 3686
   },
   {
    "id": "auto/09-transforms-effects-a",
@@ -3137,7 +3146,8 @@
     "css.filter.other",
     "css.filter.url",
     "css.transform.2d",
-    "css.transform.3d"
+    "css.transform.3d",
+    "css.value.math"
    ],
    "themes": [
     "light"
@@ -3183,6 +3193,34 @@
      "name": "rotateY(60deg) is dropped: the box keeps its width",
      "native": {
       "chromium": "fail"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "translateX(150%) is a share of the box's own width",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.math",
+     "name": "calc(% + px) inside translateX()",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.value.math",
+     "name": "calc() with * and nested parentheses inside translateX()",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "css.transform.2d",
+     "name": "a transform set from script (style.transform, calc())",
+     "native": {
+      "chromium": "pass"
      }
     },
     {
@@ -3337,9 +3375,8 @@
      "nativeVsTemplate": 0.3036
     }
    ],
-   "bytes": 8727,
-   "gzip": 3285,
-   "gzip6": 3284
+   "bytes": 9784,
+   "zlib": 3505
   },
   {
    "id": "auto/09-transforms-effects-b",
@@ -3515,8 +3552,7 @@
     }
    ],
    "bytes": 6996,
-   "gzip": 2849,
-   "gzip6": 2849
+   "zlib": 2837
   },
   {
    "id": "auto/10-css-animations",
@@ -3772,8 +3808,7 @@
     }
    ],
    "bytes": 9205,
-   "gzip": 3524,
-   "gzip6": 3524
+   "zlib": 3512
   },
   {
    "id": "auto/11-web-animations",
@@ -4004,8 +4039,7 @@
     }
    ],
    "bytes": 9372,
-   "gzip": 3617,
-   "gzip6": 3617
+   "zlib": 3605
   },
   {
    "id": "auto/12-canvas-a",
@@ -4227,8 +4261,7 @@
     }
    ],
    "bytes": 8883,
-   "gzip": 3631,
-   "gzip6": 3633
+   "zlib": 3619
   },
   {
    "id": "auto/12-canvas-b",
@@ -4534,8 +4567,7 @@
     }
    ],
    "bytes": 9148,
-   "gzip": 3616,
-   "gzip6": 3619
+   "zlib": 3604
   },
   {
    "id": "auto/13-svg-a",
@@ -4724,8 +4756,7 @@
     }
    ],
    "bytes": 7146,
-   "gzip": 3248,
-   "gzip6": 3248
+   "zlib": 3236
   },
   {
    "id": "auto/13-svg-b",
@@ -4877,8 +4908,7 @@
     }
    ],
    "bytes": 5531,
-   "gzip": 2465,
-   "gzip6": 2464
+   "zlib": 2453
   },
   {
    "id": "auto/14-dom-layout-api-a",
@@ -5005,8 +5035,7 @@
    ],
    "stages": [],
    "bytes": 7405,
-   "gzip": 3223,
-   "gzip6": 3221
+   "zlib": 3211
   },
   {
    "id": "auto/14-dom-layout-api-b",
@@ -5181,8 +5210,7 @@
    ],
    "stages": [],
    "bytes": 8094,
-   "gzip": 3518,
-   "gzip6": 3520
+   "zlib": 3506
   },
   {
    "id": "auto/15-js-runtime-a",
@@ -5305,8 +5333,7 @@
    ],
    "stages": [],
    "bytes": 7159,
-   "gzip": 3065,
-   "gzip6": 3066
+   "zlib": 3053
   },
   {
    "id": "auto/15-js-runtime-b",
@@ -5558,8 +5585,7 @@
    ],
    "stages": [],
    "bytes": 7773,
-   "gzip": 3384,
-   "gzip6": 3384
+   "zlib": 3372
   },
   {
    "id": "auto/15-js-runtime-c",
@@ -5670,8 +5696,7 @@
    ],
    "stages": [],
    "bytes": 6735,
-   "gzip": 3003,
-   "gzip6": 3002
+   "zlib": 2991
   },
   {
    "id": "auto/16-sdk-taps-a",
@@ -5825,14 +5850,13 @@
    ],
    "stages": [],
    "bytes": 8503,
-   "gzip": 3652,
-   "gzip6": 3653
+   "zlib": 3640
   },
   {
    "id": "auto/16-sdk-taps-b",
    "set": "auto",
    "file": "auto/16-sdk-taps-b.html",
-   "title": "Taps: details toggle, #fragment links, :active; double tap, context menu, keyboard and wheel stay out",
+   "title": "Taps: details toggle, #fragment links, :active; a double tap is the widget's (dblclick), the context menu stays out on touch-action: auto (auto/23 has none); keyboard and wheel stay out",
    "hint": "Tap “summary” and “frag”, press and hold “active”, then double-tap “dbl”, long-press or right-click “ctx”, tap “kbd” and press a key, scroll over “wheel”, tap Finish.",
    "kind": [
     "self",
@@ -5944,16 +5968,16 @@
     },
     {
      "id": "input.dblclick",
-     "name": "no dblclick reaches the widget (the double tap stays with the bubble)",
+     "name": "a double tap on touch-action: auto reaches the widget as dblclick (the reaction stays outside the widget)",
      "native": {
-      "chromium": "fail"
+      "chromium": "pass"
      }
     },
     {
      "id": "input.long-press",
-     "name": "no contextmenu event reaches the widget",
+     "name": "no contextmenu reaches the widget from touch-action: auto (the hold or right click is the message menu)",
      "native": {
-      "chromium": "fail"
+      "chromium": "skip"
      }
     },
     {
@@ -5972,9 +5996,8 @@
     }
    ],
    "stages": [],
-   "bytes": 7156,
-   "gzip": 3177,
-   "gzip6": 3179
+   "bytes": 7363,
+   "zlib": 3251
   },
   {
    "id": "auto/16-sdk-taps-c",
@@ -6138,15 +6161,14 @@
    ],
    "stages": [],
    "bytes": 8296,
-   "gzip": 3480,
-   "gzip6": 3480
+   "zlib": 3468
   },
   {
    "id": "auto/17-drag-hover",
    "set": "auto",
    "file": "auto/17-drag-hover.html",
-   "title": "Drag (pointer events with capture), hover events and :hover (desktop pointers), pointer-events: none, touch events on touch clients, no text selection",
-   "hint": "Hover “hover”, drag the knob to the right end, drag it again past the track, tap the striped overlay, drag across the stage text, tap Finish.",
+   "title": "Drag (pointer events with capture), hover events and :hover (desktop), pointer-events: none, touch events on touch clients, no text selection",
+   "hint": "Hover “hover”, drag the knob to the right end and again past the track, tap the striped overlay, drag across the stage text (on touch: the chat's swipe), tap Finish.",
    "kind": [
     "self",
     "pixel",
@@ -6188,7 +6210,8 @@
      "by": true,
      "steps": 12,
      "ids": [
-      "input.drag"
+      "input.drag",
+      "behaviour.gesture-claim"
      ]
     },
     {
@@ -6246,14 +6269,14 @@
     },
     {
      "id": "input.drag",
-     "name": "setPointerCapture keeps moves coming past the element",
+     "name": "setPointerCapture keeps moves coming past the track",
      "native": {
       "chromium": "pass"
      }
     },
     {
      "id": "input.drag",
-     "name": "movementX adds up to the distance",
+     "name": "movementX sums to the distance",
      "native": {
       "chromium": "pass"
      }
@@ -6267,7 +6290,7 @@
     },
     {
      "id": "input.touch-events",
-     "name": "no touch events reach the widget on a touch client: pointer events only (profile 1: out)",
+     "name": "no touch events on a touch client, pointer events only",
      "native": {
       "chromium": "skip"
      }
@@ -6300,9 +6323,8 @@
      "nativeVsTemplate": 0
     }
    ],
-   "bytes": 8830,
-   "gzip": 3797,
-   "gzip6": 3798
+   "bytes": 8832,
+   "zlib": 3785
   },
   {
    "id": "auto/18-out-of-profile",
@@ -6466,8 +6488,7 @@
    ],
    "stages": [],
    "bytes": 8510,
-   "gzip": 3566,
-   "gzip6": 3566
+   "zlib": 3554
   },
   {
    "id": "auto/19-limits",
@@ -6553,8 +6574,7 @@
    ],
    "stages": [],
    "bytes": 6014,
-   "gzip": 2815,
-   "gzip6": 2818
+   "zlib": 2803
   },
   {
    "id": "auto/20-client-behaviour",
@@ -6705,8 +6725,7 @@
    ],
    "stages": [],
    "bytes": 8684,
-   "gzip": 3774,
-   "gzip6": 3774
+   "zlib": 3762
   },
   {
    "id": "auto/21-no-keyboard",
@@ -6822,8 +6841,7 @@
    ],
    "stages": [],
    "bytes": 6724,
-   "gzip": 3130,
-   "gzip6": 3130
+   "zlib": 3118
   },
   {
    "id": "auto/22-ua-defaults",
@@ -6977,8 +6995,866 @@
    ],
    "stages": [],
    "bytes": 8611,
-   "gzip": 3766,
-   "gzip6": 3768
+   "zlib": 3754
+  },
+  {
+   "id": "auto/23-gestures-a",
+   "set": "auto",
+   "file": "auto/23-gestures-a.html",
+   "title": "Who gets a press (1/2): a double tap is always the widget's (dblclick, on every element); a hold on touch-action: none is the widget's (contextmenu), on auto the bubble's (pointercancel)",
+   "hint": "Hold “none” and “auto” for a second each, double-tap “none ×2” and “auto ×2”, tap Finish.",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "behaviour.gesture-claim",
+    "input.dblclick",
+    "input.long-press"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "press": "none",
+     "ms": 700,
+     "ids": [
+      "input.long-press"
+     ]
+    },
+    {
+     "press": "auto",
+     "ms": 700,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "dblclick": "nonedbl",
+     "ids": [
+      "input.dblclick"
+     ]
+    },
+    {
+     "dblclick": "autodbl",
+     "ids": [
+      "input.dblclick"
+     ]
+    },
+    {
+     "tap": "finish"
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "input.long-press",
+     "name": "a hold on touch-action: none is the widget's: pointerdown … pointerup, no pointercancel, and contextmenu from a finger",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a hold on auto is the message menu: pointercancel, no pointerup (a mouse hold stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "input.dblclick",
+     "name": "a double tap on touch-action: none: both clicks, then dblclick",
+     "native": {
+      "chromium": "pass"
+     }
+    },
+    {
+     "id": "input.dblclick",
+     "name": "a double tap on auto is the widget's too: both clicks, then dblclick, no pointercancel",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6590,
+   "zlib": 2843
+  },
+  {
+   "id": "auto/23-gestures-b",
+   "set": "auto",
+   "file": "auto/23-gestures-b.html",
+   "title": "Who gets a press (2/2): a vertical drag is always the chat's, on touch-action: none and pan-x too; a drag from the leading 20 px is the back gesture",
+   "hint": "Drag “none ↕” and “pan-x ↕” down (the chat scrolls), drag the pad to the right from its red strip and then from its green mark, tap Finish.",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "behaviour.gesture-claim"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "drag": "vnone",
+     "to": [
+      0,
+      60
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "drag": "vpanx",
+     "to": [
+      0,
+      60
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "drag": "edge",
+     "to": [
+      120,
+      0
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "drag": "mid",
+     "to": [
+      120,
+      0
+     ],
+     "by": true,
+     "steps": 10,
+     "ids": [
+      "behaviour.gesture-claim"
+     ]
+    },
+    {
+     "tap": "finish"
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a vertical drag on touch-action: none is the chat's scroll: pointercancel (a mouse drag stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a vertical drag on touch-action: pan-x is the chat's scroll too: pointercancel",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "a drag from the leading 20 px of a touch-action: none pad is the back gesture: pointercancel (a mouse drag stays the widget's)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "behaviour.gesture-claim",
+     "name": "the same drag from 60 px in is the widget's: moves, pointerup, no pointercancel",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6738,
+   "zlib": 2928
+  },
+  {
+   "id": "auto/24-resize-anchor",
+   "set": "auto",
+   "file": "auto/24-resize-anchor.html",
+   "title": "TelegramWidget.setResizeAnchor (v0.1.3): the method exists, takes 'top' and 'bottom', throws TypeError on anything else; the widget grows and shrinks with either anchor",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.resize-anchor"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.resize-anchor",
+     "name": "typeof TelegramWidget.setResizeAnchor is \"function\"",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "setResizeAnchor('bottom') and ('top') return undefined and throw nothing",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "anything but exactly 'top' or 'bottom' throws TypeError",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "with 'bottom' the widget grows: three lines are 60 px",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.resize-anchor",
+     "name": "with 'top' it shrinks back to 0 px",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 5239,
+   "zlib": 2459
+  },
+  {
+   "id": "auto/25-state-api-a",
+   "set": "auto",
+   "file": "auto/25-state-api-a.html",
+   "title": "The widget's state (SDK v1, layer 233): chatData / publicData read-only text or null, events, the context fields and the rules that hold in every message",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.bot-data",
+    "tw.context",
+    "tw.preview"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.bot-data",
+     "name": "chatData and publicData are text of 1–1024 bytes, or null",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.bot-data",
+     "name": "the state and the context fields are read-only",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.bot-data",
+     "name": "onEvent takes 'chatDataChanged' and 'publicDataChanged'",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "isForward is a boolean; chatType is private, group, supergroup, channel or null",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "viewer is null or a frozen WebAppUser: id, first_name, last_name, username, is_premium",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "a forward has no chatData and no chatType",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.preview",
+     "name": "isPreview is a boolean; a preview is no forward and has no chatType or viewer",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6358,
+   "zlib": 2922
+  },
+  {
+   "id": "auto/25-state-api-b",
+   "set": "auto",
+   "file": "auto/25-state-api-b.html",
+   "title": "Requests and copyText (SDK v1, layer 233): argument errors, a request without a tap settles with { result } or a WidgetRequestError, copyText outside a tap is dropped, watchPublicData idempotent",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.copy-text",
+    "tw.request",
+    "tw.watch-public-data"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap settles: { result } (frozen) or a WidgetRequestError with its code",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "request throws TypeError at once for data that is not 1–64 bytes of text",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.copy-text",
+     "name": "copyText throws TypeError for anything but 1–256 characters of text",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.copy-text",
+     "name": "copyText outside a tap returns undefined and throws nothing (the client drops it)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.watch-public-data",
+     "name": "watchPublicData and unwatchPublicData return undefined and may be called again",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6327,
+   "zlib": 2988,
+   "bot": {
+    "conf:a25": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/26-context-copy",
+   "set": "auto",
+   "file": "auto/26-context-copy.html",
+   "title": "The message context: a forward of a widget sent without fwd_allow_queries: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap is refused with NOT_ALLOWED too",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6615,
+   "zlib": 3060,
+   "message": [
+    {
+     "kind": "copy",
+     "allow_queries": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "forward": true,
+     "view": "the forward (in the test group or any chat)"
+    }
+   ]
+  },
+  {
+   "id": "auto/26-context-group",
+   "set": "auto",
+   "file": "auto/26-context-group.html",
+   "title": "The message context: an original the bot sent to a group: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6695,
+   "zlib": 3093,
+   "message": [
+    {
+     "kind": "group",
+     "allow_queries": true,
+     "chat": "group",
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the original the test bot sent into the test group"
+    }
+   ],
+   "bot": {
+    "conf:a26:bg": {
+     "result": "ok"
+    },
+    "conf:a26:tap": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/26-context-live-copy",
+   "set": "auto",
+   "file": "auto/26-context-live-copy.html",
+   "title": "The message context: a forward of a widget sent with fwd_allow_queries: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6795,
+   "zlib": 3129,
+   "message": [
+    {
+     "kind": "live-copy",
+     "allow_queries": true,
+     "fwd_allow_queries": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "forward": true,
+     "view": "the forward (in the test group or any chat); the bot needs the fwd_allow_queries whitelist"
+    }
+   ],
+   "bot": {
+    "conf:a26:bg": {
+     "result": "ok"
+    },
+    "conf:a26:tap": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/26-context-no-queries",
+   "set": "auto",
+   "file": "auto/26-context-no-queries.html",
+   "title": "The message context: an original sent without allow_queries: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap is refused with NOT_ALLOWED too",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6597,
+   "zlib": 3050,
+   "message": [
+    {
+     "kind": "no-queries",
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the original in the tester's private chat (sent without allow_queries)"
+    }
+   ]
+  },
+  {
+   "id": "auto/26-context-preview",
+   "set": "auto",
+   "file": "auto/26-context-preview.html",
+   "title": "The message context: an inline result shown before it is sent: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is refused with NOT_ALLOWED",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 5827,
+   "zlib": 2805,
+   "message": [
+    {
+     "kind": "preview",
+     "allow_queries": true,
+     "inline": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the list of inline results: type the test bot's username and conf-preview in any chat; do not send it"
+    }
+   ]
+  },
+  {
+   "id": "auto/26-context-private",
+   "set": "auto",
+   "file": "auto/26-context-private.html",
+   "title": "The message context: the original in the private chat with the bot: isForward, isPreview, chatType, viewer, chatData and what a request may do",
+   "kind": [
+    "self",
+    "interactive"
+   ],
+   "covers": [
+    "tw.context",
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [
+    {
+     "tap": "ask",
+     "ids": [
+      "tw.request"
+     ]
+    }
+   ],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "a request without a tap is not refused (background requests are allowed here)",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.request",
+     "name": "a request on a tap resolves with the bot's { result }",
+     "native": {
+      "chromium": "skip"
+     }
+    },
+    {
+     "id": "tw.context",
+     "name": "TelegramWidget exists",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 6712,
+   "zlib": 3084,
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "chat_data": "conf-chat",
+     "public_data": "conf-public",
+     "view": "the original in the tester's private chat with the test bot"
+    }
+   ],
+   "bot": {
+    "conf:a26:bg": {
+     "result": "ok"
+    },
+    "conf:a26:tap": {
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "auto/27-haptics-no-touch",
+   "set": "auto",
+   "file": "auto/27-haptics-no-touch.html",
+   "title": "Haptics without a touch (v0.2.2): a timer's haptics get one series, the first second's, then none until a touch or 10 s later",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.haptic-rate"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [
+    {
+     "id": "limit.haptic-rate",
+     "name": "no touch: the 5 haptics of the first second reach the client, the ones at 1.2 s and 2.5 s do not",
+     "bridge": {
+      "method": "haptic",
+      "count": 5
+     }
+    }
+   ],
+   "checks": [
+    {
+     "id": "limit.haptic-rate",
+     "name": "haptics may be asked for without a touch: no exception (the client decides what plays)",
+     "native": {
+      "chromium": "skip"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4103,
+   "zlib": 2182
   },
   {
    "id": "visual/01-boxes",
@@ -7086,8 +7962,7 @@
     }
    ],
    "bytes": 4666,
-   "gzip": 2010,
-   "gzip6": 2010,
+   "zlib": 1998,
    "refImages": {
     "light": "refs/visual/01-boxes.png"
    },
@@ -7216,8 +8091,7 @@
     }
    ],
    "bytes": 5521,
-   "gzip": 2471,
-   "gzip6": 2472,
+   "zlib": 2459,
    "refImages": {
     "light": "refs/visual/02-colours-gradients.png"
    },
@@ -7300,8 +8174,7 @@
     }
    ],
    "bytes": 4864,
-   "gzip": 2114,
-   "gzip6": 2115,
+   "zlib": 2102,
    "refImages": {
     "light": "refs/visual/03-text-a.png"
    },
@@ -7350,7 +8223,7 @@
      "refs": {
       "chromium": "refs/visual/03-text-b/ellipsis.chromium.png"
      },
-     "nativeVsTemplate": 0.2213
+     "nativeVsTemplate": 0.2212
     },
     {
      "name": "scripts",
@@ -7383,12 +8256,11 @@
      "refs": {
       "chromium": "refs/visual/03-text-b/text-shadow.chromium.png"
      },
-     "nativeVsTemplate": 0.3384
+     "nativeVsTemplate": 0.3382
     }
    ],
    "bytes": 5297,
-   "gzip": 2314,
-   "gzip6": 2314,
+   "zlib": 2302,
    "refImages": {
     "light": "refs/visual/03-text-b.png"
    },
@@ -7504,12 +8376,11 @@
      "refs": {
       "chromium": "refs/visual/04-layout/float-columns.chromium.png"
      },
-     "nativeVsTemplate": 0.1241
+     "nativeVsTemplate": 0.1246
     }
    ],
    "bytes": 6322,
-   "gzip": 2436,
-   "gzip6": 2438,
+   "zlib": 2424,
    "refImages": {
     "light": "refs/visual/04-layout.png"
    },
@@ -7589,15 +8460,30 @@
      "refs": {
       "chromium": "refs/visual/05-transforms-effects-a/filters.chromium.png"
      }
+    },
+    {
+     "name": "transform-units",
+     "rect": null,
+     "size": [
+      150,
+      90
+     ],
+     "covers": [],
+     "themes": [
+      "light"
+     ],
+     "reftest": false,
+     "refs": {
+      "chromium": "refs/visual/05-transforms-effects-a/transform-units.chromium.png"
+     }
     }
    ],
-   "bytes": 4690,
-   "gzip": 2072,
-   "gzip6": 2078,
+   "bytes": 5655,
+   "zlib": 2317,
    "refImages": {
     "light": "refs/visual/05-transforms-effects-a.png"
    },
-   "height": 352
+   "height": 470
   },
   {
    "id": "visual/05-transforms-effects-b",
@@ -7679,8 +8565,7 @@
     }
    ],
    "bytes": 5653,
-   "gzip": 2144,
-   "gzip6": 2145,
+   "zlib": 2132,
    "refImages": {
     "light": "refs/visual/05-transforms-effects-b.png"
    },
@@ -7742,7 +8627,7 @@
      "refs": {
       "chromium": "refs/visual/06-css-animations/slide.chromium.png"
      },
-     "nativeVsTemplate": 0.6305
+     "nativeVsTemplate": 0.6184
     },
     {
      "name": "spin-pulse",
@@ -7759,7 +8644,7 @@
      "refs": {
       "chromium": "refs/visual/06-css-animations/spin-pulse.chromium.png"
      },
-     "nativeVsTemplate": 0.8422
+     "nativeVsTemplate": 0.8319
     },
     {
      "name": "steps",
@@ -7812,9 +8697,8 @@
      "nativeVsTemplate": 0.9824
     }
    ],
-   "bytes": 8068,
-   "gzip": 2901,
-   "gzip6": 2902,
+   "bytes": 8140,
+   "zlib": 2904,
    "refImages": {
     "light": "refs/visual/06-css-animations.png"
    },
@@ -7865,7 +8749,7 @@
      "refs": {
       "chromium": "refs/visual/07-web-animations/bounce.chromium.png"
      },
-     "nativeVsTemplate": 0
+     "nativeVsTemplate": 0.0132
     },
     {
      "name": "seek",
@@ -7919,9 +8803,8 @@
      "nativeVsTemplate": 0.0154
     }
    ],
-   "bytes": 7452,
-   "gzip": 2670,
-   "gzip6": 2673,
+   "bytes": 7470,
+   "zlib": 2669,
    "refImages": {
     "light": "refs/visual/07-web-animations.png"
    },
@@ -7931,7 +8814,7 @@
    "id": "visual/08-canvas-a",
    "set": "visual",
    "file": "visual/08-canvas-a.html",
-   "title": "Canvas 2D (1/2): shapes and paths, line styles, colours, gradients and patterns, text, alpha",
+   "title": "Canvas 2D (1/2): shapes and paths, line styles, colours, gradients, text, alpha",
    "hint": "Each canvas should look like the reference picture posted next to this message.",
    "kind": [
     "pixel"
@@ -7943,7 +8826,6 @@
     "canvas.hidpi",
     "canvas.line-style",
     "canvas.path",
-    "canvas.pattern",
     "canvas.rect",
     "canvas.text"
    ],
@@ -8008,9 +8890,8 @@
      }
     }
    ],
-   "bytes": 6055,
-   "gzip": 2679,
-   "gzip6": 2679,
+   "bytes": 5689,
+   "zlib": 2554,
    "refImages": {
     "light": "refs/visual/08-canvas-a.png"
    },
@@ -8020,7 +8901,7 @@
    "id": "visual/08-canvas-b",
    "set": "visual",
    "file": "visual/08-canvas-b.html",
-   "title": "Canvas 2D (2/2): transforms and clipping; shadows, ctx.filter and conic gradients out; a chart",
+   "title": "Canvas 2D (2/2): transforms and clipping; shadows, ctx.filter, conic gradients and patterns out; a chart",
    "hint": "Each canvas should look like the reference picture posted next to this message.",
    "kind": [
     "pixel"
@@ -8032,6 +8913,7 @@
     "canvas.hidpi",
     "canvas.line-style",
     "canvas.path",
+    "canvas.pattern",
     "canvas.rect",
     "canvas.shadow",
     "canvas.transform"
@@ -8097,13 +8979,12 @@
      }
     }
    ],
-   "bytes": 5621,
-   "gzip": 2625,
-   "gzip6": 2625,
+   "bytes": 6008,
+   "zlib": 2732,
    "refImages": {
     "light": "refs/visual/08-canvas-b.png"
    },
-   "height": 352
+   "height": 358
   },
   {
    "id": "visual/09-svg-a",
@@ -8182,8 +9063,7 @@
     }
    ],
    "bytes": 4913,
-   "gzip": 2386,
-   "gzip6": 2386,
+   "zlib": 2374,
    "refImages": {
     "light": "refs/visual/09-svg-a.png"
    },
@@ -8264,12 +9144,11 @@
      "refs": {
       "chromium": "refs/visual/09-svg-b/smil.chromium.png"
      },
-     "nativeVsTemplate": 0.7266
+     "nativeVsTemplate": 0.7179
     }
    ],
    "bytes": 5218,
-   "gzip": 2356,
-   "gzip6": 2357,
+   "zlib": 2344,
    "refImages": {
     "light": "refs/visual/09-svg-b.png"
    },
@@ -8371,8 +9250,7 @@
     }
    ],
    "bytes": 9297,
-   "gzip": 3155,
-   "gzip6": 3160,
+   "zlib": 3143,
    "refImages": {
     "light": "refs/visual/10-images.png"
    },
@@ -8457,8 +9335,7 @@
    ],
    "stages": [],
    "bytes": 7103,
-   "gzip": 3142,
-   "gzip6": 3142,
+   "zlib": 3130,
    "refImages": {
     "light": "refs/visual/11-interaction.png"
    },
@@ -8513,8 +9390,7 @@
     }
    ],
    "bytes": 4036,
-   "gzip": 1978,
-   "gzip6": 1978,
+   "zlib": 1966,
    "refImages": {
     "light": "refs/visual/12-theme.png",
     "dark": "refs/visual/12-theme.dark.png"
@@ -8526,7 +9402,7 @@
    "set": "visual",
    "file": "visual/13-out-of-profile.html",
    "title": "Out of the profile, neutralised the same way everywhere: form controls, inner scrolling, sticky, named fonts, 3D, popover over the chat",
-   "hint": "Each box must look like the reference picture: the out-of-profile feature is simply not there. Tap “Show popover”: nothing may appear outside this bubble.",
+   "hint": "Each box must look like the reference picture: the out-of-profile feature is simply not there. The popover is dropped: its red box is an ordinary block in the bubble, shown from the start. Tap “Show popover”: nothing changes, and nothing may appear outside this bubble.",
    "kind": [
     "pixel",
     "interactive"
@@ -8570,7 +9446,7 @@
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/forms.chromium.png"
      },
-     "nativeVsTemplate": 0.6194
+     "nativeVsTemplate": 0.6196
     },
     {
      "name": "scroll-sticky",
@@ -8604,7 +9480,7 @@
      "refs": {
       "chromium": "refs/visual/13-out-of-profile/fonts.chromium.png"
      },
-     "nativeVsTemplate": 0.3812
+     "nativeVsTemplate": 0.3802
     },
     {
      "name": "three-d",
@@ -8624,13 +9500,12 @@
      "nativeVsTemplate": 0.436
     }
    ],
-   "bytes": 6382,
-   "gzip": 2622,
-   "gzip6": 2622,
+   "bytes": 6752,
+   "zlib": 2722,
    "refImages": {
     "light": "refs/visual/13-out-of-profile.png"
    },
-   "height": 494
+   "height": 531
   },
   {
    "id": "visual/14-unstyled-document",
@@ -8665,8 +9540,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3049,
-   "gzip": 1670,
-   "gzip6": 1670,
+   "zlib": 1658,
    "refImages": {
     "light": "refs/visual/14-unstyled-document.png",
     "dark": "refs/visual/14-unstyled-document.dark.png"
@@ -8698,8 +9572,7 @@
    "checks": [],
    "stages": [],
    "bytes": 2391,
-   "gzip": 1360,
-   "gzip6": 1360,
+   "zlib": 1348,
    "refImages": {
     "light": "refs/visual/15-body-background.png",
     "dark": "refs/visual/15-body-background.dark.png"
@@ -8730,8 +9603,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3317,
-   "gzip": 1762,
-   "gzip6": 1762,
+   "zlib": 1750,
    "refImages": {
     "light": "refs/visual/16-selection.png"
    },
@@ -8761,8 +9633,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3436,
-   "gzip": 1746,
-   "gzip6": 1746,
+   "zlib": 1734,
    "refImages": {
     "light": "refs/visual/sdk/01-link-external.png"
    },
@@ -8794,8 +9665,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3209,
-   "gzip": 1581,
-   "gzip6": 1581,
+   "zlib": 1569,
    "refImages": {
     "light": "refs/visual/sdk/02-link-telegram.png"
    },
@@ -8904,8 +9774,7 @@
    ],
    "stages": [],
    "bytes": 4110,
-   "gzip": 1897,
-   "gzip6": 1897,
+   "zlib": 1885,
    "refImages": {
     "light": "refs/visual/sdk/03-link-rejected.png"
    },
@@ -8938,8 +9807,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3174,
-   "gzip": 1551,
-   "gzip6": 1551,
+   "zlib": 1539,
    "refImages": {
     "light": "refs/visual/sdk/04-link-timer.png"
    },
@@ -8971,8 +9839,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3341,
-   "gzip": 1631,
-   "gzip6": 1631,
+   "zlib": 1619,
    "refImages": {
     "light": "refs/visual/sdk/05-haptics.png"
    },
@@ -9005,8 +9872,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3413,
-   "gzip": 1693,
-   "gzip6": 1693,
+   "zlib": 1681,
    "refImages": {
     "light": "refs/visual/sdk/06-haptics-rate.png"
    },
@@ -9040,8 +9906,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3300,
-   "gzip": 1579,
-   "gzip6": 1580,
+   "zlib": 1567,
    "refImages": {
     "light": "refs/visual/sdk/07-storage-recreate.png"
    },
@@ -9075,8 +9940,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3141,
-   "gzip": 1526,
-   "gzip6": 1526,
+   "zlib": 1514,
    "refImages": {
     "light": "refs/visual/sdk/08-storage-restart.png"
    },
@@ -9108,8 +9972,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3177,
-   "gzip": 1584,
-   "gzip6": 1584,
+   "zlib": 1572,
    "refImages": {
     "light": "refs/visual/sdk/09-storage-delete.png"
    },
@@ -9166,8 +10029,7 @@
    ],
    "stages": [],
    "bytes": 3357,
-   "gzip": 1665,
-   "gzip6": 1665,
+   "zlib": 1653,
    "refImages": {
     "light": "refs/visual/sdk/10-storage-quota.png"
    },
@@ -9198,23 +10060,22 @@
    "host": [],
    "checks": [],
    "stages": [],
-   "bytes": 3232,
-   "gzip": 1592,
-   "gzip6": 1592,
+   "bytes": 3255,
+   "zlib": 1594,
    "refImages": {
     "light": "refs/visual/sdk/11-crash-restart.png"
    },
    "height": 157,
    "group": "sdk",
-   "expect": "The frozen last frame with the localised badge; one rebuild after the first crash; none after the second, until the app restarts or the message gets new HTML.",
+   "expect": "The frozen last frame with the localised badge; one rebuild after the first crash; none after the second, until the app restarts (the HTML never changes, so no edit brings it back).",
    "contract": "docs/sdk-v1.md §2.7, §5.7"
   },
   {
    "id": "visual/sdk/12-drag-gestures",
    "set": "visual",
    "file": "visual/sdk/12-drag-gestures.html",
-   "title": "Drag inside the widget versus the bubble's gestures",
-   "hint": "Drag the knob left and right: no swipe-to-reply, the list does not scroll. Swipe left on the grey area: swipe-to-reply. Double tap: the reaction appears. Long press: the bubble menu. The counters stay 0.",
+   "title": "Who gets a press: double taps always, holds and horizontal drags by touch-action, vertical drags never, and the edge strip",
+   "hint": "Blue (touch-action: none): drag the knob sideways, hold “Hold me” (it counts the time); no swipe-to-reply, no menu, the counters move. Drag up or down over blue: the chat scrolls, “to the chat” counts it. Striped (auto): long press = the message menu, swipe = reply; “cancelled” counts each one. Double-tap anywhere in the widget: no reaction, the widget counts the double taps. Bottom pad: a drag from the red strip is the back gesture, from the rest it moves the green mark.",
    "kind": [],
    "covers": [
     "behaviour.gesture-claim",
@@ -9234,15 +10095,14 @@
    "host": [],
    "checks": [],
    "stages": [],
-   "bytes": 4276,
-   "gzip": 1966,
-   "gzip6": 1966,
+   "bytes": 7181,
+   "zlib": 2819,
    "refImages": {
     "light": "refs/visual/sdk/12-drag-gestures.png"
    },
-   "height": 259,
+   "height": 452,
    "group": "sdk",
-   "expect": "The widget claims horizontal drags of the knob (touch-action: none, preventDefault); elsewhere the chat keeps swipe-to-reply and scrolling; double tap and long press stay with the bubble and never reach the widget.",
+   "expect": "A double tap over the widget is always the widget's: both clicks and dblclick, on every element, and the client's reaction stays on the bubble outside the widget. A vertical drag is always the chat's: the list scrolls and the widget gets pointercancel, on touch-action: none too (v0.1.3). touch-action: none gives the widget horizontal drags (on both axes once a drag started sideways) and holds (it gets contextmenu, no message menu); on auto the bubble takes holds and swipes and the widget gets pointercancel; a press in the leading 20 px of the widget is never the widget's (system back). The client follows the shared gesture policy (gesture-policy.ts: 500 ms hold, 300 ms / 40 px double tap, 10 px slop, 20 px edge strip).",
    "contract": "docs/sdk-v1.md §3.5, §5.5"
   },
   {
@@ -9268,8 +10128,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3094,
-   "gzip": 1591,
-   "gzip6": 1591,
+   "zlib": 1579,
    "refImages": {
     "light": "refs/visual/sdk/13-max-height.png"
    },
@@ -9305,8 +10164,7 @@
    "checks": [],
    "stages": [],
    "bytes": 4135,
-   "gzip": 1912,
-   "gzip6": 1913,
+   "zlib": 1900,
    "refImages": {
     "light": "refs/visual/sdk/14-theme-palette.png",
     "dark": "refs/visual/sdk/14-theme-palette.dark.png"
@@ -9339,8 +10197,7 @@
    "checks": [],
    "stages": [],
    "bytes": 2871,
-   "gzip": 1428,
-   "gzip6": 1428,
+   "zlib": 1416,
    "refImages": {
     "light": "refs/visual/sdk/15-storage-forward.png"
    },
@@ -9350,14 +10207,18 @@
    "contract": "docs/sdk-v1.md §2.8"
   },
   {
-   "id": "visual/sdk/16-bot-edit",
+   "id": "visual/sdk/16-state-edit",
    "set": "visual",
-   "file": "visual/sdk/16-bot-edit.html",
-   "title": "A bot edit: same HTML keeps the widget, new HTML restarts it on the same storage",
-   "hint": "Tap +1 twice. Ask the bot to edit the message with the same HTML: nothing restarts (Started stays). Ask for the edit with version 2: it shows v2, Started goes up, the count is still 2.",
-   "kind": [],
+   "file": "visual/sdk/16-state-edit.html",
+   "title": "The bot edits the widget's state: the widget changes without a restart",
+   "hint": "Tap Ask the bot to edit a few times. Each time both values go up by one, chatDataChanged and publicDataChanged each count one more, Started stays 1, and the answer line says edited N.",
+   "kind": [
+    "self"
+   ],
    "covers": [
-    "behaviour.message-edit"
+    "behaviour.data-edit",
+    "behaviour.message-edit",
+    "tw.bot-data"
    ],
    "themes": [
     "light"
@@ -9369,18 +10230,42 @@
    ],
    "actions": [],
    "host": [],
-   "checks": [],
+   "checks": [
+    {
+     "id": "tw.bot-data",
+     "name": "chatData and publicData are there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
    "stages": [],
-   "bytes": 3076,
-   "gzip": 1514,
-   "gzip6": 1514,
+   "bytes": 4351,
+   "zlib": 1973,
    "refImages": {
-    "light": "refs/visual/sdk/16-bot-edit.png"
+    "light": "refs/visual/sdk/16-state-edit.png"
    },
-   "height": 153,
+   "height": 215,
    "group": "sdk",
-   "expect": "An edit with the same HTML keeps the running widget; with different HTML the widget restarts on the same storage.",
-   "contract": "docs/sdk-v1.md §2.8"
+   "expect": "The bot's editMessageWidgetData reaches the running widget (updateMessageWidgetData, then setData): chatDataChanged, then publicDataChanged, in one task; no restart, the HTML never changes; the answer carries no state.",
+   "contract": "docs/sdk-v1.md §2.13, §5.11",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "chat_data": "0",
+     "public_data": "0"
+    }
+   ],
+   "bot": {
+    "conf:16:edit": {
+     "edit": {
+      "chat_data": "{n}",
+      "public_data": "{n}"
+     },
+     "result": "edited {n}"
+    }
+   }
   },
   {
    "id": "visual/sdk/17-size-hint",
@@ -9406,8 +10291,7 @@
    "checks": [],
    "stages": [],
    "bytes": 3002,
-   "gzip": 1514,
-   "gzip6": 1514,
+   "zlib": 1502,
    "refImages": {
     "light": "refs/visual/sdk/17-size-hint.png"
    },
@@ -9415,6 +10299,476 @@
    "group": "sdk",
    "expect": "Width 0 = the bubble's width, W = a fixed width clamped to [200, max]; height 0 = auto (placeholder, then the reported 240 clamped to [50, 600], cached per message), H = a fixed clamp(H, 50, 600) that the content does not change.",
    "contract": "docs/sdk-v1.md §5.6"
+  },
+  {
+   "id": "visual/sdk/18-resize-anchor",
+   "set": "visual",
+   "file": "visual/sdk/18-resize-anchor.html",
+   "title": "The resize anchor: the edge the widget chose stays put when its height changes",
+   "hint": "Anchor bottom (the start): tap + line a few times: the buttons stay under your finger, the bubble grows upward and the messages above it move up; − line shrinks it back the same way. Tap the anchor button for top: now + line keeps the bubble's top still and pushes the buttons and the messages below down. Try both with the bubble near the top and near the bottom of the screen.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.resize-anchor",
+    "tw.resize-anchor"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.resize-anchor",
+     "name": "setResizeAnchor exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4579,
+   "zlib": 2061,
+   "refImages": {
+    "light": "refs/visual/sdk/18-resize-anchor.png"
+   },
+   "height": 202,
+   "group": "sdk",
+   "expect": "With every height the host reports the widget's anchor (setResizeAnchor, v0.1.3); the chat list keeps that edge of the bubble in place on screen: bottom, the content above moves and the bubble's bottom edge does not; top (the default), the content below moves. No jump of the anchored edge while the height animates. A bubble off screen keeps what is on screen in place.",
+   "contract": "docs/sdk-v1.md §2.12, §5.6"
+  },
+  {
+   "id": "visual/sdk/19-request-tap",
+   "set": "visual",
+   "file": "visual/sdk/19-request-tap.html",
+   "title": "A request on a tap gets the bot's answer",
+   "hint": "Tap Ping: “sending…”, then the bot's answer “pong, <your first name>”; the client shows nothing of its own. Tap Two at once: the first is answered, the second fails at once with BUSY.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.request"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.request",
+     "name": "request exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3637,
+   "zlib": 1758,
+   "refImages": {
+    "light": "refs/visual/sdk/19-request-tap.png"
+   },
+   "height": 175,
+   "group": "sdk",
+   "expect": "messages.getBotWidgetQueryAnswer per tap with the widget's data; its result goes back to the widget (no toast, alert or link from the client); one request in flight per widget.",
+   "contract": "docs/sdk-v1.md §2.14, §5.11",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true
+    }
+   ],
+   "bot": {
+    "conf:19:ping": {
+     "result": "pong, {from}"
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/20-forward-requests",
+   "set": "visual",
+   "file": "visual/sdk/20-forward-requests.html",
+   "title": "A forward asks the bot only if the widget was sent with fwd_allow_queries",
+   "hint": "The bot sends this twice: “live forward” (fwd_allow_queries) and “plain forward”. Forward both to another chat. In the forwards: Ask on the live one is answered; on the plain one it says NOT_ALLOWED. Neither shows chatData or a chat type; only the live one shows a viewer (your name).",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.forward-copy",
+    "tw.context"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.context",
+     "name": "isForward and chatType are there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4337,
+   "zlib": 1987,
+   "refImages": {
+    "light": "refs/visual/sdk/20-forward-requests.png"
+   },
+   "height": 215,
+   "group": "sdk",
+   "expect": "A copy gets is_copy; can_query only for a fwd_allow_queries widget, taps only. The client passes the flags from the media; the widget of a copy gets no chatData and no chatType, and the viewer only with can_query; the bot gets only from, data and widget_id.",
+   "contract": "docs/sdk-v1.md §2.13, §2.14; docs/tgw-format.md",
+   "message": [
+    {
+     "kind": "live-copy",
+     "allow_queries": true,
+     "fwd_allow_queries": true,
+     "chat_data": "secret",
+     "public_data": "live forward",
+     "forward": true
+    },
+    {
+     "kind": "copy",
+     "allow_queries": true,
+     "chat_data": "secret",
+     "public_data": "plain forward",
+     "forward": true
+    }
+   ],
+   "bot": {
+    "conf:20:ask": {
+     "result": "answered for {from}"
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/21-network-marker",
+   "set": "visual",
+   "file": "visual/sdk/21-network-marker.html",
+   "title": "The network marker: shown exactly where a tap may send data to the bot",
+   "hint": "The bot sends this twice. On “allow_queries” the client shows its network marker; on “no queries” it shows none. Forward both: neither forward has a marker (no fwd_allow_queries). Tap the marker: the client explains it (a tap may send data to the bot's server).",
+   "kind": [],
+   "covers": [
+    "behaviour.network-marker"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [],
+   "stages": [],
+   "bytes": 3358,
+   "zlib": 1620,
+   "refImages": {
+    "light": "refs/visual/sdk/21-network-marker.png"
+   },
+   "height": 137,
+   "group": "sdk",
+   "expect": "The marker exactly where the message has can_query (context.canQuery): never without allow_queries, never on a forward of a widget without fwd_allow_queries, never on a preview.",
+   "contract": "docs/integration.md \"The network marker\"; docs/sdk-v1.md §5.11",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "public_data": "allow_queries"
+    },
+    {
+     "kind": "no-queries",
+     "public_data": "no queries"
+    }
+   ]
+  },
+  {
+   "id": "visual/sdk/22-copy-text",
+   "set": "visual",
+   "file": "visual/sdk/22-copy-text.html",
+   "title": "copyText: the client copies on a tap and shows what it copied",
+   "hint": "Tap Copy: the client's toast shows CONF-2026-OK, and that is what you paste. Tap Copy later: nothing is copied a second later (no tap). Tap Copy twice: one tap, one toast.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "tw.copy-text"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.copy-text",
+     "name": "copyText exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3495,
+   "zlib": 1697,
+   "refImages": {
+    "light": "refs/visual/sdk/22-copy-text.png"
+   },
+   "height": 153,
+   "group": "sdk",
+   "expect": "copyText on a tap: copy the text and show a toast with the text itself (truncated if long); outside a tap nothing (activation-blocked); one copy per tap. The widget is not told.",
+   "contract": "docs/sdk-v1.md §2.15, §5.11",
+   "message": [
+    {
+     "kind": "private"
+    }
+   ]
+  },
+  {
+   "id": "visual/sdk/23-preview",
+   "set": "visual",
+   "file": "visual/sdk/23-preview.html",
+   "title": "A preview in the inline results: the widget's data, no input, nothing about the user",
+   "hint": "In any chat type the test bot's username and conf-preview. In the list the widget says Preview yes and shows its state; a tap on it selects the result: Taps stays 0. Send it: the message says Preview no, shows a viewer, and Tap me counts.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.preview",
+    "tw.preview"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.preview",
+     "name": "isPreview is there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3634,
+   "zlib": 1773,
+   "refImages": {
+    "light": "refs/visual/sdk/23-preview.png"
+   },
+   "height": 170,
+   "group": "sdk",
+   "expect": "A widget result in the inline list (botInlineMessageWidget) runs with context.preview and the result's data: no input routed to the widget, no requests or actions, no viewer, no storage, no network marker; the sent message is a new widget.",
+   "contract": "docs/sdk-v1.md §2.16, §5.11",
+   "message": [
+    {
+     "kind": "preview",
+     "allow_queries": true,
+     "inline": true,
+     "chat_data": "chat state",
+     "public_data": "shared state"
+    }
+   ]
+  },
+  {
+   "id": "visual/sdk/24-watch-public-data",
+   "set": "visual",
+   "file": "visual/sdk/24-watch-public-data.html",
+   "title": "watchPublicData: the client polls a shared widget's state while the widget watches",
+   "hint": "Tap Start: for two minutes the bot changes the shared state every 10 s (editWidgetData with cache_time 5, nothing pushed). Watching: the value follows within about 5 s. Tap Unwatch: it stops following; Watch: it catches up at the next poll. Scrolled off screen nothing is polled.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.data-edit",
+    "tw.watch-public-data"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.watch-public-data",
+     "name": "watchPublicData exists",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4367,
+   "zlib": 2035,
+   "refImages": {
+    "light": "refs/visual/sdk/24-watch-public-data.png"
+   },
+   "height": 206,
+   "group": "sdk",
+   "expect": "The client polls getWidgetPublicData only while the widget watches (onWatchPublicData / watchesPublicData) and is on screen, one carrier per widget_id, at the object's period; a new value reaches the widget as publicDataChanged.",
+   "contract": "docs/sdk-v1.md §2.13, §5.11; docs/integration.md",
+   "message": [
+    {
+     "kind": "private",
+     "allow_queries": true,
+     "shared_widget": true,
+     "public_data": "0"
+    }
+   ],
+   "bot": {
+    "conf:24:start": {
+     "result": "ticking",
+     "repeat": {
+      "every": 10,
+      "times": 12
+     },
+     "editShared": {
+      "public_data": "{n}",
+      "cache_time": 5
+     }
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/25-group-chat-state",
+   "set": "visual",
+   "file": "visual/sdk/25-group-chat-state.html",
+   "title": "A group: one chat state for all members, drawn per viewer",
+   "hint": "The bot sends this into the test group. Each member taps +1: everyone sees the same count and who tapped last (one chat state for the group), and each sees their own name under You. Nobody's widget asks without a tap.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "behaviour.data-edit",
+    "tw.bot-data",
+    "tw.context"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.bot-data",
+     "name": "chatData is there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 3954,
+   "zlib": 1943,
+   "refImages": {
+    "light": "refs/visual/sdk/25-group-chat-state.png"
+   },
+   "height": 186,
+   "group": "sdk",
+   "expect": "In a group chatData is one value for all members, edited by the bot (updateMessageWidgetData; in a supergroup with the channel's pts); requests on a tap only; viewer is each member.",
+   "contract": "docs/sdk-v1.md §2.13, §2.14, §5.11",
+   "message": [
+    {
+     "kind": "group",
+     "allow_queries": true,
+     "chat": "group",
+     "chat_data": "{\"n\":0}"
+    }
+   ],
+   "bot": {
+    "conf:25:plus": {
+     "edit": {
+      "chat_data": "{\"n\":{n},\"by\":\"{from}\"}"
+     },
+     "result": "ok"
+    }
+   }
+  },
+  {
+   "id": "visual/sdk/26-haptics-no-touch",
+   "set": "visual",
+   "file": "visual/sdk/26-haptics-no-touch.html",
+   "title": "Haptics without a touch: one second, then nothing for nine (a widget cannot buzz the phone)",
+   "hint": "Tap Start, then do not touch the widget: 6 s later it asks for a haptic every 50 ms for 15 s (the counter runs). You feel one second of them, nothing for nine, one more second, then nothing. Then hold Hold and buzz for a second and lift your finger: it asks every 100 ms while you hold and for 8 s after; you feel it while you hold and about 6 s after (the 5 s after a touch, then one series), then nothing.",
+   "kind": [
+    "self"
+   ],
+   "covers": [
+    "limit.haptic-rate",
+    "tw.haptic"
+   ],
+   "themes": [
+    "light"
+   ],
+   "widths": [
+    360,
+    390,
+    430
+   ],
+   "actions": [],
+   "host": [],
+   "checks": [
+    {
+     "id": "tw.haptic",
+     "name": "HapticFeedback is there",
+     "native": {
+      "chromium": "pass"
+     }
+    }
+   ],
+   "stages": [],
+   "bytes": 4448,
+   "zlib": 2057,
+   "refImages": {
+    "light": "refs/visual/sdk/26-haptics-no-touch.png"
+   },
+   "height": 172,
+   "group": "sdk",
+   "expect": "Outside a touch the first haptic opens a 1 s series; the next series needs a touch or 10 s since the last began (one series after a touch at any time later). During a touch (a press on the widget and 5 s after it is lifted) haptics pass under the rate limit (a burst of 5, then 10 per second).",
+   "contract": "docs/sdk-v1.md §2.6"
   }
  ]
 }

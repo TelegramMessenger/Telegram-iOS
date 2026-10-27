@@ -158,4 +158,18 @@ final class HLSPlaybackControllerEstimateTests: XCTestCase {
         XCTAssertEqual(h.appendedKeys.first, HLSSegmentKey(level: 1, index: 0))
         h.assertInvariants()
     }
+
+    // The first video of a session on a fast network: the node seeds the class from the account's other downloads, and
+    // the start takes the level that estimate picks (D12).
+    func testASeededPriorStartsTheFirstVideoAtTheEstimatesLevel() {
+        let store = HLSBandwidthStore()
+        store.seedPrior(bitsPerSecond: 20_000_000.0, networkClass: HLSNetworkClass("wifi"))
+        let h = ControllerHarness(store: store, networkClass: HLSNetworkClass("wifi"))
+        h.setPlaylists()
+        h.controller.start()
+
+        XCTAssertEqual(h.environment.loads.first?.level, 3)
+        XCTAssertTrue(h.logLines.contains("start level=1080 reason=estimate position=0.0"), "\(h.logLines)")
+        h.assertInvariants()
+    }
 }

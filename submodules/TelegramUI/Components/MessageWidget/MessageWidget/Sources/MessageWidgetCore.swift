@@ -2,6 +2,7 @@ import Foundation
 import MessageWidgetRendering
 import QuartzCore
 import WidgetRuntimeIOS
+import WidgetSandboxIntl
 
 /// One message widget, the worker half (spec 2026-10-15 D2), on WidgetRuntime (M1d plan, Task 8): its session
 /// (`WRSession`: the runtime, its render tree and its CoreText host), its tree renderer and its tile drawer. Main never
@@ -60,6 +61,10 @@ final class MessageWidgetCore {
     private let commitSink: MessageWidgetInstance.StorageCommitSink
     /// The stored areas the session reads at the widget's first touch of each (SDK v1 §3.1).
     private let storage: MessageWidgetStorage
+    /// The message's context, fixed for the widget's life (sdk-v1 §2.14), set on the session before its boot.
+    private let context: MessageWidgetContext
+    /// The bot's state as last set (sdk-v1 §2.13): the one the boot starts with, then each change passed on.
+    private var widgetState: MessageWidgetState = .empty
     /// The restart policy stopped the widget for good (SDK v1 §5.7): its boot makes no session.
     private let startsStopped: Bool
     private var diagnostics: [(kind: String, detail: String)] = []
@@ -89,10 +94,11 @@ final class MessageWidgetCore {
     /// Tests only: the loads the renderer refused (it fetches nothing), as of the last task; -1 without a session.
     private(set) var refusedLoads = -1
 
-    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat) {
+    init(source: String, stoppedLabel: String, maxMessageLength: Int, locale: String = "en-US", storage: MessageWidgetStorage = .empty, context: MessageWidgetContext = MessageWidgetContext(), startsStopped: Bool = false, commitSink: MessageWidgetInstance.StorageCommitSink = MessageWidgetInstance.StorageCommitSink(), timers: MessageWidgetTimers, scale: CGFloat) {
         self.source = source
         self.commitSink = commitSink
         self.storage = storage
+        self.context = context
         self.startsStopped = startsStopped
         self.stoppedLabel = stoppedLabel
         self.maxMessageLength = maxMessageLength
@@ -129,6 +135,11 @@ final class MessageWidgetCore {
         if kind == .draw {
             let drawStart = CACurrentMediaTime()
             frame = self.renderer.map { self.drawer.draw($0) }
+            // A tile the renderer could not draw though it has a tree (a bitmap past its pixel cap, a refused
+            // allocation): the drawer keeps the last frame up, and the diagnostics say why it is stale.
+            if let renderer = self.renderer, renderer.hasTree, self.drawer.needsDraw(renderer) {
+                self.appendDiag("tile-draw-failed", "the last frame stays at \(Int(renderer.documentSize.width))x\(Int(renderer.documentSize.height))")
+            }
             self.lastDrawMilliseconds = (CACurrentMediaTime() - drawStart) * 1000.0
         } else {
             self.lastStepMilliseconds = (CACurrentMediaTime() - stepStart) * 1000.0
@@ -138,7 +149,8 @@ final class MessageWidgetCore {
         self.meter = nil
         self.sequence += 1
         let wantsFrame = self.state == .live && self.session?.wantsAnimationFrame() == true
-        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
+        let resizeAnchor: MessageWidgetResizeAnchor = self.session?.resizeAnchor == .bottom ? .bottom : .top
+        let snapshot = WidgetSnapshot(sequence: self.sequence, kind: kind, width: self.width, size: self.renderer?.documentSize, resizeAnchor: resizeAnchor, frame: frame, needsDraw: needsDraw, drawRequest: kind == .draw ? self.drawRequest : 0, state: self.state, bridgeCalls: self.bridgeCalls, wantsFrame: wantsFrame, lastError: self.lastError, diagnostics: self.diagnostics, units: meter.spent, selectableText: self.exportedSelection.text, exportsSelection: self.exportedSelection.done)
         self.exportedSelection = (nil, false)
         self.bridgeCalls.removeAll()
         if !self.storageCommits.isEmpty {
@@ -159,7 +171,7 @@ final class MessageWidgetCore {
     /// Creates the session and runs the widget's parse and boot. A session that cannot be made or a boot that does not
     /// start (a C++ failure, a parse past its ceiling) is `.failedToStart`; a boot its scripts stopped is `.frozen`, as at
     /// any other time, with its parsed markup.
-    func boot(width: CGFloat, maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight, theme: MessageWidgetInstance.Theme, visible: Bool, budgets: (parse: UInt64, boot: UInt64, task: UInt64)?) {
+    func boot(width: CGFloat, maximumHeight: CGFloat = WidgetTreeRenderer.maximumHeight, theme: MessageWidgetInstance.Theme, visible: Bool, reducedMotion: Bool = false, budgets: (parse: UInt64, boot: UInt64, task: UInt64)?) {
         self.width = width
         self.visible = visible
         if let budgets {
@@ -182,7 +194,13 @@ final class MessageWidgetCore {
         }
         self.sessionDelegate = delegate
         session.setLocale(self.locale)
+        // The first layout's prefers-reduced-motion: the render tree exists already, the boot builds it.
+        session.setReducedMotion(reducedMotion)
         session.setStoragePreloadLocal(self.storage.local.map { [$0.key, $0.value] }, session: self.storage.session.map { [$0.key, $0.value] })
+        let context = self.context
+        let viewer = context.viewer.map { WRWidgetViewer(id: $0.id, firstName: $0.firstName, lastName: $0.lastName, username: $0.username, isPremium: $0.isPremium) }
+        session.setContextCopy(context.isCopy, canQuery: context.canQuery, backgroundQuery: context.backgroundQuery, chatType: context.chatType?.rawValue, viewer: viewer, preview: context.isPreview)
+        session.setChatData(self.widgetState.chatData, publicData: self.widgetState.publicData)
         self.session = session
         self.renderer = WidgetTreeRenderer(width: width, maximumHeight: maximumHeight)
         // A document starts visible; a hidden one is hidden by a task that runs before the boot's scripts.
@@ -236,11 +254,53 @@ final class MessageWidgetCore {
         self.drain(at: CACurrentMediaTime() * 1000.0)
     }
 
+    /// The bot's state (sdk-v1 §2.13). Before the boot it is the state the boot starts with; after it, a change the
+    /// session puts in place with its events, which run in this task.
+    func setState(_ state: MessageWidgetState) {
+        self.widgetState = state
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setWorkLimitAfter(self.taskBudget)
+        session.setChatData(state.chatData, publicData: state.publicData)
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// The client's outcome for the widget's request `id` (sdk-v1 §2.14), settled in this task.
+    func completeRequest(id: Int64, outcome: MessageWidgetRequestOutcome) {
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setWorkLimitAfter(self.taskBudget)
+        switch outcome {
+        case let .answered(result):
+            session.completeRequest(id, result: result, failure: .none)
+        case .timeout:
+            session.completeRequest(id, result: nil, failure: .timeout)
+        case .rateLimited:
+            session.completeRequest(id, result: nil, failure: .rateLimited)
+        case .failed:
+            session.completeRequest(id, result: nil, failure: .failed)
+        }
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
+    /// The system's Reduce Motion changed: prefers-reduced-motion follows, and the media query lists whose answer flipped
+    /// report a change.
+    func setReducedMotion(_ reduced: Bool) {
+        guard self.state == .live, let session = self.session else {
+            return
+        }
+        session.setWorkLimitAfter(self.taskBudget)
+        session.setReducedMotion(reduced)
+        self.drain(at: CACurrentMediaTime() * 1000.0)
+    }
+
     /// One touch phase, queued as the session's task and run with whatever else is runnable, after what was runnable
     /// before it. The press's permission for a link call is the runtime's (SDK v1 §2.5: one call per press, from the
-    /// press's own events only). A primary press's down answers what the press is to the widget (SDK v1 §5.5).
+    /// press's own events only). A press's down answers what the press is to the widget (SDK v1 §5.5).
     @discardableResult
-    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool) -> MessageWidgetPress {
+    func touch(action: Int32, at point: CGPoint, pointer: Int32, primary: Bool, mouse: Bool = false, button: Int = 0) -> MessageWidgetPress {
         guard self.state == .live, let session = self.session else {
             return .none
         }
@@ -252,6 +312,8 @@ final class MessageWidgetCore {
             phase = .move
         case 2:
             phase = .up
+        case 4:
+            phase = .retract
         default:
             phase = .cancel
         }
@@ -260,20 +322,23 @@ final class MessageWidgetCore {
         guard self.state == .live, !self.isStopped(session) else {
             return .none
         }
-        session.pointer(phase, at: point, pointerId: pointer, primary: primary)
+        session.pointer(phase, at: point, pointerId: pointer, primary: primary, mouse: mouse, button: button)
         self.drain(at: now)
-        guard phase == .down, primary else {
+        // Every finger's down answers, not only the primary's (multitouch design §5.1).
+        guard phase == .down else {
             return .none
         }
         let axes = session.gestureClaim
-        var claim: MessageWidgetGestureClaim = []
-        if axes.contains(.horizontal) {
-            claim.insert(.horizontal)
+        if mouse {
+            // The policy's mouse: no hold menu and no swipes, so its holds and sideways drags are the widget's whatever
+            // the touch-action (a vertical drag still scrolls the chat). Its secondary click claims holds where a touch
+            // would (the widget's contextmenu), else it is the chat's menu.
+            return MessageWidgetPress(claim: .horizontal, takesTaps: session.pressTakesTaps, hold: button != 2 || axes.contains(.hold))
         }
-        if axes.contains(.vertical) {
-            claim.insert(.vertical)
-        }
-        return MessageWidgetPress(claim: claim, takesTaps: session.pressTakesTaps)
+        // Only the horizontal axis: the chat always scrolls (`MessageWidgetGestureClaim`; widget-sandbox v0.1.3's G2,
+        // whose policy never claims the vertical one).
+        let claim: MessageWidgetGestureClaim = axes.contains(.horizontal) ? .horizontal : []
+        return MessageWidgetPress(claim: claim, takesTaps: session.pressTakesTaps, hold: axes.contains(.hold))
     }
 
     /// One animation frame, while the widget is visible and wants one.
@@ -503,8 +568,9 @@ final class MessageWidgetCore {
     }
 
     /// The runtime posts a link call only once it has checked the URL (SDK v1 §2.5) and the press allowed it; the host
-    /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). Any other
-    /// method is ignored.
+    /// still refuses one longer than `maximumLinkLength`. A haptic arrives checked and rate-limited (§2.6). A request, a
+    /// copyText and watchPublicData (widget-sandbox v0.2) arrive checked by the runtime's policy. Any other method is
+    /// ignored.
     fileprivate func bridge(_ method: String, argsJson: String) {
         guard method.count <= MessageWidgetCore.maximumBridgeMethodLength else {
             self.appendDiag("bridge-ignored", String(method.prefix(MessageWidgetCore.maximumBridgeMethodLength)))
@@ -527,6 +593,19 @@ final class MessageWidgetCore {
                 return
             }
             self.bridgeCalls.append(.haptic(kind: first, value: args.count > 1 ? args[1] as? String : nil))
+        case "request":
+            // sdk-v1 §2.14: [id, data], both checked by the runtime (its request gate admitted it).
+            guard args.count == 2, let id = Int64(first), let data = args[1] as? String else {
+                return
+            }
+            self.bridgeCalls.append(.request(id: id, data: Data(data.utf8)))
+        case "copyText":
+            guard !first.isEmpty else {
+                return
+            }
+            self.bridgeCalls.append(.copyText(first))
+        case "watchPublicData":
+            self.bridgeCalls.append(.watchPublicData(first == "true"))
         default:
             self.appendDiag("bridge-ignored", method)
         }
@@ -560,5 +639,9 @@ private final class SessionDelegate: NSObject, WRSessionDelegate {
 
     func session(_ session: WRSession, storageCommit area: String, entries: [[String]]) {
         self.core?.storageCommit(area, entries: entries)
+    }
+
+    func session(_ session: WRSession, intl requestJson: String) -> String {
+        return WidgetSandboxIntl.answer(requestJson)
     }
 }

@@ -919,7 +919,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                                 }
                             })
                         },
-                        clearGroup: { _ in
+                        clearGroup: { _, _, _ in
                         },
                         editAction: { _ in
                         },

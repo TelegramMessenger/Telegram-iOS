@@ -2406,9 +2406,25 @@ namespace
         }
     }
 
+    // Telegram (VENDOR.md edit 20): values compared exactly, not within litehtml's pixel epsilon: a layout on a kept render
+    // tree can move a box by less than it, and what the mirror holds must be what a fresh walk records.
+    bool same(litehtml::pixel_t a, litehtml::pixel_t b)
+    {
+        return a.value() == b.value();
+    }
+
+    bool same_position(const litehtml::position& a, const litehtml::position& b)
+    {
+        return same(a.x, b.x) && same(a.y, b.y) && same(a.width, b.width) && same(a.height, b.height);
+    }
+
     bool same_margins(const litehtml::margins& a, const litehtml::margins& b)
     {
+#if 0
         return a.left == b.left && a.right == b.right && a.top == b.top && a.bottom == b.bottom;
+#else
+        return same(a.left, b.left) && same(a.right, b.right) && same(a.top, b.top) && same(a.bottom, b.bottom);
+#endif
     }
 } // namespace
 
@@ -2448,16 +2464,16 @@ void litehtml::render_item::observe_geometry()
 unsigned litehtml::render_item::observed_change() const
 {
     unsigned what = 0;
-    if(!(m_observed_pos.x == m_pos.x) || !(m_observed_pos.y == m_pos.y))
+    if(!same(m_observed_pos.x, m_pos.x) || !same(m_observed_pos.y, m_pos.y))
         what |= render_observer::moved;
-    if(!(m_observed_pos.width == m_pos.width) || !(m_observed_pos.height == m_pos.height) ||
+    if(!same(m_observed_pos.width, m_pos.width) || !same(m_observed_pos.height, m_pos.height) ||
        !same_margins(m_observed_padding, m_padding) || !same_margins(m_observed_borders, m_borders))
         what |= render_observer::resized;
     if(dynamic_cast<const render_item_inline_context*>(this))
     {
         std::vector<position> now;
         inline_geometry(*this, now);
-        if(now.size() != m_observed_inline.size() || !std::equal(now.begin(), now.end(), m_observed_inline.begin()))
+        if(now.size() != m_observed_inline.size() || !std::equal(now.begin(), now.end(), m_observed_inline.begin(), same_position))
             what |= render_observer::reflowed;
     }
     return what;

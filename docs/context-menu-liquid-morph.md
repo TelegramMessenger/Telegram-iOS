@@ -1,30 +1,53 @@
 # Custom context menu liquid morph
 
-## Scope (2026-09-29): single-button header capsules only
+## Which menus morph
 
-**Update 2026-10-18: navigation bar row capsules of any number of buttons.** UIKit morphs a menu out of a whole
-section of several bar items: filmed on iOS 27 with the reference app (`Tests/NativeNavigationReference`,
-`-menuPair 1`: `[search, …]` in one pill, `…` carrying a `UIMenu`), the pill with both glyphs becomes the menu
-(search's glyph visible, blurred, inside the morphing blob), nothing of the pill stays behind, and the menu closes
-back into the whole pill with both glyphs. Content sharp ~0.21 s after the touch, closed ~0.28 s after it.
-`NavigationBarComponent` now sets `morphsIntoContextMenu` on its left capsule and every right pill whatever their
-button count, so a menu from any button morphs the whole pill (the menu's source is the pill:
-`navigationButtonContextContainer(sourceView:)`). Ours measured on Saved Messages' `[search, …]`: sharp ~0.25 s,
-closed ~0.27 s. The iPhone Duo side column's capsule keeps the single-button rule (UIKit has no counterpart to
-measure). The rest of this section describes the 2026-09-29 state.
+The morph is opt-in per source view. `ContextControllerExtractedPresentationNode` morphs a `.reference` menu only when its
+reference view has `morphsIntoContextMenu` set (a `UIView` property in `Display/ContextContentSourceNode.swift`); every
+other source, and every `.extracted` or `.location` menu, uses the standard presentation. The rule is: a menu opened from
+a button drawn on glass morphs out of that glass. The call site passes the glass, not the button:
 
-The morph is opt-in per source view. `ContextControllerExtractedPresentationNode` morphs a `.reference` menu only when its reference view has `morphsIntoContextMenu` set (a `UIView` property in `Display/ContextContentSourceNode.swift`); every other source uses the standard presentation.
+- **Navigation-bar pills.** `NavigationBarComponent` sets the flag on its left capsule and every right pill whatever
+  their button count, so a menu from any button morphs the whole pill, as UIKit does with a section of several bar items
+  (filmed with `Tests/NativeNavigationReference`, `-menuPair 1`). The call site resolves the pill with
+  `navigationButtonContextContainer(sourceView:)` on the controller's `navigationBar`, on `ChatListHeaderComponent.View`
+  (`ChatListControllerImpl.headerMenuSourceView`) or on a hosted `NavigationBarComponent.View`. The iPhone Duo side
+  column's capsule sets it only while it holds one button (UIKit has no counterpart to measure), so the column's overflow
+  "…" does not morph; its back capsule never sets it.
+- **Glass containers.** A button built on `GlassContextExtractableContainer` sets the flag on it and passes it:
+  `GiftStoreScreen`'s balance pill, `QrStudioGlassButtonView`, `QrStudioCodePillView`, `LivePhotoButton`,
+  `AccountSwitchComponent`.
+- **`GlassBackgroundView`s handed out as `menuSourceView`.** `GlassBarButtonComponent.View` (its glass; itself in the
+  generic state), `GlassControlGroupComponent.View` (the group's glass: in a group of several items the whole pill
+  morphs, as a bar pill does), `FilterSelectorComponent`'s chips, the selection panel's trash button,
+  `BrowserNavigationBarComponent.menuSourceView(itemView:)`, `RichTextMediaContentComponent`'s "•••" button and the article
+  editor's bottom action bar (`RichTextActionBarComponent`: Add, List, Quote and Table morph the whole bar, the menu
+  centred on it) set the flag on their glass once. `LensTransitionContainer` morphs a `GlassBackgroundView` or a glass container through its native
+  effect view (`transitionView`), so the backdrop goes with the content; the glass stays the source's identity across
+  `renewNativeView`. The outline comes from `GlassBackgroundView.outlinePath`: the glass's rounding is the native view's
+  `layer.cornerRadius`, so the wrapper has none of its own, and without an outline the menu closes into a rectangle. `NewsChannelIslandView.menuSourceView` passes its effect view itself and flags it on every layout.
 
-Only navigation-header glass capsules that hold exactly one button set it, and they recompute it on every layout:
+A source must hand over its whole visible glass with the button's content inside it. Not morphing, for that reason:
 
-- `NavigationBarImpl`: left capsule (back button or the single left item) and right capsule, counting visible `NavigationButtonNodeImpl` items.
-- `ChatListHeaderComponent` (Contacts → Sort): back button plus buttons of the content views currently visible, so a primary/secondary crossfade counts both.
-- `PeerInfoHeaderNavigationButtonContainerNode`: distinct visible keys; normal and expanded sets crossfade with `expandFraction`, and the back button appears in both but is one element.
-- `GiftStoreScreen`'s balance pill, which is always a single element.
+- Buttons with no glass of their own: list-row "…" buttons (invite links, contacts), header panels (translation,
+  audio rate), section-header text buttons, value labels of rows, the Stories header "…", `PeerInfoHeaderButtonNode`'s
+  action row (blur, deliberately not opted in: to re-enable it, set `morphsIntoContextMenu` on those buttons'
+  `referenceNode.view`; its live-extraction support described below is intact).
+- `PlainButtonComponent` with a `GlassBackgroundComponent` background (the video chat's "…"): its content is a sibling of
+  the glass, so the content would stay on screen while the glass morphs.
+- A button in a glass toolbar shared by many buttons (the browser toolbar, the media editor's tools): the whole toolbar
+  would turn into the menu. The article editor's action bar does so on purpose.
+- The chat's floating navigate buttons (mentions, reactions, poll votes) open `.extracted` menus on a long press, and
+  their badge is separate glass.
+- Long presses on the back button (chat navigation stack) and on the chat's title avatar.
+
+A reference source that outsets its view (negative `insets`) gives the morph a source rect other than the view's bounds,
+which it morphs from as a plain rectangle; such a source drops the outset while it morphs
+(`MediaControlMenuReferenceSource`, `RichTextActionContextReferenceSource`).
 
 A morphing menu takes the source's place instead of opening below it. Its top edge sits on the source's top edge (for a `.top` source, its bottom edge on the source's bottom edge, growing upward), and it shares the source's left edge in the left half of the screen or its right edge in the right half. The screen-edge clamp still applies. The height limit is measured from that anchor edge, so the menu also gets the space the source occupied. In a two-list menu, the morphing main list sits on the source and the additional list follows it in the growth direction. `customPosition` is ignored. The placement is decided when the menu opens and kept for its lifetime (`hasActiveLiquidMorph`), even if the header relayouts and the capsule stops opting in. The morph still pivots on the source's center, which now lies inside the menu.
 
-Menus opened from a capsule shared by several buttons, and from any other source, do not morph and keep the standard placement. The profile action row (More / Mute, `PeerInfoHeaderButtonNode`) does not opt in either. Its live-extraction support described below is intact but unused, and its `prepareForContextMenu` (which cancels the release fade) runs only for an opted-in source. To re-enable it, set `morphsIntoContextMenu` on those buttons' `referenceNode.view`. The simulator gallery opts in its own sources so it still covers every shape.
+The profile action row's `prepareForContextMenu` (which cancels the release fade) runs only for an opted-in source. The simulator gallery opts in its own sources so it still covers every shape.
 
 Current profile sources use live foreground extraction and a matching live backdrop. The snapshot sections below describe earlier iterations, superseded by the final live-source section.
 

@@ -7,9 +7,10 @@ import TelegramPresentationData
 import AvatarNode
 import AccountContext
 import SelectablePeerNode
-import SolidRoundedButtonNode
 import ActivityIndicator
 import ComponentFlow
+import ButtonComponent
+import ComponentDisplayAdapters
 import EmojiStatusComponent
 import ShareController
 
@@ -105,7 +106,10 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peerNodes: [SelectablePeerNode]
     private let moreNode: MoreNode?
     
-    private let actionButtonNode: SolidRoundedButtonNode
+    private let actionButton = ComponentView<Empty>()
+    private let actionButtonTitle: String
+    private var isJoining = false
+    private var actionButtonWidth: CGFloat?
     
     private let context: AccountContext
     private let content: Content
@@ -135,8 +139,6 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.peersScrollNode.view.showsHorizontalScrollIndicator = false
         self.peersScrollNode.view.scrollsToTop = false
         
-        self.actionButtonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: theme), height: 52.0, cornerRadius: 11.0)
-        
         let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
         
         if case let .invite(isGroup, _, _, _, memberCount, members) = content {
@@ -156,12 +158,12 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
                 self.moreNode = nil
             }
             
-            self.actionButtonNode.title = isGroup ? strings.Invitation_JoinGroup : strings.Channel_JoinChannel
+            self.actionButtonTitle = isGroup ? strings.Invitation_JoinGroup : strings.Channel_JoinChannel
         } else {
             self.peerNodes = []
             self.moreNode = nil
             
-            self.actionButtonNode.title = content.isGroup ? strings.MemberRequests_RequestToJoinGroup : strings.MemberRequests_RequestToJoinChannel
+            self.actionButtonTitle = content.isGroup ? strings.MemberRequests_RequestToJoinGroup : strings.MemberRequests_RequestToJoinChannel
         }
         
         super.init()
@@ -211,12 +213,46 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             self.descriptionNode.attributedText = NSAttributedString(string: isGroup ? strings.MemberRequests_RequestToJoinDescriptionGroup : strings.MemberRequests_RequestToJoinDescriptionChannel, font: Font.regular(15.0), textColor: theme.actionSheet.secondaryTextColor, paragraphAlignment: .center)
             self.addSubnode(self.descriptionNode)
         }
-        
-        self.actionButtonNode.pressed = { [weak self] in
-            self?.join?()
-            self?.actionButtonNode.transitionToProgress()
+    }
+    
+    private func actionButtonPressed() {
+        self.join?()
+        self.isJoining = true
+        if let actionButtonWidth = self.actionButtonWidth {
+            let _ = self.updateActionButton(width: actionButtonWidth, transition: .immediate)
         }
-        self.addSubnode(self.actionButtonNode)
+    }
+    
+    private func updateActionButton(width: CGFloat, transition: ComponentTransition) -> CGSize {
+        self.actionButtonWidth = width
+        return self.actionButton.update(
+            transition: transition,
+            component: AnyComponent(ButtonComponent(
+                background: ButtonComponent.Background(
+                    style: .glass,
+                    color: self.theme.list.itemCheckColors.fillColor,
+                    foreground: self.theme.list.itemCheckColors.foregroundColor,
+                    pressedColor: self.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                ),
+                content: AnyComponentWithIdentity(
+                    id: AnyHashable(0),
+                    component: AnyComponent(ButtonTextContentComponent(
+                        text: self.actionButtonTitle,
+                        badge: 0,
+                        textColor: self.theme.list.itemCheckColors.foregroundColor,
+                        badgeBackground: self.theme.list.itemCheckColors.foregroundColor,
+                        badgeForeground: self.theme.list.itemCheckColors.fillColor
+                    ))
+                ),
+                isEnabled: true,
+                displaysProgress: self.isJoining,
+                action: { [weak self] in
+                    self?.actionButtonPressed()
+                }
+            )),
+            environment: {},
+            containerSize: CGSize(width: width, height: 52.0)
+        )
     }
     
     func activate() {
@@ -375,9 +411,14 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         }
         
         let buttonInset: CGFloat = 16.0
-        let actionButtonHeight = self.actionButtonNode.updateLayout(width: size.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.actionButtonNode, frame: CGRect(x: buttonInset, y: verticalOffset, width: size.width, height: actionButtonHeight))
-        verticalOffset += actionButtonHeight + 20.0
+        let actionButtonSize = self.updateActionButton(width: size.width - buttonInset * 2.0, transition: ComponentTransition(transition))
+        if let actionButtonView = self.actionButton.view {
+            if actionButtonView.superview == nil {
+                self.view.addSubview(actionButtonView)
+            }
+            transition.updateFrame(view: actionButtonView, frame: CGRect(origin: CGPoint(x: buttonInset, y: verticalOffset), size: actionButtonSize))
+        }
+        verticalOffset += actionButtonSize.height + 20.0
         
         if let descriptionSize = descriptionSize {
             transition.updateFrame(node: self.descriptionNode, frame: CGRect(origin: CGPoint(x: floor((size.width - descriptionSize.width) / 2.0), y: verticalOffset), size: descriptionSize))

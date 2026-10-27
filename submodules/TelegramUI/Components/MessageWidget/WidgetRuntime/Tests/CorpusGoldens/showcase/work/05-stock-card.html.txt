@@ -1,0 +1,137 @@
+stop -
+drive time limit
+refused-loads 0
+
+== dom
+<html><head><style></style>
+</head><body><div class="card">
+  <div class="hd"><div class="logo">NW</div><div><div class="n">Nordwind Air</div><div class="s">NWND · Frankfurt · <span id="mkt">market open</span></div></div><div class="price"><b id="px">€47.41</b><span id="chg" class="neg">−€0.67 (−1.39%) 1D</span></div></div>
+  <div class="chart" id="chart"><svg viewBox="0 0 380 130" id="svg"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" id="g0" stop-opacity=".3" stop-color="#ff3b30"></stop><stop offset="1" id="g1" stop-opacity="0" stop-color="#ff3b30"></stop></linearGradient></defs><line class="ref" id="ref" x1="0" x2="380" y1="10.0" y2="10.0"></line><path class="area" id="area" fill="url(#g)" d="M0.0 10.0L6.4 20.7L12.9 27.4L19.3 48.7L25.8 36.3L32.2 17.1L38.6 37.8L45.1 25.3L51.5 45.1L58.0 59.0L64.4 42.9L70.8 53.9L77.3 60.2L83.7 66.8L90.2 64.7L96.6 56.3L103.1 60.9L109.5 60.9L115.9 51.0L122.4 55.3L128.8 73.8L135.3 60.5L141.7 45.2L148.1 68.5L154.6 77.7L161.0 96.3L167.5 91.2L173.9 113.8L180.3 120.0L186.8 96.7L193.2 79.6L199.7 66.6L206.1 41.0L212.5 63.7L219.0 69.9L225.4 54.4L231.9 77.9L238.3 91.8L244.7 71.9L251.2 87.8L257.6 98.2L264.1 77.6L270.5 63.4L276.9 39.4L283.4 26.6L289.8 43.6L296.3 44.6L302.7 38.6L309.2 33.9L315.6 37.4L322.0 49.2L328.5 42.0L334.9 43.3L341.4 66.0L347.8 51.4L354.2 69.4L360.7 92.7L367.1 81.5L373.6 85.7L380.0 80.3L380 130L0 130Z"></path><path class="line" id="line" d="M0.0 10.0L6.4 20.7L12.9 27.4L19.3 48.7L25.8 36.3L32.2 17.1L38.6 37.8L45.1 25.3L51.5 45.1L58.0 59.0L64.4 42.9L70.8 53.9L77.3 60.2L83.7 66.8L90.2 64.7L96.6 56.3L103.1 60.9L109.5 60.9L115.9 51.0L122.4 55.3L128.8 73.8L135.3 60.5L141.7 45.2L148.1 68.5L154.6 77.7L161.0 96.3L167.5 91.2L173.9 113.8L180.3 120.0L186.8 96.7L193.2 79.6L199.7 66.6L206.1 41.0L212.5 63.7L219.0 69.9L225.4 54.4L231.9 77.9L238.3 91.8L244.7 71.9L251.2 87.8L257.6 98.2L264.1 77.6L270.5 63.4L276.9 39.4L283.4 26.6L289.8 43.6L296.3 44.6L302.7 38.6L309.2 33.9L315.6 37.4L322.0 49.2L328.5 42.0L334.9 43.3L341.4 66.0L347.8 51.4L354.2 69.4L360.7 92.7L367.1 81.5L373.6 85.7L380.0 80.3" style="stroke: #ff3b30;"></path><circle class="dot live" id="dotLive" cx="380" cy="80.3"></circle><circle class="dot" id="dot" cx="380" cy="80.3"></circle></svg><div class="scrub" id="scrub"><b id="scrubV"></b></div></div>
+  <div class="ranges" id="ranges"><button class="on" data-r="1D" role="button">1D</button><button data-r="1W" role="button">1W</button><button data-r="1M" role="button">1M</button><button data-r="1Y" role="button">1Y</button></div>
+  <div class="stats"><div>Open<b id="sOpen">€48.08</b></div><div>High<b id="sHigh">€48.08</b></div><div>Low<b id="sLow">€47.03</b></div><div>Vol<b>2.4M</b></div></div>
+  <div class="acts"><button class="buy" id="buy">Buy</button><button class="sell" id="sell">Sell</button><button class="alert" id="alert" aria-label="price alert">🔔</button></div>
+  <div class="note">Demo data. Not investment advice — just pixels.</div>
+</div>
+<script></script>
+</body></html>
+
+== layout
+html 0 0 360 422.75
+  head 0 0 0 0
+    style 0 0 0 0
+  body 0 0 360 422.75
+    div 18 16 324 392.75
+      div 18 16 324 64.2
+        div 18 27.1 25.7143 42
+        div 55.7143 21.1 156.735 54
+          div 55.7143 21.1 156.735 21.6
+          div 55.7143 42.7 156.735 32.4
+            span 55.7143 42.7 0 0
+        div 224.449 16 117.551 64.2
+          b 228.449 16 113.551 26.4
+          span 224.449 42.4 0 0
+      div 12 92.2 336 130
+        svg 12 92.2 336 130
+          defs 0 0 0 0
+            lineargradient 0 0 0 0
+              stop 0 0 0 0
+              stop 0 0 0 0
+          line 0 0 0 0
+          path 0 0 0 0
+          path 0 0 0 0
+          circle 0 0 0 0
+          circle 0 0 0 0
+        div 0 0 0 0
+          b 0 0 0 0
+      div 21 233.2 318 28.2
+        button 21 239.2 76.5 16.2
+        button 101.5 239.2 76.5 16.2
+        button 182 239.2 76.5 16.2
+        button 262.5 239.2 76.5 16.2
+      div 18 276.4 324 33.05
+        div 18 276.4 75 33.05
+          b 18 291.9 75 17.55
+        div 101 276.4 75 33.05
+          b 101 291.9 75 17.55
+        div 184 276.4 75 33.05
+          b 184 291.9 75 17.55
+        div 267 276.4 75 33.05
+          b 267 291.9 75 17.55
+      div 18 323.45 324 45.6
+        button 30 335.45 100 21.6
+        button 164 335.45 100 21.6
+        button 298 335.45 32 21.6
+      div 18 379.05 324 29.7
+
+== paint
+root 360x422.75 items=55
+  solid-fill bounds=(0,0,360,423) layer=(border=(0,0,360,423),radius=(0,0,0,0,0,0,0,0),clip=(0,0,360,423),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  set-clip bounds=(0,0,360,422.75) pos=(0,0,360,422.75) radius=(0,0,0,0,0,0,0,0)
+  linear-gradient bounds=(18,27,26,42) layer=(border=(18,27,26,42),radius=(12,12,12,12,12,12,12,12),clip=(18,27,26,42),origin=(18,27,26,42),attachment=0,repeat=0,root=0) points=((0,#111111ff,-),(1,#444444ff,-)) space=0 hue=0 start=(14,31) end=(48,65)
+  solid-fill bounds=(18,230,324,34) layer=(border=(18,230,324,34),radius=(10,10,10,10,10,10,10,10),clip=(18,230,324,34),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  box-shadow bounds=(15,227,89,40) box=(21,233,77,28) radius=(8,8,8,8,8,8,8,8) shadow=(0,1,3,0,#0000001a,0)
+  solid-fill bounds=(21,233,77,28) layer=(border=(21,233,77,28),radius=(8,8,8,8,8,8,8,8),clip=(21,233,77,28),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#ffffffff
+  solid-fill bounds=(18,323,124,46) layer=(border=(18,323,124,46),radius=(8,8,8,8,8,8,8,8),clip=(18,323,124,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#34c759ff
+  solid-fill bounds=(152,323,124,46) layer=(border=(152,323,124,46),radius=(8,8,8,8,8,8,8,8),clip=(152,323,124,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  solid-fill bounds=(286,323,56,46) layer=(border=(286,323,56,46),radius=(8,8,8,8,8,8,8,8),clip=(286,323,56,46),origin=(0,0,0,0),attachment=0,repeat=0,root=0) color=#f2f2f7ff
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,422.75) pos=(0,0,360,422.75) radius=(0,0,0,0,0,0,0,0)
+  text bounds=(14.8571,32,32,32) pos=(22.8571,40,16,16) color=#ffffffff text="NW" font=f1 glyphs=2 advance=16
+  text bounds=(47.7143,15,80,32) pos=(55.7143,23,64,16) color=#0a0a0aff text="Nordwind" font=f2 glyphs=8 advance=64
+  text bounds=(119.714,15,40,32) pos=(127.714,23,24,16) color=#0a0a0aff text="Air" font=f2 glyphs=3 advance=24
+  text bounds=(47.7143,35,48,32) pos=(55.7143,43,32,16) color=#6e6e73ff text="NWND" font=f3 glyphs=4 advance=32
+  text bounds=(87.7143,35,32,32) pos=(95.7143,43,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(111.714,35,88,32) pos=(119.714,43,72,16) color=#6e6e73ff text="Frankfurt" font=f3 glyphs=9 advance=72
+  text bounds=(47.7143,51,32,32) pos=(55.7143,59,16,16) color=#6e6e73ff text="·" font=f3 glyphs=2 advance=16
+  text bounds=(71.7143,51,64,32) pos=(79.7143,59,48,16) color=#6e6e73ff text="market" font=f3 glyphs=6 advance=48
+  text bounds=(127.714,51,48,32) pos=(135.714,59,32,16) color=#6e6e73ff text="open" font=f3 glyphs=4 advance=32
+  text bounds=(270,13,80,32) pos=(278,21,64,16) color=#0a0a0aff text="€47.41" font=f4 glyphs=8 advance=64
+  text bounds=(254,35,96,32) pos=(262,43,80,16) color=#ff3b30ff text="−€0.67" font=f5 glyphs=10 advance=80
+  text bounds=(230,54,96,32) pos=(238,62,80,16) color=#ff3b30ff text="(−1.39%)" font=f5 glyphs=10 advance=80
+  text bounds=(318,54,32,32) pos=(326,62,16,16) color=#ff3b30ff text="1D" font=f5 glyphs=2 advance=16
+  text bounds=(43.25,231,32,32) pos=(51.25,239,16,16) color=#0a0a0aff text="1D" font=f6 glyphs=2 advance=16
+  text bounds=(123.75,231,32,32) pos=(131.75,239,16,16) color=#6e6e73ff text="1W" font=f6 glyphs=2 advance=16
+  text bounds=(204.25,231,32,32) pos=(212.25,239,16,16) color=#6e6e73ff text="1M" font=f6 glyphs=2 advance=16
+  text bounds=(284.75,231,32,32) pos=(292.75,239,16,16) color=#6e6e73ff text="1Y" font=f6 glyphs=2 advance=16
+  text bounds=(10,267,48,32) pos=(18,275,32,16) color=#6e6e73ff text="OPEN" font=f7 glyphs=4 advance=32
+  text bounds=(10,284,80,32) pos=(18,292,64,16) color=#0a0a0aff text="€48.08" font=f8 glyphs=8 advance=64
+  text bounds=(93,267,48,32) pos=(101,275,32,16) color=#6e6e73ff text="HIGH" font=f7 glyphs=4 advance=32
+  text bounds=(93,284,80,32) pos=(101,292,64,16) color=#0a0a0aff text="€48.08" font=f8 glyphs=8 advance=64
+  text bounds=(176,267,40,32) pos=(184,275,24,16) color=#6e6e73ff text="LOW" font=f7 glyphs=3 advance=24
+  text bounds=(176,284,80,32) pos=(184,292,64,16) color=#0a0a0aff text="€47.03" font=f8 glyphs=8 advance=64
+  text bounds=(259,267,40,32) pos=(267,275,24,16) color=#6e6e73ff text="VOL" font=f7 glyphs=3 advance=24
+  text bounds=(259,284,48,32) pos=(267,292,32,16) color=#0a0a0aff text="2.4M" font=f8 glyphs=4 advance=32
+  text bounds=(60,330,40,32) pos=(68,338,24,16) color=#ffffffff text="Buy" font=f9 glyphs=3 advance=24
+  text bounds=(190,330,48,32) pos=(198,338,32,16) color=#0a0a0aff text="Sell" font=f9 glyphs=4 advance=32
+  text bounds=(290,329,48,32) pos=(298,337,32,16) color=#0a0a0aff text="🔔" font=f2 glyphs=4 advance=32
+  text bounds=(28,371,48,32) pos=(36,379,32,16) color=#6e6e73ff text="Demo" font=f10 glyphs=4 advance=32
+  text bounds=(68,371,56,32) pos=(76,379,40,16) color=#6e6e73ff text="data." font=f10 glyphs=5 advance=40
+  text bounds=(116,371,40,32) pos=(124,379,24,16) color=#6e6e73ff text="Not" font=f10 glyphs=3 advance=24
+  text bounds=(148,371,96,32) pos=(156,379,80,16) color=#6e6e73ff text="investment" font=f10 glyphs=10 advance=80
+  text bounds=(236,371,64,32) pos=(244,379,48,16) color=#6e6e73ff text="advice" font=f10 glyphs=6 advance=48
+  text bounds=(292,371,40,32) pos=(300,379,24,16) color=#6e6e73ff text="—" font=f10 glyphs=3 advance=24
+  text bounds=(124,386,48,32) pos=(132,394,32,16) color=#6e6e73ff text="just" font=f10 glyphs=4 advance=32
+  text bounds=(164,386,72,32) pos=(172,394,56,16) color=#6e6e73ff text="pixels." font=f10 glyphs=7 advance=56
+  del-clip bounds=(0,0,0,0)
+  set-clip bounds=(0,0,360,422.75) pos=(0,0,360,422.75) radius=(0,0,0,0,0,0,0,0)
+  set-clip bounds=(12,92.2,336,130) pos=(12,92.2,336,130) radius=(0,0,0,0,0,0,0,0)
+  isolated box=(12,92.2,336,130)
+    group opacity=1 matrix=(0.884211,0,0,0.884211,12,99.7263) backface=0 bounds=(0,0,380,130) exact=0
+      path bounds=(-3,7,386,6) ops=(0,1) points=(0,10,380,10) fill=1 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#00000014 stroke-width=1 cap=0 join=0 miter=4 dashes=(3,4) dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      path bounds=(-1,9,382,122) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4) points=(0,10,6.4,20.7,12.9,27.4,19.3,48.7,25.8,36.3,32.2,17.1,38.6,37.8,45.1,25.3,51.5,45.1,58,59,64.4,42.9,70.8,53.9,77.3,60.2,83.7,66.8,90.2,64.7,96.6,56.3,103.1,60.9,109.5,60.9,115.9,51,122.4,55.3,128.8,73.8,135.3,60.5,141.7,45.2,148.1,68.5,154.6,77.7,161,96.3,167.5,91.2,173.9,113.8,180.3,120,186.8,96.7,193.2,79.6,199.7,66.6,206.1,41,212.5,63.7,219,69.9,225.4,54.4,231.9,77.9,238.3,91.8,244.7,71.9,251.2,87.8,257.6,98.2,264.1,77.6,270.5,63.4,276.9,39.4,283.4,26.6,289.8,43.6,296.3,44.6,302.7,38.6,309.2,33.9,315.6,37.4,322,49.2,328.5,42,334.9,43.3,341.4,66,347.8,51.4,354.2,69.4,360.7,92.7,367.1,81.5,373.6,85.7,380,80.3,380,130,0,130) fill=1 fill-color=#ff3b3000 evenodd=0 stroke=0 stroke-color=#000000ff stroke-width=1 cap=0 join=0 miter=4 dashes=() dash-offset=0 gradient=(1,0,10,0,130,0.5,0.5,0.5,((0,#ff3b304d),(1,#ff3b3000)))
+      path bounds=(-5,5,390,120) ops=(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1) points=(0,10,6.4,20.7,12.9,27.4,19.3,48.7,25.8,36.3,32.2,17.1,38.6,37.8,45.1,25.3,51.5,45.1,58,59,64.4,42.9,70.8,53.9,77.3,60.2,83.7,66.8,90.2,64.7,96.6,56.3,103.1,60.9,109.5,60.9,115.9,51,122.4,55.3,128.8,73.8,135.3,60.5,141.7,45.2,148.1,68.5,154.6,77.7,161,96.3,167.5,91.2,173.9,113.8,180.3,120,186.8,96.7,193.2,79.6,199.7,66.6,206.1,41,212.5,63.7,219,69.9,225.4,54.4,231.9,77.9,238.3,91.8,244.7,71.9,251.2,87.8,257.6,98.2,264.1,77.6,270.5,63.4,276.9,39.4,283.4,26.6,289.8,43.6,296.3,44.6,302.7,38.6,309.2,33.9,315.6,37.4,322,49.2,328.5,42,334.9,43.3,341.4,66,347.8,51.4,354.2,69.4,360.7,92.7,367.1,81.5,373.6,85.7,380,80.3) fill=0 fill-color=#000000ff evenodd=0 stroke=1 stroke-color=#ff3b30ff stroke-width=2 cap=1 join=1 miter=4 dashes=() dash-offset=0 gradient=(0,0,0,1,0,0.5,0.5,0.5,())
+      group opacity=0.1749 matrix=(1,0,0,1,0,0) backface=0 bounds=(-100000,-100000,200000,200000) exact=0
+  del-clip bounds=(0,0,0,0)
+  del-clip bounds=(0,0,0,0)
+
+== fonts
+f1 (family="system-ui,sans-serif",size=15,style=0,weight=900,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.6,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f2 (family="system-ui,sans-serif",size=16,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f3 (family="system-ui,sans-serif",size=12,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f4 (family="system-ui,sans-serif",size=24,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=-0.48,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f5 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f6 (family="system-ui,sans-serif",size=12,style=0,weight=700,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f7 (family="system-ui,sans-serif",size=10,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0.6,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f8 (family="system-ui,sans-serif",size=13,style=0,weight=600,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=1)
+f9 (family="system-ui,sans-serif",size=14,style=0,weight=800,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)
+f10 (family="system-ui,sans-serif",size=11,style=0,weight=400,decoration=(0,predef0,0,#000000ff!current),emphasis=("",#000000ff,0),letter-spacing=0,smoothing=2,shadow=(0,0,0,#00000000),extra-shadows=(),tabular=0)

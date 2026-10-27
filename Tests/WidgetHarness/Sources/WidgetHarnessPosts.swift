@@ -58,7 +58,9 @@ enum WidgetHarnessPosts {
                 posts.append(WidgetHarnessPost(path: item.path, html: item.source, width: 0, height: 0, caption: item.path, photos: []))
             }
         case .fixture:
-            let files = ((try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []).filter { $0.hasSuffix(".html") }.sorted()
+            // The top-level fixtures; one in a folder (`resize/`) only when `posts` names it.
+            let listed = ((try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []).filter { $0.hasSuffix(".html") }.sorted()
+            let files = listed + (options.posts ?? []).filter { $0.hasPrefix("fixture/") && $0.dropFirst("fixture/".count).contains("/") }.map { String($0.dropFirst("fixture/".count)) }
             for file in files {
                 guard let html = try? String(contentsOf: root.appendingPathComponent(file), encoding: .utf8) else {
                     continue
@@ -68,6 +70,10 @@ enum WidgetHarnessPosts {
         }
         if let filter = options.postFilter {
             posts = posts.filter { $0.path.contains(filter) }
+        }
+        if let paths = options.posts {
+            let all = posts
+            posts = paths.compactMap { path in all.first { $0.path == path } }
         }
         if !options.captions {
             posts = posts.map { post in

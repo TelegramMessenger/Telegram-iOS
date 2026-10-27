@@ -91,3 +91,53 @@ WR_TEST(testActivatedAndDeactivatedFollowVisibility) {
     env.drain();
     CHECK_EQ(env.eval("log.join()"), std::string("visibility:hidden,deactivated:false,visibility:visible,activated:true"));
 }
+
+/// widget-sandbox v0.1.3 (sdk-v1 §2.12, decision R1): setResizeAnchor takes exactly 'top' or 'bottom', returns
+/// undefined, and keeps the edge for the host, which reports it with the height (HostState::resizeAnchor).
+WR_TEST(testSetResizeAnchorTakesTopAndBottom) {
+    HostEnv env;
+    wr::HostState& host = wr::HostState::of(env.ctx());
+    CHECK_EQ(env.eval("typeof TelegramWidget.setResizeAnchor"), std::string("function"));
+    CHECK_EQ(env.eval("String(TelegramWidget.setResizeAnchor('bottom'))"), std::string("undefined"));
+    CHECK(host.resizeAnchor() == wr::ResizeAnchor::Bottom);
+    CHECK_EQ(env.eval("String(TelegramWidget.setResizeAnchor('top'))"), std::string("undefined"));
+    CHECK(host.resizeAnchor() == wr::ResizeAnchor::Top);
+}
+
+/// Until the widget calls it, the bubble grows and shrinks downward.
+WR_TEST(testTheDefaultAnchorIsTop) {
+    HostEnv env;
+    CHECK(wr::HostState::of(env.ctx()).resizeAnchor() == wr::ResizeAnchor::Top);
+}
+
+/// Anything but exactly 'top' or 'bottom' (auto/24-resize-anchor's list, and no argument at all) throws TypeError and
+/// leaves the anchor as it was.
+WR_TEST(testSetResizeAnchorThrowsTypeErrorOnAnythingElse) {
+    HostEnv env;
+    env.eval("TelegramWidget.setResizeAnchor('bottom'); 1");
+    CHECK_EQ(env.eval("[undefined, null, '', 'left', 'center', 'Bottom', ' top', 'top ', 1, true, ['top'], {edge: 'top'}]"
+                      ".filter(v => { try { TelegramWidget.setResizeAnchor(v); return true; } catch (e) { return e.name !== 'TypeError'; } })"
+                      ".length + ':' + (() => { try { TelegramWidget.setResizeAnchor(); return 'no throw'; } catch (e) { return e.name; } })()"),
+             std::string("0:TypeError"));
+    CHECK(wr::HostState::of(env.ctx()).resizeAnchor() == wr::ResizeAnchor::Bottom);
+}
+
+/// A string is the edge only whole: one longer than either edge is neither however it starts (only a 16-byte prefix is
+/// converted, so a megabyte costs nothing), and one with a NUL is not the edge before it.
+WR_TEST(testSetResizeAnchorRefusesLongAndNulStrings) {
+    HostEnv env;
+    env.eval("TelegramWidget.setResizeAnchor('bottom'); 1");
+    CHECK_EQ(env.eval("['top' + ' '.repeat(13), 'top' + 'x'.repeat(1 << 20), 'bottom' + 'm'.repeat(10), 'top\\0', 'bottom\\0', '\\0top']"
+                      ".filter(v => { try { TelegramWidget.setResizeAnchor(v); return true; } catch (e) { return e.name !== 'TypeError'; } })"
+                      ".length"),
+             std::string("0"));
+    CHECK(wr::HostState::of(env.ctx()).resizeAnchor() == wr::ResizeAnchor::Bottom);
+}
+
+/// The anchor is no action: it needs no tap and nothing reaches the bridge.
+WR_TEST(testSetResizeAnchorPostsNoBridgeCall) {
+    HostEnv env;
+    env.eval("TelegramWidget.setResizeAnchor('bottom'); 1");
+    env.drain();
+    CHECK(env.host().bridgeCalls.empty());
+}

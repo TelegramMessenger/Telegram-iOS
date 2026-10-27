@@ -12,6 +12,8 @@
 #include "Sources/Support/Allocator.h"
 #include "Sources/Support/Bindings.h"
 #include "Sources/Support/Callbacks.h"
+#include "Sources/Support/Promises.h"
+#include "twidget/sdk_policy.h"
 
 namespace wr {
 
@@ -19,14 +21,9 @@ namespace wr {
 /// ignored.
 inline constexpr size_t kMaxHandlersPerEvent = 16;
 
-/// SDK v1 §2.6 (sdk-policy.ts HAPTIC_BURST, HAPTIC_PER_SECOND, HAPTIC_REPORT_MS): a bucket of 5 haptics refilled at 10
-/// per second; haptic-limit is reported at most once per second.
-inline constexpr double kHapticBurst = 5;
-inline constexpr double kHapticPerSecond = 10;
-inline constexpr double kHapticReportMs = 1000;
-
 /// SDK v1 §2.6 (V2a plan, Task 6): an unknown style or type is a TypeError; a call is posted as `haptic`
-/// (["impact", style], ["notification", type], ["selection"]) when HostState::admitHaptic lets it through.
+/// (["impact", style], ["notification", type], ["selection"]) when HostState::admitHaptic lets it through (the vendored
+/// SDK policy's HapticGate: the rate limit, and a touch since widget-sandbox v0.2.2).
 class HapticFeedback : public PlatformObject {
 public:
     HapticFeedback() = default;
@@ -57,14 +54,48 @@ public:
     void offEvent(JSContext* ctx, std::optional<Value> type, std::optional<Value> handler);
     void openLink(JSContext* ctx, std::optional<Value> url);
     void openTelegramLink(JSContext* ctx, std::optional<Value> url);
+    /// SDK v1 §2.12, §5.6 (widget-sandbox v0.1.3): which edge of the bubble stays put when the widget's height changes,
+    /// kept for the host (HostState::resizeAnchor); exactly 'top' or 'bottom' (the SDK policy's checkResizeAnchor), else
+    /// a TypeError. No tap needed, and nothing reaches the bridge: it is no action.
+    void setResizeAnchor(JSContext* ctx, std::optional<Value> edge);
     wr::HapticFeedback* HapticFeedback(JSContext* ctx);
     void ready(JSContext* ctx);
     /// Deprecated alias of onEvent('themeChanged') whose callback gets the colour scheme, at once and on every change.
     /// Its callbacks are a list of their own (16, past which one is neither kept nor called), run after themeChanged's.
     void onTheme(JSContext* ctx, Callback callback);
+    /// SDK v1 §2.13 (widget-sandbox v0.2): the bot's chat state and shared state (HostState::chatData, publicData), null
+    /// for none.
+    std::optional<String> chatData(JSContext* ctx);
+    std::optional<String> publicData(JSContext* ctx);
+    /// The message is a forwarded copy (never in a preview).
+    bool isForward(JSContext* ctx);
+    /// 'private', 'group', 'supergroup' or 'channel'; null in a copy, a preview and when the host passed none.
+    std::optional<String> chatType(JSContext* ctx);
+    /// Mini Apps' WebAppUser for the account looking at the widget (the SDK policy's viewerJson), frozen and the same
+    /// object for the runtime's life; null where the widget may not send requests and in a preview.
+    Value viewer(JSContext* ctx);
+    /// An inline result shown before it is sent (sdk-v1 §2.16).
+    bool isPreview(JSContext* ctx);
+    /// SDK v1 §2.14: a request to the bot. `data` is 1–64 bytes of well-formed UTF-8 (the SDK policy's
+    /// checkRequestData), else a TypeError at once. The promise settles in a task of its own: with `{result}` (frozen)
+    /// when the client answers (HostState::completeRequest), else a WidgetRequestError with its code: a refusal of the
+    /// request gate, a preview's NOT_ALLOWED, the client's failure, INVALID_ANSWER.
+    Value request(JSContext* ctx, std::optional<Value> data);
+    /// SDK v1 §2.15: `text` (1–256 UTF-16 code units, well-formed, else a TypeError) to the host, on a tap only: one
+    /// privileged call per tap, shared with the links and request; outside one it is dropped with activation-blocked.
+    void copyText(JSContext* ctx, std::optional<Value> text);
+    /// SDK v1 §2.13: the widget follows its shared state live, or stops; the host is told changes only (`watchPublicData`
+    /// with "true" or "false"). No tap needed.
+    void watchPublicData(JSContext* ctx);
+    void unwatchPublicData(JSContext* ctx);
 
     // Native, inside the tasks HostState queues.
-    enum class Event { ThemeChanged, Activated, Deactivated };
+    enum class Event { ThemeChanged, Activated, Deactivated, ChatDataChanged, PublicDataChanged };
+    /// The client's outcome for request `id`, sent to it: frees the request gate and settles the promise; nothing for
+    /// an id that is not an outgoing request still pending.
+    void settleRequest(JSContext* ctx, int64_t id, const twidget::WidgetRequestOutcome& outcome);
+    /// Rejects request `id`, refused before it went out, with `code`.
+    void refuseRequest(JSContext* ctx, int64_t id, const std::string& code);
     /// Runs the handlers of `event` in the order added, `this` the TelegramWidget and no arguments, then for
     /// ThemeChanged onTheme's callbacks with the colour scheme; each is reported on its own.
     void runEvent(JSContext* ctx, Event event);
@@ -73,15 +104,31 @@ public:
     void dispose(JSRuntime* rt) override;
 
 private:
+    /// A request whose promise has not settled: sent to the client (`outgoing`), or refused, its rejection queued.
+    struct PendingRequest {
+        int64_t id = 0;
+        bool outgoing = false;
+        PromiseSlot slot;
+    };
     Vector<HeldCallback>& handlersOf(Event event);
+    void setWatching(JSContext* ctx, bool on);
+    /// The pending request `id`, or nullptr.
+    PendingRequest* pendingRequest(int64_t id);
+    void removeRequest(JSRuntime* rt, int64_t id);
+    Vector<PendingRequest> m_requests;
     Vector<HeldCallback> m_themeChanged;
     Vector<HeldCallback> m_activated;
     Vector<HeldCallback> m_deactivated;
+    Vector<HeldCallback> m_chatDataChanged;
+    Vector<HeldCallback> m_publicDataChanged;
     Vector<HeldCallback> m_onTheme;
     Held m_hapticFeedback;
     /// themeParams' object, made for HostState::themeGeneration m_themeParamsGeneration.
     Held m_themeParams;
     uint64_t m_themeParamsGeneration = 0;
+    /// viewer's object, made for HostState::contextGeneration m_viewerGeneration.
+    Held m_viewer;
+    uint64_t m_viewerGeneration = 0;
 };
 
 class Clipboard : public PlatformObject {
@@ -112,7 +159,12 @@ private:
     Held m_clipboard;
 };
 
-/// Posts a bridge call: `method` with the strings in `args` as a JSON array (JSON.stringify's escaping).
+/// Posts a bridge call: `method` with the strings in `args` as a JSON array (JSON.stringify's escaping). A preview posts
+/// only what the SDK policy's allowedInPreview lets it (callers report the refusal first: refusedInPreview).
 void postBridgeCall(JSContext* ctx, std::string_view method, std::initializer_list<const String*> args);
+
+/// SDK v1 §2.16: true, with preview-blocked (at most MAX_REJECTION_REPORTS times), when the widget is a preview and
+/// `method` is not one a preview may call (the SDK policy's allowedInPreview: ready and setResizeAnchor).
+bool refusedInPreview(JSContext* ctx, std::string_view method);
 
 } // namespace wr

@@ -1034,7 +1034,7 @@ final class RichTextAttachmentScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let contextController = makeContextController(
                 presentationData: presentationData,
-                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView, containerView: controller.view)),
+                source: .reference(RichTextActionContextReferenceSource(sourceView: self.actionBarMenuSourceView(sourceView), containerView: controller.view)),
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
@@ -1358,7 +1358,7 @@ final class RichTextAttachmentScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let contextController = makeContextController(
                 presentationData: presentationData,
-                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView, containerView: controller.view)),
+                source: .reference(RichTextActionContextReferenceSource(sourceView: self.actionBarMenuSourceView(sourceView), containerView: controller.view)),
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
@@ -1426,11 +1426,21 @@ final class RichTextAttachmentScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let controller = makeContextController(
                 presentationData: presentationData,
-                source: .reference(RichTextActionContextReferenceSource(sourceView: sourceView, containerView: selfController.view, actionsPosition: actionsPosition)),
+                source: .reference(RichTextActionContextReferenceSource(sourceView: self.actionBarMenuSourceView(sourceView), containerView: selfController.view, actionsPosition: actionsPosition)),
                 items: .single(ContextController.Items(content: .list(items))),
                 gesture: nil
             )
             selfController.presentInGlobalOverlay(controller)
+        }
+        
+        /// A menu opened from an item of the bottom action bar morphs out of the whole bar.
+        private func actionBarMenuSourceView(_ sourceView: UIView) -> UIView {
+            // Asked of the glass, not the bar: a menu over the keyboard takes the glass, items and all, into the
+            // keyboard's window until it has closed, so an item tapped meanwhile is in the glass but not in the bar.
+            if let actionBarView = self.actionBar.view as? RichTextActionBarComponent.View, sourceView.isDescendant(of: actionBarView.menuSourceView) {
+                return actionBarView.menuSourceView
+            }
+            return sourceView
         }
 
         /// Maps the app theme to the editor's render colors. Every value is `PresentationTheme`-derived —
@@ -2437,10 +2447,19 @@ private final class RichTextActionContextReferenceSource: ContextReferenceConten
         self.actionsPosition = actionsPosition
     }
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        // The outset spaces a menu that opens beside its anchor. A menu that morphs out of the action bar takes the
+        // bar's place instead, centred on it; an outset source would morph from a rectangle.
+        var insets = UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0)
+        var morphs = false
+        if #available(iOS 26.0, *), self.sourceView.morphsIntoContextMenu {
+            insets = UIEdgeInsets()
+            morphs = true
+        }
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView,
             contentAreaInScreenSpace: self.containerView.convert(self.containerView.bounds, to: nil),
-            insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0),
-            actionsPosition: self.actionsPosition)
+            insets: insets,
+            actionsPosition: self.actionsPosition,
+            centersMorphedActions: morphs)
     }
 }
 

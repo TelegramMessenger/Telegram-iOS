@@ -168,11 +168,11 @@ String PointerEvent::pointerType(JSContext* ctx) {
                                        : String::adopt(ctx, JS_DupValue(ctx, m_pointerType.value));
 }
 
-void PointerEvent::setTouchPointer(JSContext* ctx, int32_t pointerId, bool primary, double pressure) {
+void PointerEvent::setPointer(JSContext* ctx, int32_t pointerId, bool primary, double pressure, std::string_view pointerType) {
     m_pointerId = pointerId;
     m_isPrimary = primary;
     m_pressure = pressure;
-    m_pointerType.set(JS_GetRuntime(ctx), JS_NewString(ctx, "touch"));
+    m_pointerType.set(JS_GetRuntime(ctx), JS_NewStringLen(ctx, pointerType.data(), pointerType.size()));
 }
 
 void PointerEvent::trace(JSRuntime* rt, JS_MarkFunc* mark) const {

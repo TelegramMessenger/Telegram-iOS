@@ -314,14 +314,15 @@ private final class MultiplexedRequestManagerContext {
                 selectedContext.requests.append(ExecutingRequestData(requestId: requestId, disposable: disposable))
                 let queue = self.queue
                 #if DEBUG
-                let shaper = DebugNetworkShaper.shared
-                let sentAt = CFAbsoluteTimeGetCurrent()
-                let responseBytes = Atomic<Int>(value: 0)
+                // Only with a profile: without one, the request does no more than in a release build.
+                let shaping: (shaper: DebugNetworkShaper, sentAt: Double, responseBytes: Atomic<Int>)? = DebugNetworkShaper.shared.map { shaper in
+                    return (shaper, CFAbsoluteTimeGetCurrent(), Atomic<Int>(value: 0))
+                }
                 let deserializeResponse: (Buffer) -> Any?
-                if shaper != nil {
+                if let shaping {
                     let deserialize = request.deserializeResponse
                     deserializeResponse = { buffer in
-                        let _ = responseBytes.swap(Int(buffer.size))
+                        let _ = shaping.responseBytes.swap(Int(buffer.size))
                         return deserialize(buffer)
                     }
                 } else {
@@ -336,18 +337,25 @@ private final class MultiplexedRequestManagerContext {
                             return
                         }
                         #if DEBUG
-                        if let shaper {
-                            let hold = shaper.holdDuration(bytes: responseBytes.with { $0 }, sentAt: sentAt, now: CFAbsoluteTimeGetCurrent())
+                        if let shaping {
+                            let now = CFAbsoluteTimeGetCurrent()
+                            let hold = shaping.shaper.holdDuration(bytes: shaping.responseBytes.with { $0 }, sentAt: shaping.sentAt, now: now)
+                            // The request's network time is the shaped link's, as the download meter
+                            // (`DownloadThroughputMeter`) must see it.
+                            var shapedInfo = info
+                            shapedInfo.networkDuration = max(info.networkDuration, now + max(0.0, hold) - shaping.sentAt)
                             if hold > 0.0 {
                                 // The request keeps its worker slot while held; one disposed meanwhile delivers nothing.
                                 queue.after(hold, { [weak strongSelf, weak selectedContext] in
                                     guard let strongSelf, let selectedContext, selectedContext.requests.contains(where: { $0.requestId == requestId }) else {
                                         return
                                     }
-                                    strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: info)
+                                    strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: shapedInfo)
                                 })
                                 return
                             }
+                            strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: shapedInfo)
+                            return
                         }
                         #endif
                         strongSelf.completeExecutingRequest(request, requestId: requestId, context: selectedContext, result: result, info: info)

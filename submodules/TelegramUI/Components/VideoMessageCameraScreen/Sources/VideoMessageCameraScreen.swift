@@ -2030,6 +2030,7 @@ public class VideoMessageCameraScreen: ViewController {
                     cropRotation: 0.0,
                     cropMirroring: false,
                     cropOrientation: nil,
+                    cropPerspective: .zero,
                     gradientColors: nil,
                     videoTrimRange: self.node.previewState?.trimRange,
                     videoBounce: false,

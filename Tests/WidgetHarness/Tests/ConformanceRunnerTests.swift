@@ -4,6 +4,7 @@ import TelegramCore
 import TelegramPresentationData
 import ChatMessageItemCommon
 import ChatMessageWidgetBubbleContentNode
+import MessageWidget
 @testable import WidgetHarnessLib
 
 /// Tier 1: the conformance runner (widget-sandbox v0.1.1, `conformance/CLIENTS.md`) loads a widget through the app's
@@ -36,8 +37,8 @@ final class ConformanceRunnerTests: XCTestCase {
     /// each widget loads." A visual run ends once its widget has loaded, and the baseline records only that it loaded.
     func testTheVisualSetIsLoadedOnly() throws {
         let tests = try ConformanceManifest.loadVisualSet()
-        XCTAssertEqual(tests.count, 37)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 41)
+        XCTAssertEqual(tests.count, 46)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 50)
         XCTAssertTrue(tests.allSatisfy { $0.loadOnly && $0.actions.isEmpty && $0.stages.isEmpty && FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let unstyled = try XCTUnwrap(tests.first { $0.id == "visual/14-unstyled-document" })
         let started = Date()
@@ -49,10 +50,53 @@ final class ConformanceRunnerTests: XCTestCase {
         XCTAssertEqual(ConformanceBaseline.statuses(of: run, test: unstyled), ["load · loads": "pass"])
     }
 
+    /// widget-sandbox v0.2.1 (CLIENTS.md, "The message context"): a test's `message` (the first spec) and its `bot`
+    /// table, by exact data.
+    func testTheManifestReadsMessageAndBot() throws {
+        let tests = try ConformanceManifest.loadAutomaticSet()
+        let group = try XCTUnwrap(tests.first { $0.id == "auto/26-context-group" })
+        XCTAssertEqual(group.message?.kind, .group)
+        XCTAssertEqual(group.message?.chatData, "conf-chat")
+        XCTAssertEqual(group.message?.publicData, "conf-public")
+        XCTAssertEqual(group.bot["conf:a26:tap"]?.result, "ok")
+        XCTAssertEqual(group.bot["conf:a26:bg"]?.result, "ok")
+        let stateApi = try XCTUnwrap(tests.first { $0.id == "auto/25-state-api-b" })
+        XCTAssertNil(stateApi.message)
+        XCTAssertEqual(stateApi.bot["conf:a25"]?.result, "ok")
+        // The visual set's tables carry edits, shared edits and repeats.
+        let visual = try ConformanceManifest.loadVisualSet()
+        let stateEdit = try XCTUnwrap(visual.first { $0.id == "visual/sdk/16-state-edit" })
+        XCTAssertEqual(stateEdit.message?.kind, .private)
+        XCTAssertNotNil(stateEdit.bot["conf:16:edit"]?.edit)
+    }
+
+    /// The runner plays the bot (CLIENTS.md): each request answered by its exact data, `{n}` counting the requests with
+    /// that data; an edit leaves an unpassed field as it was, and "" clears one.
+    func testTheMockBotAnswersByExactData() {
+        let table: [String: ConformanceBotAction] = [
+            "vote": ConformanceBotAction(result: "n={n} from {from}", edit: .init(chatData: "c{n}", publicData: nil)),
+            "clear": ConformanceBotAction(result: nil, edit: .init(chatData: "", publicData: "p")),
+            "shared": ConformanceBotAction(result: "ok", editShared: "s{n}"),
+        ]
+        let bot = ConformanceMockBot(table: table, viewer: MessageWidgetViewer(id: 7, firstName: "Tester"))
+        let current = MessageWidgetState(chatData: Data("x".utf8), publicData: Data("keep".utf8))
+        let unknown = bot.answer(Data("nope".utf8), current: current)
+        XCTAssertNil(unknown.result)
+        XCTAssertNil(unknown.edit)
+        let first = bot.answer(Data("vote".utf8), current: current)
+        XCTAssertEqual(first.result, Data("n=1 from Tester".utf8))
+        XCTAssertEqual(first.edit, MessageWidgetState(chatData: Data("c1".utf8), publicData: Data("keep".utf8)))
+        XCTAssertEqual(bot.answer(Data("vote".utf8), current: current).result, Data("n=2 from Tester".utf8))
+        let cleared = bot.answer(Data("clear".utf8), current: current)
+        XCTAssertNil(cleared.result)
+        XCTAssertEqual(cleared.edit, MessageWidgetState(chatData: Data(), publicData: Data("p".utf8)))
+        XCTAssertEqual(bot.answer(Data("shared".utf8), current: current).edit, MessageWidgetState(chatData: Data("x".utf8), publicData: Data("s1".utf8)))
+    }
+
     func testTheManifestLoadsTheAutomaticSet() throws {
         let tests = try ConformanceManifest.loadAutomaticSet()
-        XCTAssertEqual(tests.count, 39)
-        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 41)
+        XCTAssertEqual(tests.count, 51)
+        XCTAssertEqual(tests.reduce(0) { $0 + $1.themes.count }, 53)
         XCTAssertTrue(tests.allSatisfy { FileManager.default.fileExists(atPath: $0.fileURL.path) })
         let taps = try XCTUnwrap(tests.first { $0.id == "auto/16-sdk-taps-a" })
         XCTAssertEqual(taps.actions.count, 3)
@@ -101,10 +145,18 @@ final class ConformanceRunnerTests: XCTestCase {
         XCTAssertEqual(run.skippedActions, [])
     }
 
+    /// widget-sandbox v0.1.2: a double tap over the widget is the widget's, so the runner performs it: two taps, each
+    /// carrying its own tap's permission.
+    func testAScriptedDoubleTapReachesTheWidget() throws {
+        let run = try self.runner().run(self.fixture("conformance-tap", actions: [["dblclick": "button"]]), theme: "light", timeout: 5.0)
+        XCTAssertEqual(run.skippedActions, [])
+        XCTAssertEqual(run.observed.bridge.map(\.method), ["openLink", "openLink"])
+    }
+
     /// An action the runner cannot perform for real is reported as not performed, never as done: hover (a touch
-    /// platform), a key (no keyboard, D4), a double tap (the bubble's). `wait` is performed.
+    /// platform), a key (no keyboard, D4), a right click (the bubble's). `wait` is performed.
     func testActionsTheRunnerCannotPerformAreSkipped() throws {
-        let actions: [[String: Any]] = [["hover": "button"], ["key": "Enter"], ["dblclick": "button"], ["wait": 10]]
+        let actions: [[String: Any]] = [["hover": "button"], ["key": "Enter"], ["rightclick": "button"], ["wait": 10]]
         let run = try self.runner().run(self.fixture("conformance-tap", actions: actions), theme: "light", timeout: 3.0)
         XCTAssertEqual(run.skippedActions, [0, 1, 2])
         XCTAssertEqual(run.status, "awaiting")

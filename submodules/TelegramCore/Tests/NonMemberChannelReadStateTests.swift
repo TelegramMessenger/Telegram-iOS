@@ -107,7 +107,6 @@ final class NonMemberChannelReadStateTests: XCTestCase {
         let left = self.channel(.left)
         XCTAssertFalse(readStateOperationTargetsNonMember(.ReadOutbox(MessageId(peerId: self.channelId, namespace: Namespaces.Message.Cloud, id: 5), nil), getPeer: { _ in left }))
         XCTAssertFalse(readStateOperationTargetsNonMember(.UpdatePeerChatInclusion(peerId: self.channelId, groupId: .root, changedGroup: false), getPeer: { _ in left }))
-        XCTAssertFalse(readStateOperationTargetsNonMember(.UpdateIsContact(self.channelId, true), getPeer: { _ in left }))
     }
 
     // MARK: - Joining

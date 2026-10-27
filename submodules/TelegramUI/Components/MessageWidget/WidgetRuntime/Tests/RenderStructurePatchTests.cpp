@@ -149,6 +149,51 @@ std::string byId(const char* id) {
 
 } // namespace
 
+// The `textContent = …` idiom on an element whose only child is a Text (one mapped Text out, one new Text in, nothing
+// else under that parent) is the text path's replacement: litehtml keeps its render tree and the flush publishes
+// operations, not a Reset, beside an attribute change on another element too. Every other shape is structure.
+WR_TEST(testATextSwapIsATextPatch) {
+    RenderEnv env("<!doctype html><style>.k{color:#c00}</style><body><p id=c>0</p><div id=m>m</div>"
+                  "<div id=e><b>b</b> t</div><p id=f>f</p></body>");
+    const uint64_t builds = env.render().buildCount();
+    uint64_t resets = env.render().treeRebuildResets();
+    auto noReset = [&](const char* what) {
+        if (env.render().treeRebuildResets() != resets) {
+            std::printf("  a Reset after: %s\n", what);
+        }
+        CHECK_EQ(env.render().treeRebuildResets(), resets);
+        CHECK(!env.render().layerOps().empty() && env.render().layerOps()[0].kind != wr::LayerOp::Reset);
+    };
+    for (const char* text : {"111", "two words", "3"}) {
+        patches(env, byId("c") + ".textContent = '" + text + "'");
+        noReset(text);
+    }
+    patches(env, byId("m") + ".className = 'k'; " + byId("c") + ".textContent = 'beside a class'");
+    noReset("beside a class");
+    patches(env, byId("c") + ".className = 'k'; " + byId("c") + ".textContent = 'its own class'");
+    noReset("its own class");
+    patches(env, byId("c") + ".textContent = 'a'; " + byId("f") + ".textContent = 'b'; " + byId("c") + ".firstChild.data = 'c'");
+    noReset("two swaps and a data change");
+    // An element child replaced, a second Text, the text emptied: structure, which Resets.
+    patches(env, byId("e") + ".textContent = 'was an element'");
+    CHECK(env.render().treeRebuildResets() == ++resets);
+    patches(env, byId("c") + ".append(' more')");
+    CHECK(env.render().treeRebuildResets() == ++resets);
+    patches(env, byId("c") + ".textContent = 'one again'");
+    CHECK(env.render().treeRebuildResets() == ++resets);
+    patches(env, byId("c") + ".textContent = ''");
+    CHECK(env.render().treeRebuildResets() == ++resets);
+    CHECK_EQ(env.render().buildCount(), builds);
+    // Beside the parent's own ::before content, which the swap leaves where it is: patched as a data change is.
+    RenderEnv before("<!doctype html><style>#c::before{content:'> '}</style><body><p id=c>0</p></body>");
+    uint64_t beforeResets = before.render().treeRebuildResets();
+    patches(before, byId("c") + ".firstChild.data = 'data'");
+    const uint64_t byData = before.render().treeRebuildResets() - beforeResets;
+    beforeResets = before.render().treeRebuildResets();
+    patches(before, byId("c") + ".textContent = 'after the marker'");
+    CHECK_EQ(before.render().treeRebuildResets() - beforeResets, byData);
+}
+
 // The brief's shapes, each patched and each equal to a rebuild.
 WR_TEST(testStructurePatchMatchesRebuild) {
     RenderEnv env(kPage);
@@ -190,6 +235,8 @@ WR_TEST(testRandomEditsMatchARebuild) {
         uint64_t patched = 0;
         uint64_t rebuilt = 0;
         uint64_t clean = 0;
+        /// Texts swapped in by the text path (RenderTree::swappedTexts).
+        uint64_t swapped = 0;
         std::map<std::string, uint64_t> why;
         /// The limit a near-limit group must reach at least once: a render-limit kind a build posts, or a refusal.
         std::string limit;
@@ -199,6 +246,8 @@ WR_TEST(testRandomEditsMatchARebuild) {
         /// Edits of the structural kinds only (and the table insert): no journal is mixed, so the flush that first
         /// crosses the limit is a patch's to refuse.
         bool structural = false;
+        /// Edits mostly of the Text-swap kind, beside class, style, data and any textContent: the swap path's group.
+        bool swaps = false;
         /// What goes first in the body (a build's cut then drops what follows it).
         std::string prefix;
         /// Whether the group must patch at least once: :empty makes every child-list change rebuild, and a <q> the edits
@@ -305,6 +354,8 @@ WR_TEST(testRandomEditsMatchARebuild) {
         // with an element in a lang="ru" subtree for the edits to move in and out.
         {":empty and :lang()", 22, 24, base + " :empty{outline:1px solid #f0f} span:empty{padding:1px} :lang(ru) b{color:#0a0}"
                                     " p:not(:empty){margin:3px}", ""},
+        {"Text swaps (textContent on a Text-only element, beside class, style and data)", 25, 27,
+         base + " q::before{content:'\\00ab'}", ""},
     };
     groups[3].limit = "text-pieces";
     groups[4].limit = "the selector-step budget";
@@ -314,6 +365,7 @@ WR_TEST(testRandomEditsMatchARebuild) {
     groups[8].limit = "text-budget";
     groups[9].prefix = "<div lang=ru id=ru><b>ru</b><span></span></div>";
     groups[9].mustPatch = false;
+    groups[10].swaps = true;
     // Divs the <table> refuses, up to 11 short of litehtml's 20,000 with the elements the page renders (all but the
     // <template>): litehtml counts each refused one, the maps none (I2). The seed's insertions are tables of refused rows
     // (make(13): one element linked, two refused), so a build's count crosses the cap before the linked count the fork
@@ -410,6 +462,12 @@ globalThis.__edit = (() => {
           return 'hidden';
         }
         case 9: { const t = pick(texts(), a); if (t) t.data = words[b % words.length]; return 'data'; }
+        // textContent on an element whose only child is a Text: the text path's swap (RenderTree::textSwaps).
+        case 20: {
+          const e = pick(elements().filter(e => e.childNodes.length === 1 && e.firstChild.nodeType === 3), a);
+          if (e) e.textContent = words[b % words.length];
+          return 'swap';
+        }
         case 12: {
           // A row group or a caption into a table, before one of its children (whitespace included), or a refused subtree.
           const tables = elements().filter(e => e.localName === 'table');
@@ -458,8 +516,12 @@ globalThis.__edit = (() => {
                     // Insertion-heavy (append, insertBefore, and remove, move, textContent), and every insertion a table of
                     // refused rows (make(13)), so the seed reaches its cap through the refused elements.
                     static const uint32_t kStructuralKinds[] = {0, 1, 0, 1, 2, 3, 4};
+                    static const uint32_t kSwapKinds[] = {20, 20, 20, 6, 7, 9, 4};
                     const uint32_t drawn = uint32_t(rng() % 13);
-                    const uint32_t kind = group.structural ? kStructuralKinds[drawn % 7] : drawn, a = uint32_t(rng() % 1000);
+                    const uint32_t kind = group.structural ? kStructuralKinds[drawn % 7]
+                                          : group.swaps    ? kSwapKinds[drawn % 7]
+                                                           : drawn,
+                                   a = uint32_t(rng() % 1000);
                     uint32_t b = uint32_t(rng() % 1000);
                     const uint32_t c = uint32_t(rng() % 1000);
                     if (group.structural && kind <= 1) {
@@ -471,6 +533,7 @@ globalThis.__edit = (() => {
                 }
                 const uint64_t builds = env.render().buildCount();
                 const uint64_t patchedBefore = env.render().patchCount();
+                const uint64_t swappedBefore = env.render().swappedTexts();
                 const uint64_t plainPatches = plain.patchCount();
                 const size_t posted = env.env().host().diagnostics.size();
                 env.flush();
@@ -481,6 +544,7 @@ globalThis.__edit = (() => {
                 if (env.render().patchCount() != patchedBefore) {
                     path = "patched";
                     group.patched++;
+                    group.swapped += env.render().swappedTexts() - swappedBefore;
                     // Ruling E19: the plan's bound held the patch's steps.
                     CHECK(env.render().lastPatchSteps() <= env.render().lastPatchStepBound());
                 } else if (env.render().buildCount() != builds) {
@@ -540,10 +604,10 @@ globalThis.__edit = (() => {
         }
     }
     for (const Group& group : groups) {
-        std::printf("  %s: %llu flushes, %llu patched (%.0f%%), %llu rebuilt, %llu clean\n", group.name,
+        std::printf("  %s: %llu flushes, %llu patched (%.0f%%; %llu Texts swapped), %llu rebuilt, %llu clean\n", group.name,
                     (unsigned long long)group.flushes, (unsigned long long)group.patched,
                     group.flushes ? 100.0 * double(group.patched) / double(group.flushes) : 0.0,
-                    (unsigned long long)group.rebuilt, (unsigned long long)group.clean);
+                    (unsigned long long)group.swapped, (unsigned long long)group.rebuilt, (unsigned long long)group.clean);
         for (const auto& [why, n] : group.why) {
             std::printf("    rebuilt %llu: %s\n", (unsigned long long)n, why.c_str());
         }
@@ -553,6 +617,7 @@ globalThis.__edit = (() => {
     for (const Group& group : groups) {
         CHECK(group.patched > 0 || !group.mustPatch);
         CHECK(group.rebuilt > 0);
+        CHECK(!group.swaps || group.swapped > 0);
         if (!group.limit.empty() && !group.reached) {
             std::printf("  %s never reached %s\n", group.name, group.limit.c_str());
         }

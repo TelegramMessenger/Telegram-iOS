@@ -1,8 +1,9 @@
 // Taps (M1d plan, Task 2): the host's pointer phases, hit-tested on the runtime's own layout (RenderTree::nodeAt) and
-// dispatched as touch browsers dispatch a tap.
+// dispatched as touch browsers dispatch a tap. Each finger is its own pointer with a press of its own (multitouch
+// design §5.1): up to kMaxPointers at once, each with its target, capture and defaults, lifting one disturbing no other.
 // - Down: pointerdown, then touchstart, at the hit node, which becomes the tap's target (a touch's implicit capture).
-//   A primary press also decides its gesture claim (GestureClaim) and whether it takes taps, which the host reads once
-//   the task has run.
+//   The press also decides its gesture claim (GestureClaim) and whether it takes taps, which the host reads once the
+//   task has run. Its element is :active until its own up or cancel; the primary pointer's is also hovered.
 // - Move: dropped until either axis has moved kTapSlop px from the down point; after that, pointermove and touchmove at
 //   the target, but only when the widget listens for one of them (ListenedTypes, as today's renderer forwards).
 // - Up: pointerup, then touchend, at the target. Then, when it is a click, the compatibility mousedown and mouseup and
@@ -13,9 +14,13 @@
 // Each phase is one task on the user interaction task source, queued by the host's call; every event is trusted.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <vector>
 
 #include "quickjs.h"
+#include "twidget/gesture_policy.h"
 #include "Sources/Support/PlatformObject.h"
 
 namespace wr {
@@ -23,21 +28,30 @@ namespace wr {
 class Element;
 class EventTarget;
 
-enum class PointerPhase : uint8_t { Down, Move, Up, Cancel };
+/// `Retract`: a press the host started before its touch arrived (the bubble's question at a touch's down) that no touch
+/// took up, a pointer's touch pressing instead: it ends for the widget as a cancel, and for the double tap it never was.
+enum class PointerPhase : uint8_t { Down, Move, Up, Cancel, Retract };
 
-/// The drags of a primary press the widget takes for itself (sdk-v1 §5.5; protocol.md, "Touch gestures inside a
-/// scrolling host"): `x` when the touch-action of the target or an ancestor below <html> forbids horizontal panning
-/// (none, pan-y, pinch-zoom, …), `y` when one forbids vertical panning (none, pan-x, …), both when the widget cancels the
-/// press's pointerdown or touchstart. touch-action is read as the press starts, before its handlers run, as browsers fix
-/// it at touchstart. The host keeps swipe-to-reply off a press with `x` and the list still under one with `y`.
+/// What a press claims beyond its taps and double taps, which are always the widget's (sdk-v1 §5.5; widget-sandbox
+/// v0.1.2, G1): widget-sandbox's shared gesture policy (`twidget::gesture::claimOf`) over the computed touch-action of
+/// the target and its ancestors up to the widget's <html>: `x` when one forbids horizontal panning (none, pan-y,
+/// pinch-zoom, …), `y` when one forbids vertical panning, `hold` for none (the hold is the widget's: `contextmenu`, no
+/// message menu); a canceled pointerdown or touchstart claims both axes, never a hold. touch-action is read as the press
+/// starts, before its handlers run, as browsers fix it at touchstart. A touch starting in the widget's leading
+/// `EDGE_STRIP_PX` claims nothing (the back gesture starts there). The host keeps swipe-to-reply off a press with `x` and
+/// the message menu off one with `hold`.
 struct GestureClaim {
     bool x = false;
     bool y = false;
+    bool hold = false;
 };
 
-/// The slop, in CSS px: a move shorter than this on both axes is not delivered, and a tap that never moved past it is a
-/// click.
-inline constexpr double kTapSlop = 8;
+/// The slop, in CSS px (the policy's TOUCH_SLOP_PX): a move no farther than this from the down is not delivered, and a
+/// tap that never moved past it is a click.
+inline constexpr double kTapSlop = twidget::gesture::TOUCH_SLOP_PX;
+
+/// At most this many pointers press at once; a down past them is dropped whole, its later phases with it.
+inline constexpr size_t kMaxPointers = 5;
 
 class TapState {
 public:
@@ -45,9 +59,14 @@ public:
     TapState(const TapState&) = delete;
     TapState& operator=(const TapState&) = delete;
 
-    /// The host's call (HostState::pointer): updates what the host side knows (the down point, whether the pointer moved
-    /// past the slop) and queues the phase's task. Never throws: a task that cannot be queued stops the widget.
-    void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary);
+    /// The host's call (HostState::pointer): updates what the host side knows of the pointer (its down point, whether it
+    /// moved past the slop) and queues the phase's task. A down for a pointer already down, or past kMaxPointers, is
+    /// ignored, and so is any phase of a pointer that is not down. Never throws: a task that cannot be queued stops the
+    /// widget.
+    /// `kind` is the pointer's (an iPad pointer is a mouse: its own events, no touch events, no edge strip); `button`
+    /// the mouse button pressed (0 primary, 2 secondary), 0 for a touch.
+    void pointer(JSContext* ctx, PointerPhase phase, double x, double y, int32_t pointerId, bool primary,
+                 twidget::PointerKind kind = twidget::PointerKind::Touch, int16_t button = 0);
 
     /// Pointer Events' capture, task side: `element` takes the press's pointer events from the next one on
     /// (gotpointercapture before it, lostpointercapture after the pointerup or pointercancel); touch events stay with the
@@ -57,9 +76,9 @@ public:
     void setCapture(JSContext* ctx, Element& element, int32_t pointerId);
     void releaseCapture(JSContext* ctx, Element& element, int32_t pointerId);
     bool hasCapture(const Element& element, int32_t pointerId) const;
-    /// The claim of the last press whose down task has run: none for a press on nothing or not the primary pointer.
+    /// The claim of the last press whose down task has run, whatever its pointer: none for a press on nothing.
     GestureClaim claim() const { return m_claim; }
-    /// Whether the last primary press whose down task has run landed on something the widget handles: a listener for a
+    /// Whether the last press whose down task has run landed on something the widget handles: a listener for a
     /// press's events (click, pointerdown, pointerup, touchstart, touchend, mousedown, mouseup) on the event's path
     /// (the target, its ancestors, the document, the window), an element on that path with activation behaviour outside
     /// a disabled control, a drag claim or a canceled pointerdown or touchstart. The client takes a tap there at once,
@@ -67,34 +86,64 @@ public:
     bool takesTaps() const { return m_takesTaps; }
 
 private:
-    /// Makes the pending capture the current one, firing lostpointercapture at the old and gotpointercapture at the new;
-    /// the target of the press's next pointer event.
-    EventTarget& pointerTarget(JSContext* ctx, double x, double y, bool primary);
-    void runDown(JSContext* ctx, double x, double y, int32_t pointerId, bool primary);
-    void runMove(JSContext* ctx, double x, double y, int32_t pointerId, bool primary);
+    /// The host side of a pointer, between its down and its up or cancel.
+    struct HostPointer {
+        int32_t id = 0;
+        double downX = 0;
+        double downY = 0;
+        bool moved = false;
+    };
+    /// The task side of a press: its target from its down task to its up or cancel task, and what canceled its defaults.
+    struct Press {
+        int32_t pointerId = 0;
+        Ref<EventTarget> target;
+        /// Its explicit capture: pending (set by script) and current (reported to script).
+        Ref<EventTarget> pendingCapture;
+        Ref<EventTarget> capture;
+        /// Its number (HostState::beginPress), active while its pointer and mouse events dispatch.
+        uint64_t number = 0;
+        /// The last position delivered (a move's movementX/Y is from it).
+        double lastX = 0;
+        double lastY = 0;
+        bool pointerCanceled = false;
+        bool touchCanceled = false;
+        /// Its pointer's kind and, for a mouse, the button pressed.
+        twidget::PointerKind kind = twidget::PointerKind::Touch;
+        int16_t button = 0;
+        /// The gesture policy made it a hold (its contextmenu, or the bubble's menu): its up clicks not.
+        bool held = false;
+    };
+
+    /// The press of `pointerId` whose down task has run, or nullptr.
+    Press* press(int32_t pointerId) const;
+    /// Ends `press`: it leaves the list, and its pointer is no longer down to script (setPointerCapture throws).
+    void endPress(const Press& press);
+    /// Makes the press's pending capture the current one, firing lostpointercapture at the old and gotpointercapture at
+    /// the new; the target of the press's next pointer event.
+    EventTarget& pointerTarget(JSContext* ctx, Press& press, double x, double y, bool primary);
+    void runDown(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, twidget::PointerKind kind, int16_t button);
+    /// `deliver` false: a move nothing listens for, past the slop for the first time, which only the arbiter hears.
+    void runMove(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool deliver);
+    /// The arbiter's hold timer (its holdDeadline), a scheduled task of the loop.
+    void runHold(JSContext* ctx);
+    void cancelHold(JSContext* ctx);
+    /// What the arbiter's verdict asks of the runtime for `press`: a hold clicks not, and `contextmenu` is delivered.
+    void deliver(JSContext* ctx, const std::optional<twidget::GestureVerdict>& verdict, Press& press);
+    bool arbitrates(int32_t pointerId, bool primary) const { return primary && m_arbiterOpen && pointerId == m_arbitered; }
     void runUp(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool moved);
-    void runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary);
+    void runCancel(JSContext* ctx, double x, double y, int32_t pointerId, bool primary, bool retract = false);
 
-    // The host side: the pointer between its down and its up or cancel.
-    bool m_active = false;
-    int32_t m_pointerId = 0;
-    double m_downX = 0;
-    double m_downY = 0;
-    /// The last position delivered (a move's movementX/Y is from it).
-    double m_lastX = 0;
-    double m_lastY = 0;
-    bool m_moved = false;
-
-    // The task side: the tap's target from its down task to its up or cancel task, and what canceled its defaults.
-    Ref<EventTarget> m_target;
-    /// The press's pointer, and its explicit capture: pending (set by script) and current (reported to script).
-    int32_t m_taskPointerId = 0;
-    Ref<EventTarget> m_pendingCapture;
-    Ref<EventTarget> m_capture;
-    /// The press's number (HostState::beginPress), active while its pointer and mouse events dispatch.
-    uint64_t m_press = 0;
-    bool m_pointerCanceled = false;
-    bool m_touchCanceled = false;
+    std::vector<HostPointer> m_pointers;
+    /// widget-sandbox's gesture policy on the primary pointer (as its renderer core runs it): the double tap's dblclick,
+    /// the hold's contextmenu, the hold that clicks not. The press it hears, while open, and its hold task.
+    twidget::GestureArbiter m_arbiter;
+    /// The arbiter as it was before the open primary press's down, which a retraction (`PointerPhase::Retract`) restores.
+    twidget::GestureArbiter m_arbiterBeforePress;
+    int32_t m_arbitered = 0;
+    bool m_arbiterOpen = false;
+    uint64_t m_holdTask = 0;
+    /// Owned one by one, so a press's address holds while another ends.
+    std::vector<std::unique_ptr<Press>> m_presses;
     GestureClaim m_claim;
     bool m_takesTaps = false;
 };

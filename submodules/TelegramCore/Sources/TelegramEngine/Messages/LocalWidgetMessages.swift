@@ -22,25 +22,38 @@ public struct EngineLocalWidgetPost: Equatable {
     public var height: Int32
     public var caption: String
     public var photos: [Photo]
+    /// widget-sandbox v0.2: the server's flags and the bot's state, as the conformance channel's post says the test bot
+    /// sends it (a post's `message`).
+    public var isCopy: Bool
+    public var canQuery: Bool
+    public var backgroundQuery: Bool
+    public var chatData: Data?
+    public var publicData: Data?
 
-    public init(html: String, width: Int32, height: Int32, caption: String, photos: [Photo]) {
+    public init(html: String, width: Int32, height: Int32, caption: String, photos: [Photo], isCopy: Bool = false, canQuery: Bool = false, backgroundQuery: Bool = false, chatData: Data? = nil, publicData: Data? = nil) {
         self.html = html
         self.width = width
         self.height = height
         self.caption = caption
         self.photos = photos
+        self.isCopy = isCopy
+        self.canQuery = canQuery
+        self.backgroundQuery = backgroundQuery
+        self.chatData = chatData
+        self.publicData = publicData
     }
 }
 
-/// One message per post (text = caption, media = the widget gzipped as the server does), then one per photo (a local
+/// One message per post (text = caption, media = the widget compressed as the server does), then one per photo (a local
 /// image over `photoResources[post][photo]`), in order, timestamps one second apart ending at `lastTimestamp`. Local,
 /// outgoing, by the account; in Saved Messages, in the account's own thread (My Notes).
 func _internal_localWidgetStoreMessages(posts: [EngineLocalWidgetPost], photoResources: [[LocalFileMediaResource]], peerId: PeerId, accountPeerId: PeerId, lastTimestamp: Int32) -> [StoreMessage] {
     var contents: [(text: String, media: Media)] = []
     for (postIndex, post) in posts.enumerated() {
-        guard let widget = TelegramMediaWidget(html: post.html, width: post.width, height: post.height) else {
+        guard let compressed = TelegramMediaWidget(html: post.html, width: post.width, height: post.height) else {
             continue
         }
+        let widget = TelegramMediaWidget(width: compressed.width, height: compressed.height, payload: compressed.payload, isCopy: post.isCopy, canQuery: post.canQuery, backgroundQuery: post.backgroundQuery, chatData: post.chatData, publicData: post.publicData)
         contents.append((post.caption, widget))
         let resources = postIndex < photoResources.count ? photoResources[postIndex] : []
         for (photo, resource) in zip(post.photos, resources) {
