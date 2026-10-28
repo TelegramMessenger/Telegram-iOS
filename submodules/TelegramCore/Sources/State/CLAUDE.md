@@ -97,8 +97,9 @@ A cold topic shows its messages after one round trip (`getReplies`).
 - **Forum fills store the reply targets they fetch** (the topics branch of `withResolvedAssociatedMessages`).
 - **Messages waiting for references that arrive after the store are registered** in
   `AccountViewTracker.pendingMessageReferences`.
-  - The registry is keyed by the **referencing message**, so the set that draws skeletons is exactly the set the fills
-    redraw. A message drawing a skeleton is always a source of a pending registration.
+  - The registry is keyed by the **referencing message**, so every message that draws a skeleton is one the fills
+    redraw. A message drawing a skeleton is always a source of a pending registration. The fills also redraw, without
+    registering, rich messages with a custom emoji whose file is not stored (their previews draw its alt text meanwhile).
   - A fill registers the messages it stored that reference a missing reply target or story, in the transaction that
     stores them. A forum message's own topic root is excluded (`pendingReplyTargets`): it is usually not stored and
     never draws as a header.

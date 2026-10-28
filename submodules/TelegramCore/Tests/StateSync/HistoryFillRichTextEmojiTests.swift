@@ -50,8 +50,9 @@ final class HistoryFillRichTextEmojiTests: StateSyncTestCase {
 
         XCTAssertTrue(self.server.release(getCustomEmojiDocuments, with: .result([RichTextEmojiApi.emojiDocument(id: fileId)])))
 
+        // Decisive: without the rewrite the stored message never changes (storing a file updates no view).
         self.fixture.eventually { self.fixture.message(id)?.stableVersion != version }
-        XCTAssertNotNil(self.fixture.message(id)?.associatedMedia[mediaId], "the redrawn message does not carry the emoji's file")
+        XCTAssertNotNil(self.fixture.message(id)?.associatedMedia[mediaId], "the emoji's file was not stored")
     }
 
     /// Pin: a rich message whose emoji files are all stored is not rewritten by the follow-up.
@@ -72,7 +73,8 @@ final class HistoryFillRichTextEmojiTests: StateSyncTestCase {
         let id = self.messageId(peerId, 10)
         let version = self.fixture.message(id)?.stableVersion
         XCTAssertNotNil(version, "precondition")
-        // The follow-up's last transaction is queued behind the fill's; one more after it has seen it end.
+        // There is no signal for the follow-up's end: it makes no request here, only a few transactions, which this
+        // wait outlasts. A slow run can only pass falsely, never fail falsely.
         Thread.sleep(forTimeInterval: 0.3)
         self.fixture.transaction { _ -> Void in }
 

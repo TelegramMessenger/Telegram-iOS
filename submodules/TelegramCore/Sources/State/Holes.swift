@@ -1449,8 +1449,8 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             }
                             let missing = missingReferences(transaction)
                             let registration = pendingReferences?.register(sourceIds: missing.sourceIds)
-                            if !missing.sourceIds.isEmpty || storedAnswerTopics != 0 {
-                                Logger.shared.log("ReplyThreadOpen", "fill stored answerTopics=\(storedAnswerTopics) waiting messages=\(missing.sourceIds.count) replyStories=\(missing.replyStoryIds.count) registered=\(registration != nil)")
+                            if !missing.sourceIds.isEmpty || !missing.emojiSourceIds.isEmpty || storedAnswerTopics != 0 {
+                                Logger.shared.log("ReplyThreadOpen", "fill stored answerTopics=\(storedAnswerTopics) waiting messages=\(missing.sourceIds.count) replyStories=\(missing.replyStoryIds.count) emojiWaiting=\(missing.emojiSourceIds.count) registered=\(registration != nil)")
                             }
                             // The rich messages waiting for emoji files are redrawn with the rest but not registered:
                             // they draw alt text meanwhile, not a skeleton.
