@@ -165,6 +165,7 @@ public final class WidgetHarnessListHost {
     }
 
     public func load(posts: [WidgetHarnessPost], incoming: Bool = false) {
+        self.pinnedToTop = []
         let accountPeer = TelegramUser(
             id: self.context.account.peerId, accessHash: nil, firstName: "Harness", lastName: "Account", username: nil, phone: nil,
             photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil,
