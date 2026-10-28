@@ -347,6 +347,7 @@ private final class ButtonEditorSheetContent: Component {
                     style: .glass, theme: theme,
                     initialText: component.button.labelText,
                     placeholder: strings.RichText_ButtonLabelPlaceholder,
+                    clearButtonAccessibilityLabel: strings.WebSearch_RecentSectionClear,
                     hasClearButton: true,
                     updated: { [weak self] text in
                         guard let self, let component = self.component else { return }
@@ -365,6 +366,7 @@ private final class ButtonEditorSheetContent: Component {
                     style: .glass, theme: theme,
                     initialText: url,
                     placeholder: strings.RichText_ButtonURLPlaceholder,
+                    clearButtonAccessibilityLabel: strings.WebSearch_RecentSectionClear,
                     hasClearButton: true,
                     autocapitalizationType: .none,
                     autocorrectionType: .no,

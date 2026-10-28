@@ -5972,7 +5972,6 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.On" = "On";
 "VoiceOver.Common.Off" = "Off";
 "VoiceOver.Common.SectionIndex" = "Section Index";
-"VoiceOver.QrCodeScan.Gallery" = "Choose from Gallery";
 "VoiceOver.QrCodeScan.Flashlight" = "Flashlight";
 
 "VoiceOver.TabBar.AttentionRequired" = "Attention required";

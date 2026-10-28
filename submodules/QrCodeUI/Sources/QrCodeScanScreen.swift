@@ -532,7 +532,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
             self.addSubnode(self.galleryButtonNode)
         }
         self.addSubnode(self.torchButtonNode)
-        self.galleryButtonNode.buttonAccessibilityLabel = presentationData.strings.VoiceOver_QrCodeScan_Gallery
+        self.galleryButtonNode.buttonAccessibilityLabel = presentationData.strings.Media_ChooseFromGallery
         self.torchButtonNode.buttonAccessibilityLabel = presentationData.strings.VoiceOver_QrCodeScan_Flashlight
         // The camera's picture is not content VoiceOver can read.
         self.previewView.accessibilityElementsHidden = true

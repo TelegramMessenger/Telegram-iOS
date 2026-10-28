@@ -452,6 +452,7 @@ private final class ApiKeyPageComponent: CombinedComponent {
                             theme: theme,
                             initialText: "",
                             placeholder: strings.Agent_Key_Placeholder(component.provider.vendor).string,
+                            clearButtonAccessibilityLabel: strings.WebSearch_RecentSectionClear,
                             autocapitalizationType: .none,
                             autocorrectionType: .no,
                             returnKeyType: .done,
