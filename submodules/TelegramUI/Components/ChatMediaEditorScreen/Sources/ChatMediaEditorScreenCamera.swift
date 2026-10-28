@@ -117,7 +117,7 @@ extension ChatMediaEditorScreen.Node {
             return
         }
         let captionBaseHeight = self.captionPanelView?.baseHeight() ?? 0.0
-        let frame = chatMediaEditorCameraButtonFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, hasSelection: self.hasCameraReviewSelection)
+        let frame = chatMediaEditorCameraButtonFrame(size: layout.size, safeInsets: chatMediaEditorBottomRowSafeInsets(safeInsets, reservedCorners: layout.reservedCorners), toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, hasSelection: self.hasCameraReviewSelection)
         transition.updateFrame(view: cameraButton, frame: frame)
         let isHidden = self.activeTool != nil || self.isInterfaceHiddenBySwipe || self.isEditingCaption || keyboardHeight > 0.0 || self.isSending || (self.controller?.isDismissing ?? true)
         let alphaTransition: ContainedViewLayoutTransition = transition.isAnimated ? .animated(duration: 0.2, curve: .linear) : .immediate

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import SwiftSignalKit
 import MediaEditor
 import ChatMediaSend
@@ -181,6 +182,16 @@ public let chatMediaEditorCounterCircleFrame = CGRect(x: 16.0, y: 1.0, width: 31
 public func chatMediaEditorCheckButtonFrame(size: CGSize, safeInsets: UIEdgeInsets) -> CGRect {
     let topInset = safeInsets.top
     return CGRect(origin: CGPoint(x: size.width - safeInsets.right - chatMediaEditorScreenEdgeInset - (chatMediaEditorCheckButtonSize.width - chatMediaEditorCheckButtonRingInset), y: topInset + 5.0), size: chatMediaEditorCheckButtonSize)
+}
+
+/// The counter and the camera button beside it sit at the bottom: they span the side strip, keeping clear only of a
+/// corner block that reaches the bottom edge (`bottomEdgeSideInsets`). Equal to `safeInsets` on every other device.
+public func chatMediaEditorBottomRowSafeInsets(_ safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> UIEdgeInsets {
+    let sideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: reservedCorners)
+    var result = safeInsets
+    result.left = sideInsets.left
+    result.right = sideInsets.right
+    return result
 }
 
 public func chatMediaEditorCounterButtonFrame(size: CGSize, safeInsets: UIEdgeInsets, toolbarMinY: CGFloat, captionBaseHeight: CGFloat, hasVideoHeader: Bool) -> CGRect {

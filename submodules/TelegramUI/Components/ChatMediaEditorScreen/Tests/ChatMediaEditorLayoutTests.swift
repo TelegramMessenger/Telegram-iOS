@@ -100,6 +100,28 @@ final class ChatMediaEditorLayoutTests: XCTestCase {
         XCTAssertEqual(chatMediaEditorScrubberFramesCount(trackWidth: 0.0, mediaSize: CGSize(width: 1920.0, height: 1080.0)), 1)
     }
 
+    func testUnfoldedLandscapeVideoKeepsThePhoneLayout() {
+        let size = CGSize(width: 951.0, height: 669.0)
+        let insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0)
+        let statusBlock = CGRect(x: 951.0 - 84.0, y: 0.0, width: 84.0, height: 120.0)
+        let layout = chatMediaEditorLayout(size: size, safeInsets: insets, mediaSize: CGSize(width: 1920.0, height: 1080.0), toolbarHeight: 49.0, captionPanelHeight: 62.0, keyboardHeight: 0.0)
+        XCTAssertEqual(layout.toolbarFrame, CGRect(x: 0.0, y: 669.0 - 20.0 - 49.0, width: 951.0, height: 49.0))
+        XCTAssertEqual(layout.previewFrame.midY, 669.0 / 2.0, accuracy: 0.5)
+
+        let header = chatMediaEditorVideoHeaderFrame(size: size, toolbarMinY: layout.toolbarFrame.minY, captionBaseHeight: 52.0)
+        let scrubber = chatMediaEditorScrubberFrame(size: size, safeInsets: insets, headerFrame: header, scrubberHeight: 44.0)
+        XCTAssertGreaterThan(scrubber.minY, size.height / 2.0)
+        XCTAssertLessThan(scrubber.maxY, layout.toolbarFrame.minY)
+        XCTAssertEqual(scrubber.minX, 9.0)
+        XCTAssertEqual(scrubber.maxX, 951.0 - 84.0 - 9.0)
+
+        let check = chatMediaEditorCheckButtonFrame(size: size, safeInsets: insets)
+        XCTAssertFalse(check.intersects(statusBlock))
+        let recipient = chatMediaEditorRecipientLayout(size: size, safeInsets: insets, arrowSize: CGSize(width: 10.0, height: 12.0), labelSize: CGSize(width: 1000.0, height: 16.0))
+        XCTAssertFalse(recipient.labelFrame.intersects(statusBlock))
+        XCTAssertFalse(recipient.labelFrame.intersects(check))
+    }
+
     func testToolPreviewCentresOnTheScreenWhenItClearsTheStrip() {
         let unfoldedLandscape = chatMediaEditorToolPreviewFrame(kind: .tools, size: CGSize(width: 951.0, height: 669.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), mediaSize: CGSize(width: 4032.0, height: 3024.0), toolbarHeight: 49.0)
         XCTAssertEqual(unfoldedLandscape.midX, 475.5, accuracy: 0.5)

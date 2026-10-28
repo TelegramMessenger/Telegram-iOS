@@ -9,6 +9,7 @@ import ChatMediaSend
 import MediaCropComponent
 import ComponentFlow
 import ChatMediaEditorScreen
+import Display
 
 private func capturedPhoto(_ uniqueId: String) -> ChatMediaEditorCapturedItem {
     return ChatMediaEditorCapturedItem(uniqueId: uniqueId, content: .image(path: "/tmp/\(uniqueId).jpg", dimensions: PixelDimensions(width: 4032, height: 3024)), thumbnail: nil)
@@ -228,6 +229,28 @@ final class ChatMediaEditorCaptureTests: XCTestCase {
                 XCTAssertLessThan(camera.maxX, circle.minX)
             }
         }
+    }
+
+    func testCameraButtonStaysBesideTheCounterBesideAStrip() {
+        let foldedPortrait = (CGSize(width: 466.0, height: 678.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), ContainerViewLayoutCorners(topLeft: nil, topRight: CGSize(width: 84.0, height: 170.0), bottomLeft: nil, bottomRight: nil), CGFloat(0.0))
+        let unfoldedLandscape = (CGSize(width: 951.0, height: 669.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), ContainerViewLayoutCorners(topLeft: nil, topRight: CGSize(width: 84.0, height: 120.0), bottomLeft: nil, bottomRight: nil), CGFloat(0.0))
+        let foldedLandscapeLeft = (CGSize(width: 678.0, height: 466.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: CGSize(width: 84.0, height: 82.0)), CGFloat(84.0))
+        let phone = (CGSize(width: 402.0, height: 874.0), UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), ContainerViewLayoutCorners.none, CGFloat(0.0))
+        for (size, safeInsets, reservedCorners, rowRightInset) in [foldedPortrait, unfoldedLandscape, foldedLandscapeLeft, phone] {
+            let rowInsets = chatMediaEditorBottomRowSafeInsets(safeInsets, reservedCorners: reservedCorners)
+            XCTAssertEqual(rowInsets.right, rowRightInset)
+            XCTAssertEqual(rowInsets.top, safeInsets.top)
+            XCTAssertEqual(rowInsets.bottom, safeInsets.bottom)
+            for hasVideoHeader in [false, true] {
+                let toolbarMinY = size.height - safeInsets.bottom - 49.0
+                let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: rowInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader)
+                let circle = chatMediaEditorCounterCircleFrame.offsetBy(dx: counter.minX, dy: counter.minY)
+                let camera = chatMediaEditorCameraButtonFrame(size: size, safeInsets: rowInsets, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader, hasSelection: true)
+                XCTAssertEqual(circle.minX - camera.maxX, 4.0)
+                XCTAssertEqual(counter.maxX, size.width - rowRightInset)
+            }
+        }
+        XCTAssertEqual(chatMediaEditorBottomRowSafeInsets(phone.1, reservedCorners: .none), phone.1)
     }
 
     func testMutableSourceInsertKeepsIndices() {
