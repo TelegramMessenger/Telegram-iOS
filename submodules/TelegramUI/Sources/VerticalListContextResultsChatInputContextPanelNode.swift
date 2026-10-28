@@ -134,8 +134,8 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     /// The glass under the rows starts at the first result's top and stops at the panel's top once that has scrolled
     /// past it. It rides the content on the list's content motion mirror (`backgroundMover`), which repeats the
     /// render-server flights a per-frame follower trailed by up to 60 pt, outside the list's bottom fade, which it does
-    /// not take. Its stop is the fixed clip's: the clip rounds the panel's top corners as the glass's own corners did
-    /// when it parked there.
+    /// not take, and copies its first row's own slide in a pass (`updateBackground`). Its stop is the fixed clip's: the
+    /// clip rounds the panel's top corners as the glass's own corners did when it parked there.
     private let backgroundClipView: UIView
     private let backgroundMover: UIView
     private let backgroundView: GlassBackgroundView
@@ -209,7 +209,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.backgroundClipView.isHidden = true
         // Rows load and leave as the content moves; the glass's own motion is the mirror's.
         self.listView.onVisibleWindowChanged = { [weak self] in
-            self?.updateBackground(transition: .immediate)
+            self?.updateBackground(followsRowMotion: false)
         }
     }
     
@@ -231,6 +231,12 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.loadMoreDisposable.set(nil)
         
         self.updateInternalResults(results)
+        // CoreList reports an edge when it is reached, not while it stays reached: new results whose end is already in
+        // reach (a short list after a short one) ask for their next page here, as `ListViewImpl` asked after every
+        // transaction.
+        if self.listView.reachedLoadedEdges.contains(.bottom) {
+            self.loadMore()
+        }
     }
     
     /// `animated` false for one row's new height: the whole list fading over it would only flicker.
@@ -307,7 +313,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             self.hasAppeared = true
             self.listView.isHidden = false
             self.backgroundClipView.isHidden = false
-            self.updateBackground(transition: .immediate)
+            self.updateBackground(followsRowMotion: false)
             if let topItemFrame = self.topItemFrame {
                 // From below the panel, as the results arrive.
                 let offset = size.height - topItemFrame.minY
@@ -316,28 +322,34 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
                 appearTransition.animatePositionAdditive(layer: self.backgroundClipView.layer, offset: CGPoint(x: 0.0, y: offset))
             }
         } else {
-            self.updateBackground(transition: ComponentTransition(transition).containedViewLayoutTransition)
+            self.updateBackground(followsRowMotion: true)
         }
     }
     
-    /// Places the glass in the content's coordinates (the mirror's): from the first loaded row's top, which is the first
-    /// result's when it is loaded and otherwise a row above the panel's top (the window loads a margin past the screen),
-    /// down past the last loaded row by the panel's height, so its bottom is below the panel wherever the content can be.
-    /// After a pass, on the pass's curve, which its rows move on; as the content moves, at once.
-    private func updateBackground(transition: ContainedViewLayoutTransition) {
+    private static let rowMotionKeyPrefix = "panel.glass.rowMotion."
+
+    /// Places the glass in the content's coordinates (the mirror's), at once: from the first loaded row's top, which is
+    /// the first result's when it is loaded and otherwise a row above the panel's top (the window loads a margin past the
+    /// screen), down past the last loaded row by the panel's height, so its bottom is below the panel wherever the content
+    /// can be. The mirror carries the content's motion; a pass that moves a row relative to it (a survivor whose resting
+    /// place changed, while the resting offset changes at once) gives the row its own additive slide, which
+    /// `followsRowMotion` copies onto the glass from that row, so the glass slides with it.
+    private func updateBackground(followsRowMotion: Bool) {
         guard self.hasAppeared, let (size, _, _, _) = self.validLayout else {
             return
         }
+        var firstView: UIView?
         var firstFrame: CGRect?
         var lastFrame: CGRect?
         for (_, view) in self.listView.loadedItemEntries {
             let frame = self.listView.contentFrame(of: view)
             if firstFrame == nil {
+                firstView = view
                 firstFrame = frame
             }
             lastFrame = frame
         }
-        guard let firstFrame, let lastFrame else {
+        guard let firstView, let firstFrame, let lastFrame else {
             return
         }
         let top = firstFrame.minY
@@ -353,7 +365,24 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
                 transition: .immediate
             )
         }
-        transition.updateFrame(view: self.backgroundView, frame: frame)
+        self.backgroundView.frame = frame
+        
+        if followsRowMotion {
+            // Replaced every pass from what the row has now; a copy's `beginTime` is the row track's (implicit until
+            // this commit resolves both, else the resolved one), so they stay in phase.
+            let glassLayer = self.backgroundView.layer
+            for key in glassLayer.animationKeys() ?? [] where key.hasPrefix(Self.rowMotionKeyPrefix) {
+                glassLayer.removeAnimation(forKey: key)
+            }
+            let rowLayer = firstView.layer
+            for key in rowLayer.animationKeys() ?? [] {
+                guard let animation = rowLayer.animation(forKey: key) as? CAPropertyAnimation, animation.keyPath == "position.y", animation.isAdditive, let copy = animation.copy() as? CAPropertyAnimation else {
+                    continue
+                }
+                copy.delegate = nil
+                glassLayer.add(copy, forKey: Self.rowMotionKeyPrefix + key)
+            }
+        }
     }
     
     /// A widget result's widget reported a new height: its row lays out again from it.

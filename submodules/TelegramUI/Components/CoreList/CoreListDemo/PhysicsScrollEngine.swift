@@ -36,6 +36,8 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// `shouldBeginImmediately` would find the motion already stopped and never force the `.began` that
     /// absorbs the tap.
     private var caughtMovingContentAtTouchDown = false
+    /// Whether the latest touch landed on moving content, which it stopped (`CoreVirtualListView.lastTouchCaughtMovingContent`).
+    var lastTouchCaughtMovingContent: Bool { caughtMovingContentAtTouchDown }
 
     /// How a flick/bounce plays out after release. `.stepped` (default) integrates the physics on the
     /// main thread once per frame (the original behaviour); `.keyframe` precomputes the whole path and

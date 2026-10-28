@@ -263,7 +263,8 @@ public final class WidgetHarnessListHost {
 
     /// Pins the post at `path` to the top of the screen as the chat does while a bot streams its reply under the user's
     /// message (`ChatHistoryListNode`'s `pinToTopStableId`): its item declares `pinToEdgeWithInset`, and the list
-    /// scrolls to it with `.top(0.0)` in the same pass, which engages CoreList's pinned-row latch until a drag.
+    /// scrolls to it with `.top(0.0)` in the same pass, which engages CoreList's pinned-row latch until a drag or a held
+    /// jump to another post.
     public func pinToTop(path: String) {
         guard let id = self.paths.first(where: { $0.value == path })?.key, let messageIndex = self.messages.firstIndex(where: { $0.id == id }) else {
             return

@@ -306,9 +306,9 @@ final class WidgetHarnessResizeTests: XCTestCase {
     }
 
     /// Under a post pinned to the top of the screen (the chat's pin while a bot streams its reply under the user's
-    /// message) the list re-places the pinned row on every pass until a drag, with room below the newest post: a
-    /// top-anchored widget there keeps its top and grows into that room and past it, and the pinned post stays, during
-    /// the change and on the next pass. Growing upward would push the pinned post up, and the pin would pull it back down
+    /// message) the list re-places the pinned row on every pass until a drag (or a held jump to another post), with room
+    /// below the newest post: a top-anchored widget there keeps its top and grows into that room and past it, and the
+    /// pinned post stays, during the change and on the next pass. Growing upward would push the pinned post up, and the pin would pull it back down
     /// on the next pass (the review of 2026-10-28).
     func testUnderAPinnedPostATopAnchoredBubbleKeepsItsTop() throws {
         let (root, _) = try self.load([Self.tall, Self.text, Self.box, Self.growTopFar])

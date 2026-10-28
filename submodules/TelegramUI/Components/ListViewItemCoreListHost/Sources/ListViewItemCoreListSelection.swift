@@ -7,9 +7,10 @@ import CoreList
 /// `ListViewImpl`'s tap selection (its `touchesBegan`/`touchesMoved`/`touchesEnded`) for a CoreList of
 /// `ListViewItemCoreListView` rows. A touch on a selectable row highlights it after 0.08 s unless it has moved more than
 /// 4 pt; its lift, within 4 pt of where it went down, highlights it then too and tells the row's node `selected()`. The
-/// list's drag ends it: the host calls `cancel()` from the list's `willBeginDragging`, which a finger landing on moving
-/// content fires at once, so that touch only stops the list, as in `ListViewImpl`. `ListViewItem.selected(listView:)`
-/// is not called: there is no `ListView`.
+/// list's drag ends it: the host calls `cancel()` from the list's `willBeginDragging`. A touch that lands on moving
+/// content stops it and selects nothing (`CoreVirtualListView.lastTouchCaughtMovingContent`, read at the highlight and at
+/// the lift): the list's drag cannot be relied on to begin before the lift there, since an ancestor's interactive pop
+/// recognizer holds every pan until it fails. `ListViewItem.selected(listView:)` is not called: there is no `ListView`.
 ///
 /// Added to the list's `scrollGestureHostView`. It recognizes only at the lift and lets every recognizer recognize
 /// beside it, so it never holds the scroll pan (whose own delegate grants nothing; CoreList's guide, "the limbo gotcha").
@@ -76,13 +77,14 @@ public final class ListViewItemCoreListSelectionRecognizer: UIGestureRecognizer,
 
     override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
-        guard let touchLocation = self.touchLocation, let row = self.touchedRow, let node = row.itemNode else {
+        guard let touchLocation = self.touchLocation, let row = self.touchedRow, let node = row.itemNode, let list = self.list, !list.lastTouchCaughtMovingContent else {
+            self.clearHighlight(animated: false)
             self.fail()
             return
         }
         // The lift too, not only the moves: a swipe delivered as a touch-down and a far lift with no moves between
         // (synthesized input; it sent a result twice on the simulator, 2026-10-28 and 2026-10-29) is not a tap.
-        if let list = self.list, let location = touches.first?.location(in: list), self.isFar(location, from: touchLocation) {
+        if let location = touches.first?.location(in: list), self.isFar(location, from: touchLocation) {
             self.clearHighlight(animated: false)
             self.fail()
             return
@@ -117,6 +119,7 @@ public final class ListViewItemCoreListSelectionRecognizer: UIGestureRecognizer,
     }
 
     private func fail() {
+        self.clearHighlight(animated: false)
         self.endTouch()
         if self.state == .possible {
             self.state = .failed
@@ -130,7 +133,7 @@ public final class ListViewItemCoreListSelectionRecognizer: UIGestureRecognizer,
     }
 
     private func highlightTouchedRow() {
-        guard let row = self.touchedRow, let node = row.itemNode, self.highlightedNode !== node, let list = self.list, let location = self.touchLocation else {
+        guard let row = self.touchedRow, let node = row.itemNode, self.highlightedNode !== node, let list = self.list, let location = self.touchLocation, !list.lastTouchCaughtMovingContent else {
             return
         }
         self.clearHighlight(animated: false)
@@ -154,7 +157,8 @@ public final class ListViewItemCoreListSelectionRecognizer: UIGestureRecognizer,
             guard row.listItem.selectable, let node = row.itemNode, node.canBeSelected else {
                 return nil
             }
-            let point = CGPoint(x: location.x - frame.minX, y: location.y - frame.minY)
+            // In the node, which fills the row with its bounds' origin at its content offset.
+            let point = CGPoint(x: location.x - frame.minX + node.bounds.minX, y: location.y - frame.minY + node.bounds.minY)
             return node.isLayerBacked || node.visibleForSelection(at: point) ? row : nil
         }
         return nil

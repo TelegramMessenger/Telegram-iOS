@@ -112,6 +112,40 @@ final class ContentMotionMirrorTests: XCTestCase {
         XCTAssertNotNil(mirror.layer.animation(forKey: "own"), "the host's removal took the mirror's own animation")
     }
 
+    /// A copy on a mirror carries no completion: CoreList's completions are one-shot delegates, and a mirror's copy
+    /// stopping first (a mirror removed mid-flight) would spend the host's, finalizing a flight early.
+    func testAMirrorsCopyCarriesNoCompletion() {
+        final class Probe: NSObject, CAAnimationDelegate {}
+        let probe = Probe()
+        let (_, layer) = self.engine()
+        let early = self.mirror()
+        layer.addMirror(early.layer)
+        let animation = CABasicAnimation(keyPath: "bounds.origin.y")
+        animation.delegate = probe
+        layer.add(animation, forKey: "motion")
+        let late = self.mirror()
+        layer.addMirror(late.layer)
+        XCTAssertNotNil(layer.animation(forKey: "motion")?.delegate, "precondition: the host's animation has its completion")
+        XCTAssertNotNil(early.layer.animation(forKey: "motion"), "precondition: mirrored")
+        XCTAssertNil(early.layer.animation(forKey: "motion")?.delegate, "a mirror's copy carries the host's completion")
+        XCTAssertNil(late.layer.animation(forKey: "motion")?.delegate, "a late mirror's copy carries the host's completion")
+    }
+
+    /// A touch that lands on a flight stops it and is the scroll's; the next touch, on still content, is not.
+    func testTheLatestTouchSaysWhetherItCaughtMovingContent() {
+        let (engine, _) = self.engine()
+        self.flick(engine)
+        XCTAssertTrue(engine.isDecelerating, "precondition: a flight runs")
+        engine.noteTouchDown(at: CACurrentMediaTime())
+        XCTAssertTrue(engine.lastTouchCaughtMovingContent)
+        // The catch brakes the flight over a frame or two; at rest, then:
+        engine.haltMotionInPlace()
+        XCTAssertFalse(engine.isDecelerating, "precondition: the content rests")
+        engine.noteTouchDown(at: CACurrentMediaTime())
+        XCTAssertFalse(engine.lastTouchCaughtMovingContent, "still content was caught")
+        engine.tearDown()
+    }
+
     func testARemovedMirrorStopsFollowing() {
         let (engine, layer) = self.engine()
         let mirror = self.mirror()

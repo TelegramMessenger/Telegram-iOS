@@ -606,6 +606,13 @@ public final class CoreVirtualListView: UIView {
         (engine.contentHost as? ContentMotionHostView)?.mirroringLayer?.removeMirror(view.layer)
     }
 
+    /// Whether the latest touch landed on moving content (a flight or a deceleration), which it stopped: that touch is the
+    /// scroll's, not a tap on a row. Set at touch-down and kept until the next one, so it answers for a touch at its
+    /// lift whatever order the touch reached the list's recognizers in. `PhysicsScrollEngine` only; false otherwise.
+    public var lastTouchCaughtMovingContent: Bool {
+        (engine as? PhysicsScrollEngine)?.lastTouchCaughtMovingContent ?? false
+    }
+
     /// A row's frame in the content's own coordinates, where it stays put while the content scrolls: those of a
     /// content motion mirror (`addContentMotionMirror`). Settled (model) geometry.
     public func contentFrame(of view: UIView) -> CGRect {
@@ -3337,7 +3344,12 @@ public final class CoreVirtualListView: UIView {
         // construction with `loadedEdgeRange`'s minimum, which declares the same slack.
         func placeWholeCollection() {
             let stackSlack = stackFromBottomSlack(for: window, itemCount: _items.count)
-            translate(&window, by: max(topEdge, viewportInsets.top + stackSlack) - window.minY)
+            guard stackSlack > 0 else {
+                translate(&window, by: topEdge - window.minY)
+                return
+            }
+            // `loadedEdgeRange`'s minimum, term for term: the larger of the two slacks, then a released hold's.
+            translate(&window, by: viewportInsets.top + max(bottomEdgePinSlack(for: window), stackSlack) + holdSlack.min - window.minY)
         }
 
         // Stacked wherever the anchor put it: a row that grew can have pushed the last one past the bottom edge with

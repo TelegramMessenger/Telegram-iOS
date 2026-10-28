@@ -29,7 +29,7 @@ final class ContentMotionMirroringLayer: CALayer {
         Self.write(self.bounds.origin.y, to: mirror)
         for key in self.animationKeys() ?? [] {
             if let animation = self.animation(forKey: key), Self.isMirrored(animation) {
-                mirror.add(animation, forKey: key)
+                mirror.add(Self.mirrorCopy(of: animation), forKey: key)
             }
         }
     }
@@ -58,8 +58,9 @@ final class ContentMotionMirroringLayer: CALayer {
             return
         }
         self.mirroredKeys.insert(key)
+        let copy = Self.mirrorCopy(of: animation)
         for mirror in self.mirrors.allObjects {
-            mirror.add(animation, forKey: key)
+            mirror.add(copy, forKey: key)
         }
     }
 
@@ -81,6 +82,16 @@ final class ContentMotionMirroringLayer: CALayer {
             }
         }
         self.mirroredKeys.removeAll()
+    }
+
+    /// The animation without its completion: CoreList's completions are one-shot delegates, and a copy stopping before
+    /// the host's (a mirror removed mid-flight) would spend the host's, finalizing the flight early.
+    private static func mirrorCopy(of animation: CAAnimation) -> CAAnimation {
+        guard let copy = animation.copy() as? CAAnimation else {
+            return animation
+        }
+        copy.delegate = nil
+        return copy
     }
 
     private static func isMirrored(_ animation: CAAnimation) -> Bool {

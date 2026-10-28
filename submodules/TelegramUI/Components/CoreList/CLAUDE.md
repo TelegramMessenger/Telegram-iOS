@@ -229,6 +229,9 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
   a step that cannot move at the presented position changes nothing. Not an `additionalScrollDistance`
   pass, which after the latch's release re-anchors on the natural newest edge and drops a short reply's pin
   slack in one jump. `ScrollByTests`.
+- `lastTouchCaughtMovingContent` (`PhysicsScrollEngine` only): whether the latest touch landed on a flight or a
+  deceleration and stopped it; set at touch-down, kept until the next. A host's tap selection reads it at the lift, as
+  the drag's `.began` can be held until then by an ancestor's pop recognizer.
 - `isScrollDecelerating` (at `didEndDragging`, every mode); `isScrollFlightActive` (`.keyframe` only);
   `didEndScrolling` fires when a flight ends AND when `.stepped`/UIKit deceleration rests
   (`onDidEndDecelerating`; `SteppedDecelerationEndTests`).
@@ -243,8 +246,10 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
 - `addContentMotionMirror(_:)` (`ContentMotionMirror.swift`; `PhysicsScrollEngine` only, false otherwise): the content
   host's layer repeats on registered mirror layers every model write of its `bounds.origin.y` and every
   `bounds.origin.y` animation added or removed (a drag's writes, a flight, its brake and re-emit, a pass's viewport
-  track), so a view outside the list rides the content exactly; it places its own content at `contentFrame(of:)`, a
-  row's frame in the content's coordinates. A follower placed from per-frame callbacks trails a render-server flight by
+  track), without their completions, so a view outside the list rides the content's motion; it places its own content
+  at `contentFrame(of:)`, a row's frame in the content's coordinates. A survivor's own slide in a pass (its additive
+  `position.y` track, while the offset jumps) is the row's, not the content's: a view that must follow a row copies it
+  from the row's layer (the inline results panel's glass does). A follower placed from per-frame callbacks trails a render-server flight by
   the commit's frame or two (measured up to 60 pt, the inline results panel's glass). `ContentMotionMirrorTests`.
 - **Row geometry is a pair, and picking the wrong half is silent.** `presentedFrame(of:)` is where a row IS
   — the default, used instead of `convert(_:from:)`. `settledFrame(of:)` is where it WILL BE; only for

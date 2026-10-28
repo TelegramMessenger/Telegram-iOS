@@ -43,7 +43,7 @@ final class VisibleRectNotificationTests: XCTestCase {
         XCTAssertTrue(try view(fixture, items, 10).wasNotifiedNil, "a row past the line is still visible")
         XCTAssertEqual(try view(fixture, items, 0).lastRect, CGRect(x: 0, y: 0, width: 390, height: rowHeight))
 
-        // The band holds through a scroll, and through a pass.
+        // The band holds through a scroll.
         fixture.scroll(to: fixture.boundsOriginY + 30)
         XCTAssertEqual(try view(fixture, items, 9).lastRect, CGRect(x: 0, y: 0, width: 390, height: 60),
                        "row 9 (510...570) is wholly inside the band")
