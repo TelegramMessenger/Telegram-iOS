@@ -35,6 +35,9 @@ final class ChatListContainerItemNode: ASDisplayNode {
     private let secondaryEmptyAction: () -> Void
     private let openArchiveSettings: () -> Void
     private let isInlineMode: Bool
+    // A `ChatListControllerImpl` host lays out under `ChatListNavigationBar` and passes its expanded height as
+    // `visualNavigationHeight`; other hosts (the peer selection screen) pass the bar's visible bottom.
+    private let isUnderChatListNavigationBar: Bool
     
     private var floatingHeaderOffset: CGFloat?
     
@@ -70,6 +73,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
         self.secondaryEmptyAction = secondaryEmptyAction
         self.openArchiveSettings = openArchiveSettings
         self.isInlineMode = isInlineMode
+        self.isUnderChatListNavigationBar = controller != nil
         
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, autoSetReady: autoSetReady, isMainTab: isMainTab)
         
@@ -272,12 +276,14 @@ final class ChatListContainerItemNode: ASDisplayNode {
         let _ = insets
         
         if let topPanel = self.topPanel, let topPanelSize = topPanel.size {
-            // The panel pins to the navigation bar's visible bottom. `visualNavigationHeight` is the bar's expanded
-            // height; the bar collapses its search field by the list's offset, up to `searchScrollHeight`
-            // (`ChatListControllerNode.updateNavigationScrolling`), so pinning to the expanded height would leave the
-            // panel floating over the rows below a collapsed bar.
+            // The panel pins to the navigation bar's visible bottom. Under `ChatListNavigationBar`,
+            // `visualNavigationHeight` is the bar's expanded height; the bar collapses its search field by the list's
+            // offset, up to `searchScrollHeight` (`ChatListControllerNode.updateNavigationScrolling`), so pinning to
+            // the expanded height would leave the panel floating over the rows below a collapsed bar.
             let navigationCollapse: CGFloat
-            if case let .known(value) = self.listNode.visibleContentOffset() {
+            if !self.isUnderChatListNavigationBar {
+                navigationCollapse = 0.0
+            } else if case let .known(value) = self.listNode.visibleContentOffset() {
                 navigationCollapse = min(value, ChatListNavigationBar.searchScrollHeight)
             } else {
                 navigationCollapse = ChatListNavigationBar.searchScrollHeight
