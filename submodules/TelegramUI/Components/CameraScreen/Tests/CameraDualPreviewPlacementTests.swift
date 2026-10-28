@@ -27,8 +27,10 @@ final class CameraDualPreviewPlacementTests: XCTestCase {
         XCTAssertEqual(bottomRight.x, 393.0 - 393.0 * 267.0 / 1080.0, accuracy: 0.001)
         XCTAssertEqual(bottomRight.y, 698.0 - 393.0 * 438.0 / 1080.0, accuracy: 0.001)
 
-        // Its shutter is 53pt above the viewfinder's bottom, which is the relation iPhone Duo unfolded copies.
-        XCTAssertEqual(bottomRight.y, (698.0 - self.shutterAbove) + self.shutterAbove - 393.0 * 438.0 / 1080.0, accuracy: 0.001)
+        // Its shutter, 53pt above the viewfinder's bottom, is the relation iPhone Duo unfolded copies; passed here it
+        // changes nothing, the viewfinder ending on the screen.
+        let anchored = self.center(isLeft: false, isBottom: true, width: 393.0, size: size, shutterCenterY: 698.0 - self.shutterAbove)
+        XCTAssertEqual(anchored, bottomRight)
     }
 
     // iPhone Duo folded (466x678, the strip on the right): the story viewfinder is the band's 381x678 and ends on the
@@ -64,6 +66,7 @@ final class CameraDualPreviewPlacementTests: XCTestCase {
 
             let distance = hypot(center.x - size.width / 2.0, center.y - shutterCenterY)
             XCTAssertGreaterThan(distance, side / 2.0 + self.shutterRadius, "overlaps the shutter")
+            XCTAssertLessThanOrEqual(center.y + side / 2.0, shutterCenterY - self.shutterRadius, "reaches the shutter's row")
             XCTAssertLessThanOrEqual(center.y + side / 2.0, shutterCenterY + self.modeRowTopBelowShutterCenter, "reaches the mode row")
         }
     }
