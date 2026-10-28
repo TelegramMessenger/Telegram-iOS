@@ -169,6 +169,14 @@ final class StorageCategoryItemComponent: Component {
             }
         }
         
+        // A plain container for VoiceOver (it is a UIButton for the touch handling only).
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return []
+            } set(value) {
+            }
+        }
+        
         override var accessibilityElements: [Any]? {
             get {
                 guard let component = self.component else {

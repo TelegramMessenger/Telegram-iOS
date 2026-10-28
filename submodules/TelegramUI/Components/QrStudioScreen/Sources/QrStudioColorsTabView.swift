@@ -159,7 +159,7 @@ final class QrStudioColorsTabView: UIView, UIScrollViewDelegate {
                 colorIndex += 1
                 element.accessibilityLabel = self.accessibilityStrings?.VoiceOver_Common_ColorNumber("\(colorIndex)").string ?? "\(colorIndex)"
             case let .theme(id):
-                element.accessibilityLabel = id
+                element.accessibilityLabel = self.accessibilityStrings?.Appearance_VoiceOver_Theme(id).string ?? id
             }
             element.accessibilityTraits = cell.selection == self.accessibilitySelection ? [.button, .selected] : .button
             let selection = cell.selection

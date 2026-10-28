@@ -174,7 +174,7 @@ private final class TokenNode: ASDisplayNode {
             return
         }
         self.isSelected = isSelected
-        self.accessibilityTraits = isSelected ? [.selected] : []
+        self.accessibilityTraits = isSelected ? [.button, .selected] : [.button]
         
         self.avatarNode.alpha = isSelected ? 0.0 : 1.0
         self.categoryAvatarNode.alpha = isSelected ? 0.0 : 1.0

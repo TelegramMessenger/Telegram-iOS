@@ -152,7 +152,11 @@ public final class MultilineTextComponent: Component {
                 if self.isHidden || self.alpha < 0.01 {
                     return false
                 }
-                return !(self.accessibilityLabel ?? "").isEmpty
+                guard let label = self.accessibilityLabel, !label.isEmpty else {
+                    return false
+                }
+                // Silent when an element drawn over it already speaks these words (a hand-labelled area beside it).
+                return !accessibilityTextIsSpokenByCoveringElement(self, text: label)
             } set(value) {
                 self.explicitIsAccessibilityElement = value
             }
@@ -167,7 +171,7 @@ public final class MultilineTextComponent: Component {
                     // Turned off by the call site: nothing to announce from here either.
                     return nil
                 }
-                return self.attributedText?.string
+                return self.attributedText != nil ? self.accessibilityDisplayedText : nil
             } set(value) {
                 self.explicitAccessibilityLabel = .some(value)
             }
@@ -178,7 +182,11 @@ public final class MultilineTextComponent: Component {
                 if let explicitAccessibilityTraits = self.explicitAccessibilityTraits {
                     return explicitAccessibilityTraits
                 }
-                return self.explicitIsAccessibilityElement == false ? [] : .staticText
+                if self.explicitIsAccessibilityElement == false {
+                    return []
+                }
+                // A text with tappable links: activation follows the first one (ImmediateTextView), so it says so.
+                return self.accessibilityLinks().isEmpty ? .staticText : [.staticText, .link]
             } set(value) {
                 self.explicitAccessibilityTraits = value
             }

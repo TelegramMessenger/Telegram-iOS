@@ -889,7 +889,15 @@ final class StorageUsageScreenComponent: Component {
                 if self.navigationRightButtonsBackground.superview != nil, !self.navigationRightButtonsBackground.isHidden, self.navigationRightButtonsBackground.alpha > 0.01 {
                     elements.append(self.navigationRightButtonsBackground)
                 }
-                elements.append(self.scrollView)
+                // The scrolling content top to bottom (sections are added as data arrives, so their subview order is
+                // not the reading order: the cache-size footer could follow the panel).
+                // The panels (chats / media / files) are the last section; their frame starts above the footer before them.
+                let panelView = self.panelContainer.view
+                let contentViews = self.scrollContainerView.subviews.filter { !$0.isHidden && $0.alpha > 0.01 && !$0.accessibilityElementsHidden && $0 !== panelView }.sorted { $0.frame.minY < $1.frame.minY }
+                elements.append(contentsOf: contentViews)
+                if let panelView, panelView.superview != nil, !panelView.isHidden {
+                    elements.append(panelView)
+                }
                 if let selectionPanelView = self.selectionPanel?.view, selectionPanelView.superview != nil {
                     elements.append(selectionPanelView)
                 }
@@ -2591,9 +2599,9 @@ final class StorageUsageScreenComponent: Component {
             controller.push(childController)
         }
         
-        private func messageGaleryContextAction(messageId: EngineMessage.Id, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture) {
+        private func messageGaleryContextAction(messageId: EngineMessage.Id, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture?) {
             guard let component = self.component, let aggregatedData = self.aggregatedData, let message = aggregatedData.messages[messageId] else {
-                gesture.cancel()
+                gesture?.cancel()
                 return
             }
             
@@ -2609,7 +2617,7 @@ final class StorageUsageScreenComponent: Component {
             )
             |> deliverOnMainQueue).start(next: { [weak self] previewData in
                 guard let self, let component = self.component, let previewData else {
-                    gesture.cancel()
+                    gesture?.cancel()
                     return
                 }
                 

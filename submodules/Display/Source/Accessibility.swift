@@ -132,6 +132,66 @@ public func accessibilityTextLinks(in text: NSAttributedString, attribute: NSAtt
     }
 }
 
+private var accessibilityCoverCheckInProgress = false
+
+private func normalizedAccessibilityText(_ text: String) -> String {
+    return text.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).joined(separator: " ")
+}
+
+/// Whether a text view's words are already spoken by another element: an ancestor that is itself an element, one of the
+/// view's nearest `maxDepth` ancestors
+/// whose label contains the text (a labelled container), or an element among those ancestors' direct subviews (outside
+/// the view's own branch) that covers the text's centre and whose label contains the text. Text components use it to stay silent next to a hand-labelled area (an
+/// `AccessibilityAreaNode` or a labelled container drawn over them), so the words are not read twice. Main thread;
+/// runs only when an accessibility client asks.
+public func accessibilityTextIsSpokenByCoveringElement(_ view: UIView, text: String, maxDepth: Int = 4) -> Bool {
+    if accessibilityCoverCheckInProgress {
+        return false
+    }
+    let normalizedText = normalizedAccessibilityText(text)
+    if normalizedText.isEmpty {
+        return false
+    }
+    accessibilityCoverCheckInProgress = true
+    defer {
+        accessibilityCoverCheckInProgress = false
+    }
+    // Inside an element (a title view, a button) the text is never reached on its own: stay out of the tree.
+    var ancestorView = view.superview
+    while let current = ancestorView {
+        if current.isAccessibilityElement {
+            return true
+        }
+        ancestorView = current.superview
+    }
+    let center = view.convert(CGPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
+    var branch: UIView = view
+    var depth = 0
+    while depth < maxDepth, let ancestor = branch.superview {
+        // A labelled container around the text (a title view that names itself) already says these words.
+        if let label = ancestor.accessibilityLabel, !label.isEmpty, normalizedAccessibilityText(label).contains(normalizedText) {
+            return true
+        }
+        for candidate in ancestor.subviews where candidate !== branch {
+            if candidate.isHidden || candidate.alpha < 0.01 || candidate.accessibilityElementsHidden || !candidate.isAccessibilityElement {
+                continue
+            }
+            guard let label = candidate.accessibilityLabel, !label.isEmpty else {
+                continue
+            }
+            if !candidate.convert(candidate.bounds, to: nil).contains(center) {
+                continue
+            }
+            if normalizedAccessibilityText(label).contains(normalizedText) {
+                return true
+            }
+        }
+        branch = ancestor
+        depth += 1
+    }
+    return false
+}
+
 /// VoiceOver: the text as read, without image attachments (an arrow glyph drawn over a ">").
 public func accessibilityDisplayedText(_ text: NSAttributedString) -> String {
     let mutable = NSMutableAttributedString(attributedString: text)

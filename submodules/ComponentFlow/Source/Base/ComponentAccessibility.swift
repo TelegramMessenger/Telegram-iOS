@@ -78,11 +78,10 @@ public extension UIView {
                 }
                 return
             }
-            if !(view is UIControl), view.isAccessibilityElement, view.accessibilityTraits == .staticText {
-                // Plain text that is its own element (a text component) is text, not a control.
-                if let label = view.accessibilityLabel, !label.isEmpty {
-                    found.append((origin, label))
-                }
+            if !(view is UIControl), view.accessibilityTraits == .staticText, let label = view.accessibilityLabel, !label.isEmpty {
+                // Plain text (a text component, which is its own element unless something around it speaks for it) is
+                // text, not a control.
+                found.append((origin, label))
                 return
             }
             if view is UIControl || view.isAccessibilityElement {

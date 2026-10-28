@@ -474,6 +474,44 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.updateTabAccessibilitySelection()
     }
     
+    private var tabAccessibilityElements: [QrStudioLook.Kind: QrStudioGridAccessibilityElement] = [:]
+    
+    /// VoiceOver while the sheet is open: the capsule's tab icons are hidden, so a tab row (one button per page, the
+    /// shown page `.selected`, activation opens that page as a tap on its icon does) is read above the page. Closed:
+    /// the capsule's own icons.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard self.isOpen, !self.kinds.isEmpty else {
+                return nil
+            }
+            var elements: [Any] = []
+            let top = self.clipView.frame.minY
+            let width = self.bounds.width / CGFloat(self.kinds.count)
+            for (index, kind) in self.kinds.enumerated() {
+                guard let label = self.tabAccessibilityLabels[kind] else {
+                    continue
+                }
+                let element: QrStudioGridAccessibilityElement
+                if let current = self.tabAccessibilityElements[kind] {
+                    element = current
+                } else {
+                    element = QrStudioGridAccessibilityElement(accessibilityContainer: self)
+                    element.activate = { [weak self] in
+                        self?.requestOpenTab?(kind)
+                    }
+                    self.tabAccessibilityElements[kind] = element
+                }
+                element.accessibilityLabel = label
+                element.accessibilityTraits = self.currentTab == kind ? [.button, .selected] : .button
+                element.accessibilityFrameInContainerSpace = CGRect(x: CGFloat(index) * width, y: top, width: width, height: 44.0)
+                elements.append(element)
+            }
+            elements.append(self.clipView)
+            return elements
+        } set(value) {
+        }
+    }
+    
     /// The tab whose page the open sheet shows is `.selected` for VoiceOver; none while the sheet is closed.
     private func updateTabAccessibilitySelection() {
         for (kind, iconView) in self.iconViews {

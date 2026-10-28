@@ -1780,6 +1780,20 @@ final class QrStudioScreenComponent: Component {
             controller.push(giftsController)
         }
 
+        /// VoiceOver's escape closes the open style sheet, as a tap beside it does (with the keyboard up, it ends
+        /// editing first, as that tap does). With the sheet closed the screen's own dismissal applies.
+        override func accessibilityPerformEscape() -> Bool {
+            guard self.sheetView.isOpen else {
+                return false
+            }
+            if let environment = self.environment, environment.inputHeight > 0.0 {
+                self.endEditing(true)
+            } else {
+                self.sheetView.close()
+            }
+            return true
+        }
+        
         @objc private func handleStageTap(_ recognizer: UITapGestureRecognizer) {
             guard case .ended = recognizer.state, self.sheetView.isOpen else {
                 return

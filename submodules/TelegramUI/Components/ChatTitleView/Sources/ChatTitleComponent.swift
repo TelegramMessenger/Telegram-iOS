@@ -266,6 +266,8 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarGlassPillTit
             )
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    // The title view names itself (its label is the title); the title text keeps its earlier, unlisted state.
+                    titleView.isAccessibilityElement = false
                     self.title.parentState = self.parentTitleState
                     self.parentTitleState._updated = { [weak self] transition, _ in
                         guard let self else {
@@ -1319,6 +1321,8 @@ public final class ChatTitleComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: titleLeftIconsWidth + floor((containerFrame.width - titleSize.width - titleLeftIconsWidth - titleRightIconsWidth) * 0.5), y: floor((containerFrame.height - contentSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    // The title view names itself (its label is the title); the title text keeps its earlier, unlisted state.
+                    titleView.isAccessibilityElement = false
                     titleView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(titleView)
                 }

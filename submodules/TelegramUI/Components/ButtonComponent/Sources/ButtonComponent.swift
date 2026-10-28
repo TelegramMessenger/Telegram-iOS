@@ -1029,7 +1029,7 @@ public final class ButtonComponent: Component {
                 case let .text(value):
                     return value
                 case let .number(value, minDigits):
-                    return String(format: "%0\(minDigits)d", value)
+                    return animatedTextNumberString(value, minDigits: minDigits)
                 case .icon:
                     return nil
                 }

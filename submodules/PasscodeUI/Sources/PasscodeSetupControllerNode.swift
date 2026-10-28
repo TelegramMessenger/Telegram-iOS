@@ -201,6 +201,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.subtitleNode.isAccessibilityElement = !self.subtitleNode.isHidden && !subtitle.isEmpty
         self.subtitleNode.accessibilityLabel = subtitle.isEmpty ? nil : subtitle
         self.subtitleNode.accessibilityTraits = self.subtitleNode.isAccessibilityElement ? [.staticText] : []
+        self.subtitleNode.accessibilityElementsHidden = !self.subtitleNode.isAccessibilityElement
         self.modeButtonNode.isAccessibilityElement = !self.modeButtonNode.isHidden
         if !self.modeButtonNode.isHidden {
             self.modeButtonNode.accessibilityLabel = self.presentationData.strings.PasscodeSettings_PasscodeOptions

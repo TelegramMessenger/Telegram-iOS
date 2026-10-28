@@ -84,4 +84,48 @@ final class TextComponentAccessibilityTests: XCTestCase {
         XCTAssertNil(make("Navigation/Other").accessibilityLabel)
         XCTAssertEqual(make("Navigation/Close", accessibility: ComponentAccessibility(label: "Dismiss")).accessibilityLabel, "Dismiss")
     }
+    
+    func testTextBesideAnAreaSpeakingItIsSilent() {
+        let container = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 300.0, height: 200.0))
+        let text = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "Delete the chat?"))))
+        text.frame = CGRect(x: 20.0, y: 80.0, width: 200.0, height: 20.0)
+        container.addSubview(text)
+        XCTAssertTrue(text.isAccessibilityElement)
+        
+        let area = UIView(frame: container.bounds)
+        area.isAccessibilityElement = true
+        area.accessibilityLabel = "Delete the chat?"
+        container.addSubview(area)
+        XCTAssertFalse(text.isAccessibilityElement)
+        
+        area.accessibilityLabel = "Something else"
+        XCTAssertTrue(text.isAccessibilityElement)
+    }
+    
+    func testTextInsideALabelledContainerIsSilent() {
+        let container = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 300.0, height: 60.0))
+        container.accessibilityLabel = "John Telegram"
+        let text = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "John Telegram"))))
+        text.frame = CGRect(x: 10.0, y: 10.0, width: 200.0, height: 20.0)
+        container.addSubview(text)
+        XCTAssertFalse(text.isAccessibilityElement)
+    }
+    
+    func testTextInsideAnElementIsSilent() {
+        let button = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 300.0, height: 60.0))
+        button.isAccessibilityElement = true
+        let wrapper = UIView(frame: button.bounds)
+        button.addSubview(wrapper)
+        let text = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "Inner"))))
+        wrapper.addSubview(text)
+        XCTAssertFalse(text.isAccessibilityElement)
+    }
+    
+    func testAttachmentsAreNotRead() {
+        let string = NSMutableAttributedString(string: "Remove ")
+        string.append(NSAttributedString(attachment: NSTextAttachment()))
+        string.append(NSAttributedString(string: " fee"))
+        let view = self.makeView(MultilineTextComponent(text: .plain(string)))
+        XCTAssertEqual(view.accessibilityLabel?.contains("\u{FFFC}"), false)
+    }
 }

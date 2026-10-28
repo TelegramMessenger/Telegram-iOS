@@ -8,6 +8,7 @@ import TelegramPresentationData
 import MergeLists
 import AccountContext
 import ContactListUI
+import NavigationBarNode
 import ChatListUI
 import AnimationCache
 import MultiAnimationRenderer
@@ -293,6 +294,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.addSubnode(self.contentNode.node)
         self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
+        // The token field under the bar is read by VoiceOver after the bar's buttons.
+        (self.navigationBar as? NavigationBarNode)?.exposesAdditionalContentToAccessibility = true
         
         switch self.contentNode {
         case let .contacts(contactsNode):

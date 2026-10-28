@@ -61,6 +61,8 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
 
     private let clippingNode: SparseNode
     public let additionalContentNode: SparseNode
+    /// Whether VoiceOver reads `additionalContentNode` (off by default).
+    public var exposesAdditionalContentToAccessibility: Bool = false
     public let customOverBackgroundContentView: UIView
     let edgeEffectViewImpl: EdgeEffectView
     private var backdropAlpha: CGFloat = 1.0
@@ -1054,14 +1056,17 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
             if let secondaryContentNode = self.secondaryContentNode {
                 addAccessibilityChildren(of: secondaryContentNode, container: self, to: &elements)
             }
-            // Content screens place under the bar (a picker's search/token field, panels).
-            if !self.additionalContentNode.alpha.isZero, !self.additionalContentNode.isHidden {
+            // Content a screen places under the bar (a picker's search/token field), for screens that opt in; the chat's
+            // title panels live here too and keep their earlier (unlisted) behaviour until the chat's own pass.
+            if self.exposesAdditionalContentToAccessibility, !self.additionalContentNode.alpha.isZero, !self.additionalContentNode.isHidden {
                 addAccessibilityChildren(of: self.additionalContentNode, container: self, to: &elements)
             }
             // A screen's header drawn over the bar's background (a large title, a chart, a segmented control). The
             // container is a zero-size sparse view, so its elements are listed here.
             var overBackgroundElements: [UIView] = []
-            NavigationBarNode.collectAccessibilityElements(in: self.customOverBackgroundContentView, to: &overBackgroundElements)
+            if !self.customOverBackgroundContentView.isHidden, self.customOverBackgroundContentView.alpha > 0.01 {
+                NavigationBarNode.collectAccessibilityElements(in: self.customOverBackgroundContentView, to: &overBackgroundElements)
+            }
             overBackgroundElements.sort { lhs, rhs in
                 let lhsFrame = lhs.convert(lhs.bounds, to: nil)
                 let rhsFrame = rhs.convert(rhs.bounds, to: nil)

@@ -281,10 +281,10 @@ public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemCompon
     public let currentColor: PeerNameColor?
     public let updated: (PeerNameColor?) -> Void
     public let tag: ItemListItemTag?
-    /// For the swatches' VoiceOver labels ("Color 3", "No Color"); digits only without it.
-    public let strings: PresentationStrings?
+    /// For the swatches' VoiceOver labels ("Color 3", "No Color").
+    public let strings: PresentationStrings
     
-    public init(theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, colors: PeerNameColors, mode: Mode, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, strings: PresentationStrings? = nil) {
+    public init(theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, colors: PeerNameColors, mode: Mode, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, strings: PresentationStrings) {
         self.strings = strings
         self.theme = theme
         self.systemStyle = systemStyle
@@ -524,11 +524,11 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                             colors = item.colors.getChatFolderTag(color, dark: item.theme.overallDarkAppearance)
                         }
                         
-                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, accessibilityLabel: item.strings?.VoiceOver_Common_ColorNumber("\(i + 1)").string ?? "\(i + 1)", action: action))
+                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, accessibilityLabel: item.strings.VoiceOver_Common_ColorNumber("\(i + 1)").string, action: action))
                         i += 1
                     }
                     if item.displayEmptyColor {
-                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, accessibilityLabel: item.strings?.VoiceOver_Common_NoColor ?? "-", action: action))
+                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, accessibilityLabel: item.strings.VoiceOver_Common_NoColor, action: action))
                         i += 1
                     }
                     strongSelf.items = items

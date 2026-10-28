@@ -216,6 +216,19 @@ private final class MediaGridLayerDataContext {
     
 }
 
+/// The grid's scroll view; its VoiceOver elements (one per tile, drawn as layers) come from the panel.
+private final class StorageMediaGridScrollView: UIScrollView {
+    var accessibilityElementsProvider: (() -> [Any]?)?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            return self.accessibilityElementsProvider?() ?? super.accessibilityElements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+}
+
 final class StorageMediaGridPanelComponent: Component {    
     typealias EnvironmentType = StorageUsagePanelEnvironment
     
@@ -261,14 +274,14 @@ final class StorageMediaGridPanelComponent: Component {
     let items: Items?
     let selectionState: StorageUsageScreenComponent.SelectionState?
     let action: (EngineMessage.Id) -> Void
-    let contextAction: (EngineMessage.Id, UIView, CGRect, ContextGesture) -> Void
+    let contextAction: (EngineMessage.Id, UIView, CGRect, ContextGesture?) -> Void
 
     init(
         context: AccountContext,
         items: Items?,
         selectionState: StorageUsageScreenComponent.SelectionState?,
         action: @escaping (EngineMessage.Id) -> Void,
-        contextAction: @escaping (EngineMessage.Id, UIView, CGRect, ContextGesture) -> Void
+        contextAction: @escaping (EngineMessage.Id, UIView, CGRect, ContextGesture?) -> Void
     ) {
         self.context = context
         self.items = items
@@ -377,9 +390,13 @@ final class StorageMediaGridPanelComponent: Component {
         private weak var currentGestureItemLayer: MediaGridLayer?
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = StorageMediaGridScrollView()
             
             super.init(frame: frame)
+            
+            (self.scrollView as? StorageMediaGridScrollView)?.accessibilityElementsProvider = { [weak self] in
+                return self?.makeAccessibilityElements()
+            }
             
             self.scrollView.delaysContentTouches = true
             self.scrollView.canCancelContentTouches = true
@@ -526,64 +543,57 @@ final class StorageMediaGridPanelComponent: Component {
             }
         }
         
-        // VoiceOver: one button per loaded tile, "Video, 2 MB" / "Photo, 856.3 KB" (the badge on the tile), selected
-        // while picked in edit mode; activation is the tile tap. Built when asked.
-        override var accessibilityElements: [Any]? {
-            get {
-                guard let component = self.component, let environment = self.environment, let items = component.items else {
-                    return nil
-                }
-                let selectedCount = component.selectionState?.selectedMessages.count ?? -1
-                let cacheKey = "\(self.scrollView.bounds.minY)/\(self.visibleLayers.count)/\(selectedCount)/\(items.items.count)"
-                if let cachedAccessibilityElements = self.cachedAccessibilityElements, cachedAccessibilityElements.key == cacheKey {
-                    return cachedAccessibilityElements.elements
-                }
-                var sizes: [EngineMessage.Id: Int64] = [:]
-                for item in items.items {
-                    sizes[item.message.id] = item.size
-                }
-                let visibleBounds = self.scrollView.bounds
-                var elements: [(CGRect, Any)] = []
-                for (id, itemLayer) in self.visibleLayers where !itemLayer.isHidden && itemLayer.frame.intersects(visibleBounds) {
-                    guard let message = items.items.first(where: { $0.message.id == id })?.message else {
-                        continue
-                    }
-                    var isVideo = false
-                    for media in message.media {
-                        if let file = media as? TelegramMediaFile, file.isVideo {
-                            isVideo = true
-                        }
-                    }
-                    let element = GridAccessibilityElement(accessibilityContainer: self)
-                    element.accessibilityLabel = isVideo ? environment.strings.Message_Video : environment.strings.Message_Photo
-                    if let size = sizes[id] {
-                        element.accessibilityValue = dataSizeString(size, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: "."))
-                    }
-                    var traits: UIAccessibilityTraits = .button
-                    if let selectionState = component.selectionState, selectionState.selectedMessages.contains(id) {
-                        traits.insert(.selected)
-                    }
-                    element.accessibilityTraits = traits
-                    element.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(itemLayer.frame, in: self.scrollView)
-                    element.activate = { [weak self] in
-                        self?.component?.action(id)
-                    }
-                    elements.append((itemLayer.frame, element))
-                }
-                elements.sort { lhs, rhs in
-                    if abs(lhs.0.minY - rhs.0.minY) > 1.0 {
-                        return lhs.0.minY < rhs.0.minY
-                    }
-                    return lhs.0.minX < rhs.0.minX
-                }
-                let result = elements.map { $0.1 }
-                self.cachedAccessibilityElements = (cacheKey, result)
-                return result
-            } set(value) {
-            }
-        }
+        private var cachedAccessibilityElements: (key: AnyHashable, elements: [Any])?
         
-        private var cachedAccessibilityElements: (key: String, elements: [Any])?
+        // VoiceOver: one button per tile of the whole grid (not only the loaded ones), "Video, 2 MB" / "Photo, 856.3 KB"
+        // (the badge on the tile), selected while picked in edit mode; activation is the tile tap and "More" opens the
+        // tile's long-press menu. The elements live in the grid's scroll view (frames in its content space), so they
+        // follow both the grid's and the screen's scrolling and VoiceOver scrolls the grid to reach the next one.
+        // Built when asked, kept until the items, the layout or the selection change.
+        fileprivate func makeAccessibilityElements() -> [Any]? {
+            guard let component = self.component, let environment = self.environment, let items = component.items, let itemLayout = self.itemLayout else {
+                return nil
+            }
+            let selectedMessages = component.selectionState?.selectedMessages
+            let key = AnyHashable([AnyHashable(ObjectIdentifier(items)), AnyHashable(itemLayout.width), AnyHashable(selectedMessages), AnyHashable(ObjectIdentifier(environment.strings))])
+            if let cachedAccessibilityElements = self.cachedAccessibilityElements, cachedAccessibilityElements.key == key {
+                return cachedAccessibilityElements.elements
+            }
+            let moreTitle = environment.strings.Common_More
+            var elements: [Any] = []
+            for (index, item) in items.items.enumerated() {
+                let id = item.message.id
+                var isVideo = false
+                for media in item.message.media {
+                    if let file = media as? TelegramMediaFile, file.isVideo {
+                        isVideo = true
+                    }
+                }
+                let element = GridAccessibilityElement(accessibilityContainer: self.scrollView)
+                element.accessibilityLabel = isVideo ? environment.strings.Message_Video : environment.strings.Message_Photo
+                element.accessibilityValue = dataSizeString(item.size, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: "."))
+                var traits: UIAccessibilityTraits = .button
+                if let selectedMessages, selectedMessages.contains(id) {
+                    traits.insert(.selected)
+                }
+                element.accessibilityTraits = traits
+                let frame = itemLayout.frame(itemIndex: index)
+                element.accessibilityFrameInContainerSpace = frame
+                element.activate = { [weak self] in
+                    self?.component?.action(id)
+                }
+                element.accessibilityCustomActions = [UIAccessibilityCustomAction(name: moreTitle, actionHandler: { [weak self] _ in
+                    guard let self, self.isGestureEnabled, let component = self.component else {
+                        return false
+                    }
+                    component.contextAction(id, self, self.convert(frame, from: self.scrollView), nil)
+                    return true
+                })]
+                elements.append(element)
+            }
+            self.cachedAccessibilityElements = (key, elements)
+            return elements
+        }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {

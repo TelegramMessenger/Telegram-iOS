@@ -162,7 +162,11 @@ public final class BalancedTextComponent: Component {
                 if self.isHidden || self.alpha < 0.01 {
                     return false
                 }
-                return !(self.accessibilityLabel ?? "").isEmpty
+                guard let label = self.accessibilityLabel, !label.isEmpty else {
+                    return false
+                }
+                // Silent when an element drawn over it already speaks these words (a hand-labelled area beside it).
+                return !accessibilityTextIsSpokenByCoveringElement(self, text: label)
             } set(value) {
                 self.explicitIsAccessibilityElement = value
             }
@@ -177,7 +181,7 @@ public final class BalancedTextComponent: Component {
                     // Turned off by the call site: nothing to announce from here either.
                     return nil
                 }
-                return self.textView.attributedText?.string
+                return self.textView.attributedText.flatMap { accessibilityDisplayedText($0) }
             } set(value) {
                 self.explicitAccessibilityLabel = .some(value)
             }

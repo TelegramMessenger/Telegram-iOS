@@ -23,6 +23,15 @@ extension ComponentTransition {
     }
 }
 
+/// A number item as the component draws it: the decimal digits, zero-padded to `minDigits` (any Int width).
+public func animatedTextNumberString(_ value: Int, minDigits: Int) -> String {
+    var valueText: String = "\(value)"
+    while valueText.count < minDigits {
+        valueText.insert("0", at: valueText.startIndex)
+    }
+    return valueText
+}
+
 public final class AnimatedTextComponent: Component {
     public struct Item: Equatable {
         public enum Content: Equatable {
@@ -148,7 +157,11 @@ public final class AnimatedTextComponent: Component {
                 if self.isHidden || self.alpha < 0.01 {
                     return false
                 }
-                return !(self.accessibilityLabel ?? "").isEmpty
+                guard let label = self.accessibilityLabel, !label.isEmpty else {
+                    return false
+                }
+                // Silent when an element drawn over it already speaks these words (a hand-labelled area beside it).
+                return !accessibilityTextIsSpokenByCoveringElement(self, text: label)
             } set(value) {
                 self.explicitIsAccessibilityElement = value
             }
@@ -169,7 +182,7 @@ public final class AnimatedTextComponent: Component {
                         case let .text(value):
                             return value
                         case let .number(value, minDigits):
-                            return String(format: "%0\(minDigits)d", value)
+                            return animatedTextNumberString(value, minDigits: minDigits)
                         case .icon:
                             return nil
                         }
