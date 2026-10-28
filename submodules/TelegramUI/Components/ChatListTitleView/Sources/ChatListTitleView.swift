@@ -229,6 +229,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         didSet {
             if self.strings !== oldValue {
                 self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
+                self.buttonView.accessibilityHint = self.strings.DialogList_PasscodeLockHelp
             }
         }
     }
@@ -262,7 +263,9 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         
         self.buttonView = HighlightTrackingButton()
         self.buttonView.isAccessibilityElement = true
-        self.buttonView.accessibilityTraits = .header
+        // Shown only with a passcode set: the title with the lock glyph; a tap locks the app.
+        self.buttonView.accessibilityTraits = [.header, .button]
+        self.buttonView.accessibilityHint = self.strings.DialogList_PasscodeLockHelp
         
         self.proxyButton = HighlightTrackingButton()
         self.proxyButton.isHidden = true

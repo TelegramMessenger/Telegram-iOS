@@ -115,6 +115,9 @@ open class AlertController: ViewController, StandalonePresentableController, Key
         
         self.controllerNode.existingAlertControllerNode = self.existingAlertController?.controllerNode
         
+        self.controllerNode.dismissesOnEscape = { [weak self] in
+            return self?.contentNode.dismissOnOutsideTap ?? false
+        }
         self.controllerNode.dismiss = { [weak self] in
             if let strongSelf = self, strongSelf.contentNode.dismissOnOutsideTap {
                 strongSelf.willDismiss?()

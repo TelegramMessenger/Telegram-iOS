@@ -69,6 +69,11 @@
 
 @property (nonatomic, copy) UIView *(^createStartButton)(CGFloat);
 
+// VoiceOver: the page indicator is an adjustable element with this label and the value this block returns for the
+// shown page (1-based) and the page count; swiping up/down on it shows the next/previous page.
+@property (nonatomic, copy) NSString *pageAccessibilityLabel;
+@property (nonatomic, copy) NSString *(^pageAccessibilityValue)(NSInteger page, NSInteger count);
+
 - (UIView *)createAnimationSnapshot;
 - (UIView *)createTextSnapshot;
 

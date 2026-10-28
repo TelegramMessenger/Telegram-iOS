@@ -32,6 +32,8 @@ final class AlertControllerNode: ASDisplayNode {
         
         self.centerDimView = UIImageView()
         self.centerDimView.backgroundColor = dimColor
+        // The dimming around the alert's rounded corners: decoration.
+        self.centerDimView.accessibilityElementsHidden = true
         
         self.topDimView = UIView()
         self.topDimView.backgroundColor = dimColor
@@ -202,5 +204,16 @@ final class AlertControllerNode: ASDisplayNode {
         if case .ended = recognizer.state {
             self.dismiss?()
         }
+    }
+    
+    /// VoiceOver escape: a tap outside the alert (`dismiss` keeps the alert when it does not dismiss on outside taps).
+    var dismissesOnEscape: (() -> Bool)?
+    
+    override func accessibilityPerformEscape() -> Bool {
+        guard let dismissesOnEscape = self.dismissesOnEscape, dismissesOnEscape() else {
+            return false
+        }
+        self.dismiss?()
+        return true
     }
 }

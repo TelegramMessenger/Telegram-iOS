@@ -129,8 +129,12 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.buttonTextNode.isAccessibilityElement = false
         self.buttonNode.accessibilityLabel = self.buttonTextNode.attributedText?.string
         self.buttonNode.accessibilityTraits = [.button]
-        self.titleNode.isAccessibilityElement = true
-        self.titleNode.accessibilityLabel = self.titleNode.attributedText?.string
+        // The navigation bar already reads the same words as a heading ("Passcode Lock"): the repeat is not read again.
+        let titleString = self.titleNode.attributedText?.string
+        let titleRepeatsNavigationTitle = titleString == self.mode.controllerTitle(strings: presentationData.strings)
+        self.titleNode.isAccessibilityElement = !titleRepeatsNavigationTitle
+        self.titleNode.accessibilityElementsHidden = titleRepeatsNavigationTitle
+        self.titleNode.accessibilityLabel = titleString
         self.titleNode.accessibilityTraits = [.header]
         self.textNode.isAccessibilityElement = true
         self.textNode.accessibilityLabel = self.textNode.attributedText?.string

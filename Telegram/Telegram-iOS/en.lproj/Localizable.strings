@@ -17311,3 +17311,4 @@ Error: %8$@";
 "VoiceOver.MediaEditor.Rotate" = "Rotate";
 "VoiceOver.Reactions.ShowAll" = "Show All Reactions";
 "VoiceOver.Reactions.Premium" = "Premium Reactions";
+"VoiceOver.Passcode.Incorrect" = "Incorrect passcode. Please try again.";

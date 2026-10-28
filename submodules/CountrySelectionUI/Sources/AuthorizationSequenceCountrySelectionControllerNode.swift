@@ -382,6 +382,8 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             self.searchTableView.isHidden = false
             self.searchTableView.reloadData()
         }
+        // The results cover the full list: only the shown list is read.
+        self.tableView.accessibilityElementsHidden = !self.searchTableView.isHidden
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -461,8 +463,15 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             code = "+\(self.searchResults[indexPath.row].2)"
         }
                 
+        // One element per row (the flag-prefixed title and the code label are not read again); a tap picks it.
+        cell.isAccessibilityElement = true
+        cell.accessibilityTraits = .button
+        cell.contentView.accessibilityElementsHidden = true
+        cell.accessoryView?.accessibilityElementsHidden = true
+        cell.textLabel?.isAccessibilityElement = false
+        cell.detailTextLabel?.isAccessibilityElement = false
         cell.accessibilityLabel = cleanCountryName
-        cell.accessibilityValue = code
+        cell.accessibilityValue = self.displayCodes ? code : nil
         
         cell.textLabel?.text = countryName
         cell.detailTextLabel?.text = originalCountryName

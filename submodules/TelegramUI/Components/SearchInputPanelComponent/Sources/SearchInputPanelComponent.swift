@@ -226,16 +226,21 @@ public final class SearchInputPanelComponent: Component {
                 if iconView.superview == nil {
                     iconView.layer.anchorPoint = CGPoint()
                     iconView.isUserInteractionEnabled = false
+                    // The loupe is decoration: the field is a search field.
+                    iconView.accessibilityElementsHidden = true
                     self.insertSubview(iconView, belowSubview: self.textField)
                 }
                 transition.setPosition(view: iconView, position: iconFrame.origin)
                 iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
             }
             
+            let placeholderText = component.placeholder ?? component.strings.Common_Search
+            // The drawn placeholder is the field's name for VoiceOver; the placeholder text itself is not read again.
+            self.textField.accessibilityLabel = placeholderText
             let placeholderSize = self.placeholder.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.placeholder ?? component.strings.Common_Search, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
+                    text: .plain(NSAttributedString(string: placeholderText, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - fieldSideInset * 2.0 - 30.0, height: 100.0)
@@ -246,6 +251,7 @@ public final class SearchInputPanelComponent: Component {
                 if placeholderView.superview == nil {
                     placeholderView.layer.anchorPoint = CGPoint()
                     placeholderView.isUserInteractionEnabled = false
+                    placeholderView.accessibilityElementsHidden = true
                     self.insertSubview(placeholderView, belowSubview: self.textField)
                 }
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
@@ -272,7 +278,8 @@ public final class SearchInputPanelComponent: Component {
                         self.setText(text: "", updateState: true)
                     },
                     animateAlpha: false,
-                    animateScale: true
+                    animateScale: true,
+                    accessibility: ComponentAccessibility(label: component.strings.WebSearch_RecentSectionClear)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 44.0, height: 44.0)

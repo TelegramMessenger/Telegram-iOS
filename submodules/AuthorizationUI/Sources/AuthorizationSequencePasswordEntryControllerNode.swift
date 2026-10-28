@@ -72,7 +72,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.titleNode.attributedText = NSAttributedString(string: strings.LoginPassword_Title, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.titleActivateAreaNode = AccessibilityAreaNode()
-        self.titleActivateAreaNode.accessibilityTraits = .staticText
+        self.titleActivateAreaNode.accessibilityTraits = [.staticText, .header]
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
@@ -92,6 +92,8 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.resetNode = HighlightableButtonNode()
         self.resetNode.displaysAsynchronously = false
         self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.LoginPassword_ResetAccount, font: Font.regular(16.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center), for: [])
+        self.resetNode.accessibilityLabel = self.strings.LoginPassword_ResetAccount
+        self.resetNode.accessibilityTraits = [.button]
         
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
@@ -106,7 +108,8 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.list.itemAccentColor
-        self.codeField.textField.accessibilityHint = self.strings.Login_VoiceOver_Password
+        // The field shows only the password hint as its placeholder: VoiceOver names it.
+        self.codeField.textField.accessibilityLabel = self.strings.Login_VoiceOver_Password
         
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), glass: false, height: 50.0, cornerRadius: 50.0 * 0.5)
         self.proceedNode.progressType = .embedded

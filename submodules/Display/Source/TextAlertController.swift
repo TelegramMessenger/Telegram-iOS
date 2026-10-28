@@ -159,6 +159,7 @@ public final class TextAlertContentNode: AlertContentNode {
     
     private let titleNode: ImmediateTextNode?
     private let textNode: ImmediateTextNode
+    private let textAccessibilityNode: AccessibilityAreaNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -193,6 +194,37 @@ public final class TextAlertContentNode: AlertContentNode {
                 self.textNode.highlightAttributeAction = nil
                 self.textNode.tapAttributeAction = nil
             }
+            self.updateTextAccessibility()
+        }
+    }
+    
+    /// VoiceOver: the text as one element over the text node; with tappable links it is a link whose activation follows
+    /// the first link and whose custom actions name the others (`applyAccessibilityText`), as taps on them do.
+    private func updateTextAccessibility() {
+        let text = self.textNode.attributedText ?? NSAttributedString()
+        if let (attribute, textAttributeAction) = self.textAttributeAction {
+            self.textAccessibilityNode.applyAccessibilityText(text, linkAttribute: attribute, open: { value in
+                textAttributeAction(value)
+            })
+        } else if self.textNode.tapAttributeAction != nil {
+            let attribute = NSAttributedString.Key(rawValue: "URL")
+            self.textAccessibilityNode.applyAccessibilityText(text, linkAttribute: attribute, open: { [weak self] value in
+                guard let self, let tapAttributeAction = self.textNode.tapAttributeAction, let text = self.textNode.attributedText else {
+                    return
+                }
+                var match: ([NSAttributedString.Key: Any], Int)?
+                text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: []) { attributes, range, stop in
+                    if let linkValue = attributes[attribute] as? NSObject, linkValue.isEqual(value) {
+                        match = (attributes, range.location)
+                        stop.pointee = true
+                    }
+                }
+                if let (attributes, index) = match {
+                    tapAttributeAction(attributes, index)
+                }
+            })
+        } else {
+            self.textAccessibilityNode.applyAccessibilityText(text, linkAttribute: NSAttributedString.Key(rawValue: "URL"), open: nil)
         }
     }
     
@@ -209,6 +241,7 @@ public final class TextAlertContentNode: AlertContentNode {
             titleNode.truncationType = .end
             titleNode.isAccessibilityElement = true
             titleNode.accessibilityLabel = title.string
+            titleNode.accessibilityTraits = [.staticText, .header]
             self.titleNode = titleNode
         } else {
             self.titleNode = nil
@@ -219,8 +252,8 @@ public final class TextAlertContentNode: AlertContentNode {
         self.textNode.attributedText = text
         self.textNode.displaysAsynchronously = false
         self.textNode.isLayerBacked = false
-        self.textNode.isAccessibilityElement = true
-        self.textNode.accessibilityLabel = text.string
+        self.textNode.isAccessibilityElement = false
+        self.textAccessibilityNode = AccessibilityAreaNode()
         self.textNode.insets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
         self.textNode.tapAttributeAction = linkAction
         self.textNode.highlightAttributeAction = { attributes in
@@ -262,6 +295,8 @@ public final class TextAlertContentNode: AlertContentNode {
             self.addSubnode(titleNode)
         }
         self.addSubnode(self.textNode)
+        self.addSubnode(self.textAccessibilityNode)
+        self.updateTextAccessibility()
 
         self.addSubnode(self.actionNodesSeparator)
         
@@ -405,11 +440,13 @@ public final class TextAlertContentNode: AlertContentNode {
             
             let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: titleFrame.maxY + spacing), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame.offsetBy(dx: -1.0, dy: -1.0))
+            self.textAccessibilityNode.frame = textFrame
             
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom)
         } else {
             let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: insets.top), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
+            self.textAccessibilityNode.frame = textFrame
             
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: textSize.height + actionsHeight + insets.top + insets.bottom)
         }
