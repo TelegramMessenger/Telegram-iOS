@@ -24,6 +24,8 @@ public final class CollectionIndexNode: ASDisplayNode {
         super.init()
         
         self.accessibilityTraits = .adjustable
+        // Until it has sections (search lists never get any) the index is not read.
+        self.accessibilityElementsHidden = true
     }
     
     override public func didLoad() {
@@ -48,7 +50,9 @@ public final class CollectionIndexNode: ASDisplayNode {
         self.currentSize = size
         self.currentSections = sections
         
-        self.isAccessibilityElement = !sections.isEmpty
+        // The search glyph alone is not an index a VoiceOver user can move through.
+        self.isAccessibilityElement = sections.contains(where: { $0 != CollectionIndexNode.searchIndex })
+        self.accessibilityElementsHidden = !self.isAccessibilityElement
         if let accessibilitySection = self.accessibilitySection, !sections.contains(accessibilitySection) {
             self.accessibilitySection = nil
         }

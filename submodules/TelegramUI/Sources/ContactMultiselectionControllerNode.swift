@@ -349,6 +349,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         searchResultsNode.removeFromSupernode()
                         strongSelf.searchResultsNode = nil
                     }
+                    // VoiceOver: the list under the search results is read again once they are gone.
+                    strongSelf.contentNode.node.accessibilityElementsHidden = false
                 } else {
                     if strongSelf.searchResultsNode == nil {
                         var selectionState: ContactListNodeGroupSelectionState?
@@ -432,6 +434,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         strongSelf.searchResultsReadyDisposable.set((searchResultsNode.ready |> deliverOnMainQueue).startStrict(next: { _ in
                             if let strongSelf = self, let searchResultsNode = strongSelf.searchResultsNode {
                                 strongSelf.insertSubnode(searchResultsNode, aboveSubnode: strongSelf.contentNode.node)
+                                // VoiceOver: the opaque results cover the list; only the results are read.
+                                strongSelf.contentNode.node.accessibilityElementsHidden = true
                             }
                         }))
                     }

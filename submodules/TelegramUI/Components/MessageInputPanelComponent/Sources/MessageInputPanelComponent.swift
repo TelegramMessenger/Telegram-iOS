@@ -1607,6 +1607,9 @@ public final class MessageInputPanelComponent: Component {
                 if placeholderView.superview == nil {
                     placeholderView.isUserInteractionEnabled = false
                     placeholderView.layer.anchorPoint = CGPoint()
+                    // VoiceOver: the text field reads these words as its label; the drawn placeholder is not read.
+                    placeholderView.accessibilityElementsHidden = true
+                    vibrancyPlaceholderView.accessibilityElementsHidden = true
                     self.addSubview(placeholderView)
                 }
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin.offsetBy(dx: self.fieldBackgroundView.frame.minX, dy: self.fieldBackgroundView.frame.minY))
@@ -1705,6 +1708,21 @@ public final class MessageInputPanelComponent: Component {
             }
             
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                let accessibilityPlaceholder: String
+                switch component.placeholder {
+                case let .plain(text):
+                    accessibilityPlaceholder = text
+                case let .counter(items):
+                    accessibilityPlaceholder = items.map { item -> String in
+                        switch item.content {
+                        case let .text(text):
+                            return text
+                        case let .number(value, _):
+                            return "\(value)"
+                        }
+                    }.joined()
+                }
+                textFieldView.setAccessibilityFieldLabel(accessibilityPlaceholder)
                 if textFieldView.superview == nil {
                     self.textClippingView.addSubview(textFieldView)
                     
@@ -2444,6 +2462,18 @@ public final class MessageInputPanelComponent: Component {
                 if stickerButtonView.superview == nil {
                     self.addSubview(stickerButtonView)
                 }
+                // VoiceOver: the glyph shows the input the button switches to.
+                switch inputMode {
+                case .text:
+                    stickerButtonView.accessibilityLabel = component.strings.VoiceOver_Keyboard
+                case .stickers:
+                    stickerButtonView.accessibilityLabel = component.strings.VoiceOver_Stickers
+                case .emoji:
+                    stickerButtonView.accessibilityLabel = component.strings.EmojiInput_TabEmoji
+                case .none:
+                    stickerButtonView.accessibilityLabel = nil
+                }
+                stickerButtonView.accessibilityElementsHidden = hasMediaRecording || hasMediaEditing || !inputModeVisible || component.disabledPlaceholder != nil
                 let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldBackgroundFrame.maxY - 4.0 - stickerButtonSize.height), size: stickerButtonSize)
                 transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
                 transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))

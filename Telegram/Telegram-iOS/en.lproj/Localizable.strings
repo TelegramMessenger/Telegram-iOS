@@ -9018,6 +9018,10 @@ Sorry for the inconvenience.";
 "VoiceOver.Gallery.SeekBackward" = "Back 15 Seconds";
 "VoiceOver.Gallery.SeekForward" = "Forward 15 Seconds";
 "VoiceOver.Gallery.PlaybackPosition" = "Playback position";
+"VoiceOver.Browser.Forward" = "Forward";
+"VoiceOver.Browser.PreviousResult" = "Previous Result";
+"VoiceOver.Browser.NextResult" = "Next Result";
+"VoiceOver.EmojiPicker.None" = "None";
 
 "Appearance.VoiceOver.Theme" = "%@ Theme";
 

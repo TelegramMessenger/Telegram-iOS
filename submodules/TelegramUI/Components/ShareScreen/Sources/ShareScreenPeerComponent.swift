@@ -69,6 +69,9 @@ final class ShareScreenPeerComponent: Component {
             super.init(frame: frame)
             self.addSubview(self.ring)
             self.addSubview(self.communityShadow)
+            // Decoration behind a community's avatar.
+            self.communityShadow.isAccessibilityElement = false
+            self.communityShadow.accessibilityElementsHidden = true
             self.addSubview(self.avatar.view)
             self.addSubview(self.online)
             self.addSubview(self.messagingBadge)

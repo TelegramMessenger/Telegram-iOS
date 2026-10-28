@@ -7,17 +7,20 @@ public final class ContextReferenceButtonComponent: Component {
     let content: AnyComponent<Empty>
     let tag: AnyObject?
     let minSize: CGSize?
+    let accessibility: ComponentAccessibility?
     let action: (UIView, ContextGesture?) -> Void
     
     public init(
         content: AnyComponent<Empty>,
         tag: AnyObject? = nil,
         minSize: CGSize?,
+        accessibility: ComponentAccessibility? = nil,
         action: @escaping (UIView, ContextGesture?) -> Void
     ) {
         self.content = content
         self.tag = tag
         self.minSize = minSize
+        self.accessibility = accessibility
         self.action = action
     }
     
@@ -29,6 +32,9 @@ public final class ContextReferenceButtonComponent: Component {
             return false
         }
         if lhs.minSize != rhs.minSize {
+            return false
+        }
+        if lhs.accessibility != rhs.accessibility {
             return false
         }
         return true
@@ -81,9 +87,21 @@ public final class ContextReferenceButtonComponent: Component {
         @objc private func pressed() {
             self.component?.action(self, nil)
         }
+        
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component, component.accessibility != nil else {
+                return super.accessibilityActivate()
+            }
+            component.action(self, nil)
+            return true
+        }
 
         public func update(component: ContextReferenceButtonComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
+            if let accessibility = component.accessibility {
+                // One element for the button (its glyph and the context source inside are not read separately).
+                self.apply(accessibility: accessibility, defaultTraits: .button)
+            }
             
             let componentSize = self.componentView.update(
                 transition: transition,

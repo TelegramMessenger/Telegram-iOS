@@ -123,6 +123,7 @@ final class QrStudioEmojiTabView: UIView {
                 stateContext: nil,
                 addImage: nil
             )
+            emojiContent.inputInteractionHolder.inputInteraction?.exposesItemsToAccessibility = true
             self.requestLayout?()
         })
     }

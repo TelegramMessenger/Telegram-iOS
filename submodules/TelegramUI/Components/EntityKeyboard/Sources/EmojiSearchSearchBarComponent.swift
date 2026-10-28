@@ -358,45 +358,119 @@ final class EmojiSearchSearchBarComponent: Component {
                 } else {
                     for (id, itemView) in self.visibleItemViews {
                         if let itemComponentView = itemView.view.view, itemComponentView.frame.contains(location), let itemId = id.base as? Int64 {
-                            if self.selectedItem == AnyHashable(id) {
-                                self.selectedItem = nil
-                            } else {
-                                self.selectedItem = AnyHashable(id)
-                                AudioServicesPlaySystemSound(0x450)
-                                self.hapticFeedback.tap()
-                            }
-                            self.componentState?.updated(transition: .easeInOut(duration: 0.2))
-                            
-                            if let _ = self.selectedItem, let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
-                                component.searchTermUpdated(group)
-                                
-                                if let itemComponentView = itemView.view.view {
-                                    var offset = self.scrollView.contentOffset.x
-                                    let maxDistance: CGFloat = 44.0
-                                    if itemComponentView.frame.maxX - offset > self.scrollView.bounds.width - maxDistance {
-                                        offset = itemComponentView.frame.maxX - (self.scrollView.bounds.width - maxDistance)
-                                    }
-                                    if itemComponentView.frame.minX - offset < maxDistance {
-                                        offset = itemComponentView.frame.minX - maxDistance
-                                    }
-                                    offset = max(0.0, min(offset, self.scrollView.contentSize.width - self.scrollView.bounds.width))
-                                    if offset != self.scrollView.contentOffset.x {
-                                        self.scrollView.setContentOffset(CGPoint(x: offset, y: 0.0), animated: true)
-                                    }
-                                }
-                            } else {
-                                let transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
-                                transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
-                                self.updateScrolling(transition: transition, fromScrolling: false)
-                                //self.scrollView.setContentOffset(CGPoint(), animated: true)
-                                
-                                component.searchTermUpdated(nil)
-                            }
-                            
+                            self.toggleItem(id: id, itemId: itemId, itemView: itemView)
                             break
                         }
                     }
                 }
+            }
+        }
+        
+        /// The tap on a category: selects it (searching its emoji) or clears the selection. VoiceOver activation
+        /// takes the same path.
+        private func toggleItem(id: AnyHashable, itemId: Int64, itemView: ItemView) {
+            guard let component = self.component else {
+                return
+            }
+            if self.selectedItem == AnyHashable(id) {
+                self.selectedItem = nil
+            } else {
+                self.selectedItem = AnyHashable(id)
+                AudioServicesPlaySystemSound(0x450)
+                self.hapticFeedback.tap()
+            }
+            self.componentState?.updated(transition: .easeInOut(duration: 0.2))
+            
+            if let _ = self.selectedItem, let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
+                component.searchTermUpdated(group)
+                
+                if let itemComponentView = itemView.view.view {
+                    var offset = self.scrollView.contentOffset.x
+                    let maxDistance: CGFloat = 44.0
+                    if itemComponentView.frame.maxX - offset > self.scrollView.bounds.width - maxDistance {
+                        offset = itemComponentView.frame.maxX - (self.scrollView.bounds.width - maxDistance)
+                    }
+                    if itemComponentView.frame.minX - offset < maxDistance {
+                        offset = itemComponentView.frame.minX - maxDistance
+                    }
+                    offset = max(0.0, min(offset, self.scrollView.contentSize.width - self.scrollView.bounds.width))
+                    if offset != self.scrollView.contentOffset.x {
+                        self.scrollView.setContentOffset(CGPoint(x: offset, y: 0.0), animated: true)
+                    }
+                }
+            } else {
+                let transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
+                transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
+                self.updateScrolling(transition: transition, fromScrolling: false)
+                //self.scrollView.setContentOffset(CGPoint(), animated: true)
+                
+                component.searchTermUpdated(nil)
+            }
+        }
+        
+        private final class AccessibilityItemElement: UIAccessibilityElement {
+            let activate: () -> Bool
+            
+            init(container: Any, activate: @escaping () -> Bool) {
+                self.activate = activate
+                super.init(accessibilityContainer: container)
+            }
+            
+            override func accessibilityActivate() -> Bool {
+                return self.activate()
+            }
+        }
+        
+        /// VoiceOver: "Search" (activates the field, as a tap on it), then the visible categories by their titles,
+        /// the chosen one `.selected`. Built only when asked.
+        private var cachedAccessibilityElements: [Any]?
+        
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component else {
+                    return nil
+                }
+                // Kept until the bar changes: VoiceOver loses its place if each query returns new objects.
+                if let cachedAccessibilityElements = self.cachedAccessibilityElements {
+                    return cachedAccessibilityElements
+                }
+                var elements: [Any] = []
+                if let textView = self.textView.view, textView.alpha > 0.01, !self.textContainerView.isHidden, self.textContainerView.alpha > 0.01 {
+                    let element = AccessibilityItemElement(container: self, activate: { [weak self] in
+                        self?.component?.activateTextInput()
+                        return true
+                    })
+                    element.accessibilityLabel = component.strings.Common_Search
+                    element.accessibilityTraits = .button
+                    element.accessibilityFrameInContainerSpace = textView.convert(textView.bounds, to: self)
+                    elements.append(element)
+                }
+                let groups = component.categories?.groups ?? []
+                for group in groups {
+                    let id = AnyHashable(group.id)
+                    guard let itemView = self.visibleItemViews[id], let view = itemView.view.view, view.alpha > 0.01 else {
+                        continue
+                    }
+                    let frame = view.convert(view.bounds, to: self)
+                    guard frame.intersects(self.bounds) else {
+                        continue
+                    }
+                    let itemId = group.id
+                    let element = AccessibilityItemElement(container: self, activate: { [weak self, weak itemView] in
+                        guard let self, let itemView else {
+                            return false
+                        }
+                        self.toggleItem(id: id, itemId: itemId, itemView: itemView)
+                        return true
+                    })
+                    element.accessibilityLabel = group.title
+                    element.accessibilityTraits = self.selectedItem == id ? [.button, .selected] : .button
+                    element.accessibilityFrameInContainerSpace = frame
+                    elements.append(element)
+                }
+                self.cachedAccessibilityElements = elements
+                return elements
+            } set(value) {
             }
         }
         
@@ -447,6 +521,7 @@ final class EmojiSearchSearchBarComponent: Component {
         }
         
         private func updateScrolling(transition: ComponentTransition, fromScrolling: Bool) {
+            self.cachedAccessibilityElements = nil
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -655,6 +730,7 @@ final class EmojiSearchSearchBarComponent: Component {
         
         func update(component: EmojiSearchSearchBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
+            self.cachedAccessibilityElements = nil
             self.componentState = state
             
             let textColor: UIColor

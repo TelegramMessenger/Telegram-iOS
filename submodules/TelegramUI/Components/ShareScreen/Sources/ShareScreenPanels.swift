@@ -746,7 +746,7 @@ final class SearchInputPanelComponent: Component {
             let themeUpdated = component.theme !== previousComponent?.theme
 
             if themeUpdated {
-                self.textField.accessibilityLabel = component.strings.Common_Search
+                self.textField.accessibilityLabel = component.placeholder ?? component.strings.Common_Search
                 self.textField.font = Font.regular(17.0)
                 self.textField.textColor = component.theme.list.itemPrimaryTextColor
                 self.textField.keyboardAppearance = component.theme.overallDarkAppearance ? .dark : .light
@@ -826,7 +826,8 @@ final class SearchInputPanelComponent: Component {
                             } else {
                                 component.createGroup()
                             }
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: isCancel ? component.strings.Common_Close : component.strings.ShareScreen_CreateGroupTooltip, isHidden: !isVisible)
                     )),
                     environment: {},
                     containerSize: buttonSize
@@ -836,10 +837,6 @@ final class SearchInputPanelComponent: Component {
                     shareScreenSetFadeVisible(view, isVisible: isShown, blurRadius: 8.0, transition: buttonTransition)
                     buttonTransition.setFrame(view: view, frame: CGRect(x: availableSize.width - edgeInsets.right - buttonSize.width, y: edgeInsets.top, width: buttonSize.width, height: buttonSize.height))
                     view.isUserInteractionEnabled = isVisible
-                    view.isAccessibilityElement = isVisible
-                    view.accessibilityElementsHidden = !isVisible
-                    view.accessibilityTraits = .button
-                    view.accessibilityLabel = isCancel ? component.strings.Common_Close : component.strings.ShareScreen_CreateGroupTooltip
                 }
             }
 
@@ -864,6 +861,7 @@ final class SearchInputPanelComponent: Component {
                 if iconView.superview == nil {
                     iconView.layer.anchorPoint = CGPoint()
                     iconView.isUserInteractionEnabled = false
+                    iconView.accessibilityElementsHidden = true
                     self.insertSubview(iconView, belowSubview: self.textField)
                 }
                 transition.setPosition(view: iconView, position: iconFrame.origin)
@@ -884,6 +882,8 @@ final class SearchInputPanelComponent: Component {
                 if placeholderView.superview == nil {
                     placeholderView.layer.anchorPoint = CGPoint()
                     placeholderView.isUserInteractionEnabled = false
+                    // The field reads its label (the placeholder's words); the drawn placeholder is not read again.
+                    placeholderView.accessibilityElementsHidden = true
                     self.insertSubview(placeholderView, belowSubview: self.textField)
                 }
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
@@ -910,7 +910,8 @@ final class SearchInputPanelComponent: Component {
                         self.setText(text: "", updateState: true)
                     },
                     animateAlpha: false,
-                    animateScale: true
+                    animateScale: true,
+                    accessibility: ComponentAccessibility(label: component.strings.WebSearch_RecentSectionClear)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 44.0, height: 44.0)
@@ -1141,14 +1142,11 @@ final class ShareScreenBarButtonComponent: Component {
             self.isUserInteractionEnabled = component.isVisible
             self.accessibilityElementsHidden = !component.isVisible
             let size = CGSize(width: 44.0, height: 44.0)
-            let _ = self.button.update(transition: transition, component: AnyComponent(GlassBarButtonComponent(size: size, backgroundColor: nil, isDark: component.theme.overallDarkAppearance, state: .glass, isVisible: true, component: AnyComponentWithIdentity(id: component.icon, component: AnyComponent(BundleIconComponent(name: component.icon, tintColor: component.theme.list.itemPrimaryTextColor))), action: { _ in component.action() })), environment: {}, containerSize: size)
+            let _ = self.button.update(transition: transition, component: AnyComponent(GlassBarButtonComponent(size: size, backgroundColor: nil, isDark: component.theme.overallDarkAppearance, state: .glass, isVisible: true, component: AnyComponentWithIdentity(id: component.icon, component: AnyComponent(BundleIconComponent(name: component.icon, tintColor: component.theme.list.itemPrimaryTextColor))), action: { _ in component.action() }, accessibility: ComponentAccessibility(label: component.title, isHidden: !component.isVisible))), environment: {}, containerSize: size)
             if let view = self.button.view {
                 if view.superview == nil { self.addSubview(view) }
                 transition.setFrame(view: view, frame: CGRect(origin: .zero, size: size))
                 shareScreenSetFadeVisible(view, isVisible: component.isVisible, blurRadius: 8.0, transition: transition)
-                view.isAccessibilityElement = true
-                view.accessibilityLabel = component.title
-                view.accessibilityTraits = .button
             }
             return size
         }

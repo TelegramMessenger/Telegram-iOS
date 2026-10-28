@@ -799,6 +799,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     stateContext: nil,
                     addImage: nil
                 )
+                emojiContent.inputInteractionHolder.inputInteraction?.exposesItemsToAccessibility = true
                 
                 strongSelf.refreshLayout(transition: .immediate)
             })

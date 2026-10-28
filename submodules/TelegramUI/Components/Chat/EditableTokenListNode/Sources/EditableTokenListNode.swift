@@ -146,6 +146,7 @@ private final class TokenNode: ASDisplayNode {
         // One element per token: its title (the avatar and the remove glyph are decoration).
         self.isAccessibilityElement = true
         self.accessibilityLabel = token.title
+        self.accessibilityTraits = [.button]
         
         self.updateIsSelected(isSelected, animated: false)
     }
@@ -363,6 +364,19 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                 tokenNode = currentNode
             } else {
                 tokenNode = TokenNode(context: self.context, theme: self.theme, token: token, isSelected: self.selectedTokenId != nil && token.id == self.selectedTokenId!)
+                // VoiceOver: removing a token takes two taps (select, then tap again) or backspace; "Delete" does it in
+                // one step through the same `deleteToken` the second tap calls. Built once per token.
+                let deleteTitle = self.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Delete
+                tokenNode.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: deleteTitle, actionHandler: { [weak self, weak tokenNode] _ in
+                    guard let self, let tokenNode, let deleteToken = self.deleteToken else {
+                        return false
+                    }
+                    if self.selectedTokenId == tokenNode.token.id {
+                        self.updateSelectedTokenId(nil)
+                    }
+                    deleteToken(tokenNode.token.id)
+                    return true
+                })]
                 self.tokenNodes.append(tokenNode)
                 self.scrollNode.addSubnode(tokenNode)
                 animateIn = true

@@ -142,9 +142,12 @@ final class ComposeControllerNode: ASDisplayNode {
                 }
             }
         }, placeholder: placeholderNode)
+        // The search results cover the list: VoiceOver must not read the list behind them.
+        self.contactListNode.accessibilityElementsHidden = true
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        self.contactListNode.accessibilityElementsHidden = false
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil

@@ -402,6 +402,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         self.insertSubnode(searchContainerNode, belowSubnode: navigationBar)
         self.searchContainerNode = searchContainerNode
+        self.contactListNode.accessibilityElementsHidden = true
         
         searchContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
@@ -416,6 +417,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             searchContainerNode?.removeFromSupernode()
         })
         self.searchContainerNode = nil
+        self.contactListNode.accessibilityElementsHidden = self.searchDisplayController != nil
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
@@ -493,6 +495,8 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                 }
             }
         }, placeholder: placeholderNode)
+        // The search results cover the list: VoiceOver must not read the list behind them.
+        self.contactListNode.accessibilityElementsHidden = true
     }
     
     func prepareDeactivateSearch() {
@@ -500,6 +504,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        self.contactListNode.accessibilityElementsHidden = self.searchContainerNode != nil
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil

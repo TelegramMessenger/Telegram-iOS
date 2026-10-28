@@ -1040,7 +1040,9 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     override public var accessibilityElements: [Any]? {
         get {
             var elements: [Any] = []
-            if let rowView = self.rowView, !self.glassContainer.alpha.isZero {
+            // Not while the screen hides its bar (`setDisplayNavigationBar(false)`, e.g. an active search): the row is
+            // faded out and moved above the screen, only the search field in the content node stays.
+            if let rowView = self.rowView, !self.glassContainer.alpha.isZero, !self.isRowHiddenByController {
                 elements.append(contentsOf: rowView.leadingAccessibilityElements)
                 if let titleView = self.titleView, titleView.superview != nil {
                     titleView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(titleView.bounds, in: titleView)
