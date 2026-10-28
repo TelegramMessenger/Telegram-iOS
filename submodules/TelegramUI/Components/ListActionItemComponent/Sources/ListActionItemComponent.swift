@@ -534,6 +534,10 @@ public final class ListActionItemComponent: Component {
                     if accessibility.value == nil, let texts = iconContent?.texts, !texts.isEmpty {
                         accessibility.value = texts.joined(separator: ", ")
                     }
+                    // A non-interactive custom accessory (an amount, a status) is shown text too: read it as the value.
+                    if accessibility.value == nil, case .custom = component.accessory, let texts = self.customAccessoryView?.view?.accessibilityDisplayedContent().texts, !texts.isEmpty {
+                        accessibility.value = texts.joined(separator: ", ")
+                    }
                     if component.action != nil {
                         traits = .button
                     } else {

@@ -126,6 +126,8 @@ final class StarsBalanceComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            // The currency glyph beside the amount: the screen's title names the currency.
+            self.icon.accessibilityElementsHidden = true
             self.addSubview(self.icon)
         }
         

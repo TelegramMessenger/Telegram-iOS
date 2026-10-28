@@ -200,4 +200,45 @@ final class ComponentAccessibilityTests: XCTestCase {
         XCTAssertFalse(make(isEnabled: false).accessibilityActivate())
         XCTAssertEqual(calls, 1)
     }
+    
+    func testButtonWithoutLabelReadsItsText() {
+        let view = self.makeView(Button(
+            content: AnyComponent(HStack([
+                AnyComponentWithIdentity(id: 0, component: AnyComponent(Rectangle(color: .red, width: 10.0, height: 10.0))),
+                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Gift Stars to Friends")))))
+            ], spacing: 4.0)),
+            action: {}
+        )).view!
+        XCTAssertTrue(view.isAccessibilityElement)
+        XCTAssertEqual(view.accessibilityLabel, "Gift Stars to Friends")
+        
+        let labelled = self.makeView(Button(
+            content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Inner")))),
+            action: {},
+            accessibility: ComponentAccessibility(label: "Close")
+        )).view!
+        XCTAssertEqual(labelled.accessibilityLabel, "Close")
+    }
+    
+    func testButtonComponentDerivesLabelThroughStacks() {
+        let view = self.makeView(ButtonComponent(
+            background: ButtonComponent.Background(style: .legacy, color: .blue, foreground: .white, pressedColor: .blue),
+            content: AnyComponentWithIdentity(id: 0, component: AnyComponent(HStack([
+                AnyComponentWithIdentity(id: "icon", component: AnyComponent(Rectangle(color: .white, width: 20.0, height: 20.0))),
+                AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: "Top Up", font: .systemFont(ofSize: 17.0), color: .white)))
+            ], spacing: 7.0))),
+            action: {}
+        )).view!
+        XCTAssertEqual(view.accessibilityLabel, "Top Up")
+        
+        let stacked = self.makeView(ButtonComponent(
+            background: ButtonComponent.Background(style: .legacy, color: .blue, foreground: .white, pressedColor: .blue),
+            content: AnyComponentWithIdentity(id: 0, component: AnyComponent(VStack([
+                AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Apply Style"))))),
+                AnyComponentWithIdentity(id: 1, component: AnyComponent(Text(text: "02:00", font: .systemFont(ofSize: 11.0), color: .white)))
+            ], spacing: 3.0))),
+            action: {}
+        )).view!
+        XCTAssertEqual(stacked.accessibilityLabel, "Apply Style, 02:00")
+    }
 }

@@ -372,6 +372,34 @@ open class ImmediateTextView: TextView {
         }
         return super.accessibilityActivate()
     }
+
+    /// A text with several links (terms, policy, "Restore Purchases"): each link is reachable as a custom action named
+    /// by its text, opened as a tap on it does. Built only when VoiceOver asks.
+    override open var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            if let explicit = super.accessibilityCustomActions, !explicit.isEmpty {
+                return explicit
+            }
+            guard self.isAccessibilityElement, self.tapAttributeAction != nil else {
+                return nil
+            }
+            let links = self.accessibilityLinks()
+            if links.count < 2 {
+                return nil
+            }
+            return links.map { link in
+                return UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak self] _ in
+                    guard let self, let tapAttributeAction = self.tapAttributeAction else {
+                        return false
+                    }
+                    tapAttributeAction(link.attributes, link.index)
+                    return true
+                })
+            }
+        } set(value) {
+            super.accessibilityCustomActions = value
+        }
+    }
     
     private func updateInteractiveActions() {
         if self.highlightAttributeAction != nil {

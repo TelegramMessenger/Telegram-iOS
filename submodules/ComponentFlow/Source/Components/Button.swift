@@ -226,6 +226,23 @@ public final class Button: Component {
         private var holdActionTriggerred: Bool = false
         private var holdActionTimer: Timer?
         
+        /// Without a label of its own (from `accessibility:` or the call site), the button reads the text it shows.
+        public override var accessibilityLabel: String? {
+            get {
+                if let label = super.accessibilityLabel, !label.isEmpty {
+                    return label
+                }
+                if !self.isAccessibilityElement || self.accessibilityElementsHidden {
+                    // Hidden (`ComponentAccessibility.isHidden`): nothing to announce.
+                    return nil
+                }
+                let texts = self.contentView.accessibilityDisplayedContent().texts
+                return texts.isEmpty ? nil : texts.joined(separator: ", ")
+            } set(value) {
+                super.accessibilityLabel = value
+            }
+        }
+        
         public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             var bounds = self.bounds
             if let hitTestEdgeInsets = self.component?.hitTestEdgeInsets {

@@ -729,6 +729,22 @@ private final class WalletScreenComponent: Component {
     }
 
     final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+        /// VoiceOver: the bar (Back, Scan QR Code, More), the title, the collapsed balance while it shows, the card (one
+        /// summary and its QR button), then the content. The balance copies drawn over the card and the bar for its
+        /// collapse animation are not read: the card's summary and the bar's Balance button say it.
+        override var accessibilityElements: [Any]? {
+            get {
+                let candidates: [UIView?] = [self.header, self.navigationTitle.view, self.navigationBalanceButton, self.cardContainerView, self.scrollView]
+                return candidates.compactMap { view -> UIView? in
+                    guard let view, view.superview === self, !view.isHidden, view.alpha >= 0.01 else {
+                        return nil
+                    }
+                    return view
+                }
+            } set(value) {
+            }
+        }
+        
         private enum SelectedSection: Equatable {
             case transactions
             case collectibles
@@ -2973,7 +2989,8 @@ private final class WalletScreenComponent: Component {
                     content: .icon(imageName: "Navigation/ScanQr"),
                     action: { [weak self] _ in
                         self?.openQrCodeScanner()
-                    }
+                    },
+                    accessibilityLabel: environment.strings.Contacts_ScanQrCode
                 )
             ]
 
@@ -3032,6 +3049,7 @@ private final class WalletScreenComponent: Component {
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     navigationTitleView.isUserInteractionEnabled = false
+                    navigationTitleView.accessibilityTraits = .header
                     self.insertSubview(navigationTitleView, belowSubview: self.cardContainerView)
                 }
                 transition.setFrame(
@@ -3351,7 +3369,8 @@ private final class WalletScreenComponent: Component {
                     },
                     qrPressed: { [weak self] in
                         self?.openReceive()
-                    }
+                    },
+                    qrAccessibilityLabel: environment.strings.Wallet_Receive_ShowQR
                 )),
                 environment: {},
                 containerSize: CGSize(width: cardWidth, height: availableSize.height)

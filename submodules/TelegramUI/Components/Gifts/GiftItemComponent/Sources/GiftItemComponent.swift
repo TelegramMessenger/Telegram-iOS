@@ -1767,25 +1767,66 @@ public final class GiftItemComponent: Component {
                 self.containerButton.isUserInteractionEnabled = false
             }
             
-            // VoiceOver: a collectible tile is one button, "Title #number" (the model picture and the ribbon number
-            // on screen), selected while it is the chosen one. Other subjects keep their tree for now.
-            if case let .uniqueGift(gift, _) = component.subject, component.action != nil {
+            // VoiceOver: a tile is one element, selected while it is the chosen one. A collectible reads "Title #number"
+            // (the model picture and the ribbon number on screen); a Premium or Stars gift reads the gift (its emoji when
+            // it has no title) and the texts on the tile, its ribbon ("-35%", "limited") last. A tappable tile is its
+            // button; otherwise the tile itself is the element, which a wrapping button (PlainButtonComponent) reads.
+            var accessibilityLabel: String?
+            if case let .uniqueGift(gift, _) = component.subject {
                 var label = gift.title
                 if let ribbon = component.ribbon, !ribbon.text.isEmpty {
                     label += " \(ribbon.text)"
                 } else {
                     label += " #\(gift.number)"
                 }
-                self.containerButton.isAccessibilityElement = true
-                self.containerButton.accessibilityLabel = label
-                self.containerButton.accessibilityTraits = component.isSelected ? [.button, .selected] : .button
-                // The ribbon's number is part of that label.
-                self.ribbon.accessibilityElementsHidden = true
-                self.ribbonOutline.accessibilityElementsHidden = true
-                self.ribbonText.view?.isAccessibilityElement = false
-                self.ribbonText.view?.accessibilityElementsHidden = true
+                accessibilityLabel = label
+            } else {
+                var giftName: String?
+                if case let .starGift(gift, _) = component.subject {
+                    giftName = gift.title
+                    if giftName == nil {
+                        for case let .Sticker(displayText, _, _) in gift.file.attributes where !displayText.isEmpty {
+                            giftName = displayText
+                            break
+                        }
+                    }
+                }
+                // "#" in a price or label is where the Stars glyph is drawn.
+                func shownText(_ text: String?) -> String? {
+                    guard let text else {
+                        return nil
+                    }
+                    let cleaned = text.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "#", with: "").split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+                    return cleaned.isEmpty ? nil : cleaned
+                }
+                var price: String?
+                switch component.subject {
+                case let .premium(_, priceValue), let .starGift(_, priceValue):
+                    price = priceValue
+                default:
+                    break
+                }
+                let texts: [String] = [giftName, shownText(component.title), shownText(component.subtitle), shownText(price), shownText(component.label), shownText(component.ribbon?.text)].compactMap { $0 }
+                accessibilityLabel = texts.isEmpty ? nil : texts.joined(separator: ", ")
             }
-                        
+            let accessibilityTraits: UIAccessibilityTraits = component.isSelected ? [.button, .selected] : .button
+            if component.action != nil {
+                self.containerButton.isAccessibilityElement = true
+                self.containerButton.accessibilityLabel = accessibilityLabel
+                self.containerButton.accessibilityTraits = accessibilityTraits
+                self.isAccessibilityElement = false
+            } else {
+                self.containerButton.isAccessibilityElement = false
+                self.isAccessibilityElement = accessibilityLabel != nil
+                self.accessibilityLabel = accessibilityLabel
+                self.accessibilityTraits = component.isSelected ? [.staticText, .selected] : .staticText
+            }
+            // The ribbon's text is part of that label.
+            self.ribbon.accessibilityElementsHidden = true
+            self.ribbonOutline.accessibilityElementsHidden = true
+            self.ribbonText.view?.isAccessibilityElement = false
+            self.ribbonText.view?.accessibilityElementsHidden = true
+            
             return size
         }
     }

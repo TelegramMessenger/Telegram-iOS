@@ -141,8 +141,10 @@ extension NavigationBarComponent {
         public let contextAction: ((UIView, ContextGesture?) -> Void)?
         /// VoiceOver value: a state the button shows only as its icon (the chat list's proxy shield).
         public let accessibilityValue: String?
+        /// VoiceOver label of an icon the bar does not know (a screen's own glyph); standard glyphs are named by the bar.
+        public let accessibilityLabel: String?
 
-        public init(id: AnyHashable, content: Content, isEnabled: Bool = true, tint: Tint = .generic, overflow: OverflowInfo? = nil, requiresOwnSection: Bool = false, staysInRow: Bool = false, action: @escaping (UIView) -> Void, contextAction: ((UIView, ContextGesture?) -> Void)? = nil, accessibilityValue: String? = nil) {
+        public init(id: AnyHashable, content: Content, isEnabled: Bool = true, tint: Tint = .generic, overflow: OverflowInfo? = nil, requiresOwnSection: Bool = false, staysInRow: Bool = false, action: @escaping (UIView) -> Void, contextAction: ((UIView, ContextGesture?) -> Void)? = nil, accessibilityValue: String? = nil, accessibilityLabel: String? = nil) {
             self.id = id
             self.content = content
             self.isEnabled = isEnabled
@@ -153,10 +155,11 @@ extension NavigationBarComponent {
             self.action = action
             self.contextAction = contextAction
             self.accessibilityValue = accessibilityValue
+            self.accessibilityLabel = accessibilityLabel
         }
 
         public func withOverflow(_ overflow: OverflowInfo?) -> Button {
-            return Button(id: self.id, content: self.content, isEnabled: self.isEnabled, tint: self.tint, overflow: overflow, requiresOwnSection: self.requiresOwnSection, staysInRow: self.staysInRow, action: self.action, contextAction: self.contextAction, accessibilityValue: self.accessibilityValue)
+            return Button(id: self.id, content: self.content, isEnabled: self.isEnabled, tint: self.tint, overflow: overflow, requiresOwnSection: self.requiresOwnSection, staysInRow: self.staysInRow, action: self.action, contextAction: self.contextAction, accessibilityValue: self.accessibilityValue, accessibilityLabel: self.accessibilityLabel)
         }
 
         /// Actions are not compared: they are recreated on every update.
@@ -180,6 +183,9 @@ extension NavigationBarComponent {
                 return false
             }
             if lhs.staysInRow != rhs.staysInRow {
+                return false
+            }
+            if lhs.accessibilityLabel != rhs.accessibilityLabel {
                 return false
             }
             if lhs.accessibilityValue != rhs.accessibilityValue {

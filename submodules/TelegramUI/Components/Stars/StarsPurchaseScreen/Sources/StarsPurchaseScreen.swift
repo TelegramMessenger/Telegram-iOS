@@ -395,7 +395,9 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                                     if let superview = view.superview?.superview?.superview?.superview {
                                         transition.setScale(view: superview, scale: isHighlighted ? 1.05 : 1.0)
                                     }
-                                }
+                                },
+                                // One element per option (the stars icon takes touches, which would leave the row unread).
+                                accessibility: ComponentAccessibility(label: title, value: price)
                             )))]
                         ))
                     ))

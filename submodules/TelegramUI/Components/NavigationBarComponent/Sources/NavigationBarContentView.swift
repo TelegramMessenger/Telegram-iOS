@@ -227,7 +227,7 @@ final class NavigationBarContentView: UIView {
                 buttonTransition = .immediate
                 container.addSubview(buttonComponentView)
             }
-            if let accessibilityLabel = button.overflow?.title ?? navigationButtonTextLabel(button.content) ?? self.currentStrings.flatMap({ navigationButtonIconLabel(button.content, strings: $0) }) {
+            if let accessibilityLabel = button.overflow?.title ?? button.accessibilityLabel ?? navigationButtonTextLabel(button.content) ?? self.currentStrings.flatMap({ navigationButtonIconLabel(button.content, strings: $0) }) {
                 buttonComponentView.accessibilityLabel = accessibilityLabel
             }
             if case let .node(nodeValue) = button.content, button.accessibilityValue == nil {
@@ -566,7 +566,11 @@ func navigationButtonIconLabel(_ content: NavigationBarComponent.Button.Content,
             label = strings.done
         } else if imageName == "Navigation/Close" {
             label = strings.close
+        } else if imageName == "Navigation/Back" {
+            label = strings.back
         }
+    case .more:
+        label = strings.more
     case let .node(nodeValue):
         // A custom node button is named by the screen that supplies the node.
         label = nodeValue.accessibilityLabel

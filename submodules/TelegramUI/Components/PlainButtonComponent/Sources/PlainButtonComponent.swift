@@ -110,6 +110,23 @@ public final class PlainButtonComponent: Component {
 
         private let contentContainer = UIView()
         private let content = ComponentView<Empty>()
+        
+        /// Without a label of its own (from `accessibility:` or the call site), the button reads the text it shows.
+        public override var accessibilityLabel: String? {
+            get {
+                if let label = super.accessibilityLabel, !label.isEmpty {
+                    return label
+                }
+                if !self.isAccessibilityElement || self.accessibilityElementsHidden {
+                    // Hidden (`ComponentAccessibility.isHidden`): nothing to announce.
+                    return nil
+                }
+                let texts = self.contentContainer.accessibilityDisplayedContent().texts
+                return texts.isEmpty ? nil : texts.joined(separator: ", ")
+            } set(value) {
+                super.accessibilityLabel = value
+            }
+        }
         private var background: ComponentView<Empty>?
         
         public var contentView: UIView? {

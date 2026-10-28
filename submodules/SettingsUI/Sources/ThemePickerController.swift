@@ -255,7 +255,7 @@ private enum ThemePickerControllerEntry: ItemListNodeEntry {
                     baseTheme = nil
                 }
             
-                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, generalThemeReference: generalThemeReference, themeReference: currentTheme, colors: colorItems, currentColor: currentColor, updated: { color in
+                return ThemeSettingsAccentColorItem(theme: theme, strings: presentationData.strings, sectionId: self.section, generalThemeReference: generalThemeReference, themeReference: currentTheme, colors: colorItems, currentColor: currentColor, updated: { color in
                     if let color = color {
                         switch color {
                             case let .accentColor(color):

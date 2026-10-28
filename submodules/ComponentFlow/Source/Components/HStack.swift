@@ -9,7 +9,7 @@ public enum HStackAlignment {
 public final class HStack<ChildEnvironment: Equatable>: CombinedComponent {
     public typealias EnvironmentType = ChildEnvironment
 
-    private let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    public let items: [AnyComponentWithIdentity<ChildEnvironment>]
     private let spacing: CGFloat
     private let alignment: HStackAlignment
 

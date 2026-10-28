@@ -162,6 +162,14 @@ final class StarsTransactionsPanelContainerComponent: Component {
         private var isDraggingTabs: Bool = false
         private var animatingTransition: Bool = false
         
+        /// VoiceOver: the tabs before the page (the page container starts above them, at the top of the panel).
+        override var accessibilityElements: [Any]? {
+            get {
+                return [self.tabsBackgroundContainer, self.clippingView]
+            } set(value) {
+            }
+        }
+        
         override init(frame: CGRect) {
             self.edgeEffectView = EdgeEffectView()
             self.edgeEffectView.isUserInteractionEnabled = false
@@ -514,6 +522,8 @@ final class StarsTransactionsPanelContainerComponent: Component {
                         if panelView.superview == nil {
                             self.clippingView.addSubview(panelView)
                         }
+                        // VoiceOver reads only the shown page; the tabs switch pages.
+                        panelView.accessibilityElementsHidden = self.currentId != panelItem.id
                         
                         panelTransition.setFrame(view: panelView, frame: itemFrame, completion: { [weak self] _ in
                             guard let self else {

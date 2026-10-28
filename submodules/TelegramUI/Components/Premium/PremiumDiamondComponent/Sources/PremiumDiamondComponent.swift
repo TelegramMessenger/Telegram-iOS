@@ -720,6 +720,8 @@ public final class PremiumDiamondComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+            // A decorative 3D diamond: VoiceOver reads the title and text beside it.
+            self.accessibilityElementsHidden = true
 
             self.isOpaque = false
             self.diamondLayer.onReady = { [weak self] in

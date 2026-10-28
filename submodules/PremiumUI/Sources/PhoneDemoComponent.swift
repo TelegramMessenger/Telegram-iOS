@@ -462,6 +462,8 @@ public final class PhoneDemoComponent: Component {
             self.phoneView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
+            // The feature's demo video in a phone frame: an illustration; the page's title and text describe it.
+            self.accessibilityElementsHidden = true
             
             self.addSubview(self.decorationContainerView)
             self.addSubview(self.containerView)

@@ -1023,6 +1023,11 @@ public final class ButtonComponent: Component {
             }
         case let content as Text:
             text = content.text
+        case let content as HStack<Empty>:
+            // An icon beside a title, a title over a countdown: the texts of its parts.
+            text = content.items.compactMap { ButtonComponent.accessibilityText(of: $0.component) }.joined(separator: ", ")
+        case let content as VStack<Empty>:
+            text = content.items.compactMap { ButtonComponent.accessibilityText(of: $0.component) }.joined(separator: ", ")
         case let content as AnimatedTextComponent:
             text = content.items.compactMap { item -> String? in
                 switch item.content {

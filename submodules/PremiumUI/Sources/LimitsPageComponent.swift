@@ -99,6 +99,39 @@ private final class LimitComponent: CombinedComponent {
         return true
     }
     
+    /// VoiceOver: one element per limit, read as shown ("Pinned Chats, Pin up to 10 chats…, Free, 5, Premium, 10").
+    private final class RowView: UIView {
+        override var isAccessibilityElement: Bool {
+            get {
+                return true
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityLabel: String? {
+            get {
+                // The title and text first, then the limit bars (whose view spans the row); walking `self` would ask
+                // this getter again.
+                let texts = self.subviews.filter { $0 is ImmediateTextView }.sorted(by: { $0.frame.minY < $1.frame.minY })
+                let parts = texts + self.subviews.filter { !($0 is ImmediateTextView) }
+                let words = parts.flatMap { $0.accessibilityDisplayedContent().texts }
+                return words.isEmpty ? nil : words.joined(separator: ", ")
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return .staticText
+            } set(value) {
+            }
+        }
+    }
+    
+    func makeView() -> UIView {
+        return RowView()
+    }
+    
     static var body: Body {
         let title = Child(MultilineTextComponent.self)
         let text = Child(MultilineTextComponent.self)
@@ -451,6 +484,10 @@ final class LimitsPageComponent: CombinedComponent {
         }
     }
 
+    func makeView() -> UIView {
+        return PremiumScrollPageView()
+    }
+    
     func makeState() -> State {
         return State()
     }
@@ -549,6 +586,7 @@ final class LimitsPageComponent: CombinedComponent {
 
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: 38.0))
+                .accessibilityTraits(.header)
             )
                         
             return scroll.size

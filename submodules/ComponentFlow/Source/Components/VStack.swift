@@ -10,7 +10,7 @@ public enum VStackAlignment {
 public final class VStack<ChildEnvironment: Equatable>: CombinedComponent {
     public typealias EnvironmentType = ChildEnvironment
 
-    private let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    public let items: [AnyComponentWithIdentity<ChildEnvironment>]
     private let alignment: VStackAlignment
     private let spacing: CGFloat
     private let fillWidth: Bool

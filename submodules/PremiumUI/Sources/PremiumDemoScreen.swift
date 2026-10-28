@@ -276,6 +276,7 @@ final class PageComponent<ChildEnvironment: Equatable>: CombinedComponent {
             
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: content.size.height + 40.0))
+                .accessibilityTraits(.header)
             )
             context.add(text
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: content.size.height + 60.0 + text.size.height / 2.0))
@@ -309,6 +310,8 @@ final class DemoPagerComponent: Component {
     let items: [Item]
     let index: Int
     let nextAction: ActionSlot<Void>?
+    /// Shows the page at the given index (VoiceOver's page indicator).
+    let pageAction: ActionSlot<Int>?
     let cornerRadius: CGFloat
     let updated: (CGFloat, Int) -> Void
     let interactionUpdated: ((Bool) -> Void)?
@@ -317,6 +320,7 @@ final class DemoPagerComponent: Component {
         items: [Item],
         index: Int = 0,
         nextAction: ActionSlot<Void>? = nil,
+        pageAction: ActionSlot<Int>? = nil,
         cornerRadius: CGFloat = 10.0,
         interactionUpdated: ((Bool) -> Void)? = nil,
         updated: @escaping (CGFloat, Int) -> Void
@@ -324,6 +328,7 @@ final class DemoPagerComponent: Component {
         self.items = items
         self.index = index
         self.nextAction = nextAction
+        self.pageAction = pageAction
         self.cornerRadius = cornerRadius
         self.updated = updated
         self.interactionUpdated = interactionUpdated
@@ -423,6 +428,14 @@ final class DemoPagerComponent: Component {
                 }
             }
             
+            component.pageAction?.connect { [weak self] index in
+                if let self, let component = self.component, index >= 0, index < component.items.count, self.scrollView.bounds.width > 0.0 {
+                    component.interactionUpdated?(true)
+                    self.scrollView.contentOffset = CGPoint(x: CGFloat(index) * self.scrollView.bounds.width, y: 0.0)
+                    component.interactionUpdated?(false)
+                }
+            }
+            
             let previousWidth = self.scrollView.bounds.width
             let previousIndex = previousWidth > 0.0 ? self.scrollView.contentOffset.x / previousWidth : CGFloat(component.index)
             let contentSize = CGSize(width: availableSize.width * CGFloat(component.items.count), height: availableSize.height)
@@ -483,6 +496,8 @@ final class DemoPagerComponent: Component {
                 )
                 
                 itemView.frame = itemFrame
+                // VoiceOver reads only the page in view; the neighbours kept loaded for swiping are hidden.
+                itemView.accessibilityElementsHidden = abs(centerDelta) >= availableSize.width * 0.5
             }
             
             var removeIds: [AnyHashable] = []
@@ -1692,6 +1707,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.navigationPresentation = .flatModal
+        // VoiceOver reads only the sheet while it shows (it is presented over the screen that opened it).
+        self.blocksBackgroundWhenInOverlay = true
     }
     
     required public init(coder aDecoder: NSCoder) {

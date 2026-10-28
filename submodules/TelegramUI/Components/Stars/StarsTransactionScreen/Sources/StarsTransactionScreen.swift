@@ -1433,6 +1433,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     
             context.add(starChild
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: starOriginY))
+                // The picture over the title (a peer's photo, the store's icon, a gift): the title below names it.
+                .accessibilityHidden(true)
             )
         
             var originY: CGFloat = 156.0
@@ -1606,6 +1608,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             context.add(amountStar
                 .position(CGPoint(x: amountStarOriginX, y: amountOrigin + amountStar.size.height / 2.0 - UIScreenPixel + amountStarOffsetY))
+                .accessibilityHidden(true)
             )
             
             if case .unique = giftAnimationSubject {

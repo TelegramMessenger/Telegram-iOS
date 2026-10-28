@@ -5975,6 +5975,7 @@ Sorry for the inconvenience.";
 "VoiceOver.QrCodeScan.Flashlight" = "Flashlight";
 "VoiceOver.Common.ColorNumber" = "Color %@";
 "VoiceOver.Common.NoColor" = "No Color";
+"VoiceOver.Common.Page" = "Page";
 
 "VoiceOver.TabBar.AttentionRequired" = "Attention required";
 

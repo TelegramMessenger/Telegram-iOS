@@ -144,6 +144,8 @@ public final class PremiumStarComponent: Component {
             self.sceneView.isJitteringEnabled = true
             
             super.init(frame: frame)
+            // A decorative 3D scene: VoiceOver reads the title and text beside it.
+            self.accessibilityElementsHidden = true
             
             self.addSubview(self.sceneView)
             
@@ -772,6 +774,8 @@ public final class StandalonePremiumStarComponent: Component {
             self.sceneView.isJitteringEnabled = true
             
             super.init(frame: frame)
+            // A decorative 3D scene: VoiceOver reads the title and text beside it.
+            self.accessibilityElementsHidden = true
             
             self.addSubview(self.sceneView)
         }

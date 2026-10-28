@@ -87,6 +87,8 @@ public final class PremiumCoinComponent: Component {
             self.sceneView.isJitteringEnabled = true
             
             super.init(frame: frame)
+            // A decorative 3D scene: VoiceOver reads the title and text beside it.
+            self.accessibilityElementsHidden = true
             
             self.addSubview(self.sceneView)
             

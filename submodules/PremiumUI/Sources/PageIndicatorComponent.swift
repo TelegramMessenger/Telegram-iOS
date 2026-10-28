@@ -8,17 +8,28 @@ public final class PageIndicatorComponent: Component {
     private let position: CGFloat
     private let inactiveColor: UIColor
     private let activeColor: UIColor
+    /// VoiceOver: when set, the indicator is an adjustable element with this label and "N of M" as its value;
+    /// swiping up or down calls `showPage` with the next or previous index, as swiping the pages does.
+    private let accessibilityLabel: String?
+    private let accessibilityValue: ((Int, Int) -> String)?
+    private let showPage: ((Int) -> Void)?
     
     public init(
         pageCount: Int,
         position: CGFloat,
         inactiveColor: UIColor,
-        activeColor: UIColor
+        activeColor: UIColor,
+        accessibilityLabel: String? = nil,
+        accessibilityValue: ((Int, Int) -> String)? = nil,
+        showPage: ((Int) -> Void)? = nil
     ) {
         self.pageCount = pageCount
         self.position = position
         self.inactiveColor = inactiveColor
         self.activeColor = activeColor
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityValue = accessibilityValue
+        self.showPage = showPage
     }
     
     public static func ==(lhs: PageIndicatorComponent, rhs: PageIndicatorComponent) -> Bool {
@@ -34,11 +45,66 @@ public final class PageIndicatorComponent: Component {
         if !lhs.activeColor.isEqual(rhs.activeColor) {
             return false
         }
+        if lhs.accessibilityLabel != rhs.accessibilityLabel {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private var component: PageIndicatorComponent?
+        
+        private var currentPageIndex: Int {
+            guard let component = self.component, component.pageCount > 1 else {
+                return 0
+            }
+            return max(0, min(component.pageCount - 1, Int(round(component.position * CGFloat(component.pageCount - 1)))))
+        }
+        
+        public override var isAccessibilityElement: Bool {
+            get {
+                return self.component?.accessibilityLabel != nil
+            } set(value) {
+            }
+        }
+        
+        public override var accessibilityLabel: String? {
+            get {
+                return self.component?.accessibilityLabel
+            } set(value) {
+            }
+        }
+        
+        public override var accessibilityValue: String? {
+            get {
+                guard let component = self.component, let accessibilityValue = component.accessibilityValue else {
+                    return nil
+                }
+                return accessibilityValue(self.currentPageIndex + 1, component.pageCount)
+            } set(value) {
+            }
+        }
+        
+        public override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return self.component?.showPage != nil ? .adjustable : []
+            } set(value) {
+            }
+        }
+        
+        public override func accessibilityIncrement() {
+            guard let component = self.component, self.currentPageIndex + 1 < component.pageCount else {
+                return
+            }
+            component.showPage?(self.currentPageIndex + 1)
+        }
+        
+        public override func accessibilityDecrement() {
+            guard let component = self.component, self.currentPageIndex > 0 else {
+                return
+            }
+            component.showPage?(self.currentPageIndex - 1)
+        }
         
         private let indicatorView: PageIndicatorView
         

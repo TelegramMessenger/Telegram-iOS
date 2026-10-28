@@ -50,6 +50,8 @@ public final class WalletCardComponent: Component {
     public let isVisible: Bool
     public let cardPressed: (() -> Void)?
     public let qrPressed: () -> Void
+    /// VoiceOver label of the card's QR button (it shows only a glyph).
+    public let qrAccessibilityLabel: String?
 
     public init(
         theme: PresentationTheme = defaultDarkPresentationTheme,
@@ -61,7 +63,8 @@ public final class WalletCardComponent: Component {
         address: String,
         isVisible: Bool,
         cardPressed: (() -> Void)? = nil,
-        qrPressed: @escaping () -> Void
+        qrPressed: @escaping () -> Void,
+        qrAccessibilityLabel: String? = nil
     ) {
         self.theme = theme
         self.balance = balance
@@ -73,6 +76,7 @@ public final class WalletCardComponent: Component {
         self.isVisible = isVisible
         self.cardPressed = cardPressed
         self.qrPressed = qrPressed
+        self.qrAccessibilityLabel = qrAccessibilityLabel
     }
 
     public static func ==(lhs: WalletCardComponent, rhs: WalletCardComponent) -> Bool {
@@ -100,10 +104,68 @@ public final class WalletCardComponent: Component {
         if (lhs.cardPressed == nil) != (rhs.cardPressed == nil) {
             return false
         }
+        if lhs.qrAccessibilityLabel != rhs.qrAccessibilityLabel {
+            return false
+        }
         return true
+    }
+    
+    /// VoiceOver: the card as one element (the owner's name; the balance, its fiat value and the address as its value),
+    /// activated as a tap on the card.
+    private final class SummaryAccessibilityElement: UIAccessibilityElement {
+        var activate: (() -> Void)?
+        
+        override func accessibilityActivate() -> Bool {
+            guard let activate = self.activate else {
+                return false
+            }
+            activate()
+            return true
+        }
     }
 
     public final class View: UIView {
+        private var summaryAccessibilityElement: SummaryAccessibilityElement?
+        
+        /// The card's drawn texts, the balance animation layers and the stickers are not read one by one: the summary,
+        /// then the QR button. Built when VoiceOver asks.
+        override public var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component else {
+                    return nil
+                }
+                let element: SummaryAccessibilityElement
+                if let current = self.summaryAccessibilityElement {
+                    element = current
+                } else {
+                    element = SummaryAccessibilityElement(accessibilityContainer: self)
+                    self.summaryAccessibilityElement = element
+                }
+                var balanceText = "0"
+                if let balance = component.balance {
+                    balanceText = formatTonAmountText(balance, dateTimeFormat: component.dateTimeFormat, maxDecimalPositions: 2)
+                }
+                var value = "\(balanceText) GRAM"
+                if let balance = component.balance, let fiatRate = component.fiatRate {
+                    value += ", " + formatTonFiatValue(balance, divide: true, rate: fiatRate.unitsPerGram, currencySymbol: component.fiatCurrency.symbol, maxDecimalPositions: balance == 0 ? 0 : 2, dateTimeFormat: component.dateTimeFormat)
+                }
+                if !component.address.isEmpty {
+                    value += ", " + component.address
+                }
+                element.accessibilityLabel = component.name
+                element.accessibilityValue = value
+                element.accessibilityTraits = component.cardPressed != nil ? .button : .staticText
+                element.activate = component.cardPressed
+                element.accessibilityFrameInContainerSpace = self.foregroundView.convert(self.foregroundView.bounds, to: self)
+                var result: [Any] = [element]
+                if let qrView = self.qrButton.view, qrView.window != nil, !qrView.isHidden {
+                    result.append(qrView)
+                }
+                return result
+            } set(value) {
+            }
+        }
+
         private static let maxPitch = 0.20
         private static let maxOverscrollPitch = 12.0 * Double.pi / 180.0
         private static let maxOverscrollScale = 1.05
@@ -897,7 +959,8 @@ public final class WalletCardComponent: Component {
                         self?.component?.qrPressed()
                     },
                     animateAlpha: false,
-                    animateScale: false
+                    animateScale: false,
+                    accessibility: component.qrAccessibilityLabel.flatMap { ComponentAccessibility(label: $0) }
                 )),
                 environment: {},
                 containerSize: CGSize(width: 80.0 * scale, height: 80.0)
