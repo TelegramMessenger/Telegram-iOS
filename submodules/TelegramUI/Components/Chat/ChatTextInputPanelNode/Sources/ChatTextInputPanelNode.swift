@@ -3367,7 +3367,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             } else {
                 placeholderTransition = .immediate
             }
-            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + actualTextInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel + (accessoryPanel != nil ? 52.0 : 0.0)), size: placeholderSize.size))
+            // On the text's line, as the field's own placeholder (`textPlaceholderFrame`): under whatever sits above the
+            // field (a reply / edit panel), in the field's container, which already has the panel's hide offset.
+            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: actualTextInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel + textFieldTopContentOffset), size: placeholderSize.size))
             contextPlaceholderNode.view.setMonochromaticEffect(tintColor: placeholderColor)
             contextPlaceholderNode.alpha = audioRecordingItemsAlpha * placeholderColor.alpha
         }
