@@ -140,7 +140,7 @@ private final class SheetContent: CombinedComponent {
     static var body: Body {
         let qrCode = Child(PlainButtonComponent.self)
         let closeButton = Child(GlassBarButtonComponent.self)
-        let title = Child(Text.self)
+        let title = Child(QrCodeTitleComponent.self)
         let segmentControl = Child(SegmentControlComponent.self)
         let text = Child(BalancedTextComponent.self)
         
@@ -252,7 +252,7 @@ private final class SheetContent: CombinedComponent {
                 contentSize.height += segmentControl.size.height
             } else {
                 let title = title.update(
-                    component: Text(text: titleString, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
+                    component: QrCodeTitleComponent(text: titleString, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
                     availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                     transition: .immediate
                 )
@@ -381,6 +381,52 @@ private final class SheetContent: CombinedComponent {
 
             return contentSize
         }
+    }
+}
+
+/// The sheet's title: the drawn text, read by VoiceOver as the sheet's heading.
+private final class QrCodeTitleComponent: Component {
+    let text: String
+    let font: UIFont
+    let color: UIColor
+    
+    init(text: String, font: UIFont, color: UIColor) {
+        self.text = text
+        self.font = font
+        self.color = color
+    }
+    
+    static func ==(lhs: QrCodeTitleComponent, rhs: QrCodeTitleComponent) -> Bool {
+        return lhs.text == rhs.text && lhs.font == rhs.font && lhs.color.isEqual(rhs.color)
+    }
+    
+    final class View: UIView {
+        private let text = ComponentView<Empty>()
+        
+        func update(component: QrCodeTitleComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            let size = self.text.update(
+                transition: transition,
+                component: AnyComponent(Text(text: component.text, font: component.font, color: component.color)),
+                environment: {},
+                containerSize: availableSize
+            )
+            if let textView = self.text.view {
+                if textView.superview == nil {
+                    self.addSubview(textView)
+                }
+                textView.frame = CGRect(origin: .zero, size: size)
+                textView.accessibilityTraits = [.staticText, .header]
+            }
+            return size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: .zero)
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
 
