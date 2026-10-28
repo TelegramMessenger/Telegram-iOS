@@ -197,7 +197,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode, InstantPageExt
                     }
                     self.imageNode.setSignal(instantPageImageFile(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference, fetched: true))
                 } else {
-                    self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, videoReference: fileReference))
+                    // `autoFetchFullSizeThumbnail` as in a standalone video message: without it a file that has a
+                    // stripped `immediateThumbnailData` never fetches its preview representation and stays blurred.
+                    self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, videoReference: fileReference, autoFetchFullSizeThumbnail: true))
                 }
                 self.contentBlurredSignal = chatSecretMessageVideo(account: context.account, userLocation: sourceLocation.userLocation, videoReference: fileReference)
                 if file.isVideo {
