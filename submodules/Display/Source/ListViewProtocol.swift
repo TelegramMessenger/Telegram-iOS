@@ -17,6 +17,7 @@ public protocol ListView: ASDisplayNode {
     var keepTopItemOverscrollBackground: ListViewKeepTopItemOverscrollBackground? { get set }
     var allowInsetFixWhileTracking: Bool { get set }
     var visualInsets: UIEdgeInsets? { get set }
+    var visibilityIgnoresTopInset: Bool { get set }
     var dynamicVisualInsets: (() -> UIEdgeInsets)? { get set }
     var verticalScrollIndicatorColor: UIColor? { get set }
     var verticalScrollIndicatorFollowsOverscroll: Bool { get set }

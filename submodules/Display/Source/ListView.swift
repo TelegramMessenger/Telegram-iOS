@@ -194,6 +194,9 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
     public private(set) final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
     public final var visualInsets: UIEdgeInsets?
+    /// Whether a row counts as visible above the list's top inset, up to the list's own top: for a list whose top inset is
+    /// only room its first row is placed below, which rows scroll up into and show in.
+    public final var visibilityIgnoresTopInset: Bool = false
     private var itemOffsetInsets: UIEdgeInsets?
     public final var dynamicVisualInsets: (() -> UIEdgeInsets)?
     public private(set) final var headerInsets = UIEdgeInsets()
@@ -4347,7 +4350,10 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
     }
     
     private func updateItemNodesVisibilities(onlyPositive: Bool) {
-        let insets: UIEdgeInsets = self.visualInsets ?? self.insets
+        var insets: UIEdgeInsets = self.visualInsets ?? self.insets
+        if self.visibilityIgnoresTopInset {
+            insets.top = 0.0
+        }
         let visibilityRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: self.visibleSize.width, height: self.visibleSize.height - insets.top - insets.bottom))
         for itemNode in self.itemNodes {
             let itemFrame = itemNode.apparentFrame

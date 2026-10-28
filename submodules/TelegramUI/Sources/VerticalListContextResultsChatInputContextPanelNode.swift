@@ -195,6 +195,10 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.listView.accessibilityPageScrolledString = { row, count in
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
+        // The top inset only places the first result: the rows scroll up into that room and show there, so a row is
+        // visible up to the panel's top and a widget result's preview runs until the row leaves the panel (v0.2 W3). The
+        // bottom inset still ends it: it holds the input panel and, with it, the keyboard, which hides what is under it.
+        self.listView.visibilityIgnoresTopInset = true
         
         self.listMaskView = UIImageView()
         
@@ -333,7 +337,6 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             insets.left = validLayout.1
             insets.right = validLayout.2
             insets.bottom = validLayout.3
-            self.updateListVisualInsets(insets)
             
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default(duration: nil))
             
@@ -368,13 +371,6 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             // One row's height: no crossfade, which would snapshot and fade the whole list over it.
             self.updateInternalResults(currentProcessedResults, crossfade: false)
         }
-    }
-    
-    /// The list's top inset only places its first result: the rows scroll up into that room and show there, so a row is
-    /// visible up to the panel's top and a widget result's preview runs until the row leaves the panel (v0.2 W3). The
-    /// bottom inset stays: it holds the input panel and, with it, the keyboard, which hides what is under it.
-    private func updateListVisualInsets(_ insets: UIEdgeInsets) {
-        self.listView.visualInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: insets.bottom, right: 0.0)
     }
     
     private func topInsetForLayout(size: CGSize, bottomInset: CGFloat, hasSwitchPeer: Bool) -> CGFloat {
@@ -439,7 +435,6 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         transition.updateFrame(view: self.listMaskView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        self.updateListVisualInsets(insets)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve)
         
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
