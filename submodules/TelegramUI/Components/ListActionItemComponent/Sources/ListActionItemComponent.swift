@@ -488,7 +488,30 @@ public final class ListActionItemComponent: Component {
             return false
         }
         
-        private func updateAccessibility(component: ListActionItemComponent) {
+        /// What the row is to VoiceOver, worked out from the component and the shown subviews. It is computed only when an
+        /// accessibility client asks (the getters below) and kept until the next `update`, so a sighted user's updates do
+        /// no accessibility work.
+        private struct ResolvedAccessibility {
+            /// `nil`: the row holds controls that must stay reachable, and its tree is left to VoiceOver as it is.
+            var description: ComponentAccessibility?
+            var traits: UIAccessibilityTraits
+            var customActions: [UIAccessibilityCustomAction]?
+        }
+        private var resolvedAccessibilityCache: ResolvedAccessibility?
+        
+        private var resolvedAccessibility: ResolvedAccessibility? {
+            if let resolvedAccessibilityCache = self.resolvedAccessibilityCache {
+                return resolvedAccessibilityCache
+            }
+            guard let component = self.component else {
+                return nil
+            }
+            let resolved = self.resolveAccessibility(component: component)
+            self.resolvedAccessibilityCache = resolved
+            return resolved
+        }
+        
+        private func resolveAccessibility(component: ListActionItemComponent) -> ResolvedAccessibility {
             var isInteractive = false
             if let icon = component.icon, icon.allowUserInteraction {
                 isInteractive = true
@@ -500,21 +523,16 @@ public final class ListActionItemComponent: Component {
                 isInteractive = true
             }
             
+            if isInteractive && component.accessibility == nil {
+                return ResolvedAccessibility(description: nil, traits: [], customActions: nil)
+            }
             let title = self.title.view?.accessibilityDisplayedContent()
             let iconContent = self.icon?.view?.accessibilityDisplayedContent()
-            if title?.hasInteractiveContent == true || iconContent?.hasInteractiveContent == true {
-                isInteractive = true
+            if component.accessibility == nil && (title?.hasInteractiveContent == true || iconContent?.hasInteractiveContent == true) {
+                return ResolvedAccessibility(description: nil, traits: [], customActions: nil)
             }
             
             var accessibility = component.accessibility ?? ComponentAccessibility()
-            if isInteractive && component.accessibility == nil {
-                // The row holds controls that must stay reachable: leave its tree to VoiceOver as it is.
-                self.isAccessibilityElement = false
-                self.accessibilityElementsHidden = false
-                self.accessibilityCustomActions = nil
-                return
-            }
-            
             var traits: UIAccessibilityTraits = []
             if !accessibility.isHidden {
                 if accessibility.label == nil {
@@ -549,23 +567,84 @@ public final class ListActionItemComponent: Component {
                 }
                 if accessibility.label == nil {
                     // Nothing to announce: the row stays out of the accessibility tree rather than being an empty element.
-                    self.isAccessibilityElement = false
-                    self.accessibilityElementsHidden = false
-                    self.accessibilityCustomActions = nil
-                    return
+                    return ResolvedAccessibility(description: nil, traits: [], customActions: nil)
                 }
             }
-            self.apply(accessibility: accessibility, defaultTraits: traits)
+            traits.formUnion(accessibility.traits)
             
-            if accessibility.isHidden || component.contextOptions.isEmpty {
-                self.accessibilityCustomActions = nil
-            } else {
-                self.accessibilityCustomActions = component.contextOptions.map { option in
+            var customActions: [UIAccessibilityCustomAction]?
+            if !accessibility.isHidden && !component.contextOptions.isEmpty {
+                customActions = component.contextOptions.map { option in
                     return UIAccessibilityCustomAction(name: option.title, actionHandler: { _ in
                         option.action()
                         return true
                     })
                 }
+            }
+            return ResolvedAccessibility(description: accessibility, traits: traits, customActions: customActions)
+        }
+        
+        override public var isAccessibilityElement: Bool {
+            get {
+                guard let description = self.resolvedAccessibility?.description else {
+                    return false
+                }
+                return !description.isHidden
+            } set(value) {
+            }
+        }
+        
+        override public var accessibilityElementsHidden: Bool {
+            get {
+                return self.resolvedAccessibility?.description?.isHidden ?? false
+            } set(value) {
+            }
+        }
+        
+        override public var accessibilityLabel: String? {
+            get {
+                guard let description = self.resolvedAccessibility?.description, !description.isHidden else {
+                    return nil
+                }
+                return description.label
+            } set(value) {
+            }
+        }
+        
+        override public var accessibilityValue: String? {
+            get {
+                guard let description = self.resolvedAccessibility?.description, !description.isHidden else {
+                    return nil
+                }
+                return description.value
+            } set(value) {
+            }
+        }
+        
+        override public var accessibilityHint: String? {
+            get {
+                guard let description = self.resolvedAccessibility?.description, !description.isHidden else {
+                    return nil
+                }
+                return description.hint
+            } set(value) {
+            }
+        }
+        
+        override public var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                guard let resolved = self.resolvedAccessibility, resolved.description != nil else {
+                    return super.accessibilityTraits
+                }
+                return resolved.traits
+            } set(value) {
+            }
+        }
+        
+        override public var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                return self.resolvedAccessibility?.customActions
+            } set(value) {
             }
         }
         
@@ -1177,7 +1256,8 @@ public final class ListActionItemComponent: Component {
             transition.setFrame(view: self.container, frame: CGRect(origin: CGPoint(), size: size))
             transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
             
-            self.updateAccessibility(component: component)
+            // The accessibility description is recomputed from the new state when next asked for.
+            self.resolvedAccessibilityCache = nil
             
             return size
         }

@@ -97,6 +97,30 @@ final class ComponentAccessibilityListTests: XCTestCase {
         XCTAssertEqual(switched, [false])
     }
     
+    func testRowDescriptionFollowsUpdates() {
+        // The row works its description out when asked and keeps it until the next update: an update must not leave
+        // the previous state behind.
+        let host = ComponentView<Empty>()
+        func update(title: String, isOn: Bool, options: [String]) -> UIView {
+            let _ = host.update(transition: .immediate, component: AnyComponent(ListActionItemComponent(
+                theme: self.theme,
+                title: self.text(title),
+                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: isOn, action: { _ in })),
+                contextOptions: options.map { ListActionItemComponent.ContextOption(id: $0, title: $0, color: .red, action: {}) },
+                action: nil
+            )), environment: {}, containerSize: CGSize(width: 320.0, height: 400.0))
+            return host.view!
+        }
+        var view = update(title: "Sounds", isOn: false, options: [])
+        XCTAssertEqual(view.accessibilityLabel, "Sounds")
+        XCTAssertEqual(view.accessibilityValue, "0")
+        XCTAssertNil(view.accessibilityCustomActions)
+        view = update(title: "Vibrate", isOn: true, options: ["Delete"])
+        XCTAssertEqual(view.accessibilityLabel, "Vibrate")
+        XCTAssertEqual(view.accessibilityValue, "1")
+        XCTAssertEqual(view.accessibilityCustomActions?.map { $0.name }, ["Delete"])
+    }
+    
     func testSectionHeaderTrait() {
         let view = self.make(ListSectionComponent(
             theme: self.theme,

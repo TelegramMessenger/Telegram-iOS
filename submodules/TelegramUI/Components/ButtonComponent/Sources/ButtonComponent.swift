@@ -734,6 +734,19 @@ public final class ButtonComponent: Component {
             return super.hitTest(point, with: event)
         }
 
+        /// The title content's text when the component gives no label, computed when VoiceOver asks rather than on
+        /// every update.
+        override public var accessibilityLabel: String? {
+            get {
+                if let component = self.component, component.accessibility?.isHidden != true, component.accessibility?.label == nil, let title = ButtonComponent.accessibilityText(of: component.content.component) {
+                    return title
+                }
+                return super.accessibilityLabel
+            } set(value) {
+                super.accessibilityLabel = value
+            }
+        }
+        
         func update(component: ButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.componentState = state
@@ -743,14 +756,8 @@ public final class ButtonComponent: Component {
             self.button.isEnabled = (component.isEnabled || component.allowActionWhenDisabled) && !component.displaysProgress
             
             // The view is one element: its title, badge and icons are not separately reachable. The label comes from the
-            // title content unless the call site supplies one.
-            var accessibility = component.accessibility
-            if accessibility?.isHidden != true && accessibility?.label == nil, let title = ButtonComponent.accessibilityText(of: component.content.component) {
-                var derived = accessibility ?? ComponentAccessibility()
-                derived.label = title
-                accessibility = derived
-            }
-            self.apply(accessibility: accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
+            // title content unless the call site supplies one (`accessibilityLabel` below, derived only when asked).
+            self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
                         
             var contentAlpha: CGFloat = 1.0
             if component.displaysProgress {

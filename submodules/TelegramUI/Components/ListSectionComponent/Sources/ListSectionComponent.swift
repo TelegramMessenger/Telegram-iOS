@@ -497,6 +497,10 @@ public final class ListSectionComponent: Component {
         
         /// A header or footer shows text and VoiceOver reads it as one element, a header with the `.header` trait. A view
         /// that holds something interactive (a link, a button) is left as it is.
+        /// What `applyTextAccessibility` last described for the header and the footer.
+        private var headerAccessibilitySource: (component: AnyComponent<Empty>, view: UIView)?
+        private var footerAccessibilitySource: (component: AnyComponent<Empty>, view: UIView)?
+        
         fileprivate static func applyTextAccessibility(to view: UIView, traits: UIAccessibilityTraits) {
             // A text with links ("… Invite >") is one element too: activating it follows its link, and with several
             // links each is a custom action named by its words.
@@ -563,12 +567,17 @@ public final class ListSectionComponent: Component {
                         self.addSubview(headerView)
                     }
                     headerTransition.setFrame(view: headerView, frame: CGRect(origin: CGPoint(x: headerSideInset, y: contentHeight), size: headerSize))
-                    View.applyTextAccessibility(to: headerView, traits: .header)
+                    // Only when the header content or view changes, not on every update.
+                    if self.headerAccessibilitySource?.component != headerValue || self.headerAccessibilitySource?.view !== headerView {
+                        self.headerAccessibilitySource = (headerValue, headerView)
+                        View.applyTextAccessibility(to: headerView, traits: .header)
+                    }
                 }
                 contentHeight += headerSize.height
             } else {
                 if let header = self.header {
                     self.header = nil
+                    self.headerAccessibilitySource = nil
                     header.view?.removeFromSuperview()
                 }
             }
@@ -657,12 +666,16 @@ public final class ListSectionComponent: Component {
                         self.addSubview(footerView)
                     }
                     footerTransition.setFrame(view: footerView, frame: CGRect(origin: CGPoint(x: headerSideInset, y: contentHeight), size: footerSize))
-                    View.applyTextAccessibility(to: footerView, traits: .staticText)
+                    if self.footerAccessibilitySource?.component != footerValue || self.footerAccessibilitySource?.view !== footerView {
+                        self.footerAccessibilitySource = (footerValue, footerView)
+                        View.applyTextAccessibility(to: footerView, traits: .staticText)
+                    }
                 }
                 contentHeight += footerSize.height
             } else {
                 if let footer = self.footer {
                     self.footer = nil
+                    self.footerAccessibilitySource = nil
                     footer.view?.removeFromSuperview()
                 }
             }

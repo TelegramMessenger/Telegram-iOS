@@ -199,10 +199,11 @@ public func accessibilityTextIsSpokenByCoveringElement(_ view: UIView, text: Str
             if candidate.isHidden || candidate.alpha < 0.01 || candidate.accessibilityElementsHidden || !candidate.isAccessibilityElement {
                 continue
             }
-            guard let label = candidate.accessibilityLabel, !label.isEmpty else {
+            // The frame test first: a button's label getter can walk its whole content tree.
+            if !candidate.convert(candidate.bounds, to: nil).contains(center) {
                 continue
             }
-            if !candidate.convert(candidate.bounds, to: nil).contains(center) {
+            guard let label = candidate.accessibilityLabel, !label.isEmpty else {
                 continue
             }
             if accessibilityLabel(label, speaks: normalizedText) {

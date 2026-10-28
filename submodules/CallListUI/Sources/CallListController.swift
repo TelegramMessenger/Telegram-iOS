@@ -678,8 +678,6 @@ public final class CallListController: TelegramBaseController {
         return false
     }
     
-    /// The Done of the Edit/Done toggle: the accent checkmark, kept in the bar's row where Edit is (on iPhone Duo it would
-    /// otherwise move into the side column).
     /// The "Delete All" node is hosted as is; the item carries its text for VoiceOver.
     private func deleteAllBarButtonItem(_ buttonNode: DeleteAllButtonNode) -> UIBarButtonItem? {
         let item = UIBarButtonItem(customDisplayNode: buttonNode)
@@ -687,6 +685,8 @@ public final class CallListController: TelegramBaseController {
         return item
     }
     
+    /// The Done of the Edit/Done toggle: the accent checkmark, kept in the bar's row where Edit is (on iPhone Duo it would
+    /// otherwise move into the side column).
     private func editingDoneBarButtonItem() -> UIBarButtonItem {
         let item = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed))
         item.staysInRow = true

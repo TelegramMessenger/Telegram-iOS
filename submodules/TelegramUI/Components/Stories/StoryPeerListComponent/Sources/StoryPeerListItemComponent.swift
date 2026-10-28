@@ -15,6 +15,7 @@ import StoryContainerScreen
 import MultilineTextComponent
 import HierarchyTrackingLayer
 import EmojiStatusComponent
+import TelegramStringFormatting
 
 private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, radius: CGFloat) -> (point1Angle: CGFloat, point2Angle: CGFloat)? {
     let distanceVector = CGPoint(x: otherCenter.x - center.x, y: otherCenter.y - center.y)
@@ -1165,7 +1166,7 @@ public final class StoryPeerListItemComponent: Component {
             self.button.accessibilityLabel = titleString
             var accessibilityValue: String?
             if let ringAnimation = component.ringAnimation, case let .progress(progress) = ringAnimation {
-                accessibilityValue = "\(Int(max(0.0, min(1.0, progress)) * 100.0))%"
+                accessibilityValue = storyUploadProgressAccessibilityValue(Double(max(0.0, min(1.0, progress))), strings: component.strings)
             } else if component.peer.id == component.context.account.peerId && !component.hasItems {
                 accessibilityValue = component.strings.StoryFeed_AddStory
             } else if component.peer.id != component.context.account.peerId && (component.unseenCount != 0 || component.hasLiveItems) {
@@ -1226,4 +1227,24 @@ public final class StoryPeerListItemComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+/// The upload's progress as VoiceOver reads it, a whole percentage in the interface language's format ("42 %" in some).
+/// Main thread only (component updates).
+private var storyUploadProgressFormatter: (localeIdentifier: String, formatter: NumberFormatter)?
+
+private func storyUploadProgressAccessibilityValue(_ fraction: Double, strings: PresentationStrings) -> String {
+    let locale = localeWithStrings(strings)
+    let formatter: NumberFormatter
+    if let current = storyUploadProgressFormatter, current.localeIdentifier == locale.identifier {
+        formatter = current.formatter
+    } else {
+        formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.maximumFractionDigits = 0
+        formatter.roundingMode = .down
+        formatter.locale = locale
+        storyUploadProgressFormatter = (locale.identifier, formatter)
+    }
+    return formatter.string(from: NSNumber(value: fraction)) ?? "\(Int(fraction * 100.0))%"
 }

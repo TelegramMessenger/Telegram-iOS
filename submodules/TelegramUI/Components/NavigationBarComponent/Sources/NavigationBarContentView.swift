@@ -549,8 +549,6 @@ func navigationButtonContainerWidth(content: NavigationBarComponent.Button.Conte
     }
 }
 
-/// A text button's VoiceOver label when the screen gives none (`OverflowInfo.title`): the text it shows. The
-/// `___`-prefixed sentinel titles draw icons and are not labels.
 /// The label of a button that draws a known icon in place of text: the `___done` checkmark and the `___close` X.
 func navigationButtonIconLabel(_ content: NavigationBarComponent.Button.Content, strings: NavigationBarStrings) -> String? {
     var label: String?
@@ -583,6 +581,8 @@ func navigationButtonIconLabel(_ content: NavigationBarComponent.Button.Content,
     return nil
 }
 
+/// A text button's VoiceOver label when the screen gives none (`OverflowInfo.title`): the text it shows. The
+/// `___`-prefixed sentinel titles draw icons and are not labels.
 func navigationButtonTextLabel(_ content: NavigationBarComponent.Button.Content) -> String? {
     if case let .text(title, _) = content, !title.isEmpty, !title.hasPrefix("___") {
         return title
