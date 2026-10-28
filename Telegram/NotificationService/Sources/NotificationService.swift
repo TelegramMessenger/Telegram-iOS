@@ -629,7 +629,9 @@ private struct NotificationContent: CustomStringConvertible {
         }
         if let body = self.body {
             if #available(iOS 18.0, *) {
-                if !self.resolvedEmojiFiles.isEmpty {
+                // Not while locked: the locked message below replaces only `body`, and an `attributedBody` set
+                // here would still show the message's text.
+                if self.isLockedMessage == nil, !self.resolvedEmojiFiles.isEmpty {
                     let attributedString = NSMutableAttributedString(string: body)
                     
                     let sortedEmoji = self.customEmoji.sorted(by: { $0.range.lowerBound < $1.range.lowerBound })
