@@ -11,6 +11,7 @@ import UIKit
 final class DocumentPickerPresentation {
     private weak var picker: UIViewController?
     private var isRequested = false
+    private var didDisappear = false
     private(set) var isFinished = false
 
     func presentationRequested(picker: UIViewController) {
@@ -20,6 +21,12 @@ final class DocumentPickerPresentation {
 
     /// Records that the picker's outcome was delivered. Returns false when it already was, so the outcome is
     /// delivered once even if the delegate calls back after the host gave the picker up.
+    /// The picker was on screen and went away. Its delegate may report the pick only after that, and the host
+    /// is already leaving, so the picker no longer counts as lost.
+    func pickerDidDisappear() {
+        self.didDisappear = true
+    }
+
     func finish() -> Bool {
         if self.isFinished {
             return false
@@ -28,9 +35,9 @@ final class DocumentPickerPresentation {
         return true
     }
 
-    /// The picker was asked for, has not finished, and is neither presented nor in a window.
+    /// The picker was asked for, has neither finished nor disappeared, and is neither presented nor in a window.
     var isLost: Bool {
-        guard self.isRequested, !self.isFinished else {
+        guard self.isRequested, !self.isFinished, !self.didDisappear else {
             return false
         }
         guard let picker = self.picker else {

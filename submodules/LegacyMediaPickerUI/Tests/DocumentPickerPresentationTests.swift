@@ -30,6 +30,17 @@ final class DocumentPickerPresentationTests: XCTestCase {
     // No test puts the picker in a window: a `UIWindow` in this hostless test process traps at exit, when
     // UIKit invalidates its screen-based scene.
 
+    // A picker closing normally leaves the window before its delegate reports the pick; the host leaves through
+    // the picker's `viewDidDisappear` then, and must not turn the pick into a cancellation.
+    func testNotLostOnceDisappeared() {
+        let picker = UIViewController()
+        let presentation = DocumentPickerPresentation()
+        presentation.presentationRequested(picker: picker)
+        presentation.pickerDidDisappear()
+        XCTAssertFalse(presentation.isLost)
+        XCTAssertTrue(presentation.finish())
+    }
+
     func testNotLostOnceFinished() {
         let picker = UIViewController()
         let presentation = DocumentPickerPresentation()

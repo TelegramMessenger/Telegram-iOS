@@ -71,6 +71,7 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
     
     func bindHost(_ hostController: DocumentPickerHostViewController) {
         hostController.hostView.passesTouchesThrough = { [weak self] in
+            // Hit-testing can also come from a hover; giving up on a lost picker is idempotent, so that is harmless.
             guard let self, self.pickerPresentation.isLost else {
                 return false
             }
@@ -95,6 +96,10 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
                 })
             })
         }
+    }
+    
+    func pickerDidDisappear() {
+        self.pickerPresentation.pickerDidDisappear()
     }
     
     private func cancelIfPickerLost() {
@@ -160,7 +165,8 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
         controller = DocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: mode.asCopy)
     }
     controller.forceDarkTheme = forceDarkTheme || theme.overallDarkAppearance
-    controller.didDisappear = {
+    controller.didDisappear = { [weak legacyController] in
+        legacyController?.pickerDidDisappear()
         dismissImpl?()
     }
     controller.delegate = legacyController
