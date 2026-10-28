@@ -140,6 +140,9 @@ These are the user's decisions; a screen that follows them is correct, one that 
 - Two status heights mixed in unfolded portrait (compact for one part, full for the other).
 - `UIScreen.main` used for layout while unfolded.
 - `widthClass == .regular` treated as iPad.
+- "Landscape" meaning "too short for this": unfolded landscape's detail pane is portrait-shaped (about 631x669) but
+  hardly taller than wide. A profile's expanded photo (`min(w, h − 61) + 98`) reached past its bottom, leaving no list to
+  drag, so the profile opened from a chat's avatar could not scroll; `peerInfoAvatarExpansionFits` asks for the room.
 - A 9:16 preview taller than the screen (UP, FP) leaving negative space below it for the bottom controls.
 - A bottom row lifted by a constant tuned for home-button phones, until the Duo the only phones whose 9:16 preview is
   taller than the screen: measured from the screen edge, it lands on the home indicator. The indicator is
