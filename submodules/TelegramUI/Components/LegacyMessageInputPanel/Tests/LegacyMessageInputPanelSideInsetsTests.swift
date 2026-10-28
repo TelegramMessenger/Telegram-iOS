@@ -32,7 +32,8 @@ final class LegacyMessageInputPanelSideInsetsTests: XCTestCase {
         XCTAssertEqual(result.right, 84.0)
     }
 
-    // Unfolded portrait: the status island sits within the top inset, so a caption below it has no side inset.
+    // Unfolded portrait: the status island is a top inset, not a side strip, so a caption above the media keeps the full
+    // width.
     func testDuoUnfoldedPortraitCaptionAboveHasNoSideInsets() {
         let safeInsets = UIEdgeInsets(top: 82.0, left: 0.0, bottom: 0.0, right: 0.0)
         let corners = ContainerViewLayoutCorners(topLeft: nil, topRight: CGSize(width: 134.0, height: 82.0), bottomLeft: nil, bottomRight: nil)
