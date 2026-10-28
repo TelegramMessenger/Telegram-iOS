@@ -141,6 +141,8 @@ final class ContentMotionMirrorTests: XCTestCase {
         // The catch brakes the flight over a frame or two; at rest, then:
         engine.haltMotionInPlace()
         XCTAssertFalse(engine.isDecelerating, "precondition: the content rests")
+        // Still this touch's answer at its lift, once the motion it caught has stopped: captured at touch-down, not live.
+        XCTAssertTrue(engine.lastTouchCaughtMovingContent, "the flag follows the live motion, not the touch")
         engine.noteTouchDown(at: CACurrentMediaTime())
         XCTAssertFalse(engine.lastTouchCaughtMovingContent, "still content was caught")
         engine.tearDown()
