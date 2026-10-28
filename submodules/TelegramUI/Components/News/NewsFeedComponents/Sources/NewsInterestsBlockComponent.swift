@@ -48,8 +48,18 @@ public final class NewsInterestChipComponent: Component {
             self.component?.action()
         }
 
+        override public func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            component.action()
+            return true
+        }
+
         func update(component: NewsInterestChipComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
+            // VoiceOver: one button named by the category's title (the emoji is decoration), selected when picked.
+            self.apply(accessibility: ComponentAccessibility(label: component.category.title, traits: component.isSelected ? .selected : []), defaultTraits: .button)
             let theme = component.theme
             let height: CGFloat = 28.0
             let horizontalInset: CGFloat = 12.0
@@ -181,6 +191,8 @@ public final class NewsInterestsBlockComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: titleX, y: topInset), size: titleSize)
             if let view = self.titleView.view {
                 if view.superview == nil {
+                    // VoiceOver: the block's heading.
+                    view.accessibilityTraits = [.staticText, .header]
                     self.addSubview(view)
                 }
                 transition.setFrame(view: view, frame: titleFrame)
@@ -194,6 +206,8 @@ public final class NewsInterestsBlockComponent: Component {
             )
             if let view = self.iconView.view {
                 if view.superview == nil {
+                    // VoiceOver: decoration (the 📰 in the avatar's slot).
+                    view.isAccessibilityElement = false
                     self.addSubview(view)
                 }
                 // Centred in the avatar's slot, on the title, as a post's avatar is.
