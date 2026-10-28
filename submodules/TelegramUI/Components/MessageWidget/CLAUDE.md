@@ -358,7 +358,12 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     - no touches: the node takes none, so a tap selects the result;
     - the app's language and stopped label, as the sent bubble has;
     - a widget only while on screen: the list's preload rows run none, a row leaving the screen stops its own, and a
-      row shown again boots afresh, so a fling through many widget results runs only the visible ones;
+      row shown again boots afresh, so a fling through many widget results runs only the visible ones. On screen is
+      anywhere in the panel above the input panel: the vertical list's top inset is only the room above its first
+      result, which rows scroll into and show in, so its visual top inset is zero (ListView's visibility otherwise ends
+      at the insets, and a widget scrolled up past the first result's resting place stopped while in view). The bottom
+      one stays the list's: the panel is given one bottom inset for the input panel and the keyboard together, and a row
+      behind the keyboard must not run;
     - a late snapshot (a boot past the pass's wait, a new height, a failure) re-runs its pass on a later main-queue
       turn, as the bubble's relayout does, so a late boot is not left at the 160 pt placeholder;
     - a widget that failed to start is remembered and never booted again for that result, when the failure lands
