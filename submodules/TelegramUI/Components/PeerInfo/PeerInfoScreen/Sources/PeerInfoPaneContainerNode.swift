@@ -1190,6 +1190,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         }
         
         for (key, pane) in self.currentPanes {
+            // A pager: only the current pane is read; its neighbours are laid out off screen beside it.
+            pane.node.accessibilityElementsHidden = key != self.currentPaneKey
             if let index = availablePanes.firstIndex(of: key), let updatedCurrentIndex = updatedCurrentIndex {
                 var paneWasAdded = false
                 if pane.node.supernode == nil {
@@ -1333,6 +1335,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         content = .title(HorizontalTabsComponent.Tab.Title(text: presentationData.strings.PeerInfo_PanePolls, entities: [], enableAnimations: false))
                     }
                     
+                    var tabAccessibilityLabel: String?
+                    if case .gifts = paneKey {
+                        // The tab shows the title and the first gifts' stickers; it is read by its title.
+                        tabAccessibilityLabel = presentationData.strings.PeerInfo_PaneGifts
+                    }
+                    
                     return HorizontalTabsComponent.Tab(
                         id: AnyHashable(paneKey),
                         content: content,
@@ -1375,7 +1383,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                             }
                             self.openTabContextMenu(key: paneKey, sourceView: sourceView, gesture: gesture)
                         } : nil,
-                        deleteAction: nil
+                        deleteAction: nil,
+                        accessibilityLabel: tabAccessibilityLabel,
+                        contextAccessibilityLabel: presentationData.strings.Common_More
                     )
                 },
                 selectedTab: self.currentPaneKey.flatMap { HorizontalTabsComponent.Tab.Id($0) },
@@ -1409,6 +1419,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         }
                 
         for (_, pane) in self.pendingPanes {
+            pane.pane.node.accessibilityElementsHidden = true
             let paneTransition: ContainedViewLayoutTransition = .immediate
             paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
             pane.pane.update(size: paneFrame.size, topInset: effectiveTabsHeight + topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, navigationHeight: navigationHeight, presentationData: presentationData, synchronous: true, transition: paneTransition)

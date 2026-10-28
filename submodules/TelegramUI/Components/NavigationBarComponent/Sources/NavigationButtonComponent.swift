@@ -63,6 +63,17 @@ final class NavigationButtonComponent: Component {
         private var iconSource: IconSource?
 
         private var hostedNode: ASDisplayNode?
+        
+        override var accessibilityLabel: String? {
+            get {
+                if let hostedNode = self.hostedNode, hostedNode is NavigationButtonLiveAccessibilityLabel, let label = hostedNode.accessibilityLabel, !label.isEmpty {
+                    return label
+                }
+                return super.accessibilityLabel
+            } set(value) {
+                super.accessibilityLabel = value
+            }
+        }
         /// Where the hosted node goes in this button, kept for when a loan of it ends.
         private var hostedNodeFrame = CGRect()
 

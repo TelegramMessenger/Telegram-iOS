@@ -88,27 +88,34 @@ public final class TabSelectorComponent: Component {
         public let id: AnyHashable
         public let content: Content
         public let isReorderable: Bool
-        public let contextAction: ((ASDisplayNode, ContextGesture) -> Void)?
+        /// The long-press menu. The gesture is nil when VoiceOver opens it (`contextAccessibilityLabel`).
+        public let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+        /// VoiceOver: the name of the custom action that opens the long-press menu ("More"); without it the menu has no
+        /// VoiceOver path.
+        public let contextAccessibilityLabel: String?
 
         public init(
             id: AnyHashable,
             content: Content,
             isReorderable: Bool = false,
-            contextAction: ((ASDisplayNode, ContextGesture) -> Void)? = nil
+            contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil,
+            contextAccessibilityLabel: String? = nil
         ) {
             self.id = id
             self.content = content
             self.isReorderable = isReorderable
             self.contextAction = contextAction
+            self.contextAccessibilityLabel = contextAccessibilityLabel
         }
         
         convenience public init(
             id: AnyHashable,
             title: String,
             isReorderable: Bool = false,
-            contextAction: ((ASDisplayNode, ContextGesture) -> Void)? = nil
+            contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil,
+            contextAccessibilityLabel: String? = nil
         ) {
-            self.init(id: id, content: .text(title), isReorderable: isReorderable, contextAction: contextAction)
+            self.init(id: id, content: .text(title), isReorderable: isReorderable, contextAction: contextAction, contextAccessibilityLabel: contextAccessibilityLabel)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -122,6 +129,9 @@ public final class TabSelectorComponent: Component {
                 return false
             }
             if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
+                return false
+            }
+            if lhs.contextAccessibilityLabel != rhs.contextAccessibilityLabel {
                 return false
             }
             return true
@@ -196,7 +206,7 @@ public final class TabSelectorComponent: Component {
     
     final class VisibleItem: UIView {
         let action: () -> Void
-        let contextAction: (ASDisplayNode, ContextGesture) -> Void
+        let contextAction: (ASDisplayNode, ContextGesture?) -> Void
         
         let extractedContainerNode: ContextExtractedContentContainingNode
         let containerNode: ContextControllerSourceNode
@@ -263,7 +273,31 @@ public final class TabSelectorComponent: Component {
             return true
         }
         
-        init(action: @escaping () -> Void, contextAction: @escaping (ASDisplayNode, ContextGesture) -> Void) {
+        private var accessibilityContextActionName: String?
+        private var accessibilityContextActions: [UIAccessibilityCustomAction]?
+        
+        /// The long-press menu as "More", offered only while the gesture itself is (not while reordering).
+        override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                guard let item = self.item, item.contextAction != nil, let name = item.contextAccessibilityLabel, self.containerNode.isGestureEnabled else {
+                    return nil
+                }
+                if self.accessibilityContextActionName != name || self.accessibilityContextActions == nil {
+                    self.accessibilityContextActionName = name
+                    self.accessibilityContextActions = [UIAccessibilityCustomAction(name: name, actionHandler: { [weak self] _ in
+                        guard let self, self.containerNode.isGestureEnabled else {
+                            return false
+                        }
+                        self.contextAction(self.extractedContainerNode, nil)
+                        return true
+                    })]
+                }
+                return self.accessibilityContextActions
+            } set(value) {
+            }
+        }
+        
+        init(action: @escaping () -> Void, contextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void) {
             self.action = action
             self.contextAction = contextAction
             

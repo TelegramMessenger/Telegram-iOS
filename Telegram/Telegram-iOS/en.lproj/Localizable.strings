@@ -5976,6 +5976,8 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.ColorNumber" = "Color %@";
 "VoiceOver.Common.NoColor" = "No Color";
 "VoiceOver.Common.Page" = "Page";
+"VoiceOver.Common.Expand" = "Expand";
+"VoiceOver.Common.Collapse" = "Collapse";
 
 "VoiceOver.TabBar.AttentionRequired" = "Attention required";
 

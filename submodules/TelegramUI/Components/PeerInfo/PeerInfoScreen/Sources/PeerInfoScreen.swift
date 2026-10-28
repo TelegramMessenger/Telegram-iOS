@@ -211,6 +211,28 @@ enum TopicsLimitedReason {
     case discussion
 }
 
+/// The profile's scroll node. VoiceOver: the shared-media tabs and the current pane share one frame, and the tabs are
+/// added after the panes (they float above them), so the frame sort would read the pane before its tabs.
+final class PeerInfoScrollNode: ASScrollNode {
+    weak var accessibilityTabsView: UIView?
+    weak var accessibilityPanesNode: ASDisplayNode?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let tabsView = self.accessibilityTabsView, let panesNode = self.accessibilityPanesNode, panesNode.isNodeLoaded, let tabsIndex = elements.firstIndex(where: { ($0 as AnyObject) === tabsView }), let panesIndex = elements.firstIndex(where: { ($0 as AnyObject) === panesNode.view }), tabsIndex > panesIndex {
+                let tabs = elements.remove(at: tabsIndex)
+                elements.insert(tabs, at: panesIndex)
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
+}
+
 final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
     weak var controller: PeerInfoScreenImpl?
     
@@ -481,7 +503,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.sharedMediaFromForumTopic = sharedMediaFromForumTopic
         self.sharedMediaChatLocation = peerInfoSharedMediaChatLocation(peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, sharedMediaFromForumTopic: sharedMediaFromForumTopic)
         
-        self.scrollNode = ASScrollNode()
+        self.scrollNode = PeerInfoScrollNode()
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.canCancelAllTouchesInViews = true
         
@@ -1355,6 +1377,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.scrollNode.addSubnode(self.paneContainerNode)
         self.scrollNode.view.addSubview(self.headerNode.headerEdgeEffectContainer)
         self.scrollNode.view.addSubview(self.paneContainerNode.headerContainer)
+        if let scrollNode = self.scrollNode as? PeerInfoScrollNode {
+            scrollNode.accessibilityTabsView = self.paneContainerNode.headerContainer
+            scrollNode.accessibilityPanesNode = self.paneContainerNode
+        }
         
         self.view.addSubview(self.edgeEffectView)
         

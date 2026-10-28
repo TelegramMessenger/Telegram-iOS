@@ -188,6 +188,7 @@ private final class PeerInfoScreenCommunityItemNode: PeerInfoScreenItemNode {
 
         self.activateArea.accessibilityLabel = item.community.title
         self.activateArea.accessibilityValue = subtitle
+        self.activateArea.applyPeerInfoRowAction(item.action)
         self.activateArea.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
 
         return height

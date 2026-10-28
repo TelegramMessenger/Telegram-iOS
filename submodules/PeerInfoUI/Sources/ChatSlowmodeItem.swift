@@ -210,6 +210,14 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
+                    // VoiceOver: the slider with its stop labels is one adjustable element named by its section,
+                    // valued by the current stop ("Off", "5s", …); swiping up/down moves a stop, as dragging does.
+                    strongSelf.isAccessibilityElement = true
+                    strongSelf.accessibilityLabel = item.strings.GroupInfo_Permissions_SlowmodeHeader
+                    strongSelf.accessibilityTraits = .adjustable
+                    let accessibilityIndex = allowedValues.firstIndex(where: { $0 >= item.value }) ?? (allowedValues.count - 1)
+                    let accessibilityValue = allowedValues[accessibilityIndex]
+                    strongSelf.accessibilityValue = accessibilityValue == 0 ? item.strings.GroupInfo_Permissions_SlowmodeValue_Off : shortTimeIntervalString(strings: item.strings, value: accessibilityValue)
                     
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -306,6 +314,26 @@ class ChatSlowmodeItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override func accessibilityIncrement() {
+        self.accessibilityStep(1)
+    }
+    
+    override func accessibilityDecrement() {
+        self.accessibilityStep(-1)
+    }
+    
+    private func accessibilityStep(_ delta: Int) {
+        guard let item = self.item else {
+            return
+        }
+        let index = allowedValues.firstIndex(where: { $0 >= item.value }) ?? (allowedValues.count - 1)
+        let value = allowedValues[max(0, min(allowedValues.count - 1, index + delta))]
+        if value != item.value {
+            self.reportedValue = value
+            item.updated(value)
+        }
     }
     
     @objc func sliderValueChanged() {

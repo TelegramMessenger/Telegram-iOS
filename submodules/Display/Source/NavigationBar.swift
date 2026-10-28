@@ -119,6 +119,11 @@ public protocol NavigationButtonCustomDisplayNode {
     var isHighlightable: Bool { get }
 }
 
+/// VoiceOver: a node hosted in a bar button whose label changes while it stays hosted (an icon that morphs between
+/// "More" and "Search"). The bar's button reads the node's current label instead of the one it was built with.
+public protocol NavigationButtonLiveAccessibilityLabel: AnyObject {
+}
+
 
 public enum NavigationBarGlassStyle {
     case `default`

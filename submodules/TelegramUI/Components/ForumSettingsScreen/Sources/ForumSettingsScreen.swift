@@ -369,6 +369,8 @@ final class ForumSettingsScreenComponent: Component {
             let iconFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - iconSize.width * 0.5), y: contentHeight + 8.0), size: iconSize)
             if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
+                    // Decoration: the text below says what topics are.
+                    iconView.accessibilityElementsHidden = true
                     self.scrollView.addSubview(iconView)
                     iconView.playOnce()
                 }

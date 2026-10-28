@@ -205,6 +205,9 @@ final class RankChatPreviewItemNode: ListViewItemNode {
         
         self.clipsToBounds = true
         self.isUserInteractionEnabled = false
+        // VoiceOver: a sample message showing how the tag looks (placeholder text, not content); the tag is read in
+        // the field below it.
+        self.accessibilityElementsHidden = true
         
         self.addSubnode(self.containerNode)
     }

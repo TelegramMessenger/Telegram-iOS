@@ -636,7 +636,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 return
                             }
                             self.openCollectionContextMenu(id: collection.id, sourceNode: sourceNode, gesture: gesture)
-                        } : nil
+                        } : nil,
+                        contextAccessibilityLabel: params.presentationData.strings.Common_More
                     ))
                 }
                         

@@ -1852,6 +1852,15 @@ public final class GiftItemComponent: Component {
                 self.accessibilityElementsHidden = true
             }
             if role != .untouched {
+                // The pin glyph on a pinned tile is read as the tile's value.
+                let pinnedValue: String? = component.isPinned ? component.strings.VoiceOver_ChatList_Pinned : nil
+                if component.action != nil {
+                    self.containerButton.accessibilityValue = pinnedValue
+                } else if role == .grid {
+                    self.accessibilityValue = pinnedValue
+                }
+                self.pinnedIcon?.isAccessibilityElement = false
+                self.pinnedIcon?.accessibilityElementsHidden = true
                 // The ribbon's text is part of that label.
                 self.ribbon.accessibilityElementsHidden = true
                 self.ribbonOutline.accessibilityElementsHidden = true

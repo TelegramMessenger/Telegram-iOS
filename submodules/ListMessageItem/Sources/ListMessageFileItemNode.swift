@@ -1150,6 +1150,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     strongSelf.contextSourceNode.contentRect = extractedRect
                     strongSelf.containerNode.isGestureEnabled = item.displayFileInfo
+                    strongSelf.applyListMessageAccessibility(label: listMessageAccessibilityText([titleText?.string, item.isGlobalSearchResult ? globalAuthorTitle : nil]), value: listMessageAccessibilityText([descriptionText?.string, item.isGlobalSearchResult ? dateText : nil]), item: item, contextSourceNode: strongSelf.contextSourceNode, isContextMenuEnabled: item.displayFileInfo)
                     
                     strongSelf.currentIsRestricted = isRestricted || item.message == nil
                     strongSelf.currentMedia = selectedMedia

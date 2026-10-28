@@ -525,6 +525,55 @@ private final class ItemView: UIView, SparseItemGridView {
         self.disposable?.dispose()
     }
 
+    // VoiceOver: the row is one element that reads as the list row it hosts (`ListMessageNode`) and activates as its
+    // tap does; the full-size button around that row would otherwise be an unlabelled element hiding it.
+    override var isAccessibilityElement: Bool {
+        get {
+            return self.messageItemNode != nil
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityLabel: String? {
+        get {
+            return self.messageItemNode?.accessibilityLabel
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityValue: String? {
+        get {
+            return self.messageItemNode?.accessibilityValue
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityTraits: UIAccessibilityTraits {
+        get {
+            var traits: UIAccessibilityTraits = .button
+            if let messageItem = self.messageItem, case .selectable(true, _) = messageItem.selection {
+                traits.insert(.selected)
+            }
+            return traits
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            return self.messageItemNode?.view.accessibilityCustomActions
+        } set(value) {
+        }
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        guard self.messageItemNode != nil else {
+            return false
+        }
+        self.pressed()
+        return true
+    }
+    
     @objc func pressed() {
         guard let itemNode = self.messageItemNode else {
             return
@@ -1040,6 +1089,53 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         }
         self.onTapImpl?(item)
     }
+    
+    var accessibilityContextActionImpl: ((VisualMediaItem, CALayer) -> Bool)?
+    
+    /// VoiceOver: a tile reads its kind (the same words the chat list uses for media), then a video's duration (the
+    /// tile shows it) and the date; selection is `.selected`; the long-press menu is "More" while the gesture is on (grid mode).
+    func accessibilityItem(item: SparseItemGrid.Item) -> SparseItemGrid.AccessibilityItem? {
+        guard let item = item as? VisualMediaItem else {
+            return nil
+        }
+        let message = item.message._asMessage()
+        var label = self.strings.Message_Photo
+        var value: String?
+        for media in message.effectiveMedia {
+            if media is TelegramMediaImage {
+                break
+            } else if let file = media as? TelegramMediaFile {
+                if file.isAnimated {
+                    label = self.strings.Message_Animation
+                } else if file.isInstantVideo {
+                    label = self.strings.Message_VideoMessage
+                } else if file.isVideo {
+                    label = self.strings.Message_Video
+                    if let duration = file.duration {
+                        value = stringForDuration(Int32(floor(duration)))
+                    }
+                } else {
+                    label = self.strings.Message_File
+                }
+                break
+            }
+        }
+        // The date tells otherwise identical tiles apart (the scroller shows it while scrolling).
+        let date = stringForMediumDate(timestamp: message.timestamp, strings: self.strings, dateTimeFormat: self.chatPresentationData.dateTimeFormat, withTime: false)
+        value = [value, date].compactMap { $0 }.joined(separator: ", ")
+        var traits: UIAccessibilityTraits = .button
+        if let selectionState = self.chatControllerInteraction.selectionState, selectionState.selectedIds.contains(message.id) {
+            traits.insert(.selected)
+        }
+        return SparseItemGrid.AccessibilityItem(label: label, value: value, traits: traits, contextActionName: self.useListItems ? nil : self.strings.Common_More)
+    }
+    
+    func accessibilityPerformContextAction(item: SparseItemGrid.Item, itemLayer: CALayer) -> Bool {
+        guard let item = item as? VisualMediaItem else {
+            return false
+        }
+        return self.accessibilityContextActionImpl?(item, itemLayer) ?? false
+    }
 
     func onTagTap() {
         self.onTagTapImpl?()
@@ -1277,6 +1373,9 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         self.listBackgroundView = UIImageView()
         self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
         self.listMaskView = UIImageView()
+        // The rounded list background and its mask are decoration.
+        self.listBackgroundView.accessibilityElementsHidden = true
+        self.listMaskView.accessibilityElementsHidden = true
         self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(UIColor.white.cgColor)
@@ -1512,6 +1611,15 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             }
         }
 
+        self.itemGridBinding.accessibilityContextActionImpl = { [weak self] item, itemLayer in
+            guard let self, let itemLayer = itemLayer as? ItemLayer else {
+                return false
+            }
+            let rect = self.itemGrid.frameForItem(layer: itemLayer)
+            self.chatControllerInteraction.openMessageContextActions(item.message._asMessage(), self, rect, nil)
+            return true
+        }
+        
         self.contextGestureContainerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let currentGestureItem = strongSelf.currentGestureItem else {
                 return

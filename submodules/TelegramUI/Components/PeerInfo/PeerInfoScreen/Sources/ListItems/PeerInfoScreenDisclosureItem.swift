@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TextNodeWithEntities
 import AccountContext
+import TextFormat
 
 final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     enum Label {
@@ -33,6 +34,21 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
             case let .text(text), let .coloredText(text, _), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _), let .labelBadge(text):
                 return text
             }
+        }
+        
+        /// VoiceOver: the label as read. An attributed label draws its currency glyph as a custom emoji over a "*"
+        /// placeholder; the placeholder is not a word.
+        var accessibilityText: String {
+            if case let .attributedText(text) = self {
+                let mutable = NSMutableAttributedString(attributedString: text)
+                text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), options: [.reverse]) { value, range, _ in
+                    if value != nil {
+                        mutable.deleteCharacters(in: range)
+                    }
+                }
+                return accessibilityDisplayedText(mutable)
+            }
+            return self.text
         }
         
         var badgeColor: UIColor? {
@@ -394,7 +410,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         if let additionalBadgeLabel = item.additionalBadgeLabel, !additionalBadgeLabel.isEmpty {
             accessibilityValues.append(additionalBadgeLabel)
         }
-        let labelAccessibilityText = item.labelAccessibilityText ?? item.label.text
+        let labelAccessibilityText = item.labelAccessibilityText ?? item.label.accessibilityText
         if !labelAccessibilityText.isEmpty {
             accessibilityValues.append(labelAccessibilityText)
         }

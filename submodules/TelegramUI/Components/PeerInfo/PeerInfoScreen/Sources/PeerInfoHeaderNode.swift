@@ -46,6 +46,30 @@ import MarqueeComponent
 import EdgeEffect
 
 final class PeerInfoHeaderRegularContentNode: SparseNode {
+    /// VoiceOver: the action buttons' container spans the header from its top, so the frame sort would read the buttons
+    /// before the avatar and the name. They are read where they are drawn: after the name, status and balance, before the
+    /// music strip below them.
+    weak var accessibilityButtonsNode: ASDisplayNode?
+    weak var accessibilityTrailingView: UIView?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let buttonsNode = self.accessibilityButtonsNode, buttonsNode.isNodeLoaded, case let buttonsView = buttonsNode.view, let index = elements.firstIndex(where: { ($0 as AnyObject) === buttonsView }) {
+                let buttons = elements.remove(at: index)
+                if let trailingView = self.accessibilityTrailingView, let trailingIndex = elements.firstIndex(where: { ($0 as AnyObject) === trailingView }) {
+                    elements.insert(buttons, at: trailingIndex)
+                } else {
+                    elements.append(buttons)
+                }
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
+    }
 }
 
 enum PeerInfoHeaderTextFieldNodeKey: Equatable {
@@ -379,6 +403,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if !isMediaOnly {
             self.regularContentNode.addSubnode(self.buttonsContainerNode)
+            self.regularContentNode.accessibilityButtonsNode = self.buttonsContainerNode
         }
         
         self.addSubnode(self.editingContentNode)
@@ -431,6 +456,22 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     deinit {
         self.emojiStatusPackDisposable.dispose()
+    }
+    
+    /// VoiceOver: the avatar, name and status (with the buttons, in `PeerInfoHeaderRegularContentNode`), then the gifts
+    /// on the cover. The cover spans the header from its top, so the frame sort would read the gifts first.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard var elements = super.accessibilityElements else {
+                return nil
+            }
+            if let giftsCoverView = self.giftsCover.view, let index = elements.firstIndex(where: { ($0 as AnyObject) === giftsCoverView }) {
+                elements.append(elements.remove(at: index))
+            }
+            return elements
+        } set(value) {
+            super.accessibilityElements = value
+        }
     }
     
     override func didLoad() {
@@ -2727,7 +2768,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             minSize: CGSize(width: musicBandWidth, height: musicHeight),
                             action: { [weak self] in
                                 self?.displaySavedMusic?()
-                            }
+                            },
+                            accessibility: ComponentAccessibility(label: musicString.string.trimmingCharacters(in: .whitespacesAndNewlines))
                         )
                     ),
                     environment: {},
@@ -2735,6 +2777,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 )
                 let musicFrame = CGRect(origin: CGPoint(x: stripLeft, y: (apparentBackgroundHeight - backgroundHeight) + backgroundHeight - musicHeight - (hasBackground || self.isAvatarExpanded ? 0.0 : 4.0) + 1.0 - UIScreenPixel), size: musicSize)
                 if let musicView = music.view {
+                    self.regularContentNode.accessibilityTrailingView = musicView
                     if musicView.superview == nil {
                         // A newly loaded strip item fades in at its final position.
                         ContainedViewLayoutTransition.immediate.updateFrame(view: musicView, frame: musicFrame)

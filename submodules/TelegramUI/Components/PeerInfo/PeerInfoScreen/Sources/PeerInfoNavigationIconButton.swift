@@ -124,7 +124,7 @@ private final class MoreIconNode: ManagedAnimationNode {
 /// The profile's more / search / sort button: one node whose icon animates between the three, hosted by the bar as a
 /// node item. A `HighlightableButtonNode` keeps its own touches in the bar, so a tap and the context-menu gesture both
 /// reach the profile with the source a context menu is extracted from.
-final class PeerInfoNavigationIconButton: HighlightableButtonNode {
+final class PeerInfoNavigationIconButton: HighlightableButtonNode, NavigationButtonLiveAccessibilityLabel {
     let containerNode: ContextControllerSourceNode
     let contextSourceNode: ContextReferenceContentNode
     private let animationNode: MoreIconNode
