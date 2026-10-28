@@ -256,8 +256,12 @@ extension VideoChatScreenComponent.View {
                     f(.dismissWithoutContent)
                 })))
                 
-                items.append(.action(ContextMenuActionItem(text: environment.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: peer.id.namespace == Namespaces.Peer.CloudUser ? "Chat/Context Menu/User" : "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+                var isChannel = false
+                if case let .channel(peer) = peer, case .broadcast = peer.info {
+                    isChannel = true
+                }
+                items.append(.action(ContextMenuActionItem(text: isChannel ? environment.strings.Conversation_ContextMenuOpenChannelProfile : environment.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.actionSheet.primaryTextColor)
                 }, action: { [weak self] _, f in
                     guard let self else {
                         return
