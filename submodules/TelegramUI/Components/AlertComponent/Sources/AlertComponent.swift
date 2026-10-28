@@ -214,6 +214,12 @@ private final class AlertScreenComponent: Component {
             return result
         }
         
+        /// VoiceOver's escape gesture dismisses the alert, as the Escape key does.
+        override func accessibilityPerformEscape() -> Bool {
+            self.requestDismiss()
+            return true
+        }
+        
         func requestDismiss() {
             guard let controller = self.environment?.controller() as? AlertScreen else {
                 return
@@ -533,6 +539,15 @@ private final class AlertScreenComponent: Component {
                     }
                     itemView.applySize(size: itemFrame.size, transition: itemTransition)
                     itemTransition.setFrame(view: itemView, frame: itemFrame)
+                    let actionId = AnyHashable(action.id)
+                    itemView.accessibilityPerform = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.highlightedAction = actionId
+                        self.performHighlightedAction()
+                        self.highlightedAction = nil
+                    }
                 }
                 
                 var removeActionIds: [AnyHashable] = []
@@ -694,6 +709,8 @@ open class AlertScreen: ViewControllerComponentContainer, KeyShortcutResponder {
             updatedPresentationData: updatedPresentationData
         )
         self.navigationPresentation = .flatModal
+        // VoiceOver reads only the alert while it shows, as UIKit does for an alert (the screens under it are hidden).
+        self.blocksBackgroundWhenInOverlay = true
         
         //self.readyValue.set(componentReady.get() |> timeout(1.0, queue: .mainQueue(), alternate: .single(true)))
     }

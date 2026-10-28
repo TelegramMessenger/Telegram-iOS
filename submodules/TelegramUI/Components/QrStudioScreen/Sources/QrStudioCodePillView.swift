@@ -359,6 +359,41 @@ final class QrStudioCodePillView: UIView {
         }
     }
 
+    /// VoiceOver: the pill is one button reading its words as shown ("Remove 100 fee", "Free · Expires in 0:59"),
+    /// worded at the time of the query so a countdown stays current; activation does what the tap does.
+    override var isAccessibilityElement: Bool {
+        get {
+            return self.texts != nil && !self.isHidden && self.alpha > 0.01
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityLabel: String? {
+        get {
+            guard let content = self.labelContent(at: QrStudioClock.now) else {
+                return nil
+            }
+            return [content.prefix, content.title, content.detail].filter({ !$0.isEmpty }).joined(separator: " ")
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityTraits: UIAccessibilityTraits {
+        get {
+            return .button
+        } set(value) {
+        }
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        if self.state.removeFee {
+            self.openMenu?(self.glass)
+        } else {
+            self.tapPaid?()
+        }
+        return true
+    }
+    
     @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
         guard case .ended = recognizer.state else {
             return

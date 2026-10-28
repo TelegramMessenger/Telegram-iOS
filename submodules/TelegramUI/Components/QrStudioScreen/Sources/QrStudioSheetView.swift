@@ -78,7 +78,9 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
 
     private let capsuleGlass = GlassBackgroundView()
     private let iconsContainer = UIView()
-    private var iconViews: [QrStudioLook.Kind: UIImageView] = [:]
+    private var iconViews: [QrStudioLook.Kind: QrStudioSheetTabIconView] = [:]
+    /// VoiceOver: the name of each tab's icon in the capsule (each icon is a button that opens its tab).
+    var tabAccessibilityLabels: [QrStudioLook.Kind: String] = [:]
     private var kinds: [QrStudioLook.Kind] = []
 
     private let clipView = QrStudioSheetClipView()
@@ -304,7 +306,15 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             }
             self.iconViews.removeAll()
             for kind in kinds {
-                let iconView = UIImageView(image: UIImage(bundleImageName: QrStudioSheetView.iconName(kind))?.withRenderingMode(.alwaysTemplate))
+                let iconView = QrStudioSheetTabIconView(image: UIImage(bundleImageName: QrStudioSheetView.iconName(kind))?.withRenderingMode(.alwaysTemplate))
+                iconView.accessibilityTraits = .button
+                iconView.activate = { [weak self] in
+                    guard let self, let requestOpenTab = self.requestOpenTab else {
+                        return false
+                    }
+                    requestOpenTab(kind)
+                    return true
+                }
                 self.iconsContainer.addSubview(iconView)
                 self.iconViews[kind] = iconView
             }
@@ -321,6 +331,8 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         var iconX = QrStudioSheetView.iconInset
         for kind in kinds {
             if let iconView = self.iconViews[kind] {
+                iconView.accessibilityLabel = self.tabAccessibilityLabels[kind]
+                iconView.isAccessibilityElement = iconView.accessibilityLabel != nil
                 if iconView.tintColor != glyphColor {
                     iconView.tintColor = glyphColor
                 }
@@ -755,5 +767,13 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.addKeyframes(self.contentContainer.layer, "opacity", layouts.map { NSNumber(value: Float($0.contentAlpha)) }, duration: duration)
         self.addKeyframes(self.tintMaskContentView.layer, "transform", layouts.map { NSValue(caTransform3D: CATransform3DMakeScale($0.zoom, $0.zoom, 1.0)) }, duration: duration)
         self.addKeyframes(self.tintMaskContentView.layer, "opacity", layouts.map { NSNumber(value: Float($0.contentAlpha)) }, duration: duration)
+    }
+}
+
+final class QrStudioSheetTabIconView: UIImageView {
+    var activate: (() -> Bool)?
+    
+    override func accessibilityActivate() -> Bool {
+        return self.activate?() ?? false
     }
 }

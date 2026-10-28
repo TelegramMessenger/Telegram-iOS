@@ -53,9 +53,11 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     let icon: UIImage?
     let iconSignal: Signal<UIImage?, NoError>?
     let hasArrow: Bool
+    /// What VoiceOver reads for the label when it is not words (a "!" warning badge).
+    let labelAccessibilityText: String?
     let action: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, labelAccessibilityText: String? = nil, action: (() -> Void)?) {
         self.id = id
         self.label = label
         self.additionalBadgeLabel = additionalBadgeLabel
@@ -64,6 +66,7 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
         self.icon = icon
         self.iconSignal = iconSignal
         self.hasArrow = hasArrow
+        self.labelAccessibilityText = labelAccessibilityText
         self.action = action
     }
     
@@ -386,7 +389,17 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         }
         
         self.activateArea.accessibilityLabel = item.text
-        self.activateArea.accessibilityValue = item.label.text
+        // The value is everything the row shows besides its title: a title badge ("NEW") and the label.
+        var accessibilityValues: [String] = []
+        if let additionalBadgeLabel = item.additionalBadgeLabel, !additionalBadgeLabel.isEmpty {
+            accessibilityValues.append(additionalBadgeLabel)
+        }
+        let labelAccessibilityText = item.labelAccessibilityText ?? item.label.text
+        if !labelAccessibilityText.isEmpty {
+            accessibilityValues.append(labelAccessibilityText)
+        }
+        self.activateArea.accessibilityValue = accessibilityValues.joined(separator: ", ")
+        self.activateArea.applyPeerInfoRowAction(item.action)
         
         transition.updateFrame(node: self.labelBadgeNode, frame: labelBadgeNodeFrame)
         if self.labelNode.bounds.size != labelFrame.size {

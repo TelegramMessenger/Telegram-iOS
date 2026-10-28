@@ -164,6 +164,9 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityLabel = item.text
         self.activateArea.accessibilityValue = item.value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
         self.activateArea.accessibilityHint = presentationData.strings.VoiceOver_Common_SwitchHint
+        self.activateArea.accessibilityTraits = .button
+        // The row's element toggles; the switch itself would be a second, unlabelled element.
+        self.switchNode.view.accessibilityElementsHidden = true
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: .greatestFiniteMagnitude))
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: 16.0), size: textSize)

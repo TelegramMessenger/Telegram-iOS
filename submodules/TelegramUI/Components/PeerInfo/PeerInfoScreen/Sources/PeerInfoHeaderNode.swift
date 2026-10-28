@@ -280,6 +280,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNodeRawContainer = ASDisplayNode()
         self.titleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.titleNode.displaysAsynchronously = false
+        // The peer's name is the screen's title. (Its text elements carry the label; the containers stay unlabelled.)
+        self.titleNode.textAccessibilityTraits = .header
         
         self.titleCredibilityIconView = ComponentHostView<Empty>()
         self.titleNode.stateNode(forKey: TitleNodeStateRegular)?.view.addSubview(self.titleCredibilityIconView)
@@ -1433,6 +1435,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         #endif
 
+        self.avatarListNode.avatarContainerNode.updateAccessibility(label: presentationData.strings.Privacy_ProfilePhoto, moreLabel: presentationData.strings.Common_More)
+        
         if let starRating = self.currentStarRating {
             let subtitleRating: ComponentView<Empty>
             var subtitleRatingTransition = ComponentTransition(transition)
@@ -1463,7 +1467,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             customTheme: self.presentationData?.theme
                         ))
                     },
-                    debugLevel: self.context.sharedContext.immediateExperimentalUISettings.debugRatingLayout
+                    debugLevel: self.context.sharedContext.immediateExperimentalUISettings.debugRatingLayout,
+                    accessibilityLabel: presentationData.strings.ProfileLevelInfo_Title
                 )),
                 environment: {},
                 containerSize: CGSize(width: width - 12.0 * 2.0 - stripLeft - stripRight, height: 100.0)
@@ -1503,7 +1508,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: subtitleStates, mainState: subtitleMainState)
         }
-        self.subtitleNode.accessibilityLabel = subtitleStringText
         
         var subtitleButtonHorizontalOffset: CGFloat = 0.0
         if subtitleIsButton {
@@ -1616,13 +1620,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             panelSubtitleNodeLayout = self.panelSubtitleNode.updateLayout(text: panelSubtitleString?.text ?? subtitleStringText, states: panelSubtitleStates, mainState: subtitleMainState)
         }
-        self.panelSubtitleNode.accessibilityLabel = panelSubtitleString?.text ?? subtitleStringText
         
         let usernameNodeLayout = self.usernameNode.updateLayout(text: usernameString.text, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
-        self.usernameNode.accessibilityLabel = usernameString.text
         
         let avatarCenter = avatarFrame.center
         

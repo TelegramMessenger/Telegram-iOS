@@ -2696,6 +2696,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    /// The navigation bar, then the header (avatar, name, status), then the rows. The header's frame starts where the
+    /// scroll node's does and the bar is added last, so UIKit's order would read the header after every row.
+    override var screenAccessibilityElements: [Any]? {
+        let headerView = self.headerNode.view
+        let navigationBarView = self.controller?.navigationBar?.view
+        var elements: [Any] = []
+        if let navigationBarView, navigationBarView.superview === self.view {
+            elements.append(navigationBarView)
+        }
+        if headerView.superview === self.view {
+            elements.append(headerView)
+        }
+        for subview in self.view.subviews where subview !== headerView && subview !== navigationBarView {
+            elements.append(subview)
+        }
+        return elements
+    }
+    
     deinit {
         self.dataDisposable?.dispose()
         self.walletStickersPreloadDisposable.dispose()

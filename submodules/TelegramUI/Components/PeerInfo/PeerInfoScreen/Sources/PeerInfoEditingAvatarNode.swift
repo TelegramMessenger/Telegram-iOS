@@ -26,6 +26,9 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         
     var canAttachVideo: Bool = true
     
+    /// VoiceOver: the avatar as one button over its whole frame (the tap opens the photos).
+    private let accessibilityArea = AccessibilityAreaNode()
+    
     init(context: AccountContext) {
         self.context = context
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
@@ -37,6 +40,28 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
     
         self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        
+        self.accessibilityArea.accessibilityTraits = [.button, .image]
+        self.accessibilityArea.activate = { [weak self] in
+            guard let self, let tapped = self.tapped else {
+                return false
+            }
+            tapped(false)
+            return true
+        }
+        self.addSubnode(self.accessibilityArea)
+        self.accessibilityArea.frame = self.avatarNode.frame
+    }
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            return [self.accessibilityArea.view]
+        } set(value) {
+        }
+    }
+    
+    func updateAccessibility(label: String) {
+        self.accessibilityArea.accessibilityLabel = label
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -86,6 +111,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
         self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
+        self.accessibilityArea.frame = self.avatarNode.frame
         
         var isForum = false
         let avatarCornerRadius: CGFloat

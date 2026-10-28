@@ -379,17 +379,22 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     }
                     if let string = locationAttributedString?.string {
                         if !value.isEmpty {
-                            value += "\n"
+                            value += ", "
                         }
                         value += string
                     }
                     strongSelf.activateArea.accessibilityValue = value
                     
-                    if item.enabled {
-                        strongSelf.activateArea.accessibilityTraits = []
-                    } else {
-                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                    var accessibilityTraits: UIAccessibilityTraits = []
+                    if item.action != nil {
+                        accessibilityTraits.insert(.button)
                     }
+                    if !item.enabled {
+                        accessibilityTraits.insert(.notEnabled)
+                    }
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
+                    let accessibilityCustomActions = strongSelf.revealOptionsAccessibilityCustomActions(peerRevealOptions)
+                    strongSelf.activateArea.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
                     
                     if let updatedIcon = updatedIcon {
                         strongSelf.iconNode.image = updatedIcon

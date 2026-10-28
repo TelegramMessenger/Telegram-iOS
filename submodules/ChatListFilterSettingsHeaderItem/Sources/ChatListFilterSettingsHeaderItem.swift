@@ -94,6 +94,10 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.animationNode)
+        
+        // The text is the element; the illustration is decoration.
+        self.accessibilityTraits = .staticText
+        self.animationNode.accessibilityElementsHidden = true
     }
     
     override func didLoad() {
@@ -171,6 +175,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.animationNode.alpha = isHidden ? 0.0 : 1.0
                     strongSelf.titleNode.alpha = isHidden ? 0.0 : 1.0
+                    strongSelf.isAccessibilityElement = !isHidden
                 }
             })
         }

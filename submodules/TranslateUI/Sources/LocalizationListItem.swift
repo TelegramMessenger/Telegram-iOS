@@ -270,6 +270,15 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = item.title
                     strongSelf.activateArea.accessibilityValue = item.subtitle
+                    // The checked language is the current one (its checkmark), and the row is picked by tapping it.
+                    var accessibilityTraits: UIAccessibilityTraits = .button
+                    if item.checked {
+                        accessibilityTraits.insert(.selected)
+                    }
+                    if !item.enabled {
+                        accessibilityTraits.insert(.notEnabled)
+                    }
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
                     
                     let revealOffset = strongSelf.revealOffset
                     

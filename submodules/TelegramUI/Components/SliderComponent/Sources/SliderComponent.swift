@@ -94,6 +94,8 @@ public final class SliderComponent: Component {
     public let displaysBorderOnTracking: Bool
     public let useLegacyKnob: Bool
     public let isTrackingUpdated: ((Bool) -> Void)?
+    public let accessibilityLabel: String?
+    public let accessibilityValue: String?
     
     public init(
         content: Content,
@@ -107,7 +109,9 @@ public final class SliderComponent: Component {
         trackHeight: CGFloat? = nil,
         displaysBorderOnTracking: Bool = false,
         useLegacyKnob: Bool = false,
-        isTrackingUpdated: ((Bool) -> Void)? = nil
+        isTrackingUpdated: ((Bool) -> Void)? = nil,
+        accessibilityLabel: String? = nil,
+        accessibilityValue: String? = nil
     ) {
         self.content = content
         self.useNative = useNative
@@ -121,6 +125,8 @@ public final class SliderComponent: Component {
         self.displaysBorderOnTracking = displaysBorderOnTracking
         self.useLegacyKnob = useLegacyKnob
         self.isTrackingUpdated = isTrackingUpdated
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityValue = accessibilityValue
     }
     
     public static func ==(lhs: SliderComponent, rhs: SliderComponent) -> Bool {
@@ -152,6 +158,12 @@ public final class SliderComponent: Component {
             return false
         }
         if lhs.useLegacyKnob != rhs.useLegacyKnob {
+            return false
+        }
+        if lhs.accessibilityLabel != rhs.accessibilityLabel {
+            return false
+        }
+        if lhs.accessibilityValue != rhs.accessibilityValue {
             return false
         }
         return true
@@ -416,6 +428,16 @@ public final class SliderComponent: Component {
                 sliderView.hitTestEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             }
             
+            // VoiceOver: the host names the slider and may word its value (the position as the screen describes it).
+            if let slider: UIView = (self.nativeSliderView as UIView?) ?? (self.sliderView as UIView?) {
+                if let accessibilityLabel = component.accessibilityLabel {
+                    slider.accessibilityLabel = accessibilityLabel
+                }
+                if let accessibilityValue = component.accessibilityValue {
+                    slider.accessibilityValue = accessibilityValue
+                }
+            }
+
             return size
         }
         

@@ -353,6 +353,8 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                     if strongSelf.textNode.attributedPlaceholderText == nil || !strongSelf.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
                     }
+                    // The field is named by its placeholder ("Bio"), which is hidden once there is text.
+                    strongSelf.textNode.textView.accessibilityLabel = item.placeholder
                     
                     strongSelf.textNode.keyboardAppearance = item.presentationData.theme.rootController.keyboardColor.keyboardAppearance
                     

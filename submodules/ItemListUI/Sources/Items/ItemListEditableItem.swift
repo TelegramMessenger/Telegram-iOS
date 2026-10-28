@@ -744,6 +744,19 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
 
     open func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
     }
+    
+    /// VoiceOver: the swipe options as custom actions, each going through `revealOptionSelected`, as the swipe does.
+    public func revealOptionsAccessibilityCustomActions(_ options: [ItemListRevealOption]) -> [UIAccessibilityCustomAction] {
+        return options.map { option in
+            return UIAccessibilityCustomAction(name: option.title, actionHandler: { [weak self] _ in
+                guard let self else {
+                    return false
+                }
+                self.revealOptionSelected(option, animated: false)
+                return true
+            })
+        }
+    }
 
     override open var preventsTouchesToOtherItems: Bool {
         return self.isDisplayingRevealedOptions

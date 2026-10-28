@@ -49,6 +49,7 @@ swift_library(
         "Tests/AccessibilityCollectorTests.swift",
         "Tests/CollectionIndexAccessibilityTests.swift",
         "Tests/TextLinkAccessibilityTests.swift",
+        "Tests/AccessibilityTextLinksTests.swift",
     ],
     deps = [
         ":Display",
