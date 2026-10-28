@@ -191,7 +191,7 @@ public final class ChatListHeaderComponent: Component {
         private let storyPeerListExternalState = StoryPeerListComponent.ExternalState()
         private var storyPeerList: ComponentView<Empty>?
         public var storyPeerAction: ((EnginePeer?) -> Void)?
-        public var storyContextPeerAction: ((ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void)?
+        public var storyContextPeerAction: ((ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void)?
         public var storyComposeAction: ((CGFloat) -> Void)?
 
         private var navigationBarView: NavigationBarComponent.View? {

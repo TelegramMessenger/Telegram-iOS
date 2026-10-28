@@ -134,6 +134,22 @@ public final class PeerNameTextComponent: Component {
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
             }
             
+            // VoiceOver: the name and the badge after it (verified, scam, fake) are one piece of text, which an
+            // enclosing button reads as part of its label.
+            var accessibilityLabel = titleText
+            if let peer = component.peer {
+                if peer.isScam {
+                    accessibilityLabel += ", " + component.strings.Message_ScamAccount
+                } else if peer.isFake {
+                    accessibilityLabel += ", " + component.strings.Message_FakeAccount
+                } else if peer.isVerified {
+                    accessibilityLabel += ", " + component.strings.VoiceOver_Common_Verified
+                }
+            }
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = accessibilityLabel
+            self.accessibilityTraits = .staticText
+            
             var size = CGSize(width: titleFrame.maxX, height: titleSize.height)
             
             if let iconContent {

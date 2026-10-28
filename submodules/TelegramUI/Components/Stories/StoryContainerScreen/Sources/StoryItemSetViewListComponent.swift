@@ -1224,6 +1224,8 @@ public final class StoryItemSetViewListComponent: Component {
                 
                 if let emptyIconView = emptyIcon.view as? LottieComponent.View {
                     if emptyIconView.superview == nil {
+                        // The empty state's sticker is decoration; its text says it.
+                        emptyIconView.accessibilityElementsHidden = true
                         self.insertSubview(emptyIconView, belowSubview: self.scrollView)
                         
                         /*var completionRecurse: (() -> Void)?
@@ -1319,6 +1321,21 @@ public final class StoryItemSetViewListComponent: Component {
         
         public var currentViewList: EngineStoryViewListContext? {
             return self.currentContentView?.viewList
+        }
+        
+        /// VoiceOver order: the sheet's header (title or tabs, sort, search) before the list, which lies under it in
+        /// the view tree.
+        public override var accessibilityElements: [Any]? {
+            get {
+                var elements: [Any] = [self.navigationContainerView]
+                for view in self.subviews where view !== self.navigationContainerView {
+                    if !view.isHidden && view.alpha >= 0.01 && !view.accessibilityElementsHidden {
+                        elements.append(view)
+                    }
+                }
+                return elements
+            } set(value) {
+            }
         }
         
         override init(frame: CGRect) {
@@ -1665,13 +1682,18 @@ public final class StoryItemSetViewListComponent: Component {
             )
             
             let orderSelectorIconName: String
+            // VoiceOver: the sort button reads the order it stands for, in the words of its menu.
+            let orderSelectorAccessibilityLabel: String
             switch self.sortMode {
             case .repostsFirst:
                 orderSelectorIconName = "Stories/Context Menu/Repost"
+                orderSelectorAccessibilityLabel = component.strings.Story_ViewList_ContextSortReposts
             case .reactionsFirst:
                 orderSelectorIconName = "Chat/Context Menu/Reactions"
+                orderSelectorAccessibilityLabel = component.strings.Story_ViewList_ContextSortReactions
             case .recentFirst:
                 orderSelectorIconName = "Chat/Context Menu/Time"
+                orderSelectorAccessibilityLabel = component.strings.Story_ViewList_ContextSortRecent
             }
             let orderSelectorSize = self.orderSelector.update(
                 transition: transition,
@@ -1696,7 +1718,8 @@ public final class StoryItemSetViewListComponent: Component {
                         }
                         
                         self.openSortModeMenu()
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: orderSelectorAccessibilityLabel)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -1761,6 +1784,7 @@ public final class StoryItemSetViewListComponent: Component {
                     self.navigationContainerView.addSubview(titleView)
                 }
                 titleView.isHidden = displayModeSelector
+                titleView.accessibilityTraits = .header
                 
                 let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((56.0 - titleSize.height) * 0.5) + (component.isSearchActive ? (-56.0) : 0.0)), size: titleSize)
                 

@@ -397,6 +397,34 @@ final class ShareWithPeersScreenComponent: Component {
         private var dismissPanGesture: UIPanGestureRecognizer?
         private var dismissPanState: DismissPanState?
         
+        /// VoiceOver order: the header (close, title, the search or token field), then the sheet's content and its
+        /// bottom button. The header's container is never sized (its children are placed from its origin), and VoiceOver
+        /// does not look inside an empty-sized view, so its children are listed here directly; the sheet's background
+        /// picture is not read.
+        override var accessibilityElements: [Any]? {
+            get {
+                func isShown(_ view: UIView) -> Bool {
+                    return view.superview != nil && !view.isHidden && view.alpha >= 0.01 && !view.accessibilityElementsHidden
+                }
+                var elements: [Any] = []
+                for view in [self.navigationLeftButton.view, self.navigationTitle.view, self.navigationRightButton.view, self.navigationTextField.view] {
+                    if let view, isShown(view) {
+                        elements.append(view)
+                    }
+                }
+                for view in self.containerView.subviews {
+                    if view === self.navigationContainerView || view === self.backgroundView || view === self.navigationLeftButton.view {
+                        continue
+                    }
+                    if isShown(view) {
+                        elements.append(view)
+                    }
+                }
+                return elements
+            } set(value) {
+            }
+        }
+        
         override init(frame: CGRect) {
             self.dimView = UIView()
             self.containerView = SparseContainerView()
@@ -2917,6 +2945,7 @@ final class ShareWithPeersScreenComponent: Component {
                 if navigationTitleView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTitleView)
                 }
+                navigationTitleView.accessibilityTraits = .header
                 transition.setPosition(view: navigationTitleView, position: navigationTitleFrame.center)
                 navigationTitleView.bounds = CGRect(origin: CGPoint(), size: navigationTitleFrame.size)
             }

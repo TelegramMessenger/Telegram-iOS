@@ -68,6 +68,22 @@ final class TextComponentAccessibilityTests: XCTestCase {
         XCTAssertFalse(content.hasInteractiveContent)
     }
     
+    func testControlDeclaredAsTextIsTextInDisplayedContent() {
+        let container = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 200.0, height: 100.0))
+        let name = UIControl(frame: CGRect(x: 0.0, y: 0.0, width: 100.0, height: 20.0))
+        name.isAccessibilityElement = true
+        name.accessibilityLabel = "Your story"
+        name.accessibilityTraits = .staticText
+        container.addSubview(name)
+        let button = UIButton(frame: CGRect(x: 0.0, y: 40.0, width: 100.0, height: 20.0))
+        button.accessibilityLabel = "Close"
+        container.addSubview(button)
+        
+        let content = container.accessibilityDisplayedContent()
+        XCTAssertEqual(content.texts, ["Your story"])
+        XCTAssertTrue(content.hasInteractiveContent)
+    }
+    
     func testStandardGlyphBarButtonReadsItsName() {
         func make(_ name: String, accessibility: ComponentAccessibility? = nil) -> UIView {
             return self.makeView(GlassBarButtonComponent(

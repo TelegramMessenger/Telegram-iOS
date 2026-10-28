@@ -544,6 +544,16 @@ public final class StoryItemSetContainerComponent: Component {
         
         private var scheduledStoryUnpinnedUndoOverlay: ViewController?
         
+        var storyPagerAccessibilityElement: StoryPagerAccessibilityElement?
+        
+        /// VoiceOver order and contents: `storyAccessibilityElements()` (StoryItemSetContainerAccessibility.swift).
+        public override var accessibilityElements: [Any]? {
+            get {
+                return self.storyAccessibilityElements()
+            } set(value) {
+            }
+        }
+        
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
@@ -1636,7 +1646,10 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                                 
-                                if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
+                                // Under VoiceOver a story does not move on by itself when its time is up: reading the
+                                // header, caption and reply row takes longer than a story lasts. The story element's
+                                // swipe up moves on (StoryItemSetContainerAccessibility.swift).
+                                if progress >= 1.0 && canSwitch && !visibleItem.requestedNext && !isVoiceOverRunningForLayout {
                                     visibleItem.requestedNext = true
                                     
                                     component.navigate(.next)
@@ -4069,6 +4082,8 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
                 transition.setAlpha(view: self.closeButton, alpha: (component.hideUI || self.isEditingStory || component.isEmbeddedInCamera) ? 0.0 : 1.0)
+                self.closeButton.accessibilityLabel = component.strings.Common_Close
+                self.closeButton.accessibilityTraits = .button
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
                 headerRightOffset -= 51.0
             }
@@ -4102,7 +4117,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 animationView.playOnce()
                             }
                             self.performMoreAction(sourceView: moreButtonView, gesture: nil)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Common_More)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 33.0, height: 64.0)
@@ -4170,7 +4186,11 @@ public final class StoryItemSetContainerComponent: Component {
                         } else {
                             component.toggleAmbientMode()
                         }
-                    }
+                    },
+                    accessibility: isVideo ? {
+                        let toggle = ComponentAccessibility.toggleDefaults(isOn: !soundButtonState)
+                        return ComponentAccessibility(label: component.strings.VoiceOver_Stories_Sound, value: toggle.value, traits: toggle.traits)
+                    }() : ComponentAccessibility(isHidden: true)
                 )),
                 environment: {},
                 containerSize: CGSize(width: 33.0, height: 64.0)
@@ -4286,7 +4306,19 @@ public final class StoryItemSetContainerComponent: Component {
                             self.sendMessageContext.tooltipScreen = tooltipScreen
                             self.updateIsProgressPaused()
                             component.controller()?.present(tooltipScreen, in: .current)
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Story_Context_Privacy, value: {
+                            switch storyPrivacyIcon {
+                            case .everyone:
+                                return component.strings.Story_Privacy_CategoryEveryone
+                            case .contacts:
+                                return component.strings.Story_Privacy_CategoryContacts
+                            case .closeFriends:
+                                return component.strings.Story_Privacy_CategoryCloseFriends
+                            case .selectedContacts:
+                                return component.strings.Story_Privacy_CategorySelectedContacts
+                            }
+                        }())
                     )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
@@ -4331,7 +4363,8 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             
                             self.beginPictureInPicture()
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: component.strings.Gallery_VoiceOver_PictureInPicture)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
@@ -4483,7 +4516,10 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.navigateToPeer(peer: component.slice.effectivePeer, chat: false)
                             }
                         },
-                        isEnabled: !component.isEmbeddedInCamera
+                        isEnabled: !component.isEmbeddedInCamera,
+                        // The avatar opens what the author's name beside it opens, unless the story is a repost or
+                        // posted by someone else, when the name opens the original author: only then is it read.
+                        accessibility: (component.slice.item.storyItem.forwardInfo == nil && component.slice.item.storyItem.author == nil) ? ComponentAccessibility(isHidden: true) : ComponentAccessibility(label: component.slice.effectivePeer.compactDisplayTitle)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 32.0, height: 32.0)

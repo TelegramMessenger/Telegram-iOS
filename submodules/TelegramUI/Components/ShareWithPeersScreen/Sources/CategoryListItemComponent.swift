@@ -316,6 +316,17 @@ final class CategoryListItemComponent: Component {
             let containerFrame = CGRect(origin: CGPoint(x: contextInset, y: verticalInset), size: CGSize(width: availableSize.width - contextInset * 2.0, height: height - verticalInset * 2.0))
             transition.setFrame(view: self.containerButton, frame: containerFrame)
             
+            // VoiceOver: one button per audience, its name and the line under it ("exclude people", "John Telegram"),
+            // `.selected` for the chosen one. Activation is the tap: choose it, or open its list once chosen.
+            var isSelected = false
+            if case .editing(true, _) = component.selectionState {
+                isSelected = true
+            }
+            self.containerButton.isAccessibilityElement = true
+            self.containerButton.accessibilityLabel = component.title
+            self.containerButton.accessibilityValue = component.subtitle
+            self.containerButton.accessibilityTraits = isSelected ? [.button, .selected] : .button
+            
             return CGSize(width: availableSize.width, height: height)
         }
     }

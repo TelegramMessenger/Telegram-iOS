@@ -2506,6 +2506,7 @@ public final class MessageInputPanelComponent: Component {
                         ),
                         tag: timeoutButtonTag,
                         minSize: CGSize(width: 32.0, height: 32.0),
+                        accessibility: ComponentAccessibility(label: component.strings.VoiceOver_MessageInput_Timer, value: timeoutValue, traits: component.timeoutSelected ? .selected : []),
                         action: { view, gesture in
                             timeoutAction(view, gesture)
                         }

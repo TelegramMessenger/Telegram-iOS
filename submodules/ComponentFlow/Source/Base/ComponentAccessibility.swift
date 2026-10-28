@@ -78,9 +78,9 @@ public extension UIView {
                 }
                 return
             }
-            if !(view is UIControl), view.accessibilityTraits == .staticText, let label = view.accessibilityLabel, !label.isEmpty {
+            if !(view is UIControl) || view.isAccessibilityElement, view.accessibilityTraits == .staticText, let label = view.accessibilityLabel, !label.isEmpty {
                 // Plain text (a text component, which is its own element unless something around it speaks for it) is
-                // text, not a control.
+                // text, not a control; so is a control-based view that declares itself text (a name with its badge).
                 found.append((origin, label))
                 return
             }

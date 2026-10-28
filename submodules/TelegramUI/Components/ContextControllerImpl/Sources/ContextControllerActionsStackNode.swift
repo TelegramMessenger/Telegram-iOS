@@ -281,6 +281,8 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
             self.titleLabelNode.maximumNumberOfLines = 0
             self.titleLabelNode.lineSpacing = 0.1
         }
+        // VoiceOver: the second line ("1 Person" under "Who Can See") is the item's value.
+        self.accessibilityValue = subtitle?.string
         
         let titleColor: UIColor
         let linkColor = presentationData.theme.list.itemAccentColor

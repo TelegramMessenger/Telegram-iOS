@@ -57,7 +57,7 @@ public final class StoryPeerListComponent: Component {
     public let unlocked: Bool
     public let uploadProgress: [EnginePeer.Id: Float]
     public let peerAction: (EnginePeer?) -> Void
-    public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
+    public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void
     public let openStatusSetup: (UIView) -> Void
     public let lockAction: () -> Void
     public let composeAction: (CGFloat) -> Void
@@ -81,7 +81,7 @@ public final class StoryPeerListComponent: Component {
         unlocked: Bool,
         uploadProgress: [EnginePeer.Id: Float],
         peerAction: @escaping (EnginePeer?) -> Void,
-        contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void,
+        contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture?, EnginePeer) -> Void,
         openStatusSetup: @escaping (UIView) -> Void,
         lockAction: @escaping () -> Void,
         composeAction: @escaping (CGFloat) -> Void
@@ -453,6 +453,20 @@ public final class StoryPeerListComponent: Component {
             self.loadingItemDisposable?.dispose()
         }
         
+        /// VoiceOver order: the title (or the button it becomes) before the stories under it, which UIKit would read
+        /// first (their scroll views are the first subviews).
+        public override var accessibilityElements: [Any]? {
+            get {
+                // Views listed here are read even when they are not elements, so hidden ones are left out.
+                let scrollViews: [UIView] = [self.scrollView, self.scrollContainerView]
+                let ordered = self.subviews.filter { view in !scrollViews.contains(where: { $0 === view }) } + scrollViews
+                return ordered.filter { view in
+                    return !view.isHidden && view.alpha >= 0.01 && !view.accessibilityElementsHidden
+                }
+            } set(value) {
+            }
+        }
+        
         /// The chat list's title for VoiceOver. It is drawn here as an image (`titleView`), so it is labelled here: a
         /// header, which is also the button that shows the stories while they are collapsed beside it (the tap on
         /// the title), or the passcode lock button when the title has a lock.
@@ -466,6 +480,8 @@ public final class StoryPeerListComponent: Component {
             self.collapsedButton.accessibilityTraits = [.header, .button]
             
             self.titleView.isAccessibilityElement = !titleShowsStories && !component.titleHasLock
+            // Hidden outright while the button above speaks for it: a labelled header image is otherwise still listed.
+            self.titleView.accessibilityElementsHidden = titleShowsStories || component.titleHasLock
             self.titleView.accessibilityLabel = component.title
             self.titleView.accessibilityTraits = .header
             

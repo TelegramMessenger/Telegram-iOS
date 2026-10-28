@@ -88,12 +88,30 @@ final class ModeComponent: Component {
         private var state: EmptyComponentState?
         
         final class ItemView: HighlightTrackingButton {
+            var accessibilityActivateAction: (() -> Void)?
+            
             init() {
                 super.init(frame: .zero)
             }
             
             required init(coder: NSCoder) {
                 preconditionFailure()
+            }
+            
+            // The button is the element; its title label is not a second one.
+            override var accessibilityElements: [Any]? {
+                get {
+                    return []
+                } set(value) {
+                }
+            }
+            
+            override func accessibilityActivate() -> Bool {
+                guard let accessibilityActivateAction = self.accessibilityActivateAction else {
+                    return false
+                }
+                accessibilityActivateAction()
+                return true
             }
             
             func update(isTablet: Bool, value: String, selected: Bool, tintColor: UIColor) -> CGSize {
@@ -424,6 +442,17 @@ final class ModeComponent: Component {
                 
                 let _ = selectedItemView.update(isTablet: component.isTablet, value: mode.title(strings: component.strings), selected: true, tintColor: component.tintColor)
                 selectedItemView.bounds = CGRect(origin: .zero, size: itemSize)
+                
+                // VoiceOver: one button per mode, the current one `.selected`; activation picks it as tapping does.
+                // The highlighted copy drawn through the lens is not read.
+                itemView.isAccessibilityElement = true
+                itemView.accessibilityLabel = mode.title(strings: component.strings)
+                itemView.accessibilityTraits = mode == component.currentMode ? [.button, .selected] : .button
+                itemView.accessibilityActivateAction = { [weak self] in
+                    self?.component?.updatedMode(mode)
+                }
+                selectedItemView.isAccessibilityElement = false
+                selectedItemView.accessibilityElementsHidden = true
                 
                 itemFrame = CGRect(origin: itemFrame.origin, size: itemSize)
                 

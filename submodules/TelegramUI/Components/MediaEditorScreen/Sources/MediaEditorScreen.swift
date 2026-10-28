@@ -1267,7 +1267,8 @@ final class MediaEditorScreenComponent: Component {
                                 view.playOnce()
                             }
                             controller.requestSave()
-                        }
+                        },
+                        accessibility: ComponentAccessibility(label: environment.strings.Gallery_SaveToGallery, traits: component.isSavingAvailable ? [] : .notEnabled)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
@@ -9770,10 +9771,14 @@ private func mediaEditorStoryAccessibilityLabel(_ item: MediaEditorStoryBottomCo
         case .curves:
             return strings.PhotoEditor_CurvesTool
         case .adjustments:
-            return nil
+            return strings.VoiceOver_MediaEditor_Adjustments
         }
-    case .tools, .rotate, .paint:
-        return nil
+    case .tools:
+        return strings.VoiceOver_MediaEditor_Adjustments
+    case .rotate:
+        return strings.VoiceOver_MediaEditor_Rotate
+    case .paint:
+        return strings.Paint_Draw
     }
 }
 
