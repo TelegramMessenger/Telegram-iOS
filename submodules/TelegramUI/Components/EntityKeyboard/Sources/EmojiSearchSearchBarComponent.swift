@@ -409,42 +409,48 @@ final class EmojiSearchSearchBarComponent: Component {
         }
         
         private final class AccessibilityItemElement: UIAccessibilityElement {
-            let activate: () -> Bool
-            
-            init(container: Any, activate: @escaping () -> Bool) {
-                self.activate = activate
-                super.init(accessibilityContainer: container)
-            }
+            var activate: (() -> Bool)?
             
             override func accessibilityActivate() -> Bool {
-                return self.activate()
+                return self.activate?() ?? false
             }
         }
         
         /// VoiceOver: "Search" (activates the field, as a tap on it), then the visible categories by their titles,
-        /// the chosen one `.selected`. Built only when asked.
+        /// the chosen one `.selected`. Built only when asked. The element objects are kept per category (and one for
+        /// "Search") and updated in place: VoiceOver keeps its place by identity, and activating a category scrolls the
+        /// bar. Only the ordered list is dropped when the bar changes.
         private var cachedAccessibilityElements: [Any]?
+        private var searchAccessibilityElement: AccessibilityItemElement?
+        private var categoryAccessibilityElements: [Int64: AccessibilityItemElement] = [:]
         
         override var accessibilityElements: [Any]? {
             get {
                 guard let component = self.component else {
                     return nil
                 }
-                // Kept until the bar changes: VoiceOver loses its place if each query returns new objects.
                 if let cachedAccessibilityElements = self.cachedAccessibilityElements {
                     return cachedAccessibilityElements
                 }
                 var elements: [Any] = []
                 if let textView = self.textView.view, textView.alpha > 0.01, !self.textContainerView.isHidden, self.textContainerView.alpha > 0.01 {
-                    let element = AccessibilityItemElement(container: self, activate: { [weak self] in
-                        self?.component?.activateTextInput()
-                        return true
-                    })
+                    let element: AccessibilityItemElement
+                    if let current = self.searchAccessibilityElement {
+                        element = current
+                    } else {
+                        element = AccessibilityItemElement(accessibilityContainer: self)
+                        element.accessibilityTraits = .button
+                        element.activate = { [weak self] in
+                            self?.component?.activateTextInput()
+                            return true
+                        }
+                        self.searchAccessibilityElement = element
+                    }
                     element.accessibilityLabel = component.strings.Common_Search
-                    element.accessibilityTraits = .button
                     element.accessibilityFrameInContainerSpace = textView.convert(textView.bounds, to: self)
                     elements.append(element)
                 }
+                var validIds = Set<Int64>()
                 let groups = component.categories?.groups ?? []
                 for group in groups {
                     let id = AnyHashable(group.id)
@@ -456,21 +462,31 @@ final class EmojiSearchSearchBarComponent: Component {
                         continue
                     }
                     let itemId = group.id
-                    let element = AccessibilityItemElement(container: self, activate: { [weak self, weak itemView] in
-                        guard let self, let itemView else {
-                            return false
+                    let element: AccessibilityItemElement
+                    if let current = self.categoryAccessibilityElements[itemId] {
+                        element = current
+                    } else {
+                        element = AccessibilityItemElement(accessibilityContainer: self)
+                        element.activate = { [weak self] in
+                            guard let self, let itemView = self.visibleItemViews[id] else {
+                                return false
+                            }
+                            self.toggleItem(id: id, itemId: itemId, itemView: itemView)
+                            return true
                         }
-                        self.toggleItem(id: id, itemId: itemId, itemView: itemView)
-                        return true
-                    })
+                        self.categoryAccessibilityElements[itemId] = element
+                    }
+                    validIds.insert(itemId)
                     element.accessibilityLabel = group.title
                     element.accessibilityTraits = self.selectedItem == id ? [.button, .selected] : .button
                     element.accessibilityFrameInContainerSpace = frame
                     elements.append(element)
                 }
+                self.categoryAccessibilityElements = self.categoryAccessibilityElements.filter { validIds.contains($0.key) }
                 self.cachedAccessibilityElements = elements
                 return elements
             } set(value) {
+                super.accessibilityElements = value
             }
         }
         

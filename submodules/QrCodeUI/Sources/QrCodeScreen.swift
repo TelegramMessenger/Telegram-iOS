@@ -275,7 +275,9 @@ private final class SheetContent: CombinedComponent {
                             shareQrCode(sharedContext: component.sharedContext, subject: effectiveSubject, asImage: true, view: view)
                         }
                     },
-                    animateScale: false
+                    animateScale: false,
+                    // The code's tap shares it, as the "Share QR Code" button under it does; VoiceOver reads that button.
+                    accessibility: ComponentAccessibility(isHidden: true)
                 ),
                 availableSize: CGSize(width: 260.0, height: 260.0),
                 transition: .immediate
@@ -554,6 +556,8 @@ public final class QrCodeScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        // VoiceOver: only the sheet is read while it is up (it may be presented over the window, outside a modal stack).
+        self.blocksBackgroundWhenInOverlay = true
     }
     
     public init(
@@ -574,6 +578,8 @@ public final class QrCodeScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        // VoiceOver: only the sheet is read while it is up (it may be presented over the window, outside a modal stack).
+        self.blocksBackgroundWhenInOverlay = true
     }
         
     required public init(coder aDecoder: NSCoder) {

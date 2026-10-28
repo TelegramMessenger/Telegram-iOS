@@ -172,6 +172,28 @@ final class BottomPanelComponent: Component {
         private var lastVisibleHeight: CGFloat = 0.0
         private var lastButtonTitle: AnyComponentWithIdentity<Empty>?
         private var component: BottomPanelComponent?
+        private var accessibilityInputIsVisible = false
+        private var accessibilityActionIsVisible = false
+        
+        /// VoiceOver: the accessory, the caption field while it is up, and the action button while it is shown. The
+        /// panel's other subviews (the glass backgrounds, the parked caption bar below the sheet) are not read.
+        override var accessibilityElements: [Any]? {
+            get {
+                var elements: [Any] = []
+                if let accessoryView = self.accessory?.view, accessoryView.superview === self, !accessoryView.isHidden, accessoryView.alpha > 0.01 {
+                    elements.append(accessoryView)
+                }
+                if self.accessibilityInputIsVisible, let inputPanelView = self.inputPanel.view {
+                    elements.append(inputPanelView)
+                }
+                if self.accessibilityActionIsVisible, let actionButtonView = self.actionButton.view {
+                    elements.append(actionButtonView)
+                }
+                return elements
+            } set(value) {
+                super.accessibilityElements = value
+            }
+        }
         private weak var state: EmptyComponentState?
 
         override init(frame: CGRect) {
@@ -334,6 +356,7 @@ final class BottomPanelComponent: Component {
                 }
                 shareScreenSetFadeVisible(inputPanelView, isVisible: mainActionIsVisible || panelSlidesOut, transition: visibilityTransition)
                 inputPanelView.accessibilityElementsHidden = !mainActionIsVisible
+                self.accessibilityInputIsVisible = mainActionIsVisible
                 if slideTransition.animation.isImmediate || previousInputIsVisible == mainActionIsVisible {
                     transition.setPosition(view: inputPanelView, position: inputPanelFrame.center.offsetBy(dx: 0.0, dy: slideOffset))
                 } else {
@@ -427,6 +450,7 @@ final class BottomPanelComponent: Component {
                 actionButtonView.accessibilityTraits = .button
                 actionButtonView.accessibilityLabel = mainActionIsVisible ? component.strings.ShareMenu_Send : component.actionTitle
                 actionButtonView.accessibilityValue = component.actionBadge.map(String.init)
+                self.accessibilityActionIsVisible = component.showsActionButton && buttonIsVisible
                 let visibilityTransition: ComponentTransition = previousInputIsVisible != nil && previousInputIsVisible != mainActionIsVisible ? .easeInOut(duration: 0.2) : transition
                 visibilityTransition.setAlpha(view: actionButtonView, alpha: buttonIsVisible || panelSlidesOut ? 1.0 : 0.0)
             }
@@ -694,6 +718,30 @@ final class SearchInputPanelComponent: Component {
             self.textField.resignFirstResponder()
 
             return self.currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        
+        /// VoiceOver: the field, Clear while there is text, the one right button that is shown (create group, or Close
+        /// while searching), then the search tabs. The faded button's glass stays in the shared glass container, so
+        /// the container's own tree is not read.
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component, component.isVisible else {
+                    return []
+                }
+                var elements: [Any] = [self.textField]
+                if let clearButtonView = self.clearButton.view, !clearButtonView.isHidden {
+                    elements.append(clearButtonView)
+                }
+                if let buttonView = (component.isSearching ? self.cancelSearchButton : self.createGroupButton).view {
+                    elements.append(buttonView)
+                }
+                if self.tabsBackground != nil, let tabsView = self.tabs.view {
+                    elements.append(tabsView)
+                }
+                return elements
+            } set(value) {
+                super.accessibilityElements = value
+            }
         }
 
         func update(component: SearchInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {

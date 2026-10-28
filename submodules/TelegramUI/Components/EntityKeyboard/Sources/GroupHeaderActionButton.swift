@@ -84,6 +84,7 @@ final class GroupHeaderActionButton: UIButton {
     }
     
     func update(theme: PresentationTheme, title: String, compact: Bool) -> CGSize {
+        self.accessibilityLabel = title
         let textConstrainedWidth: CGFloat = 100.0
         
         let needsVibrancy = !theme.overallDarkAppearance && compact

@@ -340,6 +340,10 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         ),
                         minSize: buttonSize,
                         accessibility: ComponentAccessibility(label: strings.Common_Back, traits: canGoBack ? [] : .notEnabled),
+                        contextAccessibilityLabel: canGoBack ? strings.Common_More : nil,
+                        contextAccessibilityAction: canGoBack ? { view in
+                            performHoldAction(view, nil, .navigateBack)
+                        } : nil,
                         action: { view, gesture in
                             guard canGoBack else {
                                 return
@@ -370,6 +374,10 @@ final class NavigationToolbarContentComponent: CombinedComponent {
                         ),
                         minSize: buttonSize,
                         accessibility: ComponentAccessibility(label: strings.VoiceOver_Browser_Forward, traits: canGoForward ? [] : .notEnabled),
+                        contextAccessibilityLabel: canGoForward ? strings.Common_More : nil,
+                        contextAccessibilityAction: canGoForward ? { view in
+                            performHoldAction(view, nil, .navigateForward)
+                        } : nil,
                         action: { view, gesture in
                             guard canGoForward else {
                                 return

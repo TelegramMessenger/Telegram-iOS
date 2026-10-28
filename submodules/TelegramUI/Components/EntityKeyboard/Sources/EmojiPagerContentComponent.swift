@@ -1539,17 +1539,21 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         private final class ItemAccessibilityElement: UIAccessibilityElement {
-            let activate: () -> Bool
-            
-            init(container: Any, activate: @escaping () -> Bool) {
-                self.activate = activate
-                super.init(accessibilityContainer: container)
-            }
+            var activate: (() -> Bool)?
+            var moreAction: UIAccessibilityCustomAction?
             
             override func accessibilityActivate() -> Bool {
-                return self.activate()
+                return self.activate?() ?? false
             }
         }
+        
+        /// One element object per visible item, group heading and group control, kept while its key stays visible:
+        /// VoiceOver keeps its place by element identity, and walking past the edge row scrolls the grid. A scroll only
+        /// drops the ordered list; the objects are reused and updated in place when VoiceOver asks again.
+        private var itemAccessibilityElementsByKey: [EmojiKeyboardItemLayer.Key: ItemAccessibilityElement] = [:]
+        private var headerAccessibilityElementsByGroup: [AnyHashable: UIAccessibilityElement] = [:]
+        private var clearAccessibilityElementsByGroup: [AnyHashable: ItemAccessibilityElement] = [:]
+        private var cachedItemAccessibilityElements: [Any]?
         
         /// The visible items and group titles of the grid, row by row, plus one row beyond each edge (as ListView's
         /// edge rows). Built only when VoiceOver asks; nil when the host has not opted in.
@@ -1557,8 +1561,6 @@ public final class EmojiPagerContentComponent: Component {
             guard let component = self.component, let inputInteraction = component.inputInteractionHolder.inputInteraction, inputInteraction.exposesItemsToAccessibility else {
                 return nil
             }
-            // The same element objects until the visible items change: VoiceOver walks the array element by element
-            // and loses its place if each query returns new objects.
             if let cachedItemAccessibilityElements = self.cachedItemAccessibilityElements {
                 return cachedItemAccessibilityElements
             }
@@ -1566,7 +1568,7 @@ public final class EmojiPagerContentComponent: Component {
             let visibleBounds = scrollView.bounds.insetBy(dx: 0.0, dy: -60.0)
             var entries: [(frame: CGRect, element: Any)] = []
             
-            // The grid's own views in the scroll view (the search header, group buttons) keep their elements.
+            // The grid's own views in the scroll view (the search header, the "+N" expand buttons) keep their elements.
             for subview in scrollView.subviews {
                 if subview is GroupHeaderLayer || subview.isHidden || subview.alpha <= 0.01 || !subview.frame.intersects(visibleBounds) {
                     continue
@@ -1574,20 +1576,55 @@ public final class EmojiPagerContentComponent: Component {
                 entries.append((subview.frame, subview))
             }
             
+            var validHeaderIds = Set<AnyHashable>()
+            var validClearIds = Set<AnyHashable>()
             for (groupId, groupHeader) in self.visibleGroupHeaders {
                 guard groupHeader.frame.intersects(visibleBounds), !groupHeader.isHidden, groupHeader.alpha > 0.01 else {
                     continue
                 }
-                guard let title = component.contentItemGroups.first(where: { $0.groupId == groupId })?.title, !title.isEmpty else {
-                    continue
+                if let title = component.contentItemGroups.first(where: { $0.groupId == groupId })?.title, !title.isEmpty {
+                    let element: UIAccessibilityElement
+                    if let current = self.headerAccessibilityElementsByGroup[groupId] {
+                        element = current
+                    } else {
+                        element = UIAccessibilityElement(accessibilityContainer: scrollView)
+                        element.accessibilityTraits = [.staticText, .header]
+                        self.headerAccessibilityElementsByGroup[groupId] = element
+                    }
+                    validHeaderIds.insert(groupId)
+                    element.accessibilityLabel = title
+                    element.accessibilityFrameInContainerSpace = groupHeader.frame
+                    entries.append((groupHeader.frame, element))
                 }
-                let element = UIAccessibilityElement(accessibilityContainer: scrollView)
-                element.accessibilityLabel = title
-                element.accessibilityTraits = [.staticText, .header]
-                element.accessibilityFrameInContainerSpace = groupHeader.frame
-                entries.append((groupHeader.frame, element))
+                // The header's own controls: its action button ("Add", "Unlock") and the clear glyph of recents.
+                if let actionButton = groupHeader.accessibilityActionButton, !actionButton.isHidden, actionButton.alpha > 0.01 {
+                    entries.append((groupHeader.convert(actionButton.frame, to: scrollView), actionButton))
+                }
+                if let clearIconLayer = groupHeader.clearIconLayer, !clearIconLayer.isHidden {
+                    let element: ItemAccessibilityElement
+                    if let current = self.clearAccessibilityElementsByGroup[groupId] {
+                        element = current
+                    } else {
+                        element = ItemAccessibilityElement(accessibilityContainer: scrollView)
+                        element.accessibilityTraits = .button
+                        self.clearAccessibilityElementsByGroup[groupId] = element
+                    }
+                    validClearIds.insert(groupId)
+                    element.accessibilityLabel = strings.WebSearch_RecentSectionClear
+                    let clearFrame = groupHeader.convert(clearIconLayer.frame, to: scrollView).insetBy(dx: -8.0, dy: -8.0)
+                    element.accessibilityFrameInContainerSpace = clearFrame
+                    element.activate = { [weak self, weak groupHeader] in
+                        guard let self, let groupHeader, let clearIconLayer = groupHeader.clearIconLayer else {
+                            return false
+                        }
+                        self.component?.inputInteractionHolder.inputInteraction?.clearGroup(groupId, groupHeader, clearIconLayer.frame)
+                        return true
+                    }
+                    entries.append((clearFrame, element))
+                }
             }
             
+            var validItemKeys = Set<EmojiKeyboardItemLayer.Key>()
             for (itemKey, itemLayer) in self.visibleItemLayers {
                 guard itemLayer.frame.intersects(visibleBounds), !itemLayer.isHidden, itemLayer.opacity > 0.01, !itemLayer.displayPlaceholder else {
                     continue
@@ -1621,18 +1658,46 @@ public final class EmojiPagerContentComponent: Component {
                 guard let label, !label.isEmpty else {
                     continue
                 }
-                let element = ItemAccessibilityElement(container: scrollView, activate: { [weak self, weak itemLayer] in
-                    guard let self, let itemLayer, let component = self.component, !itemLayer.displayPlaceholder else {
-                        return false
+                let element: ItemAccessibilityElement
+                if let current = self.itemAccessibilityElementsByKey[itemKey] {
+                    element = current
+                } else {
+                    element = ItemAccessibilityElement(accessibilityContainer: scrollView)
+                    // The layer for a key can be replaced; activation looks it up when it runs.
+                    element.activate = { [weak self] in
+                        guard let self, let component = self.component, let itemLayer = self.visibleItemLayers[itemKey], !itemLayer.displayPlaceholder else {
+                            return false
+                        }
+                        component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
+                        return true
                     }
-                    component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
-                    return true
-                })
+                    self.itemAccessibilityElementsByKey[itemKey] = element
+                }
+                validItemKeys.insert(itemKey)
                 element.accessibilityLabel = label
                 element.accessibilityTraits = isSelected ? [.button, .selected] : .button
                 element.accessibilityFrameInContainerSpace = itemLayer.frame
+                // The long-press path (a status's duration menu, a sticker's preview) while the gesture is on.
+                if component.enableLongPress {
+                    if element.moreAction == nil {
+                        element.moreAction = UIAccessibilityCustomAction(name: strings.Common_More, actionHandler: { [weak self] _ in
+                            guard let self, let component = self.component, component.enableLongPress, let itemLayer = self.visibleItemLayers[itemKey], !itemLayer.displayPlaceholder else {
+                                return false
+                            }
+                            component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, true)
+                            return true
+                        })
+                    }
+                    element.accessibilityCustomActions = element.moreAction.flatMap { [$0] }
+                } else {
+                    element.accessibilityCustomActions = nil
+                }
                 entries.append((itemLayer.frame, element))
             }
+            
+            self.itemAccessibilityElementsByKey = self.itemAccessibilityElementsByKey.filter { validItemKeys.contains($0.key) }
+            self.headerAccessibilityElementsByGroup = self.headerAccessibilityElementsByGroup.filter { validHeaderIds.contains($0.key) }
+            self.clearAccessibilityElementsByGroup = self.clearAccessibilityElementsByGroup.filter { validClearIds.contains($0.key) }
             
             entries.sort { lhs, rhs in
                 if abs(lhs.frame.minY - rhs.frame.minY) > 4.0 {
@@ -1644,8 +1709,6 @@ public final class EmojiPagerContentComponent: Component {
             self.cachedItemAccessibilityElements = elements
             return elements
         }
-        
-        private var cachedItemAccessibilityElements: [Any]?
         
         private enum VisualItemKey: Hashable {
             case item(id: EmojiKeyboardItemLayer.Key)

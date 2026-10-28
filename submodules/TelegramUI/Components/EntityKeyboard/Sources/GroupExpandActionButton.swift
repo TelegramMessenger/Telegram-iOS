@@ -80,6 +80,8 @@ final class GroupExpandActionButton: UIButton {
     }
     
     func update(theme: PresentationTheme, title: String, useOpaqueTheme: Bool) -> CGSize {
+        // The "+N" it draws into a layer.
+        self.accessibilityLabel = title
         let textConstrainedWidth: CGFloat = 100.0
         let color = theme.list.itemCheckColors.foregroundColor
         

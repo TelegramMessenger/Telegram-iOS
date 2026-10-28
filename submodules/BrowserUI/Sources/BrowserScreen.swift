@@ -564,7 +564,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             }
             var top: [Any] = []
             var bottom: [Any] = []
-            for subview in hostView.subviews where !subview.isHidden && subview.alpha > 0.01 {
+            for subview in hostView.subviews where !subview.isHidden && subview.alpha > 0.01 && subview.frame.intersects(hostView.bounds) {
                 if subview.frame.minY > hostView.bounds.midY {
                     bottom.append(subview)
                 } else {
@@ -574,7 +574,7 @@ public class BrowserScreen: ViewController, MinimizableController {
             var elements: [Any] = top
             elements.append(self.contentContainerView)
             elements.append(contentsOf: bottom)
-            for subview in self.view.subviews where subview !== hostView && subview !== self.contentContainerView {
+            for subview in self.view.subviews where subview !== hostView && subview !== self.contentContainerView && !subview.isHidden && subview.alpha > 0.01 {
                 elements.append(subview)
             }
             return elements

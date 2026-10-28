@@ -630,12 +630,15 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         strongSelf.accessibilityLabel = nil
                         strongSelf.accessibilityValue = nil
                         strongSelf.accessibilityTraits = []
-                        strongSelf.avatarNode.isAccessibilityElement = true
-                        strongSelf.avatarNode.accessibilityTraits = .button
                         switch editingName {
                         case .personName:
-                            strongSelf.avatarNode.accessibilityLabel = item.presentationData.strings.Settings_SetPhoto
+                            // Editing a contact's name the avatar tap only opens the existing photo (it sets none), so
+                            // it is not offered as a "Set Photo" button.
+                            strongSelf.avatarNode.isAccessibilityElement = false
+                            strongSelf.avatarNode.accessibilityLabel = nil
                         case let .title(_, type):
+                            strongSelf.avatarNode.isAccessibilityElement = true
+                            strongSelf.avatarNode.accessibilityTraits = .button
                             switch type {
                             case .group:
                                 strongSelf.avatarNode.accessibilityLabel = item.presentationData.strings.GroupInfo_SetGroupPhoto
@@ -646,6 +649,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     } else {
                         strongSelf.isAccessibilityElement = true
                         strongSelf.avatarNode.isAccessibilityElement = false
+                        strongSelf.avatarNode.accessibilityLabel = nil
                     }
                     
                     strongSelf.layoutWidthAndNeighbors = (params, neighbors)
