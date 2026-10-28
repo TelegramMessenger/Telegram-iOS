@@ -238,7 +238,7 @@ public final class Button: Component {
                     return nil
                 }
                 if accessibilityIsInsideViewElementsSubtree(self) {
-                    // The chat screen keeps its accessibility as it was (its own pass).
+                    // Inside the chat's history subtree (see `accessibilityIsInsideViewElementsSubtree` for the boundary) the old result is kept.
                     return nil
                 }
                 let texts = self.contentView.accessibilityDisplayedContent().texts

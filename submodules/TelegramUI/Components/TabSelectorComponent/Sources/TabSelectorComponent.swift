@@ -219,7 +219,7 @@ public final class TabSelectorComponent: Component {
         override var isAccessibilityElement: Bool {
             get {
                 if accessibilityIsInsideViewElementsSubtree(self) {
-                    // The chat screen keeps its accessibility as it was (its own pass).
+                    // Inside the chat's history subtree (see `accessibilityIsInsideViewElementsSubtree` for the boundary) the old result is kept.
                     return false
                 }
                 return self.accessibilityLabel != nil

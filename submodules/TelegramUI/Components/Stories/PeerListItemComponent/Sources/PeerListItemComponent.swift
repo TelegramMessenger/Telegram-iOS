@@ -431,7 +431,8 @@ public final class PeerListItemComponent: Component {
     private final class ContainerButton: HighlightTrackingButton {
         weak var row: View?
         
-        /// The chat screen (its message input panel's results use this row) keeps its accessibility as it was.
+        /// Inside the chat's history subtree (`accessibilityIsInsideViewElementsSubtree`) the row keeps the plain button it
+        /// was. No chat part uses this row today; the guard keeps it so if one does.
         private var describesRow: Bool {
             return self.row != nil && !accessibilityIsInsideViewElementsSubtree(self)
         }

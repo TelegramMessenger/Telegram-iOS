@@ -195,8 +195,8 @@ public final class BalancedTextComponent: Component {
                 if self.explicitIsAccessibilityElement == false {
                     return []
                 }
-                // A link only when activating it does something (a tap handler is set). The chat screen keeps its
-                // accessibility as it was (its own pass).
+                // A link only when activating it does something (a tap handler is set). Inside the chat's history
+                // subtree (see `accessibilityIsInsideViewElementsSubtree` for the boundary) the old result is kept.
                 if self.textView.tapAttributeAction == nil || self.textView.accessibilityLinks().isEmpty || accessibilityIsInsideViewElementsSubtree(self) {
                     return .staticText
                 }

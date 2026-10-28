@@ -266,6 +266,10 @@ private final class WalletCollectibleHeaderButtonComponent: Component {
             self.addSubview(self.backgroundView)
             self.backgroundView.contentView.addSubview(self.button)
             self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            // VoiceOver: only the button (labelled with the title); the glass content's icon and title are drawing. An
+            // explicit list on this view: the glass's native effect view reports its content's image views even when they
+            // are hidden, and interactive glass swaps that effect view (and its content view) on press.
+            self.accessibilityElements = [self.button]
         }
 
         required init?(coder: NSCoder) {
@@ -1354,6 +1358,8 @@ private final class WalletCollectibleContentComponent: Component {
                 if let titleView = self.giftTitle.view {
                     if titleView.superview == nil {
                         titleView.isUserInteractionEnabled = false
+                        // The gift's name, the sheet's title.
+                        titleView.accessibilityTraits = .header
                         self.addSubview(titleView)
                     }
                     titleView.isHidden = false
@@ -1647,7 +1653,9 @@ private final class WalletCollectibleContentComponent: Component {
                             self.updateDisplayedOnProfile(gift: uniqueGift, displayed: displayed)
                         },
                         animateAlpha: false,
-                        animateScale: false
+                        animateScale: false,
+                        // VoiceOver: a check box, its tick as `.selected` (as check rows elsewhere).
+                        accessibility: ComponentAccessibility(label: environment.strings.Wallet_Collectible_AlsoShowInMyGifts, traits: displayed ? .selected : [])
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)

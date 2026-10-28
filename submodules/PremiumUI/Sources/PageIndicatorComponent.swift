@@ -71,6 +71,21 @@ public final class PageIndicatorComponent: Component {
             return self.pendingPageIndex ?? self.positionPageIndex
         }
         
+        /// The pager reports its new position on the next run loop turns; if by then it has not moved (it could not
+        /// show the page), the request is dropped so the value says the page that is shown.
+        private func clearPendingPageIfNotShown() {
+            let requestedIndex = self.pendingPageIndex
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: { [weak self] in
+                guard let self, let requestedIndex, self.pendingPageIndex == requestedIndex else {
+                    return
+                }
+                if self.positionPageIndex != requestedIndex {
+                    self.pendingPageIndex = nil
+                    self.pendingFromPageIndex = nil
+                }
+            })
+        }
+        
         public override var isAccessibilityElement: Bool {
             get {
                 return self.component?.accessibilityLabel != nil
@@ -110,6 +125,7 @@ public final class PageIndicatorComponent: Component {
             self.pendingFromPageIndex = self.positionPageIndex
             self.pendingPageIndex = index
             showPage(index)
+            self.clearPendingPageIfNotShown()
         }
         
         public override func accessibilityDecrement() {
@@ -120,6 +136,7 @@ public final class PageIndicatorComponent: Component {
             self.pendingFromPageIndex = self.positionPageIndex
             self.pendingPageIndex = index
             showPage(index)
+            self.clearPendingPageIfNotShown()
         }
         
         private let indicatorView: PageIndicatorView

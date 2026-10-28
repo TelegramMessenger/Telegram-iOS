@@ -269,10 +269,16 @@ public extension AccessibilityAreaNode {
     }
 }
 
-/// Whether `view` is inside a subtree that keeps UIKit's own accessibility (`accessibilityUsesViewElements`, today the
-/// chat screen, whose accessibility is a separate pass). Defaults added to shared components for the screen sweeps (a
-/// button reading its shown text, links as custom actions) keep their old result there. Runs only when an accessibility
-/// client asks.
+/// Whether `view` is inside a subtree that keeps UIKit's own accessibility (`accessibilityUsesViewElements`). Defaults
+/// added to shared components for the screen sweeps (a button reading its shown text, links as custom actions) keep their
+/// old result there.
+///
+/// Boundary: today only `ChatControllerNode.contentContainerNode` sets the flag, so this covers the chat's history, its
+/// navigation bar with the title accessory panels (business link, managing bot), the navigate buttons and the overlay
+/// context panels. The input-panel area (`inputPanelContainerNode`, `inputContextPanelContainer`, the panels that replace
+/// the input such as tag search or "Premium required") lies outside it, on the new collector like the rest of the app:
+/// there these defaults apply (an unlabelled button there now reads its text). Sheets presented over the chat are
+/// outside it too. Mostly called from accessibility getters, so it runs only when an accessibility client asks.
 public func accessibilityIsInsideViewElementsSubtree(_ view: UIView) -> Bool {
     var current: UIView? = view
     while let value = current {
