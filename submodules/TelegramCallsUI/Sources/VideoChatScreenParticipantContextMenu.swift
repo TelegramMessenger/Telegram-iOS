@@ -255,6 +255,21 @@ extension VideoChatScreenComponent.View {
                     
                     f(.dismissWithoutContent)
                 })))
+                
+                var isChannel = false
+                if case let .channel(peer) = peer, case .broadcast = peer.info {
+                    isChannel = true
+                }
+                items.append(.action(ContextMenuActionItem(text: isChannel ? environment.strings.Conversation_ContextMenuOpenChannelProfile : environment.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] _, f in
+                    guard let self else {
+                        return
+                    }
+                    self.openPeerInfo(peer)
+                    
+                    f(.dismissWithoutContent)
+                })))
             
                 if case let .group(groupCall) = self.currentCall, (callState.canManageCall && !callState.adminIds.contains(peer.id)), peer.id != groupCall.peerId {
                     items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
@@ -425,6 +440,28 @@ extension VideoChatScreenComponent.View {
                     return
                 }
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil))
+            }
+        })
+    }
+    
+    func openPeerInfo(_ peer: EnginePeer) {
+        guard let environment = self.environment, let currentCall = self.currentCall else {
+            return
+        }
+        guard let controller = environment.controller() as? VideoChatScreenV2Impl, let navigationController = controller.parentNavigationController else {
+            return
+        }
+        let context = currentCall.accountContext
+        let avatarInitiallyExpanded = videoChatParticipantProfileAvatarInitiallyExpanded(hasProfilePhoto: peer.smallProfileImage != nil, isTablet: environment.deviceMetrics.type == .tablet)
+        controller.dismiss(completion: { [weak navigationController] in
+            Queue.mainQueue().after(0.1) {
+                guard let navigationController else {
+                    return
+                }
+                guard let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: avatarInitiallyExpanded, fromChat: false, requestsContext: nil) else {
+                    return
+                }
+                navigationController.pushViewController(infoController)
             }
         })
     }
@@ -801,6 +838,12 @@ extension VideoChatScreenComponent.View {
             }
         }))
     }
+}
+
+/// A participant's profile opens with the avatar expanded when there is a photo to expand, except on a
+/// tablet, as the chat header's profile does.
+func videoChatParticipantProfileAvatarInitiallyExpanded(hasProfilePhoto: Bool, isTablet: Bool) -> Bool {
+    return hasProfilePhoto && !isTablet
 }
 
 private final class ParticipantExtractedContentSource: ContextExtractedContentSource {
