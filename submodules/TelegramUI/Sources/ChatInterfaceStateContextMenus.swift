@@ -1806,17 +1806,23 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !channel.isMonoForum, !(message.media.first is TelegramMediaAction), !isReplyThreadHead, !isMigrated {
+        if let message = messages.first, let copyLinkKind = chatMessageCopyLinkKind(message: message), let channel = message.peers[message.id.peerId] as? TelegramChannel, !isReplyThreadHead, !isMigrated {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 var threadMessageId: EngineMessage.Id?
-                if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
+                // A direct-messages conversation is a sublist keyed by the user's peer id, not a reply thread.
+                if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation, copyLinkKind != .directMessages {
                     threadMessageId = replyThreadMessage.effectiveMessageId
                 }
                 let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
                 |> map { result -> String? in
-                    return result
+                    switch copyLinkKind {
+                    case .channelMessage:
+                        return result
+                    case .directMessages:
+                        return directMessagesMessageLink(exportedLink: result, messageId: message.id)
+                    }
                 }
                 |> deliverOnMainQueue).startStandalone(next: { link in
                     if let link = link {
@@ -1825,7 +1831,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
                         var warnAboutPrivate = false
-                        if case .peer = chatPresentationInterfaceState.chatLocation {
+                        if copyLinkKind == .directMessages {
+                            warnAboutPrivate = true
+                        } else if case .peer = chatPresentationInterfaceState.chatLocation {
                             if channel.addressName == nil {
                                 warnAboutPrivate = true
                             }
