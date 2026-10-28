@@ -51,7 +51,8 @@ public final class WidgetHarnessListHost {
     /// The rotated surface the root view hosts, as `ChatHistoryListNodeImpl` is in the chat: the π rotation is the
     /// wrapper's, the backend stays at identity with `rotated` set.
     public let node: ASDisplayNode
-    private let listView: ChatHistoryListViewBackend
+    /// Internal for the tests that reach the backend's scroll engine through `@testable` imports.
+    let listView: ChatHistoryListViewBackend
     private let context: AccountContext
     private var messages: [EngineRawMessage] = []
     private var paths: [EngineMessage.Id: String] = [:]

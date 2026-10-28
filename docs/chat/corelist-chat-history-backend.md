@@ -1233,9 +1233,12 @@ fresh history node has `pinToTopStableId == nil`, so opening a chat with an answ
 fires it on the first view.
 
 **Release is permanent for that answer**, and is an event rather than a measurement: finger-down
-(`engine.onWillBeginDragging`), the pinned row leaving the collection, or a full replace. Dragging away
-mid-stream and scrolling back does **not** re-pin — only a new pinned message does. That is
-`ListViewImpl`'s behaviour, and it is why nothing here infers release from geometry.
+(`engine.onWillBeginDragging`), a jump the list holds landing on another message (a tap on a reply), the pinned row
+leaving the collection, or a full replace. Dragging away mid-stream and scrolling back does **not** re-pin — only a
+new pinned message does. That is `ListViewImpl`'s behaviour, and it is why nothing here infers release from geometry.
+The held jump is not: `ListViewImpl` keeps no jump (the chat never sets `experimentalSnapScrollToItem`), so there the
+next pass after any jump re-snaps to the pin. Here a held jump ends it (the user, 2026-10-29: while a scrolled-to
+message is held, a widget resizing keeps its own edge, which a pin pulling the list back would undo).
 
 **The slack still has to be computed inside the pass, and that is why it lives in CoreList.** It
 depends on the measured heights of the rows above the pin, which change on every streamed token — and

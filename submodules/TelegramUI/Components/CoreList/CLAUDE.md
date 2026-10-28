@@ -129,9 +129,11 @@ Two mechanisms answer two questions (cf. `ListViewImpl`'s `experimentalSnapScrol
 
 - **`holdsPinnedRow`, a latch: WHERE the row goes.** Engaged by `scrollTo` at `lowestPinnedItemIndex` (one whose
   `pinsRow` is set, the default); released, **permanently** for that pin, on a user-driven scroll
-  (`engine.onWillBeginDragging`, or a `scroll(by:)` that can move at the presented position), the row leaving, or a
-  full replace. Programmatic writes keep it. While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below
-  `scrollTo`, above `preserveVisibleContent`), placed from its own height only (no loading precondition).
+  (`engine.onWillBeginDragging`, or a `scroll(by:)` that can move at the presented position), a scroll hold arming on
+  another row (the user jumped elsewhere; `testAHeldJumpToAnotherRowReleasesThePin`), the row leaving, or a full
+  replace. Programmatic writes keep it; a jump that holds nothing (a yielding landing on the newest edge) keeps it too.
+  While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below `scrollTo`, above
+  `preserveVisibleContent`), placed from its own height only (no loading precondition).
 - **`bottomEdgePinSlack`, top-inset slack: is there ROOM.** Positive only while content above the pin is
   shorter than the viewport; `max(0, …)`-clamped; read from intra-window offsets and folded into the
   effective top inset at `buildWindow`'s `topEdge`, `loadedEdgeRange`'s `minimum` and
@@ -184,6 +186,8 @@ above `preserveVisibleContent`). Keyed by identity, never index.
 - Released by: a drag beginning (`onWillBeginDragging`; physics: `.began` after hysteresis, or at once on
   moving content — a tap keeps it), any later `scrollTo`, the identity leaving, a full replace,
   `rebuildFromScratch`, `releaseScrollHold()`, a `scroll(by:)` that can move at the presented position.
+- Arming one on a row other than the pinned row releases the pin latch, so the two never hold at once (the pin
+  latch, which `resolveAnchor` ranks above the hold, would otherwise undo the jump on the next pass).
 
 While held, `buildWindow` skips the underfill alignments and loaded-top pin; `heldWindowSlack` turns their
 gaps into scroll room (`holdSlack`, both edges, ≥0, measured against the unfolded edges), folded into

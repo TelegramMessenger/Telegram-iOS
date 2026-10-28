@@ -135,6 +135,9 @@ public enum CoreListAnchorMode: Equatable {
 /// it), by a `scroll(by:)` that can move at the presented position, by any later `scrollTo` (a holding
 /// one arms a new hold), by the row leaving the collection, by a full replace, and by
 /// `releaseScrollHold()`.
+///
+/// Arming a hold on a row other than the pinned row releases the pin latch (`holdsPinnedRowAtBottomEdge`), which
+/// would otherwise put the pinned row back on the edge on the next pass.
 public struct CoreListScrollHold {
     public enum Edge {
         /// `viewportInsets.top` — under the chat's π rotation, the input-panel edge.
@@ -556,9 +559,9 @@ public final class CoreVirtualListView: UIView {
     ///
     /// Engaged by an explicit `scrollTo` at the pinned index whose `pinsRow` is set (the default; a
     /// target that only keeps a row in place clears it); released on finger-down, by a `scroll(by:)`
-    /// that can move at the presented position, on the pinned row leaving the collection, and on a full
-    /// replace. Release is PERMANENT for that pin — scrolling back to the edge does not re-engage it,
-    /// matching `ListViewImpl`.
+    /// that can move at the presented position, by a holding `scrollTo` that arms its hold on another
+    /// row, on the pinned row leaving the collection, and on a full replace. Release is PERMANENT for
+    /// that pin — scrolling back to the edge does not re-engage it, matching `ListViewImpl`.
     ///
     /// This answers WHERE the pinned row goes. `bottomEdgePinSlack` answers whether the list has
     /// scroll ROOM to rest there, and is deliberately independent of this flag.
@@ -1933,6 +1936,12 @@ public final class CoreVirtualListView: UIView {
                                   hold: hold,
                                   distance: landedMinY + hold.rowPoint(landed.frame.height, landed.view)
                                       - holdEdgeY(hold.edge))
+                // A held jump to another row ends the pin: the user went somewhere else, and the latch, which
+                // `resolveAnchor` ranks above the hold, would put the pinned row back on the edge on the next pass.
+                // Only where a hold arms: a landing that yields to the newest edge holds nothing and keeps the pin.
+                if scrollTo.index != lowestPinnedItemIndex {
+                    holdsPinnedRow = false
+                }
             }
         }
         retireHoldSlack()

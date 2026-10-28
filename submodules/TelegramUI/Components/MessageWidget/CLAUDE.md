@@ -51,11 +51,14 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   top already past the inset has reached it, so it stays and the widget grows downward (the user's call: the inset is
   a ceiling, never crossed); a shrink at the bottom keeps the bottom. "At the bottom" is the settled list at its newest
   end, an overscroll hold included. **While the list holds a pinned row** (the user's message while a bot streams its
-  reply, until a drag; CoreList's `holdsPinnedRowAtBottomEdge`) there is no resize target at all: every pass re-places
+  reply, until a drag or until the chat holds a jump to another message, which ends the pin: under a held jump the
+  widget's edge wins, the user's call of 2026-10-29, `testUnderAPinnedPostAHeldJumpLetsAWidgetKeepItsEdge`; CoreList's
+  `holdsPinnedRowAtBottomEdge`) there is no resize target at all: every pass re-places
   that row, so a target that moved it would see it jump back on the next pass. The pin anchors the pass and every
   widget grows away from it, a bottom anchor included (`testUnderAPinnedPostATopAnchoredBubbleKeepsItsTop`,
   `testUnderAPinnedPostABottomAnchoredBubbleLeavesThePinInPlace`). A resize target never arms the pin
-  (`CoreListScrollTarget.pinsRow` false): aimed at a released pin's row, it would arm it again. Three rules around it,
+  (`CoreListScrollTarget.pinsRow` false): aimed at a released pin's row, it would arm it again
+  (`testAResizeDoesNotPinAReleasedPinnedPostAgain`). Three rules around it,
   also the user's: a widget's **first height** after the 160 pt placeholder with nothing cached is placed as any new
   message is (at the bottom the chat stays at its bottom); the list **clamps at its ends** (a shrink that would need
   space past the end moves the edge instead); a bubble **off screen** leaves the screen still. The path: the widget

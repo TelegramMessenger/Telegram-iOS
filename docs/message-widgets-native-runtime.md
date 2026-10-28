@@ -1288,7 +1288,8 @@ M1d's, from the old runtime (spec §10.1):
   is a network request the widget would cause.
 - **At the chat's bottom a top-anchored widget grows upward** (the user, 2026-10-28): the chat stays at its bottom
   until the widget's top reaches the screen's top inset, and only the rest of the growth goes downward. And while the
-  chat holds a pinned message (a bot streaming its reply under the user's message, until a drag), a widget grows away
+  chat holds a pinned message (a bot streaming its reply under the user's message, until a drag or a held jump to
+  another message), a widget grows away
   from it whatever its anchor: a bottom-anchored one under it does not keep its bottom. sdk-v1 §5.6 keeps the anchored
   edge everywhere; the message widgets guide's "Which edge stays put" has the rules.
 - **There is no source cap** (V1): M1d's 256 KiB cap is gone with the inline `tgwidget` blocks and `.tgw` files it
