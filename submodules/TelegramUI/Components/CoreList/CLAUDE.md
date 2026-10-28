@@ -127,11 +127,11 @@ Observation only — pagination is caller-owned.
 Two mechanisms answer two questions (cf. `ListViewImpl`'s `experimentalSnapScrollToPinnedItem` +
 `calculatePinToEdgeTopInset`); merging them into one number is a known defect family.
 
-- **`holdsPinnedRow`, a latch: WHERE the row goes.** Engaged by `scrollTo` at `lowestPinnedItemIndex`;
-  released, **permanently** for that pin, on a user-driven scroll (`engine.onWillBeginDragging`, or a
-  `scroll(by:)` that can move at the presented position), the row leaving, or a full replace. Programmatic
-  writes keep it. While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below `scrollTo`,
-  above `preserveVisibleContent`), placed from its own height only (no loading precondition).
+- **`holdsPinnedRow`, a latch: WHERE the row goes.** Engaged by `scrollTo` at `lowestPinnedItemIndex` (one whose
+  `pinsRow` is set, the default); released, **permanently** for that pin, on a user-driven scroll
+  (`engine.onWillBeginDragging`, or a `scroll(by:)` that can move at the presented position), the row leaving, or a
+  full replace. Programmatic writes keep it. While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below
+  `scrollTo`, above `preserveVisibleContent`), placed from its own height only (no loading precondition).
 - **`bottomEdgePinSlack`, top-inset slack: is there ROOM.** Positive only while content above the pin is
   shorter than the viewport; `max(0, …)`-clamped; read from intra-window offsets and folded into the
   effective top inset at `buildWindow`'s `topEdge`, `loadedEdgeRange`'s `minimum` and
@@ -144,7 +144,9 @@ finger-down; a shrinking range would move content under the finger).
 
 `isStrictlyPinnedToBottomEdge` = latch + presented-frame check that the animation landed; the chat uses it
 to decide whether sending drops the pin (`ChatControllerLoadDisplayNode`). `holdsPinnedRowAtBottomEdge` is the latch
-alone, landed or not: the chat backend's message-widget resize targets read it, since every pass re-places the held row. `appendUntilPinnedRowLoaded`
+alone, landed or not: the chat backend makes no message-widget resize target while it holds, since every pass
+re-places the held row. Only a `scrollTo` with `pinsRow` (the default) arms the latch: a target that keeps a row in place
+passes false, or one aimed at a released pin's row would arm it again (`testATargetThatDoesNotPinLeavesAReleasedLatchReleased`). `appendUntilPinnedRowLoaded`
 runs only while disengaged and its `window.height < visibleArea` bound is correct — do not patch it.
 
 **A released anchor rides the EFFECTIVE top edge (`inset + slack`)**, so a streaming reply grows into the

@@ -220,7 +220,7 @@ There is no caption, and an older post sits above, so the probes are below the s
 
 The fixtures under `Fixtures/resize/` set their resize anchor first, then change by 120 pt once: on their first click
 (`grow-top`, `grow-bottom`, `shrink-top`; `grow-top-far` by 480 pt, so at the chat's bottom its top reaches the screen's
-top inset) or 2.5 s after loading (`timer-top`); `toggle-top` changes
+top inset; `grow-bottom-far` by 480 pt, past the room below a pinned post) or 2.5 s after loading (`timer-top`); `toggle-top` changes
 every 50 ms from its first pointerdown, 60 times, logging the count (a swipe that starts on it flings past a resizing
 widget, `testAFlingPastAResizingWidgetKeepsItsMomentum`). They are loaded only
 by `-widget-posts` (`WidgetHarnessLaunchOptions.posts`), so their timers never run in the all-fixtures set the other

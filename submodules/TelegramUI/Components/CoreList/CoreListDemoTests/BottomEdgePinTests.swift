@@ -551,6 +551,36 @@ final class BottomEdgePinTests: XCTestCase {
                        "the slack stays declared — the pin is still reachable")
     }
 
+    /// A target that only keeps a row where it is (the chat backend's message-widget resize target,
+    /// `CoreListChatHistoryBackend.keepingEdge`) is not a scroll TO the pin. Aimed at the pinned row after a drag released
+    /// the latch, it must not arm the latch again: the next pass would pull the row back to the edge, up to a screen away
+    /// from where the user scrolled it.
+    func testATargetThatDoesNotPinLeavesAReleasedLatchReleased() throws {
+        let fixture = self.fixture()
+        self.armPin(fixture)
+        XCTAssertTrue(fixture.listView.holdsPinnedRowAtBottomEdge, "precondition: the pin is armed")
+        fixture.beginUserDrag()
+        XCTAssertFalse(fixture.listView.holdsPinnedRowAtBottomEdge, "precondition: the drag released the pin")
+        fixture.scroll(to: -140)   // 100 up from the -240 min edge
+        let before = try XCTUnwrap(fixture.settledScreenY(identity: pinnedId))
+        XCTAssertEqual(before, 240, accuracy: 1e-6, "precondition: moved 100 off the pin")
+
+        // Keeps the pinned row exactly where it is (zero insets: the returned value is its screen Y).
+        fixture.listView.applyChanges(
+            scrollTo: CoreListScrollTarget(index: 1, pinsRow: false) { _, _ in before },
+            transition: .easeInOut(duration: 0))
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: pinnedId)), before, accuracy: 1e-6,
+                       "precondition: the target kept the row")
+        XCTAssertFalse(fixture.listView.holdsPinnedRowAtBottomEdge, "the target armed the pin again")
+
+        var items = fixture.listView.items
+        items.append(IdentifiableFixedHeightItem(id: UUID(), height: 50))
+        fixture.listView.applyChanges(items: items, transition: .easeInOut(duration: 0))
+
+        XCTAssertEqual(try XCTUnwrap(fixture.settledScreenY(identity: pinnedId)), before, accuracy: 1e-6,
+                       "the later pass pulled the row back to the pin: the target armed the latch again")
+    }
+
     // MARK: - Inset compensation against the EFFECTIVE edge
 
     /// The anchor keeps its distance from the effective top edge, not the raw one. While the pin is
