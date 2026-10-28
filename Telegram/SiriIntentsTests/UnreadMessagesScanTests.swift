@@ -13,6 +13,7 @@ final class UnreadMessagesScanTests: XCTestCase {
     private var store: TestPostbox!
     private var postbox: Postbox { return self.store.postbox }
 
+    private let me = IntentMessageFixtures.user(1000, firstName: "Me")
     private let alice = IntentMessageFixtures.user(1001, firstName: "Alice", phone: "15551234567")
     private let bob = IntentMessageFixtures.user(1002, firstName: "Bob", phone: "15557654321")
     private let ride = IntentMessageFixtures.group(2001, title: "Weekend Ride")
@@ -41,7 +42,20 @@ final class UnreadMessagesScanTests: XCTestCase {
     }
 
     private func incoming(_ id: Int32, in chat: Peer, from author: Peer, text: String, timestamp: Int32) -> StoreMessage {
-        return StoreMessage(id: MessageId(peerId: chat.id, namespace: Namespaces.Message.Cloud, id: id), customStableId: nil, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: author.id, text: text, attributes: [], media: [])
+        return self.stored(id, in: chat, from: author, text: text, timestamp: timestamp, flags: [.Incoming])
+    }
+
+    private func stored(_ id: Int32, in chat: Peer, from author: Peer, text: String, timestamp: Int32, flags: StoreMessageFlags) -> StoreMessage {
+        return StoreMessage(id: MessageId(peerId: chat.id, namespace: Namespaces.Message.Cloud, id: id), customStableId: nil, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: flags, tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: author.id, text: text, attributes: [], media: [])
+    }
+
+    private func seed(chat: Peer, peers: [Peer], messages: [StoreMessage], readUpTo: Int32, unread: Int32) {
+        self.transaction { transaction in
+            transaction.updatePeersInternal([chat] + peers, update: { _, updated in updated })
+            transaction.updatePeerChatListInclusion(chat.id, inclusion: .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: nil))
+            let _ = transaction.addMessages(messages, location: .UpperHistoryBlock)
+            transaction.resetIncomingReadStates([chat.id: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readUpTo, maxOutgoingReadId: 0, maxKnownId: messages.map { $0.id.id }.max() ?? 0, count: unread, markedUnread: false)]])
+        }
     }
 
     /// A chat in the main list whose incoming messages up to `readUpTo` are read.
@@ -58,7 +72,7 @@ final class UnreadMessagesScanTests: XCTestCase {
     }
 
     private func scan() -> [INMessage] {
-        return self.store.first(unreadMessages(postbox: self.postbox)) ?? []
+        return self.store.first(unreadMessages(postbox: self.postbox, accountPeerId: self.me.id)) ?? []
     }
 
     func testUnreadPrivateMessageIsFound() {
@@ -100,6 +114,42 @@ final class UnreadMessagesScanTests: XCTestCase {
         self.seed(chat: self.ride, author: self.bob, messages: [(20, "newer")], readUpTo: 0, startingAt: 1_700_000_100)
 
         XCTAssertEqual(self.scan().map { $0.content }, ["newer", "older"], self.storeState([self.alice, self.ride]))
+    }
+
+    func testOwnMessagesAboveTheReadMarkerAreNotReported() {
+        let base: Int32 = 1_700_000_000
+        self.seed(chat: self.alice, peers: [self.me], messages: [
+            self.incoming(10, in: self.alice, from: self.alice, text: "dinner tonight?", timestamp: base),
+            self.stored(11, in: self.alice, from: self.me, text: "sure, where?", timestamp: base + 1, flags: []),
+            self.incoming(12, in: self.alice, from: self.alice, text: "the usual place", timestamp: base + 2)
+        ], readUpTo: 10, unread: 1)
+
+        XCTAssertEqual(self.scan().map { $0.content }, ["the usual place"], self.storeState([self.alice, self.me]))
+    }
+
+    func testOwnGroupMessageAboveTheReadMarkerIsNotReported() {
+        let base: Int32 = 1_700_000_000
+        self.seed(chat: self.ride, peers: [self.me, self.alice, self.bob], messages: [
+            self.incoming(20, in: self.ride, from: self.bob, text: "who's in on Sunday?", timestamp: base),
+            self.stored(21, in: self.ride, from: self.me, text: "me, leaving at 9", timestamp: base + 1, flags: []),
+            self.incoming(22, in: self.ride, from: self.alice, text: "same", timestamp: base + 2),
+            self.incoming(23, in: self.ride, from: self.bob, text: "see you there", timestamp: base + 3)
+        ], readUpTo: 20, unread: 2)
+
+        XCTAssertEqual(self.scan().map { $0.content }, ["see you there", "same"], self.storeState([self.ride, self.me]))
+    }
+
+    func testReminderInSavedMessagesIsReported() {
+        let base: Int32 = 1_700_000_000
+        self.seed(chat: self.me, peers: [], messages: [
+            self.stored(30, in: self.me, from: self.me, text: "parking: level 3", timestamp: base, flags: []),
+            self.stored(31, in: self.me, from: self.me, text: "call mum", timestamp: base + 1, flags: [.WasScheduled, .CountedAsIncoming])
+        ], readUpTo: 0, unread: 1)
+
+        let messages = self.scan()
+
+        XCTAssertEqual(messages.map { $0.content }, ["call mum"], self.storeState([self.me]))
+        XCTAssertNil(messages.first?.groupName)
     }
 
     /// The store as the scan would see it, for failure messages.

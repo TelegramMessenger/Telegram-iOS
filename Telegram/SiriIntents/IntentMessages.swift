@@ -21,12 +21,25 @@ func intentMessageIdentifier(_ id: MessageId) -> String {
     return "\(id.peerId.toInt64())_\(id.namespace)_\(id.id)"
 }
 
+func intentMessageIsReadable(_ message: Message, accountPeerId: PeerId) -> Bool {
+    if message.flags.contains(.Incoming) {
+        return true
+    }
+    return message.id.peerId == accountPeerId && message.flags.contains(.WasScheduled)
+}
+
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func getMessages(account: Account, ids: [MessageId]) -> Signal<[INMessage], NoError> {
     return account.postbox.transaction { transaction -> [INMessage] in
         var messages: [INMessage] = []
         for id in ids {
-            if let message = transaction.getMessage(id).flatMap(messageWithTelegramMessage) {
+            guard let telegramMessage = transaction.getMessage(id) else {
+                continue
+            }
+            if !intentMessageIsReadable(telegramMessage, accountPeerId: account.peerId) {
+                continue
+            }
+            if let message = messageWithTelegramMessage(telegramMessage) {
                 messages.append(message)
             }
         }
@@ -85,6 +98,7 @@ func firstSettledValue<T>(_ signal: Signal<T, NoError>, isSettled: @escaping (T)
 
 /// The views the unread scan reads: the main chat list, and one chat's newest messages.
 struct UnreadMessagesViews {
+    var accountPeerId: PeerId
     var chatList: Signal<ChatListView, NoError>
     var history: (PeerId, MessageHistoryViewReadState?) -> Signal<MessageHistoryView, NoError>
 }
@@ -99,6 +113,7 @@ private let unreadMessagesSettleTimeout: Double = 3.0
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     return unreadMessages(views: UnreadMessagesViews(
+        accountPeerId: account.peerId,
         chatList: firstSettledValue(account.viewTracker.tailChatListView(groupId: .root, count: 20) |> map { $0.0 }, isSettled: { view in
             return !view.entries.contains(where: { entry in
                 if case .HoleEntry = entry {
@@ -115,8 +130,9 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
 
 /// The same scan over the raw store, for tests; a store without holes reads the same.
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
-func unreadMessages(postbox: Postbox) -> Signal<[INMessage], NoError> {
+func unreadMessages(postbox: Postbox, accountPeerId: PeerId) -> Signal<[INMessage], NoError> {
     return unreadMessages(views: UnreadMessagesViews(
+        accountPeerId: accountPeerId,
         chatList: postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents()) |> take(1) |> map { $0.0 },
         history: { peerId, fixedCombinedReadStates in
             return postbox.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: .combinedLocation) |> take(1) |> map { $0.0 }
@@ -169,6 +185,9 @@ func unreadMessages(views: UnreadMessagesViews) -> Signal<[INMessage], NoError> 
                 var unreadEntries = 0
                 var unconvertible = 0
                 for entry in view.entries {
+                    if !intentMessageIsReadable(entry.message, accountPeerId: views.accountPeerId) {
+                        continue
+                    }
                     var isRead = true
                     if let readState = readState {
                         isRead = readState.state.isIncomingMessageIndexRead(entry.message.index)
