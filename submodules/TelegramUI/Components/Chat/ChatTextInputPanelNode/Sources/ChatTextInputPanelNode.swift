@@ -1557,6 +1557,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if transition.isAnimated {
             self.animatingTransition = true
             self.startButton.highlightEnabled = false
+            // It lies over the menu button until it has faded out: taps must reach the menu button, not send /start again.
+            self.startButton.isUserInteractionEnabled = false
         }
         
         let sourceButtonFrame = self.startButton.frame
@@ -1611,6 +1613,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 self.startButton.clipsToBounds = false
                 self.startButton.cornerRadius = 0.0
                 self.startButton.highlightEnabled = true
+                self.startButton.isUserInteractionEnabled = true
             }
             
             // The morphed button is solid, the menu button glass: reveal the menu button underneath by fading the
