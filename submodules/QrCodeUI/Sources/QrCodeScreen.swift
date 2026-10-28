@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -673,8 +672,7 @@ private final class QrCodeComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: "PlaneLogo"),
-                        loop: true,
-                        lottieSettings: .noAccountFallback
+                        loop: true
                     )),
                     environment: {},
                     containerSize: cutoutFrame.size

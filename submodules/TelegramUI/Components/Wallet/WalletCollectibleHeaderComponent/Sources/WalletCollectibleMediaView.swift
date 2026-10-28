@@ -4,7 +4,6 @@ import TelegramCore
 import TelegramPresentationData
 import ComponentFlow
 import LottieComponent
-import LottieSettings
 import WalletCollectibleImageComponent
 
 public final class WalletCollectibleMediaView: UIView {
@@ -69,8 +68,7 @@ public final class WalletCollectibleMediaView: UIView {
                     content: WalletRemoteLottieContent(context: context, file: lottie),
                     startingPosition: .begin,
                     size: size,
-                    loop: false,
-                    lottieSettings: context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: size

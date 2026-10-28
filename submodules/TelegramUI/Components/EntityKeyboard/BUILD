@@ -46,7 +46,6 @@ swift_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/GZip",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/lottie-ios:Lottie",
         "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
         "//submodules/TelegramUIPreferences",

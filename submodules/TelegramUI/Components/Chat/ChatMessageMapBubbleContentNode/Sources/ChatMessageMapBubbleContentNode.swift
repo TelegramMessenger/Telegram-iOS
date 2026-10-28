@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -32,7 +31,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var timeoutTimer: (SwiftSignalKit.Timer, Int32)?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
         self.pinNode = ChatMessageLiveLocationPositionNode()
@@ -40,7 +39,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.titleNode = TextNode()
         self.textNode = TextNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.imageNode)
         self.addSubnode(self.pinNode)

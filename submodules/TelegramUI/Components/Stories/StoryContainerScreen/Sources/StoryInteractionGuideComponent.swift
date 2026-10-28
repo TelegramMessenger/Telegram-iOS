@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -353,8 +352,7 @@ private final class GuideItemComponent: Component {
                         startingPosition: .begin,
                         size: CGSize(width: 60.0, height: 60.0),
                         renderingScale: UIScreen.main.scale,
-                        loop: false,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        loop: false
                     )
                 ),
                 environment: {},

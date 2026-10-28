@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -422,7 +421,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
         
-        self.playPauseIconNode = PlayPauseIconNode(lottieSettings: context.lottieRenderingSettings)
+        self.playPauseIconNode = PlayPauseIconNode()
         
         self.statusButtonNode = HighlightTrackingButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -2343,8 +2342,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    init(lottieSettings: LottieRenderingSettings) {
-        super.init(size: CGSize(width: 40.0, height: 40.0), lottieSettings: lottieSettings)
+    init() {
+        super.init(size: CGSize(width: 40.0, height: 40.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

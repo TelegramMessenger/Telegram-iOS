@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UniformTypeIdentifiers
 import UIKit
 import Display
@@ -718,7 +717,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.menuButtonClippingNode.clipsToBounds = true
         self.menuButtonClippingNode.isUserInteractionEnabled = false
         
-        self.menuButtonIconNode = MenuIconNode(lottieSettings: context.lottieRenderingSettings)
+        self.menuButtonIconNode = MenuIconNode()
         self.menuButtonIconNode.isUserInteractionEnabled = false
         self.menuButtonIconNode.customColor = presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor
         self.menuButtonTextNode = ImmediateTextNode()
@@ -2698,8 +2697,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "BinBlue"),
                     color: interfaceState.theme.chat.inputPanel.panelControlColor,
-                    startingPosition: .begin,
-                    lottieSettings: self.context?.lottieRenderingSettings ?? .noAccountFallback
+                    startingPosition: .begin
                 )),
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
@@ -2954,8 +2952,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         component: AnyComponent(LottieComponent(
                             content: LottieComponent.AppBundleContent(name: "BinRed"),
                             color: UIColor(rgb: 0xFF3B30),
-                            startingPosition: .begin,
-                            lottieSettings: self.context?.lottieRenderingSettings ?? .noAccountFallback
+                            startingPosition: .begin
                         )),
                         environment: {},
                         containerSize: CGSize(width: 40.0, height: 40.0)

@@ -42,7 +42,6 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [

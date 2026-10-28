@@ -302,7 +302,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayAudioPlayerControlsNode(account: context.account, engine: context.engine, accountManager: context.sharedContext.accountManager, presentationData: self.presentationData, status: context.sharedContext.mediaManager.musicMediaPlayerState, chatLocation: self.chatLocation, source: self.source, lottieSettings: context.lottieRenderingSettings)
+        self.controlsNode = OverlayAudioPlayerControlsNode(account: context.account, engine: context.engine, accountManager: context.sharedContext.accountManager, presentationData: self.presentationData, status: context.sharedContext.mediaManager.musicMediaPlayerState, chatLocation: self.chatLocation, source: self.source)
         self.controlsNode.getParentController = getParentController
         
         self.historyBackgroundNode = ASDisplayNode()

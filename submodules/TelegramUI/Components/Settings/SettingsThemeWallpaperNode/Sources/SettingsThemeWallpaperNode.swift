@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -362,7 +361,7 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
             if let current = self.animatedStickerNode {
                 animatedStickerNode = current
             } else {
-                animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 animatedStickerNode.started = { [weak self] in
                     self?.emojiImageNode.isHidden = true
                 }

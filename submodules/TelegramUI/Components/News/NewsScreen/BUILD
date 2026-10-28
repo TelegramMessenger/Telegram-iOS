@@ -27,7 +27,6 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatListTitleView",
         "//submodules/TelegramUI/Components/HorizontalTabsComponent",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
-        "//submodules/LottieSettings",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
         "//submodules/TelegramUI/Components/CoreListComponentHost",

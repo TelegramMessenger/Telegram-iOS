@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import TelegramCore
@@ -320,7 +319,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     }
                     
                     if self.animationNode == nil {
-                        let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
                         self.animationNode = animationNode
                         self.containerNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
                         animationNode.started = { [weak self] in

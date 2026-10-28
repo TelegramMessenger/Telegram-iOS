@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import AVFoundation
 import UIKit
 import AsyncDisplayKit
@@ -1474,7 +1473,6 @@ final class VideoChatScreenComponent: Component {
         
         func update(component: VideoChatScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
-            let lottieSettings = component.initialCall.accountContext.lottieRenderingSettings
             defer {
                 self.isUpdating = false
             }
@@ -2297,8 +2295,7 @@ final class VideoChatScreenComponent: Component {
                             name: "anim_profilemore"
                         ),
                         color: .white,
-                        size: CGSize(width: 34.0, height: 34.0),
-                        lottieSettings: lottieSettings
+                        size: CGSize(width: 34.0, height: 34.0)
                     )),
                     background: AnyComponent(
                         GlassBackgroundComponent(size: CGSize(width: navigationButtonDiameter, height: navigationButtonDiameter), cornerRadius: navigationButtonDiameter * 0.5, isDark: true, tintColor: .init(kind: .custom(style: .default, color: panelColor)))

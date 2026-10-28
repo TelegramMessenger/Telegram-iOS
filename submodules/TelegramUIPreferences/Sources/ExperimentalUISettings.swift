@@ -85,7 +85,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var useInputDecEngine: Bool
     public var coreListChatBackend: Bool
     public var inputDecTextBackend: Bool
-    public var forceRLottieBackend: Bool
     public var respectSystemMicrophone: Bool
     public var springSendAnimation: Bool
     /// Debug Settings ▸ "Wallet: fake transfers", offered to dev accounts only (and only honoured for them): a send
@@ -147,7 +146,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
             useInputDecEngine: false,
             coreListChatBackend: false,
             inputDecTextBackend: false,
-            forceRLottieBackend: false,
             respectSystemMicrophone: false,
             springSendAnimation: false,
             fakeWalletTransfers: false,
@@ -207,7 +205,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         useInputDecEngine: Bool,
         coreListChatBackend: Bool,
         inputDecTextBackend: Bool,
-        forceRLottieBackend: Bool,
         respectSystemMicrophone: Bool,
         springSendAnimation: Bool,
         fakeWalletTransfers: Bool,
@@ -265,7 +262,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.useInputDecEngine = useInputDecEngine
         self.coreListChatBackend = coreListChatBackend
         self.inputDecTextBackend = inputDecTextBackend
-        self.forceRLottieBackend = forceRLottieBackend
         self.respectSystemMicrophone = respectSystemMicrophone
         self.springSendAnimation = springSendAnimation
         self.fakeWalletTransfers = fakeWalletTransfers
@@ -329,7 +325,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.useInputDecEngine = try container.decodeIfPresent(Bool.self, forKey: "useInputDecEngine") ?? false
         self.coreListChatBackend = try container.decodeIfPresent(Bool.self, forKey: "coreListChatBackend") ?? false
         self.inputDecTextBackend = try container.decodeIfPresent(Bool.self, forKey: "inputDecTextBackend") ?? false
-        self.forceRLottieBackend = try container.decodeIfPresent(Bool.self, forKey: "forceRLottieBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
         self.springSendAnimation = try container.decodeIfPresent(Bool.self, forKey: "springSendAnimation") ?? false
         self.fakeWalletTransfers = try container.decodeIfPresent(Bool.self, forKey: "fakeWalletTransfers") ?? false
@@ -391,7 +386,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.useInputDecEngine, forKey: "useInputDecEngine")
         try container.encodeIfPresent(self.coreListChatBackend, forKey: "coreListChatBackend")
         try container.encodeIfPresent(self.inputDecTextBackend, forKey: "inputDecTextBackend")
-        try container.encodeIfPresent(self.forceRLottieBackend, forKey: "forceRLottieBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")
         try container.encodeIfPresent(self.springSendAnimation, forKey: "springSendAnimation")
         try container.encodeIfPresent(self.fakeWalletTransfers, forKey: "fakeWalletTransfers")

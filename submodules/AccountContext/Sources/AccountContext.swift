@@ -15,7 +15,6 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
-import LottieSettings
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -1823,11 +1822,6 @@ public protocol AccountContext: AnyObject {
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
     var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
-
-    /// Which Lottie rasterizer this account's renders should use. Resolved from
-    /// app configuration and the debug switch; see the implementation for the
-    /// precedence rule.
-    var lottieRenderingSettings: LottieRenderingSettings { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     

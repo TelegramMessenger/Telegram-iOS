@@ -8,7 +8,6 @@ import TelegramPresentationData
 import TelegramStringFormatting
 import MultilineTextComponent
 import LottieComponent
-import LottieSettings
 
 final class ShareScreenCollectibleInfoComponent: Component {
     let theme: PresentationTheme
@@ -176,8 +175,7 @@ final class ShareScreenCollectibleInfoComponent: Component {
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "anim_collectible_username"),
                     color: component.theme.list.itemAccentColor,
-                    loop: false,
-                    lottieSettings: .noAccountFallback
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 30.0)

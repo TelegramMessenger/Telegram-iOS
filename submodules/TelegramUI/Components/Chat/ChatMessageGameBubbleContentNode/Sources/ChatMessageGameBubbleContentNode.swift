@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -20,10 +19,10 @@ public final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNod
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.contentNode = ChatMessageAttachedContentNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] _ in

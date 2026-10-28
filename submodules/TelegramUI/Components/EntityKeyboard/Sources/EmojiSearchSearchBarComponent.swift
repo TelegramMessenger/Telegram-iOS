@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -508,8 +507,7 @@ final class EmojiSearchSearchBarComponent: Component {
                                 context: component.context,
                                 fileId: item.id
                             ),
-                            color: color,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            color: color
                         )),
                         environment: {},
                         containerSize: itemLayout.itemSize

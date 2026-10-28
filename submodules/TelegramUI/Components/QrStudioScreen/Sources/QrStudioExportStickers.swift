@@ -7,7 +7,6 @@ import AccountContext
 import AnimationCache
 import EmojiTextAttachmentView
 import LottieBinding
-import LottieSettings
 import GZip
 import AppBundle
 
@@ -33,7 +32,7 @@ final class QrStudioExportSticker {
 }
 
 func qrStudioDecodeExportPlane(pixelSide: Int) -> QrStudioExportSticker? {
-    guard pixelSide > 0, let url = getAppBundle().url(forResource: "PlaneLogoPlain", withExtension: "tgs"), let data = try? Data(contentsOf: url), let unpacked = TGGUnzipData(data, 5 * 1024 * 1024), let instance = makeLottieInstance(data: unpacked, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: .noAccountFallback), instance.frameCount > 0 else {
+    guard pixelSide > 0, let url = getAppBundle().url(forResource: "PlaneLogoPlain", withExtension: "tgs"), let data = try? Data(contentsOf: url), let unpacked = TGGUnzipData(data, 5 * 1024 * 1024), let instance = makeLottieInstance(data: unpacked, fitzModifier: .none, colorReplacements: nil), instance.frameCount > 0 else {
         return nil
     }
     let frameRate = max(1, Int(instance.frameRate))

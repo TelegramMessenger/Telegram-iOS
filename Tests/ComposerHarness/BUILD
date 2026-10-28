@@ -58,7 +58,6 @@ swift_library(
         "//submodules/TelegramUI/Components/DCTMultiAnimationRendererImpl",
         "//submodules/TextFormat",
         "//submodules/WalletContext",
-        "//submodules/LottieSettings",
         "//submodules/TelegramAudio",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/MusicAlbumArtResources",

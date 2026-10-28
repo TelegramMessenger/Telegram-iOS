@@ -20,7 +20,6 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/ComponentFlow",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",

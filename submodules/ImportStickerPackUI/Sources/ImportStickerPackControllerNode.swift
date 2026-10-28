@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -30,8 +29,8 @@ private struct StickerPackPreviewGridEntry: Comparable, Equatable, Identifiable 
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, lottieSettings: LottieRenderingSettings) -> StickerPackPreviewGridItem {
-        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isVerified: self.isVerified, lottieSettings: lottieSettings)
+    func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
+        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isVerified: self.isVerified)
     }
 }
 
@@ -40,12 +39,12 @@ private struct StickerPackPreviewGridTransaction {
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
     
-    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, lottieSettings: LottieRenderingSettings) {
+    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) {
          let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
         
         self.deletions = deleteIndices
-        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, theme: theme, lottieSettings: lottieSettings), previousIndex: $0.2) }
-        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, theme: theme, lottieSettings: lottieSettings)) }
+        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, theme: theme), previousIndex: $0.2) }
+        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, theme: theme)) }
     }
 }
 
@@ -431,7 +430,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, ASScroll
             }
             
             if !forceTitleUpdate {
-                transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme, lottieSettings: self.context.lottieRenderingSettings)
+                transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
             }
         }
         let itemCount = self.currentItems.count

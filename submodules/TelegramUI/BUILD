@@ -91,7 +91,6 @@ swift_library(
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/BuildConfigExtra:BuildConfigExtra",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/TelegramUpdateUI:TelegramUpdateUI",
         "//submodules/MergeLists:MergeLists",
         "//submodules/ActivityIndicator:ActivityIndicator",

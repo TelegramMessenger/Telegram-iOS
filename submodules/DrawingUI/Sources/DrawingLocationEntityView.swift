@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import SwiftSignalKit
@@ -306,7 +305,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             if let dimensions = file.dimensions {
                 if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                     if self.animationNode == nil {
-                        let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
                         animationNode.autoplay = false
                         self.animationNode = animationNode
                         animationNode.started = { [weak self, weak animationNode] in

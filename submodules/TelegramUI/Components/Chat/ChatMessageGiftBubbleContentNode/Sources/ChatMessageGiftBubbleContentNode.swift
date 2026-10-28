@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -143,7 +142,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var cachedTonImage: (UIImage, UIColor)?
     private var cachedGiftMessageBackgroundImage: (UIColor, CGSize, UIImage)?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
@@ -203,7 +202,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.alpha = 0.75
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
 
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
@@ -235,7 +234,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.moreTextNode.isUserInteractionEnabled = false
         self.moreTextNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.addSubnode(self.labelNode)
         
@@ -1642,7 +1641,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         strongSelf.buttonContentNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                                     }
                                     
-                                    buttonIconNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
+                                    buttonIconNode = DefaultAnimatedStickerNodeImpl()
                                     buttonIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: buttonIcon), width: 60, height: 60, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                                     strongSelf.buttonContentNode.addSubnode(buttonIconNode)
                                     strongSelf.buttonIconNode = buttonIconNode

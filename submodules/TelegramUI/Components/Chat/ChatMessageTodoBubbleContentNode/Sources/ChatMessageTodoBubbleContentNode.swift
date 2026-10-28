@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1046,7 +1045,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.textNode = TextNodeWithEntities()
         self.textNode.textNode.isUserInteractionEnabled = false
         self.textNode.textNode.contentMode = .topLeft
@@ -1069,7 +1068,7 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.statusNode = ChatMessageDateAndStatusNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.typeNode)

@@ -2,7 +2,6 @@ import Foundation
 import CoreGraphics
 import SwiftSignalKit
 import LottieBinding
-import LottieSettings
 import GZip
 import AppBundle
 
@@ -20,7 +19,7 @@ public final class NewsStickerFrames {
     }
 
     /// Calls back on the main queue; renders at most once per process.
-    public static func load(settings: LottieRenderingSettings, completion: @escaping (NewsStickerFrames?) -> Void) {
+    public static func load(completion: @escaping (NewsStickerFrames?) -> Void) {
         if let shared = self.shared {
             completion(shared)
             return
@@ -30,7 +29,7 @@ public final class NewsStickerFrames {
             return
         }
         Queue.concurrentDefaultQueue().async {
-            let frames = self.render(settings: settings)
+            let frames = self.render()
             Queue.mainQueue().async {
                 self.shared = frames
                 let callbacks = self.pending
@@ -42,8 +41,8 @@ public final class NewsStickerFrames {
         }
     }
 
-    private static func render(settings: LottieRenderingSettings) -> NewsStickerFrames? {
-        guard let path = getAppBundle().path(forResource: "news_drop", ofType: "tgs"), let packed = try? Data(contentsOf: URL(fileURLWithPath: path)), let data = TGGUnzipData(packed, 1024 * 1024), let instance = makeLottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "news_drop", settings: settings) else {
+    private static func render() -> NewsStickerFrames? {
+        guard let path = getAppBundle().path(forResource: "news_drop", ofType: "tgs"), let packed = try? Data(contentsOf: URL(fileURLWithPath: path)), let data = TGGUnzipData(packed, 1024 * 1024), let instance = makeLottieInstance(data: data, fitzModifier: .none, colorReplacements: nil) else {
             return nil
         }
         let size = self.pixelSize

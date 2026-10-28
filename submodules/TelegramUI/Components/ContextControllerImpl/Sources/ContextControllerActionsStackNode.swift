@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -418,8 +417,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                     content: LottieComponent.AppBundleContent(name: iconAnimation.name),
                     color: titleColor,
                     startingPosition: iconAnimation.loop ? .begin : .end,
-                    loop: iconAnimation.loop,
-                    lottieSettings: self.context?.lottieRenderingSettings ?? .noAccountFallback
+                    loop: iconAnimation.loop
                 )),
                 environment: {},
                 containerSize: animatedIconSize

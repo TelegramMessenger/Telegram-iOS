@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ManagedAnimationNode
@@ -142,7 +141,7 @@ final class SemanticStatusNodeIconContext: SemanticStatusNodeStateContext {
         self.icon = icon
         
         if [.play, .pause].contains(icon) {
-            self.animationNode = PlayPauseIconNode(lottieSettings: .noAccountFallback)
+            self.animationNode = PlayPauseIconNode()
             self.animationNode?.imageUpdated = { [weak self] image in
                 if let strongSelf = self {
                     strongSelf.iconImage = image
@@ -187,8 +186,8 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .play
     
-    init(lottieSettings: LottieRenderingSettings) {
-        super.init(size: CGSize(width: 36.0, height: 36.0), lottieSettings: lottieSettings)
+    init() {
+        super.init(size: CGSize(width: 36.0, height: 36.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
     }

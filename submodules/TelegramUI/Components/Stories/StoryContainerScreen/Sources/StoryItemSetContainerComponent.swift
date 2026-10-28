@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -4086,8 +4085,7 @@ public final class StoryItemSetContainerComponent: Component {
                             ),
                             color: .white,
                             startingPosition: .end,
-                            size: CGSize(width: 30.0, height: 30.0),
-                            lottieSettings: component.context.lottieRenderingSettings
+                            size: CGSize(width: 30.0, height: 30.0)
                         )),
                         effectAlignment: .center,
                         minSize: CGSize(width: 33.0, height: 64.0),
@@ -4145,8 +4143,7 @@ public final class StoryItemSetContainerComponent: Component {
                         ),
                         color: .white,
                         startingPosition: .end,
-                        size: CGSize(width: 30.0, height: 30.0),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: 30.0, height: 30.0)
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: 33.0, height: 64.0),

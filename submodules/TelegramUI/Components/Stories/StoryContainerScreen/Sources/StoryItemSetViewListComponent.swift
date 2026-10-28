@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -1101,8 +1100,7 @@ public final class StoryItemSetViewListComponent: Component {
                         content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
                         color: nil,
                         startingPosition: .begin,
-                        size: CGSize(width: 140.0, height: 140.0),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: 140.0, height: 140.0)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 140.0, height: 140.0)

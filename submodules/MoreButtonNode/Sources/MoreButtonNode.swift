@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -18,10 +17,10 @@ public final class MoreButtonNode: ASDisplayNode {
         private let duration: Double = 0.21
         public var iconState: State = .search
         
-        init(size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool, lottieSettings: LottieRenderingSettings) {
+        init(size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool) {
             self.encircled = encircled
             
-            super.init(size: size, lottieSettings: lottieSettings)
+            super.init(size: size)
             
             if self.encircled {
                 self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 90, endFrame: 90), duration: 0.0))
@@ -126,7 +125,7 @@ public final class MoreButtonNode: ASDisplayNode {
         self.containerNode.animateScale = false
         
         self.buttonNode = HighlightableButtonNode()
-        self.iconNode = MoreIconNode(size: size, encircled: encircled, lottieSettings: .noAccountFallback)
+        self.iconNode = MoreIconNode(size: size, encircled: encircled)
         self.iconNode.customColor = self.theme.chat.inputPanel.panelControlColor
         
         super.init()

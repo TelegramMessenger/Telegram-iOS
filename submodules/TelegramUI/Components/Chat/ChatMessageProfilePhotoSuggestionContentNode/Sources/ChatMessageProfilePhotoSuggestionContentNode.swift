@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -39,7 +38,7 @@ public class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleCont
     
     private let fetchDisposable = MetaDisposable()
             
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 24.0
@@ -59,7 +58,7 @@ public class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleCont
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.subtitleNode)

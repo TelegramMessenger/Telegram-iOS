@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/AccountContext",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/AnimationUI",
         "//submodules/AppBundle",

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ContextUI
-import LottieSettings
 import ManagedAnimationNode
 import TelegramPresentationData
 import PeerInfoPaneNode
@@ -19,8 +18,8 @@ private final class MoreIconNode: ManagedAnimationNode {
     private let duration: Double = 0.21
     private var iconState: MoreIconNodeState = .more
     
-    init(lottieSettings: LottieRenderingSettings) {
-        super.init(size: CGSize(width: 30.0, height: 30.0), lottieSettings: lottieSettings)
+    init() {
+        super.init(size: CGSize(width: 30.0, height: 30.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
     }
@@ -136,7 +135,7 @@ final class PeerInfoNavigationIconButton: HighlightableButtonNode {
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         self.contextSourceNode = ContextReferenceContentNode()
-        self.animationNode = MoreIconNode(lottieSettings: .noAccountFallback)
+        self.animationNode = MoreIconNode()
         self.animationNode.customColor = .white
 
         super.init(pointerStyle: .insetRectangle(0.0, 0.0))

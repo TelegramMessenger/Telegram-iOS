@@ -12,7 +12,6 @@ swift_library(
     deps = [
         "//submodules/UrlWhitelist",
         "//submodules/Display",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AsyncDisplayKit",
         "//submodules/ComponentFlow",
         "//submodules/Components/ViewControllerComponent",

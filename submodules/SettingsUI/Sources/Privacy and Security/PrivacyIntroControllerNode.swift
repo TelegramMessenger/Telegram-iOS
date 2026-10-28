@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -58,7 +57,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.proceedAction = proceedAction
         
         self.iconNode = ASImageNode()
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.titleNode = ASTextNode()
         self.textNode = ASTextNode()

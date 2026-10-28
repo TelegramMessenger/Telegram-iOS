@@ -342,8 +342,7 @@ private final class AttachButtonComponent: CombinedComponent {
                         ),
                         tintColor: tintColor,
                         isAnimating: component.isAnimating,
-                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale)
                     ),
                     availableSize: iconSize,
                     transition: context.transition
@@ -362,8 +361,7 @@ private final class AttachButtonComponent: CombinedComponent {
                         ),
                         tintColor: tintColor,
                         isAnimating: component.isAnimating,
-                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: iconSize.width * animationScale, height: iconSize.height * animationScale)
                     ),
                     availableSize: iconSize,
                     transition: context.transition

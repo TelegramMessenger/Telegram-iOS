@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1841,7 +1840,7 @@ final class ActionSheetAnimationAndTextItemNode: ActionSheetItemNode {
         self.theme = theme
         self.defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: .noAccountFallback)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearDownloadList"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

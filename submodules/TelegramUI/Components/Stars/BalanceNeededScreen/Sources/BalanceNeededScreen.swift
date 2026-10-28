@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -110,8 +109,7 @@ private final class BalanceNeededSheetContentComponent: Component {
                     color: nil,
                     startingPosition: .begin,
                     size: iconSize,
-                    loop: true,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: true
                 )),
                 environment: {},
                 containerSize: iconSize

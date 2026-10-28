@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import CoreText
 import Metal
@@ -688,7 +687,7 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
         }
     }
 
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
@@ -770,7 +769,7 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
         self.ribbonTextMaskNode.displayWithoutProcessing = true
         self.ribbonTextMaskNode.image = UIImage(bundleImageName: "Wallet/MessageRibbon")
 
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.cardNode.addSubnode(self.cardBackgroundNode)
         self.cardNode.addSubnode(self.amountNode)

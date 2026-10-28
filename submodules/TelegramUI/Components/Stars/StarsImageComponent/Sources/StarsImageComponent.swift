@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -887,7 +886,7 @@ public final class StarsImageComponent: Component {
                 if let current = self.animationNode {
                     animationNode = current
                 } else {
-                    animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: component.context.lottieRenderingSettings)
+                    animationNode = DefaultAnimatedStickerNodeImpl()
                     animationNode.autoplay = true
                     animationNode.visibility = true
                     containerNode.view.addSubview(animationNode.view)

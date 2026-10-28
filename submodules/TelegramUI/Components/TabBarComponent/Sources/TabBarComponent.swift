@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import TelegramPresentationData
@@ -1147,8 +1146,7 @@ private final class ItemComponent: Component {
                             placeholderColor: nil,
                             startingPosition: .end,
                             size: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale)),
-                            loop: false,
-                            lottieSettings: .noAccountFallback
+                            loop: false
                         )),
                         environment: {},
                         containerSize: CGSize(width: floor(48.0 * animationScale), height: floor(48.0 * animationScale))
@@ -1234,8 +1232,7 @@ private final class ItemComponent: Component {
                             placeholderColor: nil,
                             startingPosition: .end,
                             size: CGSize(width: 48.0, height: 48.0),
-                            loop: false,
-                            lottieSettings: .noAccountFallback
+                            loop: false
                         )),
                         environment: {},
                         containerSize: CGSize(width: 48.0, height: 48.0)

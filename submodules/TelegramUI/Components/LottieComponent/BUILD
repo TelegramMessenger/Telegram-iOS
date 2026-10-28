@@ -14,7 +14,6 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AppBundle",
         "//submodules/GZip",

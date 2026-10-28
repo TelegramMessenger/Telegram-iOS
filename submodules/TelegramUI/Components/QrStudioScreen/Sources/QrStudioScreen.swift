@@ -894,11 +894,6 @@ final class QrStudioScreenComponent: Component {
         }
 
         private func showToast(_ icon: QrStudioToastIcon, _ text: String, action: QrStudioToast.Action? = nil) {
-            if self.toastView.superview == nil {
-                if let component = self.component {
-                    self.toastView.lottieSettings = component.context.lottieRenderingSettings
-                }
-            }
             self.presentationContainer.addSubview(self.toastView)
             self.toastView.show(QrStudioToast(icon: icon, text: text, action: action), isLight: self.look.backdrop.isLight, glassTint: QrStudioGlass.tint(self.look.backdrop))
             self.layoutToast()

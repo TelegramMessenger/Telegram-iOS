@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1263,8 +1262,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
                             ),
                             color: .white,
                             size: CGSize(width: 34.0, height: 34.0),
-                            playOnce: moreButtonPlayOnce,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            playOnce: moreButtonPlayOnce
                         )
                     )),
                     action: { [weak state] view in

@@ -11,7 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/Display",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/WalletContext",

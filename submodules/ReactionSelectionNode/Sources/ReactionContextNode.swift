@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -2763,7 +2762,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let additionalAnimation = additionalAnimation {
-            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode = additionalAnimationNodeValue
             if self.didTriggerExpandedReaction {
                 if incomingMessage {
@@ -3477,9 +3476,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         if let additionalAnimationResource {
             let additionalAnimationNodeValue: AnimatedStickerNode
             if self.useDirectRendering {
-                additionalAnimationNodeValue = DirectAnimatedStickerNode(lottieSettings: context.lottieRenderingSettings)
+                additionalAnimationNodeValue = DirectAnimatedStickerNode()
             } else {
-                additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
             }
             additionalAnimationNode = additionalAnimationNodeValue
             
@@ -3508,9 +3507,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             if let effectURL {
                 let additionalAnimationNodeValue: AnimatedStickerNode
                 if self.useDirectRendering {
-                    additionalAnimationNodeValue = DirectAnimatedStickerNode(lottieSettings: context.lottieRenderingSettings)
+                    additionalAnimationNodeValue = DirectAnimatedStickerNode()
                 } else {
-                    additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+                    additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
                 }
                 additionalAnimationNode = additionalAnimationNodeValue
                 
@@ -3916,7 +3915,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
         
         if let additionalAnimation = additionalAnimation {
-            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+            let additionalAnimationNodeValue = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode = additionalAnimationNodeValue
             if didTriggerExpandedReaction {
                 if incomingMessage {

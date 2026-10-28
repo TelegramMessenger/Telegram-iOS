@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -685,8 +684,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                                 startingPosition: !component.cameraState.flashModeDidChange ? .end : .begin,
                                 size: CGSize(width: 40.0, height: 40.0),
                                 loop: false,
-                                playOnce: flashAction,
-                                lottieSettings: component.context.lottieRenderingSettings
+                                playOnce: flashAction
                             )
                         )
                     )
