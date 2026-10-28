@@ -5568,7 +5568,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.accessibilityIsPinned = item.isPinned && promoInfo == nil
                     strongSelf.accessibilityIsMuted = isMuted
-                    strongSelf.accessibilityDateText = dateText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : dateText
+                    // The text the date slot draws: no date on archive rows, the Ad/PSA label on promo rows.
+                    let displayedDateText = dateAttributedString?.string ?? ""
+                    strongSelf.accessibilityDateText = displayedDateText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : displayedDateText
                     strongSelf.accessibilityDraftText = accessibilityDraftText
                     strongSelf.accessibilityActivityText = strongSelf.inputActivitiesNode.alpha.isZero ? nil : strongSelf.inputActivitiesNode.displayedText
                     switch currentCredibilityIconContent {
