@@ -383,50 +383,13 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 }
 
 func apiEphemeralMessagePeerIds(_ message: Api.EphemeralMessage) -> [PeerId] {
-    switch message {
-    case let .ephemeralMessage(messageData):
-        let (_, _, fromId, peerId, receiverId, _, _, _, _, _, _, replyTo) = (messageData.flags, messageData.id, messageData.fromId, messageData.peerId, messageData.receiverId, messageData.topMsgId, messageData.date, messageData.message, messageData.entities, messageData.media, messageData.replyMarkup, messageData.replyTo)
-        var result: [PeerId] = []
-
-        func appendUnique(_ peerId: PeerId) {
-            if !result.contains(peerId) {
-                result.append(peerId)
-            }
-        }
-
-        if let peerId {
-            appendUnique(peerId.peerId)
-        }
-        appendUnique(fromId.peerId)
-        if receiverId != 0 {
-            appendUnique(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(receiverId)))
-        }
-        if let replyTo {
-            switch replyTo {
-            case let .messageReplyHeader(messageReplyHeaderData):
-                if let replyToPeerId = messageReplyHeaderData.replyToPeerId {
-                    appendUnique(replyToPeerId.peerId)
-                }
-                if let replyFrom = messageReplyHeaderData.replyFrom {
-                    switch replyFrom {
-                    case let .messageFwdHeader(messageFwdHeaderData):
-                        if let fromId = messageFwdHeaderData.fromId {
-                            appendUnique(fromId.peerId)
-                        }
-                        if let savedFromPeer = messageFwdHeaderData.savedFromPeer {
-                            appendUnique(savedFromPeer.peerId)
-                        }
-                        if let savedFromId = messageFwdHeaderData.savedFromId {
-                            appendUnique(savedFromId.peerId)
-                        }
-                    }
-                }
-            case let .messageReplyStoryHeader(messageReplyStoryHeaderData):
-                appendUnique(messageReplyStoryHeaderData.peer.peerId)
-            }
-        }
-        return result
+    // Only the chat is required. Ephemeral messages are not returned by getDifference,
+    // so a missing sender (e.g. a bot the user never opened, sent via updateShort without
+    // users) must not fail state verification, or the message is lost.
+    if let peerId = message.peerId {
+        return [peerId]
     }
+    return []
 }
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: ReferencedReplyMessageIds, generalIds: [MessageId])? {
