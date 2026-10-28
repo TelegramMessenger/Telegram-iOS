@@ -1567,6 +1567,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         let sourceButtonCornerRadius = self.startButton.buttonCornerRadius
         transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: self.menuButton.cornerRadius)
+        // The button's glass chrome and shimmer keep its full-width size: clip them to the shrinking background.
+        self.startButton.clipsToBounds = true
+        self.startButton.cornerRadius = sourceButtonCornerRadius
+        transition.updateCornerRadius(node: self.startButton, cornerRadius: self.menuButton.cornerRadius)
         transition.animateTransformScale(layer: self.startButton.titleNode.layer, from: CGPoint(x: 1.0, y: 1.0), to: CGPoint(x: 0.4, y: 0.4))
         Queue.mainQueue().justDispatch {
             self.startButton.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -1598,6 +1602,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             self?.startButton.titleNode.position = sourceButtonTextPosition
             self?.startButton.titleNode.layer.removeAllAnimations()
             self?.startButton.buttonBackgroundNode.cornerRadius = sourceButtonCornerRadius
+            self?.startButton.clipsToBounds = false
+            self?.startButton.cornerRadius = 0.0
             self?.startButton.highlightEnabled = true
         })
     }
@@ -1855,11 +1861,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             hasMenuButton = false
         }
         
-        let buttonInset: CGFloat = max(leftInset, 16.0)
-        let maximumButtonWidth: CGFloat = min(430.0, width)
-        let buttonHeight = self.startButton.updateLayout(width: maximumButtonWidth - buttonInset * 2.0, transition: transition)
-        let buttonSize = CGSize(width: maximumButtonWidth - buttonInset * 2.0, height: buttonHeight)
-        self.startButton.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: 6.0), size: buttonSize)
+        // While the Start button morphs into the menu button (`animateBotButtonOutToMenu`), its frame belongs to that
+        // animation: any layout in the meantime (the chat updates as /start is sent) would stretch it back into a
+        // full-width bar holding the menu button's title until the morph completes.
+        if displayBotStartButton || !self.animatingTransition {
+            let buttonInset: CGFloat = max(leftInset, 16.0)
+            let maximumButtonWidth: CGFloat = min(430.0, width)
+            let buttonHeight = self.startButton.updateLayout(width: maximumButtonWidth - buttonInset * 2.0, transition: transition)
+            let buttonSize = CGSize(width: maximumButtonWidth - buttonInset * 2.0, height: buttonHeight)
+            self.startButton.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: 6.0), size: buttonSize)
+        }
         
         var hideOffset: CGPoint = .zero
         if displayBotStartButton {
