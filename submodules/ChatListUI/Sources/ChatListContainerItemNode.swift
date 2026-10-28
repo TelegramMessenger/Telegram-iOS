@@ -322,9 +322,9 @@ final class ChatListContainerItemNode: ASDisplayNode {
         
         var listInsets = insets
         var additionalTopInset: CGFloat = 0.0
-        // The top panel's title and dismiss button keep to the band beside a side strip (iPhone Duo); equal side insets
-        // keep them on the full width.
-        let topPanelSideInsets = insets.left != insets.right ? UIEdgeInsets(top: 0.0, left: insets.left, bottom: 0.0, right: insets.right) : UIEdgeInsets()
+        // The top panel's capsule keeps to the safe insets, as the navigation bar's folder tabs above it do (and so to the
+        // band beside iPhone Duo's side strip).
+        let topPanelSideInsets = UIEdgeInsets(top: 0.0, left: insets.left, bottom: 0.0, right: insets.right)
         
         if let chatFolderUpdates = self.chatFolderUpdates {
             let topPanel: TopPanelItem
