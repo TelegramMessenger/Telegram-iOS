@@ -87,6 +87,13 @@ previous ones.
 `MediaChromeLayout`, where the article editor's glass media buttons go: a tile's "…" keeps clear of the
 container's "+" and layout toggle (#28), checked over the real album layouts (`MosaicCellFrames`).
 
+`//submodules/TelegramPresentationData:TelegramPresentationDataTests` covers the theme settings' storage and the
+bubble-free mode's themes. With bubbles on, the stored bytes are master's (captured before the bubble-free fields
+existed). No builtin raw value an older build does not know reaches `"t"` or `"theme_v2"`, which older builds and both
+extensions force-unwrap at launch. The bubble-free theme is built and recoloured as the app does. Building a
+`PresentationTheme` works in the test process (`makePresentationTheme` takes a `MediaBox` on a temporary directory);
+`PresentationStrings` does not, so no `PresentationData` and no theme names in these tests.
+
 The RichTextEditor SwiftPM package keeps its own suite (`swift test` / `Scripts/iostest.sh`). MtProtoKit's suite
 (`//submodules/MtProtoKit:MtProtoKitTests`) also runs on macOS: `swift test` in `submodules/MtProtoKit` (the package's
 test target puts the module's private headers on its search path).

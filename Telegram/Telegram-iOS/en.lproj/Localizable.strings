@@ -4740,6 +4740,8 @@ Sorry for the inconvenience.";
 "Conversation.SendMessage.ScheduleMessage" = "Schedule Message";
 
 "Appearance.ThemeCarouselTintedNight" = "Tinted Night";
+"Appearance.ThemeCarouselNeutral" = "Neutral";
+"Appearance.ThemeCarouselNeutralNight" = "Neutral Night";
 "Appearance.ThemeCarouselNewNight" = "Night";
 
 "Channel.AdminLog.MessageRankName" = "changed custom title for %1$@:\n%2$@";
@@ -7118,6 +7120,7 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";
 
 "Appearance.NightTheme" = "Night Mode";
+"Appearance.BubbleMode" = "Bubble Mode";
 
 "Map.ETADays_0" = "%@ days";
 "Map.ETADays_1" = "%@ day";

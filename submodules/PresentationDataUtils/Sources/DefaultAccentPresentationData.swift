@@ -4,9 +4,9 @@ import TelegramPresentationData
 private func themeWithDefaultAccent(_ theme: PresentationTheme) -> PresentationTheme {
     let defaultTheme: PresentationTheme
     switch theme.referenceTheme {
-    case .day, .dayClassic:
+    case .day, .dayClassic, .neutral:
         defaultTheme = defaultPresentationTheme
-    case .night:
+    case .night, .neutralNight:
         defaultTheme = defaultDarkColorPresentationTheme
     case .nightAccent:
         return defaultDarkTintedPresentationTheme
