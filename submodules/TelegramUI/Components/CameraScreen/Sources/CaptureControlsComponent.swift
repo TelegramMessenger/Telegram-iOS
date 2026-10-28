@@ -986,6 +986,8 @@ final class CaptureControlsComponent: Component {
             return self.bottomCloseButton?.view
         }
 
+        private var bottomSettingsButtonIsHidden: Bool = false
+        
         private func updateBottomButtonUnderlay(_ current: UIView?, frame: CGRect, isHidden: Bool, transition: ComponentTransition) -> UIView? {
             let underlay: UIView
             if let current {
@@ -1829,14 +1831,19 @@ final class CaptureControlsComponent: Component {
                 transition.setPosition(view: bottomSettingsButtonView, position: bottomSettingsButtonFrame.center)
                 
                 transition.setScale(view: bottomSettingsButtonView, scale: hidesBottomSettingsButton ? 0.01 : 1.0)
-                transition.setAlpha(view: bottomSettingsButtonView, alpha: hidesBottomSettingsButton ? 0.0 : 1.0)
                 // Out of the accessibility tree while it is scaled out (its inner button was still listed under the hidden
-                // glass view); shown again before it animates in. No visual change: it is transparent then.
+                // glass view): hidden once it has faded out, shown again before it animates in. No visual change: it is
+                // transparent then.
+                self.bottomSettingsButtonIsHidden = hidesBottomSettingsButton
                 if !hidesBottomSettingsButton {
                     bottomSettingsButtonView.isHidden = false
-                } else if transition.animation.isImmediate {
-                    bottomSettingsButtonView.isHidden = true
                 }
+                transition.setAlpha(view: bottomSettingsButtonView, alpha: hidesBottomSettingsButton ? 0.0 : 1.0, completion: { [weak self, weak bottomSettingsButtonView] _ in
+                    guard let self, let bottomSettingsButtonView, self.bottomSettingsButtonIsHidden else {
+                        return
+                    }
+                    bottomSettingsButtonView.isHidden = true
+                })
                 self.bottomSettingsButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomSettingsButtonUnderlay, frame: bottomSettingsButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomSettingsButton || self.isHandedOffToEditor, transition: transition)
             }
             

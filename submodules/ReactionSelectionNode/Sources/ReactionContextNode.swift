@@ -246,8 +246,8 @@ private final class TitleLabelView: UIView {
     }
 }
 
-/// The name VoiceOver reads for a reaction in the picker: the emoji itself, a custom emoji's alt emoji, or the paid
-/// (star) and Premium items by name.
+/// The name VoiceOver reads for a reaction in the picker: the emoji itself, or the paid (star) and Premium items by
+/// name. A custom emoji's alt emoji is looked up by `ReactionNode` when VoiceOver asks, not here (it decodes the file).
 func reactionContextItemAccessibilityLabel(_ item: ReactionContextItem, strings: PresentationStrings) -> String? {
     switch item {
     case let .staticEmoji(emoji):
@@ -257,14 +257,10 @@ func reactionContextItemAccessibilityLabel(_ item: ReactionContextItem, strings:
         case let .builtin(value):
             return value
         case .custom:
-            for attribute in reactionItem.stillAnimation._parse().attributes {
-                if case let .CustomEmoji(_, _, alt, _) = attribute, !alt.isEmpty {
-                    return alt
-                }
-            }
+            // Read from the file only when VoiceOver asks (ReactionNode.accessibilityLabel).
             return nil
         case .stars:
-            return strings.VoiceOver_Reactions_Stars
+            return strings.Stars_Intro_Transaction_Reaction_Title
         }
     case .premium:
         return strings.VoiceOver_Reactions_Premium
