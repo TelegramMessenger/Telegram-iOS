@@ -2064,6 +2064,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         if self.accessibilityActivateAction != nil || (item.action != nil && item.selectable) {
             traits.insert(.button)
         }
+        if traits.isEmpty {
+            // A row with no action (the owner in an admins list) is text, not a traitless element.
+            traits.insert(.staticText)
+        }
         if !item.enabled {
             traits.insert(.notEnabled)
         }

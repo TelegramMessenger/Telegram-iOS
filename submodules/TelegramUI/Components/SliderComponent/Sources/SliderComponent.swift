@@ -170,6 +170,17 @@ public final class SliderComponent: Component {
     }
     
     final class SliderView: UISlider {
+        /// VoiceOver: a value worded by the host (UISlider would read its percentage, ignoring an assigned value).
+        var customAccessibilityValue: String?
+        
+        override var accessibilityValue: String? {
+            get {
+                return self.customAccessibilityValue ?? super.accessibilityValue
+            } set(value) {
+                self.customAccessibilityValue = value
+            }
+        }
+
         
     }
     

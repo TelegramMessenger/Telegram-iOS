@@ -922,18 +922,22 @@ public final class SparseItemGrid: ASDisplayNode {
             let listed = onScreen.insetBy(dx: 0.0, dy: -rowHeight)
             var elements: [Any] = []
             var validIds = Set<AnyHashable>()
+            // The index range of the listed rect, in index order; items are looked up by index (a binary search), so a
+            // query costs the listed items only.
             var listedItems: [(index: Int, item: Item, visibleItem: VisibleItem)] = []
-            for (id, visibleItem) in self.visibleItems {
-                let frame = visibleItem.frame
-                if frame.isEmpty || !frame.intersects(listed) {
-                    continue
+            let range = layout.visibleItemRange(for: listed, count: items.count)
+            if range.maxIndex >= range.minIndex {
+                for index in range.minIndex ... range.maxIndex {
+                    guard let item = items.item(at: index), let visibleItem = self.visibleItems[item.id] else {
+                        continue
+                    }
+                    let frame = visibleItem.frame
+                    if frame.isEmpty || !frame.intersects(listed) {
+                        continue
+                    }
+                    listedItems.append((index, item, visibleItem))
                 }
-                guard let item = items.items.first(where: { $0.id == id }) else {
-                    continue
-                }
-                listedItems.append((item.index, item, visibleItem))
             }
-            listedItems.sort(by: { $0.index < $1.index })
             for (_, item, visibleItem) in listedItems {
                 if let view = visibleItem.view {
                     // A view-backed item (a list row) describes itself.

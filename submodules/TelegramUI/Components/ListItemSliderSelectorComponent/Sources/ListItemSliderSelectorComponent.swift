@@ -96,15 +96,20 @@ public final class ListItemSliderSelectorComponent: Component {
     public let theme: PresentationTheme
     public let content: Content
     public let preferNative: Bool
+    /// VoiceOver: the slider's name (usually its section's title). With it the slider is one adjustable element whose
+    /// value is the title it shows (or the selected stop), and the texts around it are not read separately.
+    public let accessibilityLabel: String?
     
     public init(
         theme: PresentationTheme,
         content: Content,
-        preferNative: Bool = false
+        preferNative: Bool = false,
+        accessibilityLabel: String? = nil
     ) {
         self.theme = theme
         self.content = content
         self.preferNative = preferNative
+        self.accessibilityLabel = accessibilityLabel
     }
     
     public static func ==(lhs: ListItemSliderSelectorComponent, rhs: ListItemSliderSelectorComponent) -> Bool {
@@ -115,6 +120,9 @@ public final class ListItemSliderSelectorComponent: Component {
             return false
         }
         if lhs.preferNative != rhs.preferNative {
+            return false
+        }
+        if lhs.accessibilityLabel != rhs.accessibilityLabel {
             return false
         }
         return true
@@ -336,6 +344,21 @@ public final class ListItemSliderSelectorComponent: Component {
                 }
             }
             
+            var accessibilityValueText: String?
+            switch component.content {
+            case let .discrete(discrete):
+                accessibilityValueText = mainTitleValue ?? (discrete.values.indices.contains(discrete.selectedIndex) ? discrete.values[discrete.selectedIndex] : nil)
+            case let .continuous(continuous):
+                accessibilityValueText = continuous.title
+            }
+            // With a name the slider speaks for the whole item: its stop labels and title are not read on their own.
+            let hidesTexts = component.accessibilityLabel != nil
+            for (_, title) in self.titles {
+                title.view?.accessibilityElementsHidden = hidesTexts
+            }
+            self.mainTitle?.view?.accessibilityElementsHidden = hidesTexts
+            self.secondaryTitle?.view?.accessibilityElementsHidden = hidesTexts
+            
             let sliderSize: CGSize
             switch component.content {
             case let .discrete(discrete):
@@ -357,7 +380,9 @@ public final class ListItemSliderSelectorComponent: Component {
                         useNative: component.preferNative,
                         trackBackgroundColor: component.theme.list.controlSecondaryColor,
                         trackForegroundColor: component.theme.list.itemAccentColor,
-                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6)
+                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6),
+                        accessibilityLabel: component.accessibilityLabel,
+                        accessibilityValue: component.accessibilityLabel != nil ? accessibilityValueText : nil
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -379,7 +404,9 @@ public final class ListItemSliderSelectorComponent: Component {
                         useNative: component.preferNative,
                         trackBackgroundColor: component.theme.list.controlSecondaryColor,
                         trackForegroundColor: component.theme.list.itemAccentColor,
-                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6)
+                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6),
+                        accessibilityLabel: component.accessibilityLabel,
+                        accessibilityValue: component.accessibilityLabel != nil ? accessibilityValueText : nil
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)

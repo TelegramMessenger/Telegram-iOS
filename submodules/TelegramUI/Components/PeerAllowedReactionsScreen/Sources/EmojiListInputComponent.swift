@@ -157,6 +157,58 @@ final class EmojiListInputComponent: Component {
             }
         }
         
+        // VoiceOver: the field is one element. It reads the reactions it shows (each as its emoji) and, empty, its
+        // placeholder; activation opens the emoji input with the caret at the end, as a tap past the last item does.
+        // The reactions are layers and were not read at all; the placeholder text was read on its own.
+        override var isAccessibilityElement: Bool {
+            get {
+                return self.component != nil
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityLabel: String? {
+            get {
+                return self.component?.placeholder
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityValue: String? {
+            get {
+                guard let component = self.component else {
+                    return nil
+                }
+                let emojis: [String] = component.reactionItems.compactMap { item -> String? in
+                    if case let .builtin(value) = item.reaction {
+                        return value
+                    }
+                    if let alt = item.file.customEmojiAlt, !alt.isEmpty {
+                        return alt
+                    }
+                    return nil
+                }
+                return emojis.isEmpty ? nil : emojis.joined(separator: " ")
+            } set(value) {
+            }
+        }
+        
+        override var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                return .button
+            } set(value) {
+            }
+        }
+        
+        override func accessibilityActivate() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            component.setCaretPosition(component.reactionItems.count)
+            component.activateInput()
+            return true
+        }
+        
         func caretRect() -> CGRect? {
             if !self.caretIndicator.isHidden {
                 return self.caretIndicator.frame
