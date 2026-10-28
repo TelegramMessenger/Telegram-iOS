@@ -523,7 +523,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                         arguments.openTagColorPremium()
                     }
                 },
-                sectionId: self.section
+                sectionId: self.section,
+                strings: presentationData.strings
             )
         case .tagColorFooter:
             return ItemListTextItem(presentationData: presentationData, text: .plain(presentationData.strings.ChatListFilter_TagSectionFooter), sectionId: self.section)

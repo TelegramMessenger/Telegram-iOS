@@ -375,7 +375,8 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     
                     var value = ""
                     if let string = appAttributedString?.string {
-                        value += string
+                        // "Telegram Widgets " (an empty version) must not read with a stray space before the comma.
+                        value += string.trimmingCharacters(in: .whitespaces)
                     }
                     if let string = locationAttributedString?.string {
                         if !value.isEmpty {

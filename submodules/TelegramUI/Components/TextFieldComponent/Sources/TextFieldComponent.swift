@@ -1625,7 +1625,13 @@ public final class TextFieldComponent: Component {
                 if let placeholderView = placeholder.view {
                     if placeholderView.superview == nil {
                         placeholderView.isUserInteractionEnabled = false
+                        // VoiceOver: the field is labelled by its placeholder; the placeholder text is not read again.
+                        placeholderView.isAccessibilityElement = false
+                        placeholderView.accessibilityElementsHidden = true
                         self.textView.insertSubview(placeholderView, at: 0)
+                    }
+                    if self.textView.accessibilityLabel != placeholderValue.string {
+                        self.textView.accessibilityLabel = placeholderValue.string
                     }
                     placeholderTransition.setPosition(view: placeholderView, position: placeholderFrame.center)
                     placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)

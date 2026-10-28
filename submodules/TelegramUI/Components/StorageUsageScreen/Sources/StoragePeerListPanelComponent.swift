@@ -45,7 +45,7 @@ private final class PeerListItemComponent: Component {
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
-    let contextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
+    let contextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void
     
     init(
         context: AccountContext,
@@ -57,7 +57,7 @@ private final class PeerListItemComponent: Component {
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
-        contextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
+        contextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -211,6 +211,8 @@ private final class PeerListItemComponent: Component {
             component.action(peer)
         }
         
+        private var moreAccessibilityAction: UIAccessibilityCustomAction?
+        
         func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
@@ -234,6 +236,33 @@ private final class PeerListItemComponent: Component {
             self.state = state
             
             let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
+            
+            // VoiceOver: the row is one button (name, size; selected while picked in edit mode); its long-press menu
+            // is the "More" custom action, offered while that gesture is on.
+            self.containerButton.isAccessibilityElement = true
+            self.containerButton.accessibilityLabel = component.title
+            self.containerButton.accessibilityValue = component.label
+            if case .editing(true) = component.selectionState {
+                self.containerButton.accessibilityTraits = [.button, .selected]
+            } else {
+                self.containerButton.accessibilityTraits = .button
+            }
+            if component.peer != nil {
+                if self.moreAccessibilityAction == nil {
+                    // Created once per row view (the strings are read here, not on every update).
+                    let title = component.context.sharedContext.currentPresentationData.with { $0 }.strings.Common_More
+                    self.moreAccessibilityAction = UIAccessibilityCustomAction(name: title, actionHandler: { [weak self] _ in
+                        guard let self, self.isGestureEnabled, let component = self.component, let peer = component.peer else {
+                            return false
+                        }
+                        component.contextAction(peer, self.extractedContainerView, nil)
+                        return true
+                    })
+                }
+                self.containerButton.accessibilityCustomActions = self.moreAccessibilityAction.flatMap { [$0] }
+            } else {
+                self.containerButton.accessibilityCustomActions = nil
+            }
             
             let height: CGFloat = 52.0
             let verticalInset: CGFloat = 1.0
@@ -422,14 +451,14 @@ final class StoragePeerListPanelComponent: Component {
     let items: Items?
     let selectionState: StorageUsageScreenComponent.SelectionState?
     let peerAction: (EnginePeer) -> Void
-    let contextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
+    let contextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void
 
     init(
         context: AccountContext,
         items: Items?,
         selectionState: StorageUsageScreenComponent.SelectionState?,
         peerAction: @escaping (EnginePeer) -> Void,
-        contextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
+        contextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.items = items
@@ -524,8 +553,10 @@ final class StoragePeerListPanelComponent: Component {
             self.scrollView = ScrollViewImpl()
 
             self.listBackgroundView = UIImageView()
+            self.listBackgroundView.accessibilityElementsHidden = true // decoration
             self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
             self.listMaskView = UIImageView()
+            self.listMaskView.accessibilityElementsHidden = true // decoration
             self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(UIColor.white.cgColor)

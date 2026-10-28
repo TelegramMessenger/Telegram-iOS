@@ -148,6 +148,52 @@ public final class BalancedTextComponent: Component {
             self.addSubview(self.textView)
         }
         
+        // VoiceOver: one static-text element reading the text shown (see MultilineTextComponent.View); a call site's
+        // own settings win.
+        private var explicitIsAccessibilityElement: Bool?
+        private var explicitAccessibilityLabel: String??
+        private var explicitAccessibilityTraits: UIAccessibilityTraits?
+        
+        override public var isAccessibilityElement: Bool {
+            get {
+                if let explicitIsAccessibilityElement = self.explicitIsAccessibilityElement {
+                    return explicitIsAccessibilityElement
+                }
+                if self.isHidden || self.alpha < 0.01 {
+                    return false
+                }
+                return !(self.accessibilityLabel ?? "").isEmpty
+            } set(value) {
+                self.explicitIsAccessibilityElement = value
+            }
+        }
+        
+        override public var accessibilityLabel: String? {
+            get {
+                if let explicitAccessibilityLabel = self.explicitAccessibilityLabel {
+                    return explicitAccessibilityLabel
+                }
+                if self.explicitIsAccessibilityElement == false {
+                    // Turned off by the call site: nothing to announce from here either.
+                    return nil
+                }
+                return self.textView.attributedText?.string
+            } set(value) {
+                self.explicitAccessibilityLabel = .some(value)
+            }
+        }
+        
+        override public var accessibilityTraits: UIAccessibilityTraits {
+            get {
+                if let explicitAccessibilityTraits = self.explicitAccessibilityTraits {
+                    return explicitAccessibilityTraits
+                }
+                return self.explicitIsAccessibilityElement == false ? [] : .staticText
+            } set(value) {
+                self.explicitAccessibilityTraits = value
+            }
+        }
+        
         required public init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }

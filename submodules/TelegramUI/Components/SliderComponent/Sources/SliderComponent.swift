@@ -175,6 +175,27 @@ public final class SliderComponent: Component {
     
     public final class View: UIView {
         private var nativeSliderView: SliderView?
+        
+        // A host that turns touches off (`isUserInteractionEnabled = false`, a disabled row) also makes the slider
+        // dimmed and not adjustable for VoiceOver, as it is for touch.
+        override public var isUserInteractionEnabled: Bool {
+            didSet {
+                if oldValue != self.isUserInteractionEnabled {
+                    self.updateAccessibilityEnabled()
+                }
+            }
+        }
+        
+        private func updateAccessibilityEnabled() {
+            guard let slider: UIView = (self.nativeSliderView as UIView?) ?? (self.sliderView as UIView?) else {
+                return
+            }
+            if self.isUserInteractionEnabled {
+                slider.accessibilityTraits.remove(.notEnabled)
+            } else {
+                slider.accessibilityTraits.insert(.notEnabled)
+            }
+        }
         private let nativeTrackBackgroundView = UIView()
         private let nativeTrackForegroundView = UIView()
         private var sliderView: TGPhotoEditorSliderView?
@@ -437,6 +458,7 @@ public final class SliderComponent: Component {
                     slider.accessibilityValue = accessibilityValue
                 }
             }
+            self.updateAccessibilityEnabled()
 
             return size
         }

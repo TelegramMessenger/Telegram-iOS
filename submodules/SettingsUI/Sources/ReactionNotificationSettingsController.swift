@@ -329,7 +329,7 @@ public func reactionNotificationSettingsController(
                     }
                     return settings
                 }).start()
-            }))
+            }, accessibilityIsSelected: currentValue == value))
         }
 
         let sourceTag: ReactionNotificationSettingsEntryTag = isMessages ? .messages : .stories

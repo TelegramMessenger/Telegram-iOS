@@ -255,6 +255,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         self.lockView = ChatListTitleLockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
         self.lockView.isHidden = true
         self.lockView.isUserInteractionEnabled = false
+        self.lockView.accessibilityElementsHidden = true
         
         self.proxyNode = ChatTitleProxyNode(theme: self.theme)
         self.proxyNode.isHidden = true

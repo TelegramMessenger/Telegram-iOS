@@ -990,6 +990,12 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
             themeReference = settings.automaticThemeSwitchSetting.theme
         }
         
+        // VoiceOver: the moon/sun button previews the themes at night; it reads "Night Mode" with its state.
+        switchNode?.isAccessibilityElement = true
+        switchNode?.accessibilityLabel = presentationData.strings.Appearance_NightTheme
+        switchNode?.accessibilityValue = nightModePreview ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
+        switchNode?.accessibilityTraits = .button
+        
         let rightNavigationButton: ItemListNavigationButton?
         if !presentationData.autoNightModeTriggered, let switchNode = switchNode {
             rightNavigationButton = ItemListNavigationButton(content: .node(switchNode), style: .regular, enabled: true, action: {

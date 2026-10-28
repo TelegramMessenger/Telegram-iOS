@@ -873,6 +873,31 @@ final class StorageUsageScreenComponent: Component {
             self.keepScreenActiveDisposable?.dispose()
         }
         
+        // VoiceOver order: the header that floats over the content (title, total, which live in a zero-size container
+        // VoiceOver does not walk into on its own), Edit/Done, the scrolling content, the selection panel. The
+        // edge-effect and progress decorations are not elements.
+        override var accessibilityElements: [Any]? {
+            get {
+                var elements: [Any] = []
+                let headerViews = self.headerOffsetContainer.subviews.filter { !$0.isHidden && $0.alpha > 0.01 && !$0.accessibilityElementsHidden }.sorted { lhs, rhs in
+                    if abs(lhs.frame.minY - rhs.frame.minY) > 1.0 {
+                        return lhs.frame.minY < rhs.frame.minY
+                    }
+                    return lhs.frame.minX < rhs.frame.minX
+                }
+                elements.append(contentsOf: headerViews)
+                if self.navigationRightButtonsBackground.superview != nil, !self.navigationRightButtonsBackground.isHidden, self.navigationRightButtonsBackground.alpha > 0.01 {
+                    elements.append(self.navigationRightButtonsBackground)
+                }
+                elements.append(self.scrollView)
+                if let selectionPanelView = self.selectionPanel?.view, selectionPanelView.superview != nil {
+                    elements.append(selectionPanelView)
+                }
+                return elements
+            } set(value) {
+            }
+        }
+        
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             guard let result = super.hitTest(point, with: event) else {
                 return nil
@@ -1557,6 +1582,7 @@ final class StorageUsageScreenComponent: Component {
             let headerViewFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - headerViewSize.width / 2.0), y: contentHeight), size: headerViewSize)
             if let headerComponentView = self.headerView.view {
                 if headerComponentView.superview == nil {
+                    headerComponentView.accessibilityTraits = .header
                     self.headerOffsetContainer.addSubview(headerComponentView)
                 }
                 transition.setPosition(view: headerComponentView, position: headerViewFrame.center)
@@ -1835,6 +1861,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepDurationTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepDurationTitleSize)
                 if let keepDurationTitleComponentView = self.keepDurationTitleView.view {
                     if keepDurationTitleComponentView.superview == nil {
+                        keepDurationTitleComponentView.accessibilityTraits = .header
                         self.scrollContainerView.addSubview(keepDurationTitleComponentView)
                     }
                     transition.setFrame(view: keepDurationTitleComponentView, frame: keepDurationTitleFrame)
@@ -1968,6 +1995,7 @@ final class StorageUsageScreenComponent: Component {
                 let keepSizeTitleFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: keepSizeTitleSize)
                 if let keepSizeTitleComponentView = self.keepSizeTitleView.view {
                     if keepSizeTitleComponentView.superview == nil {
+                        keepSizeTitleComponentView.accessibilityTraits = .header
                         self.scrollContainerView.addSubview(keepSizeTitleComponentView)
                     }
                     transition.setFrame(view: keepSizeTitleComponentView, frame: keepSizeTitleFrame)
@@ -2674,7 +2702,7 @@ final class StorageUsageScreenComponent: Component {
             })
         }
         
-        private func messageContextAction(messageId: EngineMessage.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
+        private func messageContextAction(messageId: EngineMessage.Id, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?) {
             guard let component = self.component, let aggregatedData = self.aggregatedData else {
                 return
             }

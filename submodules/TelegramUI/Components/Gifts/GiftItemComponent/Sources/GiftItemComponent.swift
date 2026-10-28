@@ -1766,6 +1766,25 @@ public final class GiftItemComponent: Component {
             } else {
                 self.containerButton.isUserInteractionEnabled = false
             }
+            
+            // VoiceOver: a collectible tile is one button, "Title #number" (the model picture and the ribbon number
+            // on screen), selected while it is the chosen one. Other subjects keep their tree for now.
+            if case let .uniqueGift(gift, _) = component.subject, component.action != nil {
+                var label = gift.title
+                if let ribbon = component.ribbon, !ribbon.text.isEmpty {
+                    label += " \(ribbon.text)"
+                } else {
+                    label += " #\(gift.number)"
+                }
+                self.containerButton.isAccessibilityElement = true
+                self.containerButton.accessibilityLabel = label
+                self.containerButton.accessibilityTraits = component.isSelected ? [.button, .selected] : .button
+                // The ribbon's number is part of that label.
+                self.ribbon.accessibilityElementsHidden = true
+                self.ribbonOutline.accessibilityElementsHidden = true
+                self.ribbonText.view?.isAccessibilityElement = false
+                self.ribbonText.view?.accessibilityElementsHidden = true
+            }
                         
             return size
         }

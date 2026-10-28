@@ -1021,6 +1021,8 @@ public final class ButtonComponent: Component {
                 // The source has markup the UI does not show; the call site supplies the label.
                 return nil
             }
+        case let content as Text:
+            text = content.text
         case let content as AnimatedTextComponent:
             text = content.items.compactMap { item -> String? in
                 switch item.content {

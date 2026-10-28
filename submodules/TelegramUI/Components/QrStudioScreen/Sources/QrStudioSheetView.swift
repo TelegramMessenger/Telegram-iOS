@@ -333,6 +333,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
             if let iconView = self.iconViews[kind] {
                 iconView.accessibilityLabel = self.tabAccessibilityLabels[kind]
                 iconView.isAccessibilityElement = iconView.accessibilityLabel != nil
+                iconView.accessibilityTraits = self.isOpen && self.currentTab == kind ? [.button, .selected] : .button
                 if iconView.tintColor != glyphColor {
                     iconView.tintColor = glyphColor
                 }
@@ -470,6 +471,14 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.motion.open(animated: true)
         self.updateAttachedContent()
         self.runMotion()
+        self.updateTabAccessibilitySelection()
+    }
+    
+    /// The tab whose page the open sheet shows is `.selected` for VoiceOver; none while the sheet is closed.
+    private func updateTabAccessibilitySelection() {
+        for (kind, iconView) in self.iconViews {
+            iconView.accessibilityTraits = self.isOpen && self.currentTab == kind ? [.button, .selected] : .button
+        }
     }
 
     func close() {
@@ -481,6 +490,7 @@ final class QrStudioSheetView: UIView, UIGestureRecognizerDelegate {
         self.motion.setSearch(false)
         self.motion.close(velocity: 0.0, travel: 1.0)
         self.runMotion()
+        self.updateTabAccessibilitySelection()
     }
 
     func attachScrollView(_ scrollView: UIScrollView) {

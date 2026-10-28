@@ -777,6 +777,7 @@ final class DataUsageScreenComponent: Component {
             let headerViewFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - headerViewSize.width / 2.0), y: contentHeight), size: headerViewSize)
             if let headerComponentView = self.headerView.view {
                 if headerComponentView.superview == nil {
+                    headerComponentView.accessibilityTraits = .header
                     self.headerOffsetContainer.addSubview(headerComponentView)
                 }
                 transition.setPosition(view: headerComponentView, position: headerViewFrame.center)
@@ -998,6 +999,7 @@ final class DataUsageScreenComponent: Component {
             if let totalCategoriesTitleComponentView = self.totalCategoriesTitleView.view {
                 if totalCategoriesTitleComponentView.superview == nil {
                     totalCategoriesTitleComponentView.layer.anchorPoint = CGPoint()
+                    totalCategoriesTitleComponentView.accessibilityTraits = .header
                     self.scrollContainerView.addSubview(totalCategoriesTitleComponentView)
                 }
                 

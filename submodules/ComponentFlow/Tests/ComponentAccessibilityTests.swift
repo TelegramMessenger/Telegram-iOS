@@ -126,6 +126,9 @@ final class ComponentAccessibilityTests: XCTestCase {
         let badged = make(content: AnyComponent(ButtonTextContentComponent(text: "Gifts", badge: 3, textColor: .white, badgeBackground: .red, badgeForeground: .white)))
         XCTAssertEqual(badged.accessibilityLabel, "Gifts, 3")
         
+        let plainText = make(content: AnyComponent(Text(text: "Set", font: .systemFont(ofSize: 17.0), color: .white)))
+        XCTAssertEqual(plainText.accessibilityLabel, "Set")
+        
         let explicit = make(content: AnyComponent(MultilineTextComponent(text: .plain(attributed))), accessibility: ComponentAccessibility(label: "Proceed"))
         XCTAssertEqual(explicit.accessibilityLabel, "Proceed")
         

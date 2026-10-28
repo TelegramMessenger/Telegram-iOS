@@ -183,6 +183,8 @@ public final class _UpdatedChildComponent {
     var _clipsToBounds: Bool?
     var _allowsGroupOpacity: Bool?
     var _shadow: Shadow?
+    var _accessibilityTraits: UIAccessibilityTraits?
+    var _accessibilityHidden: Bool?
     
     fileprivate var transitionAppear: ComponentTransition.Appear?
     fileprivate var transitionAppearWithGuide: (ComponentTransition.AppearWithGuide, _AnyChildComponent.Id)?
@@ -276,6 +278,18 @@ public final class _UpdatedChildComponent {
     
     @discardableResult public func shadow(_ shadow: Shadow?) -> _UpdatedChildComponent {
         self._shadow = shadow
+        return self
+    }
+    
+    /// VoiceOver traits of the child's view (`.header` for a title drawn by a text component).
+    @discardableResult public func accessibilityTraits(_ accessibilityTraits: UIAccessibilityTraits) -> _UpdatedChildComponent {
+        self._accessibilityTraits = accessibilityTraits
+        return self
+    }
+    
+    /// Hides the child and everything in it from VoiceOver (decoration).
+    @discardableResult public func accessibilityHidden(_ accessibilityHidden: Bool) -> _UpdatedChildComponent {
+        self._accessibilityHidden = accessibilityHidden
         return self
     }
 
@@ -753,6 +767,15 @@ public extension CombinedComponent {
                         updatedChild.view.layer.cornerRadius = updatedChild._cornerRadius ?? 0.0
                         if let allowsGroupOpacity = updatedChild._allowsGroupOpacity {
                             updatedChild.view.layer.allowsGroupOpacity = allowsGroupOpacity
+                        }
+                        if let accessibilityTraits = updatedChild._accessibilityTraits {
+                            updatedChild.view.accessibilityTraits = accessibilityTraits
+                        }
+                        if let accessibilityHidden = updatedChild._accessibilityHidden {
+                            updatedChild.view.accessibilityElementsHidden = accessibilityHidden
+                            if accessibilityHidden {
+                                updatedChild.view.isAccessibilityElement = false
+                            }
                         }
                         if let shadow = updatedChild._shadow {
                             updatedChild.view.layer.shadowColor = shadow.color.withAlphaComponent(1.0).cgColor

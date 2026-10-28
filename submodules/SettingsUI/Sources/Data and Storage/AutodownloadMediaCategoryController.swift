@@ -84,7 +84,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case peerChannels(PresentationTheme, String, Bool)
     
     case sizeHeader(PresentationTheme, String)
-    case sizeItem(PresentationTheme, PresentationStrings, String, String, Int64)
+    case sizeItem(PresentationTheme, PresentationStrings, String, String, Int64, String?)
     case sizePreload(PresentationTheme, String, Bool, Bool)
     case sizePreloadInfo(PresentationTheme, String)
     
@@ -158,8 +158,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .sizeItem(lhsTheme, lhsStrings, lhsDecimalSeparator, lhsText, lhsValue):
-                if case let .sizeItem(rhsTheme, rhsStrings, rhsDecimalSeparator, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDecimalSeparator == rhsDecimalSeparator, lhsText == rhsText, lhsValue == rhsValue {
+            case let .sizeItem(lhsTheme, lhsStrings, lhsDecimalSeparator, lhsText, lhsValue, lhsAccessibilityLabel):
+                if case let .sizeItem(rhsTheme, rhsStrings, rhsDecimalSeparator, rhsText, rhsValue, rhsAccessibilityLabel) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDecimalSeparator == rhsDecimalSeparator, lhsText == rhsText, lhsValue == rhsValue, lhsAccessibilityLabel == rhsAccessibilityLabel {
                     return true
                 } else {
                     return false
@@ -206,10 +206,10 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 })
             case let .sizeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .sizeItem(theme, strings, decimalSeparator, text, value):
+            case let .sizeItem(theme, strings, decimalSeparator, text, value, accessibilityLabel):
                 return AutodownloadSizeLimitItem(theme: theme, strings: strings, systemStyle: .glass, decimalSeparator: decimalSeparator, text: text, value: value, range: nil, sectionId: self.section, updated: { value in
                     arguments.adjustSize(value)
-                })
+                }, accessibilityLabel: accessibilityLabel)
             case let .sizePreload(_, text, value, enabled):
                 return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: text, value: value && enabled, enableInteractiveChanges: true, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleVideoPreload()
@@ -304,7 +304,7 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
                 sizeText = autodownloadDataSizeString(Int64(size), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             }
             let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).string
-            entries.append(.sizeItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator, text, size))
+            entries.append(.sizeItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator, text, size, sizeTitle))
             if #available(iOSApplicationExtension 10.3, *), category == .video {
                 entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 2 * 1024 * 1024))
                 entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).string))

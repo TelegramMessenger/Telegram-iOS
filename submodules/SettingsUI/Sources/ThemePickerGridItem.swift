@@ -143,6 +143,11 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         item.action(item.themeReference)
     }
     
+    override func accessibilityActivate() -> Bool {
+        self.tap()
+        return true
+    }
+    
     private func removePlaceholder(animated: Bool) {
         if !animated {
             self.placeholderNode.removeFromSupernode()
@@ -232,6 +237,11 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         
         self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((90.0 - textLayout.size.width) / 2.0), y: 83.0), size: textLayout.size)
         self.textNode.isHidden = string == nil
+        
+        // VoiceOver: one button per theme ("🏠 Theme", or the theme's name), the current one selected.
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = item.themeReference?.emoticon.flatMap { item.strings.Appearance_VoiceOver_Theme($0).string } ?? string ?? item.strings.Conversation_Theme_NoTheme
+        self.accessibilityTraits = item.selected ? [.button, .selected] : .button
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         self.emojiContainerNode.frame = CGRect(origin: CGPoint(), size: size)

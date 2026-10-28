@@ -78,6 +78,13 @@ public extension UIView {
                 }
                 return
             }
+            if !(view is UIControl), view.isAccessibilityElement, view.accessibilityTraits == .staticText {
+                // Plain text that is its own element (a text component) is text, not a control.
+                if let label = view.accessibilityLabel, !label.isEmpty {
+                    found.append((origin, label))
+                }
+                return
+            }
             if view is UIControl || view.isAccessibilityElement {
                 if view.isAccessibilityElement, let label = view.accessibilityLabel, !label.isEmpty, !(view is UIControl) {
                     found.append((origin, label))
@@ -105,6 +112,28 @@ public extension UIView {
 public enum ComponentAccessibilityStrings {
     public static var on: String = "On"
     public static var off: String = "Off"
+    /// Labels of the standard navigation glyphs (`Common_Close`, `Common_Done`, `Common_Back`, `Common_Search`), for
+    /// icon-only bar buttons whose call site passes no label.
+    public static var close: String = "Close"
+    public static var done: String = "Done"
+    public static var back: String = "Back"
+    public static var search: String = "Search"
+    
+    /// The label of a standard navigation glyph by its bundle image name, nil for any other image.
+    public static func label(navigationIconName name: String) -> String? {
+        switch name {
+        case "Navigation/Close":
+            return self.close
+        case "Navigation/Done":
+            return self.done
+        case "Navigation/Back":
+            return self.back
+        case "Navigation/Search":
+            return self.search
+        default:
+            return nil
+        }
+    }
 }
 
 public extension ComponentAccessibility {

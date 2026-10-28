@@ -5973,6 +5973,8 @@ Sorry for the inconvenience.";
 "VoiceOver.Common.Off" = "Off";
 "VoiceOver.Common.SectionIndex" = "Section Index";
 "VoiceOver.QrCodeScan.Flashlight" = "Flashlight";
+"VoiceOver.Common.ColorNumber" = "Color %@";
+"VoiceOver.Common.NoColor" = "No Color";
 
 "VoiceOver.TabBar.AttentionRequired" = "Attention required";
 

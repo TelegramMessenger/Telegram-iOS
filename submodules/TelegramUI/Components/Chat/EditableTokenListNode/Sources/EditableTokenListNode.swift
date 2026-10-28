@@ -143,6 +143,10 @@ private final class TokenNode: ASDisplayNode {
             self.categoryAvatarNode.image = image
         }
         
+        // One element per token: its title (the avatar and the remove glyph are decoration).
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = token.title
+        
         self.updateIsSelected(isSelected, animated: false)
     }
     
@@ -170,6 +174,7 @@ private final class TokenNode: ASDisplayNode {
             return
         }
         self.isSelected = isSelected
+        self.accessibilityTraits = isSelected ? [.selected] : []
         
         self.avatarNode.alpha = isSelected ? 0.0 : 1.0
         self.categoryAvatarNode.alpha = isSelected ? 0.0 : 1.0
@@ -262,6 +267,9 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.maximumNumberOfLines = 1
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.list.itemPlaceholderTextColor)
+        // The field is labelled by the placeholder; the placeholder text itself is not a separate element.
+        self.placeholderNode.isAccessibilityElement = false
+        self.placeholderNode.accessibilityElementsHidden = true
         
         self.textFieldScrollNode = ASScrollNode()
         self.textFieldScrollNode.view.scrollsToTop = false
@@ -273,6 +281,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.returnKeyType = .done
         self.textFieldNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.tintColor = theme.list.itemAccentColor
+        self.textFieldNode.textField.accessibilityLabel = placeholder
         
         super.init()
         
@@ -313,6 +322,7 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                 placeholderSnapshot?.frame = self.placeholderNode.frame
             }
             self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: self.theme.list.itemPlaceholderTextColor)
+            self.textFieldNode.textField.accessibilityLabel = placeholder
         }
         
         for i in (0 ..< self.tokenNodes.count).reversed() {

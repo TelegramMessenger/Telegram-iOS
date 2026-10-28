@@ -396,9 +396,13 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing.editable, item.removeItem != nil {
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
+                        let revealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]
+                        strongSelf.setRevealOptions((left: [], right: revealOptions))
+                        // The swipe's "Delete" as a VoiceOver custom action (cached by the helper).
+                        strongSelf.activateArea.view.accessibilityCustomActions = strongSelf.revealOptionsAccessibilityCustomActions(revealOptions)
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
+                        strongSelf.activateArea.view.accessibilityCustomActions = nil
                     }
                     strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                     

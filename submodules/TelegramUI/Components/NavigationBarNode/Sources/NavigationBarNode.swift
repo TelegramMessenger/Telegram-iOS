@@ -1022,6 +1022,19 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         return result
     }
 
+    private static func collectAccessibilityElements(in view: UIView, to elements: inout [UIView]) {
+        for subview in view.subviews {
+            if subview.isHidden || subview.alpha < 0.01 || subview.accessibilityElementsHidden {
+                continue
+            }
+            if subview.isAccessibilityElement || subview is UISegmentedControl || subview.accessibilityElements != nil {
+                elements.append(subview)
+            } else {
+                NavigationBarNode.collectAccessibilityElements(in: subview, to: &elements)
+            }
+        }
+    }
+    
     override public var accessibilityElements: [Any]? {
         get {
             var elements: [Any] = []
@@ -1041,6 +1054,23 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
             if let secondaryContentNode = self.secondaryContentNode {
                 addAccessibilityChildren(of: secondaryContentNode, container: self, to: &elements)
             }
+            // Content screens place under the bar (a picker's search/token field, panels).
+            if !self.additionalContentNode.alpha.isZero, !self.additionalContentNode.isHidden {
+                addAccessibilityChildren(of: self.additionalContentNode, container: self, to: &elements)
+            }
+            // A screen's header drawn over the bar's background (a large title, a chart, a segmented control). The
+            // container is a zero-size sparse view, so its elements are listed here.
+            var overBackgroundElements: [UIView] = []
+            NavigationBarNode.collectAccessibilityElements(in: self.customOverBackgroundContentView, to: &overBackgroundElements)
+            overBackgroundElements.sort { lhs, rhs in
+                let lhsFrame = lhs.convert(lhs.bounds, to: nil)
+                let rhsFrame = rhs.convert(rhs.bounds, to: nil)
+                if abs(lhsFrame.minY - rhsFrame.minY) > 1.0 {
+                    return lhsFrame.minY < rhsFrame.minY
+                }
+                return lhsFrame.minX < rhsFrame.minX
+            }
+            elements.append(contentsOf: overBackgroundElements)
             return elements
         } set(value) {
         }

@@ -470,6 +470,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 ComponentAccessibilityStrings.on = next.strings.VoiceOver_Common_On
                 ComponentAccessibilityStrings.off = next.strings.VoiceOver_Common_Off
+                ComponentAccessibilityStrings.close = next.strings.Common_Close
+                ComponentAccessibilityStrings.done = next.strings.Common_Done
+                ComponentAccessibilityStrings.back = next.strings.Common_Back
+                ComponentAccessibilityStrings.search = next.strings.Common_Search
+                OverlayStatusControllerAccessibilityStrings.loading = next.strings.Channel_NotificationLoading
+                OverlayStatusControllerAccessibilityStrings.done = next.strings.Common_Done
                 if stringsUpdated {
                     updateLegacyLocalization(strings: next.strings)
                 }

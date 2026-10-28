@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import ComponentFlow
 import GlassBackgroundComponent
+import BundleIconComponent
 
 public final class GlassBarButtonComponent: Component {
     public enum DisplayState: Equatable {
@@ -103,6 +104,7 @@ public final class GlassBarButtonComponent: Component {
         private var componentView: ComponentView<Empty>?
         
         private var component: GlassBarButtonComponent?
+        private var inferredAccessibilityLabel: String?
         
         /// The source for a context menu this button opens: its glass, which morphs into the menu, or the button itself
         /// in the generic state.
@@ -187,6 +189,17 @@ public final class GlassBarButtonComponent: Component {
             
             self.containerView.isEnabled = component.isEnabled
             self.apply(accessibility: component.accessibility, defaultTraits: component.isEnabled ? .button : [.button, .notEnabled])
+            if component.accessibility == nil {
+                // An icon-only button showing a standard navigation glyph reads its name ("Close") unless the call
+                // site labelled the view itself.
+                let inferredLabel = (component.component.component.wrapped as? BundleIconComponent).flatMap { ComponentAccessibilityStrings.label(navigationIconName: $0.name) }
+                if self.accessibilityLabel == nil || self.accessibilityLabel == self.inferredAccessibilityLabel {
+                    self.accessibilityLabel = inferredLabel
+                }
+                self.inferredAccessibilityLabel = inferredLabel
+            } else {
+                self.inferredAccessibilityLabel = nil
+            }
             
             var componentView: ComponentView<Empty>
             var animateAppearance = false

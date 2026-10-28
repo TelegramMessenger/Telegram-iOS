@@ -230,7 +230,12 @@ final class NavigationBarContentView: UIView {
             if let accessibilityLabel = button.overflow?.title ?? navigationButtonTextLabel(button.content) ?? self.currentStrings.flatMap({ navigationButtonIconLabel(button.content, strings: $0) }) {
                 buttonComponentView.accessibilityLabel = accessibilityLabel
             }
-            buttonComponentView.accessibilityValue = button.accessibilityValue
+            if case let .node(nodeValue) = button.content, button.accessibilityValue == nil {
+                // A custom node button (a toggle drawn by the screen) carries its own state.
+                buttonComponentView.accessibilityValue = nodeValue.accessibilityValue
+            } else {
+                buttonComponentView.accessibilityValue = button.accessibilityValue
+            }
             buttonTransition.setFrame(view: buttonComponentView, frame: frame(buttonSize))
             if animateButtonIn {
                 alphaTransition.animateBlur(layer: buttonComponentView.layer, fromRadius: 10.0, toRadius: 0.0)
@@ -562,6 +567,9 @@ func navigationButtonIconLabel(_ content: NavigationBarComponent.Button.Content,
         } else if imageName == "Navigation/Close" {
             label = strings.close
         }
+    case let .node(nodeValue):
+        // A custom node button is named by the screen that supplies the node.
+        label = nodeValue.accessibilityLabel
     default:
         break
     }

@@ -60,8 +60,11 @@ final class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let updated: (Int64) -> Void
     let tag: ItemListItemTag?
+    /// VoiceOver name of the slider (the section title above it); its value is `text`.
+    let accessibilityLabel: String?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, systemStyle: ItemListSystemStyle = .legacy, decimalSeparator: String, text: String, value: Int64, range: Range<Int64>?, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, systemStyle: ItemListSystemStyle = .legacy, decimalSeparator: String, text: String, value: Int64, range: Range<Int64>?, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void, tag: ItemListItemTag? = nil, accessibilityLabel: String? = nil) {
+        self.accessibilityLabel = accessibilityLabel
         self.theme = theme
         self.strings = strings
         self.systemStyle = systemStyle
@@ -259,7 +262,9 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode, ItemListIte
                                 )),
                                 useNative: true,
                                 trackBackgroundColor: item.theme.list.itemSwitchColors.frameColor,
-                                trackForegroundColor: item.theme.list.itemAccentColor
+                                trackForegroundColor: item.theme.list.itemAccentColor,
+                                accessibilityLabel: item.accessibilityLabel ?? item.text,
+                                accessibilityValue: item.accessibilityLabel == nil ? nil : item.text
                             )
                         ),
                         environment: {},

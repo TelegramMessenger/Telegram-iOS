@@ -1233,7 +1233,10 @@ public final class ListComposePollOptionComponent: Component {
                             }
                             component.toggleInputMode?()
                         },
-                        animateScale: false
+                        animateScale: false,
+                        // VoiceOver: the glyph shows what a tap switches to (the emoji face while typing, the keyboard
+                        // while the emoji panel is up), so it is named after that.
+                        accessibility: ComponentAccessibility(label: inputMode == .keyboard ? component.strings.EmojiInput_TabEmoji : component.strings.VoiceOver_Keyboard)
                     )),
                     environment: {},
                     containerSize: modeSelectorSize

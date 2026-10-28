@@ -76,6 +76,13 @@ private enum OverlayStatusContentController {
     }
 }
 
+/// The words VoiceOver uses for the HUDs that show no text of their own (the spinner, the bare checkmark). The app sets
+/// them from `Channel_NotificationLoading` ("Loading...") and `Common_Done` whenever the strings change; main thread.
+public enum OverlayStatusControllerAccessibilityStrings {
+    public static var loading: String = "Loading..."
+    public static var done: String = "Done"
+}
+
 private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     private let dismissed: () -> Void
     private let contentController: OverlayStatusContentController
@@ -102,6 +109,15 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
                 self.contentController = .genericSuccess(ProxyWindowController(light: style == .light, text: text, icon: UIImage(bundleImageName: "Star"), isShield: false, showCheck: false), false)
         }
         
+        switch type {
+        case .loading:
+            self.accessibilityText = OverlayStatusControllerAccessibilityStrings.loading
+        case .success:
+            self.accessibilityText = OverlayStatusControllerAccessibilityStrings.done
+        case let .shieldSuccess(text, _), let .genericSuccess(text, _), let .starSuccess(text):
+            self.accessibilityText = text
+        }
+        
         super.init()
         
         self.backgroundColor = nil
@@ -109,7 +125,18 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
         self.isUserInteractionEnabled = isUserInteractionEnabled
         
         self.view.addSubview(self.contentController.view)
+        
+        // VoiceOver: the HUD is announced when it appears (its text, or "Loading..." / "Done" for the bare spinner and
+        // checkmark), since focus stays where it was. A HUD that takes touches covers the screen, so it is also one
+        // element reading the same; one that lets touches through (a passing toast) stays out of the way.
+        let contentView = self.contentController.view
+        contentView.isAccessibilityElement = isUserInteractionEnabled
+        contentView.accessibilityElementsHidden = !isUserInteractionEnabled
+        contentView.accessibilityLabel = self.accessibilityText
+        contentView.accessibilityTraits = .staticText
     }
+    
+    private let accessibilityText: String
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.contentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -117,6 +144,9 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     }
     
     func begin() {
+        if UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .announcement, argument: self.accessibilityText)
+        }
         self.contentController.show(success: { [weak self] in
             self?.dismissed()
         })

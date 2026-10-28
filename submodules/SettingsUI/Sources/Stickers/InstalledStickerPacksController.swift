@@ -835,7 +835,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 let _ = updateStickerSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     return current.withUpdatedEmojiStickerSuggestionMode(option)
                 }).start()
-            })))
+            }, accessibilityIsSelected: currentEmojiStickerSuggestionMode == option)))
         }
 
         guard let sourceNode = findSuggestOptionsReferenceNode?() else {

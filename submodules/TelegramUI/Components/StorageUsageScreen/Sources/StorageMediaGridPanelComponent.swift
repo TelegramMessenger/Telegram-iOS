@@ -514,6 +514,77 @@ final class StorageMediaGridPanelComponent: Component {
             })
         }
         
+        private final class GridAccessibilityElement: UIAccessibilityElement {
+            var activate: (() -> Void)?
+            
+            override func accessibilityActivate() -> Bool {
+                guard let activate = self.activate else {
+                    return false
+                }
+                activate()
+                return true
+            }
+        }
+        
+        // VoiceOver: one button per loaded tile, "Video, 2 MB" / "Photo, 856.3 KB" (the badge on the tile), selected
+        // while picked in edit mode; activation is the tile tap. Built when asked.
+        override var accessibilityElements: [Any]? {
+            get {
+                guard let component = self.component, let environment = self.environment, let items = component.items else {
+                    return nil
+                }
+                let selectedCount = component.selectionState?.selectedMessages.count ?? -1
+                let cacheKey = "\(self.scrollView.bounds.minY)/\(self.visibleLayers.count)/\(selectedCount)/\(items.items.count)"
+                if let cachedAccessibilityElements = self.cachedAccessibilityElements, cachedAccessibilityElements.key == cacheKey {
+                    return cachedAccessibilityElements.elements
+                }
+                var sizes: [EngineMessage.Id: Int64] = [:]
+                for item in items.items {
+                    sizes[item.message.id] = item.size
+                }
+                let visibleBounds = self.scrollView.bounds
+                var elements: [(CGRect, Any)] = []
+                for (id, itemLayer) in self.visibleLayers where !itemLayer.isHidden && itemLayer.frame.intersects(visibleBounds) {
+                    guard let message = items.items.first(where: { $0.message.id == id })?.message else {
+                        continue
+                    }
+                    var isVideo = false
+                    for media in message.media {
+                        if let file = media as? TelegramMediaFile, file.isVideo {
+                            isVideo = true
+                        }
+                    }
+                    let element = GridAccessibilityElement(accessibilityContainer: self)
+                    element.accessibilityLabel = isVideo ? environment.strings.Message_Video : environment.strings.Message_Photo
+                    if let size = sizes[id] {
+                        element.accessibilityValue = dataSizeString(size, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: "."))
+                    }
+                    var traits: UIAccessibilityTraits = .button
+                    if let selectionState = component.selectionState, selectionState.selectedMessages.contains(id) {
+                        traits.insert(.selected)
+                    }
+                    element.accessibilityTraits = traits
+                    element.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(itemLayer.frame, in: self.scrollView)
+                    element.activate = { [weak self] in
+                        self?.component?.action(id)
+                    }
+                    elements.append((itemLayer.frame, element))
+                }
+                elements.sort { lhs, rhs in
+                    if abs(lhs.0.minY - rhs.0.minY) > 1.0 {
+                        return lhs.0.minY < rhs.0.minY
+                    }
+                    return lhs.0.minX < rhs.0.minX
+                }
+                let result = elements.map { $0.1 }
+                self.cachedAccessibilityElements = (cacheKey, result)
+                return result
+            } set(value) {
+            }
+        }
+        
+        private var cachedAccessibilityElements: (key: String, elements: [Any])?
+        
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 guard let component = self.component else {

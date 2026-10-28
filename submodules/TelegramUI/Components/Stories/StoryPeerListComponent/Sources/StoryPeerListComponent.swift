@@ -1546,6 +1546,8 @@ public final class StoryPeerListComponent: Component {
                     titleLockView = current
                 } else {
                     titleLockView = ChatListTitleLockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
+                    // The lock glyph is drawn beside the title; the lock button (the title) speaks for it.
+                    titleLockView.accessibilityElementsHidden = true
                     self.titleLockView = titleLockView
                     self.addSubview(titleLockView)
                 }

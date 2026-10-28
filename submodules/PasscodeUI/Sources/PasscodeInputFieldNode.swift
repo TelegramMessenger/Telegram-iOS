@@ -159,6 +159,15 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         return self.textFieldNode.textField.text ?? ""
     }
     
+    /// VoiceOver label of the (secure) field; the owner passes the prompt shown above it.
+    public var fieldAccessibilityLabel: String? {
+        get {
+            return self.textFieldNode.textField.accessibilityLabel
+        } set(value) {
+            self.textFieldNode.textField.accessibilityLabel = value
+        }
+    }
+    
     public var keyboardAppearance: UIKeyboardAppearance {
         didSet {
             self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
