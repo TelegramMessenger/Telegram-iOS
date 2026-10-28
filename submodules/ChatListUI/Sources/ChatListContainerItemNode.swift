@@ -299,7 +299,10 @@ final class ChatListContainerItemNode: ASDisplayNode {
                 }
                 topPanelTransition.updateFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: max(minY, offset - topPanelSize.height)), size: topPanelSize))
                 if animateIn {
+                    // The panel slides out from behind the folder tabs, whose glass would show it: fade it as well
+                    // (as `HeaderPanelContainerComponent` does with its panels).
                     transition.animatePositionAdditive(layer: topPanelView.layer, offset: CGPoint(x: 0.0, y: -topPanelView.bounds.height))
+                    ComponentTransition(transition).animateAlpha(view: topPanelView, from: 0.0, to: 1.0)
                 }
             }
         }
@@ -448,6 +451,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                     transition.updatePosition(layer: topPanelView.layer, position: CGPoint(x: topPanelView.layer.position.x, y: topPanelView.layer.position.y - topPanelView.layer.bounds.height), completion: { [weak topPanelView] _ in
                         topPanelView?.removeFromSuperview()
                     })
+                    transition.updateAlpha(layer: topPanelView.layer, alpha: 0.0)
                 }
             }
         }
