@@ -72,14 +72,20 @@ final class AppLogEventPrivacyTests: XCTestCase {
         })
     }
 
-    func testUnscopedLegacyAndTransactionalEnqueueAreDenied() throws {
-        XCTAssertFalse(AppLogEventCollection.allowsLegacyEvents)
+    // Unscoped ("legacy") events are denied on macOS only: iOS keeps them for its network telemetry and split tests
+    // (`AppLogEventCollection.allowsLegacyEvents`).
+    func testUnscopedLegacyAndTransactionalEnqueueAreDeniedOnlyWithoutLegacyEvents() throws {
         _internal_addAppLogEvent(postbox: postbox, type: "legacy")
         invokeAppLogEventsSynchronization(postbox: postbox)
         let _ = try value(postbox.transaction { transaction in
             _internal_addAppLogEvent(transaction: transaction, time: Date().timeIntervalSince1970, type: "legacy", data: .dictionary([:]))
         })
-        XCTAssertTrue(try entries().isEmpty)
+        if AppLogEventCollection.allowsLegacyEvents {
+            // The two events and the flush marker.
+            XCTAssertEqual(try entries().count, 3)
+        } else {
+            XCTAssertTrue(try entries().isEmpty)
+        }
     }
 
     func testScopedEventPreservesOccurrenceTimeAndLocalAuthorization() throws {
@@ -97,7 +103,7 @@ final class AppLogEventPrivacyTests: XCTestCase {
         withExtendedLifetime(context) {}
     }
 
-    func testOldPersistedEntriesArePurgedWithoutARequest() throws {
+    func testOldPersistedEntriesArePurgedWithoutARequestOnlyWithoutLegacyEvents() throws {
         let operation = SynchronizeAppLogEventsOperation(content: .add(time: Date().timeIntervalSince1970, type: "legacy", peerId: nil, data: .dictionary([:])))
         let decoded = try JSONDecoder().decode(SynchronizeAppLogEventsOperation.self, from: JSONEncoder().encode(operation))
         XCTAssertNil(decoded.collectionId)
@@ -108,7 +114,8 @@ final class AppLogEventPrivacyTests: XCTestCase {
             requests += 1
             return .complete()
         }))
-        XCTAssertEqual(requests, 0)
+        // With legacy events allowed the entry is sent, and removed once it is.
+        XCTAssertEqual(requests, AppLogEventCollection.allowsLegacyEvents ? 1 : 0)
         XCTAssertTrue(try entries().isEmpty)
     }
 
