@@ -77,7 +77,7 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
                 return false
             }
             DispatchQueue.main.async { [weak self] in
-                self?.cancelIfPickerLost()
+                self?.cancelIfPickerLost(reason: "touch")
             }
             return true
         }
@@ -87,13 +87,17 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
     func pickerPresentationRequested(_ picker: UIViewController) {
         self.pickerPresentation.presentationRequested(picker: picker)
         
-        // A locked Files app makes the app resign active for Face ID while the picker is being presented, and
-        // the picker can be dropped then without a word to its delegate. UIKit settles presentations shortly
-        // after the scene is active again; if the picker is gone by then, the host gives up on it.
+        // The picker's presentation can be cancelled while UIKit holds it back (a Files app locked with Face ID
+        // makes the app inactive then, and the app lock dismisses what the root presents). The host checks once
+        // UIKit can no longer be holding it, and again shortly after the scene is active again, when UIKit has
+        // settled its presentations; a touch on the host checks too.
+        DispatchQueue.main.asyncAfter(deadline: .now() + DocumentPickerPresentation.presentationDelayLimit + 0.1, execute: { [weak self] in
+            self?.cancelIfPickerLost(reason: "presentation limit")
+        })
         if self.sceneActivationObserver == nil {
             self.sceneActivationObserver = NotificationCenter.default.addObserver(forName: UIScene.didActivateNotification, object: nil, queue: .main, using: { [weak self] _ in
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: { [weak self] in
-                    self?.cancelIfPickerLost()
+                    self?.cancelIfPickerLost(reason: "scene activation")
                 })
             })
         }
@@ -103,9 +107,9 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
         self.pickerPresentation.pickerDidDisappear()
     }
     
-    private func cancelIfPickerLost() {
+    private func cancelIfPickerLost(reason: String) {
         if self.pickerPresentation.isLost {
-            Logger.shared.log("LegacyICloudFilePicker", "the document picker is gone without a result, cancelling")
+            Logger.shared.log("LegacyICloudFilePicker", "the document picker is gone without a result, cancelling (\(reason))")
             self.finish(urls: [])
         }
     }
