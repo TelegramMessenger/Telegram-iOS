@@ -240,6 +240,12 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
   for a rotated host); the list measures the DISTANCE** (the block's settled height, reserved space included). List-owned on purpose: a host's own additive
   animation would be read back as a CoreList track by `capturePresentedPositionOffsets()`, and
   `transitionPosition` composes overlapping arrivals. Safe right after `applyChanges` (same scheduler).
+- `addContentMotionMirror(_:)` (`ContentMotionMirror.swift`; `PhysicsScrollEngine` only, false otherwise): the content
+  host's layer repeats on registered mirror layers every model write of its `bounds.origin.y` and every
+  `bounds.origin.y` animation added or removed (a drag's writes, a flight, its brake and re-emit, a pass's viewport
+  track), so a view outside the list rides the content exactly; it places its own content at `contentFrame(of:)`, a
+  row's frame in the content's coordinates. A follower placed from per-frame callbacks trails a render-server flight by
+  the commit's frame or two (measured up to 60 pt, the inline results panel's glass). `ContentMotionMirrorTests`.
 - **Row geometry is a pair, and picking the wrong half is silent.** `presentedFrame(of:)` is where a row IS
   — the default, used instead of `convert(_:from:)`. `settledFrame(of:)` is where it WILL BE; only for
   reporting a just-submitted pass's outcome alongside its transition. Both are ancestor-path-agnostic. See "Content offsets" in

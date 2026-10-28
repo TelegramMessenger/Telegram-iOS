@@ -587,6 +587,31 @@ public final class CoreVirtualListView: UIView {
 
     public var isHoldingScrollTarget: Bool { heldRow != nil }
 
+    /// Makes `view` move exactly as the content does: every model write of the content host's `bounds.origin.y` and
+    /// every animation of it (a `.keyframe` flight and its brake on the render server, a pass's viewport track) is
+    /// repeated on its layer. For a view outside the list that must ride the content but not take what the list's own
+    /// view takes (its mask): a follower placed from per-frame callbacks trails a render-server flight by the commit's
+    /// frame or two. Give `view` the list's bounds in a shared superview and place its content at
+    /// `contentFrame(of:)`. `PhysicsScrollEngine` only; with another engine it does nothing and returns false.
+    @discardableResult
+    public func addContentMotionMirror(_ view: UIView) -> Bool {
+        guard let host = engine.contentHost as? ContentMotionHostView, let layer = host.mirroringLayer else {
+            return false
+        }
+        layer.addMirror(view.layer)
+        return true
+    }
+
+    public func removeContentMotionMirror(_ view: UIView) {
+        (engine.contentHost as? ContentMotionHostView)?.mirroringLayer?.removeMirror(view.layer)
+    }
+
+    /// A row's frame in the content's own coordinates, where it stays put while the content scrolls: those of a
+    /// content motion mirror (`addContentMotionMirror`). Settled (model) geometry.
+    public func contentFrame(of view: UIView) -> CGRect {
+        engine.contentHost.convert(view.bounds, from: view)
+    }
+
     /// Ends the hold without moving anything. The chat calls it from scroll-to-end, which issues no
     /// scroll when the list already rests at its newest edge.
     public func releaseScrollHold() {

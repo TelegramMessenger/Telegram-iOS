@@ -5,7 +5,8 @@ import UIKit
 /// layout math is unchanged — only the driver differs. Touch only; trackpad and `.keyframe`
 /// deceleration during virtualization are future increments.
 public final class PhysicsScrollEngine: NSObject, ScrollEngine {
-    private let host = UIView()
+    /// Repeats the content's motion on mirror layers (`CoreVirtualListView.addContentMotionMirror`).
+    private let host = ContentMotionHostView()
     private let core: PhysicsScrollCore
     private let pan = PhysicsPanGestureRecognizer(target: nil, action: nil)
     private var displayLink: CADisplayLink?
