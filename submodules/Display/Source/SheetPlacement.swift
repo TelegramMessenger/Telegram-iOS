@@ -72,18 +72,37 @@ public func sheetContentBandInsets(containerSize: CGSize, safeInsets: UIEdgeInse
     return UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: 0.0, right: safeInsets.right)
 }
 
-/// The side insets a centered alert (`AlertScreen`, `AlertControllerNode`) centers between, for an alert from
-/// `alertMinY` to `alertMaxY` in a container `containerSize` large: on the axis of the sheets it shows over.
+/// The side insets a centered alert (`AlertScreen`, `AlertControllerNode`) `alertWidth` wide, from `alertMinY` to
+/// `alertMaxY`, centers between in a container `containerSize` large: the axis of the screen's sheets.
 ///
-/// In portrait, where a sheet spans iPhone Duo's side strip below the status corner, a strip side counts only where
-/// its corner block reaches the alert (`bandSideInsets`: raised by the keyboard in folded portrait), so the alert
-/// centers on the screen. In landscape, where sheets keep to the band (`resizableSheetHorizontalPlacement`,
+/// In portrait, where sheets span iPhone Duo's side strip below the status corner, a strip side counts only where the
+/// screen-centered alert would reach one of its corner blocks (lifted by the keyboard in folded portrait), overlapping
+/// it by more than 1pt (a 300pt alert on the 466pt folded screen ends 1pt inside the 84pt block), so the alert centers
+/// on the screen whatever is behind it. In landscape, where sheets keep to the band (`resizableSheetHorizontalPlacement`,
 /// `sheetContentBandInsets`), the safe insets. Without corner blocks (every other device) the safe insets.
-public func centeredAlertSideInsets(alertMinY: CGFloat, alertMaxY: CGFloat, containerSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> (left: CGFloat, right: CGFloat) {
+public func centeredAlertSideInsets(alertWidth: CGFloat, alertMinY: CGFloat, alertMaxY: CGFloat, containerSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> (left: CGFloat, right: CGFloat) {
     if containerSize.width > containerSize.height {
         return (safeInsets.left, safeInsets.right)
     }
-    return bandSideInsets(forBandFrom: alertMinY, to: alertMaxY, containerHeight: containerSize.height, safeInsets: safeInsets, reservedCorners: reservedCorners)
+    let rowInsets = bandSideInsets(forBandFrom: alertMinY, to: alertMaxY, containerHeight: containerSize.height, safeInsets: safeInsets, reservedCorners: reservedCorners)
+    let alertMinX = (containerSize.width - alertWidth) / 2.0
+    let alertMaxX = alertMinX + alertWidth
+    // A side whose inset is a corner block's strip (`bandSideInsets`' test) and whose blocks the alert's rows reach
+    // keeps it only if the screen-centered alert also reaches into one of them horizontally.
+    func inset(_ rowInset: CGFloat, blocks: [CGSize?], reaches: (CGSize) -> Bool) -> CGFloat {
+        if rowInset <= 0.0 {
+            return rowInset
+        }
+        let stripBlocks = blocks.compactMap { $0 }.filter { abs($0.width - rowInset) <= 1.0 }
+        if stripBlocks.isEmpty {
+            return rowInset
+        }
+        return stripBlocks.contains(where: reaches) ? rowInset : 0.0
+    }
+    return (
+        inset(rowInsets.left, blocks: [reservedCorners.topLeft, reservedCorners.bottomLeft], reaches: { alertMinX < $0.width - 1.0 }),
+        inset(rowInsets.right, blocks: [reservedCorners.topRight, reservedCorners.bottomRight], reaches: { alertMaxX > containerSize.width - $0.width + 1.0 })
+    )
 }
 
 /// How much further in a sheet's header controls (close, title, trailing button) move on each side so they do

@@ -104,9 +104,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
      of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
      rule 2's exception.
 
-   **Centred alerts** (`AlertScreen`, `AlertControllerNode`) keep the axis of the sheets they show over
-   (`centeredAlertSideInsets`): the screen's centre in folded portrait, where sheets span the strip (the band when the
-   keyboard lifts the alert beside the corner block), and the band's in landscape, where sheets keep to it.
+   **Centred alerts** (`AlertScreen`, `AlertControllerNode`) keep the axis of the screen's sheets
+   (`centeredAlertSideInsets`), whatever is behind them: the screen's centre in folded portrait, where sheets span the
+   strip (the band only when the keyboard lifts the alert into the corner block), and the band's in landscape, where
+   sheets keep to it. Over band-centred content in folded portrait (a list) an alert is therefore 42pt off its axis.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
    island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
    row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;
