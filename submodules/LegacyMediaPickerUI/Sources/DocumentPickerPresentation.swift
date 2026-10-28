@@ -8,7 +8,7 @@ import QuartzCore
 /// The host leaves only through the picker's delegate or its `viewDidDisappear`, but a picker can be cancelled
 /// before it ever appears, with neither. UIKit holds the picker's presentation back until its remote view is
 /// ready (up to 3 s), and a dismissal on the presenting controller meanwhile cancels it silently. The app lock
-/// does exactly that whenever the app goes inactive with a passcode set (`AppLock` dismisses what the root
+/// does exactly that when the app goes inactive with passcode auto-lock on (`AppLock` dismisses what the root
 /// controller presents, so nothing shows above the lock), and the Face ID prompt of a Files app locked with Face
 /// ID makes the app inactive while the picker is held back (#40). The host must then go away by itself, or it
 /// keeps taking every touch and the app looks frozen. `isLost` tells that state apart.

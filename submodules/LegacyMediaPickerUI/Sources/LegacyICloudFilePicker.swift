@@ -88,7 +88,7 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
         self.pickerPresentation.presentationRequested(picker: picker)
         
         // The picker's presentation can be cancelled while UIKit holds it back (a Files app locked with Face ID
-        // makes the app inactive then, and the app lock dismisses what the root presents). The host checks once
+        // makes the app inactive then, and with passcode auto-lock on the app lock dismisses what the root presents). The host checks once
         // UIKit can no longer be holding it, and again shortly after the scene is active again, when UIKit has
         // settled its presentations; a touch on the host checks too.
         DispatchQueue.main.asyncAfter(deadline: .now() + DocumentPickerPresentation.presentationDelayLimit + 0.1, execute: { [weak self] in

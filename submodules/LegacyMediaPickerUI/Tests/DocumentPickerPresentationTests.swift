@@ -5,6 +5,8 @@ import UIKit
 final class DocumentPickerPresentationTests: XCTestCase {
     private var time: Double = 100.0
 
+    // Each test that holds a picker keeps it alive to its end (`withExtendedLifetime`): an optimized build may
+    // release a local after its last use, and a released picker counts as lost at once.
     private func makePresentation() -> DocumentPickerPresentation {
         return DocumentPickerPresentation(now: { [unowned self] in self.time })
     }
@@ -25,6 +27,7 @@ final class DocumentPickerPresentationTests: XCTestCase {
         XCTAssertFalse(presentation.isLost)
         self.time += 3.0
         XCTAssertFalse(presentation.isLost)
+        withExtendedLifetime(picker) {}
     }
 
     // Past that limit, a picker still neither presented nor in a window is not going to appear (#40), and the
@@ -35,6 +38,7 @@ final class DocumentPickerPresentationTests: XCTestCase {
         presentation.presentationRequested(picker: picker)
         self.time += DocumentPickerPresentation.presentationDelayLimit
         XCTAssertTrue(presentation.isLost)
+        withExtendedLifetime(picker) {}
     }
 
     // A cancelled presentation releases the picker (UIKit holds one it will still present), so it is lost at once:
@@ -61,6 +65,7 @@ final class DocumentPickerPresentationTests: XCTestCase {
         self.time += 10.0
         XCTAssertFalse(presentation.isLost)
         XCTAssertTrue(presentation.finish())
+        withExtendedLifetime(picker) {}
     }
 
     func testNotLostOnceFinished() {
@@ -70,6 +75,7 @@ final class DocumentPickerPresentationTests: XCTestCase {
         XCTAssertTrue(presentation.finish())
         self.time += 10.0
         XCTAssertFalse(presentation.isLost)
+        withExtendedLifetime(picker) {}
     }
 
     // Delivering the outcome a second time (a late delegate call after the host gave up) must be refused.

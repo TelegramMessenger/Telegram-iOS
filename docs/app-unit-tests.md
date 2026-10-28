@@ -87,7 +87,7 @@ previous ones.
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the
 picker's presentation back for up to 3 s, and a dismissal on the root controller meanwhile cancels it silently: the app
-lock does that whenever the app goes inactive with a passcode set, as for the Face ID prompt of a Files app locked with
+lock does that when the app goes inactive with passcode auto-lock on, as for the Face ID prompt of a Files app locked with
 Face ID (#40, read from the code, not reproduced). The host then stayed and took every touch. A picker not on screen
 counts as lost only past that limit (or at once when UIKit released it), so one still held back is never cancelled. A
 `UIWindow` cannot be used in this hostless test process: it traps at exit, when UIKit invalidates its screen-based scene,
