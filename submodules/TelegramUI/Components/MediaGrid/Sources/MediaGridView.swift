@@ -158,6 +158,20 @@ public final class MediaGridView: UIView {
     public var onDidEndDragging: (() -> Void)?
     public var bounces = true
     public var onZoomingChanged: ((Bool) -> Void)?
+    public var onZoomFrame: (() -> Void)?
+
+    public var zoomContentMinY: CGFloat? {
+        guard let transition = self.transition else {
+            return nil
+        }
+        var minY = CGFloat.greatestFiniteMagnitude
+        for layer in [transition.outgoing, transition.incoming] where layer.opacity > 0.0 && !layer.isHidden {
+            for (_, cell) in layer.visibleCells where !cell.isHidden {
+                minY = min(minY, layer.convert(cell.frame, to: self.layer).minY - self.bounds.minY)
+            }
+        }
+        return minY == CGFloat.greatestFiniteMagnitude ? nil : minY
+    }
     private var reportedZooming = false
     public let overlayView = UIView()
 
@@ -718,6 +732,7 @@ public final class MediaGridView: UIView {
         if isZooming != self.reportedZooming {
             self.reportedZooming = isZooming
             self.onZoomingChanged?(isZooming)
+            self.onZoomFrame?()
         }
         self.noteTargetLevel()
     }
@@ -1589,6 +1604,7 @@ public final class MediaGridView: UIView {
         self.drivePinch(from: result.from, to: result.to, progress: result.progress)
         self.applyOvershoot(session.state.overshoot, about: session.state.anchor.pointInView)
         self.noteTargetLevel()
+        self.onZoomFrame?()
     }
 
     private func drivePinch(from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat) {

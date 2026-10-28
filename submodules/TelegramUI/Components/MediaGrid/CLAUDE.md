@@ -35,7 +35,14 @@ nearest available one); `compactLevelsRequestSharpImages` (15 and 31 request sha
 compact detail is otherwise unchanged); `visibleIndexRange` / `onVisibleRangeChanged` (indices intersecting the
 viewport, reported once per change from every binding pass); `transferVelocity(_:)` (a grid-owned display-link decay
 with SparseItemGrid's formula, not a CoreList fling, since `PhysicsScrollEngine` has no public launch); and
-`isScrollingLockedAtTop` (offset 0 and the pan off; zoom endings and the selection pan respect it).
+`isScrollingLockedAtTop` (offset 0 and the pan off; zoom endings and the selection pan respect it); `MediaGridCellLayer.isBinding`
+(true while the grid binds the cell, including image completions delivered synchronously from `requestImage`, so a
+subclass can animate only late arrivals); `MediaGridCellLayer.imageRequestTime` (when the grid last asked for the cell's
+image; the Media tab shows an image that arrives within 100 ms of it, a disk cache hit, without its crossfade).
+
+The picker also uses `zoomContentMinY` (during a zoom, the top of the visible cells of both layers in view coordinates;
+nil outside a zoom) with `onZoomFrame` (each pinch step and the start and end of a zoom): its bar treats content as
+under it when cells rise above their resting top during a zoom, at any level.
 
 ## Measuring image loading in the demo
 

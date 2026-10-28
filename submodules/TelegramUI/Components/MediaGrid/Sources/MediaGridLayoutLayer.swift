@@ -343,6 +343,10 @@ final class MediaGridLayoutLayer: CALayer {
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout, keepsImage: Bool = false, reassigned: Bool = false) {
         let frame = layout.frame(at: index)
         let pixelSize = layout.pixelSize(at: index)
+        cell.isBinding = true
+        defer {
+            cell.isBinding = false
+        }
         cell.bind(index: index, detail: self.detail)
         cell.setSelected(self.detail == .full ? (self.isItemSelected?(index) ?? false) : false)
         cell.frame = frame
@@ -383,6 +387,7 @@ final class MediaGridLayoutLayer: CALayer {
             return
         }
         cell.bindingToken += 1
+        cell.imageRequestTime = CACurrentMediaTime()
         let token = cell.bindingToken
         let frame = layout.frame(at: index)
         let targetPixelWidth = layout.pixelSize(at: index).width
