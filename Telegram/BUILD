@@ -1942,11 +1942,9 @@ ios_application(
     ],
     extensions = select({
         ":disableExtensionsSetting": [],
+        # PureGram ships without the Share, Notification Content, Notification Service and
+        # Siri (Intents) extensions, so a sideloaded install needs fewer App IDs and app groups.
         "//conditions:default": [
-            ":ShareExtension",
-            ":NotificationContentExtension",
-            ":NotificationServiceExtension" + notificationServiceExtensionVersion,
-            ":IntentsExtension",
             ":WidgetExtension",
             ":BroadcastUploadExtension",
         ],
@@ -1954,10 +1952,8 @@ ios_application(
     # Embed the in-repo tgwatch watch app (Telegram/WatchApp) under Watch/ only when
     # --//Telegram:embedWatchApp is set (Make.py sets it for device configs when
     # --embedWatchApp is passed). Off by default, so simulator/dev builds are unaffected.
-    watch_application = select({
-        ":embedWatchAppSetting": ":TelegramWatchApp",
-        "//conditions:default": None,
-    }),
+    # PureGram never embeds the watch app.
+    watch_application = None,
     deps = [
         ":Main",
         ":Lib",
