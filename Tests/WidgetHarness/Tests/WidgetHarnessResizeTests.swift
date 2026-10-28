@@ -6,11 +6,14 @@ import MessageWidget
 
 /// Tier 1: widget-sandbox v0.1.3's resize anchor in the REAL chat bubbles on the chat's list (integration.md "Which edge
 /// stays put", sdk-v1 §5.6): when a widget's auto height changes on screen, the bubble's anchored edge stays where it is
-/// and the content on its other side moves; everywhere, at the chat's bottom too (the user's decision 1), but for a
-/// widget's first height, which is placed as any new message is (decision 2), and the list never shows space past its
-/// ends (decision 3). The fixtures are `Fixtures/resize/`: each sets its anchor first, then changes by 120 pt. Each chat
-/// is taller than the screen (older filler posts): a chat that fits the screen cannot scroll, so nothing in it can keep
-/// an edge the list's own placement does not.
+/// and the content on its other side moves; but at the chat's bottom the chat stays at its bottom, so a top-anchored
+/// widget grows upward there until its top reaches the screen's top inset, and the rest downward (the user's rule,
+/// 2026-10-28, replacing decision 1's "the anchor wins at the bottom too"); a widget's first height is placed as any new
+/// message is (decision 2), and the list never shows space past its ends (decision 3). The fixtures are
+/// `Fixtures/resize/`: each sets its anchor first, then changes by 120 pt (`grow-top-far` by 480 pt). Each chat is taller
+/// than the screen (older filler posts): a chat that fits the screen cannot scroll, so nothing in it can keep an edge the
+/// list's own placement does not. A test of the anchor off the chat's bottom scrolls there and checks it is
+/// (`assertOffTheBottom`): `load` leaves the chat at its bottom.
 final class WidgetHarnessResizeTests: XCTestCase {
     private struct Frame: CustomStringConvertible {
         let minY: Double
@@ -21,6 +24,7 @@ final class WidgetHarnessResizeTests: XCTestCase {
 
     private static let growTop = "fixture/resize/grow-top.html"
     private static let growBottom = "fixture/resize/grow-bottom.html"
+    private static let growTopFar = "fixture/resize/grow-top-far.html"
     private static let shrinkTop = "fixture/resize/shrink-top.html"
     private static let timerTop = "fixture/resize/timer-top.html"
     private static let text = "fixture/text.html"
@@ -103,6 +107,18 @@ final class WidgetHarnessResizeTests: XCTestCase {
         instance.pointer(.up, at: CGPoint(x: 50.0, y: 50.0))
     }
 
+    /// The screen's top inset in the root view's coordinates: the list's edge under the readout
+    /// (`WidgetHarnessRootViewController.layoutList`).
+    private func topInset(_ root: WidgetHarnessRootViewController) -> Double {
+        return Double(root.view.safeAreaInsets.top + WidgetHarnessRootViewController.readoutHeight)
+    }
+
+    /// Fails unless the chat is off its bottom: the newest post, `newest`, lies well below the screen's bottom inset.
+    private func assertOffTheBottom(_ root: WidgetHarnessRootViewController, _ frames: [String: Frame], newest: String, file: StaticString = #filePath, line: UInt = #line) {
+        let bottomLine = Double(root.view.bounds.height - root.view.safeAreaInsets.bottom)
+        XCTAssertGreaterThan(frames[newest]?.maxY ?? 0.0, bottomLine + 100.0, "the chat is at its bottom: \(frames)", file: file, line: line)
+    }
+
     private func XCTAssertNear(_ a: Double?, _ b: Double?, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
         guard let a, let b else {
             return XCTFail("missing: \(String(describing: a)) vs \(String(describing: b)) — \(message)", file: file, line: line)
@@ -110,8 +126,12 @@ final class WidgetHarnessResizeTests: XCTestCase {
         XCTAssertEqual(a, b, accuracy: 0.6, message, file: file, line: line)
     }
 
+    /// Off the chat's bottom a top-anchored bubble grows downward: its top stays, what is below it moves.
     func testATopAnchoredBubbleGrowsDownward() throws {
-        let (root, before) = try self.load([Self.tall, Self.box, Self.growTop, Self.text])
+        let (root, _) = try self.load([Self.box, Self.growTop, Self.text, Self.tall])
+        root.listHost?.scrollTo(messageIndex: 1)
+        let before = self.settle(root) { _ in true }
+        self.assertOffTheBottom(root, before, newest: Self.tall)
         try self.click(root, Self.growTop)
         let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
         let message = "before \(before), after \(after)"
@@ -129,27 +149,50 @@ final class WidgetHarnessResizeTests: XCTestCase {
         XCTAssertNear(after[Self.box]?.minY, before[Self.box]?.minY, message)
     }
 
-    /// Decision 1: at the chat's bottom a top-anchored newest widget grows downward too, under the input bar.
-    func testAtTheBottomTheAnchorWins() throws {
+    /// The user's rule (2026-10-28): at the chat's bottom a top-anchored newest widget grows upward, the chat staying at
+    /// its bottom, while its top stays below the screen's top inset.
+    func testAtTheBottomATopAnchoredBubbleGrowsUpward() throws {
         let (root, before) = try self.load([Self.tall, Self.box, Self.text, Self.growTop])
+        XCTAssertGreaterThan((before[Self.growTop]?.minY ?? 0.0) - 120.0, self.topInset(root), "it would reach the top inset: \(before)")
         try self.click(root, Self.growTop)
         let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
         let message = "before \(before), after \(after)"
-        XCTAssertNear(after[Self.growTop]?.minY, before[Self.growTop]?.minY, message)
-        XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
+        XCTAssertNear(after[Self.growTop]?.maxY, before[Self.growTop]?.maxY, message)
+        XCTAssertNear(after[Self.text]?.minY, before[Self.text].map { $0.minY - 120.0 }, message)
     }
 
-    /// With the chat's newest edge held open (an overscroll action), the anchored edge stays put all the same: the hold
-    /// is extra inset the list is given, which the target is measured from.
-    func testTheAnchorWinsWithTheNewestEdgeHeld() throws {
+    /// With the chat's newest edge held open (an overscroll action) the chat is at its bottom too, and a top-anchored
+    /// widget grows upward: the hold is extra inset the list is given, which the target is measured from.
+    func testWithTheNewestEdgeHeldATopAnchoredBubbleGrowsUpward() throws {
         let (root, _) = try self.load([Self.tall, Self.box, Self.text, Self.growTop])
         root.listHost?.holdOverscroll(distance: 80.0)
         let before = self.settle(root) { _ in true }
+        XCTAssertGreaterThan((before[Self.growTop]?.minY ?? 0.0) - 120.0, self.topInset(root), "it would reach the top inset: \(before)")
         try self.click(root, Self.growTop)
         let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
         let message = "before \(before), after \(after)"
-        XCTAssertNear(after[Self.growTop]?.minY, before[Self.growTop]?.minY, message)
-        XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
+        XCTAssertNear(after[Self.growTop]?.maxY, before[Self.growTop]?.maxY, message)
+        XCTAssertNear(after[Self.text]?.minY, before[Self.text].map { $0.minY - 120.0 }, message)
+    }
+
+    /// The user's rule (2026-10-28): at the chat's bottom a top-anchored widget grows upward until its top reaches the
+    /// screen's top inset, which its row's top then keeps, and the rest of its growth goes downward, the chat leaving its
+    /// bottom by it.
+    func testAtTheBottomATopAnchoredBubbleStopsAtTheTopInset() throws {
+        let (root, before) = try self.load([Self.tall, Self.growTopFar, Self.box])
+        let inset = self.topInset(root)
+        let frame = try XCTUnwrap(before[Self.growTopFar], "\(before)")
+        XCTAssertTrue(frame.minY > inset + 1.0 && frame.minY - 480.0 < inset - 1.0, "its growth does not reach the top inset at \(inset): \(before)")
+        try self.click(root, Self.growTopFar)
+        let after = self.settle(root) { ($0[Self.growTopFar]?.height ?? 0.0) > frame.height + 400.0 }
+        let message = "inset \(inset), before \(before), after \(after)"
+        let grown = try XCTUnwrap(after[Self.growTopFar], message)
+        XCTAssertNear(grown.height, frame.height + 480.0, message)
+        // The widget's top sits under its row's top, which keeps the inset.
+        XCTAssertGreaterThanOrEqual(grown.minY, inset - 0.6, message)
+        XCTAssertLessThan(grown.minY, inset + 8.0, message)
+        XCTAssertGreaterThan(grown.maxY, frame.maxY + 50.0, message)
+        XCTAssertNear(after[Self.box]?.minY, before[Self.box].map { $0.minY + (grown.maxY - frame.maxY) }, message)
     }
 
     /// Decision 3: a top-anchored newest widget that shrinks at the chat's bottom would leave space below it; the list
@@ -188,9 +231,10 @@ final class WidgetHarnessResizeTests: XCTestCase {
     /// The chat's jump to a message holds that row until a drag; a widget's height change on screen still keeps the
     /// widget's anchored edge, and the held row moves with its side (the design's call).
     func testAHeldJumpYieldsToTheAnchor() throws {
-        let (root, _) = try self.load([Self.tall, Self.growTop, Self.text, Self.box])
+        let (root, _) = try self.load([Self.box, Self.growTop, Self.text, Self.tall])
         root.listHost?.scrollTo(messageIndex: 2, hold: .always)
         let before = self.settle(root) { _ in true }
+        self.assertOffTheBottom(root, before, newest: Self.tall)
         try self.click(root, Self.growTop)
         let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
         let message = "before \(before), after \(after)"
@@ -218,8 +262,11 @@ final class WidgetHarnessResizeTests: XCTestCase {
     /// edge, and the post between them stays. The list host holds both bubbles' update requests (each widget asks once
     /// it has reported its new height), then sends them as one transaction.
     func testTwoBubblesResizingInOnePass() throws {
-        let (root, before) = try self.load([Self.tall, Self.growBottom, Self.text, Self.growTop, Self.box])
+        let (root, _) = try self.load([Self.box, Self.growBottom, Self.text, Self.growTop, Self.tall])
         let host = try XCTUnwrap(root.listHost)
+        host.scrollTo(messageIndex: 2)
+        let before = self.settle(root) { _ in true }
+        self.assertOffTheBottom(root, before, newest: Self.tall)
         host.holdsUpdates = true
         try self.click(root, Self.growBottom)
         try self.click(root, Self.growTop)
@@ -255,7 +302,34 @@ final class WidgetHarnessResizeTests: XCTestCase {
         XCTAssertEqual(updates.first ?? nil, .bottom, "\(updates)")
     }
 
+    /// Under a post pinned to the top of the screen (the chat's pin while a bot streams its reply under the user's
+    /// message) the list re-places the pinned row on every pass until a drag, with room below the newest post: a
+    /// top-anchored widget there keeps its top and grows into that room and past it, and the pinned post stays, during
+    /// the change and on the next pass. Growing upward would push the pinned post up, and the pin would pull it back down
+    /// on the next pass (the review of 2026-10-28).
+    func testUnderAPinnedPostATopAnchoredBubbleKeepsItsTop() throws {
+        let (root, _) = try self.load([Self.tall, Self.text, Self.box, Self.growTopFar])
+        let host = try XCTUnwrap(root.listHost)
+        host.pinToTop(path: Self.text)
+        let before = self.settle(root) { _ in true }
+        let bottomLine = Double(root.view.bounds.height - root.view.safeAreaInsets.bottom)
+        let room = bottomLine - (before[Self.growTopFar]?.maxY ?? bottomLine)
+        let pinnedTop = before[Self.text]?.minY ?? 0.0
+        XCTAssertTrue(pinnedTop > self.topInset(root) - 0.6 && pinnedTop < self.topInset(root) + 12.0, "the post is not pinned to the top: \(before)")
+        XCTAssertTrue(room > 20.0 && room < 440.0, "the room below the newest post is not under its growth: \(room), \(before)")
+        try self.click(root, Self.growTopFar)
+        let after = self.settle(root) { ($0[Self.growTopFar]?.height ?? 0.0) > (before[Self.growTopFar]?.height ?? 0.0) + 400.0 }
+        let message = "room \(room), before \(before), after \(after)"
+        XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
+        XCTAssertNear(after[Self.growTopFar]?.minY, before[Self.growTopFar]?.minY, message)
+        host.updateMessage(path: Self.text)
+        let later = self.settle(root) { _ in true }
+        XCTAssertNear(later[Self.text]?.minY, before[Self.text]?.minY, "after a later pass: before \(before), later \(later)")
+    }
+
     /// Review Focus 1: a bubble whose anchored top is above the screen keeps it there; what is on screen below it moves.
+    /// At the chat's bottom too, where it is: a top already past the screen's top inset has reached it (the user's call,
+    /// 2026-10-28), so the chat leaves its bottom.
     func testAPartlyVisibleBubbleKeepsItsEdge() throws {
         let (root, before) = try self.load([Self.growTop, Self.tall, Self.text])
         let frame = try XCTUnwrap(before[Self.growTop], "\(before)")

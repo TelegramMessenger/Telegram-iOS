@@ -44,8 +44,16 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   default, grows the bubble downward (what is below it moves), `bottom` upward (what is above it moves). The runtime
   keeps the latest (`HostState::resizeAnchor`, checked by the vendored SDK policy's `checkResizeAnchor`) and the
   snapshot carries it with the size (`MessageWidgetInstance.resizeAnchor`, `MessageWidgetRegistry.resizeAnchor`).
-  **The chat keeps that edge everywhere, at its bottom too** (the user: "The anchor should win if scrolled to bottom
-  too"): a top-anchored newest widget that grows leaves the chat scrolled up by its growth. Three rules around it,
+  The chat keeps that edge, **but at its bottom the chat stays at its bottom** (the user, 2026-10-28, replacing
+  2026-10-24's "The anchor should win if scrolled to bottom too"): there a top-anchored widget grows upward, as a
+  bottom-anchored one does, until its row's top reaches the screen's top inset (the navigation bar's side, the list's
+  bottom inset), which it then keeps, the rest of the growth going downward and the chat leaving its bottom by it. A
+  top already past the inset has reached it, so it stays and the widget grows downward (the user's call: the inset is
+  a ceiling, never crossed); a shrink at the bottom keeps the bottom. "At the bottom" is the settled list at its newest
+  end, an overscroll hold included, but **never while the list holds a pinned row** (the user's message while a bot
+  streams its reply, CoreList's `holdsPinnedRowAtBottomEdge`): every pass re-places that row, so a widget under it that
+  pushed it up would see it jump back down on the next pass; there the widget keeps its top and grows into the room
+  below (`testUnderAPinnedPostATopAnchoredBubbleKeepsItsTop`). Three rules around it,
   also the user's: a widget's **first height** after the 160 pt placeholder with nothing cached is placed as any new
   message is (at the bottom the chat stays at its bottom); the list **clamps at its ends** (a shrink that would need
   space past the end moves the edge instead); a bubble **off screen** leaves the screen still. The path: the widget
@@ -62,9 +70,12 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   then, and none for an update that changes no height (the bubble's re-layouts). A real change on screen releases a
   held jump; its row moves with its side. ListViewImpl ignores it. **While the height animates** the widget's clip, mask and tail follow the bubble's own
   animation (the widget never shows past the bubble's edge), a bottom-anchored widget's view rides the clip's bottom,
-  and its old tiles sit on the anchored edge until the new ones are drawn (`MessageWidgetView.tileOffset`). A chat that
+  and its old tiles sit on the anchored edge until the new ones are drawn (`MessageWidgetView.tileOffset`). A
+  top-anchored widget growing upward at the chat's bottom stays laid from the clip's top: its picture rises with the
+  bubble's top and the new part is uncovered at the bottom, which stays (recorded on the harness 2026-10-28: the caption
+  under it still within 0 pt, the widget's top and the posts above it moving together). A chat that
   fits the screen cannot scroll, so there the list's own placement decides. `WidgetHarnessResizeTests` (Tier 1,
-  `Fixtures/resize/`), `testTheFaqsQuestionStaysUnderTheFinger` and `testAFlingPastAResizingWidgetKeepsItsMomentum`
+  `Fixtures/resize/`), `testAtTheBottomTheFaqGrowsUpward` and `testAFlingPastAResizingWidgetKeepsItsMomentum`
   (Tier 2) cover it.
 - **The widget fills its bubble** (sdk-v1 §5.1): the bubble adds no padding
   (`ChatMessageWidgetBubbleContentNode.bubbleInset` = 0; the widget's body margin, the text tokens' padding, is the

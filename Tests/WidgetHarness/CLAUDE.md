@@ -219,7 +219,8 @@ There is no caption, and an older post sits above, so the probes are below the s
 ## Resize anchors (`Fixtures/resize/`, `WidgetHarnessResizeTests`)
 
 The fixtures under `Fixtures/resize/` set their resize anchor first, then change by 120 pt once: on their first click
-(`grow-top`, `grow-bottom`, `shrink-top`) or 2.5 s after loading (`timer-top`); `toggle-top` changes
+(`grow-top`, `grow-bottom`, `shrink-top`; `grow-top-far` by 480 pt, so at the chat's bottom its top reaches the screen's
+top inset) or 2.5 s after loading (`timer-top`); `toggle-top` changes
 every 50 ms from its first pointerdown, 60 times, logging the count (a swipe that starts on it flings past a resizing
 widget, `testAFlingPastAResizingWidgetKeepsItsMomentum`). They are loaded only
 by `-widget-posts` (`WidgetHarnessLaunchOptions.posts`), so their timers never run in the all-fixtures set the other
@@ -232,7 +233,12 @@ asks for one as a bubble would), records the anchor each update carried (`update
 (`updateTransactions`), and tells whether the list holds a jump (`isHoldingScrollTarget`, after
 `scrollTo(messageIndex:hold:)`). `holdsUpdates` keeps the bubbles' requests until `flushUpdates()` sends them as one
 transaction, so several widgets change height in one list pass (`heldUpdateCount`: a widget asks on the main-queue turn
-after its new height is set); `holdOverscroll(distance:)` holds the newest edge open as an overscroll action does.
+after its new height is set); `holdOverscroll(distance:)` holds the newest edge open as an overscroll action does;
+`pinToTop(path:)` pins a post to the screen's top as the chat does while a bot streams its reply under the user's message
+(the item's `pinToTop`, then the `.top(0.0)` scroll to it, which engages CoreList's pinned-row latch until a drag).
+`load` leaves the chat at its newest end, where a top-anchored widget grows upward: a test of the anchor away from the
+bottom puts newer filler below and scrolls (`scrollTo(messageIndex:)`), then checks it left the bottom
+(`assertOffTheBottom`).
 
 ## Which tier
 

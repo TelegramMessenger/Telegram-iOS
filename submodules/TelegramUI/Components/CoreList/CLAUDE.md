@@ -143,7 +143,8 @@ into empty space; a tall reply became unreachable) and **keep it latch-independe
 finger-down; a shrinking range would move content under the finger).
 
 `isStrictlyPinnedToBottomEdge` = latch + presented-frame check that the animation landed; the chat uses it
-to decide whether sending drops the pin (`ChatControllerLoadDisplayNode`). `appendUntilPinnedRowLoaded`
+to decide whether sending drops the pin (`ChatControllerLoadDisplayNode`). `holdsPinnedRowAtBottomEdge` is the latch
+alone, landed or not: the chat backend's message-widget resize targets read it, since every pass re-places the held row. `appendUntilPinnedRowLoaded`
 runs only while disengaged and its `window.height < visibleArea` bound is correct — do not patch it.
 
 **A released anchor rides the EFFECTIVE top edge (`inset + slack`)**, so a streaming reply grows into the

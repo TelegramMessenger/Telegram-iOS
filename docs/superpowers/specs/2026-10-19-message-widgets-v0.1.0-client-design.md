@@ -273,6 +273,9 @@ G2, which this client already kept), and a widget chooses which edge of its bubb
   server does, zlib at level 9.
 - **The anchored edge wins everywhere**, at the chat's bottom too (the user: "The anchor should win if scrolled to
   bottom too"): a top-anchored newest widget that grows leaves the chat scrolled up by its growth.
+  **Superseded 2026-10-28** (the user): at the chat's bottom the chat stays at its bottom, a top-anchored widget
+  growing upward until its top reaches the screen's top inset, then downward (the message widgets guide, "Which edge
+  stays put").
 - **A widget's first height is placement** (the user's choice): the first height after the placeholder, with nothing
   cached, is placed as any new message is; the anchor governs every later change.
 - **The list clamps at its ends** (the user's choice): it never shows space past an end; a shrink that would need it

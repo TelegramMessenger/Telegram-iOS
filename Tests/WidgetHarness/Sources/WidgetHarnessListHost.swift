@@ -64,6 +64,8 @@ public final class WidgetHarnessListHost {
     private var extractedMessageId: EngineMessage.Id?
     /// Settings ▸ Appearance ▸ Text Size, when set after the context's (`setFontSize`).
     private var fontSize: PresentationFontSize?
+    /// The posts pinned to the top of the screen (`pinToTop(path:)`).
+    private var pinnedToTop = Set<EngineMessage.Id>()
     private var extractionEndTimer: SwiftSignalKit.Timer?
     /// The bubble's own recognizers, off while the stand-in menu holds it (`openContextMenu`).
     private var disabledRecognizers: [UIGestureRecognizer] = []
@@ -257,6 +259,21 @@ public final class WidgetHarnessListHost {
         self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .center(.bottom), animated: false, curve: .Default(duration: nil), directionHint: .Up, hold: hold), updateOpaqueState: nil)
     }
 
+    /// Pins the post at `path` to the top of the screen as the chat does while a bot streams its reply under the user's
+    /// message (`ChatHistoryListNode`'s `pinToTopStableId`): its item declares `pinToEdgeWithInset`, and the list
+    /// scrolls to it with `.top(0.0)` in the same pass, which engages CoreList's pinned-row latch until a drag.
+    public func pinToTop(path: String) {
+        guard let id = self.paths.first(where: { $0.value == path })?.key, let messageIndex = self.messages.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        self.pinnedToTop.insert(id)
+        let listIndex = self.messages.count - 1 - messageIndex
+        let item = self.makeItem(self.messages[messageIndex])
+        self.items[listIndex] = item
+        let update = ChatHistoryListViewUpdateItem(index: listIndex, previousIndex: listIndex, stableId: self.stableId(atListIndex: listIndex), item: item, directionHint: nil)
+        self.listView.chatHistoryTransaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [update], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: listIndex, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Up), updateOpaqueState: nil)
+    }
+
     /// Every message update the bubbles asked for, in order: the post's path and the edge the update carried.
     public private(set) var updateAnchors: [(path: String, anchor: ListViewItemResizeAnchor?)] = []
     /// The number of messages each update transaction carried, in order.
@@ -358,7 +375,9 @@ public final class WidgetHarnessListHost {
             nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false,
             chatBubbleCorners: presentationData.chatBubbleCorners)
         let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .wifi, isRecentActions: false, isCopyProtectionEnabled: self.copyProtected, availableReactions: nil, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: self.accountPeer)
-        return ChatMessageItemImpl(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(id: WidgetHarnessListHost.chatPeer.id), associatedData: associatedData, controllerInteraction: self.controllerInteraction!, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+        var attributes = ChatMessageEntryAttributes()
+        attributes.pinToTop = self.pinnedToTop.contains(message.id)
+        return ChatMessageItemImpl(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(id: WidgetHarnessListHost.chatPeer.id), associatedData: associatedData, controllerInteraction: self.controllerInteraction!, content: .message(message: message, read: true, selection: .none, attributes: attributes, location: nil))
     }
 
     // MARK: - What the bubbles ask for

@@ -921,6 +921,12 @@ public final class CoreVirtualListView: UIView {
     /// the difference is only that there the pan's view and the list's view coincide.
     public var scrollGestureHostView: UIView { engine.contentHost }
 
+    /// Whether the latch holds a `pinsToBottomEdge` row (`holdsPinnedRow`): every pass without a
+    /// `scrollTo` re-places that row against the bottom edge, so a host's own target that moves it is
+    /// undone on the next pass. The latch alone, landed or not (`isStrictlyPinnedToBottomEdge` also
+    /// asks whether its animation has landed).
+    public var holdsPinnedRowAtBottomEdge: Bool { holdsPinnedRow }
+
     /// Whether a `pinsToBottomEdge` row is currently HELD against the bottom edge, as opposed to
     /// merely happening to be near it. `ListViewImpl.isStrictlyScrolledToPinToEdgeItem()`
     /// (`Display/Source/ListView.swift:2708`), tolerance included.

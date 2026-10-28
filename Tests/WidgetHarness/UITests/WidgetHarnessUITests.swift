@@ -574,10 +574,10 @@ final class WidgetHarnessUITests: XCTestCase {
 
     // MARK: resize anchors (widget-sandbox v0.1.3, corpus/resize)
 
-    /// corpus/resize's delivery FAQ (the default anchor, top), the newest post of a chat taller than the screen: a tap on
-    /// its first question opens the answer below it, and the question stays under the finger, at the chat's bottom too
-    /// (the bubble's top stays; the user's decision 1).
-    func testTheFaqsQuestionStaysUnderTheFinger() throws {
+    /// corpus/resize's delivery FAQ (the default anchor, top), the newest post of a chat taller than the screen, at the
+    /// chat's bottom: a tap on its first question opens the answer below it, and the FAQ grows upward, the chat staying at
+    /// its bottom, as its top stays below the screen's top inset (the user's rule, 2026-10-28).
+    func testAtTheBottomTheFaqGrowsUpward() throws {
         let faq = "resize/1-default/01-faq.html"
         let app = self.launch(["-widget-set", "corpus", "-widget-posts", "resize/3-grows-down/03-show-more.html,resize/2-grows-up/02-support-thread.html," + faq])
         self.waitForReadout(app) { $0.contains(faq) && $0.contains(" widget") && !$0.contains("x160 ") }
@@ -586,6 +586,7 @@ final class WidgetHarnessUITests: XCTestCase {
         let size = before.size.split(separator: "x").compactMap { Double($0) }
         let height = size.last ?? 0.0
         let top = before.centre.dy - height / 2.0
+        let bottom = before.centre.dy + height / 2.0
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: before.centre.dx, dy: top + 132.0)).tap()
         let grown = self.waitForReadout(app, timeout: 5.0) { value in
             (self.bubble(faq, in: value)?.size.split(separator: "x").compactMap { Double($0) }.last ?? 0.0) > height + 20.0
@@ -595,7 +596,10 @@ final class WidgetHarnessUITests: XCTestCase {
         self.attachScreenshot(app, "after opening the FAQ's first answer")
         let afterHeight = after.size.split(separator: "x").compactMap { Double($0) }.last ?? 0.0
         XCTAssertGreaterThan(afterHeight, height + 20.0, self.readout(app))
-        XCTAssertEqual(after.centre.dy - afterHeight / 2.0, top, accuracy: 1.0, "before \(before), after \(after)")
+        // The list's top edge is the readout's bottom (the harness's top inset).
+        let inset = Double(app.staticTexts["harness.readout"].frame.maxY)
+        XCTAssertGreaterThan(top - (afterHeight - height), inset + 1.0, "its growth reaches the top inset at \(inset): before \(before), after \(after)")
+        XCTAssertEqual(after.centre.dy + afterHeight / 2.0, bottom, accuracy: 1.0, "before \(before), after \(after)")
     }
 
     /// A widget's height change during a fling leaves the fling alone: the list's own placement keeps what is on the

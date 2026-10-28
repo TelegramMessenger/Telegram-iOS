@@ -558,10 +558,14 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     /// own placement already does. The list keeps what lies on the screen-bottom side of a changed row (the rotated list's
     /// low indices), so: a row on screen, even partly, keeps its `anchor` edge (its screen top is the list's maxY, its
     /// screen bottom the list's minY); a row below the viewport keeps the lowest visible row; a row above it needs
-    /// nothing. At the chat's bottom a top-anchored row that grows leaves the chat scrolled up by its growth, a valid
-    /// place; one that shrinks would need space past the end, which the target's clamp refuses. The target
-    /// is the pass's own (no hold), placed from the row's new height and clamped at the ends as any target is (the list
-    /// never shows space past its ends), and it replaces a held jump. Settled geometry, so passes in flight compose.
+    /// nothing. At the chat's bottom the chat stays at its bottom (the user, 2026-10-28): a top-anchored row keeps its
+    /// screen bottom there, growing upward until its top reaches the screen's top inset, which its top then keeps, the
+    /// rest of the growth going downward; a top already past the inset stays (the inset is a ceiling, never crossed), and
+    /// a shrink keeps the bottom. Not while the list holds a pinned row (the user's message while a bot streams its
+    /// reply): every pass re-places that row, so one that a widget under it pushed up would jump back down on the next;
+    /// there the widget keeps its top and grows into the room below. The target is the pass's own (no hold), placed from the row's new height and clamped at
+    /// the ends as any target is (the list never shows space past its ends), and it replaces a held jump. Settled
+    /// geometry, so passes in flight compose.
     private func keepingEdge(of index: Int, anchor: ListViewItemResizeAnchor) -> CoreListScrollTarget? {
         guard index >= 0, index < self.entries.count, let view = self.coreList.loadedItemView(at: index) else {
             return nil
@@ -573,6 +577,16 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         // through them.
         let visibleMinY: CGFloat = 0.0
         let visibleMaxY = self.currentSize.height
+        // The screen's top inset, in the list's coordinates: the list's bottom inset is the navigation bar's side.
+        let topInsetY = visibleMaxY - self.currentInsets.bottom
+        // At the chat's bottom: the newest row rests on its edge, or past it while the overscroll hold keeps the edge open
+        // or a pinned row's room does (a negative offset). Never while the pinned row is held (above).
+        let isAtBottom: Bool
+        if !self.coreList.holdsPinnedRowAtBottomEdge, case let .known(offset) = self.visibleContentOffset(.settled), offset <= 0.9 {
+            isAtBottom = true
+        } else {
+            isAtBottom = false
+        }
         if frame.minY >= visibleMaxY {
             return nil
         }
@@ -594,6 +608,12 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
         return CoreListScrollTarget(index: index, direction: .forward, hold: nil) { height, _ in
             switch anchor {
             case .top:
+                if isAtBottom {
+                    // The row's new screen top, its bottom kept: a growth stops at the top inset, or where a top
+                    // already past it is.
+                    let maxY = min(frame.minY + height, max(frame.maxY, topInsetY))
+                    return maxY - height - insetTop
+                }
                 return frame.maxY - height - insetTop
             case .bottom:
                 return frame.minY - insetTop
