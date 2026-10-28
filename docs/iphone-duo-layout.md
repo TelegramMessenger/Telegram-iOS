@@ -103,8 +103,8 @@ These are the user's decisions; a screen that follows them is correct, one that 
      button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
      of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
      rule 2's exception.
-   - the **text actions that take a hidden button's place** in Settings' 2FA data input ("Can't access your email?",
-     "Re-send Code"): they line up with the fields above them, while the button itself spans the strip
+   - the **text actions that take a hidden button's place** in Settings' 2FA data input ("Can't access your email?"
+     or "Change Email", and "Re-send Code"): they line up with the fields above them, while the button itself spans the strip
      (`twoFactorDataInputHorizontalLayout` in PasswordSetupUI). In the login flow they keep to the button's frame, as
      above.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the

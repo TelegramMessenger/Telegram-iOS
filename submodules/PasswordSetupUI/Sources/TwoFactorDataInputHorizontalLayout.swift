@@ -11,8 +11,8 @@ struct TwoFactorDataInputHorizontalLayout: Equatable {
     /// The band the bottom button is centred in.
     var bottomMinX: CGFloat
     var bottomWidth: CGFloat
-    /// The row of the text actions that take the button's place while it is hidden ("Can't access your email?",
-    /// "Re-send Code"), the left one at its leading edge and the right one at its trailing edge.
+    /// The row of the text actions that take the button's place while it is hidden ("Can't access your email?" or
+    /// "Change Email", and "Re-send Code"), the left one at its leading edge and the right one at its trailing edge.
     var actionsMinX: CGFloat
     var actionsWidth: CGFloat
 }
