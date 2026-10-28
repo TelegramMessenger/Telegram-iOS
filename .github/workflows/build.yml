@@ -71,11 +71,11 @@ jobs:
           OUTPUT_PATH="build/artifacts"
           rm -rf "$OUTPUT_PATH" build/DSYMs
           mkdir -p "$OUTPUT_PATH" build/DSYMs
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" $OUTPUT_PATH/
-          done
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM; do
-            cp -R "$f" build/DSYMs/
+          # bazel-bin points at the configuration of the build that just ran (Bazel 9 names it
+          # ios_arm64-opt-ios-arm64-min15.0-ST-*, no longer applebin_ios-*).
+          cp -L bazel-bin/Telegram/Telegram.ipa $OUTPUT_PATH/
+          for f in bazel-bin/Telegram/*.dSYM; do
+            cp -RL "$f" build/DSYMs/
           done
           zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
 
