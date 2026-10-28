@@ -268,6 +268,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         }
                         self.statusNode.transitionToState(statusState, completion: {})
                         self.statusButtonNode.isUserInteractionEnabled = statusState != .none
+                        // VoiceOver: the button exists only while it does something: cancel a download in progress, or
+                        // start one (a cloud icon). With nothing shown it is not an element.
+                        switch status {
+                        case .Fetching:
+                            self.statusButtonNode.isAccessibilityElement = true
+                            self.statusButtonNode.accessibilityLabel = self.strings.Common_Cancel
+                        case .Remote, .Paused:
+                            self.statusButtonNode.isAccessibilityElement = statusState != .none
+                            self.statusButtonNode.accessibilityLabel = self.strings.WebBrowser_Download_Download
+                        case .Local:
+                            self.statusButtonNode.isAccessibilityElement = false
+                            self.statusButtonNode.accessibilityLabel = nil
+                        }
+                        self.statusButtonNode.accessibilityTraits = .button
                     case let .playback(paused, seekable):
                         self.currentIsPaused = paused
                         
@@ -426,6 +440,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.playPauseIconNode = PlayPauseIconNode(lottieSettings: context.lottieRenderingSettings)
         
         self.statusButtonNode = HighlightTrackingButtonNode()
+        // VoiceOver: an element only while it cancels or starts a download (`content`).
+        self.statusButtonNode.isAccessibilityElement = false
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         self.statusNode.isUserInteractionEnabled = false
         
@@ -1356,7 +1372,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.actionButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.Gallery_VoiceOver_Share
                 ))
             }
             if buttonsState.displayPictureInPictureButton {
@@ -1368,7 +1385,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.pipButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.Gallery_VoiceOver_PictureInPicture
                 ))
             }
             if let settingsButtonState = buttonsState.settingsButtonState {
@@ -1388,7 +1406,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         } else if let rightItemView = buttonPanelView.rightItemView, rightItemView.itemView(id: AnyHashable("settings")) != nil {
                             self.settingsButtonPressed(sourceView: rightItemView.menuSourceView)
                         }
-                    }
+                    },
+                    accessibilityLabel: self.strings.VoiceOver_Gallery_VideoSettings
                 ))
             }
             if buttonsState.displayEditButton {
@@ -1400,7 +1419,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.editButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.Gallery_VoiceOver_Edit
                 ))
             }
             if buttonsState.displayTextRecognitionButton {
@@ -1412,7 +1432,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.textRecognitionButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.VoiceOver_Gallery_TextRecognition
                 ))
             }
             if buttonsState.displayStickersButton {
@@ -1424,7 +1445,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.stickersButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.Gallery_VoiceOver_Stickers
                 ))
             }
             if buttonsState.displayFullscreenButton && !metrics.isTablet {
@@ -1436,7 +1458,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.fullscreenButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.Gallery_VoiceOver_Fullscreen
                 ))
             }
             if buttonsState.displayDeleteButton {
@@ -1448,7 +1471,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             return
                         }
                         self.deleteButtonPressed()
-                    }
+                    },
+                    accessibilityLabel: self.strings.Gallery_VoiceOver_Delete
                 ))
             }
         }
@@ -1502,6 +1526,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor(buttonsCenterX - statusSize.width / 2.0), y: panelHeight - bottomInset - statusSize.height - 8.0), size: statusSize))
         
         self.statusButtonNode.frame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - 22.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        // VoiceOver: an element only while it shows a cancel or download icon (`content`); ASControlNode turns any
+        // interactive control into an element, which left an empty one here.
+        self.statusButtonNode.isAccessibilityElement = !self.statusButtonNode.isHidden && self.statusButtonNode.isUserInteractionEnabled && self.statusButtonNode.accessibilityLabel != nil
         
         if let (videoFramePreviewNode, videoFrameTextNode) = self.videoFramePreviewNode {
             let intrinsicImageSize = videoFramePreviewNode.image?.size ?? CGSize(width: 320.0, height: 240.0)

@@ -1307,7 +1307,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     } else {
                         self.footerContentNode.seekBackward?(15.0)
                     }
-                }
+                },
+                accessibilityStrings: self.presentationData.strings
             )),
             environment: {},
             containerSize: CGSize(width: 1000.0, height: 1000.0)
@@ -1385,6 +1386,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             let scrubberView = ChatVideoGalleryItemScrubberView(chapters: chapters)
             self.scrubberView = scrubberView
+            let accessibilityStrings = self.presentationData.strings
+            scrubberView.accessibilityTitle = accessibilityStrings.VoiceOver_Gallery_PlaybackPosition
+            scrubberView.accessibilityValueFormat = { position, duration in
+                return accessibilityStrings.Items_NOfM(position, duration).string
+            }
             scrubberView.seek = { [weak self] timecode in
                 self?.videoNode?.seek(timecode)
             }

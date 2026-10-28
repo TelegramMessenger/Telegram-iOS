@@ -260,7 +260,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     let cachedDataPromise = Promise<EngineCachedPeerData?>()
     
-    let scrollNode: ASScrollNode
+    let scrollNode: PeerInfoScrollNode
     let edgeEffectView: EdgeEffectView
     
     let headerNode: PeerInfoHeaderNode
@@ -1377,10 +1377,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.scrollNode.addSubnode(self.paneContainerNode)
         self.scrollNode.view.addSubview(self.headerNode.headerEdgeEffectContainer)
         self.scrollNode.view.addSubview(self.paneContainerNode.headerContainer)
-        if let scrollNode = self.scrollNode as? PeerInfoScrollNode {
-            scrollNode.accessibilityTabsView = self.paneContainerNode.headerContainer
-            scrollNode.accessibilityPanesNode = self.paneContainerNode
-        }
+        self.scrollNode.accessibilityTabsView = self.paneContainerNode.headerContainer
+        self.scrollNode.accessibilityPanesNode = self.paneContainerNode
         
         self.view.addSubview(self.edgeEffectView)
         

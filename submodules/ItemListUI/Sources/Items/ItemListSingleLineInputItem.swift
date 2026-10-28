@@ -499,7 +499,9 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         }
         self.clearIconNode.isHidden = isHidden
         self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
+        // The flag was inverted: the shown button was a container nobody could focus, the hidden one an element.
+        self.clearButtonNode.isAccessibilityElement = !isHidden
+        self.clearButtonNode.accessibilityTraits = .button
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {

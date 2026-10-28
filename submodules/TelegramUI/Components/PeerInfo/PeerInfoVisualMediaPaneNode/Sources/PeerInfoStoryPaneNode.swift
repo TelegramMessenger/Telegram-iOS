@@ -2334,6 +2334,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
         }
 
+        self.itemGrid.accessibilityItemFocused = { [weak self] rect in
+            guard let self else {
+                return
+            }
+            // A focused story below the fold: the profile scrolls the pane up, as for a story opened from elsewhere.
+            self.ensureRectVisible?(self.itemGrid.view, rect)
+        }
         self.itemGridBinding.accessibilityContextMenuEnabledImpl = { [weak self] in
             return self?.contextGestureContainerNode.isGestureEnabled ?? false
         }

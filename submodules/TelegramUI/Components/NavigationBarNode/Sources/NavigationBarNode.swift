@@ -1048,13 +1048,10 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
                 } else if let titleElement = rowView.titleAccessibilityElement {
                     elements.append(titleElement)
                 }
-                // A title a screen draws itself and adds straight to the bar's view (ForumSettingsScreen, the affiliate
-                // program screens, …): the bar's own subviews are containers, so a direct subview that is a text element
-                // is such a title. It is read where the bar's title is, as a heading.
+                // A title a screen draws itself and adds straight to the bar's view (ForumSettingsScreen, the
+                // Business settings, …): the bar's own subviews are containers, so a direct subview that is a text element
+                // is such a title. It is read where the bar's title is; those screens mark it as a heading.
                 for subview in self.view.subviews where subview.isAccessibilityElement && subview.accessibilityTraits.contains(.staticText) && !subview.isHidden && subview.alpha >= 0.01 && !subview.accessibilityElementsHidden {
-                    if !subview.accessibilityTraits.contains(.header) {
-                        subview.accessibilityTraits.insert(.header)
-                    }
                     elements.append(subview)
                 }
                 elements.append(contentsOf: rowView.trailingAccessibilityElements)

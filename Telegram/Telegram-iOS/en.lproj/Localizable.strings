@@ -9012,6 +9012,11 @@ Sorry for the inconvenience.";
 "Gallery.VoiceOver.Edit" = "Edit";
 "Gallery.VoiceOver.Stickers" = "Stickers";
 "Gallery.VoiceOver.PictureInPicture" = "Picture-in-Picture";
+"VoiceOver.Gallery.VideoSettings" = "Video Settings";
+"VoiceOver.Gallery.TextRecognition" = "Recognize Text";
+"VoiceOver.Gallery.SeekBackward" = "Back 15 Seconds";
+"VoiceOver.Gallery.SeekForward" = "Forward 15 Seconds";
+"VoiceOver.Gallery.PlaybackPosition" = "Playback position";
 
 "Appearance.VoiceOver.Theme" = "%@ Theme";
 

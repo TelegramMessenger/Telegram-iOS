@@ -382,7 +382,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             // The long press opens the context menu when the item has one (the gesture is enabled only then), otherwise
             // the item's long-tap action.
             let moreLabel: String? = (item.contextAction != nil || item.longTapAction != nil) ? presentationData.strings.Common_More : nil
-            let linkTexts = links.map(\.text)
+            // Keyed by text and target: an edit that keeps a link's text but changes where it goes rebuilds the action.
+            let linkTexts = links.map { "\($0.text)\u{0}\(String(describing: $0.item))" }
             if let key = self.accessibilityActionsKey, key.moreLabel == moreLabel, key.linkTexts == linkTexts {
             } else {
                 self.accessibilityActionsKey = (moreLabel, linkTexts)

@@ -402,7 +402,8 @@ public class ItemListExpandableSwitchItemNode: ListViewItemNode, ItemListItemNod
                     // count it shows ("10/10"); the switch control is not read on its own. The tap on the row's
                     // title expands the sub-items: that is the "Expand"/"Collapse" custom action.
                     strongSelf.activateArea.accessibilityLabel = item.title
-                    strongSelf.activateArea.accessibilityValue = "\(titleValue), " + (item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off)
+                    let switchValue = item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off
+                    strongSelf.activateArea.accessibilityValue = item.subItems.isEmpty ? switchValue : "\(titleValue), \(switchValue)"
                     strongSelf.activateArea.accessibilityHint = item.presentationData.strings.VoiceOver_Common_SwitchHint
                     strongSelf.switchNode.view.accessibilityElementsHidden = true
                     strongSelf.switchGestureNode.view.accessibilityElementsHidden = true

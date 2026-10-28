@@ -259,6 +259,41 @@ final class GiftsListView: UIView {
         preconditionFailure()
     }
     
+    /// VoiceOver: the gift tiles on screen plus one row beyond each edge (as ListView's edge rows), in reading order.
+    /// The list is laid out at full height inside the profile's scroll, so the tiles far below the screen are left out
+    /// until the profile scrolls them closer. Computed only when an accessibility client asks.
+    override var accessibilityElements: [Any]? {
+        get {
+            guard let window = self.window else {
+                return nil
+            }
+            let onScreen = self.convert(window.bounds, from: window)
+            var rowHeight: CGFloat = 0.0
+            for subview in self.subviews where subview.bounds.height > rowHeight {
+                rowHeight = subview.bounds.height
+            }
+            let listed = onScreen.insetBy(dx: 0.0, dy: -(rowHeight + 10.0))
+            var elements: [UIView] = []
+            for subview in self.subviews {
+                if subview.isHidden || subview.alpha < 0.01 || subview.accessibilityElementsHidden {
+                    continue
+                }
+                if !subview.frame.intersects(listed) {
+                    continue
+                }
+                elements.append(subview)
+            }
+            elements.sort(by: { lhs, rhs in
+                if abs(lhs.frame.minY - rhs.frame.minY) > 1.0 {
+                    return lhs.frame.minY < rhs.frame.minY
+                }
+                return lhs.frame.minX < rhs.frame.minX
+            })
+            return elements
+        } set(value) {
+        }
+    }
+    
     deinit {
         self.dataDisposable?.dispose()
     }

@@ -79,6 +79,19 @@ public struct GalleryPagerTransaction {
     }
 }
 
+private final class GalleryPagerAccessibilityElement: UIAccessibilityElement {
+    var increment: (() -> Void)?
+    var decrement: (() -> Void)?
+    
+    override func accessibilityIncrement() {
+        self.increment?()
+    }
+    
+    override func accessibilityDecrement() {
+        self.decrement?()
+    }
+}
+
 public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     private let pageGap: CGFloat
     private let disableTapNavigation: Bool
@@ -575,6 +588,52 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
             self.centralItemIndex = focusOnItem
             self.ignoreCentralItemIndexUpdate = false
             self.updateItemNodes(transition: .immediate, forceOffsetReset: true, synchronous: transaction.synchronous)
+        }
+    }
+    
+    /// VoiceOver: the pager is one adjustable element for the page on screen ("Page"); swiping up/down goes
+    /// to the next/previous item, as swiping the page does. Neighbouring pages are not read. Set by the gallery.
+    public var accessibilityPageLabel: String?
+    public var accessibilityPageValue: ((Int, Int) -> String)?
+    private var accessibilityPageElement: GalleryPagerAccessibilityElement?
+    
+    override public var accessibilityElements: [Any]? {
+        get {
+            guard let label = self.accessibilityPageLabel, let index = self.centralItemIndex, !self.items.isEmpty else {
+                return []
+            }
+            let element: GalleryPagerAccessibilityElement
+            if let current = self.accessibilityPageElement {
+                element = current
+            } else {
+                element = GalleryPagerAccessibilityElement(accessibilityContainer: self.view)
+                self.accessibilityPageElement = element
+            }
+            element.accessibilityLabel = label
+            element.accessibilityValue = self.accessibilityPageValue?(index + 1, self.items.count)
+            element.accessibilityTraits = .adjustable
+            element.accessibilityFrameInContainerSpace = self.view.bounds
+            element.increment = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.goToNextItem()
+                UIAccessibility.post(notification: .layoutChanged, argument: nil)
+            }
+            element.decrement = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.goToPreviousItem()
+                UIAccessibility.post(notification: .layoutChanged, argument: nil)
+            }
+            var elements: [Any] = [element]
+            // The current page's own controls (a video's play button), never its neighbours.
+            if let centralNode = self.centralItemNode(), centralNode.isNodeLoaded {
+                elements.append(centralNode.view)
+            }
+            return elements
+        } set(value) {
         }
     }
     

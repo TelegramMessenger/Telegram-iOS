@@ -2206,6 +2206,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             )
             if let standardTitleView = standardTitle.view {
                 if standardTitleView.superview == nil {
+                    // The screen's title (Saved Messages, a media-only profile), read as a heading like the name.
+                    standardTitleView.accessibilityTraits = [.staticText, .header]
                     self.regularContentNode.view.addSubview(standardTitleView)
                 }
                 let standardTitleFrame = titleSize.centered(in: self.titleNodeContainer.frame).offsetBy(dx: 2.0, dy: 0.0)
@@ -2769,7 +2771,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             action: { [weak self] in
                                 self?.displaySavedMusic?()
                             },
-                            accessibility: ComponentAccessibility(label: musicString.string.trimmingCharacters(in: .whitespacesAndNewlines))
+                            // Its shown text; nothing while the track's title is still loading.
+                            accessibility: ComponentAccessibility(label: musicString.string.trimmingCharacters(in: .whitespacesAndNewlines), isHidden: musicString.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         )
                     ),
                     environment: {},

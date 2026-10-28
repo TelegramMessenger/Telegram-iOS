@@ -621,6 +621,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     strongSelf.accessibilityLabel = displayTitle.composedTitle
                     // The status under the name (username, phone, member count) is read as the value.
                     strongSelf.accessibilityValue = statusText.isEmpty ? nil : statusText.replacingOccurrences(of: "\n", with: ", ")
+                    // A row that opens something (`action`) is a button; otherwise it is the screen's peer header, text.
+                    strongSelf.accessibilityTraits = item.action != nil ? .button : [.staticText, .header]
                     
                     strongSelf.layoutWidthAndNeighbors = (params, neighbors)
                     

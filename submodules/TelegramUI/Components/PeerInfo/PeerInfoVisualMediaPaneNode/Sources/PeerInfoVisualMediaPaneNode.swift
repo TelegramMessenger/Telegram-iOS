@@ -550,7 +550,7 @@ private final class ItemView: UIView, SparseItemGridView {
     
     override var accessibilityTraits: UIAccessibilityTraits {
         get {
-            var traits: UIAccessibilityTraits = .button
+            var traits: UIAccessibilityTraits = self.messageItemNode?.accessibilityTraits ?? .button
             if let messageItem = self.messageItem, case .selectable(true, _) = messageItem.selection {
                 traits.insert(.selected)
             }
@@ -572,6 +572,13 @@ private final class ItemView: UIView, SparseItemGridView {
         }
         self.pressed()
         return true
+    }
+    
+    var accessibilityFocused: ((UIView) -> Void)?
+    
+    override func accessibilityElementDidBecomeFocused() {
+        super.accessibilityElementDidBecomeFocused()
+        self.accessibilityFocused?(self)
     }
     
     @objc func pressed() {
@@ -880,8 +887,14 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         if !self.useListItems {
             return nil
         }
-        return ItemView()
+        let view = ItemView()
+        view.accessibilityFocused = { [weak self] view in
+            self?.accessibilityViewFocusedImpl?(view)
+        }
+        return view
     }
+    
+    var accessibilityViewFocusedImpl: ((UIView) -> Void)?
 
     func createShimmerLayer() -> SparseItemGridShimmerLayer? {
         if self.useListItems {
@@ -1277,6 +1290,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
 
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
+    /// Brings a rect of the pane on screen (the profile scrolls the pane up). Used for VoiceOver focus.
+    public var ensureRectVisible: ((UIView, CGRect) -> Void)?
 
     private let stateTag: EngineMessage.Tags
     private var storedStateDisposable: Disposable?
@@ -1611,6 +1626,15 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             }
         }
 
+        self.itemGrid.accessibilityItemFocused = { [weak self] rect in
+            guard let self else {
+                return
+            }
+            self.ensureRectVisible?(self.itemGrid.view, rect)
+        }
+        self.itemGridBinding.accessibilityViewFocusedImpl = { [weak self] view in
+            self?.ensureRectVisible?(view, view.bounds)
+        }
         self.itemGridBinding.accessibilityContextActionImpl = { [weak self] item, itemLayer in
             guard let self, let itemLayer = itemLayer as? ItemLayer else {
                 return false

@@ -500,6 +500,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.controller = controller
         
         self.backgroundNode = backgroundNode
+        if case .standard(.embedded) = chatPresentationInterfaceState.mode {
+            // A history embedded in a profile pane (Saved): the wallpaper is decoration there. The chat screen itself is
+            // left as it is (its own pass).
+            backgroundNode.accessibilityElementsHidden = true
+        }
         
         self.wrappingNode = SpaceWarpNodeImpl()
         

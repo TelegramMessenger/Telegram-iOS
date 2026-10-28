@@ -1169,6 +1169,8 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     } else {
                         footerHeight = 100.0
                     }
+                    // Withdrawn: VoiceOver neither reads nor activates it while it slides out.
+                    footerItemNode.accessibilityElementsHidden = true
                     footerItemNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: footerHeight), duration: 0.25, removeOnCompletion: false, additive: true, completion: { [weak footerItemNode] _ in
                         footerItemNode?.removeFromSupernode()
                     })
