@@ -2,103 +2,94 @@ import XCTest
 import CoreGraphics
 
 final class CameraDualPreviewPlacementTests: XCTestCase {
-    // The shutter is 96pt; the mode row sits below it, its top 45pt below the shutter's centre on a lifted row.
+    // The 96pt shutter's centre is 53pt above the viewfinder's bottom where the viewfinder fits above the controls.
     private let shutterRadius: CGFloat = 48.0
+    private let shutterAbove: CGFloat = 53.0
+    // On a lifted row (iPhone Duo) the mode row's top is 45pt below the shutter's centre.
     private let modeRowTopBelowShutterCenter: CGFloat = 45.0
 
     private func circleSide(viewfinderWidth: CGFloat) -> CGFloat {
         return viewfinderWidth * 160.0 / 393.0
     }
 
-    private func assertClearOfControls(_ center: CGPoint, side: CGFloat, shutterCenter: CGPoint, containerHeight: CGFloat, file: StaticString = #filePath, line: UInt = #line) {
-        let distance = hypot(center.x - shutterCenter.x, center.y - shutterCenter.y)
-        XCTAssertGreaterThan(distance, side / 2.0 + self.shutterRadius, "overlaps the shutter", file: file, line: line)
-        XCTAssertLessThanOrEqual(center.y + side / 2.0, shutterCenter.y + self.modeRowTopBelowShutterCenter, "reaches the mode row", file: file, line: line)
-        XCTAssertLessThanOrEqual(center.y + side / 2.0, containerHeight, "below the screen's bottom edge", file: file, line: line)
+    private func center(isLeft: Bool, isBottom: Bool, width: CGFloat, size: CGSize, visibleHeight: CGFloat? = nil, leftInset: CGFloat = 0.0, rightInset: CGFloat = 0.0, shutterCenterY: CGFloat?) -> CGPoint {
+        return cameraDualPreviewCenter(isLeft: isLeft, isBottom: isBottom, viewfinderWidth: width, containerSize: size, visibleHeight: visibleHeight ?? size.height, leftInset: leftInset, rightInset: rightInset, shutterCenterY: shutterCenterY, shutterCenterAboveViewfinderBottom: self.shutterAbove)
     }
 
-    // iPhone 17/18 Pro: a 393x698 viewfinder with room below it. Without a shutter anchor it is the original expression.
+    // iPhone 17/18 Pro: a 393x698 viewfinder with room below it, the frame's corners.
     func testOrdinaryIPhoneKeepsTheViewfinderCorners() {
         let size = CGSize(width: 393.0, height: 698.0)
-        let topLeft = cameraDualPreviewCenter(isLeft: true, isBottom: false, viewfinderWidth: 393.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
+        let topLeft = self.center(isLeft: true, isBottom: false, width: 393.0, size: size, shutterCenterY: nil)
         XCTAssertEqual(topLeft.x, 393.0 * 267.0 / 1080.0, accuracy: 0.001)
         XCTAssertEqual(topLeft.y, 393.0 * 438.0 / 1080.0, accuracy: 0.001)
 
-        let bottomRight = cameraDualPreviewCenter(isLeft: false, isBottom: true, viewfinderWidth: 393.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
+        let bottomRight = self.center(isLeft: false, isBottom: true, width: 393.0, size: size, shutterCenterY: nil)
         XCTAssertEqual(bottomRight.x, 393.0 - 393.0 * 267.0 / 1080.0, accuracy: 0.001)
         XCTAssertEqual(bottomRight.y, 698.0 - 393.0 * 438.0 / 1080.0, accuracy: 0.001)
+
+        // Its shutter is 53pt above the viewfinder's bottom, which is the relation iPhone Duo unfolded copies.
+        XCTAssertEqual(bottomRight.y, (698.0 - self.shutterAbove) + self.shutterAbove - 393.0 * 438.0 / 1080.0, accuracy: 0.001)
     }
 
-    // On a phone whose viewfinder fits, the shutter's centre is 53pt above the viewfinder's bottom: keeping to the
-    // shutter is the same place, which is what the Duo copies.
-    func testShutterAnchorReducesToTheViewfinderCornerWhereTheViewfinderFits() {
-        let size = CGSize(width: 393.0, height: 698.0)
-        for isLeft in [true, false] {
-            let plain = cameraDualPreviewCenter(isLeft: isLeft, isBottom: true, viewfinderWidth: 393.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
-            let anchored = cameraDualPreviewCenter(isLeft: isLeft, isBottom: true, viewfinderWidth: 393.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: 698.0 - 53.0)
-            XCTAssertEqual(plain.x, anchored.x, accuracy: 0.001)
-            XCTAssertEqual(plain.y, anchored.y, accuracy: 0.001)
-        }
-    }
-
-    // iPhone Duo folded (466x678, the strip on the right): the story viewfinder is the band's 381x678, the controls
-    // lifted 46pt above the home indicator, the shutter's centre at 558.67.
-    func testDuoFoldedBottomCornersClearTheControls() {
+    // iPhone Duo folded (466x678, the strip on the right): the story viewfinder is the band's 381x678 and ends on the
+    // screen, so a bottom corner stays where the capture puts it, as on home-button phones, though the controls are
+    // lifted over it.
+    func testDuoFoldedKeepsTheViewfinderCorner() {
         let size = CGSize(width: 381.0, height: 678.0)
         let shutterCenterY: CGFloat = 678.0 - 48.0 - 20.0 - 5.0 - 46.0 - 1.0 / 3.0
-        let side = self.circleSide(viewfinderWidth: 381.0)
-
-        let old = cameraDualPreviewCenter(isLeft: true, isBottom: true, viewfinderWidth: 381.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
-        XCTAssertLessThan(hypot(old.x - size.width / 2.0, old.y - shutterCenterY), side / 2.0 + self.shutterRadius, "the viewfinder's corner is under the shutter")
-
         for isLeft in [true, false] {
-            let center = cameraDualPreviewCenter(isLeft: isLeft, isBottom: true, viewfinderWidth: 381.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: shutterCenterY)
-            XCTAssertEqual(center.y, shutterCenterY + 53.0 - 381.0 * 438.0 / 1080.0, accuracy: 0.001)
-            XCTAssertGreaterThanOrEqual(center.x - side / 2.0, 0.0)
-            XCTAssertLessThanOrEqual(center.x + side / 2.0, size.width)
-            self.assertClearOfControls(center, side: side, shutterCenter: CGPoint(x: size.width / 2.0, y: shutterCenterY), containerHeight: size.height)
+            let plain = self.center(isLeft: isLeft, isBottom: true, width: 381.0, size: size, shutterCenterY: nil)
+            let anchored = self.center(isLeft: isLeft, isBottom: true, width: 381.0, size: size, shutterCenterY: shutterCenterY)
+            XCTAssertEqual(plain, anchored)
+            XCTAssertEqual(anchored.y, 678.0 - 381.0 * 438.0 / 1080.0, accuracy: 0.001)
         }
     }
 
-    // iPhone Duo unfolded (669x951): the 9:16 viewfinder is 669x1189, 238pt below the screen; the bottom corner was
-    // there with it.
+    // iPhone Duo unfolded (669x951): the 9:16 viewfinder is 669x1189, 238pt below the screen, and the bottom corner
+    // was there with it. It keeps to the shutter instead: on screen and clear of the controls.
     func testDuoUnfoldedBottomCornersStayOnScreenAndClearTheControls() {
         let size = CGSize(width: 669.0, height: 1189.0)
         let screenHeight: CGFloat = 951.0
         let shutterCenterY: CGFloat = 951.0 - 48.0 - 20.0 - 5.0 - 46.0 - 1.0 / 3.0
         let side = self.circleSide(viewfinderWidth: 669.0)
 
-        let old = cameraDualPreviewCenter(isLeft: true, isBottom: true, viewfinderWidth: 669.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
+        let old = self.center(isLeft: true, isBottom: true, width: 669.0, size: size, visibleHeight: screenHeight, shutterCenterY: nil)
         XCTAssertGreaterThan(old.y + side / 2.0, screenHeight, "the viewfinder's corner is below the screen")
 
         for isLeft in [true, false] {
-            let center = cameraDualPreviewCenter(isLeft: isLeft, isBottom: true, viewfinderWidth: 669.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: shutterCenterY)
-            self.assertClearOfControls(center, side: side, shutterCenter: CGPoint(x: size.width / 2.0, y: shutterCenterY), containerHeight: screenHeight)
+            let center = self.center(isLeft: isLeft, isBottom: true, width: 669.0, size: size, visibleHeight: screenHeight, shutterCenterY: shutterCenterY)
+            XCTAssertEqual(center.y, shutterCenterY + self.shutterAbove - 669.0 * 438.0 / 1080.0, accuracy: 0.001)
+            XCTAssertGreaterThanOrEqual(center.x - side / 2.0, 0.0)
+            XCTAssertLessThanOrEqual(center.x + side / 2.0, size.width)
+
+            let distance = hypot(center.x - size.width / 2.0, center.y - shutterCenterY)
+            XCTAssertGreaterThan(distance, side / 2.0 + self.shutterRadius, "overlaps the shutter")
+            XCTAssertLessThanOrEqual(center.y + side / 2.0, shutterCenterY + self.modeRowTopBelowShutterCenter, "reaches the mode row")
         }
     }
 
     func testTopCornersIgnoreTheShutter() {
         let size = CGSize(width: 669.0, height: 1189.0)
         for isLeft in [true, false] {
-            let plain = cameraDualPreviewCenter(isLeft: isLeft, isBottom: false, viewfinderWidth: 669.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
-            let anchored = cameraDualPreviewCenter(isLeft: isLeft, isBottom: false, viewfinderWidth: 669.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: 831.67)
+            let plain = self.center(isLeft: isLeft, isBottom: false, width: 669.0, size: size, visibleHeight: 951.0, shutterCenterY: nil)
+            let anchored = self.center(isLeft: isLeft, isBottom: false, width: 669.0, size: size, visibleHeight: 951.0, shutterCenterY: 831.67)
             XCTAssertEqual(plain, anchored)
         }
     }
 
-    // The shutter only ever raises a bottom corner, never lowers it below the viewfinder's.
+    // A guard: the shutter only ever raises a bottom corner, never lowers it below the viewfinder's.
     func testShutterAnchorNeverLowersTheCorner() {
-        let size = CGSize(width: 393.0, height: 698.0)
-        let plain = cameraDualPreviewCenter(isLeft: true, isBottom: true, viewfinderWidth: 393.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: nil)
-        let anchored = cameraDualPreviewCenter(isLeft: true, isBottom: true, viewfinderWidth: 393.0, containerSize: size, leftInset: 0.0, rightInset: 0.0, shutterCenterY: 900.0)
+        let size = CGSize(width: 669.0, height: 1189.0)
+        let plain = self.center(isLeft: true, isBottom: true, width: 669.0, size: size, visibleHeight: 951.0, shutterCenterY: nil)
+        let anchored = self.center(isLeft: true, isBottom: true, width: 669.0, size: size, visibleHeight: 951.0, shutterCenterY: 1300.0)
         XCTAssertEqual(plain, anchored)
     }
 
     func testSideInsetsMoveTheirOwnSideOnly() {
         let size = CGSize(width: 466.0, height: 828.0)
-        let left = cameraDualPreviewCenter(isLeft: true, isBottom: false, viewfinderWidth: 466.0, containerSize: size, leftInset: 0.0, rightInset: 84.0, shutterCenterY: nil)
+        let left = self.center(isLeft: true, isBottom: false, width: 466.0, size: size, rightInset: 84.0, shutterCenterY: nil)
         XCTAssertEqual(left.x, 466.0 * 267.0 / 1080.0, accuracy: 0.001)
-        let right = cameraDualPreviewCenter(isLeft: false, isBottom: false, viewfinderWidth: 466.0, containerSize: size, leftInset: 0.0, rightInset: 84.0, shutterCenterY: nil)
+        let right = self.center(isLeft: false, isBottom: false, width: 466.0, size: size, rightInset: 84.0, shutterCenterY: nil)
         XCTAssertEqual(right.x, 466.0 - 84.0 - 466.0 * 267.0 / 1080.0, accuracy: 0.001)
     }
 }

@@ -5110,8 +5110,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             let pipRightInset = max(0.0, previewContainerFrame.maxX - (layout.size.width - layout.safeInsets.right))
             let pipIsLeft = self.pipPosition == .topLeft || self.pipPosition == .bottomLeft
             let pipIsBottom = self.pipPosition == .bottomLeft || self.pipPosition == .bottomRight
-            // On iPhone Duo the viewfinder's bottom edge is at the screen's bottom (folded) or below it (unfolded), under the
-            // lifted controls: a bottom corner keeps to the shutter instead.
+            // On iPhone Duo unfolded the viewfinder's bottom edge is below the screen: a bottom corner keeps to the shutter
+            // instead.
             var pipShutterCenterY: CGFloat?
             if !isTablet && layout.reservedCorners != .none {
                 let shutterCenterY = storyCameraShutterCenterY(containerHeight: layout.size.height, bottomInset: bottomInset, controlsBottomInset: storyCameraControlsBottomInset(containerHeight: layout.size.height, viewfinderHeight: previewSize.height))
@@ -5122,9 +5122,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 isBottom: pipIsBottom,
                 viewfinderWidth: previewSize.width,
                 containerSize: previewFrame.size,
+                visibleHeight: layout.size.height - previewContainerFrame.minY,
                 leftInset: pipLeftInset,
                 rightInset: pipRightInset,
-                shutterCenterY: pipShutterCenterY
+                shutterCenterY: pipShutterCenterY,
+                shutterCenterAboveViewfinderBottom: storyCameraShutterCenterAboveViewfinderBottom
             )
             if !isDualCameraEnabled {
                 origin = origin.offsetBy(dx: pipIsLeft ? -180.0 : 180.0, dy: 0.0)
@@ -6085,9 +6087,12 @@ private func storyCameraControlsBottomInset(containerHeight: CGFloat, viewfinder
     return containerHeight < viewfinderHeight + 30.0 ? -70.0 : 0.0
 }
 
+// Where the viewfinder fits above the controls, the shutter's centre is this far above its bottom edge.
+private let storyCameraShutterCenterAboveViewfinderBottom: CGFloat = maximumShutterSize.height / 2.0 + 5.0
+
 // The shutter's centre on a phone, outside the chat camera's own layout (`CameraScreenChatScreenLayout`).
 private func storyCameraShutterCenterY(containerHeight: CGFloat, bottomInset: CGFloat, controlsBottomInset: CGFloat) -> CGFloat {
-    return containerHeight - maximumShutterSize.height / 2.0 - bottomInset - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66)
+    return containerHeight - bottomInset - storyCameraShutterCenterAboveViewfinderBottom + floorToScreenPixels(controlsBottomInset * 0.66)
 }
 
 private func pipPositionForLocation(layout: ContainerViewLayout, centerX: CGFloat, position: CGPoint, velocity: CGPoint) -> CameraScreenImpl.PIPPosition {
