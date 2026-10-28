@@ -217,6 +217,8 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
                 self.countryButton.setCountryTitle(countryId: countryId, name: localizedName, font: Font.regular(17.0), color: item.theme.list.itemPrimaryTextColor)
             } else {
                 self.countryButton.setTitle(item.strings.Login_SelectCountry, with: Font.regular(17.0), with: item.theme.list.itemPrimaryTextColor, for: [])
+                self.countryButton.accessibilityLabel = item.strings.Login_SelectCountry
+                self.countryButton.accessibilityTraits = .button
             }
         }
         
@@ -370,6 +372,8 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.phoneInputNode.numberField.textField.tintColor = item.theme.list.itemAccentColor
                     
                     strongSelf.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 15.0, bottom: 4.0, right: 0.0)
+                    strongSelf.phoneInputNode.countryCodeField.textField.accessibilityLabel = item.strings.Login_CountryCode
+                    strongSelf.phoneInputNode.numberField.textField.accessibilityLabel = item.strings.Contacts_PhoneNumber
                     
                     strongSelf.countryButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: 52.0 + 6.0))
                     

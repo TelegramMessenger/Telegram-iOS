@@ -16,8 +16,14 @@ public final class CollectionIndexNode: ASDisplayNode {
     private var currentSelectedIndex: String?
     public var indexSelected: ((String) -> Void)?
     
+    /// VoiceOver: the index is one adjustable element (like UIKit's table index); swiping up and down jumps to
+    /// the next and previous section through `indexSelected`, the same path as dragging along it.
+    private var accessibilitySection: String?
+    
     override public init() {
         super.init()
+        
+        self.accessibilityTraits = .adjustable
     }
     
     override public func didLoad() {
@@ -41,6 +47,12 @@ public final class CollectionIndexNode: ASDisplayNode {
         
         self.currentSize = size
         self.currentSections = sections
+        
+        self.isAccessibilityElement = !sections.isEmpty
+        if let accessibilitySection = self.accessibilitySection, !sections.contains(accessibilitySection) {
+            self.accessibilitySection = nil
+        }
+        self.updateAccessibilityValue()
         
         let itemHeight: CGFloat = 15.0
         let verticalInset: CGFloat = 10.0
@@ -111,6 +123,35 @@ public final class CollectionIndexNode: ASDisplayNode {
         for title in removeTitles {
             self.titleNodes.removeValue(forKey: title)?.node.removeFromSupernode()
         }
+    }
+    
+    private func updateAccessibilityValue() {
+        self.accessibilityValue = self.accessibilitySection ?? self.currentSections.first(where: { $0 != CollectionIndexNode.searchIndex })
+    }
+    
+    private func accessibilityMove(by delta: Int) {
+        let sections = self.currentSections
+        guard let current = self.accessibilitySection.flatMap({ sections.firstIndex(of: $0) }) ?? sections.firstIndex(where: { $0 != CollectionIndexNode.searchIndex }) else {
+            return
+        }
+        var index = current + delta
+        while index >= 0 && index < sections.count && sections[index] == CollectionIndexNode.searchIndex {
+            index += delta > 0 ? 1 : -1
+        }
+        guard index >= 0 && index < sections.count else {
+            return
+        }
+        self.accessibilitySection = sections[index]
+        self.updateAccessibilityValue()
+        self.indexSelected?(sections[index])
+    }
+    
+    override public func accessibilityIncrement() {
+        self.accessibilityMove(by: 1)
+    }
+    
+    override public func accessibilityDecrement() {
+        self.accessibilityMove(by: -1)
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

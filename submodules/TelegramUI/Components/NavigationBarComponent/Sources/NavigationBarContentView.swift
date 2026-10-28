@@ -35,6 +35,7 @@ final class NavigationBarContentView: UIView {
     private var overflowButtonView: ComponentView<NavigationButtonEnvironment>?
     private var overflowItems: [NavigationBarComponent.OverflowItem] = []
     private var openOverflow: ((UIView, [NavigationBarComponent.OverflowItem]) -> Void)?
+    private var currentStrings: NavigationBarStrings?
 
     let titleOffsetContainer: UIView
     let titleScaleContainer: UIView
@@ -226,7 +227,7 @@ final class NavigationBarContentView: UIView {
                 buttonTransition = .immediate
                 container.addSubview(buttonComponentView)
             }
-            if let accessibilityLabel = button.overflow?.title ?? navigationButtonTextLabel(button.content) {
+            if let accessibilityLabel = button.overflow?.title ?? navigationButtonTextLabel(button.content) ?? self.currentStrings.flatMap({ navigationButtonIconLabel(button.content, strings: $0) }) {
                 buttonComponentView.accessibilityLabel = accessibilityLabel
             }
             buttonComponentView.accessibilityValue = button.accessibilityValue
@@ -244,6 +245,7 @@ final class NavigationBarContentView: UIView {
     func update(theme: NavigationBarTheme, strings: NavigationBarStrings, content: NavigationBarComponent.Content, leftInset: CGFloat, rightInset: CGFloat, size: CGSize, columnLength: CGFloat?, openOverflow: ((UIView, [NavigationBarComponent.OverflowItem]) -> Void)?, transition: ComponentTransition, itemsTransition: ComponentTransition? = nil) {
         let itemsTransition = itemsTransition ?? transition
         let alphaTransition: ComponentTransition = itemsTransition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
+        self.currentStrings = strings
 
         transition.setPosition(view: self.titleOffsetContainer, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
         transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: self.titleOffsetContainer.bounds.origin, size: size))
@@ -544,6 +546,31 @@ func navigationButtonContainerWidth(content: NavigationBarComponent.Button.Conte
 
 /// A text button's VoiceOver label when the screen gives none (`OverflowInfo.title`): the text it shows. The
 /// `___`-prefixed sentinel titles draw icons and are not labels.
+/// The label of a button that draws a known icon in place of text: the `___done` checkmark and the `___close` X.
+func navigationButtonIconLabel(_ content: NavigationBarComponent.Button.Content, strings: NavigationBarStrings) -> String? {
+    var label: String?
+    switch content {
+    case let .text(title, _):
+        if title == "___done" {
+            label = strings.done
+        } else if title == "___close" {
+            label = strings.close
+        }
+    case let .icon(imageName):
+        if imageName == "Navigation/Done" {
+            label = strings.done
+        } else if imageName == "Navigation/Close" {
+            label = strings.close
+        }
+    default:
+        break
+    }
+    if let label, !label.isEmpty {
+        return label
+    }
+    return nil
+}
+
 func navigationButtonTextLabel(_ content: NavigationBarComponent.Button.Content) -> String? {
     if case let .text(title, _) = content, !title.isEmpty, !title.hasPrefix("___") {
         return title

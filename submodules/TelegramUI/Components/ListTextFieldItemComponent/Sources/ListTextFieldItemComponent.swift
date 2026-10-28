@@ -303,6 +303,8 @@ public final class ListTextFieldItemComponent: Component {
                 
                 placeholderView.isHidden = !self.currentText.isEmpty
             }
+            // The placeholder is drawn by its own view, not by the field, so the field is labelled with it for VoiceOver.
+            self.textField.accessibilityLabel = component.placeholder.isEmpty ? nil : component.placeholder
             
             transition.setFrame(view: self.textField, frame: CGRect(origin: CGPoint(x: component.contentInsets.left, y: 0.0), size: CGSize(width: availableSize.width - component.contentInsets.left - component.contentInsets.right - textFieldRightInset, height: contentHeight)))
             

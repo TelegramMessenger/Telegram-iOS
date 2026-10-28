@@ -52,11 +52,14 @@ public final class NavigationBarStrings {
     public let close: String
     /// The iPhone Duo side column's "…" overflow button.
     public let more: String
+    /// VoiceOver label of the Done checkmark (`___done`), which shows no text.
+    public let done: String
 
-    public init(back: String, close: String, more: String) {
+    public init(back: String, close: String, more: String, done: String = "") {
         self.back = back
         self.close = close
         self.more = more
+        self.done = done
     }
 }
 

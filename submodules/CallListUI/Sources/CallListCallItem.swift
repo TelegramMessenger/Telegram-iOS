@@ -249,6 +249,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.infoButtonNode.hitTestSlop = UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -10.0)
         
         self.accessibilityArea = AccessibilityAreaNode()
+        self.accessibilityArea.accessibilityTraits = .button
         
         super.init(layerBacked: false, rotated: false, seeThrough: false)
         
@@ -767,12 +768,13 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                             
                             strongSelf.accessibilityArea.accessibilityLabel = titleAttributedString?.string
-                            strongSelf.accessibilityArea.accessibilityValue = statusAccessibilityString
+                            strongSelf.accessibilityArea.accessibilityValue = [statusAccessibilityString, dateText].filter { !$0.isEmpty }.joined(separator: ", ")
                             strongSelf.accessibilityArea.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                             
                             strongSelf.infoButtonNode.accessibilityLabel = item.presentationData.strings.Conversation_Info
+                            strongSelf.infoButtonNode.accessibilityTraits = .button
                             
-                            strongSelf.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.presentationData.strings.Common_Delete, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)))]
+                            strongSelf.accessibilityArea.accessibilityCustomActions = [UIAccessibilityCustomAction(name: item.presentationData.strings.Common_Delete, target: strongSelf, selector: #selector(strongSelf.performLocalAccessibilityCustomAction(_:)))]
                             
                             strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                             strongSelf.setRevealOptionsOpened(item.revealed, animated: animated)
@@ -872,6 +874,19 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         }
     }
 
+    /// The row first, then its info button (hidden while editing). The row's elements live in `containerNode`, whose
+    /// frame starts where the row's does, so the collector's frame sort alone would read the info button first.
+    override var accessibilityElements: [Any]? {
+        get {
+            var elements: [Any] = [self.accessibilityArea.view]
+            if self.infoButtonNode.alpha > 0.0 && !self.infoButtonNode.isHidden {
+                elements.append(self.infoButtonNode.view)
+            }
+            return elements
+        } set(value) {
+        }
+    }
+    
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
         self.setRevealOptionsOpened(false, animated: true)
         self.revealOptionsInteractivelyClosed()

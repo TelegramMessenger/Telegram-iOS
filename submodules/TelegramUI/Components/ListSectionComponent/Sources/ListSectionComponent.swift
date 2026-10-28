@@ -498,6 +498,28 @@ public final class ListSectionComponent: Component {
         /// A header or footer shows text and VoiceOver reads it as one element, a header with the `.header` trait. A view
         /// that holds something interactive (a link, a button) is left as it is.
         fileprivate static func applyTextAccessibility(to view: UIView, traits: UIAccessibilityTraits) {
+            // A text with links ("… Invite >") is one element too: activating it follows its link, and with several
+            // links each is a custom action named by its words.
+            if let textView = view as? ImmediateTextView, textView.tapAttributeAction != nil {
+                let links = textView.accessibilityLinks()
+                textView.isAccessibilityElement = true
+                textView.accessibilityLabel = textView.accessibilityDisplayedText
+                textView.accessibilityTraits = links.isEmpty ? traits : traits.union(.link)
+                if links.count > 1 {
+                    textView.accessibilityCustomActions = links.map { link in
+                        return UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak textView] _ in
+                            guard let textView, let tapAttributeAction = textView.tapAttributeAction else {
+                                return false
+                            }
+                            tapAttributeAction(link.attributes, link.index)
+                            return true
+                        })
+                    }
+                } else {
+                    textView.accessibilityCustomActions = nil
+                }
+                return
+            }
             let content = view.accessibilityDisplayedContent()
             if content.hasInteractiveContent || content.texts.isEmpty {
                 return

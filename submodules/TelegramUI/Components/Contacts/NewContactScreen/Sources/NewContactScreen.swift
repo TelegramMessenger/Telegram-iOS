@@ -130,6 +130,19 @@ final class NewContactScreenComponent: Component {
             self.resolvedPeerDisposable.dispose()
         }
         
+        /// The header reads Close, title, Done before the form; by frame the buttons (higher) would read before the title.
+        override var accessibilityElements: [Any]? {
+            get {
+                let header: [UIView] = [self.cancelButton.view, self.title.view, self.doneButton.view].compactMap { $0 }.filter { $0.superview === self }
+                var elements: [Any] = header
+                for subview in self.subviews where !header.contains(subview) && subview !== self.edgeEffectView {
+                    elements.append(subview)
+                }
+                return elements
+            } set(value) {
+            }
+        }
+        
         func scrollToTop() {
             self.scrollView.setContentOffset(CGPoint(), animated: true)
         }
@@ -889,6 +902,9 @@ final class NewContactScreenComponent: Component {
                     self.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
+                titleView.isAccessibilityElement = true
+                titleView.accessibilityLabel = strings.AddContact_Title
+                titleView.accessibilityTraits = .header
             }
             
             let barButtonSize = CGSize(width: 44.0, height: 44.0)
@@ -910,7 +926,8 @@ final class NewContactScreenComponent: Component {
                             return
                         }
                         controller.dismiss()
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: strings.Common_Close)
                 )),
                 environment: {},
                 containerSize: barButtonSize
@@ -952,7 +969,8 @@ final class NewContactScreenComponent: Component {
                             controller.complete(result: input)
                         }
                         controller.dismiss()
-                    }
+                    },
+                    accessibility: ComponentAccessibility(label: strings.Common_Done)
                 )),
                 environment: {},
                 containerSize: barButtonSize

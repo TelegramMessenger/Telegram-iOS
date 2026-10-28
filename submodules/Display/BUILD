@@ -33,6 +33,8 @@ swift_library(
         "Tests/**/*.swift",
     ], exclude = [
         "Tests/AccessibilityCollectorTests.swift",
+        "Tests/CollectionIndexAccessibilityTests.swift",
+        "Tests/TextLinkAccessibilityTests.swift",
     ]),
     deps = [
         ":Display",
@@ -45,6 +47,8 @@ swift_library(
     testonly = True,
     srcs = [
         "Tests/AccessibilityCollectorTests.swift",
+        "Tests/CollectionIndexAccessibilityTests.swift",
+        "Tests/TextLinkAccessibilityTests.swift",
     ],
     deps = [
         ":Display",

@@ -91,7 +91,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         self.isAccessibilityElement = true
         self.accessibilityLabel = item.text
-        self.accessibilityTraits = [.button]
+        self.accessibilityTraits = item.accessibilityIsSelected ? [.button, .selected] : [.button]
         
         self.addSubnode(self.titleLabelNode)
         self.addSubnode(self.subtitleNode)
@@ -207,6 +207,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
     public func setItem(item: ContextMenuActionItem) {
         self.item = item
         self.accessibilityLabel = item.text
+        self.accessibilityTraits = item.accessibilityIsSelected ? [.button, .selected] : [.button]
     }
     
     public func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {

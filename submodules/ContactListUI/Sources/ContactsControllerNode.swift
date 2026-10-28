@@ -333,6 +333,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             )
             rightButtons = [NavigationBarComponent.Button(id: "add",
                 content: .icon(imageName: "Chat List/AddIcon"),
+                overflow: NavigationBarComponent.OverflowInfo(title: self.presentationData.strings.Contacts_VoiceOver_AddContact, iconName: nil, priority: nil),
                 action: { [weak self] _ in
                     guard let self else {
                         return
@@ -518,10 +519,13 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 }
             }
         }, placeholder: placeholderNode)
+        // The search results cover the list: VoiceOver must not read the list behind them.
+        self.contactListNode.accessibilityElementsHidden = true
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode?, animated: Bool) {
         self.isSearchDisplayControllerActive = nil
+        self.contactListNode.accessibilityElementsHidden = false
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
