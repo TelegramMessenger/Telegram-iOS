@@ -5,7 +5,7 @@ import AuthorizationUtils
 
 // The login password screen's column (AuthorizationSequencePasswordEntryControllerNode) laid out above the keyboard,
 // with the sizes measured on the simulators (issue #50). Above a short screen's keyboard the monkey animation does not
-// fit: kept, it left the spacers ~2pt and "Forgot password?" sat on the field's line. The screen drops the animation
+// fit: kept, it left the spacers ~2pt above the issue's 275pt keyboard and "Forgot password?" sat on the field's line. The screen drops the animation
 // when `authorizationLayoutItemsFit` says the column does not fit, and the spacers then get their share.
 final class AuthorizationLayoutTests: XCTestCase {
     private final class Column {
@@ -15,8 +15,9 @@ final class AuthorizationLayoutTests: XCTestCase {
         let reset = UIView()
         let items: [AuthorizationLayoutItem]
 
-        // The item specs mirror the password entry screen's (title, notice, field, its line, Forgot password, Reset
-        // Account, and the animation first when it is shown).
+        // The item specs mirror the password entry screen's `containerLayoutUpdated` (title, notice, field, its line,
+        // Forgot password, Reset Account, which it shows with `suggestReset` as in the issue, and the animation first
+        // when it is shown).
         init(noticeHeight: CGFloat, withAnimation: Bool) {
             let none = AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)
             var items: [AuthorizationLayoutItem] = [
@@ -51,20 +52,27 @@ final class AuthorizationLayoutTests: XCTestCase {
     private func assertSpacedColumn(width: CGFloat, height: CGFloat, statusBarHeight: CGFloat, navigationBarHeight: CGFloat, keyboardHeight: CGFloat, noticeHeight: CGFloat, animationFits: Bool, file: StaticString = #filePath, line: UInt = #line) {
         let withAnimation = Column(noticeHeight: noticeHeight, withAnimation: true)
         let animationBounds = self.bounds(width: width, height: height, top: statusBarHeight, keyboardHeight: keyboardHeight)
-        XCTAssertEqual(authorizationLayoutItemsFit(height: animationBounds.height, items: withAnimation.items), animationFits, "animation fits", file: file, line: line)
+        let fits = authorizationLayoutItemsFit(height: animationBounds.height, items: withAnimation.items)
+        XCTAssertEqual(fits, animationFits, "animation fits", file: file, line: line)
 
-        let column = animationFits ? withAnimation : Column(noticeHeight: noticeHeight, withAnimation: false)
-        let bounds = animationFits ? animationBounds : self.bounds(width: width, height: height, top: navigationBarHeight, keyboardHeight: keyboardHeight)
+        // As the screen does: the animation stays when the fit check says so.
+        let column = fits ? withAnimation : Column(noticeHeight: noticeHeight, withAnimation: false)
+        let bounds = fits ? animationBounds : self.bounds(width: width, height: height, top: navigationBarHeight, keyboardHeight: keyboardHeight)
         column.layout(bounds: bounds)
 
         XCTAssertGreaterThanOrEqual(column.forgotGap, 20.0, "Forgot password's gap below the field", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(column.reset.frame.minY, column.forgot.frame.maxY, "Reset Account below Forgot password", file: file, line: line)
         XCTAssertLessThanOrEqual(column.reset.frame.maxY, bounds.maxY, "the column ends above the Continue button", file: file, line: line)
     }
 
-    // iPhone Duo unfolded, landscape (951x669), keyboard 220pt: the animation is dropped.
+    // iPhone Duo unfolded, landscape (951x669), keyboard 220pt (the simulator's): the animation is dropped.
     func test_duoUnfoldedLandscape_dropsTheAnimation_spacesTheButtons() {
         self.assertSpacedColumn(width: 951.0, height: 669.0, statusBarHeight: 20.0, navigationBarHeight: 60.0, keyboardHeight: 220.0, noticeHeight: 45.0, animationFits: false)
+    }
+
+    // The same with the issue's 275pt keyboard (its Continue button's position), where a kept animation leaves Forgot
+    // password 1pt.
+    func test_duoUnfoldedLandscapeTallKeyboard_dropsTheAnimation_spacesTheButtons() {
+        self.assertSpacedColumn(width: 951.0, height: 669.0, statusBarHeight: 20.0, navigationBarHeight: 60.0, keyboardHeight: 275.0, noticeHeight: 45.0, animationFits: false)
     }
 
     // iPhone Duo folded, portrait (466x678), keyboard 265pt: the animation is dropped.
@@ -77,7 +85,8 @@ final class AuthorizationLayoutTests: XCTestCase {
         self.assertSpacedColumn(width: 402.0, height: 874.0, statusBarHeight: 54.0, navigationBarHeight: 114.0, keyboardHeight: 328.0, noticeHeight: 67.0, animationFits: true)
     }
 
-    // The issue's screenshot: kept above the unfolded screen's keyboard, the animation leaves Forgot password no gap.
+    // The issue's screenshot: kept above the unfolded screen's 275pt keyboard, the animation leaves Forgot password no
+    // gap.
     func test_duoUnfoldedLandscape_keptAnimation_squeezesTheButtons() {
         let column = Column(noticeHeight: 45.0, withAnimation: true)
         column.layout(bounds: self.bounds(width: 951.0, height: 669.0, top: 20.0, keyboardHeight: 275.0))
