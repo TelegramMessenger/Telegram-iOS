@@ -121,6 +121,34 @@ final class TextComponentAccessibilityTests: XCTestCase {
         XCTAssertFalse(text.isAccessibilityElement)
     }
     
+    func testShortTextInsideALongerWordIsNotSilenced() {
+        let container = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 300.0, height: 60.0))
+        container.accessibilityLabel = "last seen 10 minutes ago, Mention"
+        let count = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "1"))))
+        count.frame = CGRect(x: 10.0, y: 10.0, width: 20.0, height: 20.0)
+        container.addSubview(count)
+        XCTAssertTrue(count.isAccessibilityElement)
+        let on = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "On"))))
+        on.frame = CGRect(x: 40.0, y: 10.0, width: 20.0, height: 20.0)
+        container.addSubview(on)
+        XCTAssertTrue(on.isAccessibilityElement)
+        let words = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "10 minutes"))))
+        words.frame = CGRect(x: 70.0, y: 10.0, width: 80.0, height: 20.0)
+        container.addSubview(words)
+        XCTAssertFalse(words.isAccessibilityElement)
+    }
+    
+    func testOverlappingCopiesDoNotSilenceEachOther() {
+        let container = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 300.0, height: 60.0))
+        let first = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "Title"))))
+        first.frame = CGRect(x: 10.0, y: 10.0, width: 100.0, height: 20.0)
+        container.addSubview(first)
+        let second = self.makeView(MultilineTextComponent(text: .plain(NSAttributedString(string: "Title"))))
+        second.frame = first.frame
+        container.addSubview(second)
+        XCTAssertTrue(first.isAccessibilityElement || second.isAccessibilityElement)
+    }
+    
     func testAttachmentsAreNotRead() {
         let string = NSMutableAttributedString(string: "Remove ")
         string.append(NSAttributedString(attachment: NSTextAttachment()))

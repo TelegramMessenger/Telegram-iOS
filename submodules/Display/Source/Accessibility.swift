@@ -138,6 +138,27 @@ private func normalizedAccessibilityText(_ text: String) -> String {
     return text.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).joined(separator: " ")
 }
 
+/// The words of a text for matching: split at whitespace and punctuation, lowercased.
+private func accessibilityWords(_ text: String) -> [String] {
+    return text.lowercased().split(whereSeparator: { $0.isWhitespace || $0.isNewline || ($0.isPunctuation && $0 != "#") }).map(String.init)
+}
+
+/// Whether `label` speaks `text`: the text's words appear in the label as a run of whole words ("1" is not spoken by
+/// "last seen 10 minutes ago", "On" not by "Mention").
+func accessibilityLabel(_ label: String, speaks text: String) -> Bool {
+    let textWords = accessibilityWords(text)
+    let labelWords = accessibilityWords(label)
+    if textWords.isEmpty || textWords.count > labelWords.count {
+        return false
+    }
+    for start in 0 ... (labelWords.count - textWords.count) {
+        if Array(labelWords[start ..< start + textWords.count]) == textWords {
+            return true
+        }
+    }
+    return false
+}
+
 /// Whether a text view's words are already spoken by another element: an ancestor that is itself an element, one of the
 /// view's nearest `maxDepth` ancestors
 /// whose label contains the text (a labelled container), or an element among those ancestors' direct subviews (outside
@@ -146,7 +167,9 @@ private func normalizedAccessibilityText(_ text: String) -> String {
 /// runs only when an accessibility client asks.
 public func accessibilityTextIsSpokenByCoveringElement(_ view: UIView, text: String, maxDepth: Int = 4) -> Bool {
     if accessibilityCoverCheckInProgress {
-        return false
+        // A text queried as a candidate by another text's check: it does not count as speaking (two overlapping copies
+        // of one text, as in a cross-fade, must not silence each other).
+        return true
     }
     let normalizedText = normalizedAccessibilityText(text)
     if normalizedText.isEmpty {
@@ -169,7 +192,7 @@ public func accessibilityTextIsSpokenByCoveringElement(_ view: UIView, text: Str
     var depth = 0
     while depth < maxDepth, let ancestor = branch.superview {
         // A labelled container around the text (a title view that names itself) already says these words.
-        if let label = ancestor.accessibilityLabel, !label.isEmpty, normalizedAccessibilityText(label).contains(normalizedText) {
+        if let label = ancestor.accessibilityLabel, !label.isEmpty, accessibilityLabel(label, speaks: normalizedText) {
             return true
         }
         for candidate in ancestor.subviews where candidate !== branch {
@@ -182,7 +205,7 @@ public func accessibilityTextIsSpokenByCoveringElement(_ view: UIView, text: Str
             if !candidate.convert(candidate.bounds, to: nil).contains(center) {
                 continue
             }
-            if normalizedAccessibilityText(label).contains(normalizedText) {
+            if accessibilityLabel(label, speaks: normalizedText) {
                 return true
             }
         }
