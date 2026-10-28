@@ -178,11 +178,21 @@ private final class AlertScreenComponent: Component {
         }
         
         @objc private func dimTapped() {
-            guard let component = self.component, component.configuration.dismissOnOutsideTap else {
-                return
+            let _ = self.dismissWithoutAction()
+        }
+        
+        /// A dismissal that is not one of the alert's actions — a tap outside, the Escape key, VoiceOver's escape
+        /// gesture — follows the outside-tap rule: allowed only when the configuration allows it, and reported as
+        /// "by outside tap" (hosts such as web `alert`/`confirm` panels finish their request only then).
+        private func dismissWithoutAction() -> Bool {
+            guard let component = self.component else {
+                return false
             }
-            self.dismissedByTapOutside = true
-            self.requestDismiss()
+            return AlertOutsideDismissal.perform(configuration: component.configuration, markDismissedByOutsideTap: { [weak self] in
+                self?.dismissedByTapOutside = true
+            }, dismiss: { [weak self] in
+                self?.requestDismiss()
+            })
         }
         
         func animateIn() {
@@ -214,10 +224,9 @@ private final class AlertScreenComponent: Component {
             return result
         }
         
-        /// VoiceOver's escape gesture dismisses the alert, as the Escape key does.
+        /// VoiceOver's escape gesture: as a tap outside the alert.
         override func accessibilityPerformEscape() -> Bool {
-            self.requestDismiss()
-            return true
+            return self.dismissWithoutAction()
         }
         
         func requestDismiss() {
@@ -250,7 +259,7 @@ private final class AlertScreenComponent: Component {
                 }
                 self.updateActionHighlight(previous: false)
             case .escape:
-                self.requestDismiss()
+                let _ = self.dismissWithoutAction()
             case .enter:
                 self.performHighlightedAction()
             }
@@ -985,5 +994,17 @@ public final class ActionSelectionGestureRecognizer: UIGestureRecognizer {
             return CGPoint(x: currentLocation.x - initialLocation.x, y: currentLocation.y - initialLocation.y)
         }
         return CGPoint()
+    }
+}
+
+/// The rule for dismissing an alert without choosing one of its actions (outside tap, Escape key, VoiceOver escape).
+enum AlertOutsideDismissal {
+    static func perform(configuration: AlertScreen.Configuration, markDismissedByOutsideTap: () -> Void, dismiss: () -> Void) -> Bool {
+        guard configuration.dismissOnOutsideTap else {
+            return false
+        }
+        markDismissedByOutsideTap()
+        dismiss()
+        return true
     }
 }

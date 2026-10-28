@@ -146,18 +146,31 @@ public func accessibilityDisplayedText(_ text: NSAttributedString) -> String {
 public extension AccessibilityAreaNode {
     /// A text with links as one element: the text without attachments as its label, `.link` when it has links,
     /// activation following the first link (as a tap on it does), and a custom action per link when there are several.
+    /// Called from layout: the element is rebuilt only when the text changes; the handler is always the latest one.
     func applyAccessibilityText(_ text: NSAttributedString, linkAttribute: NSAttributedString.Key, open: ((Any) -> Void)?) {
+        self.accessibilityTextOpen = open
+        if let applied = self.appliedAccessibilityText, applied.hasOpen == (open != nil), applied.text.isEqual(to: text) {
+            return
+        }
+        self.appliedAccessibilityText = (text, open != nil)
+        
         self.accessibilityLabel = accessibilityDisplayedText(text)
         let links = open == nil ? [] : accessibilityTextLinks(in: text, attribute: linkAttribute)
-        if let open, let first = links.first {
+        if let first = links.first {
             self.accessibilityTraits = [.staticText, .link]
-            self.activate = {
+            self.activate = { [weak self] in
+                guard let open = self?.accessibilityTextOpen else {
+                    return false
+                }
                 open(first.value)
                 return true
             }
             if links.count > 1 {
                 self.view.accessibilityCustomActions = links.map { link in
-                    return UIAccessibilityCustomAction(name: link.text, actionHandler: { _ in
+                    return UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak self] _ in
+                        guard let open = self?.accessibilityTextOpen else {
+                            return false
+                        }
                         open(link.value)
                         return true
                     })

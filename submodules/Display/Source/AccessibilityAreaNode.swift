@@ -12,6 +12,10 @@ public final class AccessibilityAreaNode: ASDisplayNode {
     public var decrement: (() -> Void)?
     public var focused: (() -> Void)?
     
+    /// `applyAccessibilityText` state: the text last applied and the current link handler.
+    var appliedAccessibilityText: (text: NSAttributedString, hasOpen: Bool)?
+    var accessibilityTextOpen: ((Any) -> Void)?
+    
     override public init() {
         super.init()
         

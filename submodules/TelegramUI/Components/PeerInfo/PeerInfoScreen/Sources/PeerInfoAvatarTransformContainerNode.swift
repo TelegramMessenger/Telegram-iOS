@@ -205,22 +205,47 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if let window = areaView.window, !window.bounds.intersects(areaView.convert(areaView.bounds, to: window)) {
                 return []
             }
+            self.updateAccessibilityArea()
             return [areaView]
         } set(value) {
         }
     }
     
-    /// The avatar's VoiceOver label and its long-press menu as a "More" action (the menu's own entry point).
+    private var accessibilityStrings: (label: String, moreLabel: String)?
+    private var accessibilityMoreAction: UIAccessibilityCustomAction?
+    
+    /// The avatar's VoiceOver label and the name of its long-press menu action. Only stores the words (called on every
+    /// header update); the element is configured when an accessibility client asks (`accessibilityElements`).
     func updateAccessibility(label: String, moreLabel: String) {
-        self.accessibilityArea.accessibilityLabel = label
-        if self.contextAction != nil {
-            self.accessibilityArea.view.accessibilityCustomActions = [UIAccessibilityCustomAction(name: moreLabel, actionHandler: { [weak self] _ in
-                guard let self, self.containerNode.isGestureEnabled, let contextAction = self.contextAction else {
-                    return false
-                }
-                contextAction(self.containerNode, nil)
-                return true
-            })]
+        if let current = self.accessibilityStrings, current.label == label, current.moreLabel == moreLabel {
+            return
+        }
+        self.accessibilityStrings = (label, moreLabel)
+        self.accessibilityMoreAction = nil
+    }
+    
+    /// Configures the area at query time: the label, and "More" (the long-press menu) only while that gesture is enabled
+    /// (it is off on the Settings avatar and while photos are shown).
+    private func updateAccessibilityArea() {
+        guard let strings = self.accessibilityStrings else {
+            return
+        }
+        self.accessibilityArea.accessibilityLabel = strings.label
+        if self.contextAction != nil && self.containerNode.isGestureEnabled {
+            let action: UIAccessibilityCustomAction
+            if let current = self.accessibilityMoreAction {
+                action = current
+            } else {
+                action = UIAccessibilityCustomAction(name: strings.moreLabel, actionHandler: { [weak self] _ in
+                    guard let self, self.containerNode.isGestureEnabled, let contextAction = self.contextAction else {
+                        return false
+                    }
+                    contextAction(self.containerNode, nil)
+                    return true
+                })
+                self.accessibilityMoreAction = action
+            }
+            self.accessibilityArea.view.accessibilityCustomActions = [action]
         } else {
             self.accessibilityArea.view.accessibilityCustomActions = nil
         }

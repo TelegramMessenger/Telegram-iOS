@@ -47,4 +47,25 @@ final class AccessibilityTextLinksTests: XCTestCase {
         XCTAssertFalse(area.accessibilityActivate())
         XCTAssertNil(area.view.accessibilityCustomActions)
     }
+
+    func testReapplyingTheSameTextKeepsActionsAndUsesTheLatestHandler() {
+        let area = AccessibilityAreaNode()
+        var opened: [String] = []
+        area.applyAccessibilityText(self.makeText(), linkAttribute: self.urlKey, open: { _ in
+            opened.append("old")
+        })
+        let actions = area.view.accessibilityCustomActions
+        area.applyAccessibilityText(self.makeText(), linkAttribute: self.urlKey, open: { value in
+            opened.append("new:\(value as? String ?? "")")
+        })
+        XCTAssertEqual(area.view.accessibilityCustomActions?.map { $0.name }, ["Telegram Desktop", "Web"])
+        XCTAssertTrue(area.accessibilityActivate())
+        // An action built for the first text still reaches the latest handler.
+        if let webAction = actions?.last, let handler = webAction.actionHandler {
+            XCTAssertTrue(handler(webAction))
+        } else {
+            XCTFail("no custom actions")
+        }
+        XCTAssertEqual(opened, ["new:desktop", "new:web"])
+    }
 }

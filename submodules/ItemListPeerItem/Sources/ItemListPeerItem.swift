@@ -723,6 +723,8 @@ private let badgeFont = Font.regular(15.0)
 public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
     /// VoiceOver: a host that handles the row's tap itself (no `action` on the item) marks the row as a button and
     /// gives the activation that tap runs.
+    private var accessibilityActionNames: [String]?
+    
     public var accessibilityActivateAction: (() -> Void)? {
         didSet {
             if let item = self.layoutParams?.0 {
@@ -1349,27 +1351,26 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     strongSelf.accessibilityValue = combinedValues.joined(separator: ", ")
                     strongSelf.updateAccessibilityTraits(item: item)
                     
-                    // The swipe options and the long-press menu as custom actions, through the gestures' own paths.
-                    var accessibilityCustomActions: [UIAccessibilityCustomAction] = []
-                    for option in peerRevealOptions {
-                        accessibilityCustomActions.append(UIAccessibilityCustomAction(name: option.title, actionHandler: { [weak strongSelf] _ in
-                            guard let strongSelf else {
-                                return false
-                            }
-                            strongSelf.revealOptionSelected(option, animated: false)
-                            return true
-                        }))
-                    }
+                    // The swipe options and the long-press menu as custom actions, through the gestures' own paths. Built
+                    // only when their names change (layout runs often; the handlers read the current item when invoked).
+                    var accessibilityActionNames: [String] = peerRevealOptions.map { $0.title }
                     if item.contextAction != nil {
-                        accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
-                            guard let strongSelf, let contextAction = strongSelf.layoutParams?.0.contextAction else {
-                                return false
-                            }
-                            contextAction(strongSelf.containerNode, nil)
-                            return true
-                        }))
+                        accessibilityActionNames.append(item.presentationData.strings.Common_More)
                     }
-                    strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
+                    if strongSelf.accessibilityActionNames != accessibilityActionNames {
+                        strongSelf.accessibilityActionNames = accessibilityActionNames
+                        var accessibilityCustomActions: [UIAccessibilityCustomAction] = strongSelf.revealOptionsAccessibilityCustomActions(peerRevealOptions)
+                        if item.contextAction != nil {
+                            accessibilityCustomActions.append(UIAccessibilityCustomAction(name: item.presentationData.strings.Common_More, actionHandler: { [weak strongSelf] _ in
+                                guard let strongSelf, let contextAction = strongSelf.layoutParams?.0.contextAction else {
+                                    return false
+                                }
+                                contextAction(strongSelf.containerNode, nil)
+                                return true
+                            }))
+                        }
+                        strongSelf.view.accessibilityCustomActions = accessibilityCustomActions.isEmpty ? nil : accessibilityCustomActions
+                    }
                     
                     if let updateArrowImage = updateArrowImage {
                         strongSelf.labelArrowNode?.image = updateArrowImage

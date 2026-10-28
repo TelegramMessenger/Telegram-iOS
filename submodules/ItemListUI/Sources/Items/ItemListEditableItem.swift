@@ -745,9 +745,16 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
     open func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
     }
     
+    private var revealOptionsAccessibilityCache: (names: [String], actions: [UIAccessibilityCustomAction])?
+    
     /// VoiceOver: the swipe options as custom actions, each going through `revealOptionSelected`, as the swipe does.
+    /// Called from layout; the actions are rebuilt only when the options' names change.
     public func revealOptionsAccessibilityCustomActions(_ options: [ItemListRevealOption]) -> [UIAccessibilityCustomAction] {
-        return options.map { option in
+        let names = options.map { "\($0.key):\($0.title)" }
+        if let cache = self.revealOptionsAccessibilityCache, cache.names == names {
+            return cache.actions
+        }
+        let actions = options.map { option in
             return UIAccessibilityCustomAction(name: option.title, actionHandler: { [weak self] _ in
                 guard let self else {
                     return false
@@ -756,6 +763,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
                 return true
             })
         }
+        self.revealOptionsAccessibilityCache = (names, actions)
+        return actions
     }
 
     override open var preventsTouchesToOtherItems: Bool {
