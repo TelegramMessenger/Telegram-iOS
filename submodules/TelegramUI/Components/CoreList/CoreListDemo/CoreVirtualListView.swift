@@ -112,6 +112,28 @@ public extension CoreListItem {
 public enum CoreListAnchorMode: Equatable {
     case automatic
     case preserveVisibleContent
+    /// The loaded row crossing the OLD visible centre line (midway between the inset edges) keeps its
+    /// midpoint's distance from the line, placed from its NEW measured height, so a pass that changes
+    /// every row's height keeps what the user looks at in place. A row that crossed the line still
+    /// crosses it. The line is the new geometry's, or the old one when the pass declines inset
+    /// compensation. When that row leaves, the nearest survivor below it, then above it, keeps its
+    /// distance instead.
+    ///
+    /// The list's ends win: no loaded-top pin, and the window's underfill alignment closes any gap above
+    /// the first row or below the last. No momentum halt and no viewport track: the row's position and
+    /// height ride one curve and one clock. Yields to `scrollTo`, the pin latch and a scroll hold. Not
+    /// meant for a list with a bottom-edge pin.
+    case preserveCentredContent
+    /// The loaded row with this identity keeps its top's distance from the top inset edge, but never
+    /// sits above the edge: a row partly scrolled under it lands on it, so a row that shrinks stays in
+    /// view. A new height therefore grows or shrinks the row downward, and the row the user acted on (a
+    /// per-row expand or collapse) stays where it is.
+    ///
+    /// It is placed as `preserveVisibleContent` places its witness: an inset change in the same pass
+    /// carries it with the edge, the list's ends win, and there is no momentum halt and no viewport
+    /// track. A row the old window did not load, or one leaving the collection, makes the pass a
+    /// `preserveVisibleContent` one. Yields to `scrollTo`, the pin latch and a scroll hold.
+    case preserveItem(AnyHashable)
 }
 
 /// Keeps a scrolled-to row where it landed until a drag begins or the list scrolls elsewhere. Carried by
@@ -331,8 +353,10 @@ public final class CoreVirtualListView: UIView {
     }
 
     private struct ResolvedAnchor {
-        /// `.resolved` is produced by `resolveAnchor`'s `scrollTo` branch and by nothing else, so the
-        /// two cases are exactly the old `hasScrollTo` split in the offset composition below.
+        /// `.resolved`: placed from the measured height of the row this pass builds, against the
+        /// geometry it builds (`scrollTo`, the pin latch, a scroll hold, the centred anchor). `.fixed`:
+        /// a screen position read from the old geometry (every other branch), which the offset
+        /// composition below projects onto the new top edge.
         enum Offset {
             case fixed(CGFloat)
             case resolved((CGFloat, UIView & CoreListItemView) -> CGFloat)
@@ -1378,7 +1402,9 @@ public final class CoreVirtualListView: UIView {
         // same reason — and `ListViewImpl` halts on it identically (`ListView.swift:3238`). The
         // `.automatic` guard is that halt's else-if chain: ListViewImpl reaches it only when the pass
         // did not position content itself, i.e. no `scrollToItem` (halted just above) and no stationary
-        // item range, whose analogue here is `.preserveVisibleContent`.
+        // item range, whose analogue here is `.preserveVisibleContent`. `.preserveCentredContent` and
+        // `.preserveItem` keep content in place as that mode does, so they skip the halt too: a fling
+        // carries on through the pass.
         if !hasScrollTo, hasAdditionalScrollDistance, anchorMode == .automatic {
             engine.haltMotionInPlace()
         }
@@ -1601,8 +1627,10 @@ public final class CoreVirtualListView: UIView {
                 oldWindow: oldWindow,
                 oldContainerOriginY: oldContainerOriginY,
                 oldSettledOffset: oldSettledOffset,
-                oldTopInset: oldViewportInsets.top,
-                oldItemCount: oldItems.count
+                oldViewportInsets: oldViewportInsets,
+                oldLogicalHeight: oldLogicalSize.height,
+                compensatesInsetChange: compensatesInsetChange,
+                oldItems: oldItems
             )
             else {
                 rebuildFromScratch()
@@ -1637,10 +1665,9 @@ public final class CoreVirtualListView: UIView {
             // positions content first, then the displacement moves it.
             //
             // The two branches below are the two halves of what used to be one `projectedPointOffset`
-            // expression; only the `scrollTo` half is deferred, because only it needs the anchor's
-            // measured height. `.resolved` is produced by resolveAnchor's `scrollTo` branch and by
-            // nothing else, so the branch split here is exactly the old `hasScrollTo` split — note
-            // in particular that it does NOT add `topInsetDelta`.
+            // expression; only the `.resolved` half is deferred, because only it needs the anchor's
+            // measured height. A `.resolved` anchor computes its placement from the geometry this
+            // pass is building, so it does NOT add `topInsetDelta`.
             let resolveY: (CGFloat, UIView & CoreListItemView) -> CGFloat
             switch resolvedAnchor.offset {
             case let .fixed(pointOffset):
@@ -1663,9 +1690,10 @@ public final class CoreVirtualListView: UIView {
                 && oldWindow.startIndex == 0
                 && oldEdges.min.map { abs(oldSettledOffset - $0) <= 1e-6 } == true
             // Only a `.fixed` anchor was placed against the OLD effective top edge, so only it needs
-            // re-projecting onto the new one. A `.resolved` anchor — an explicit `scrollTo`, or the pin
-            // latch itself — computes its placement from the geometry this pass is building, and the
-            // `pinsLoadedTop` branch translates the window onto `topEdge` outright.
+            // re-projecting onto the new one. A `.resolved` anchor — an explicit `scrollTo`, the pin
+            // latch itself, a scroll hold or the centred anchor — computes its placement from the
+            // geometry this pass is building, and the `pinsLoadedTop` branch translates the window onto
+            // `topEdge` outright.
             //
             // And only an anchor ABOVE the pinned row. The absorption invariant is that the pinned row
             // and everything below it hold still while the content above spends the slack: an anchor
@@ -2802,8 +2830,10 @@ public final class CoreVirtualListView: UIView {
                                oldWindow: Window,
                                oldContainerOriginY: CGFloat,
                                oldSettledOffset: CGFloat,
-                               oldTopInset: CGFloat,
-                               oldItemCount: Int) -> ResolvedAnchor? {
+                               oldViewportInsets: UIEdgeInsets,
+                               oldLogicalHeight: CGFloat,
+                               compensatesInsetChange: Bool,
+                               oldItems: [CoreListItem]) -> ResolvedAnchor? {
         if let scrollTo {
             // Momentum was already halted at pass entry (see applyChanges) — deliberately, so this pass's
             // geometry is built against the caught position rather than a stale sample.
@@ -2860,13 +2890,45 @@ public final class CoreVirtualListView: UIView {
                 isHeld: true
             )
         }
-        if anchorMode == .preserveVisibleContent,
+        if anchorMode == .preserveCentredContent,
+           let centred = resolveCentredAnchor(
+               diff: diff,
+               oldWindow: oldWindow,
+               oldContainerOriginY: oldContainerOriginY,
+               oldSettledOffset: oldSettledOffset,
+               oldCentreLineY: (oldViewportInsets.top + oldLogicalHeight - oldViewportInsets.bottom) * 0.5,
+               followsNewCentreLine: compensatesInsetChange
+           ) {
+            return centred
+        }
+        if case let .preserveItem(identity) = anchorMode,
+           let preserved = resolvePreservedItemAnchor(
+               identity: identity,
+               diff: diff,
+               oldItems: oldItems,
+               oldWindow: oldWindow,
+               oldContainerOriginY: oldContainerOriginY,
+               oldSettledOffset: oldSettledOffset,
+               oldTopInset: oldViewportInsets.top
+           ) {
+            return preserved
+        }
+        // `.preserveItem` comes here when the old window did not load its row or the row is leaving,
+        // which makes the pass exactly a `.preserveVisibleContent` one.
+        let resolvesTopInsetWitness: Bool
+        switch anchorMode {
+        case .preserveVisibleContent, .preserveItem:
+            resolvesTopInsetWitness = true
+        case .automatic, .preserveCentredContent:
+            resolvesTopInsetWitness = false
+        }
+        if resolvesTopInsetWitness,
            let preserved = resolvePreservedAnchor(
                diff: diff,
                oldWindow: oldWindow,
                oldContainerOriginY: oldContainerOriginY,
                oldSettledOffset: oldSettledOffset,
-               oldTopInset: oldTopInset
+               oldTopInset: oldViewportInsets.top
            ) {
             return preserved
         }
@@ -2884,7 +2946,7 @@ public final class CoreVirtualListView: UIView {
         // which ignores the slack and moves everything by it.
         let oldEdges = loadedEdgeRange(for: oldWindow,
                                        originY: oldContainerOriginY,
-                                       itemCount: oldItemCount,
+                                       itemCount: oldItems.count,
                                        includesHoldSlack: false)
         if oldWindow.startIndex == 0,
            let minimum = oldEdges.min,
@@ -2969,6 +3031,93 @@ public final class CoreVirtualListView: UIView {
         return resolved(Array(
             oldWindow.items.indices[..<witnessPosition].reversed()
         ))
+    }
+
+    /// `.preserveCentredContent`: the loaded row crossing the old visible centre line, else the nearest
+    /// survivor below it, then above it (`resolvePreservedAnchor`'s order), keeps its midpoint's
+    /// distance from the line. A row that crossed the line still crosses it once re-measured (a tall row
+    /// shrinking near one of its ends): its top stays at or above the line and its bottom below it, on
+    /// the pixel grid, so a reversal finds the same row. The line is the new geometry's
+    /// (`holdEdgeY(.visibleCenter)`, read when `buildWindow` resolves the anchor), or the old one when
+    /// the caller declined inset compensation. Settled geometry, as for every anchor: a rubber band or a
+    /// viewport track in flight does not count.
+    private func resolveCentredAnchor(diff: ItemDiff,
+                                      oldWindow: Window,
+                                      oldContainerOriginY: CGFloat,
+                                      oldSettledOffset: CGFloat,
+                                      oldCentreLineY: CGFloat,
+                                      followsNewCentreLine: Bool) -> ResolvedAnchor? {
+        guard !oldWindow.isEmpty else { return nil }
+        let absoluteBase = oldContainerOriginY - oldWindow.minY
+        func screenMinY(_ item: Window.Item) -> CGFloat {
+            absoluteBase + item.frame.minY - oldSettledOffset
+        }
+        let witnessPosition = oldWindow.items.firstIndex {
+            screenMinY($0) + $0.frame.height > oldCentreLineY
+        } ?? oldWindow.items.count - 1
+
+        func resolved(_ positions: [Int]) -> ResolvedAnchor? {
+            for position in positions {
+                let item = oldWindow.items[position]
+                guard let newIndex = diff.survivingNewIndex(forOldIndex: item.index) else { continue }
+                let minY = screenMinY(item)
+                let crosses = minY <= oldCentreLineY && minY + item.frame.height > oldCentreLineY
+                let midDistance = minY + item.frame.height * 0.5 - oldCentreLineY
+                return ResolvedAnchor(
+                    index: newIndex,
+                    offset: .resolved { [weak self] height, _ in
+                        guard let self else { return 0 }
+                        let line = followsNewCentreLine ? self.holdEdgeY(.visibleCenter) : oldCentreLineY
+                        var top = self.alignedToPixels(line + midDistance - height * 0.5)
+                        if crosses {
+                            let pixel = 1.0 / max(1.0, self.traitCollection.displayScale)
+                            top = min(top, self.alignedToPixels(line, .down))
+                            top = max(top, self.alignedToPixels(line - height, .down) + pixel)
+                        }
+                        return top - self.viewportInsets.top
+                    },
+                    preservesVisibleContent: true
+                )
+            }
+            return nil
+        }
+
+        if let below = resolved(Array(witnessPosition..<oldWindow.items.endIndex)) {
+            return below
+        }
+        return resolved(Array(oldWindow.items.indices[..<witnessPosition].reversed()))
+    }
+
+    /// `.preserveItem`: the named row keeps its old settled screen top, lowered onto the old top inset
+    /// edge when it sat above it. A `.fixed` anchor, because the placement does not depend on the row's
+    /// new height, and so the offset composition projects it exactly as it does
+    /// `resolvePreservedAnchor`'s witness (inset compensation, pin slack, `additionalScrollDistance`).
+    /// Nil when the old window did not load the row or the row is leaving the collection.
+    private func resolvePreservedItemAnchor(identity: AnyHashable,
+                                            diff: ItemDiff,
+                                            oldItems: [CoreListItem],
+                                            oldWindow: Window,
+                                            oldContainerOriginY: CGFloat,
+                                            oldSettledOffset: CGFloat,
+                                            oldTopInset: CGFloat) -> ResolvedAnchor? {
+        guard let item = oldWindow.items.first(where: {
+                  oldItems.indices.contains($0.index) && oldItems[$0.index].identity == identity
+              }),
+              let newIndex = diff.survivingNewIndex(forOldIndex: item.index)
+        else { return nil }
+        let screenMinY = oldContainerOriginY - oldWindow.minY + item.frame.minY - oldSettledOffset
+        return ResolvedAnchor(index: newIndex,
+                              pointOffset: max(screenMinY, oldTopInset),
+                              preservesVisibleContent: true)
+    }
+
+    /// `value` on the display's pixel grid, rounded by `rule`; unchanged while the scale is unknown (a
+    /// list outside a window can report 0).
+    private func alignedToPixels(_ value: CGFloat,
+                                 _ rule: FloatingPointRoundingRule = .toNearestOrAwayFromZero) -> CGFloat {
+        let scale = traitCollection.displayScale
+        guard scale > 0 else { return value }
+        return (value * scale).rounded(rule) / scale
     }
 
     fileprivate func markDirty(_ view: UIView, animated: Bool) {

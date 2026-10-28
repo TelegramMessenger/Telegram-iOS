@@ -117,6 +117,23 @@ loaded item crossing the old top-inset edge at its distance from that edge — a
 witness; a departing one falls back to the nearest survivor below, then above. It never measures old
 off-screen rows or post-corrects the offset, and yields to `scrollTo` and finite-edge clipping.
 
+`.preserveCentredContent` (opt-in, News's Compact ↔ Expanded morph) keeps the loaded row crossing the OLD
+visible centre line (midway between the inset edges) at its midpoint's distance from the line: the new
+geometry's line, or the old one under `compensatesInsetChange: false`. It is a `.resolved` anchor, placed from
+the row's NEW measured height on the pixel grid, so the row's position and height ride one curve and its
+midpoint stays still through the morph. A row that crossed the line still crosses it (top at or above, bottom
+below), so a reversal finds the same row; a departing one hands over to the nearest survivor below, then above.
+`.preserveVisibleContent`'s semantics: no loaded-top pin, the underfill alignments clip both ends, no momentum
+halt, no viewport track. Below `scrollTo`, the pin latch and a scroll hold; not for pinned lists.
+`CentredAnchorTests`.
+
+`.preserveItem(identity)` (opt-in, News's per-row Expand / Collapse swipe) keeps that row's top at its distance
+from the top inset edge, but never above the edge: a row partly under it lands on it, so a collapsed row stays
+in view. A `.fixed` anchor (the placement needs no new height), projected exactly as `.preserveVisibleContent`'s
+witness (inset compensation, pin slack, `additionalScrollDistance`), with the same end clipping, no halt and no
+viewport track. A row the old window did not load, or one leaving, makes the pass a `.preserveVisibleContent`
+one. `PreservedItemAnchorTests`.
+
 `reachedLoadedEdges`/`onLoadedEdgeReached` (transitions only): lines at `loadedEdgeMargin` and
 `logicalSize.height - loadedEdgeMargin` (positive loads later), independent of insets and engine limits,
 overscroll excluded; recomputed after construction, settlement, rebalancing and margin changes.
@@ -291,8 +308,8 @@ func applyChanges(items: [CoreListItem]? = nil,
   travel when no old identity survives.
 - **`additionalScrollDistance`**: points, positive moves content DOWN (cf. `ListViewImpl.transaction`),
   applied to the anchor before window construction, so it composes with clipping, carries and `scrollTo`.
-  Nonzero halts momentum (except under `.preserveVisibleContent`) and opts out of the loaded-top pin; at the
-  top edge a downward displacement is clipped, an upward one honoured.
+  Nonzero halts momentum (under `.automatic` only; the preserve modes keep a fling) and opts out of the
+  loaded-top pin; at the top edge a downward displacement is clipped, an upward one honoured.
 
 A pass: (1) serializes re-entrant requests, applies `newSize`; (2) validates unique identities, diffs
 survivors/inserts/deletes/LIS moves; (3) captures one transaction clock and the old settled state;
@@ -585,7 +602,8 @@ clock); `TestScrollEngine` has no render server.
   boundary, deterministic order) and teardown.
   Failures print seed and action prefix; minimize into a focused suite before fixing. **Attachments are
   opt-in** (`includesAttachments: true`) on a SEPARATE RNG (focused suites replay the main sequence);
-  `testTheGrammarActuallyExercisesAttachments` is the non-vacuity guard.
+  `testTheGrammarActuallyExercisesAttachments` is the non-vacuity guard. Anchor modes likewise
+  (`includesAnchorModes: true`, a third RNG; `testTheGrammarActuallyExercisesTheAnchorModes`).
 
 ## Non-obvious gotchas
 
