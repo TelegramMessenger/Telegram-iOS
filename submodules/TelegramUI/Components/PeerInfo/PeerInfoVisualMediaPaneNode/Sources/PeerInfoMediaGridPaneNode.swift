@@ -75,6 +75,10 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
     private var touchActionsDisabled = false
     private var processedOnBeginFastScrolling = false
     private var currentScrollingTag: Int32?
+    private var scrollerTextCache: (tag: Int32, strings: PresentationStrings, text: String)?
+    private let shimmeringCells = NSHashTable<MediaGridPaneCellLayer>.weakObjects()
+    private var readyRowStarts = Set<Int>()
+    private var readyRowsColumns = 0
     private var gestureIndex: Int?
 
     private let ready = Promise<Bool>()
@@ -250,6 +254,47 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         return MediaGridPaneCellState(duration: duration, isLivePhoto: isLivePhoto, hasSpoiler: hasSpoiler, spoilerImage: spoilerImage, isSelected: isSelected, isHidden: isHidden)
     }
 
+    func shimmerDidChange(_ cell: MediaGridPaneCellLayer, isActive: Bool) {
+        if isActive {
+            self.shimmeringCells.add(cell)
+        } else {
+            self.shimmeringCells.remove(cell)
+        }
+    }
+
+    func isRowReady(at index: Int) -> Bool {
+        let columns = max(1, self.gridView.level.columns)
+        if self.readyRowsColumns != columns {
+            self.readyRowsColumns = columns
+            self.readyRowStarts.removeAll()
+        }
+        let rowStart = (index / columns) * columns
+        if self.readyRowStarts.contains(rowStart) {
+            return true
+        }
+        let dataSource = self.dataSource
+        let isReady = mediaGridPaneRowIsReady(index: index, columns: columns, count: dataSource.count, isEndKnown: dataSource.isEndKnown, isReady: { dataSource.isContentReady(at: $0) })
+        if isReady {
+            self.readyRowStarts.insert(rowStart)
+        }
+        return isReady
+    }
+
+    private func revealReadyRows() {
+        let columns = max(1, self.gridView.level.columns)
+        var pending: [(index: Int, cell: MediaGridPaneCellLayer)] = []
+        self.gridView.forEachCell { index, cell in
+            guard let cell = cell as? MediaGridPaneCellLayer, !cell.isRevealed, self.isRowReady(at: index) else {
+                return
+            }
+            pending.append((index, cell))
+        }
+        let delays = mediaGridPaneRevealDelays(rows: pending.map { $0.index / columns })
+        for (index, cell) in pending {
+            cell.reveal(delay: delays[index / columns] ?? 0.0)
+        }
+    }
+
     private func setupGrid() {
         self.dataSource.onThumbnailsReady = { [weak self] indices in
             guard let self else {
@@ -261,6 +306,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
                     (cell as? MediaGridPaneCellLayer)?.refresh(animated: false)
                 }
             }
+            self.revealReadyRows()
         }
         self.gridView.onTapItem = { [weak self] index in
             self?.handleTap(index: index)
@@ -306,6 +352,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
                 self.contextGestureContainerNode.cancelGesture()
             } else {
                 self.applyHeldStateIfIdle()
+                self.revealReadyRows()
                 self.updateHoleToLoad()
             }
             self.updateScrollingArea()
@@ -470,6 +517,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
     }
 
     private func applyState(_ state: SparseMessageList.State) {
+        self.readyRowStarts.removeAll()
         if let changes = self.dataSource.update(state: state) {
             self.gridView.apply(changes)
         }
@@ -484,6 +532,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
             }
         }
         self.refreshVisibleCells(animated: false)
+        self.revealReadyRows()
         self.updateHoleToLoad()
         self.updateScrollingArea()
         if !self.didSetReady {
@@ -507,9 +556,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         guard !self.isLoadingHole, !self.gridView.isZooming, self.didReceiveState, !self.dataSource.isPlaceholderCount, let visible = self.gridView.visibleIndexRange, !visible.isEmpty else {
             return
         }
-        guard let hole = mediaGridPaneHoleToLoad(visible: visible, isLoaded: { [dataSource = self.dataSource] index in
-            return dataSource.message(at: index) != nil
-        }, holes: self.dataSource.holes()), let messageId = self.dataSource.holeAnchorMessageId(at: hole.anchorIndex) else {
+        guard let firstEmpty = self.dataSource.firstUnloadedIndex(in: visible), let hole = mediaGridPaneHoleNearest(to: firstEmpty, sortedHoles: self.dataSource.holes()), let messageId = self.dataSource.holeAnchorMessageId(at: hole.anchorIndex) else {
             return
         }
         self.isLoadingHole = true
@@ -587,11 +634,13 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
                 self?.applyHeldStateIfIdle()
             }
         }
-        self.gridView.forEachVisibleCell { _, cell in
-            if let cell = cell as? MediaGridPaneCellLayer, !cell.hasVisibleImage {
-                cell.updateShimmer()
-            }
+        let viewport = self.shimmerViewport
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for cell in self.shimmeringCells.allObjects {
+            cell.updateShimmerPosition(viewport: viewport)
         }
+        CATransaction.commit()
         self.updateScrollingArea()
     }
 
@@ -614,8 +663,13 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
     }
 
     private func scrollerText(tag: Int32) -> String {
+        if let cached = self.scrollerTextCache, cached.tag == tag, cached.strings === self.presentationData.strings {
+            return cached.text
+        }
         let month = VisualMediaMonth(packedValue: tag)
-        return stringForMonth(strings: self.presentationData.strings, month: month.month, ofYear: month.year)
+        let text = stringForMonth(strings: self.presentationData.strings, month: month.month, ofYear: month.year)
+        self.scrollerTextCache = (tag, self.presentationData.strings, text)
+        return text
     }
 
     private func updateScrollingArea() {
@@ -678,6 +732,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         self.scrollingArea.hideScroller()
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: self.chatLocation.threadId, tag: tagMaskForType(contentType))
         self.dataSource.reset()
+        self.readyRowStarts.removeAll()
         _ = self.stateGate.release()
         self.didReceiveState = false
         self.gridView.reloadData()

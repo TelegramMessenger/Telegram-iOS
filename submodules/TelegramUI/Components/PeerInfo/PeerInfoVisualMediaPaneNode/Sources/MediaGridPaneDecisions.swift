@@ -36,16 +36,32 @@ func mediaGridPaneHoleToLoad(visible: Range<Int>, isLoaded: (Int) -> Bool, holes
     guard !holes.isEmpty, let firstEmpty = visible.first(where: { !isLoaded($0) }) else {
         return nil
     }
-    var best: MediaGridPaneHole?
-    var bestDistance = Int.max
-    for hole in holes {
-        let distance = abs(hole.anchorIndex - firstEmpty)
-        if distance < bestDistance || (distance == bestDistance && hole.anchorIndex > (best?.anchorIndex ?? Int.min)) {
-            best = hole
-            bestDistance = distance
+    return mediaGridPaneHoleNearest(to: firstEmpty, sortedHoles: holes.sorted(by: { $0.anchorIndex < $1.anchorIndex }))
+}
+
+func mediaGridPaneHoleNearest(to index: Int, sortedHoles holes: [MediaGridPaneHole]) -> MediaGridPaneHole? {
+    guard !holes.isEmpty else {
+        return nil
+    }
+    var low = 0
+    var high = holes.count
+    while low < high {
+        let mid = (low + high) / 2
+        if holes[mid].anchorIndex < index {
+            low = mid + 1
+        } else {
+            high = mid
         }
     }
-    return best
+    if low == holes.count {
+        return holes[holes.count - 1]
+    }
+    if low == 0 {
+        return holes[0]
+    }
+    let lower = holes[low - 1]
+    let upper = holes[low]
+    return index - lower.anchorIndex < upper.anchorIndex - index ? lower : upper
 }
 
 func mediaGridPaneDateIndex(at index: Int, anchors: [(index: Int, timestamp: Int32)]) -> Int32? {
@@ -99,4 +115,31 @@ struct MediaGridPaneStateGate<State> {
         self.held = nil
         return state
     }
+}
+
+func mediaGridPaneRowIsReady(index: Int, columns: Int, count: Int, isEndKnown: Bool, isReady: (Int) -> Bool) -> Bool {
+    let columns = max(1, columns)
+    let start = (index / columns) * columns
+    for i in start ..< start + columns {
+        if i >= count {
+            return isEndKnown
+        }
+        if !isReady(i) {
+            return false
+        }
+    }
+    return true
+}
+
+func mediaGridPaneRevealDelays(rows: [Int]) -> [Int: Double] {
+    let sorted = Set(rows).sorted()
+    guard !sorted.isEmpty else {
+        return [:]
+    }
+    let step = sorted.count > 1 ? min(0.04, 0.3 / Double(sorted.count - 1)) : 0.0
+    var result: [Int: Double] = [:]
+    for (rank, row) in sorted.enumerated() {
+        result[row] = Double(rank) * step
+    }
+    return result
 }

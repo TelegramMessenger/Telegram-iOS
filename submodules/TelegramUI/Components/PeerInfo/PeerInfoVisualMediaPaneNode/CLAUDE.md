@@ -24,7 +24,13 @@ reaches either photo/video pane only through `PeerInfoVisualMediaPane` (`Sources
 - **Images**: `DirectMediaImageCache` with the old width buckets (64/150/200/280 px by cell point width). Each `next`
   of its load signal is delivered degraded, the last one final at completion. The instant placeholder is
   `DirectMediaImageCache.blurredImmediateThumbnail(media:)` (the message's `immediateThumbnailData`, decoded and blurred
-  off main in `prepareThumbnails`), served as MediaGrid's thumbnail; a message without one shows the shimmer.
+  off main in `prepareThumbnails`), served as MediaGrid's thumbnail; a message without one shows the shimmer. Cells are revealed **by rows**: a cell keeps its shimmer over
+  whatever it already shows until every index of its row is ready (`mediaGridPaneRowIsReady`: the message is loaded and
+  its blurred thumbnail decoded, or it has none), and a partial last row waits until the end of the list is known (not
+  the placeholder count, not loading). Rows that become ready together fade their shimmer out top to bottom, 40 ms apart,
+  within 0.3 s (`mediaGridPaneRevealDelays`). A cell's own image that arrives later fades in; a sharp image replacing a
+  thumbnail crossfades (`CATransition`, 0.2 s). Anything set during the grid's binding pass (`isBinding`, a cache hit on a
+  ready row) shows at once.
 - **Header**: `tabBarOffset` is the covering inset, ported from SparseItemGrid's `scrollViewDidScroll` /
   `snapCoveringInsetOffset` (the snap of the covering inset only; SparseItemGrid's animated content-offset snap inside the
   top inset is not ported). `isScrollingLockedAtTop` maps to `MediaGridView.isScrollingLockedAtTop`; `transferVelocity`

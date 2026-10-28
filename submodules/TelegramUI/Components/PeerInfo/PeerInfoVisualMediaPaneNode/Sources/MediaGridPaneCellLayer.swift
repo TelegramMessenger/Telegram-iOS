@@ -25,6 +25,8 @@ protocol MediaGridPaneCellProvider: AnyObject {
     var shimmerColors: MediaGridPaneShimmerColors { get }
     var shimmerViewport: (offset: CGFloat, height: CGFloat) { get }
     func cellState(at index: Int) -> MediaGridPaneCellState?
+    func isRowReady(at index: Int) -> Bool
+    func shimmerDidChange(_ cell: MediaGridPaneCellLayer, isActive: Bool)
 }
 
 private final class MediaGridPaneShimmerImage {
@@ -57,9 +59,12 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
     weak var provider: MediaGridPaneCellProvider?
 
     private static let minDurationWidth: CGFloat = 80.0
+    private static let instantImageInterval: CFTimeInterval = 0.1
 
     private var detail: MediaGridCellDetail = .full
     private var shimmerLayer: SimpleLayer?
+    private var fadingShimmerLayers: [SimpleLayer] = []
+    private(set) var isRevealed = false
     private var durationLayer: VisualMediaDurationLayer?
     private var livePhotoLayer: SimpleLayer?
     private var rightShadowLayer: SimpleLayer?
@@ -86,6 +91,9 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
     override func bind(index: Int, detail: MediaGridCellDetail) {
         super.bind(index: index, detail: detail)
         self.detail = detail
+        if !self.isRevealed {
+            self.isRevealed = self.provider?.isRowReady(at: index) ?? true
+        }
         self.refresh(animated: false)
     }
 
@@ -93,17 +101,47 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
     }
 
     override func setImage(_ image: UIImage?) {
+        let previousContents = self.contents
         super.setImage(image)
+        self.crossfadeContentsIfReplaced(previousContents: previousContents)
         self.updateShimmer()
     }
 
     override func setThumbnail(_ thumbnail: MediaGridThumbnail, cellAspect: CGFloat) {
+        let previousContents = self.contents
         super.setThumbnail(thumbnail, cellAspect: cellAspect)
+        self.crossfadeContentsIfReplaced(previousContents: previousContents)
         self.updateShimmer()
+    }
+
+    func reveal(delay: Double) {
+        if self.isRevealed {
+            return
+        }
+        self.isRevealed = true
+        self.updateShimmer(delay: delay)
+    }
+
+    private func crossfadeContentsIfReplaced(previousContents: Any?) {
+        guard !self.isBinding, self.isRevealed, self.shimmerLayer == nil, let previousContents, let contents = self.contents, (contents as AnyObject) !== (previousContents as AnyObject) else {
+            return
+        }
+        if CACurrentMediaTime() - self.imageRequestTime < MediaGridPaneCellLayer.instantImageInterval {
+            return
+        }
+        let transition = CATransition()
+        transition.type = .fade
+        transition.duration = 0.2
+        self.add(transition, forKey: "contentsFade")
     }
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        self.isRevealed = false
+        for layer in self.fadingShimmerLayers {
+            layer.removeFromSuperlayer()
+        }
+        self.fadingShimmerLayers.removeAll()
         self.isHidden = false
         self.removeAllAnimations()
         self.transform = CATransform3DIdentity
@@ -120,11 +158,24 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
         self.setNeedsLayout()
     }
 
-    func updateShimmer() {
-        if self.hasVisibleImage {
+    func updateShimmer(delay: Double = 0.0) {
+        if self.hasVisibleImage && self.isRevealed {
             if let shimmerLayer = self.shimmerLayer {
                 self.shimmerLayer = nil
-                shimmerLayer.removeFromSuperlayer()
+                self.provider?.shimmerDidChange(self, isActive: false)
+                if self.isBinding {
+                    shimmerLayer.removeFromSuperlayer()
+                } else {
+                    self.fadingShimmerLayers.append(shimmerLayer)
+                    shimmerLayer.opacity = 0.0
+                    shimmerLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: delay, removeOnCompletion: false, completion: { [weak self, weak shimmerLayer] _ in
+                        guard let self, let shimmerLayer else {
+                            return
+                        }
+                        shimmerLayer.removeFromSuperlayer()
+                        self.fadingShimmerLayers.removeAll(where: { $0 === shimmerLayer })
+                    })
+                }
             }
             return
         }
@@ -138,13 +189,11 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
             shimmerLayer = SimpleLayer()
             self.insertSublayer(shimmerLayer, at: 0)
             self.shimmerLayer = shimmerLayer
+            provider.shimmerDidChange(self, isActive: true)
         }
         shimmerLayer.frame = self.bounds
         shimmerLayer.contents = MediaGridPaneShimmerImage.shared.image(colors: provider.shimmerColors)
-        let viewport = provider.shimmerViewport
-        if viewport.height > 0.0 {
-            shimmerLayer.contentsRect = CGRect(x: 0.0, y: (self.frame.minY - viewport.offset) / viewport.height, width: 1.0, height: self.bounds.height / viewport.height)
-        }
+        self.updateShimmerPosition(viewport: provider.shimmerViewport)
         if shimmerLayer.animation(forKey: "shimmer") == nil {
             let animation = CABasicAnimation(keyPath: "contentsRect.origin.y")
             animation.fromValue = 1.0 as NSNumber
@@ -155,6 +204,13 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
             animation.beginTime = shimmerLayer.convertTime(1.0, from: nil)
             shimmerLayer.add(animation, forKey: "shimmer")
         }
+    }
+
+    func updateShimmerPosition(viewport: (offset: CGFloat, height: CGFloat)) {
+        guard let shimmerLayer = self.shimmerLayer, viewport.height > 0.0 else {
+            return
+        }
+        shimmerLayer.contentsRect = CGRect(x: 0.0, y: (self.frame.minY - viewport.offset) / viewport.height, width: 1.0, height: self.bounds.height / viewport.height)
     }
 
     private func updateDuration(_ duration: Int32?, isLivePhoto: Bool) {

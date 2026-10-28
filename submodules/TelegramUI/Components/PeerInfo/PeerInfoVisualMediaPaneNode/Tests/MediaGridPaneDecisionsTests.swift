@@ -87,4 +87,44 @@ final class MediaGridPaneDecisionsTests: XCTestCase {
         XCTAssertNil(gate.release())
         XCTAssertFalse(gate.isHolding)
     }
+    func testRowIsReadyOnlyWhenEveryCellIsReady() {
+        let ready: Set<Int> = [0, 1, 2, 3, 4]
+        XCTAssertTrue(mediaGridPaneRowIsReady(index: 1, columns: 3, count: 100, isEndKnown: true, isReady: { ready.contains($0) }))
+        XCTAssertFalse(mediaGridPaneRowIsReady(index: 4, columns: 3, count: 100, isEndKnown: true, isReady: { ready.contains($0) }))
+        XCTAssertFalse(mediaGridPaneRowIsReady(index: 3, columns: 3, count: 100, isEndKnown: true, isReady: { ready.contains($0) }))
+    }
+
+    func testPartialLastRowWaitsUntilEndIsKnown() {
+        let isReady: (Int) -> Bool = { _ in true }
+        XCTAssertFalse(mediaGridPaneRowIsReady(index: 6, columns: 5, count: 7, isEndKnown: false, isReady: isReady))
+        XCTAssertTrue(mediaGridPaneRowIsReady(index: 6, columns: 5, count: 7, isEndKnown: true, isReady: isReady))
+        XCTAssertTrue(mediaGridPaneRowIsReady(index: 2, columns: 5, count: 7, isEndKnown: false, isReady: isReady))
+    }
+
+    func testRevealDelaysStaggerRowsTopToBottom() {
+        XCTAssertEqual(mediaGridPaneRevealDelays(rows: [7, 5, 6]), [5: 0.0, 6: 0.04, 7: 0.08])
+        let delays = mediaGridPaneRevealDelays(rows: Array(0 ..< 40))
+        XCTAssertEqual(delays[0], 0.0)
+        XCTAssertEqual(delays[39] ?? 0.0, 0.3, accuracy: 0.0001)
+        XCTAssertTrue(mediaGridPaneRevealDelays(rows: []).isEmpty)
+    }
+    func testHoleNearestToIndexMatchesLinearScan() {
+        var generator = SystemRandomNumberGenerator()
+        for _ in 0 ..< 200 {
+            let anchors = Set((0 ..< Int.random(in: 1 ... 40, using: &generator)).map { _ in Int.random(in: 0 ..< 500, using: &generator) }).sorted()
+            let holes = anchors.map { MediaGridPaneHole(anchorIndex: $0) }
+            let target = Int.random(in: 0 ..< 500, using: &generator)
+            var expected: MediaGridPaneHole?
+            var bestDistance = Int.max
+            for hole in holes {
+                let distance = abs(hole.anchorIndex - target)
+                if distance < bestDistance || (distance == bestDistance && hole.anchorIndex > (expected?.anchorIndex ?? Int.min)) {
+                    expected = hole
+                    bestDistance = distance
+                }
+            }
+            XCTAssertEqual(mediaGridPaneHoleNearest(to: target, sortedHoles: holes), expected)
+        }
+        XCTAssertNil(mediaGridPaneHoleNearest(to: 5, sortedHoles: []))
+    }
 }

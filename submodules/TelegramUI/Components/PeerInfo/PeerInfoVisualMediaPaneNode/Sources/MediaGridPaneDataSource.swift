@@ -68,8 +68,12 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
     private(set) var isLoading = true
     private var messages: [Int: EngineMessage] = [:]
     private var mediaKeys: [Int: String] = [:]
+    private var mediaKeyCache: [EngineMessage.Id: (version: UInt32, key: String)] = [:]
+    private var loadedIndices = IndexSet()
+    private var attemptedThumbnailIndices = IndexSet()
     private var indexById: [EngineMessage.Id: Int] = [:]
     private var holeEntries: [HoleEntry] = []
+    private var sortedHoles: [MediaGridPaneHole] = []
     private var anchors: [(index: Int, timestamp: Int32)] = []
     private var thumbnails: [EngineMessage.Id: MediaGridThumbnail] = [:]
     private var pendingThumbnails = Set<EngineMessage.Id>()
@@ -86,6 +90,8 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         var isPlaceholderCount = false
         var newMessages: [Int: EngineMessage] = [:]
         var newMediaKeys: [Int: String] = [:]
+        var newMediaKeyCache: [EngineMessage.Id: (version: UInt32, key: String)] = [:]
+        var newLoadedIndices = IndexSet()
         var newIndexById: [EngineMessage.Id: Int] = [:]
         var newHoles: [HoleEntry] = []
         var newAnchors: [(index: Int, timestamp: Int32)] = []
@@ -98,7 +104,15 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
                 case let .message(message, isLocal):
                     let engineMessage = EngineMessage(message)
                     newMessages[item.index] = engineMessage
-                    newMediaKeys[item.index] = mediaGridPaneMediaKey(engineMessage)
+                    let key: String
+                    if let cached = self.mediaKeyCache[message.id], cached.version == engineMessage.stableVersion {
+                        key = cached.key
+                    } else {
+                        key = mediaGridPaneMediaKey(engineMessage)
+                    }
+                    newMediaKeys[item.index] = key
+                    newMediaKeyCache[message.id] = (engineMessage.stableVersion, key)
+                    newLoadedIndices.insert(item.index)
                     newIndexById[message.id] = item.index
                     newAnchors.append((item.index, message.timestamp))
                     if !isLocal {
@@ -127,8 +141,12 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         self.isLoading = state.isLoading
         self.messages = newMessages
         self.mediaKeys = newMediaKeys
+        self.mediaKeyCache = newMediaKeyCache
+        self.loadedIndices = newLoadedIndices
+        self.attemptedThumbnailIndices = IndexSet()
         self.indexById = newIndexById
         self.holeEntries = newHoles
+        self.sortedHoles = newHoles.map { MediaGridPaneHole(anchorIndex: $0.index) }.sorted(by: { $0.anchorIndex < $1.anchorIndex })
         self.anchors = newAnchors
 
         let changes = MediaGridChanges(removed: removed, inserted: inserted, changed: changed)
@@ -141,8 +159,12 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         self.isLoading = true
         self.messages = [:]
         self.mediaKeys = [:]
+        self.mediaKeyCache = [:]
+        self.loadedIndices = IndexSet()
+        self.attemptedThumbnailIndices = IndexSet()
         self.indexById = [:]
         self.holeEntries = []
+        self.sortedHoles = []
         self.anchors = []
     }
 
@@ -163,7 +185,11 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
     }
 
     func holes() -> [MediaGridPaneHole] {
-        return self.holeEntries.map { MediaGridPaneHole(anchorIndex: $0.index) }
+        return self.sortedHoles
+    }
+
+    func firstUnloadedIndex(in range: Range<Int>) -> Int? {
+        return IndexSet(integersIn: range).subtracting(self.loadedIndices).first
     }
 
     func holeAnchorMessageId(at anchorIndex: Int) -> EngineMessage.Id? {
@@ -217,6 +243,20 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
     func stopCaching(indices: [Int], pixelSize: CGSize) {
     }
 
+    var isEndKnown: Bool {
+        return !self.isPlaceholderCount && !self.isLoading
+    }
+
+    func isContentReady(at index: Int) -> Bool {
+        guard let message = self.messages[index] else {
+            return false
+        }
+        if self.thumbnails[message.id] != nil || self.missingThumbnails.contains(message.id) {
+            return true
+        }
+        return mediaGridPaneSelectedMedia(message) == nil
+    }
+
     func thumbnail(at index: Int) -> MediaGridThumbnail? {
         guard let message = self.messages[index] else {
             return nil
@@ -227,10 +267,12 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
     func prepareThumbnails(ranges: [Range<Int>]) {
         var batch: [(EngineMessage.Id, EngineMedia)] = []
         outer: for range in ranges {
-            for index in range {
+            let candidates = IndexSet(integersIn: range).intersection(self.loadedIndices).subtracting(self.attemptedThumbnailIndices)
+            for index in candidates {
                 guard let message = self.messages[index] else {
                     continue
                 }
+                self.attemptedThumbnailIndices.insert(index)
                 if self.thumbnails[message.id] != nil || self.pendingThumbnails.contains(message.id) || self.missingThumbnails.contains(message.id) {
                     continue
                 }
@@ -259,15 +301,16 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
                 }
                 if self.thumbnails.count + decoded.count > MediaGridPaneDataSource.thumbnailCacheLimit {
                     self.thumbnails.removeAll()
+                    self.attemptedThumbnailIndices = IndexSet()
                 }
                 var indices = IndexSet()
                 for (id, image) in decoded {
                     self.pendingThumbnails.remove(id)
-                    guard let image else {
+                    if let image {
+                        self.thumbnails[id] = MediaGridThumbnail(image: image, contentsRect: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+                    } else {
                         self.missingThumbnails.insert(id)
-                        continue
                     }
-                    self.thumbnails[id] = MediaGridThumbnail(image: image, contentsRect: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
                     if let index = self.indexById[id] {
                         indices.insert(index)
                     }
