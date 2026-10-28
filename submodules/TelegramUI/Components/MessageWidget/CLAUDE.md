@@ -375,23 +375,28 @@ the gate differently asks for its own relayout, because nothing else lays out a 
     - the app's language and stopped label, as the sent bubble has;
     - a widget only while on screen: the list's preload rows run none, a row leaving the screen stops its own, and a
       row shown again boots afresh, so a fling through many widget results runs only the visible ones. On screen is
-      anywhere in the panel above the input panel: the vertical list's top inset is only the room above its first
-      result, which rows scroll into and show in, so the list sets `visibilityIgnoresTopInset` (ListView's visibility
-      otherwise ends at the insets, and a widget scrolled up past the first result's resting place stopped while in
-      view). The flag zeroes the top edge; the bottom still comes from the insets the list has applied (a visual inset
-      written beside them ran a transaction ahead during a keyboard change). The bottom inset ends it: the panel is given
-      one bottom inset for the input panel and the keyboard together, and a row behind the keyboard must not run
-      (`ListViewVisibilityTests`);
+      anywhere in the panel but behind the keyboard: in the room above the vertical list's first result (its top
+      inset), which rows scroll up into, and under the input panel's glass (the user, 2026-10-29), which rows show
+      through. The list is CoreList, whose visible rect counts its insets as visible; `visibleRectInsets` ends it at
+      `ChatInputContextPanelNode.coveredBottomInset`, the part of the panel's bottom inset the keyboard (or the chat's
+      own input, else the home indicator's strip) covers, which the chat sets before each layout. A row wholly inside
+      the home indicator's strip with no keyboard up does not run. `ListViewItemCoreListHostTests` (the band, and
+      `ListViewImpl`'s visibility formula on the hosted node), CoreList's `VisibleRectNotificationTests`;
     - a late snapshot (a boot past the pass's wait, a new height, a failure) re-runs its pass on a later main-queue
       turn, as the bubble's relayout does, so a late boot is not left at the 160 pt placeholder;
     - a widget that failed to start is remembered and never booted again for that result, when the failure lands
       while the row is on screen (a slow parse failing after the row left is parsed again on the next show).
   - **The vertical list.** A row with the result's title and the widget at its sent bubble's width and its own height,
-    scaled down past `MessageWidgetPreviewLayout.maximumListHeight` (240 pt). The panel keeps each reported height and
-    re-lays that row out from it, without the list's crossfade. A fixed height reports nothing.
+    scaled down past `MessageWidgetPreviewLayout.maximumListHeight` (240 pt). The panel keeps each reported height, by
+    result id, and re-lays that row out from it with no animation; a row scrolled out and back in is a new view, whose
+    widget starts at that height. Ids are the bot's own, so the heights are dropped when results come from another
+    bot (the panel stays for any list-presented results). A fixed height reports nothing. The list is CoreList with the
+    chat's render-server scrolling (`.keyframe`, the user's call of 2026-10-29), its rows the `ListViewItem`s they were
+    (`ListViewItemCoreListHost`: the item's own node, `ListViewImpl`'s tap highlight and selection), a short list
+    stacked above the input panel (`stacksFromBottom`).
   - **The gallery strip.** A cell the size of an image result's widest crop, with the widget fitted inside and no peek.
-  - **Layout off main.** Both lists lay out off main, so a row's layout uses only the anchors and the height passed in,
-    and the widget boots in the item's apply. A height report arrives one main-queue turn after the pass, never inside
+  - **Layout off main.** The gallery strip lays out off main (the vertical list on main, in CoreList's pass), so a row's
+    layout uses only the anchors and the height passed in, and the widget boots in the item's apply. A height report arrives one main-queue turn after the pass, never inside
     a list's apply.
   - **Elsewhere.** With the kill switch engaged, a widget result draws as any other result. The Mini App share preview
     shows its text.
