@@ -29,6 +29,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     
     private let titleNode: ASTextNode
     private let currentOptionNode: ASTextNode
+    private let titleActivateAreaNode: AccessibilityAreaNode
+    private let currentOptionActivateAreaNode: AccessibilityAreaNode
     private let termsNode: ImmediateTextNode
     private let termsActivateAreaNode: AccessibilityAreaNode
     
@@ -92,17 +94,19 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.accessibilityIdentifier = "Auth.SetName.Title"
-        self.titleNode.isAccessibilityElement = true
-        self.titleNode.accessibilityLabel = self.strings.Login_InfoTitle
-        self.titleNode.accessibilityTraits = [.staticText, .header]
+        // VoiceOver: the title and the text through area nodes positioned in layout, as on the phone, code and
+        // password screens.
+        self.titleActivateAreaNode = AccessibilityAreaNode()
+        self.titleActivateAreaNode.accessibilityLabel = self.strings.Login_InfoTitle
+        self.titleActivateAreaNode.accessibilityTraits = [.staticText, .header]
 
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
-        self.currentOptionNode.isAccessibilityElement = true
-        self.currentOptionNode.accessibilityLabel = self.strings.Login_InfoHelp
-        self.currentOptionNode.accessibilityTraits = .staticText
+        self.currentOptionActivateAreaNode = AccessibilityAreaNode()
+        self.currentOptionActivateAreaNode.accessibilityLabel = self.strings.Login_InfoHelp
+        self.currentOptionActivateAreaNode.accessibilityTraits = .staticText
         
         self.termsNode = ImmediateTextNode()
         self.termsNode.textAlignment = .center
@@ -194,6 +198,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addSubnode(self.termsNode)
         self.termsNode.isHidden = true
         self.addSubnode(self.termsActivateAreaNode)
+        self.addSubnode(self.titleActivateAreaNode)
+        self.addSubnode(self.currentOptionActivateAreaNode)
         self.termsActivateAreaNode.isHidden = true
         self.termsActivateAreaNode.applyAccessibilityText(self.termsNode.attributedText ?? NSAttributedString(), linkAttribute: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), open: { [weak self] _ in
             self?.openTermsOfService?()
@@ -309,6 +315,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: bandMinX, y: insets.top), size: CGSize(width: bandWidth, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         self.termsActivateAreaNode.frame = self.termsNode.frame
+        self.titleActivateAreaNode.frame = self.titleNode.frame
+        self.currentOptionActivateAreaNode.frame = self.currentOptionNode.frame
     }
     
     func activateInput() {

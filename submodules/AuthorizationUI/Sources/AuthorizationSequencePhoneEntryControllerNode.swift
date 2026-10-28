@@ -962,12 +962,12 @@ final class PhoneConfirmationController: ViewController {
             self.cancel()
         }
 
-        // VoiceOver escape: the same as a tap on the dimmed background (Edit).
+        // VoiceOver escape: the same as a tap on the dimmed background (Edit). While the sheet is already closing the
+        // escape is still consumed, so it does not reach the navigation controller and pop the phone screen.
         override func accessibilityPerformEscape() -> Bool {
-            guard self.dimNode.isUserInteractionEnabled else {
-                return false
+            if self.dimNode.isUserInteractionEnabled {
+                self.cancelPressed()
             }
-            self.cancelPressed()
             return true
         }
 

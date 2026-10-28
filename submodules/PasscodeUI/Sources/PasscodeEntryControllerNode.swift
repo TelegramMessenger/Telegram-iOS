@@ -538,12 +538,16 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         }.map { $0.view }
     }
     
-    func animateError() {
-        self.inputFieldNode.reset()
-        // A wrong passcode only shakes the dots: VoiceOver says it.
+    /// A rejected passcode only shakes the dots: VoiceOver says it. Called only where the passcode was checked and
+    /// rejected (not on the cooldown, biometric or domain-state paths that also shake).
+    func announceIncorrectPasscode() {
         if UIAccessibility.isVoiceOverRunning {
             UIAccessibility.post(notification: .announcement, argument: self.strings.VoiceOver_Passcode_Incorrect)
         }
+    }
+    
+    func animateError() {
+        self.inputFieldNode.reset()
         self.inputFieldNode.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)
         if self.arguments.displayAppLock {
             self.iconNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)

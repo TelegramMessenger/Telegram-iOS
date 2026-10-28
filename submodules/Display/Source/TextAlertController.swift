@@ -153,13 +153,98 @@ public enum TextAlertContentActionLayout {
     case vertical
 }
 
+/// VoiceOver element over an alert's text: label, `.link` trait, activation (first link) and custom actions (the other
+/// links) are computed in the view's accessibility getters, so nothing runs while no accessibility client asks. The node
+/// only stores the inputs.
+private final class TextAlertTextAccessibilityNode: ASDisplayNode {
+    var text: NSAttributedString?
+    var linkAttribute: NSAttributedString.Key?
+    var open: ((Any) -> Void)?
+    
+    override init() {
+        super.init()
+        
+        self.setViewBlock({
+            return TextAlertTextAccessibilityView()
+        })
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        (self.view as? TextAlertTextAccessibilityView)?.owner = self
+    }
+    
+    func links() -> [AccessibilityTextLink] {
+        guard let text = self.text, let linkAttribute = self.linkAttribute, self.open != nil else {
+            return []
+        }
+        return accessibilityTextLinks(in: text, attribute: linkAttribute)
+    }
+}
+
+private final class TextAlertTextAccessibilityView: UIView {
+    weak var owner: TextAlertTextAccessibilityNode?
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        return nil
+    }
+    
+    override var isAccessibilityElement: Bool {
+        get {
+            return true
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityLabel: String? {
+        get {
+            return self.owner?.text.flatMap { accessibilityDisplayedText($0) }
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityTraits: UIAccessibilityTraits {
+        get {
+            return (self.owner?.links().isEmpty ?? true) ? .staticText : [.staticText, .link]
+        } set(value) {
+        }
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        guard let owner = self.owner, let open = owner.open, let first = owner.links().first else {
+            return false
+        }
+        open(first.value)
+        return true
+    }
+    
+    override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            guard let links = self.owner?.links(), links.count > 1 else {
+                return nil
+            }
+            return links.map { link in
+                return UIAccessibilityCustomAction(name: link.text, actionHandler: { [weak self] _ in
+                    guard let open = self?.owner?.open else {
+                        return false
+                    }
+                    open(link.value)
+                    return true
+                })
+            }
+        } set(value) {
+        }
+    }
+}
+
 public final class TextAlertContentNode: AlertContentNode {
     private var theme: AlertControllerTheme
     private let actionLayout: TextAlertContentActionLayout
     
     private let titleNode: ImmediateTextNode?
     private let textNode: ImmediateTextNode
-    private let textAccessibilityNode: AccessibilityAreaNode
+    private let textAccessibilityNode: TextAlertTextAccessibilityNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -199,16 +284,19 @@ public final class TextAlertContentNode: AlertContentNode {
     }
     
     /// VoiceOver: the text as one element over the text node; with tappable links it is a link whose activation follows
-    /// the first link and whose custom actions name the others (`applyAccessibilityText`), as taps on them do.
+    /// the first link and whose custom actions name the others, as taps on them do. Only the inputs are stored here;
+    /// the element computes its label and links when VoiceOver asks (`TextAlertTextAccessibilityNode`).
     private func updateTextAccessibility() {
-        let text = self.textNode.attributedText ?? NSAttributedString()
+        self.textAccessibilityNode.text = self.textNode.attributedText
         if let (attribute, textAttributeAction) = self.textAttributeAction {
-            self.textAccessibilityNode.applyAccessibilityText(text, linkAttribute: attribute, open: { value in
+            self.textAccessibilityNode.linkAttribute = attribute
+            self.textAccessibilityNode.open = { value in
                 textAttributeAction(value)
-            })
+            }
         } else if self.textNode.tapAttributeAction != nil {
             let attribute = NSAttributedString.Key(rawValue: "URL")
-            self.textAccessibilityNode.applyAccessibilityText(text, linkAttribute: attribute, open: { [weak self] value in
+            self.textAccessibilityNode.linkAttribute = attribute
+            self.textAccessibilityNode.open = { [weak self] value in
                 guard let self, let tapAttributeAction = self.textNode.tapAttributeAction, let text = self.textNode.attributedText else {
                     return
                 }
@@ -222,9 +310,10 @@ public final class TextAlertContentNode: AlertContentNode {
                 if let (attributes, index) = match {
                     tapAttributeAction(attributes, index)
                 }
-            })
+            }
         } else {
-            self.textAccessibilityNode.applyAccessibilityText(text, linkAttribute: NSAttributedString.Key(rawValue: "URL"), open: nil)
+            self.textAccessibilityNode.linkAttribute = nil
+            self.textAccessibilityNode.open = nil
         }
     }
     
@@ -253,7 +342,7 @@ public final class TextAlertContentNode: AlertContentNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.isLayerBacked = false
         self.textNode.isAccessibilityElement = false
-        self.textAccessibilityNode = AccessibilityAreaNode()
+        self.textAccessibilityNode = TextAlertTextAccessibilityNode()
         self.textNode.insets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
         self.textNode.tapAttributeAction = linkAction
         self.textNode.highlightAttributeAction = { attributes in

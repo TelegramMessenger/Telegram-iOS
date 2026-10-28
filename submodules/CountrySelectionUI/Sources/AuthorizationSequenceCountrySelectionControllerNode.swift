@@ -463,13 +463,9 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             code = "+\(self.searchResults[indexPath.row].2)"
         }
                 
-        // One element per row (the flag-prefixed title and the code label are not read again); a tap picks it.
-        cell.isAccessibilityElement = true
+        // UIKit's cell is already one element; it reads the country's name (not the flag-prefixed title) and the code,
+        // and a tap picks it.
         cell.accessibilityTraits = .button
-        cell.contentView.accessibilityElementsHidden = true
-        cell.accessoryView?.accessibilityElementsHidden = true
-        cell.textLabel?.isAccessibilityElement = false
-        cell.detailTextLabel?.isAccessibilityElement = false
         cell.accessibilityLabel = cleanCountryName
         cell.accessibilityValue = self.displayCodes ? code : nil
         

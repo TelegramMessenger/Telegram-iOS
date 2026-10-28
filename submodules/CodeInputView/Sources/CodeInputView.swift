@@ -183,10 +183,17 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         preconditionFailure()
     }
     
-    /// VoiceOver: the code is one text field (its label set by the host through `textField.accessibilityLabel`), over
-    /// the drawn boxes. Listed explicitly: the collector would skip the field for its 0.01 alpha.
+    /// VoiceOver: the known leading digits (`prefix`, missed-call codes) when shown, then the code as one text field
+    /// (its label set by the host through `textField.accessibilityLabel`) over the drawn boxes. Listed explicitly: the
+    /// collector would skip the field for its 0.01 alpha.
     override public var accessibilityElements: [Any]? {
         get {
+            if !self.prefix.isEmpty {
+                self.prefixLabel.isAccessibilityElement = true
+                self.prefixLabel.accessibilityLabel = self.prefix
+                self.prefixLabel.accessibilityTraits = .staticText
+                return [self.prefixLabel.view, self.textField]
+            }
             return [self.textField]
         } set(value) {
         }

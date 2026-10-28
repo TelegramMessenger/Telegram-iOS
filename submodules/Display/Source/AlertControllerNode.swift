@@ -206,14 +206,14 @@ final class AlertControllerNode: ASDisplayNode {
         }
     }
     
-    /// VoiceOver escape: a tap outside the alert (`dismiss` keeps the alert when it does not dismiss on outside taps).
+    /// VoiceOver escape: a tap outside the alert. An alert that does not dismiss on outside taps still consumes the
+    /// escape (returns true without dismissing), so it does not reach the navigation controller and pop the screen under it.
     var dismissesOnEscape: (() -> Bool)?
     
     override func accessibilityPerformEscape() -> Bool {
-        guard let dismissesOnEscape = self.dismissesOnEscape, dismissesOnEscape() else {
-            return false
+        if let dismissesOnEscape = self.dismissesOnEscape, dismissesOnEscape() {
+            self.dismiss?()
         }
-        self.dismiss?()
         return true
     }
 }

@@ -278,6 +278,7 @@ public final class PasscodeEntryController: ViewController {
                     switch error as? PasscodeError ?? .unavailable {
                     case .invalidCode:
                         self.controllerNode.animateError()
+                        self.controllerNode.announceIncorrectPasscode()
                         self.refreshCredentialCooldown()
                     case let .cooldown(remaining):
                         self.controllerNode.resetInput()
