@@ -1824,11 +1824,11 @@ public extension TelegramEngine {
         }
         
         public func setBotStorageValue(peerId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, BotStorageError> {
-            return _internal_setBotStorageValue(account: self.account, peerId: peerId, key: key, value: value)
+            return _internal_setBotStorageValue(postbox: self.account.postbox, peerId: peerId, key: key, value: value)
         }
 
         public func clearBotStorage(peerId: EnginePeer.Id) -> Signal<Never, BotStorageError> {
-            return _internal_clearBotStorage(account: self.account, peerId: peerId)
+            return _internal_clearBotStorage(postbox: self.account.postbox, peerId: peerId)
         }
         
         public func toggleChatManagingBotIsPaused(chatId: EnginePeer.Id) {

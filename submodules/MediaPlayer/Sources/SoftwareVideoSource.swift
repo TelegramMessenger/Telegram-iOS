@@ -455,11 +455,13 @@ public final class SoftwareAudioSource {
         return self.audioStream != nil
     }
     
+    // Decodes to mono, the format voice message conversion expects.
     public convenience init(path: String) {
-        self.init(path: path, ignoreEditList: false)
+        self.init(path: path, ignoreEditList: false, isPlayback: false)
     }
 
-    init(path: String, ignoreEditList: Bool) {
+    // isPlayback keeps a stereo source stereo.
+    init(path: String, ignoreEditList: Bool, isPlayback: Bool) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         var s = stat()
@@ -517,7 +519,7 @@ public final class SoftwareAudioSource {
                 let codecContext = FFMpegAVCodecContext(codec: codec)
                 if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                     if codecContext.open() {
-                        audioStream = SoftwareAudioStream(index: Int(streamIndex), fps: fps, timebase: timebase, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: 1))
+                        audioStream = SoftwareAudioStream(index: Int(streamIndex), fps: fps, timebase: timebase, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: isPlayback ? FFMpegAudioFrameDecoder.playbackChannelCount(codecContext: codecContext) : 1))
                         break
                     }
                 }
@@ -671,6 +673,10 @@ final class SoftwareVideoReader {
     
     public private(set) var reportedDuration: CMTime = .invalid
     
+    var videoRotationAngle: Double {
+        return self.videoStream?.rotationAngle ?? 0.0
+    }
+
     public var hasStream: Bool {
         return self.videoStream != nil
     }

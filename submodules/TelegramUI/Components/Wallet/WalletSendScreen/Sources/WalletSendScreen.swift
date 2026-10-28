@@ -320,9 +320,13 @@ fileprivate final class WalletPeerTransferSubmission {
                             return .fail(.authorizationCancelled)
                         }
                         guard let balance = state.balance.currentValue, request.amount <= balance else {
+                            Logger.shared.log("WalletSendScreen", "event=wallet_send_ui_failed error=insufficient_balance reason=\(state.balance.currentValue == nil ? "balance_unknown" : "amount_exceeds_balance")")
                             return .fail(.insufficientBalance(required: request.amount))
                         }
-                        if request.sendAll && balance != request.amount { return .fail(.previewFailed) }
+                        if request.sendAll && balance != request.amount {
+                            Logger.shared.log("WalletSendScreen", "event=wallet_send_ui_failed error=preview_failed reason=send_all_balance_changed")
+                            return .fail(.previewFailed)
+                        }
                         return walletContext.prepareTransfer(
                             address: request.feeRequest.address,
                             amount: request.amount,
@@ -1833,6 +1837,7 @@ private final class WalletSendScreenComponent: Component {
                       self.component?.walletContext === walletContext, self.component?.peer?.id == peerId,
                       self.currentFeeRequest == request.feeRequest else { return }
                 guard case let .wallet(info) = state.phase else {
+                    Logger.shared.log("WalletSendScreen", "event=wallet_send_ui_failed error=unavailable reason=no_wallet_phase")
                     self.cancelPendingSend()
                     self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     self.presentTransferError(.unavailable)

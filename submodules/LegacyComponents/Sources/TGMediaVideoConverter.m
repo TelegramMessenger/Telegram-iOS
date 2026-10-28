@@ -578,13 +578,28 @@
     return output;
 }
 
+// Videos recorded with Spatial Audio carry an AAC stereo track next to the APAC one, and after a trim in
+// Photos the APAC one comes first. Converting from the AAC track skips rendering the APAC one to stereo,
+// so an AAC track is taken when there is one; other tracks are still converted (see the reader settings).
++ (AVAssetTrack *)_preferredAudioTrackForAVAsset:(AVAsset *)avAsset
+{
+    NSArray<AVAssetTrack *> *tracks = [avAsset tracksWithMediaType:AVMediaTypeAudio];
+    for (AVAssetTrack *track in tracks)
+    {
+        CMFormatDescriptionRef description = (__bridge CMFormatDescriptionRef)track.formatDescriptions.firstObject;
+        if (description != NULL && CMFormatDescriptionGetMediaSubType(description) == kAudioFormatMPEG4AAC)
+            return track;
+    }
+    return tracks.firstObject;
+}
+
 + (bool)setupAssetReaderWriterForAVAsset:(AVAsset *)avAsset image:(UIImage *)image duration:(NSTimeInterval)duration outputURL:(NSURL *)outputURL preset:(TGMediaVideoConversionPreset)preset entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer adjustments:(TGMediaVideoEditAdjustments *)adjustments inhibitAudio:(bool)inhibitAudio conversionContext:(SAtomic *)outConversionContext error:(NSError **)error
 {
     if (image == nil) {
         TGMediaSampleBufferProcessor *videoProcessor = nil;
         TGMediaSampleBufferProcessor *audioProcessor = nil;
         
-        AVAssetTrack *audioTrack = [[avAsset tracksWithMediaType:AVMediaTypeAudio] firstObject];
+        AVAssetTrack *audioTrack = [self _preferredAudioTrackForAVAsset:avAsset];
         AVAssetTrack *videoTrack = [[avAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];
         if (videoTrack == nil)
             return false;
@@ -636,10 +651,19 @@
             if (trimAudioTrack == nil)
                 return false;
             
-            AVAssetReaderOutput *output = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:trimAudioTrack outputSettings:@{ AVFormatIDKey: @(kAudioFormatLinearPCM) }];
+            // The AAC encoder only takes decoded audio with its own channel count, and the preset may be mono.
+            // Decoding straight to it lets Core Audio downmix or render the source first: PCM tracks (ProRes),
+            // 5.1 and other multichannel tracks, and Spatial Audio's ambisonic APAC track all fail otherwise.
+            NSDictionary *audioSettings = [TGMediaVideoConversionPresetSettings audioSettingsForPreset:preset];
+            AVAssetReaderOutput *output = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:trimAudioTrack outputSettings:@
+            {
+                AVFormatIDKey: @(kAudioFormatLinearPCM),
+                AVNumberOfChannelsKey: audioSettings[AVNumberOfChannelsKey],
+                AVChannelLayoutKey: audioSettings[AVChannelLayoutKey]
+            }];
             [assetReader addOutput:output];
             
-            AVAssetWriterInput *input = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio outputSettings:[TGMediaVideoConversionPresetSettings audioSettingsForPreset:preset]];
+            AVAssetWriterInput *input = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio outputSettings:audioSettings];
             [assetWriter addInput:input];
             
             audioProcessor = [[TGMediaSampleBufferProcessor alloc] initWithAssetReaderOutput:output assetWriterInput:input];
@@ -778,7 +802,7 @@
             }
             else
             {
-                [context.subscriber putError:context.assetReader.error];
+                [context.subscriber putError:context.assetReader.error ?: context.assetWriter.error];
             }
         }
         
@@ -997,6 +1021,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
                 @try {
                     success = [_assetWriterInput appendSampleBuffer:sampleBuffer];
                 } @catch (NSException *exception) {
+                    TGLegacyLog(@"[TGMediaVideoConverter] appendSampleBuffer raised %@: %@", exception.name, exception.reason);
                     if ([exception.name isEqualToString:NSInternalInconsistencyException])
                         success = false;
                 } @finally {

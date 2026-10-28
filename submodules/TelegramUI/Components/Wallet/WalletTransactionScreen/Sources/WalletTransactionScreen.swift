@@ -1921,9 +1921,11 @@ private final class WalletTransactionContentComponent: Component {
             |> mapToSignal { state -> Signal<WalletContext.PreparedTransfer, WalletContext.WalletError> in
                 if collectible == nil {
                     guard let balance = state.balance.currentValue, requestedAmount <= balance else {
+                        Logger.shared.log("WalletTransactionScreen", "event=wallet_send_ui_failed error=insufficient_balance reason=\(state.balance.currentValue == nil ? "balance_unknown" : "amount_exceeds_balance")")
                         return .fail(.insufficientBalance(required: requestedAmount))
                     }
                     if sendAll && balance != requestedAmount {
+                        Logger.shared.log("WalletTransactionScreen", "event=wallet_send_ui_failed error=preview_failed reason=send_all_balance_changed")
                         return .fail(.previewFailed)
                     }
                 }

@@ -646,7 +646,7 @@ public final class MediaEditorVideoExport {
                         try? compositionTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: videoAssetTrack, at: .zero)
                     }
                 }
-                if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, !self.configuration.values.videoIsMuted, !self.isBounceEnabled {
+                if let audioAssetTrack = preferredAudioTrack(in: asset), !self.configuration.values.videoIsMuted, !self.isBounceEnabled {
                     if let compositionTrack = composition?.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
                         try? compositionTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: audioAssetTrack, at: .zero)
                         
@@ -681,7 +681,7 @@ public final class MediaEditorVideoExport {
                                 try? compositionTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: startTime)
                             }
                         }
-                        if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, volume ?? 1.0 > 0.01, !self.isBounceEnabled {
+                        if let audioAssetTrack = preferredAudioTrack(in: asset), volume ?? 1.0 > 0.01, !self.isBounceEnabled {
                             if let compositionTrack = composition?.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
                                 try? compositionTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: startTime)
                                 
@@ -717,7 +717,7 @@ public final class MediaEditorVideoExport {
                         try? compositionTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: startTime)
                     }
                 }
-                if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, self.configuration.values.additionalVideoVolume ?? 1.0 > 0.01, !self.isBounceEnabled {
+                if let audioAssetTrack = preferredAudioTrack(in: asset), self.configuration.values.additionalVideoVolume ?? 1.0 > 0.01, !self.isBounceEnabled {
                     if let compositionTrack = composition?.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
                         try? compositionTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: startTime)
                         
@@ -859,7 +859,7 @@ public final class MediaEditorVideoExport {
         if let reader {
             let audioTracks = composition?.tracks(withMediaType: .audio) ?? []
             if audioTracks.count > 0 {
-                let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: nil)
+                let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: linearPCMAudioSettings(matching: self.configuration.audioSettings))
                 audioOutput.audioMix = audioMix
                 audioOutput.alwaysCopiesSampleData = false
                 if reader.canAdd(audioOutput) {

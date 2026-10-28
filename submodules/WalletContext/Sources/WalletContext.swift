@@ -451,6 +451,7 @@ public final class WalletContext {
                                     subscriber.putError(error)
                                 }
                             } catch {
+                                logger.error("wallet_operation_delivery_rejected", error, context: "operation=\(name)")
                                 discard(result)
                                 subscriber.putError(walletError(error))
                             }

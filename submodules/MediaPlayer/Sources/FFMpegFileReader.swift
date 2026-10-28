@@ -225,6 +225,8 @@ public final class FFMpegFileReader {
         case error
     }
     
+    public private(set) var videoRotationAngle: Double = 0.0
+
     private(set) var readingError = false
     private var stream: Stream?
     private var avIoContext: FFMpegAVIOContext?
@@ -331,6 +333,7 @@ public final class FFMpegFileReader {
                 
                 switch mediaType {
                 case .video:
+                    self.videoRotationAngle = rotationAngle
                     if passthroughDecoder {
                         var videoFormatData: FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData?
                         if codecId == FFMpegCodecIdMPEG4 {
@@ -378,7 +381,7 @@ public final class FFMpegFileReader {
                             if codecContext.open() {
                                 stream = Stream(
                                     info: info,
-                                    decoder: .audio(FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: 1))
+                                    decoder: .audio(FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: FFMpegAudioFrameDecoder.playbackChannelCount(codecContext: codecContext)))
                                 )
                                 break outer
                             }

@@ -36,7 +36,7 @@ private final class WalletReceiveQrComponent: Component {
 
     final class View: UIView {
         private static let introDelay = 0.03
-        private static let qrRevealDuration = 0.5
+        private static let qrRevealDuration = WalletReceiveQrRevealView.revealTime
         private static let diamondIntroSpeed = 1.5
         private static var diamondIntroDuration: Double {
             return Self.introDelay + (InteractiveDiamondIntro.duration - InteractiveDiamondIntro.delay) / Self.diamondIntroSpeed
@@ -132,6 +132,7 @@ private final class WalletReceiveQrComponent: Component {
             let intro = InteractiveDiamondIntro(time: introTime, speed: Self.diamondIntroSpeed, damping: 0.64)
             let bounceAmplitude: CGFloat = intro.progress > 1.0 ? 0.49 : 1.0
             let scale = 1.0 + (intro.scale(from: 5.0, allowsOvershoot: true) - 1.0) * bounceAmplitude
+            self.revealView?.update(time: elapsed - Self.introDelay)
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             diamondView.clipsToBounds = false
@@ -161,12 +162,14 @@ private final class WalletReceiveQrComponent: Component {
             self.didAnimateIn = true
 
             let revealView = WalletReceiveQrRevealView(image: image, moduleCount: qrCodeSize)
+            guard revealView.prepare() else {
+                return
+            }
             revealView.frame = self.imageNode.frame
             self.revealView = revealView
             self.insertSubview(revealView, aboveSubview: self.imageNode.view)
             self.imageNode.isHidden = true
             self.revealStartTime = CACurrentMediaTime()
-            revealView.animateIn(delay: Self.introDelay, duration: Self.qrRevealDuration)
             self.updateDiamondIntro()
             self.revealDisplayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
                 self?.updateDiamondIntro()

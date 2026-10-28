@@ -721,7 +721,7 @@ extension HarnessSharedAccountContext {
     public func makeTextProcessingScreen( context: AccountContext, theme: PresentationTheme?, mode: TextProcessingScreenMode, inputText: ComposedRichMessage, copyResult: ((ComposedRichMessage) -> Void)?, translateChat: ((String) -> Void)? ) async -> ViewController {
         fatalError("harness: SharedAccountContext.makeTextProcessingScreen is not provided")
     }
-    public func makeCreateBotScreen( context: AccountContext, parentBot: EnginePeer.Id, initialUsername: String?, initialTitle: String?, openAutomatically: Bool, completion: @escaping (EnginePeer.Id?) -> Void ) async -> ViewController? {
+    public func makeCreateBotScreen( context: AccountContext, parentBot: EnginePeer.Id, initialUsername: String?, initialTitle: String?, openAutomatically: Bool, viaDeeplink: Bool, completion: @escaping (EnginePeer.Id?) -> Void ) async -> ViewController? {
         fatalError("harness: SharedAccountContext.makeCreateBotScreen is not provided")
     }
     public func makeEmojiStatusSelectionController(context: AccountContext, mode: EmojiStatusSelectionControllerMode, sourceView: UIView, emojiContent: Signal<AnyObject, NoError>, currentSelection: Int64?, color: UIColor?, destinationItemView: @escaping () -> UIView?) -> ViewController {

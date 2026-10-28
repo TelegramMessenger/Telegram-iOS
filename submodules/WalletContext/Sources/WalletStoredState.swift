@@ -234,6 +234,15 @@ struct WalletStoredTonConnectRequest: Codable, Equatable, Sendable {
     var key: TonConnectMessageKey { TonConnectMessageKey(sessionId: self.envelope.sessionId, msgId: self.envelope.msgId) }
 }
 
+// JSON has no NaN or infinity, and the default strategy throws on them: one such value anywhere in the cache (a server
+// card's coordinates, say) would make the whole stored state unencodable, and every transfer waits for it to be stored.
+private var walletStoredStateNonConformingFloatEncoding: JSONEncoder.NonConformingFloatEncodingStrategy {
+    .convertToString(positiveInfinity: "+inf", negativeInfinity: "-inf", nan: "nan")
+}
+private var walletStoredStateNonConformingFloatDecoding: JSONDecoder.NonConformingFloatDecodingStrategy {
+    .convertFromString(positiveInfinity: "+inf", negativeInfinity: "-inf", nan: "nan")
+}
+
 @available(macOS 10.15, *)
 struct WalletStoredState: Codable, Equatable, Sendable {
     private struct Payload: Codable {
@@ -281,7 +290,9 @@ struct WalletStoredState: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.schemaVersion = try container.decode(Int32.self, forKey: .schemaVersion)
         let data = try container.decode(Data.self, forKey: .payload)
-        let payload = try JSONDecoder().decode(Payload.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.nonConformingFloatDecodingStrategy = walletStoredStateNonConformingFloatDecoding
+        let payload = try decoder.decode(Payload.self, from: data)
         self.walletAddress = payload.walletAddress
         self.tonConnectRequests = payload.tonConnectRequests ?? []
         self.pendingTransfers = payload.pendingTransfers
@@ -315,8 +326,21 @@ struct WalletStoredState: Codable, Equatable, Sendable {
             cardStickerDirtyWallets: self.cardStickerDirtyWallets,
             serverCardsByWallet: self.serverCardsByWallet
         )
-        try container.encode(try JSONEncoder().encode(payload), forKey: .payload)
+        let encoder = JSONEncoder()
+        encoder.nonConformingFloatEncodingStrategy = walletStoredStateNonConformingFloatEncoding
+        try container.encode(try encoder.encode(payload), forKey: .payload)
     }
+}
+
+/// Whether `entry` restores what a `storeAndWait` caller relies on after a restart: the pending transfer and TON Connect
+/// journals of the wallet. The rest of the stored state is a cache, and a cached value that decoding normalizes (a
+/// card sticker that `CardSticker.validated` drops) must not fail a send.
+@available(macOS 10.15, *)
+func walletStoredStateEntryKeepsJournals(_ entry: EnginePreferencesEntry, of state: WalletStoredState) -> Bool {
+    guard let stored = entry.get(WalletStoredState.self) else { return false }
+    return stored.walletAddress == state.walletAddress
+        && stored.pendingTransfers == state.pendingTransfers
+        && stored.tonConnectRequests == state.tonConnectRequests
 }
 
 @available(macOS 10.15, *)
@@ -354,7 +378,7 @@ actor WalletStoredStateWriter {
     }
 
     func storeAndWait(_ state: WalletStoredState, revision: UInt64) async -> Bool {
-        guard !self.isShutdown, let entry = EnginePreferencesEntry(state), entry.get(WalletStoredState.self) == state else { return false }
+        guard !self.isShutdown, let entry = EnginePreferencesEntry(state), walletStoredStateEntryKeepsJournals(entry, of: state) else { return false }
         self.enqueue(state, revision: revision)
         if self.completedRevision >= revision { return true }
         return await withCheckedContinuation { continuation in
