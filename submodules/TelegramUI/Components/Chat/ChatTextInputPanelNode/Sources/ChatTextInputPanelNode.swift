@@ -1566,11 +1566,13 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         transition.updatePosition(node: self.startButton.titleNode, position: CGPoint(x: self.menuButton.frame.width / 2.0, y: self.menuButton.frame.height / 2.0))
         
         let sourceButtonCornerRadius = self.startButton.buttonCornerRadius
-        transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: self.menuButton.cornerRadius)
+        // The menu button draws a capsule (`menuButtonBackgroundView`), rounder than its node's clipping radius.
+        let targetCornerRadius = self.menuButton.frame.height * 0.5
+        transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: targetCornerRadius)
         // The button's glass chrome and shimmer keep its full-width size: clip them to the shrinking background.
         self.startButton.clipsToBounds = true
         self.startButton.cornerRadius = sourceButtonCornerRadius
-        transition.updateCornerRadius(node: self.startButton, cornerRadius: self.menuButton.cornerRadius)
+        transition.updateCornerRadius(node: self.startButton, cornerRadius: targetCornerRadius)
         transition.animateTransformScale(layer: self.startButton.titleNode.layer, from: CGPoint(x: 1.0, y: 1.0), to: CGPoint(x: 0.4, y: 0.4))
         Queue.mainQueue().justDispatch {
             self.startButton.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -1590,21 +1592,37 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.glassBackgroundContainer.contentView.addSubview(menuTextSnapshotView)
         menuTextSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x - menuContentDelta, y: self.menuButton.position.y), completion: { [weak self, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
-            self?.animatingTransition = false
+            guard let self else {
+                return
+            }
+            let completion: () -> Void = {
+                self.animatingTransition = false
+                
+                menuIconSnapshotView?.removeFromSuperview()
+                menuTextSnapshotView?.removeFromSuperview()
+                
+                self.startButton.isHidden = true
+                self.startButton.layer.removeAnimation(forKey: "opacity")
+                self.startButton.frame = sourceButtonFrame
+                self.startButton.buttonBackgroundNode.frame = CGRect(origin: .zero, size: sourceButtonFrame.size)
+                self.startButton.titleNode.position = sourceButtonTextPosition
+                self.startButton.titleNode.layer.removeAllAnimations()
+                self.startButton.buttonBackgroundNode.cornerRadius = sourceButtonCornerRadius
+                self.startButton.clipsToBounds = false
+                self.startButton.cornerRadius = 0.0
+                self.startButton.highlightEnabled = true
+            }
             
-            menuIconSnapshotView?.removeFromSuperview()
-            menuTextSnapshotView?.removeFromSuperview()
-            
-            self?.menuButton.isHidden = false
-            self?.startButton.isHidden = true
-            self?.startButton.frame = sourceButtonFrame
-            self?.startButton.buttonBackgroundNode.frame = CGRect(origin: .zero, size: sourceButtonFrame.size)
-            self?.startButton.titleNode.position = sourceButtonTextPosition
-            self?.startButton.titleNode.layer.removeAllAnimations()
-            self?.startButton.buttonBackgroundNode.cornerRadius = sourceButtonCornerRadius
-            self?.startButton.clipsToBounds = false
-            self?.startButton.cornerRadius = 0.0
-            self?.startButton.highlightEnabled = true
+            // The morphed button is solid, the menu button glass: reveal the menu button underneath by fading the
+            // morphed button out instead of swapping them in one frame. The snapshots carry the title until then.
+            self.menuButton.isHidden = false
+            if transition.isAnimated {
+                self.startButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    completion()
+                })
+            } else {
+                completion()
+            }
         })
     }
     
