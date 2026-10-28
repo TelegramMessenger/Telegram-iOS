@@ -62,3 +62,41 @@ func mediaGridPaneDateIndex(at index: Int, anchors: [(index: Int, timestamp: Int
     }
     return (below ?? above)?.timestamp
 }
+
+func mediaGridPaneChangedIndices<Key: Equatable>(old: [Int: Key], new: [Int: Key], overlap: Int) -> IndexSet {
+    var result = IndexSet()
+    var indices = Set<Int>()
+    for index in old.keys where index < overlap {
+        indices.insert(index)
+    }
+    for index in new.keys where index < overlap {
+        indices.insert(index)
+    }
+    for index in indices where old[index] != new[index] {
+        result.insert(index)
+    }
+    return result
+}
+
+struct MediaGridPaneStateGate<State> {
+    private var held: State?
+
+    var isHolding: Bool {
+        return self.held != nil
+    }
+
+    mutating func offer(_ state: State, isBusy: Bool) -> State? {
+        if isBusy {
+            self.held = state
+            return nil
+        }
+        self.held = nil
+        return state
+    }
+
+    mutating func release() -> State? {
+        let state = self.held
+        self.held = nil
+        return state
+    }
+}

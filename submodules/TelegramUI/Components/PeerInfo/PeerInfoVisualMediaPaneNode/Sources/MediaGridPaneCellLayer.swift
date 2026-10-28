@@ -106,6 +106,7 @@ final class MediaGridPaneCellLayer: MediaGridCellLayer {
         super.prepareForReuse()
         self.isHidden = false
         self.removeAllAnimations()
+        self.transform = CATransform3DIdentity
     }
 
     func refresh(animated: Bool) {

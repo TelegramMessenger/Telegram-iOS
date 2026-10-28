@@ -59,4 +59,32 @@ final class MediaGridPaneDecisionsTests: XCTestCase {
     func testDateIndexEmpty() {
         XCTAssertNil(mediaGridPaneDateIndex(at: 3, anchors: []))
     }
+
+    func testChangedIndicesIgnoreSameMedia() {
+        let old: [Int: String] = [0: "a", 1: "b", 2: "c"]
+        let new: [Int: String] = [0: "a", 1: "b2", 2: "c"]
+        XCTAssertEqual(mediaGridPaneChangedIndices(old: old, new: new, overlap: 3), IndexSet([1]))
+    }
+
+    func testChangedIndicesCountLoadAndUnload() {
+        let old: [Int: String] = [0: "a"]
+        let new: [Int: String] = [1: "b"]
+        XCTAssertEqual(mediaGridPaneChangedIndices(old: old, new: new, overlap: 2), IndexSet([0, 1]))
+    }
+
+    func testStateGatePassesThroughWhenIdle() {
+        var gate = MediaGridPaneStateGate<Int>()
+        XCTAssertEqual(gate.offer(1, isBusy: false), 1)
+        XCTAssertNil(gate.release())
+    }
+
+    func testStateGateHoldsLatestWhileBusy() {
+        var gate = MediaGridPaneStateGate<Int>()
+        XCTAssertNil(gate.offer(1, isBusy: true))
+        XCTAssertNil(gate.offer(2, isBusy: true))
+        XCTAssertTrue(gate.isHolding)
+        XCTAssertEqual(gate.release(), 2)
+        XCTAssertNil(gate.release())
+        XCTAssertFalse(gate.isHolding)
+    }
 }

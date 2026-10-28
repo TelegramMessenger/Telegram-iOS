@@ -33,6 +33,25 @@ func mediaGridPaneSelectedMedia(_ message: EngineMessage) -> EngineMedia? {
     return nil
 }
 
+func mediaGridPaneMediaKey(_ message: EngineMessage) -> String {
+    var key = "\(message.id.peerId.toInt64()):\(message.id.namespace):\(message.id.id)"
+    switch mediaGridPaneSelectedMedia(message) {
+    case let .image(image):
+        key += "|i\(image.imageId.namespace):\(image.imageId.id)"
+        for representation in image.representations {
+            key += "|\(representation.resource.id.stringRepresentation)"
+        }
+    case let .file(file):
+        key += "|f\(file.fileId.namespace):\(file.fileId.id)"
+        for representation in file.previewRepresentations {
+            key += "|\(representation.resource.id.stringRepresentation)"
+        }
+    default:
+        break
+    }
+    return key
+}
+
 final class MediaGridPaneDataSource: MediaGridDataSource {
     private struct HoleEntry {
         var index: Int
@@ -48,6 +67,7 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
     private(set) var isPlaceholderCount = false
     private(set) var isLoading = true
     private var messages: [Int: EngineMessage] = [:]
+    private var mediaKeys: [Int: String] = [:]
     private var indexById: [EngineMessage.Id: Int] = [:]
     private var holeEntries: [HoleEntry] = []
     private var anchors: [(index: Int, timestamp: Int32)] = []
@@ -65,6 +85,7 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         var newCount = state.totalCount
         var isPlaceholderCount = false
         var newMessages: [Int: EngineMessage] = [:]
+        var newMediaKeys: [Int: String] = [:]
         var newIndexById: [EngineMessage.Id: Int] = [:]
         var newHoles: [HoleEntry] = []
         var newAnchors: [(index: Int, timestamp: Int32)] = []
@@ -77,6 +98,7 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
                 case let .message(message, isLocal):
                     let engineMessage = EngineMessage(message)
                     newMessages[item.index] = engineMessage
+                    newMediaKeys[item.index] = mediaGridPaneMediaKey(engineMessage)
                     newIndexById[message.id] = item.index
                     newAnchors.append((item.index, message.timestamp))
                     if !isLocal {
@@ -91,14 +113,7 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         newAnchors.sort(by: { $0.index < $1.index })
 
         let oldCount = self.count
-        var changed = IndexSet()
-        for index in 0 ..< min(oldCount, newCount) {
-            let previous = self.messages[index]
-            let current = newMessages[index]
-            if previous?.stableId != current?.stableId || previous?.stableVersion != current?.stableVersion {
-                changed.insert(index)
-            }
-        }
+        let changed = mediaGridPaneChangedIndices(old: self.mediaKeys, new: newMediaKeys, overlap: min(oldCount, newCount))
         var inserted = IndexSet()
         var removed = IndexSet()
         if newCount > oldCount {
@@ -111,6 +126,7 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         self.isPlaceholderCount = isPlaceholderCount
         self.isLoading = state.isLoading
         self.messages = newMessages
+        self.mediaKeys = newMediaKeys
         self.indexById = newIndexById
         self.holeEntries = newHoles
         self.anchors = newAnchors
@@ -124,6 +140,7 @@ final class MediaGridPaneDataSource: MediaGridDataSource {
         self.isPlaceholderCount = false
         self.isLoading = true
         self.messages = [:]
+        self.mediaKeys = [:]
         self.indexById = [:]
         self.holeEntries = []
         self.anchors = []

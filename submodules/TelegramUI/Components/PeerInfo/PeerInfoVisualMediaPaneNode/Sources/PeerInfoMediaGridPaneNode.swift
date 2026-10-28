@@ -55,6 +55,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
     public private(set) var calendarSource: SparseMessageCalendar?
     private let listDisposable = MetaDisposable()
     private var listGeneration = 0
+    private var stateGate = MediaGridPaneStateGate<SparseMessageList.State>()
     private var isLoadingHole = false
     private var didReceiveState = false
 
@@ -242,8 +243,8 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
             duration = file.duration.flatMap { Int32(floor($0)) }
         }
         var spoilerImage: UIImage?
-        if hasSpoiler, let selectedMedia {
-            spoilerImage = self.directMediaImageCache.blurredImmediateThumbnail(media: selectedMedia._asMedia())
+        if hasSpoiler, let thumbnail = self.dataSource.thumbnail(at: index) {
+            spoilerImage = UIImage(cgImage: thumbnail.image)
         }
         let isSelected = self.chatControllerInteraction.selectionState.flatMap { $0.selectedIds.contains(message.id) }
         return MediaGridPaneCellState(duration: duration, isLivePhoto: isLivePhoto, hasSpoiler: hasSpoiler, spoilerImage: spoilerImage, isSelected: isSelected, isHidden: isHidden)
@@ -251,7 +252,15 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
 
     private func setupGrid() {
         self.dataSource.onThumbnailsReady = { [weak self] indices in
-            self?.gridView.thumbnailsDidChange(indices: indices)
+            guard let self else {
+                return
+            }
+            self.gridView.thumbnailsDidChange(indices: indices)
+            self.gridView.forEachCell { index, cell in
+                if indices.contains(index) {
+                    (cell as? MediaGridPaneCellLayer)?.refresh(animated: false)
+                }
+            }
         }
         self.gridView.onTapItem = { [weak self] index in
             self?.handleTap(index: index)
@@ -295,6 +304,9 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
             }
             if isZooming {
                 self.contextGestureContainerNode.cancelGesture()
+            } else {
+                self.applyHeldStateIfIdle()
+                self.updateHoleToLoad()
             }
             self.updateScrollingArea()
         }
@@ -451,7 +463,9 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
             guard let self, self.listGeneration == generation else {
                 return
             }
-            self.applyState(state)
+            if let state = self.stateGate.offer(state, isBusy: self.isGridBusy) {
+                self.applyState(state)
+            }
         }))
     }
 
@@ -478,8 +492,19 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         }
     }
 
+    private var isGridBusy: Bool {
+        return self.gridView.isZooming || self.gridView.isAnimatingScroll
+    }
+
+    private func applyHeldStateIfIdle() {
+        guard self.stateGate.isHolding, !self.isGridBusy, let state = self.stateGate.release() else {
+            return
+        }
+        self.applyState(state)
+    }
+
     private func updateHoleToLoad() {
-        guard !self.isLoadingHole, self.didReceiveState, !self.dataSource.isPlaceholderCount, let visible = self.gridView.visibleIndexRange, !visible.isEmpty else {
+        guard !self.isLoadingHole, !self.gridView.isZooming, self.didReceiveState, !self.dataSource.isPlaceholderCount, let visible = self.gridView.visibleIndexRange, !visible.isEmpty else {
             return
         }
         guard let hole = mediaGridPaneHoleToLoad(visible: visible, isLoaded: { [dataSource = self.dataSource] index in
@@ -557,6 +582,11 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
             }
         }
         self.previousScrollOffset = offset
+        if self.stateGate.isHolding && !self.isGridBusy {
+            DispatchQueue.main.async { [weak self] in
+                self?.applyHeldStateIfIdle()
+            }
+        }
         self.gridView.forEachVisibleCell { _, cell in
             if let cell = cell as? MediaGridPaneCellLayer, !cell.hasVisibleImage {
                 cell.updateShimmer()
@@ -648,6 +678,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         self.scrollingArea.hideScroller()
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: self.chatLocation.threadId, tag: tagMaskForType(contentType))
         self.dataSource.reset()
+        _ = self.stateGate.release()
         self.didReceiveState = false
         self.gridView.reloadData()
         self.gridView.scrollToTop(animated: false)

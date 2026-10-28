@@ -781,7 +781,7 @@ public final class MediaGridView: UIView {
     }
 
     public func transferVelocity(_ velocity: CGFloat) {
-        guard velocity > 0.0, velocity.isFinite, self.gridLayout != nil else {
+        guard velocity > 0.0, velocity.isFinite, self.gridLayout != nil, self.window != nil || self._testAllowsWindowlessScrollAnimation, !self.isScrollingLockedAtTop else {
             return
         }
         self.stopScrollAnimation()

@@ -66,6 +66,7 @@ final class MediaGridVisibleRangeTests: XCTestCase {
 
     func testTransferVelocityStartsFling() {
         let view = self.makeView(count: 10_000)
+        view._testAllowsWindowlessScrollAnimation = true
         let start = view.contentOffset
         view.transferVelocity(2.0)
         for _ in 0 ..< 10 {
@@ -101,5 +102,11 @@ final class MediaGridVisibleRangeTests: XCTestCase {
         view._testFinishAnimations()
         XCTAssertFalse(view.engine.isScrollEnabled)
         XCTAssertEqual(view.contentOffset, 0.0, accuracy: 1e-6)
+    }
+
+    func testTransferVelocityWithoutAWindowDoesNotStayAnimating() {
+        let view = self.makeView(count: 10_000)
+        view.transferVelocity(2.0)
+        XCTAssertFalse(view.isAnimatingScroll)
     }
 }
