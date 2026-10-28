@@ -5,8 +5,8 @@ import AuthorizationUtils
 
 // The login password screen's column (AuthorizationSequencePasswordEntryControllerNode) laid out above the keyboard,
 // with the sizes measured on the simulators (issue #50). Above a short screen's keyboard the monkey animation does not
-// fit: kept, it left the spacers ~2pt above the issue's 275pt keyboard and "Forgot password?" sat on the field's line. The screen drops the animation
-// when `authorizationLayoutItemsFit` says the column does not fit, and the spacers then get their share.
+// fit: kept above the issue's 275pt keyboard, it left "Forgot password?" 1pt below the field's line. The screen drops
+// the animation when `authorizationLayoutItemsFit` says the column does not fit, and the spacers then get their share.
 final class AuthorizationLayoutTests: XCTestCase {
     private final class Column {
         let animation = UIView()
