@@ -569,10 +569,12 @@ private final class AlertScreenComponent: Component {
                 availableHeight -= environment.inputHeight
             }
                         
-            // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this
-            // is the full width's center.
-            let alertX = environment.safeInsets.left + floorToScreenPixels((availableSize.width - environment.safeInsets.left - environment.safeInsets.right - alertSize.width) / 2.0)
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: alertX, y: environment.statusBarHeight +  floorToScreenPixels((availableHeight - alertSize.height) / 2.0)), size: alertSize))
+            let alertY = environment.statusBarHeight +  floorToScreenPixels((availableHeight - alertSize.height) / 2.0)
+            // On the axis of the sheets it shows over (`centeredAlertSideInsets`): beside iPhone Duo's side strip, the
+            // screen's center in portrait and the band's in landscape; with equal insets the full width's center.
+            let sideInsets = centeredAlertSideInsets(alertMinY: alertY, alertMaxY: alertY + alertSize.height, containerSize: availableSize, safeInsets: environment.safeInsets, reservedCorners: environment.reservedCorners)
+            let alertX = sideInsets.left + floorToScreenPixels((availableSize.width - sideInsets.left - sideInsets.right - alertSize.width) / 2.0)
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: alertX, y: alertY), size: alertSize))
             self.backgroundView.update(size: alertSize, cornerRadius: 35.0, isDark: environment.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
             
             return availableSize

@@ -176,9 +176,11 @@ final class AlertControllerNode: ASDisplayNode {
         let contentAvailableFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: layout.size.width - insets.right, height: layout.size.height - insets.top - insets.bottom))
         let contentSize = self.contentNode.updateLayout(size: contentAvailableFrame.size, transition: transition)
         let containerSize = CGSize(width: contentSize.width, height: contentSize.height)
-        // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this is
-        // the full width's center.
-        let containerFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - containerSize.width) / 2.0), y: contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)), size: containerSize)
+        let containerY = contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)
+        // On the axis of the sheets it shows over (`centeredAlertSideInsets`): beside iPhone Duo's side strip, the
+        // screen's center in portrait and the band's in landscape; with equal insets the full width's center.
+        let sideInsets = centeredAlertSideInsets(alertMinY: containerY, alertMaxY: containerY + containerSize.height, containerSize: layout.size, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners)
+        let containerFrame = CGRect(origin: CGPoint(x: sideInsets.left + floor((layout.size.width - sideInsets.left - sideInsets.right - containerSize.width) / 2.0), y: containerY), size: containerSize)
         
         let outerEdge: CGFloat = 100.0
         

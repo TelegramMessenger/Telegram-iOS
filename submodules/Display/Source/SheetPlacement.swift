@@ -72,6 +72,20 @@ public func sheetContentBandInsets(containerSize: CGSize, safeInsets: UIEdgeInse
     return UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: 0.0, right: safeInsets.right)
 }
 
+/// The side insets a centered alert (`AlertScreen`, `AlertControllerNode`) centers between, for an alert from
+/// `alertMinY` to `alertMaxY` in a container `containerSize` large: on the axis of the sheets it shows over.
+///
+/// In portrait, where a sheet spans iPhone Duo's side strip below the status corner, a strip side counts only where
+/// its corner block reaches the alert (`bandSideInsets`: raised by the keyboard in folded portrait), so the alert
+/// centers on the screen. In landscape, where sheets keep to the band (`resizableSheetHorizontalPlacement`,
+/// `sheetContentBandInsets`), the safe insets. Without corner blocks (every other device) the safe insets.
+public func centeredAlertSideInsets(alertMinY: CGFloat, alertMaxY: CGFloat, containerSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> (left: CGFloat, right: CGFloat) {
+    if containerSize.width > containerSize.height {
+        return (safeInsets.left, safeInsets.right)
+    }
+    return bandSideInsets(forBandFrom: alertMinY, to: alertMaxY, containerHeight: containerSize.height, safeInsets: safeInsets, reservedCorners: reservedCorners)
+}
+
 /// How much further in a sheet's header controls (close, title, trailing button) move on each side so they do
 /// not sit under a top corner block (iPhone Duo's status corner, 84x170 in folded portrait), given the sheet's
 /// horizontal frame and the highest its top edge can rise (`sheetMinY`, in the container's coordinates).

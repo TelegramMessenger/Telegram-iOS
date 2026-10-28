@@ -56,8 +56,8 @@ constants.
   with a sheet. Component environments carry `statusBarHeight` (compact), `fullStatusBarHeight`,
   `navigationBarTrailingButtonsInset` and `reservedCorners`; a screen that builds an
   `Environment` by hand must pass them all (the defaults are 0 / `.none`).
-- Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetContentBandInsets`
-  (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
+- Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetContentBandInsets`,
+  `centeredAlertSideInsets` for centred alerts (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
@@ -103,6 +103,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
      button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
      of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
      rule 2's exception.
+
+   **Centred alerts** (`AlertScreen`, `AlertControllerNode`) keep the axis of the sheets they show over
+   (`centeredAlertSideInsets`): the screen's centre in folded portrait, where sheets span the strip (the band when the
+   keyboard lifts the alert beside the corner block), and the band's in landscape, where sheets keep to it.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
    island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
    row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;
@@ -171,4 +175,5 @@ other device stays byte-identical; the band helpers above are built that way.
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
   widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
-  flow's content and bottom-button bands per posture).
+  flow's content and bottom-button bands per posture), `//submodules/Display:DisplayTests` (`CenteredAlertSideInsetsTests`:
+  a centred alert's band per posture).
