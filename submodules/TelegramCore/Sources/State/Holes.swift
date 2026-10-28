@@ -1277,6 +1277,11 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     struct MissingReferences {
                         var sourceIds = Set<MessageId>()
                         var replyStoryIds = Set<StoryId>()
+                        /// Rich messages with a custom emoji whose file is not stored. Their previews (chat list,
+                        /// reply headers) read the files from the stored media (`RichTextMessageAttribute
+                        /// .associatedMediaIds`) and draw such an emoji as its alt text, so they are redrawn too when
+                        /// the follow-up, which fetches the files, ends. Nothing draws as loading for them.
+                        var emojiSourceIds = Set<MessageId>()
                     }
                     let missingReferences: (Transaction) -> MissingReferences = { transaction in
                         var storedIds = Set<MessageId>()
@@ -1290,11 +1295,18 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         var candidateTargets = Set<MessageId>()
                         var mediaStoryIds = Set<StoryId>()
                         var attributeStoryIds = Set<StoryId>()
+                        var emojiFileIdsBySource: [MessageId: [Int64]] = [:]
                         for message in storeMessages {
                             guard case let .Id(id) = message.id else {
                                 continue
                             }
                             for attribute in message.attributes {
+                                if let attribute = attribute as? RichTextMessageAttribute {
+                                    let fileIds = attribute.associatedMediaIds.map(\.id)
+                                    if !fileIds.isEmpty {
+                                        emojiFileIdsBySource[id, default: []].append(contentsOf: fileIds)
+                                    }
+                                }
                                 let targets = pendingReplyTargets(replyTargets: attribute.associatedMessageIds, messageThreadId: message.threadId, peerIsForum: peer.isForumOrMonoForum).filter { !storedIds.contains($0) }
                                 if !targets.isEmpty {
                                     targetsBySource[id, default: []].append(contentsOf: targets)
@@ -1323,6 +1335,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                         for (id, stories) in storiesBySource where stories.contains(where: { missingStories.contains($0) }) {
                             result.sourceIds.insert(id)
+                        }
+                        if !emojiFileIdsBySource.isEmpty {
+                            let missingEmojiFileIds = transaction.filterStoredMediaIds(namespace: Namespaces.Media.CloudFile, ids: Set(emojiFileIdsBySource.values.joined()))
+                            for (id, fileIds) in emojiFileIdsBySource where fileIds.contains(where: { missingEmojiFileIds.contains($0) }) {
+                                result.emojiSourceIds.insert(id)
+                            }
                         }
                         return result
                     }
@@ -1434,6 +1452,9 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             if !missing.sourceIds.isEmpty || storedAnswerTopics != 0 {
                                 Logger.shared.log("ReplyThreadOpen", "fill stored answerTopics=\(storedAnswerTopics) waiting messages=\(missing.sourceIds.count) replyStories=\(missing.replyStoryIds.count) registered=\(registration != nil)")
                             }
+                            // The rich messages waiting for emoji files are redrawn with the rest but not registered:
+                            // they draw alt text meanwhile, not a skeleton.
+                            let redrawnIds = missing.sourceIds.union(missing.emojiSourceIds)
 
                             // Started here, not after this transaction's result is delivered: a fill disposed in
                             // between (ReplyThreadHistory disposes one as soon as the thread's hole changes, which
@@ -1452,7 +1473,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     if let registration {
                                         pendingReferences?.release(registration)
                                     }
-                                    redrawMessages(transaction, missing.sourceIds)
+                                    redrawMessages(transaction, redrawnIds)
                                 }
                             }).startStandalone()
 
