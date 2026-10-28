@@ -29,6 +29,7 @@ swift_library(
     ]),
     deps = [
         ":LiquidLens",
+        "//submodules/ComponentFlow",
     ],
 )
 

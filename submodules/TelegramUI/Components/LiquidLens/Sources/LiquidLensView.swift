@@ -127,14 +127,6 @@ private func makeLensKeyframeAnimation(keyPath: String, values: [Any], times: [D
 }
 
 public final class LiquidLensView: UIView {
-    public final class TransitionInfo {
-        public let disableAnimationWorkarounds: Bool
-        
-        public init(disableAnimationWorkarounds: Bool) {
-            self.disableAnimationWorkarounds = disableAnimationWorkarounds
-        }
-    }
-    
     public enum Kind {
         case externalContainer
         case builtinContainer
@@ -188,6 +180,14 @@ public final class LiquidLensView: UIView {
     private let liftedContainerView: UIView
     public let contentView: UIView
     private let restingBackgroundView: RestingBackgroundView
+    /// Cuts `contentView` where the lens is, so that what lies under the glass shows only as the lens's lifted content.
+    /// UIKit's own punch-out follows the lens layer's rect through a match-move animation, not the glass UIKit lays out
+    /// inside the lens; this one gets the lens's own bounds and animations, so it stays on the glass however it moves.
+    private let punchoutView: UIView
+    /// UIKit puts its punch-out next to the lens's `overridePunchoutView`: this view, in a hidden container, where it
+    /// cuts nothing.
+    private let uikitPunchoutTargetView: UIView
+    private let uikitPunchoutSinkView: UIView
     
     private var legacySelectionView: GlassBackgroundView.ContentImageView?
     private var legacyContentMaskView: UIView?
@@ -270,6 +270,10 @@ public final class LiquidLensView: UIView {
         self.liftedContainerView = UIView()
 
         self.restingBackgroundView = RestingBackgroundView()
+        
+        self.punchoutView = UIView()
+        self.uikitPunchoutTargetView = UIView()
+        self.uikitPunchoutSinkView = UIView()
 
         super.init(frame: CGRect())
         
@@ -310,9 +314,19 @@ public final class LiquidLensView: UIView {
             
             self.liftedContainerView.addSubview(self.restingBackgroundView)
             
+            self.punchoutView.isUserInteractionEnabled = false
+            self.punchoutView.backgroundColor = .black
+            self.punchoutView.layer.compositingFilter = "destOut"
+            
+            self.uikitPunchoutSinkView.isHidden = true
+            self.uikitPunchoutSinkView.isUserInteractionEnabled = false
+            self.uikitPunchoutSinkView.addSubview(self.uikitPunchoutTargetView)
+            
             self.containerView.addSubview(self.liftedContainerView)
             self.containerView.addSubview(lensView)
             self.containerView.addSubview(self.contentView)
+            self.containerView.addSubview(self.punchoutView)
+            self.containerView.addSubview(self.uikitPunchoutSinkView)
             
             if let backgroundContainer = self.backgroundContainer {
                 lensView.perform(NSSelectorFromString("setLiftedContainerView:"), with: backgroundContainer.contentView)
@@ -320,7 +334,7 @@ public final class LiquidLensView: UIView {
                 lensView.perform(NSSelectorFromString("setLiftedContainerView:"), with: genericBackgroundContainer)
             }
             lensView.perform(NSSelectorFromString("setLiftedContentView:"), with: self.liftedContainerView)
-            lensView.perform(NSSelectorFromString("setOverridePunchoutView:"), with: self.contentView)
+            lensView.perform(NSSelectorFromString("setOverridePunchoutView:"), with: self.uikitPunchoutTargetView)
             
             do {
                 let selector = NSSelectorFromString("setLiftedContentMode:")
@@ -421,6 +435,17 @@ public final class LiquidLensView: UIView {
         return CGRect(origin: CGPoint(), size: CGSize(width: params.baseFrame.width + inset * 2.0, height: params.baseFrame.height + inset * 2.0))
     }
 
+    /// The lens's size, and the punch-out's with it: inside a view animation, both animate along with the glass that
+    /// UIKit lays out inside the lens.
+    private func setLensBounds(_ bounds: CGRect) {
+        guard let lensView = self.lensView else {
+            return
+        }
+        lensView.bounds = bounds
+        self.punchoutView.bounds = bounds
+        self.punchoutView.layer.cornerRadius = min(bounds.width, bounds.height) * 0.5
+    }
+
     private func updateLens(params: LensParams, transition: ComponentTransition) {
         guard self.lensView != nil else {
             return
@@ -493,15 +518,15 @@ public final class LiquidLensView: UIView {
             // Inside a view animation the lens lays its glass out along with its bounds.
             if #available(iOS 17.0, *) {
                 UIView.animate(springDuration: LiquidLensView.liftSpringResponse, bounce: 0.0, initialSpringVelocity: 0.0, delay: 0.0, options: [.allowUserInteraction, .beginFromCurrentState], animations: {
-                    lensView.bounds = lensBounds
+                    self.setLensBounds(lensBounds)
                 })
             } else {
                 UIView.animate(withDuration: LiquidLensView.liftSpringResponse, delay: 0.0, usingSpringWithDamping: 1.0, initialSpringVelocity: 0.0, options: [.allowUserInteraction, .beginFromCurrentState], animations: {
-                    lensView.bounds = lensBounds
+                    self.setLensBounds(lensBounds)
                 })
             }
         } else {
-            lensView.bounds = lensBounds
+            self.setLensBounds(lensBounds)
         }
         let resetsFlex = !animated && !isLifted
         if resetsFlex {
@@ -549,21 +574,11 @@ public final class LiquidLensView: UIView {
 
         let previousBounds: CGRect = lensView.bounds
         if previousBounds != lensBounds {
+            // The lens lays its glass out inside this animation, so the lens, its glass and the punch-out change size
+            // together, centred on the lens's path. Snapping the lens's bounds instead left the glass growing from the
+            // lens's left edge, off the path, while the punch-out took the new size at once.
             transition.animateView {
-                lensView.bounds = lensBounds
-            }
-
-            if let info = transition.userData(TransitionInfo.self), info.disableAnimationWorkarounds {
-            } else {
-                // The bounds snap, while the glass, which the lens lays out inside the animation above, still grows
-                // or shrinks from its old size, anchored at the lens's left edge. The additive offset below moves the
-                // layer by the same amount, so the glass keeps its centre on the lens's path, which is what the
-                // keyframes describe. This also removes the keyframes, which the position update below adds again.
-                lensView.layer.removeAllAnimations()
-                lensView.bounds = lensBounds
-            }
-            if previousBounds.width != lensBounds.width {
-                transition.animatePosition(layer: lensView.layer, from: CGPoint(x: (lensBounds.width - previousBounds.width) * 0.5, y: 0.0), to: CGPoint(), additive: true)
+                self.setLensBounds(lensBounds)
             }
         }
         self.setLensPosition(lensCenter, transition: transition, replans: previousBounds != lensBounds)
@@ -645,6 +660,7 @@ public final class LiquidLensView: UIView {
             self.lensSegment = segment
             UIView.performWithoutAnimation {
                 lensView.center = center
+                self.punchoutView.center = center
             }
             movesLens = true
             self.updateIsLensMoving(segment: segment, now: now)
@@ -693,23 +709,25 @@ public final class LiquidLensView: UIView {
         let plan = LiquidLensMotionPlan(start: start, segment: segment, isFlexActive: self.isFlexActive, size: lensView.bounds.size)
         self.lensPlan = plan
 
-        let layer = lensView.layer
         let timeScale = self.lensTimeScale()
-        let beginTime = layer.convertTime(plan.startTime * timeScale, from: nil)
-
         let positionKeyframes = plan.positionKeyframes
-        if positionKeyframes.count > 1, let duration = positionKeyframes.last?.time, duration > 0.0 {
-            let animation = makeLensKeyframeAnimation(keyPath: "position", values: positionKeyframes.map { NSValue(cgPoint: $0.position) }, times: positionKeyframes.map { $0.time }, duration: duration, beginTime: beginTime, timeScale: timeScale)
-            layer.add(animation, forKey: "liquidLensPosition")
-        } else {
-            layer.removeAnimation(forKey: "liquidLensPosition")
-        }
+        // The punch-out moves and flexes with the lens.
+        for layer in [lensView.layer, self.punchoutView.layer] {
+            let beginTime = layer.convertTime(plan.startTime * timeScale, from: nil)
 
-        if plan.hasFlex, plan.endTime > plan.startTime {
-            let animation = makeLensKeyframeAnimation(keyPath: "transform", values: plan.states.map { NSValue(caTransform3D: $0.animator.flex.transform) }, times: plan.states.map { $0.time - plan.startTime }, duration: plan.endTime - plan.startTime, beginTime: beginTime, timeScale: timeScale)
-            layer.add(animation, forKey: "liquidLensFlex")
-        } else {
-            layer.removeAnimation(forKey: "liquidLensFlex")
+            if positionKeyframes.count > 1, let duration = positionKeyframes.last?.time, duration > 0.0 {
+                let animation = makeLensKeyframeAnimation(keyPath: "position", values: positionKeyframes.map { NSValue(cgPoint: $0.position) }, times: positionKeyframes.map { $0.time }, duration: duration, beginTime: beginTime, timeScale: timeScale)
+                layer.add(animation, forKey: "liquidLensPosition")
+            } else {
+                layer.removeAnimation(forKey: "liquidLensPosition")
+            }
+
+            if plan.hasFlex, plan.endTime > plan.startTime {
+                let animation = makeLensKeyframeAnimation(keyPath: "transform", values: plan.states.map { NSValue(caTransform3D: $0.animator.flex.transform) }, times: plan.states.map { $0.time - plan.startTime }, duration: plan.endTime - plan.startTime, beginTime: beginTime, timeScale: timeScale)
+                layer.add(animation, forKey: "liquidLensFlex")
+            } else {
+                layer.removeAnimation(forKey: "liquidLensFlex")
+            }
         }
     }
 
