@@ -754,6 +754,12 @@ public final class CoreVirtualListView: UIView {
     /// itself at their final frames and travel on one additive `sublayerTransform`
     /// (`Display/Source/ListView.swift:3625-3634`, `:3803`), so scrolling never repositions them.
     let carouselExitOverlay = UIView()
+    /// A zero-size view whose model `bounds.origin.x` changes once per transaction that writes row
+    /// bases (`beginModelWrites`): while its presentation still shows the previous value, nothing
+    /// written since has been committed, and the bases recorded at the first write still describe what
+    /// is rendered.
+    private let commitSentinel = UIView()
+    private var commitSentinelSerial: CGFloat = 0
     let animationController: ListAnimationController
     let scheduler: Scheduler
     private(set) var logicalSize: CGSize = .zero
@@ -1230,6 +1236,8 @@ public final class CoreVirtualListView: UIView {
         carouselExitOverlay.isUserInteractionEnabled = false
         attachmentContainer.backgroundColor = .clear
         attachmentContainer.clipsToBounds = false
+        commitSentinel.isUserInteractionEnabled = false
+        addSubview(commitSentinel)
         // BELOW the content host, matching ListViewImpl's `insertSubnode(_:belowSubnode:)` for its
         // temporary previous nodes. Nothing paints over the strip during a correct travel — the
         // incoming rows are off-screen at t=0 and `container` has no background — so this changes
@@ -1302,10 +1310,12 @@ public final class CoreVirtualListView: UIView {
             return
         }
         isApplyingChanges = true
-        // BEFORE anything this pass writes. Every bound layer's model position is still the base its
-        // render tree was committed against, which is the only moment `presented - model` means the
-        // additive contribution — `render()` overwrites it ~570 lines below. Re-entrant calls are
-        // deferred to the scheduler above rather than nested, so one pass owns this snapshot.
+        // BEFORE anything this pass writes: the transaction's first writer records the bases the render
+        // tree was committed against, and this pass samples each animating row's rendered contribution
+        // against them. That is the one form that stays right after a pass or rebalance earlier in the
+        // same transaction re-based the rows (`beginModelWrites`). Re-entrant calls are deferred to the
+        // scheduler above, so one pass owns the sample.
+        beginModelWrites()
         animationController.capturePresentedPositionOffsets()
         defer {
             animationController.clearPresentedPositionOffsets()
@@ -2638,11 +2648,12 @@ public final class CoreVirtualListView: UIView {
     ///
     /// **Why this is a list-owned track and not something a host can install itself.** Position tracks
     /// here are additive offsets decaying to zero, and `capturePresentedPositionOffsets()` reads
-    /// `presented − model` on every bound live layer at the start of the NEXT pass to recover exactly
-    /// that quantity. A raw `CAAnimation` a host added would be indistinguishable from a track this
-    /// model owns, so a second pass landing mid-slide would resume against a displacement the model
-    /// never issued. Going through `transitionPosition` also means an overlapping slide composes with
-    /// the one in flight (`transitionPositionOffset` folds in `currentOffset`) rather than fighting it.
+    /// `presented − committed base` on every animating live layer at the start of the NEXT pass to
+    /// recover exactly that quantity. A raw `CAAnimation` a host added would be misread as part of such
+    /// a track, or not read at all on a row with none, so a second pass landing mid-slide would not
+    /// resume from where the row is drawn. Going through `transitionPosition` also means an
+    /// overlapping slide composes with the one in flight (`transitionPositionOffset` folds in
+    /// `currentOffset`) rather than fighting it.
     ///
     /// Rows not currently loaded are skipped: an unloaded row has no layer, and it is off-screen, so
     /// there is nothing to see travel.
@@ -3073,6 +3084,9 @@ public final class CoreVirtualListView: UIView {
         }
 
         guard changed else { return }
+        // `render()` below re-bases the surviving rows when the window's top moved; a pass later in
+        // this transaction must not read that as motion.
+        beginModelWrites()
         let promotedCrossingIdentities = Set(window.items.map {
             _items[$0.index].identity
         }).intersection(crossingCarries.keys)
@@ -3632,6 +3646,23 @@ public final class CoreVirtualListView: UIView {
         return engine.containerOrigin(windowHeight: window.height,
                                       topLoaded: window.startIndex == 0,
                                       bottomLoaded: window.endIndex == _items.count - 1)
+    }
+
+    /// Runs before a pass or a window-changing rebalance first writes a row base. The first call after a
+    /// commit records the committed bases and marks the transaction; later ones in the same transaction
+    /// keep that record. A sentinel with no presentation (a list outside a window) counts as committed:
+    /// its rows have none either, so nothing is sampled against the record.
+    private func beginModelWrites() {
+        let layer = commitSentinel.layer
+        let isCommitted = layer.presentation().map { $0.bounds.origin.x == layer.bounds.origin.x }
+            ?? true
+        animationController.beginModelWrites(isCommitted: isCommitted)
+        if isCommitted {
+            commitSentinelSerial += 1
+            UIView.performWithoutAnimation {
+                layer.bounds.origin.x = commitSentinelSerial
+            }
+        }
     }
 
     private func render() {

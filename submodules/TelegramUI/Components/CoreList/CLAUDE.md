@@ -395,9 +395,14 @@ growing row's `.height` plus the next row's `.positionY`; the chat's item node s
 - `ListAnimationModel.resumeValue` asks a provider from `ListAnimationController`; `value(for:property:at:)`
   stays the settled answer (window building, `bottomEdgePinSlack`, `finalize`). Keep them separate.
 - `.height`, `.width`, `.opacity`: the presented value.
-- `.positionY`: from a snapshot taken at **PASS ENTRY** by `capturePresentedPositionOffsets()` (presented −
-  model value, before any write), cleared in `applyChanges`' `defer`. Never sample it later: `render()` has
-  written the new settled position by then and `transitionPositionOffset` would count the displacement twice.
+- `.positionY`: presented minus the **COMMITTED** base. The transaction's first row-base write (pass entry, or
+  a rebalance that changes the window) records `layer.position.y` for every live owner with a running
+  position track (`beginModelWrites`); a zero-size commit sentinel tells whether anything has been committed
+  since. An owner whose track or binding this transaction replaced is forgotten and resumes analytically.
+  Idle rows are never sampled. The snapshot is taken at pass entry by `capturePresentedPositionOffsets()` and
+  cleared in `applyChanges`' `defer`. Presented − model would be wrong: a pass or rebalance earlier in the
+  same runloop turn that grows or shrinks the window at its top re-bases the rows without a commit, and
+  that rebase would read as motion. `SameTransactionResumeTests`.
   Only `.live` owners (`ListAnimationOwner.hasPassWrittenPositionBase`): attachments (`renderAttachments()`
   rewrites their base every render) and `.exit`/`.transient`/`.ghostBlock` (rebased from `render()`) have a
   per-frame base that `presentation()` trails. `AttachmentResumeBaseTests`.
@@ -407,8 +412,8 @@ growing row's `.height` plus the next row's `.positionY`; the chat's item node s
   minus `newSettledY` (model gets `containerOriginY + localY`, layer `localY`); `.positionY` as
   `presented − layer.position.y` inside the provider.
 
-`PresentedPositionResumeBaseTests`, `PresentationResumeSamplingTests`, `PresentedResumeSeamTests` (see Tests
-for why only these reach the provider).
+`PresentedPositionResumeBaseTests`, `PresentationResumeSamplingTests`, `PresentedResumeSeamTests`,
+`SameTransactionResumeTests` (see Tests for why only these reach the provider).
 
 #### Core Animation output
 

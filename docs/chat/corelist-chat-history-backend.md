@@ -1496,13 +1496,14 @@ host-layer fade CoreList already installs.)
 
 **The track must be list-owned, not a raw CA animation on the row's layer.** Position tracks in
 `ListAnimationModel` are additive offsets decaying to zero, and `capturePresentedPositionOffsets()`
-reads `presented − model` on every bound live layer at the START of the next pass to recover exactly
-that quantity. An animation the backend added itself is indistinguishable from a track the model owns,
-so a second message landing mid-slide would resume against a displacement the model never issued —
-the same class of double-count that shipped once as every row snapping a whole growth backwards (see
-"Granular animation contract" in the CoreList `CLAUDE.md`). Going through
-`CoreVirtualListView.animateInsertedBlock(identities:origin:transition:)` also makes an overlapping
-arrival compose: `transitionPositionOffset` folds the in-flight `currentOffset` into the new track.
+reads presented minus the committed base on every live row with a running position track at the START
+of the next pass to recover exactly that quantity. On such a row an animation the backend added itself
+is indistinguishable from the track the model owns, so a second message landing mid-slide would resume
+against a displacement the model never issued — the same class of double-count that shipped once as
+every row snapping a whole growth backwards (see "Granular animation contract" in the CoreList
+`CLAUDE.md`). Going through `CoreVirtualListView.animateInsertedBlock(identities:origin:transition:)`
+also makes an overlapping arrival compose: `transitionPositionOffset` folds the in-flight
+`currentOffset` into the new track.
 
 **The block, not the row, is the unit.** Every named row takes the SAME offset — the run's total
 settled height, reserved space included — so a run arriving together keeps its spacing for the whole

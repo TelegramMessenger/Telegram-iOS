@@ -42,9 +42,11 @@ enum ListAnimationOwner: Hashable {
     /// `presented − model` to mean "the additive track's contribution" and therefore the precondition
     /// for `ListAnimationController.capturePresentedPositionOffsets` to sample it at all.
     ///
-    /// A row qualifies: `render()` writes container-local frames, which are offset-independent, so the
-    /// renders that run outside a pass (a scroll rebalance) rewrite a surviving row's base with the
-    /// value it already had. Nothing else qualifies:
+    /// A row qualifies: only `render()` writes its base, from a pass or a rebalance, and it re-bases
+    /// every surviving row whenever the window's top moves (`frame.minY − window.minY`). So
+    /// `presented − model` is a row's contribution only until the transaction's first such write, and
+    /// the controller differences against the base recorded there (`beginModelWrites`). Nothing else
+    /// qualifies:
     ///
     /// - `.attachment` — `renderAttachments()` rewrites every attachment's frame on EVERY render, and
     ///   it must: a parked attachment stays parked on screen only by moving its base with the content.

@@ -117,13 +117,13 @@ final class AttachmentResumeBaseTests: XCTestCase {
     /// attachment's base is not pass-written, so nothing may be captured for it.
     func testNoPresentedPositionBaseIsCapturedForAnAttachment() throws {
         let window = try makeRenderingWindow()
+        func date(_ group: Int) -> [AnyHashable: CoreListAttachedItem] {
+            ["date\(group)": FixedHeightAttachment(label: "d\(group)", height: 34,
+                                                   placement: .overlay, edge: .bottom,
+                                                   isFloating: true)]
+        }
         let items: [CoreListItem] = (0..<40).map { index -> CoreListItem in
-            let group = index / 6
-            return AttachedItem(id: index, height: 95, attachedItems: [
-                "date\(group)": FixedHeightAttachment(label: "d\(group)", height: 34,
-                                                      placement: .overlay, edge: .bottom,
-                                                      isFloating: true),
-            ])
+            AttachedItem(id: index, height: 95, attachedItems: date(index / 6))
         }
         let fixture = VirtualListFixture(viewport: viewport, items: items)
         fixture.listView.frame = CGRect(origin: .zero, size: viewport)
@@ -131,11 +131,21 @@ final class AttachmentResumeBaseTests: XCTestCase {
         window.layoutIfNeeded()
         settle()
 
+        // Only a row with a running position track is recorded, so the rows get one: a row arriving at
+        // the top pushes them down, and the synthetic clock keeps the tracks running. (An
+        // `AttachedItem`'s view keeps the height it was made with, so a taller item 0 would move
+        // nothing.)
+        let arrived: [CoreListItem] = [AttachedItem(id: 40, height: 100, attachedItems: date(0))] + items
+        fixture.listView.applyChanges(items: arrived, transition: .linear(duration: 0.6))
+
         let serial = try XCTUnwrap(fixture.activeWindow.attachments.first?.serial)
-        let rowIdentity = try XCTUnwrap(fixture.activeWindow.items.first.map {
+        let rowIdentity = try XCTUnwrap(fixture.activeWindow.items.dropFirst().first.map {
             fixture.listView.items[$0.index].identity
         })
+        XCTAssertNotNil(fixture.positionTrack(identity: rowIdentity),
+                        "precondition: the row is animating, which is what gets it recorded at all")
 
+        fixture.animationController.beginModelWrites(isCommitted: true)
         fixture.animationController.capturePresentedPositionOffsets()
         XCTAssertNil(fixture.animationController.capturedPresentedPositionOffset(
             owner: .attachment(serial)),
