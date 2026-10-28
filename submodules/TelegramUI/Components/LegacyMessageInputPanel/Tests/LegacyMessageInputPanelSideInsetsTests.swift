@@ -1,7 +1,7 @@
 import XCTest
 import UIKit
 import Display
-@testable import LegacyMessageInputPanel
+import LegacyMessageInputPanel
 
 final class LegacyMessageInputPanelSideInsetsTests: XCTestCase {
     // iPhone Duo, folded portrait (466x678): the right strip exists only because of the 84x170 status corner block.

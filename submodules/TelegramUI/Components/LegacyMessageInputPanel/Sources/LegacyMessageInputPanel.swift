@@ -376,7 +376,8 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         let expandedCaptionTopInset = self.currentSafeAreaInset.top + 8.0
 
         // iPhone Duo: in a full-screen container the panel's rows keep clear of a status corner block they reach (a
-        // caption above the media in folded portrait). Everywhere else the panel spans the full width.
+        // caption above the media in folded portrait). Everywhere else the panel spans the full width. A landscape phone
+        // parks the panel off-screen, so the container is portrait here.
         let reservedCorners: ContainerViewLayoutCorners = self.usesContainerLayout && !isLandscapePhone ? reservedCornersForHostedLayout(size: CGSize(width: width, height: maxHeight), orientation: .portrait) : .none
         let safeAreaInset = self.currentSafeAreaInset
         func rowSideInsets(from minY: CGFloat, to maxY: CGFloat) -> (left: CGFloat, right: CGFloat) {
