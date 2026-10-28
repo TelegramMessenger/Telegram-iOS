@@ -64,7 +64,8 @@ enum UploadedRichMedia {
     }
 }
 
-func assembleInputRichMessage(instantPage: InstantPage, uploadedMedia: [MediaId: UploadedRichMedia]) -> Api.InputRichMessage {
+/// `users`: `apiInputRichMessageUsers(instantPage, …)`, the users the page refers to by id.
+func assembleInputRichMessage(instantPage: InstantPage, uploadedMedia: [MediaId: UploadedRichMedia], users: [Api.InputUser]) -> Api.InputRichMessage {
     var remap: [MediaId: Int64] = [:]
     for (mediaId, uploaded) in uploadedMedia {
         remap[mediaId] = uploaded.cloudId
@@ -100,13 +101,16 @@ func assembleInputRichMessage(instantPage: InstantPage, uploadedMedia: [MediaId:
     if !documents.isEmpty {
         flags |= (1 << 3)
     }
+    if !users.isEmpty {
+        flags |= (1 << 4)
+    }
 
     return Api.InputRichMessage.inputRichMessage(Api.InputRichMessage.Cons_inputRichMessage(
         flags: flags,
         blocks: blocks,
         photos: photos.isEmpty ? nil : photos,
         documents: documents.isEmpty ? nil : documents,
-        users: nil
+        users: users.isEmpty ? nil : users
     ))
 }
 
@@ -619,13 +623,22 @@ func richMessageContentToUpload(
         stepMediaIds.append(mediaId)
     }
 
+    // The users the page refers to by id, for `inputRichMessage.users`.
+    let users = postbox.transaction { transaction -> [Api.InputUser] in
+        return apiInputRichMessageUsers(instantPage, peer: transaction.getPeer)
+    }
+    |> castError(PendingMessageUploadError.self)
+
     if stepSignals.isEmpty {
         // No uploadable media after all — assemble with an empty map (acts like media-less).
-        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .richMessage(assembleInputRichMessage(instantPage: instantPage, uploadedMedia: [:])), reuploadInfo: nil, cacheReferenceKey: nil)))
+        return users
+        |> map { users -> PendingMessageUploadedContentResult in
+            return .content(PendingMessageUploadedContentAndReuploadInfo(content: .richMessage(assembleInputRichMessage(instantPage: instantPage, uploadedMedia: [:], users: users)), reuploadInfo: nil, cacheReferenceKey: nil))
+        }
     }
 
-    return combineLatest(stepSignals)
-    |> map { steps -> PendingMessageUploadedContentResult in
+    return combineLatest(users, combineLatest(stepSignals))
+    |> map { users, steps -> PendingMessageUploadedContentResult in
         var uploadedMedia: [MediaId: UploadedRichMedia] = [:]
         var mediaProgress: [MediaId: Float] = [:]
         var progressSum: Float = 0.0
@@ -642,7 +655,7 @@ func richMessageContentToUpload(
             }
         }
         if uploadedMedia.count == steps.count {
-            return .content(PendingMessageUploadedContentAndReuploadInfo(content: .richMessage(assembleInputRichMessage(instantPage: instantPage, uploadedMedia: uploadedMedia)), reuploadInfo: nil, cacheReferenceKey: nil))
+            return .content(PendingMessageUploadedContentAndReuploadInfo(content: .richMessage(assembleInputRichMessage(instantPage: instantPage, uploadedMedia: uploadedMedia, users: users)), reuploadInfo: nil, cacheReferenceKey: nil))
         } else {
             let normalized = progressSum / Float(steps.count)
             return .progress(PendingMessageUploadedContentProgress(progress: normalized, mediaProgress: mediaProgress))
@@ -653,7 +666,7 @@ func richMessageContentToUpload(
 // Resolves a rich attribute to its `Api.InputRichMessage`, uploading inline media via the reused
 // `richMessageContentToUpload` routine. Already-cloud media short-circuits (no network round-trip).
 // `nil` richText, secret chats, media-less rich, and upload failure fall back to the media-less
-// serializer (`apiInputRichMessage()`) so the send/edit still proceeds. Emits exactly once (`take(1)`):
+// serializer (`apiInputRichMessage(users:)`) so the send/edit still proceeds. Emits exactly once (`take(1)`):
 // callers wrap this in `mapToSignal { ... <network request> }`, so a second emission would re-issue it.
 func uploadedRichMessage(
     network: Network,
@@ -667,8 +680,11 @@ func uploadedRichMessage(
     guard let richText else {
         return .single(nil)
     }
+    let mediaLess: Signal<Api.InputRichMessage?, NoError> = postbox.transaction { transaction -> Api.InputRichMessage? in
+        return richText.apiInputRichMessage(users: apiInputRichMessageUsers(richText.instantPage, peer: transaction.getPeer))
+    }
     if peerId.namespace == Namespaces.Peer.SecretChat || richText.instantPage.rawMedia.isEmpty {
-        return .single(richText.apiInputRichMessage())
+        return mediaLess
     }
     return richMessageContentToUpload(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: forceReupload, peerId: peerId, instantPage: richText.instantPage)
     |> mapToSignal { result -> Signal<Api.InputRichMessage?, PendingMessageUploadError> in
@@ -677,14 +693,14 @@ func uploadedRichMessage(
             if case let .richMessage(assembled) = content.content {
                 return .single(assembled)
             }
-            return .single(richText.apiInputRichMessage())
+            return mediaLess |> castError(PendingMessageUploadError.self)
         case .progress:
             return .complete()
         }
     }
     |> take(1)
     |> `catch` { _ -> Signal<Api.InputRichMessage?, NoError> in
-        return .single(richText.apiInputRichMessage())
+        return mediaLess
     }
 }
 

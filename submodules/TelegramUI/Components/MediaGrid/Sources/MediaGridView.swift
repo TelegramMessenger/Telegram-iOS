@@ -158,6 +158,20 @@ public final class MediaGridView: UIView {
     public var onDidEndDragging: (() -> Void)?
     public var bounces = true
     public var onZoomingChanged: ((Bool) -> Void)?
+    public var onZoomFrame: (() -> Void)?
+
+    public var zoomContentMinY: CGFloat? {
+        guard let transition = self.transition else {
+            return nil
+        }
+        var minY = CGFloat.greatestFiniteMagnitude
+        for layer in [transition.outgoing, transition.incoming] where layer.opacity > 0.0 && !layer.isHidden {
+            for (_, cell) in layer.visibleCells where !cell.isHidden {
+                minY = min(minY, layer.convert(cell.frame, to: self.layer).minY - self.bounds.minY)
+            }
+        }
+        return minY == CGFloat.greatestFiniteMagnitude ? nil : minY
+    }
     private var reportedZooming = false
     public let overlayView = UIView()
 
@@ -221,6 +235,53 @@ public final class MediaGridView: UIView {
             if self.accessoryLevels != oldValue {
                 self.endInteraction()
                 self.invalidateGridLayout()
+            }
+        }
+    }
+
+    public var compactLevelsRequestSharpImages: Bool = false {
+        didSet {
+            if self.compactLevelsRequestSharpImages != oldValue {
+                self.activeLayoutLayer.compactRequestsSharpImages = self.compactLevelsRequestSharpImages
+                self.spareLayoutLayer?.compactRequestsSharpImages = self.compactLevelsRequestSharpImages
+                if !self.layoutLevel.isInteractive {
+                    self.requestVisibleSharpImages()
+                    self.updatePrefetch(offset: self.engine.offset)
+                }
+            }
+        }
+    }
+
+    public var isScrollingLockedAtTop: Bool = false {
+        didSet {
+            if self.isScrollingLockedAtTop == oldValue {
+                return
+            }
+            if self.isScrollingLockedAtTop {
+                self.stopScrollAnimation()
+                self.engine.isScrollEnabled = false
+                if self.engine.offset != 0.0 {
+                    self.setContentOffset(0.0)
+                }
+            } else {
+                self.engine.isScrollEnabled = self.transition == nil && self.pinch == nil && !self.isSelecting
+            }
+        }
+    }
+
+    public var availableLevels: [MediaGridLevel] = MediaGridLevel.allCases {
+        didSet {
+            let sorted = self.availableLevels.sorted()
+            if sorted.isEmpty {
+                self.availableLevels = oldValue
+                return
+            }
+            if sorted != self.availableLevels {
+                self.availableLevels = sorted
+                return
+            }
+            if sorted != oldValue, !sorted.contains(self.level) {
+                self.setLevel(self.level, animated: false)
             }
         }
     }
@@ -304,7 +365,7 @@ public final class MediaGridView: UIView {
             if began {
                 self.stopScrollAnimation()
             }
-            self.engine.isScrollEnabled = isEnabled && self.transition == nil && self.pinch == nil
+            self.engine.isScrollEnabled = isEnabled && self.transition == nil && self.pinch == nil && !self.isScrollingLockedAtTop
             if began {
                 self.onSelectionPanBegan?()
             }
@@ -560,7 +621,7 @@ public final class MediaGridView: UIView {
         self.stopMotion()
         let previousLevel = self.level
         if rotates {
-            let target = self.level.rotated(toLandscape: isLandscape)
+            let target = self.level.rotated(toLandscape: isLandscape, within: self.availableLevels)
             if target != self.level {
                 self.level = target
                 self.layoutLevel = target
@@ -671,6 +732,7 @@ public final class MediaGridView: UIView {
         if isZooming != self.reportedZooming {
             self.reportedZooming = isZooming
             self.onZoomingChanged?(isZooming)
+            self.onZoomFrame?()
         }
         self.noteTargetLevel()
     }
@@ -703,10 +765,11 @@ public final class MediaGridView: UIView {
 
     private var scrollAnimation: (from: CGFloat, start: CFTimeInterval)?
     private var scrollAnimationLink: CADisplayLink?
+    private var velocityTransfer: (velocity: CGFloat, start: CFTimeInterval)?
     var _testAllowsWindowlessScrollAnimation = false
 
     public var isAnimatingScroll: Bool {
-        return self.scrollAnimation != nil
+        return self.scrollAnimation != nil || self.velocityTransfer != nil
     }
 
     public func scrollToTop(animated: Bool) {
@@ -732,13 +795,59 @@ public final class MediaGridView: UIView {
         }
     }
 
+    public func transferVelocity(_ velocity: CGFloat) {
+        guard velocity > 0.0, velocity.isFinite, self.gridLayout != nil, self.window != nil || self._testAllowsWindowlessScrollAnimation, !self.isScrollingLockedAtTop else {
+            return
+        }
+        self.stopScrollAnimation()
+        self.endInteraction()
+        self.engine.haltMotionInPlace()
+        self.velocityTransfer = (velocity, self.motionClock())
+        if self.window != nil {
+            let link = CADisplayLink(target: MediaGridDisplayLinkTarget(self), selector: #selector(MediaGridDisplayLinkTarget.tick))
+            link.add(to: .main, forMode: .common)
+            self.scrollAnimationLink = link
+        }
+    }
+
+    private func stepVelocityTransfer() {
+        guard let transfer = self.velocityTransfer else {
+            return
+        }
+        let t = max(0.0, self.motionClock() - transfer.start)
+        let velocity = transfer.velocity * 15.0 * CGFloat(pow(MediaGridView.velocityTransferDecelerationRate, 1000.0 * t))
+        let maxOffset = max(0.0, self.contentHeight - self.bounds.height)
+        var offset = self.engine.offset + velocity
+        var ended = abs(velocity) < 0.1
+        if offset >= maxOffset {
+            offset = maxOffset
+            ended = true
+        }
+        if ended {
+            self.stopScrollAnimation()
+        }
+        self.engine.setOffset(offset)
+        self.scrolled(to: offset)
+    }
+
+    private static let velocityTransferDecelerationRate: Double = 0.998
+
+    func _testStepTransferredVelocity() {
+        self.stepVelocityTransfer()
+    }
+
     private func stopScrollAnimation() {
         self.scrollAnimation = nil
+        self.velocityTransfer = nil
         self.scrollAnimationLink?.invalidate()
         self.scrollAnimationLink = nil
     }
 
     fileprivate func stepScrollAnimation() {
+        if self.velocityTransfer != nil {
+            self.stepVelocityTransfer()
+            return
+        }
         guard let animation = self.scrollAnimation else {
             self.stopScrollAnimation()
             return
@@ -846,22 +955,22 @@ public final class MediaGridView: UIView {
             self.onTapItem?(index)
             self.onTapItemAt?(index, point)
             self.updateSelectionForVisibleItems()
-        } else if self.isZoomEnabled, let target = self.layoutLevel.zoomedIn {
+        } else if self.isZoomEnabled, let target = self.layoutLevel.zoomedIn(within: self.availableLevels) {
             self.setLevel(target, animated: true, anchor: MediaGridZoomAnchor(index: index, pointInView: point))
         }
     }
 
     public var canZoomIn: Bool {
-        return self.isZoomEnabled && self.level.zoomedIn != nil
+        return self.isZoomEnabled && self.level.zoomedIn(within: self.availableLevels) != nil
     }
 
     public var canZoomOut: Bool {
-        return self.isZoomEnabled && self.level.zoomedOut != nil
+        return self.isZoomEnabled && self.level.zoomedOut(within: self.availableLevels) != nil
     }
 
     public func zoomIn() {
         self.endInteraction()
-        guard self.isZoomEnabled, let target = self.level.zoomedIn else {
+        guard self.isZoomEnabled, let target = self.level.zoomedIn(within: self.availableLevels) else {
             return
         }
         self.setLevel(target, animated: true, anchor: self.centerAnchor())
@@ -869,7 +978,7 @@ public final class MediaGridView: UIView {
 
     public func zoomOut() {
         self.endInteraction()
-        guard self.isZoomEnabled, let target = self.level.zoomedOut else {
+        guard self.isZoomEnabled, let target = self.level.zoomedOut(within: self.availableLevels) else {
             return
         }
         self.setLevel(target, animated: true, anchor: self.centerAnchor())
@@ -904,6 +1013,7 @@ public final class MediaGridView: UIView {
     }
 
     public func setLevel(_ level: MediaGridLevel, animated: Bool, anchor: MediaGridZoomAnchor? = nil) {
+        let level = level.nearest(within: self.availableLevels)
         self.endInteraction()
         self.rotationAnchor = nil
         guard level != self.level else {
@@ -1097,6 +1207,7 @@ public final class MediaGridView: UIView {
         let shift = sourceOffset - targetOffset
 
         let incoming = self.spareLayoutLayer ?? MediaGridLayoutLayer(dataSource: self.dataSource, pool: self.pool)
+        incoming.compactRequestsSharpImages = self.compactLevelsRequestSharpImages
         self.spareLayoutLayer = nil
         incoming.isItemSelected = self.isItemSelected
         incoming.suspendsSharpRequests = false
@@ -1293,7 +1404,7 @@ public final class MediaGridView: UIView {
             self.resetPrefetch()
             self.prefetchLayout = layout
         }
-        self.engine.isScrollEnabled = true
+        self.engine.isScrollEnabled = !self.isScrollingLockedAtTop
         self.updateGestureAvailability()
         self.applyAspects(notify: false)
         self.scrolled(to: self.engine.offset)
@@ -1378,7 +1489,7 @@ public final class MediaGridView: UIView {
         let relativePosition: CGPoint
         if let transition = self.transition, let (anchor, relative) = self.transitionAnchor {
             transition.interrupt()
-            state = MediaGridPinchState(startLevel: transition.sourceLevel, anchor: anchor, toward: transition.targetLevel, startProgress: transition.progress)
+            state = MediaGridPinchState(startLevel: transition.sourceLevel, anchor: anchor, toward: transition.targetLevel, startProgress: transition.progress, levels: self.availableLevels)
             relativePosition = relative
         } else {
             let hostLayer = self.engine.contentHost.layer
@@ -1388,7 +1499,7 @@ public final class MediaGridView: UIView {
             guard let anchor = self.anchor(at: center) else {
                 return
             }
-            state = MediaGridPinchState(startLevel: self.layoutLevel, anchor: anchor)
+            state = MediaGridPinchState(startLevel: self.layoutLevel, anchor: anchor, levels: self.availableLevels)
             relativePosition = self.relativePosition(of: anchor)
         }
         self.pinch = PinchSession(state: state, relativePosition: relativePosition, isTracking: true)
@@ -1416,7 +1527,7 @@ public final class MediaGridView: UIView {
         let host = self.engine.contentHost.frame
         let point = CGPoint(x: anchor.pointInView.x - host.minX, y: anchor.pointInView.y - host.minY)
         var ranges: [Range<Int>] = []
-        for level in [self.layoutLevel.zoomedIn, self.layoutLevel.zoomedOut] {
+        for level in [self.layoutLevel.zoomedIn(within: self.availableLevels), self.layoutLevel.zoomedOut(within: self.availableLevels)] {
             guard let level else {
                 continue
             }
@@ -1493,6 +1604,7 @@ public final class MediaGridView: UIView {
         self.drivePinch(from: result.from, to: result.to, progress: result.progress)
         self.applyOvershoot(session.state.overshoot, about: session.state.anchor.pointInView)
         self.noteTargetLevel()
+        self.onZoomFrame?()
     }
 
     private func drivePinch(from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat) {
@@ -1545,7 +1657,7 @@ public final class MediaGridView: UIView {
                 let next = level == from ? to : from
                 let start = level == from ? progress : 1.0 - progress
                 self.beginTransition(to: next, source: source, anchor: anchor, relativePosition: session.relativePosition, binding: start ... start)
-            } else if let next = from > level ? level.zoomedOut : level.zoomedIn {
+            } else if let next = from > level ? level.zoomedOut(within: self.availableLevels) : level.zoomedIn(within: self.availableLevels) {
                 self.jumpLayout(to: next, anchor: anchor, relativePosition: session.relativePosition)
             } else {
                 return
@@ -2065,7 +2177,7 @@ public final class MediaGridView: UIView {
         guard let layout = self.gridLayout else {
             return
         }
-        if self.defersCellBinding || self.isCellBindingScheduled || self.isMovingFast || !self.layoutLevel.isInteractive {
+        if self.defersCellBinding || self.isCellBindingScheduled || self.isMovingFast || !self.requestsSharpImages(at: self.layoutLevel) {
             return
         }
         let sizing = self.prefetchLayout ?? layout
@@ -2138,6 +2250,25 @@ public final class MediaGridView: UIView {
             self.activeLayoutLayer.updateVisibleRange(range, priority: priority)
         }
         self.pool.setVisibleCount(self.activeLayoutLayer.visibleCells.count)
+        self.noteVisibleRange(priority)
+    }
+
+    public var visibleIndexRange: Range<Int>? {
+        guard let layout = self.gridLayout, self.bounds.height > 0.0 else {
+            return nil
+        }
+        return layout.indexRange(intersecting: CGRect(x: 0.0, y: self.engine.offset, width: self.bounds.width, height: self.bounds.height))
+    }
+
+    public var onVisibleRangeChanged: ((Range<Int>) -> Void)?
+    private var lastReportedVisibleRange: Range<Int>?
+
+    private func noteVisibleRange(_ range: Range<Int>) {
+        if range == self.lastReportedVisibleRange {
+            return
+        }
+        self.lastReportedVisibleRange = range
+        self.onVisibleRangeChanged?(range)
     }
 
     private func scheduleCellBinding() {
@@ -2160,6 +2291,10 @@ public final class MediaGridView: UIView {
         }
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
         CFRunLoopWakeUp(CFRunLoopGetMain())
+    }
+
+    private func requestsSharpImages(at level: MediaGridLevel) -> Bool {
+        return level.isInteractive || self.compactLevelsRequestSharpImages
     }
 
     private func windowMargin(level: MediaGridLevel) -> CGFloat {

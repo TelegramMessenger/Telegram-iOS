@@ -697,7 +697,9 @@ never use confirm-before-delete (`historyFillReconciles` covers private chats an
 `testChannelFillIsUnchanged`). A fill stores and closes the hole in its first transaction and resolves reply targets,
 emoji and stories in a follow-up started inside that transaction (master `51c8a7e596`, merged in 2026-10-24): it
 registers the stored messages waiting for a missing reference in `PendingMessageReferences` (views draw skeletons for
-them), and when it ends it releases them and rewrites them from their current rows so they redraw. The follow-up's
+them), and when it ends it releases them and rewrites them from their current rows so they redraw. Rich messages
+with a custom emoji whose file is not stored are rewritten then too, without registering (their previews draw such an
+emoji as its alt text, not a skeleton; `HistoryFillRichTextEmojiTests`). The follow-up's
 answers are stored only while none is older than `FetchedAnswerAge.maximum` (otherwise it fetches again), and reply
 targets deleted meanwhile are not stored. A forum or monoforum fill stores first too unless a fetched message's topic
 info is neither stored nor in the answer (`forumFillStoresFirst`); then it resolves first, as before (C3, fixed;

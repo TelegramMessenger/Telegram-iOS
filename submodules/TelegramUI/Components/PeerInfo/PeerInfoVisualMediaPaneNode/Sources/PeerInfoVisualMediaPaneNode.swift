@@ -202,7 +202,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
 }
 
-private struct Month: Equatable {
+struct VisualMediaMonth: Equatable {
     var packedValue: Int32
 
     init(packedValue: Int32) {
@@ -229,8 +229,8 @@ private struct Month: Equatable {
     }
 }
 
-private let durationFont = Font.semibold(11.0)
-private let minDurationImage: UIImage = {
+let visualMediaDurationFont = Font.semibold(11.0)
+let visualMediaMinDurationImage: UIImage = {
     let image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
@@ -244,7 +244,7 @@ private let minDurationImage: UIImage = {
     return image!
 }()
 
-private let rightShadowImage: UIImage = {
+let visualMediaRightShadowImage: UIImage = {
     let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
     let image = generateImage(baseImage.size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -256,7 +256,7 @@ private let rightShadowImage: UIImage = {
     return image!
 }()
 
-private final class DurationLayer: CALayer {
+final class VisualMediaDurationLayer: CALayer {
     override init() {
         super.init()
 
@@ -274,9 +274,9 @@ private final class DurationLayer: CALayer {
 
     func update(duration: Int32, isMin: Bool) {
         if isMin {
-            self.contents = minDurationImage.cgImage
+            self.contents = visualMediaMinDurationImage.cgImage
         } else {
-            let string = NSAttributedString(string: stringForDuration(duration), font: durationFont, textColor: .white)
+            let string = NSAttributedString(string: stringForDuration(duration), font: visualMediaDurationFont, textColor: .white)
             let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
             let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
             let sideInset: CGFloat = 6.0
@@ -299,7 +299,7 @@ private final class DurationLayer: CALayer {
 
 private protocol ItemLayer: SparseItemGridLayer {
     var item: VisualMediaItem? { get set }
-    var durationLayer: DurationLayer? { get set }
+    var durationLayer: VisualMediaDurationLayer? { get set }
     var minFactor: CGFloat { get set }
     var selectionLayer: GridMessageSelectionLayer? { get set }
     var disposable: Disposable? { get set }
@@ -318,7 +318,7 @@ private protocol ItemLayer: SparseItemGridLayer {
 private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
     var livePhotoLayer: SimpleLayer?
-    var durationLayer: DurationLayer?
+    var durationLayer: VisualMediaDurationLayer?
     var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
@@ -379,9 +379,9 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                 let livePhotoLayer = SimpleLayer()
                 livePhotoLayer.contentsGravity = .topLeft
                 livePhotoLayer.contentsScale = UIScreenScale
-                livePhotoLayer.contents = livePhotoImage.cgImage
+                livePhotoLayer.contents = visualMediaLivePhotoImage.cgImage
                 self.addSublayer(livePhotoLayer)
-                livePhotoLayer.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: livePhotoImage.size)
+                livePhotoLayer.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: visualMediaLivePhotoImage.size)
                 livePhotoLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
                 self.livePhotoLayer = livePhotoLayer
             }
@@ -394,7 +394,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
             } else {
-                let durationLayer = DurationLayer()
+                let durationLayer = VisualMediaDurationLayer()
                 durationLayer.update(duration: duration, isMin: isMin)
                 self.addSublayer(durationLayer)
                 durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
@@ -413,8 +413,8 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                 let rightShadowLayer = SimpleLayer()
                 self.rightShadowLayer = rightShadowLayer
                 self.insertSublayer(rightShadowLayer, at: 0)
-                rightShadowLayer.contents = rightShadowImage.cgImage
-                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                rightShadowLayer.contents = visualMediaRightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, visualMediaRightShadowImage.size.width), height: min(size.height, visualMediaRightShadowImage.size.height))
                 rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
             }
         } else {
@@ -486,7 +486,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         }
         
         if let rightShadowLayer = self.rightShadowLayer {
-            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            let shadowSize = CGSize(width: min(size.width, visualMediaRightShadowImage.size.width), height: min(size.height, visualMediaRightShadowImage.size.height))
             rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
         }
     }
@@ -1019,7 +1019,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     }
 
     func scrollerTextForTag(tag: Int32) -> String? {
-        let month = Month(packedValue: tag)
+        let month = VisualMediaMonth(packedValue: tag)
         return stringForMonth(strings: self.strings, month: month.month, ofYear: month.year)
     }
 
@@ -1070,7 +1070,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     }
 }
 
-private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> EngineMessage.Tags {
+func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> EngineMessage.Tags {
     switch type {
     case .photoOrVideo:
         return .photoOrVideo
@@ -1806,12 +1806,12 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 for item in list.items {
                     switch item.content {
                     case let .message(message, isLocal):
-                        mappedItems.append(VisualMediaItem(index: item.index, message: EngineMessage(message), localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                        mappedItems.append(VisualMediaItem(index: item.index, message: EngineMessage(message), localMonthTimestamp: VisualMediaMonth(localTimestamp: message.timestamp + timezoneOffset).packedValue))
                         if !isLocal {
-                            mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: message.id, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                            mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: message.id, localMonthTimestamp: VisualMediaMonth(localTimestamp: message.timestamp + timezoneOffset).packedValue))
                         }
                     case let .placeholder(id, timestamp):
-                        mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: Month(localTimestamp: timestamp + timezoneOffset).packedValue))
+                        mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: VisualMediaMonth(localTimestamp: timestamp + timezoneOffset).packedValue))
                     }
                 }
             }
@@ -2519,7 +2519,7 @@ private class MediaListSelectionRecognizer: UIPanGestureRecognizer {
     }
 }
 
-private let livePhotoImage: UIImage = {
+let visualMediaLivePhotoImage: UIImage = {
     let baseImage = UIImage(bundleImageName: "Chat/Message/LivePhoto")!
     let image = generateImage(baseImage.size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

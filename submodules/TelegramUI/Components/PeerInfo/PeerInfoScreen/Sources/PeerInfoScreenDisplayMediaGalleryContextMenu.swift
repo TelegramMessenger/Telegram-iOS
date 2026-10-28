@@ -119,7 +119,7 @@ extension PeerInfoScreenNode {
                     
                     var testView: UIView? = localResult
                     while let testViewValue = testView {
-                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPane {
                             node.brieflyDisableTouchActions()
                             return .dismiss(consume: false, result: nil)
                         } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
@@ -238,7 +238,7 @@ extension PeerInfoScreenNode {
                     
                     var testView: UIView? = localResult
                     while let testViewValue = testView {
-                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPane {
                             node.brieflyDisableTouchActions()
                             return .dismiss(consume: false, result: nil)
                         } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
@@ -277,7 +277,7 @@ extension PeerInfoScreenNode {
                 guard let controller = strongSelf.controller else {
                     return
                 }
-                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPane else {
                     return
                 }
                 
@@ -287,16 +287,15 @@ extension PeerInfoScreenNode {
                 
                 var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
                 let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
-                    let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
-                    let canZoom: Bool = nextZoomLevel != nil
+                    let canZoom: Bool = pane?.canZoom(isZoomIn: isZoomIn) ?? false
                     
                     return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
                     }, action: canZoom ? { action in
-                        guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
+                        guard let pane = pane, pane.canZoom(isZoomIn: isZoomIn) else {
                             return
                         }
-                        pane.updateZoomLevel(level: zoomLevel)
+                        pane.zoom(isZoomIn: isZoomIn)
                         if let recurseGenerateAction = recurseGenerateAction {
                             action.updateAction(0, recurseGenerateAction(true))
                             action.updateAction(1, recurseGenerateAction(false))
@@ -409,7 +408,7 @@ extension PeerInfoScreenNode {
                     
                     var testView: UIView? = localResult
                     while let testViewValue = testView {
-                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPane {
                             node.brieflyDisableTouchActions()
                             return .dismiss(consume: false, result: nil)
                         } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {

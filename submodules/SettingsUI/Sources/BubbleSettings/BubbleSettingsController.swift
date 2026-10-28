@@ -258,7 +258,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, ASScrollViewDel
     }
     
     func updatePresentationThemeSettings(_ presentationThemeSettings: PresentationThemeSettings) {
-        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(presentationThemeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(presentationThemeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners)
+        let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(presentationThemeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(presentationThemeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners, bubbleMode: presentationThemeSettings.chatBubbleSettings.bubbleMode)
         
         self.presentationData = self.presentationData.withChatBubbleCorners(chatBubbleCorners)
         self.toolbarNode.updatePresentationData(presentationData: self.presentationData)
@@ -383,7 +383,11 @@ final class BubbleSettingsController: ViewController {
     private func apply(chatBubbleSettings: PresentationChatBubbleSettings) {
         let _ = (updatePresentationThemeSettingsInteractively(accountManager: self.context.sharedContext.accountManager, { current in
             var current = current
-            current.chatBubbleSettings = chatBubbleSettings
+            // Only the corner fields: `chatBubbleSettings` is the snapshot taken when the screen opened, and the
+            // bubble-free fields beside them may have changed since.
+            current.chatBubbleSettings.mainRadius = chatBubbleSettings.mainRadius
+            current.chatBubbleSettings.auxiliaryRadius = chatBubbleSettings.auxiliaryRadius
+            current.chatBubbleSettings.mergeBubbleCorners = chatBubbleSettings.mergeBubbleCorners
             return current
         })
         |> deliverOnMainQueue).start(completed: { [weak self] in

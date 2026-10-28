@@ -50,7 +50,7 @@ level. Library changes reach the grid through the data source's own PHChange obs
 
 **Attachment container.** `MediaPickerMediaGridContainerView` adopts `AttachmentScrollableContent` (AttachmentUI), which
 the container finds when the nearest content in the hit-test chain is not a scroll view; the scroll-view path is
-unchanged. A pinch on the grid never moves the sheet.
+unchanged. A pinch on the grid never moves the sheet by itself; the start of any zoom (pinch, menu, tap) asks the attachment menu to expand (`zoomingStarted` → `requestAttachmentMenuExpansion`, a no-op when it is already expanded or tracking).
 
 **Transitions.** `transitionView(snapshot: false)` returns the cell's proxy view in the grid's `overlayView` (in the
 hierarchy, so the media editor can convert its bounds and add a view to its grandparent); `snapshot: true` a detached

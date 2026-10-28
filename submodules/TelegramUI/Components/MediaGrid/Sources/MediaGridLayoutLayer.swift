@@ -11,6 +11,7 @@ final class MediaGridLayoutLayer: CALayer {
     private(set) var visibleCells: [Int: MediaGridCellLayer] = [:]
     var isItemSelected: ((Int) -> Bool)?
     var suspendsSharpRequests = false
+    var compactRequestsSharpImages = false
     weak var donor: MediaGridLayoutLayer?
     private(set) var visibleRange: Range<Int> = 0 ..< 0
     private var needsRebind = false
@@ -327,7 +328,7 @@ final class MediaGridLayoutLayer: CALayer {
 
     private func wantsSharpImage(_ cell: MediaGridCellLayer, size: CGSize, pixelSize: CGSize) -> Bool {
         if cell.isShowingThumbnail {
-            if self.detail == .compact {
+            if self.detail == .compact && !self.compactRequestsSharpImages {
                 return false
             }
             return max(pixelSize.width, pixelSize.height) > MediaGridLayoutLayer.thumbnailSufficiency * cell.thumbnailPixelSize
@@ -342,6 +343,10 @@ final class MediaGridLayoutLayer: CALayer {
     private func bind(_ cell: MediaGridCellLayer, index: Int, layout: MediaGridLayout, keepsImage: Bool = false, reassigned: Bool = false) {
         let frame = layout.frame(at: index)
         let pixelSize = layout.pixelSize(at: index)
+        cell.isBinding = true
+        defer {
+            cell.isBinding = false
+        }
         cell.bind(index: index, detail: self.detail)
         cell.setSelected(self.detail == .full ? (self.isItemSelected?(index) ?? false) : false)
         cell.frame = frame
@@ -382,6 +387,7 @@ final class MediaGridLayoutLayer: CALayer {
             return
         }
         cell.bindingToken += 1
+        cell.imageRequestTime = CACurrentMediaTime()
         let token = cell.bindingToken
         let frame = layout.frame(at: index)
         let targetPixelWidth = layout.pixelSize(at: index).width

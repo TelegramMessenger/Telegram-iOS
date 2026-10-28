@@ -8,23 +8,33 @@ import TelegramCore
 /// (a real text mention is a `.TextMention` entity, never a `tg://user` textUrl) and accepted rather
 /// than adding dedicated model fields; revisit if it ever surfaces in practice.
 ///
-/// Private markdown-link URL carrying a text mention's peer id between the chat composer's
-/// `NSAttributedString` currency and the RichTextEditor `Document` (which stores it in the generic
-/// `link` field, keeping the Core model markdown-clean). Mirrors `customEmojiMarkdownURL`. The peer id
-/// is encoded as the single `Int64` the draft persistence already uses (`EnginePeer.Id.toInt64()`),
-/// so the peer namespace round-trips inside it.
-public func mentionMarkdownURL(peerId: EnginePeer.Id) -> String {
-    return "tg://user?id=\(peerId.toInt64())"
-}
-
-/// Parses the peer id out of a `tg://user?id=<int64>` marker URL. Returns nil for any other URL
-/// (ordinary links flow through unchanged).
-public func parseMentionPeerId(fromURL url: String) -> EnginePeer.Id? {
-    let prefix = "tg://user?id="
-    guard url.hasPrefix(prefix), let raw = Int64(url.dropFirst(prefix.count)) else {
+/// Private markdown-link URL carrying a text mention between the chat composer's `NSAttributedString`
+/// currency and the RichTextEditor `Document` (which stores it in the generic `link` field, keeping the
+/// Core model markdown-clean). Mirrors `customEmojiMarkdownURL`. It carries the raw user id, as Telegram's
+/// own `tg://user?id=` links and a rich page's `textMentionName` do, not a packed `PeerId` (the two differ
+/// for every id of 2^32 and above), so a pasted external link means the same user. Only a user can be
+/// mentioned by name: any other peer has no marker, and its text stays plain.
+public func mentionMarkdownURL(peerId: EnginePeer.Id) -> String? {
+    let userId = peerId.id._internalGetInt64Value()
+    guard peerId.namespace == Namespaces.Peer.CloudUser, isMentionableUserId(userId) else {
         return nil
     }
-    return EnginePeer.Id(raw)
+    return "tg://user?id=\(userId)"
+}
+
+/// A user id a `PeerId` can hold: positive, and below 2^52 (larger ones trip `PeerId`'s packing).
+private func isMentionableUserId(_ userId: Int64) -> Bool {
+    return userId > 0 && userId < (1 << 52)
+}
+
+/// Parses the user out of a `tg://user?id=<user id>` marker URL. Returns nil for any other URL
+/// (ordinary links flow through unchanged), and for an id no user can have.
+public func parseMentionPeerId(fromURL url: String) -> EnginePeer.Id? {
+    let prefix = "tg://user?id="
+    guard url.hasPrefix(prefix), let userId = Int64(url.dropFirst(prefix.count)), isMentionableUserId(userId) else {
+        return nil
+    }
+    return EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId))
 }
 
 /// Private markdown-link URL carrying a `FormattedDate` entity's Unix timestamp through the

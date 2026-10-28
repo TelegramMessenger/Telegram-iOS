@@ -30,6 +30,7 @@ swift_library(
     deps = [
         ":RichTextEditorMessageConversion",
         "//submodules/TelegramCore",
+        "//submodules/TextFormat",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorCore",
     ],

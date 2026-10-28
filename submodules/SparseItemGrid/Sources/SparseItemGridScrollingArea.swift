@@ -1197,6 +1197,22 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var isScrolling: Bool = false
     
     private var isDateIndicatorVisible = false
+
+    private struct IndicatorInputs: Equatable {
+        var containerSize: CGSize
+        var date: String
+        var tag: Int32
+        var previousDate: String?
+        var previousTag: Int32?
+        var isVisible: Bool
+        var theme: PresentationTheme
+
+        static func ==(lhs: IndicatorInputs, rhs: IndicatorInputs) -> Bool {
+            return lhs.containerSize == rhs.containerSize && lhs.date == rhs.date && lhs.tag == rhs.tag && lhs.previousDate == rhs.previousDate && lhs.previousTag == rhs.previousTag && lhs.isVisible == rhs.isVisible && lhs.theme === rhs.theme
+        }
+    }
+
+    private var lastIndicator: (inputs: IndicatorInputs, size: CGSize)?
     
     private func requestUpdate(animated: Bool) {
         guard let containerSize = self.containerSize else {
@@ -1208,6 +1224,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private func updateIndicator(containerSize: CGSize, previousDate: (String, Int32)? = nil, animated: Bool) -> CGSize {
         guard let theme = self.theme, let date = self.currentDate else {
             return .zero
+        }
+        let indicatorInputs = IndicatorInputs(containerSize: containerSize, date: date.0, tag: date.1, previousDate: previousDate?.0, previousTag: previousDate?.1, isVisible: self.isDateIndicatorVisible, theme: theme)
+        if !animated, let lastIndicator = self.lastIndicator, lastIndicator.inputs == indicatorInputs {
+            return lastIndicator.size
         }
         let indicatorSize = self.dateIndicator.update(
             transition: animated ? .easeInOut(duration: 0.2) : .immediate,
@@ -1223,6 +1243,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             environment: {},
             containerSize: containerSize
         )
+        self.lastIndicator = (indicatorInputs, indicatorSize)
         return indicatorSize
     }
     

@@ -15,6 +15,8 @@ open class MediaGridCellLayer: CALayer {
     var hasFinalImage = false
     var isAwaitingSharpImage = false
     public private(set) var isShowingThumbnail = false
+    public internal(set) var isBinding = false
+    public internal(set) var imageRequestTime: CFTimeInterval = 0.0
     private(set) var sharpImage: UIImage?
     private(set) var isImageStale = false
     private(set) var thumbnailPixelWidth: CGFloat = 0.0

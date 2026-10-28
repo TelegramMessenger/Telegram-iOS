@@ -6866,6 +6866,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     chatTheme = nil
                 }
                                 
+                let modeTheme = presentationData.theme
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
 
@@ -6912,6 +6913,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 })
                             }
                         }
+                    } else if let darkAppearancePreview = darkAppearancePreview, !presentationData.chatBubbleCorners.bubbleMode {
+                        // Without bubbles the preview is the bubble-free theme of the other appearance, already
+                        // recoloured; its page is set below.
+                        useDarkAppearance = darkAppearancePreview
+                        let previewTheme = makeBubblelessPresentationTheme(mediaBox: accountManager.mediaBox, themeSettings: themeSettings, autoNightModeTriggered: darkAppearancePreview)
+                        previewTheme.forceSync = true
+                        Queue.mainQueue().after(1.0, {
+                            previewTheme.forceSync = false
+                        })
+                        presentationData = presentationData.withUpdated(theme: previewTheme)
                     } else if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
                         let lightTheme: PresentationTheme
@@ -6997,6 +7008,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let forcedWallpaper = strongSelf.forcedWallpaper {
                     presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
+                } else if !presentationData.chatBubbleCorners.bubbleMode {
+                    // Without bubbles a chat's own wallpaper gives way to the plain page, and a chat theme is
+                    // recoloured for it (the mode's own theme already is; recolouring twice would shift its accent).
+                    if chatTheme != nil && presentationData.theme !== modeTheme {
+                        presentationData = presentationData.withUpdated(theme: bubblelessPresentationTheme(presentationData.theme))
+                    }
+                    presentationData = presentationData.withUpdated(chatWallpaper: bubblelessChatWallpaper(theme: presentationData.theme))
                 } else if let chatWallpaper {
                     presentationData = presentationData.withUpdated(chatWallpaper: chatWallpaper)
                 }

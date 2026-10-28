@@ -32,7 +32,7 @@ func makeUser(id: Int64) -> TelegramUser {
     )
 }
 
-func makeChannel(id: Int64, info: TelegramChannelInfo, flags: TelegramChannelFlags = TelegramChannelFlags(), adminRights: TelegramChatAdminRights? = nil, defaultBannedRights: TelegramChatBannedRights? = nil) -> TelegramChannel {
+func makeChannel(id: Int64, info: TelegramChannelInfo, flags: TelegramChannelFlags = TelegramChannelFlags(), adminRights: TelegramChatAdminRights? = nil, defaultBannedRights: TelegramChatBannedRights? = nil, linkedMonoforumId: PeerId? = nil) -> TelegramChannel {
     return TelegramChannel(
         id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id)),
         accessHash: nil,
@@ -59,7 +59,7 @@ func makeChannel(id: Int64, info: TelegramChannelInfo, flags: TelegramChannelFla
         subscriptionUntilDate: nil,
         verificationIconFileId: nil,
         sendPaidMessageStars: nil,
-        linkedMonoforumId: nil
+        linkedMonoforumId: linkedMonoforumId
     )
 }
 

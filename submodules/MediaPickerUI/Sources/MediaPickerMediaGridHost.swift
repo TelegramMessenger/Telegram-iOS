@@ -549,6 +549,7 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
     static let itemInfoLimit = 8192
 
     var scrollingInitiated: (() -> Void)?
+    var zoomingStarted: (() -> Void)?
     var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
     var visibleItemsUpdated: (() -> Void)?
     var headerHeight: CGFloat = 0.0
@@ -891,16 +892,25 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
             self.updateOverlays()
             self.updateDownloadTracking()
         }
-        gridView.onZoomingChanged = { [weak self] _ in
+        gridView.onZoomingChanged = { [weak self] isZooming in
+            if isZooming {
+                self?.zoomingStarted?()
+            }
             self?.updateOverlays()
         }
-        gridView.onTargetLevelChanged = { [weak self, weak gridView] level in
+        gridView.onTargetLevelChanged = { [weak self, weak gridView] _ in
             guard let self, let gridView, self.gridView === gridView else {
                 return
             }
-            self.updateContentUnderBar(level: level)
+            self.updateContentUnderBar()
         }
-        self.updateContentUnderBar(level: gridView.targetLevel)
+        gridView.onZoomFrame = { [weak self, weak gridView] in
+            guard let self, let gridView, self.gridView === gridView else {
+                return
+            }
+            self.updateContentUnderBar()
+        }
+        self.updateContentUnderBar()
         gridView.onMovingFastChanged = { [weak self, weak base] isMovingFast in
             guard let self, let base, self.dataSource?.base === base else {
                 return
@@ -1053,8 +1063,14 @@ final class MediaPickerMediaGridHost: MediaPickerGridHost, MediaPickerGridCellSt
         self.selectionNumbers = mediaPickerGridSelectionNumbers(identifiers)
     }
 
-    private func updateContentUnderBar(level: MediaGridLevel) {
-        let isContentUnderBar = !level.isInteractive
+    private func updateContentUnderBar() {
+        guard let gridView = self.gridView else {
+            return
+        }
+        var isContentUnderBar = !gridView.targetLevel.isInteractive
+        if !isContentUnderBar, let minY = gridView.zoomContentMinY, minY < gridView.geometryInsets.top + gridView.headerHeight - 1.0 {
+            isContentUnderBar = true
+        }
         if self.isContentUnderBar != isContentUnderBar {
             self.isContentUnderBar = isContentUnderBar
             self.contentUnderBarChanged?()

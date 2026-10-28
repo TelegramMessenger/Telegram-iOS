@@ -644,7 +644,10 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                             themeSpecificChatWallpapers[themeReference.index] = nil
                                             
-                                            return PresentationThemeSettings(theme: themeReference, themePreferredBaseTheme: current.themePreferredBaseTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                            var updated = current
+                                            updated.currentModeTheme = themeReference
+                                            updated.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+                                            return updated
                                         }) |> deliverOnMainQueue).start(completed: {
                                             if !hasCustomFile {
                                                 saveThemeTemplateFile(state.title, themeResource, {
@@ -678,7 +681,10 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[themeReference.index] = nil
                                         
-                                        return PresentationThemeSettings(theme: themeReference, themePreferredBaseTheme: current.themePreferredBaseTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                        var updated = current
+                                        updated.currentModeTheme = themeReference
+                                        updated.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+                                        return updated
                                     }) |> deliverOnMainQueue).start(completed: {
                                         if let themeResource = themeResource, !hasCustomFile {
                                             saveThemeTemplateFile(state.title, themeResource, {
