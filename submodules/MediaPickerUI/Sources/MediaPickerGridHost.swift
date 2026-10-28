@@ -36,6 +36,7 @@ protocol MediaPickerGridHost: AnyObject {
     var isUserInteractionEnabled: Bool { get set }
 
     var scrollingInitiated: (() -> Void)? { get set }
+    var zoomingStarted: (() -> Void)? { get set }
     var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void { get set }
     var visibleItemsUpdated: (() -> Void)? { get set }
 
@@ -170,6 +171,8 @@ final class MediaPickerGridNodeHost: MediaPickerGridHost {
             self.gridNode.scrollingInitiated = newValue
         }
     }
+
+    var zoomingStarted: (() -> Void)?
 
     var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void {
         get {
