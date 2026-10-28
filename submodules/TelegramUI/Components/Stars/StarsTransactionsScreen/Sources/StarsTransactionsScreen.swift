@@ -584,6 +584,8 @@ final class StarsTransactionsScreenComponent: Component {
             if let titleView = self.titleView.view {
                 if titleView.superview == nil {
                     if let navigationBar = environment.controller()?.navigationBar {
+                        // The page title ("Telegram Stars", "Gram Balance").
+                        titleView.accessibilityTraits = .header
                         navigationBar.customOverBackgroundContentView.insertSubview(titleView, at: 0)
                     }
                 }

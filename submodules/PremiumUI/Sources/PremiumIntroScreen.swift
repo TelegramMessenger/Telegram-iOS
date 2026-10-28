@@ -1221,7 +1221,12 @@ final class SectionGroupComponent: Component {
                 }
                 buttonView.accessibilityLabel = item.accessibilityLabel
                 // The check mark beside the chosen option.
-                buttonView.accessibilityTraits = item.isSelected ? [.button, .selected] : .button
+                var buttonTraits: UIAccessibilityTraits = item.isSelected ? [.button, .selected] : .button
+                if !item.isEnabled {
+                    // A plan shorter than the current subscription cannot be chosen (dimmed).
+                    buttonTraits.insert(.notEnabled)
+                }
+                buttonView.accessibilityTraits = buttonTraits
                 
                 if let current = self.itemViews[item.content.id] {
                     itemView = current

@@ -121,6 +121,10 @@ public final class PlainButtonComponent: Component {
                     // Hidden (`ComponentAccessibility.isHidden`): nothing to announce.
                     return nil
                 }
+                if accessibilityIsInsideViewElementsSubtree(self) {
+                    // The chat screen keeps its accessibility as it was (its own pass).
+                    return nil
+                }
                 let texts = self.contentContainer.accessibilityDisplayedContent().texts
                 return texts.isEmpty ? nil : texts.joined(separator: ", ")
             } set(value) {

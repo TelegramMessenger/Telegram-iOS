@@ -1790,6 +1790,10 @@ public final class GiftItemComponent: Component {
                             break
                         }
                     }
+                    if giftName == nil {
+                        // A gift with neither a title nor an emoji: name what the tile gives.
+                        giftName = component.strings.Gift_View_Title
+                    }
                 }
                 // "#" in a price or label is where the Stars glyph is drawn.
                 func shownText(_ text: String?) -> String? {
@@ -1810,22 +1814,50 @@ public final class GiftItemComponent: Component {
                 accessibilityLabel = texts.isEmpty ? nil : texts.joined(separator: ", ")
             }
             let accessibilityTraits: UIAccessibilityTraits = component.isSelected ? [.button, .selected] : .button
-            if component.action != nil {
+            // Tiles of a grid are read on their own; a tile used as an icon beside text that already names the gift
+            // (alerts, table rows, the auction panel) is not. `.thumbnail` and `.preview` are what message bubbles show:
+            // the chat screen keeps its own accessibility (its pass is separate), so those keep their tree as it was.
+            enum TileRole {
+                case grid
+                case icon
+                case untouched
+            }
+            let role: TileRole
+            switch component.mode {
+            case .generic, .profile, .grid, .select, .upgradePreview:
+                role = .grid
+            case .buttonIcon, .tableIcon, .header:
+                role = .icon
+            case .thumbnail, .preview:
+                role = component.action != nil ? .grid : .untouched
+            }
+            if role == .untouched {
+                // As before this pass: nothing set here.
+            } else if component.action != nil {
                 self.containerButton.isAccessibilityElement = true
                 self.containerButton.accessibilityLabel = accessibilityLabel
                 self.containerButton.accessibilityTraits = accessibilityTraits
                 self.isAccessibilityElement = false
-            } else {
+                self.accessibilityElementsHidden = false
+            } else if role == .grid {
                 self.containerButton.isAccessibilityElement = false
                 self.isAccessibilityElement = accessibilityLabel != nil
                 self.accessibilityLabel = accessibilityLabel
                 self.accessibilityTraits = component.isSelected ? [.staticText, .selected] : .staticText
+                self.accessibilityElementsHidden = false
+            } else {
+                self.containerButton.isAccessibilityElement = false
+                self.isAccessibilityElement = false
+                self.accessibilityLabel = nil
+                self.accessibilityElementsHidden = true
             }
-            // The ribbon's text is part of that label.
-            self.ribbon.accessibilityElementsHidden = true
-            self.ribbonOutline.accessibilityElementsHidden = true
-            self.ribbonText.view?.isAccessibilityElement = false
-            self.ribbonText.view?.accessibilityElementsHidden = true
+            if role != .untouched {
+                // The ribbon's text is part of that label.
+                self.ribbon.accessibilityElementsHidden = true
+                self.ribbonOutline.accessibilityElementsHidden = true
+                self.ribbonText.view?.isAccessibilityElement = false
+                self.ribbonText.view?.accessibilityElementsHidden = true
+            }
             
             return size
         }

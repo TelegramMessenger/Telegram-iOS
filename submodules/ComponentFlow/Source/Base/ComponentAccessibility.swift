@@ -117,6 +117,8 @@ public enum ComponentAccessibilityStrings {
     public static var done: String = "Done"
     public static var back: String = "Back"
     public static var search: String = "Search"
+    /// The "…" glyph (`anim_morewide`, `Navigation/More`): `Common_More`.
+    public static var more: String = "More"
     
     /// The label of a standard navigation glyph by its bundle image name, nil for any other image.
     public static func label(navigationIconName name: String) -> String? {

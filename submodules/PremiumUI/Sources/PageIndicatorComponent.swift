@@ -54,11 +54,21 @@ public final class PageIndicatorComponent: Component {
     public final class View: UIView {
         private var component: PageIndicatorComponent?
         
-        private var currentPageIndex: Int {
+        /// The page VoiceOver asked for: the pager reports its new position a run loop turn later, and VoiceOver reads the
+        /// value right after the swipe.
+        private var pendingPageIndex: Int?
+        /// The page shown when that request was made.
+        private var pendingFromPageIndex: Int?
+        
+        private var positionPageIndex: Int {
             guard let component = self.component, component.pageCount > 1 else {
                 return 0
             }
             return max(0, min(component.pageCount - 1, Int(round(component.position * CGFloat(component.pageCount - 1)))))
+        }
+        
+        private var currentPageIndex: Int {
+            return self.pendingPageIndex ?? self.positionPageIndex
         }
         
         public override var isAccessibilityElement: Bool {
@@ -93,17 +103,23 @@ public final class PageIndicatorComponent: Component {
         }
         
         public override func accessibilityIncrement() {
-            guard let component = self.component, self.currentPageIndex + 1 < component.pageCount else {
+            guard let component = self.component, let showPage = component.showPage, self.currentPageIndex + 1 < component.pageCount else {
                 return
             }
-            component.showPage?(self.currentPageIndex + 1)
+            let index = self.currentPageIndex + 1
+            self.pendingFromPageIndex = self.positionPageIndex
+            self.pendingPageIndex = index
+            showPage(index)
         }
         
         public override func accessibilityDecrement() {
-            guard let component = self.component, self.currentPageIndex > 0 else {
+            guard let component = self.component, let showPage = component.showPage, self.currentPageIndex > 0 else {
                 return
             }
-            component.showPage?(self.currentPageIndex - 1)
+            let index = self.currentPageIndex - 1
+            self.pendingFromPageIndex = self.positionPageIndex
+            self.pendingPageIndex = index
+            showPage(index)
         }
         
         private let indicatorView: PageIndicatorView
@@ -123,6 +139,21 @@ public final class PageIndicatorComponent: Component {
         public func update(component: PageIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
             self.component = component
+            
+            if let pendingPageIndex = self.pendingPageIndex, pendingPageIndex == self.positionPageIndex {
+                // The pager is on the page VoiceOver asked for: say so, as a three-finger page scroll does.
+                self.pendingPageIndex = nil
+                self.pendingFromPageIndex = nil
+                if let accessibilityValue = component.accessibilityValue {
+                    UIAccessibility.post(notification: .pageScrolled, argument: accessibilityValue(pendingPageIndex + 1, component.pageCount))
+                }
+            }
+            
+            if self.pendingPageIndex != nil, let pendingFromPageIndex = self.pendingFromPageIndex, self.positionPageIndex != pendingFromPageIndex {
+                // The pages moved elsewhere (a swipe by hand): the request no longer applies.
+                self.pendingPageIndex = nil
+                self.pendingFromPageIndex = nil
+            }
             
             self.indicatorView.pageCount = component.pageCount
             self.indicatorView.setProgress(progress: component.position, animated: !isFirstTime)

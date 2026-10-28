@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 public final class Button: Component {
     public let content: AnyComponent<Empty>
@@ -234,6 +235,10 @@ public final class Button: Component {
                 }
                 if !self.isAccessibilityElement || self.accessibilityElementsHidden {
                     // Hidden (`ComponentAccessibility.isHidden`): nothing to announce.
+                    return nil
+                }
+                if accessibilityIsInsideViewElementsSubtree(self) {
+                    // The chat screen keeps its accessibility as it was (its own pass).
                     return nil
                 }
                 let texts = self.contentView.accessibilityDisplayedContent().texts

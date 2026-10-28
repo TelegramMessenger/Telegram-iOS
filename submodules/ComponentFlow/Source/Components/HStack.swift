@@ -9,7 +9,11 @@ public enum HStackAlignment {
 public final class HStack<ChildEnvironment: Equatable>: CombinedComponent {
     public typealias EnvironmentType = ChildEnvironment
 
-    public let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    private let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    /// The stacked components, for a container that describes its content to VoiceOver (ButtonComponent's title).
+    public var accessibilityChildren: [AnyComponentWithIdentity<ChildEnvironment>] {
+        return self.items
+    }
     private let spacing: CGFloat
     private let alignment: HStackAlignment
 

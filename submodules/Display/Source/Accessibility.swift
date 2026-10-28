@@ -268,3 +268,18 @@ public extension AccessibilityAreaNode {
         }
     }
 }
+
+/// Whether `view` is inside a subtree that keeps UIKit's own accessibility (`accessibilityUsesViewElements`, today the
+/// chat screen, whose accessibility is a separate pass). Defaults added to shared components for the screen sweeps (a
+/// button reading its shown text, links as custom actions) keep their old result there. Runs only when an accessibility
+/// client asks.
+public func accessibilityIsInsideViewElementsSubtree(_ view: UIView) -> Bool {
+    var current: UIView? = view
+    while let value = current {
+        if let node = value.asyncdisplaykit_node, node.accessibilityUsesViewElements {
+            return true
+        }
+        current = value.superview
+    }
+    return false
+}

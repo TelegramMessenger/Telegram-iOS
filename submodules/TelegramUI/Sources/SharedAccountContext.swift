@@ -474,6 +474,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 ComponentAccessibilityStrings.done = next.strings.Common_Done
                 ComponentAccessibilityStrings.back = next.strings.Common_Back
                 ComponentAccessibilityStrings.search = next.strings.Common_Search
+                ComponentAccessibilityStrings.more = next.strings.Common_More
                 OverlayStatusControllerAccessibilityStrings.loading = next.strings.Channel_NotificationLoading
                 OverlayStatusControllerAccessibilityStrings.done = next.strings.Common_Done
                 if stringsUpdated {

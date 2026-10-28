@@ -173,6 +173,17 @@ public final class ListItemComponentAdaptor: Component {
             }
         }
         
+        override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                // The item's own actions (swipe options, "More"), set on its element's view.
+                if let node = self.itemElement() as? ASDisplayNode, node.isNodeLoaded {
+                    return node.view.accessibilityCustomActions
+                }
+                return nil
+            } set(value) {
+            }
+        }
+        
         override var accessibilityTraits: UIAccessibilityTraits {
             get {
                 var traits = self.itemElement()?.accessibilityTraits ?? []

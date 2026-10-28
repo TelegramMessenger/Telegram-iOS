@@ -523,7 +523,10 @@ final class StarsTransactionsPanelContainerComponent: Component {
                             self.clippingView.addSubview(panelView)
                         }
                         // VoiceOver reads only the shown page; the tabs switch pages.
-                        panelView.accessibilityElementsHidden = self.currentId != panelItem.id
+                        let isAccessibilityHidden = self.currentId != panelItem.id
+                        if panelView.accessibilityElementsHidden != isAccessibilityHidden {
+                            panelView.accessibilityElementsHidden = isAccessibilityHidden
+                        }
                         
                         panelTransition.setFrame(view: panelView, frame: itemFrame, completion: { [weak self] _ in
                             guard let self else {

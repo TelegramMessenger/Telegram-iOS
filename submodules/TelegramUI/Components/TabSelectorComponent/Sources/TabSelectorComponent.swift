@@ -218,6 +218,10 @@ public final class TabSelectorComponent: Component {
         // VoiceOver: a tab is one button named by the text it shows; activation selects it, as a tap does.
         override var isAccessibilityElement: Bool {
             get {
+                if accessibilityIsInsideViewElementsSubtree(self) {
+                    // The chat screen keeps its accessibility as it was (its own pass).
+                    return false
+                }
                 return self.accessibilityLabel != nil
             } set(value) {
             }

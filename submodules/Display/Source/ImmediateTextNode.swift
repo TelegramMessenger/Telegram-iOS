@@ -383,6 +383,10 @@ open class ImmediateTextView: TextView {
             guard self.isAccessibilityElement, self.tapAttributeAction != nil else {
                 return nil
             }
+            if accessibilityIsInsideViewElementsSubtree(self) {
+                // The chat screen keeps its accessibility as it was (its own pass).
+                return nil
+            }
             let links = self.accessibilityLinks()
             if links.count < 2 {
                 return nil

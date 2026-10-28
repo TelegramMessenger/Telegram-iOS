@@ -195,7 +195,12 @@ public final class BalancedTextComponent: Component {
                 if self.explicitIsAccessibilityElement == false {
                     return []
                 }
-                return self.textView.accessibilityLinks().isEmpty ? .staticText : [.staticText, .link]
+                // A link only when activating it does something (a tap handler is set). The chat screen keeps its
+                // accessibility as it was (its own pass).
+                if self.textView.tapAttributeAction == nil || self.textView.accessibilityLinks().isEmpty || accessibilityIsInsideViewElementsSubtree(self) {
+                    return .staticText
+                }
+                return [.staticText, .link]
             } set(value) {
                 self.explicitAccessibilityTraits = value
             }
@@ -203,7 +208,7 @@ public final class BalancedTextComponent: Component {
         
         /// Activating a text with links follows its first link, as a tap on it does (the inner text view handles taps).
         override public func accessibilityActivate() -> Bool {
-            if let tapAttributeAction = self.textView.tapAttributeAction, let link = self.textView.accessibilityLinks().first {
+            if self.isAccessibilityElement, let tapAttributeAction = self.textView.tapAttributeAction, let link = self.textView.accessibilityLinks().first, !accessibilityIsInsideViewElementsSubtree(self) {
                 tapAttributeAction(link.attributes, link.index)
                 return true
             }
@@ -216,7 +221,7 @@ public final class BalancedTextComponent: Component {
                 if let explicit = super.accessibilityCustomActions, !explicit.isEmpty {
                     return explicit
                 }
-                guard self.textView.tapAttributeAction != nil else {
+                guard self.textView.tapAttributeAction != nil, !accessibilityIsInsideViewElementsSubtree(self) else {
                     return nil
                 }
                 let links = self.textView.accessibilityLinks()

@@ -161,6 +161,13 @@ public final class WalletCardComponent: Component {
                 if let qrView = self.qrButton.view, qrView.window != nil, !qrView.isHidden {
                     result.append(qrView)
                 }
+                // Views a screen places over the card (the Gram tooltip) are read after it.
+                let ownViews: [UIView] = [self.shadowView, self.backgroundView, self.foregroundView]
+                for subview in self.subviews where !ownViews.contains(where: { $0 === subview }) {
+                    if !subview.isHidden && subview.alpha >= 0.01 && !subview.accessibilityElementsHidden {
+                        result.append(subview)
+                    }
+                }
                 return result
             } set(value) {
             }

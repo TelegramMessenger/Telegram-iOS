@@ -160,6 +160,8 @@ private final class WalletCollectibleActionComponent: Component {
             self.backgroundView.backgroundColor = component.theme.list.itemModalBlocksBackgroundColor
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: size))
             transition.setFrame(view: self.button, frame: CGRect(origin: .zero, size: size))
+            // VoiceOver: the button reads its title; the icon and title drawn beside it are not read again.
+            self.button.accessibilityLabel = component.title
 
             let iconSize = self.icon.update(
                 transition: transition,
@@ -209,6 +211,11 @@ private final class WalletCollectibleActionComponent: Component {
                     height: titleSize.height
                 ))
             }
+            // The button reads the title: the icon and title views are not read on their own.
+            self.icon.view?.isAccessibilityElement = false
+            self.icon.view?.accessibilityElementsHidden = true
+            self.title.view?.isAccessibilityElement = false
+            self.title.view?.accessibilityElementsHidden = true
             return size
         }
     }
@@ -275,6 +282,9 @@ private final class WalletCollectibleHeaderButtonComponent: Component {
             self.backgroundView.update(size: bounds.size, cornerRadius: 16.0, isDark: true, tintColor: .init(kind: .custom(style: .default, color: component.buttonColor)), isInteractive: true, transition: transition)
             transition.setFrame(view: self.backgroundView, frame: bounds)
             transition.setFrame(view: self.button, frame: bounds)
+            // VoiceOver: the button reads its title (the icon and title views are inside it for sighted users only).
+            self.button.accessibilityLabel = component.title
+            self.button.accessibilityTraits = component.isEnabled ? .button : [.button, .notEnabled]
 
             let iconSize = self.icon.update(
                 transition: transition,
@@ -309,6 +319,11 @@ private final class WalletCollectibleHeaderButtonComponent: Component {
                 titleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels(44.0 - titleSize.height * 0.5)), size: titleSize)
                 transition.setAlpha(view: titleView, alpha: component.isEnabled ? 1.0 : 0.5)
             }
+            // The button reads the title: the icon and title views are not read on their own.
+            self.icon.view?.isAccessibilityElement = false
+            self.icon.view?.accessibilityElementsHidden = true
+            self.title.view?.isAccessibilityElement = false
+            self.title.view?.accessibilityElementsHidden = true
             return availableSize
         }
     }

@@ -89,12 +89,12 @@ final class GiftOptionsScreenComponent: Component {
                 guard let accessibilityHeadingViews = self.accessibilityHeadingViews else {
                     return super.accessibilityElements
                 }
-                var items: [(minY: CGFloat, element: Any)] = []
+                var items: [(frame: CGRect, element: Any)] = []
                 for subview in self.subviews {
                     if subview.isHidden || subview.alpha < 0.01 || subview.accessibilityElementsHidden {
                         continue
                     }
-                    items.append((subview.frame.minY, subview))
+                    items.append((subview.frame, subview))
                 }
                 let headingViews = accessibilityHeadingViews()
                 while self.accessibilityHeadingElements.count < headingViews.count {
@@ -109,9 +109,15 @@ final class GiftOptionsScreenComponent: Component {
                     element.accessibilityTraits = .header
                     let frame = headingView.convert(headingView.bounds, to: self)
                     element.accessibilityFrameInContainerSpace = frame
-                    items.append((frame.minY, element))
+                    items.append((frame, element))
                 }
-                return items.sorted(by: { $0.minY < $1.minY }).map(\.element)
+                // Top to bottom, then leading to trailing within a row of tiles.
+                return items.sorted(by: { lhs, rhs in
+                    if abs(lhs.frame.minY - rhs.frame.minY) > 0.5 {
+                        return lhs.frame.minY < rhs.frame.minY
+                    }
+                    return lhs.frame.minX < rhs.frame.minX
+                }).map(\.element)
             } set(value) {
                 super.accessibilityElements = value
             }

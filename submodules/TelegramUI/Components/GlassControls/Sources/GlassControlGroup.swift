@@ -346,8 +346,16 @@ func glassControlItemAccessibilityLabel(_ item: GlassControlGroupComponent.Item)
     if let accessibilityLabel = item.accessibilityLabel {
         return accessibilityLabel
     }
-    if case let .text(text) = item.content, !text.isEmpty {
-        return text
+    switch item.content {
+    case let .text(text):
+        return text.isEmpty ? nil : text
+    case let .icon(name):
+        // A standard navigation glyph reads its name ("Close").
+        return ComponentAccessibilityStrings.label(navigationIconName: name)
+    case let .animation(name):
+        // The animated "…" glyph opens a menu.
+        return name == "anim_morewide" ? ComponentAccessibilityStrings.more : nil
+    case .customIcon:
+        return nil
     }
-    return nil
 }

@@ -497,7 +497,10 @@ final class DemoPagerComponent: Component {
                 
                 itemView.frame = itemFrame
                 // VoiceOver reads only the page in view; the neighbours kept loaded for swiping are hidden.
-                itemView.accessibilityElementsHidden = abs(centerDelta) >= availableSize.width * 0.5
+                let isAccessibilityHidden = abs(centerDelta) >= availableSize.width * 0.5
+                if itemView.accessibilityElementsHidden != isAccessibilityHidden {
+                    itemView.accessibilityElementsHidden = isAccessibilityHidden
+                }
             }
             
             var removeIds: [AnyHashable] = []
