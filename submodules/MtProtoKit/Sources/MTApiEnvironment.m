@@ -390,7 +390,7 @@ static NSData *base64_decode(NSString *str) {
         _systemVersion = [[UIDevice currentDevice] systemVersion];
 #else
         NSProcessInfo *pInfo = [NSProcessInfo processInfo];
-        _systemVersion = [[[pInfo operatingSystemVersionString] componentsSeparatedByString:@" "] objectAtIndex:1];
+        _systemVersion = [@"macOS " stringByAppendingString:[[[pInfo operatingSystemVersionString] componentsSeparatedByString:@" "] objectAtIndex:1]];
 #endif
         
 NSString *suffix = @"";
