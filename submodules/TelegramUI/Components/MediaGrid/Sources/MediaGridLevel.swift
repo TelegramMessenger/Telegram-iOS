@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 public enum MediaGridLevel: Int, CaseIterable, Comparable {
     case one = 1
@@ -36,6 +37,26 @@ public enum MediaGridLevel: Int, CaseIterable, Comparable {
     public var zoomedOut: MediaGridLevel? {
         let index = self.index
         return index + 1 < MediaGridLevel.allCases.count ? MediaGridLevel.allCases[index + 1] : nil
+    }
+
+    public func zoomedIn(within levels: [MediaGridLevel]) -> MediaGridLevel? {
+        return levels.filter { $0 < self }.max()
+    }
+
+    public func zoomedOut(within levels: [MediaGridLevel]) -> MediaGridLevel? {
+        return levels.filter { $0 > self }.min()
+    }
+
+    public func nearest(within levels: [MediaGridLevel]) -> MediaGridLevel {
+        if levels.isEmpty || levels.contains(self) {
+            return self
+        }
+        let position = log(CGFloat(self.columns))
+        return levels.min(by: { abs(log(CGFloat($0.columns)) - position) < abs(log(CGFloat($1.columns)) - position) }) ?? self
+    }
+
+    public func rotated(toLandscape: Bool, within levels: [MediaGridLevel]) -> MediaGridLevel {
+        return (toLandscape ? self.zoomedOut(within: levels) : self.zoomedIn(within: levels)) ?? self
     }
 
     public static func defaultLevel(isLandscape: Bool) -> MediaGridLevel {

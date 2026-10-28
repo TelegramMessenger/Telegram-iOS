@@ -405,6 +405,19 @@ public final class DirectMediaImageCache {
         return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: width, aspectRatio: aspectRatio, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
 
+    public func blurredImmediateThumbnail(media: Media) -> UIImage? {
+        var immediateThumbnailData: Data?
+        if let image = media as? TelegramMediaImage {
+            immediateThumbnailData = image.immediateThumbnailData
+        } else if let file = media as? TelegramMediaFile {
+            immediateThumbnailData = file.immediateThumbnailData
+        }
+        guard let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data) else {
+            return nil
+        }
+        return generateBlurredThumbnail(image: image)
+    }
+
     public func getImage(message: Message, media: Media, width: Int, possibleWidths: [Int], includeBlurred: Bool = false, synchronous: Bool) -> GetMediaResult? {
         if synchronous {
             return self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, aspectRatio: 1.0, possibleWidths: possibleWidths, includeBlurred: includeBlurred)

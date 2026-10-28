@@ -683,6 +683,10 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             self.gridHost.scrollingInitiated = { [weak self] in
                 self?.dismissInput()
             }
+
+            self.gridHost.zoomingStarted = { [weak self] in
+                self?.controller?.requestAttachmentMenuExpansion()
+            }
             
             self.gridHost.contentUnderBarChanged = { [weak self] in
                 guard let self else {

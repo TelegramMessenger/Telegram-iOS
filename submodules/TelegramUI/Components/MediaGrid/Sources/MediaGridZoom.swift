@@ -78,18 +78,21 @@ public struct MediaGridPinchState {
 
     public let startLevel: MediaGridLevel
     public let anchor: MediaGridZoomAnchor
+    private let levels: [MediaGridLevel]
     private let startPosition: CGFloat
     private var scale: CGFloat = 1.0
     private var rawPosition: CGFloat
     private(set) var current: (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat)
 
-    public init(startLevel: MediaGridLevel, anchor: MediaGridZoomAnchor) {
-        self.init(startLevel: startLevel, anchor: anchor, toward: startLevel, startProgress: 0.0)
+    public init(startLevel: MediaGridLevel, anchor: MediaGridZoomAnchor, levels: [MediaGridLevel] = MediaGridLevel.allCases) {
+        self.init(startLevel: startLevel, anchor: anchor, toward: startLevel, startProgress: 0.0, levels: levels)
     }
 
-    init(startLevel: MediaGridLevel, anchor: MediaGridZoomAnchor, toward target: MediaGridLevel, startProgress: CGFloat) {
+    init(startLevel: MediaGridLevel, anchor: MediaGridZoomAnchor, toward target: MediaGridLevel, startProgress: CGFloat, levels: [MediaGridLevel] = MediaGridLevel.allCases) {
         self.startLevel = startLevel
         self.anchor = anchor
+        let sorted = levels.sorted()
+        self.levels = sorted.isEmpty ? MediaGridLevel.allCases.sorted() : sorted
         let from = MediaGridPinchState.position(of: startLevel)
         let to = MediaGridPinchState.position(of: target)
         self.startPosition = from + (to - from) * min(1.25, max(-0.25, startProgress))
@@ -98,18 +101,16 @@ public struct MediaGridPinchState {
         self.current = self.resolve(self.startPosition)
     }
 
-    private static let levels: [MediaGridLevel] = MediaGridLevel.allCases.sorted()
-
     static func position(of level: MediaGridLevel) -> CGFloat {
         return log(CGFloat(level.columns))
     }
 
     private var bounds: (CGFloat, CGFloat) {
-        return (MediaGridPinchState.position(of: MediaGridPinchState.levels[0]), MediaGridPinchState.position(of: MediaGridPinchState.levels[MediaGridPinchState.levels.count - 1]))
+        return (MediaGridPinchState.position(of: self.levels[0]), MediaGridPinchState.position(of: self.levels[self.levels.count - 1]))
     }
 
     private func resolve(_ position: CGFloat) -> (from: MediaGridLevel, to: MediaGridLevel, progress: CGFloat) {
-        let levels = MediaGridPinchState.levels
+        let levels = self.levels
         let start = MediaGridPinchState.position(of: self.startLevel)
         if position > start + MediaGridPinchState.epsilon {
             for index in 1 ..< levels.count {
