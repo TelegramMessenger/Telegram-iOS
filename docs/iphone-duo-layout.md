@@ -141,6 +141,8 @@ These are the user's decisions; a screen that follows them is correct, one that 
 - `UIScreen.main` used for layout while unfolded.
 - `widthClass == .regular` treated as iPad.
 - A 9:16 preview taller than the screen (UP, FP) leaving negative space below it for the bottom controls.
+- Something anchored to that preview's bottom edge, which is under the lifted controls (FP) or below the screen (UP):
+  the dual camera's front preview keeps to the shutter instead (`cameraDualPreviewCenter`).
 - A bottom row lifted by a constant tuned for home-button phones, until the Duo the only phones whose 9:16 preview is
   taller than the screen: measured from the screen edge, it lands on the home indicator. The indicator is
   `layout.intrinsicInsets.bottom` (20pt); the Duo's `safeInsets.bottom` is 0. The story camera keeps its controls above
@@ -171,4 +173,5 @@ other device stays byte-identical; the band helpers above are built that way.
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
   widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
-  flow's content and bottom-button bands per posture).
+  flow's content and bottom-button bands per posture), `//submodules/TelegramUI/Components/CameraScreen:CameraScreenTests`
+  (the story camera's dual-camera front preview: a bottom corner keeps to the shutter, as where the 9:16 viewfinder fits).
