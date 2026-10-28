@@ -83,6 +83,13 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
+`//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
+system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
+picker is presented over an invisible full-screen host that leaves only through the picker's callbacks; with "Unlock with
+Face ID" on for Files, the app resigns active for the prompt and the picker never appears (#40), so the host stayed and
+took every touch. A `UIWindow` cannot be used in this hostless test process: it traps at exit, when UIKit invalidates its
+screen-based scene, so the picker-on-screen case has no test.
+
 `//submodules/TelegramUI/Components/RichTextEditorMediaView:RichTextEditorMediaViewTests` covers
 `MediaChromeLayout`, where the article editor's glass media buttons go: a tile's "…" keeps clear of the
 container's "+" and layout toggle (#28), checked over the real album layouts (`MosaicCellFrames`).

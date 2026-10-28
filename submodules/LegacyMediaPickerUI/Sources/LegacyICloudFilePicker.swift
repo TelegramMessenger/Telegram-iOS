@@ -24,29 +24,101 @@ private class DocumentPickerViewController: UIDocumentPickerViewController {
     }
 }
 
+/// The host's own content: it draws nothing, so a touch that reaches it means the picker is not on top.
+private final class DocumentPickerHostView: UIView {
+    var passesTouchesThrough: (() -> Bool)?
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result === self, let passesTouchesThrough = self.passesTouchesThrough, passesTouchesThrough() {
+            return nil
+        }
+        return result
+    }
+}
+
+private final class DocumentPickerHostViewController: UIViewController {
+    let hostView = DocumentPickerHostView()
+    
+    override func loadView() {
+        self.view = self.hostView
+    }
+}
+
 private final class LegacyICloudFileController: LegacyController, UIDocumentPickerDelegate {
     let completion: ([URL]) -> Void
+    private let pickerPresentation = DocumentPickerPresentation()
+    private var sceneActivationObserver: NSObjectProtocol?
     
     init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, completion: @escaping ([URL]) -> Void) {
         self.completion = completion
         
         super.init(presentation: presentation, theme: theme)
+        
+        // Touches the host view lets through go on to the controllers below.
+        self.hasSparseContainerView = true
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        if let sceneActivationObserver = self.sceneActivationObserver {
+            NotificationCenter.default.removeObserver(sceneActivationObserver)
+        }
+    }
+    
+    func bindHost(_ hostController: DocumentPickerHostViewController) {
+        hostController.hostView.passesTouchesThrough = { [weak self] in
+            guard let self, self.pickerPresentation.isLost else {
+                return false
+            }
+            DispatchQueue.main.async { [weak self] in
+                self?.cancelIfPickerLost()
+            }
+            return true
+        }
+        self.bind(controller: hostController)
+    }
+    
+    func pickerPresentationRequested(_ picker: UIViewController) {
+        self.pickerPresentation.presentationRequested(picker: picker)
+        
+        // A locked Files app makes the app resign active for Face ID while the picker is being presented, and
+        // the picker can be dropped then without a word to its delegate. UIKit settles presentations shortly
+        // after the scene is active again; if the picker is gone by then, the host gives up on it.
+        if self.sceneActivationObserver == nil {
+            self.sceneActivationObserver = NotificationCenter.default.addObserver(forName: UIScene.didActivateNotification, object: nil, queue: .main, using: { [weak self] _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: { [weak self] in
+                    self?.cancelIfPickerLost()
+                })
+            })
+        }
+    }
+    
+    private func cancelIfPickerLost() {
+        if self.pickerPresentation.isLost {
+            self.finish(urls: [])
+        }
+    }
+    
+    private func finish(urls: [URL]) {
+        if self.pickerPresentation.finish() {
+            self.completion(urls)
+        }
+    }
+    
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        self.completion([])
+        self.finish(urls: [])
     }
     
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        self.completion(urls)
+        self.finish(urls: urls)
     }
     
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentAt url: URL) {
-        self.completion([url])
+        self.finish(urls: [url])
     }
 }
 
@@ -103,6 +175,7 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
                 controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                 window.rootViewController?.present(controller, animated: true)
                 legacyController.presentationCompleted = nil
+                legacyController.pickerPresentationRequested(controller)
             }
         }
     }
@@ -113,6 +186,6 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
         }
         dismissed()
     }
-    legacyController.bind(controller: UIViewController())
+    legacyController.bindHost(DocumentPickerHostViewController())
     return legacyController
 }
