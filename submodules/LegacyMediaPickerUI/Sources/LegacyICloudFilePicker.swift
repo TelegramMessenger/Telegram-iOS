@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 import Display
 import TelegramPresentationData
 import LegacyUI
+import TelegramCore
 
 private class DocumentPickerViewController: UIDocumentPickerViewController {
     var forceDarkTheme = false
@@ -104,6 +105,7 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
     
     private func cancelIfPickerLost() {
         if self.pickerPresentation.isLost {
+            Logger.shared.log("LegacyICloudFilePicker", "the document picker is gone without a result, cancelling")
             self.finish(urls: [])
         }
     }

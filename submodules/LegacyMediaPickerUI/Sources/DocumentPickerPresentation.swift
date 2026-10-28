@@ -19,14 +19,14 @@ final class DocumentPickerPresentation {
         self.isRequested = true
     }
 
-    /// Records that the picker's outcome was delivered. Returns false when it already was, so the outcome is
-    /// delivered once even if the delegate calls back after the host gave the picker up.
     /// The picker was on screen and went away. Its delegate may report the pick only after that, and the host
     /// is already leaving, so the picker no longer counts as lost.
     func pickerDidDisappear() {
         self.didDisappear = true
     }
 
+    /// Records that the picker's outcome was delivered. Returns false when it already was, so the outcome is
+    /// delivered once even if the delegate calls back after the host gave the picker up.
     func finish() -> Bool {
         if self.isFinished {
             return false
