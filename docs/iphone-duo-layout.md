@@ -103,6 +103,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
      button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
      of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
      rule 2's exception.
+   - the **text actions that take a hidden button's place** in Settings' 2FA data input ("Can't access your email?",
+     "Re-send Code"): they line up with the fields above them, while the button itself spans the strip
+     (`twoFactorDataInputHorizontalLayout` in PasswordSetupUI). In the login flow they keep to the button's frame, as
+     above.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
    island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
    row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;
@@ -170,5 +174,6 @@ other device stays byte-identical; the band helpers above are built that way.
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
-  widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
+  widths in and outside a chat), `//submodules/PasswordSetupUI:PasswordSetupUITests` (the 2FA data input's
+  bands and its button-row actions per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
   flow's content and bottom-button bands per posture).

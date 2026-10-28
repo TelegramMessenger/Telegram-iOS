@@ -15,7 +15,6 @@ import TelegramCore
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ActivityIndicator
-import AuthorizationUtils
 
 public enum TwoFactorDataInputMode {
     public struct Recovery {
@@ -1897,33 +1896,14 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let contentAreaSize = layout.size
         let availableAreaSize = CGSize(width: layout.size.width, height: layout.size.height - layout.insets(options: [.input]).bottom)
         
-        // The content above the button lays out in the band between the side insets when they differ (iPhone Duo's
-        // side strip: the fields ran under it); across the screen otherwise. In the login flow (password recovery) it
-        // is centered on the full width on the unfolded screen, as the other login screens do (authorizationContentBand).
-        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
-        let bandMinX: CGFloat
-        let bandWidth: CGFloat
-        if self.isAuthorizationFlow {
-            (bandMinX, bandWidth) = authorizationContentBand(layout: layout)
-        } else {
-            bandMinX = insetsDiffer ? layout.safeInsets.left : 0.0
-            bandWidth = insetsDiffer ? contentAreaSize.width - layout.safeInsets.left - layout.safeInsets.right : contentAreaSize.width
-        }
-        // The button and the actions in its rows span iPhone Duo's side strip; they keep clear only of a corner block
-        // at the bottom. In the login flow they keep to the content's axis (authorizationBottomBand): unfolded as
-        // above, folded in the content band.
-        let bottomBandMinX: CGFloat
-        let bottomBandWidth: CGFloat
-        if self.isAuthorizationFlow {
-            (bottomBandMinX, bottomBandWidth) = authorizationBottomBand(layout: layout)
-        } else {
-            let bottomSideInsets = layout.bottomEdgeSideInsets()
-            bottomBandMinX = insetsDiffer ? bottomSideInsets.left : 0.0
-            bottomBandWidth = insetsDiffer ? contentAreaSize.width - bottomSideInsets.left - bottomSideInsets.right : contentAreaSize.width
-        }
-        
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
+        // The bands for iPhone Duo's side strip (twoFactorDataInputHorizontalLayout); across the screen elsewhere.
+        let horizontalLayout = twoFactorDataInputHorizontalLayout(layout: layout, isAuthorizationFlow: self.isAuthorizationFlow, rowSideInset: buttonSideInset)
+        let bandMinX = horizontalLayout.contentMinX
+        let bandWidth = horizontalLayout.contentWidth
+        let bottomBandMinX = horizontalLayout.bottomMinX
+        let bottomBandWidth = horizontalLayout.bottomWidth
         let iconSpacing: CGFloat
         switch self.mode {
         case .passwordHint, .emailConfirmation:
@@ -1955,8 +1935,9 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let titleSize = self.titleNode.updateLayout(CGSize(width: bandWidth - sideInset * 2.0, height: contentAreaSize.height))
         let textSize = self.textNode.updateLayout(CGSize(width: bandWidth - sideInset * 2.0, height: contentAreaSize.height))
         let skipActionSize = self.skipActionTitleNode.updateLayout(CGSize(width: bottomBandWidth - sideInset * 2.0, height: contentAreaSize.height))
-        let changeEmailActionSize = self.changeEmailActionTitleNode.updateLayout(CGSize(width: bottomBandWidth - sideInset * 2.0, height: contentAreaSize.height))
-        let resendCodeActionSize = self.resendCodeActionTitleNode.updateLayout(CGSize(width: bottomBandWidth - sideInset * 2.0, height: contentAreaSize.height))
+        let actionsTextWidth = horizontalLayout.actionsWidth + (buttonSideInset - sideInset) * 2.0
+        let changeEmailActionSize = self.changeEmailActionTitleNode.updateLayout(CGSize(width: actionsTextWidth, height: contentAreaSize.height))
+        let resendCodeActionSize = self.resendCodeActionTitleNode.updateLayout(CGSize(width: actionsTextWidth, height: contentAreaSize.height))
         
         var calculatedContentHeight = iconSize.height + iconSpacing + titleSize.height
         if textSize.width.isZero {
@@ -2072,15 +2053,17 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let changeEmailActionButtonFrame: CGRect
         let resendCodeActionFrame: CGRect
         let resendCodeActionButtonFrame: CGRect
-        if changeEmailActionSize.width + resendCodeActionSize.width > bottomBandWidth - (buttonFrame.minX - bottomBandMinX) * 2.0 - 32.0 {
-            changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
+        // The actions take the button's place, in the fields' row (the button's frame in the login flow).
+        let actionsFrame = CGRect(origin: CGPoint(x: horizontalLayout.actionsMinX, y: buttonFrame.minY), size: CGSize(width: horizontalLayout.actionsWidth, height: buttonFrame.height))
+        if changeEmailActionSize.width + resendCodeActionSize.width > actionsFrame.width - 32.0 {
+            changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: actionsFrame.minX, y: actionsFrame.minY), size: CGSize(width: actionsFrame.width, height: actionsFrame.height))
             changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX + floor((changeEmailActionButtonFrame.width - changeEmailActionSize.width) / 2.0), y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
-            resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.maxY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
+            resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: actionsFrame.minX, y: actionsFrame.maxY), size: CGSize(width: actionsFrame.width, height: actionsFrame.height))
             resendCodeActionFrame = CGRect(origin: CGPoint(x: resendCodeActionButtonFrame.minX + floor((resendCodeActionButtonFrame.width - resendCodeActionSize.width) / 2.0), y: resendCodeActionButtonFrame.minY + floor((resendCodeActionButtonFrame.height - resendCodeActionSize.height) / 2.0)), size: resendCodeActionSize)
         } else {
-            changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: floor(buttonFrame.width / 2.0), height: buttonFrame.height))
+            changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: actionsFrame.minX, y: actionsFrame.minY), size: CGSize(width: floor(actionsFrame.width / 2.0), height: actionsFrame.height))
             changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX, y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
-            resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.maxX - floor(buttonFrame.width / 2.0), y: buttonFrame.minY), size: CGSize(width: floor(buttonFrame.width / 2.0), height: buttonFrame.height))
+            resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: actionsFrame.maxX - floor(actionsFrame.width / 2.0), y: actionsFrame.minY), size: CGSize(width: floor(actionsFrame.width / 2.0), height: actionsFrame.height))
             resendCodeActionFrame = CGRect(origin: CGPoint(x: resendCodeActionButtonFrame.maxX - resendCodeActionSize.width, y: resendCodeActionButtonFrame.minY + floor((resendCodeActionButtonFrame.height - resendCodeActionSize.height) / 2.0)), size: resendCodeActionSize)
         }
         
