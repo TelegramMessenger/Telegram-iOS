@@ -1476,8 +1476,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             let contentHeight: CGFloat
-            if self.actionsStackNode.topPositionLock != nil || self.currentReactionsPositionLock != nil {
+            if self.currentReactionsPositionLock != nil {
                 contentHeight = layout.size.height
+            } else if self.actionsStackNode.topPositionLock != nil {
+                // A pushed submenu keeps the top of the menu it replaced. When it is taller than the space below that
+                // (a long list of albums, say), extend the content past the screen as for an unlocked menu, so the
+                // scroller can reach its bottom items. A submenu that fits keeps the screen height.
+                contentHeight = max(layout.size.height, combinedActionsFrame.maxY + bottomInset + layout.intrinsicInsets.bottom)
             } else if actionsTopOverflow > 0.0 {
                 contentHeight = layout.size.height + actionsTopOverflow
             } else {
