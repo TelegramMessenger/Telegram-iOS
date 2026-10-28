@@ -1830,6 +1830,13 @@ final class CaptureControlsComponent: Component {
                 
                 transition.setScale(view: bottomSettingsButtonView, scale: hidesBottomSettingsButton ? 0.01 : 1.0)
                 transition.setAlpha(view: bottomSettingsButtonView, alpha: hidesBottomSettingsButton ? 0.0 : 1.0)
+                // Out of the accessibility tree while it is scaled out (its inner button was still listed under the hidden
+                // glass view); shown again before it animates in. No visual change: it is transparent then.
+                if !hidesBottomSettingsButton {
+                    bottomSettingsButtonView.isHidden = false
+                } else if transition.animation.isImmediate {
+                    bottomSettingsButtonView.isHidden = true
+                }
                 self.bottomSettingsButtonUnderlay = self.updateBottomButtonUnderlay(self.bottomSettingsButtonUnderlay, frame: bottomSettingsButtonFrame.offsetBy(dx: self.bottomContainerView.frame.minX, dy: self.bottomContainerView.frame.minY), isHidden: hidesBottomSettingsButton || self.isHandedOffToEditor, transition: transition)
             }
             

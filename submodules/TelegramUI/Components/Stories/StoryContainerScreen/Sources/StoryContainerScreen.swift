@@ -1257,15 +1257,31 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
 
+        /// Where the sideways swipe between authors is allowed (`horizontalPanRecognizer`'s directions): not while the
+        /// interaction guide or the viewers sheet is up; under VoiceOver also not while the story's tap would first close
+        /// something (the reaction picker, the keyboard), which escape closes. Evaluated when VoiceOver asks.
+        private func accessibilityAllowsPeerSwipe() -> Bool {
+            guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                return false
+            }
+            if self.isDisplayingInteractionGuide || self.itemSetPanState != nil {
+                return false
+            }
+            if !itemSetComponentView.allowsInteractiveGestures() || !itemSetComponentView.storyAccessibilityCanNavigate() {
+                return false
+            }
+            return true
+        }
+        
         func accessibilityNeighbourPeers() -> (previous: EnginePeer?, next: EnginePeer?) {
-            guard let stateValue = self.stateValue, stateValue.slice != nil else {
+            guard let stateValue = self.stateValue, stateValue.slice != nil, self.accessibilityAllowsPeerSwipe() else {
                 return (nil, nil)
             }
             return (stateValue.previousSlice?.peer, stateValue.nextSlice?.peer)
         }
         
         func accessibilityNavigatePeer(next: Bool) -> Bool {
-            guard let stateValue = self.stateValue, stateValue.slice != nil, self.itemSetPanState == nil else {
+            guard let stateValue = self.stateValue, stateValue.slice != nil, self.accessibilityAllowsPeerSwipe() else {
                 return false
             }
             // The path `navigate(direction:)` takes past either end of an author's stories: a completed sideways swipe.

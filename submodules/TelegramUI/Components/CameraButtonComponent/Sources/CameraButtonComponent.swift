@@ -139,6 +139,23 @@ public final class CameraButton: Component {
             self.component?.longTapAction?()
         }
         
+        /// VoiceOver: the long press (the flash's tint, for one) as a "More" action, offered while the long press is.
+        override public var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+            get {
+                guard let component = self.component, component.longTapAction != nil, component.isEnabled else {
+                    return nil
+                }
+                return [UIAccessibilityCustomAction(name: ComponentAccessibilityStrings.more, actionHandler: { [weak self] _ in
+                    guard let self, let longTapAction = self.component?.longTapAction else {
+                        return false
+                    }
+                    longTapAction()
+                    return true
+                })]
+            } set(value) {
+            }
+        }
+        
         @objc private func pressed() {
             self.component?.action()
         }

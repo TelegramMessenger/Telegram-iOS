@@ -686,6 +686,8 @@ private final class ContextControllerActionsListSeparatorItemNode: ASDisplayNode
         
         super.init()
         
+        // A divider between groups of items, not content.
+        self.separatorView.accessibilityElementsHidden = true
         self.view.addSubview(self.separatorView)
     }
     

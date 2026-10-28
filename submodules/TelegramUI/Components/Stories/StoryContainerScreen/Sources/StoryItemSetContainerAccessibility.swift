@@ -3,10 +3,11 @@ import UIKit
 import Display
 import TelegramCore
 
-/// The story being shown, as one VoiceOver element: what it is (photo, video) and its place in the author's stories
-/// ("Story 2 of 5"). Swiping up or down moves to the next or previous story exactly as tapping the right or left part
-/// of the screen does (past the last story that is the next author's first one); the custom actions switch authors as
-/// the sideways swipe does. Double tap does nothing: the sighted tap on the story is the navigation above.
+/// The story being shown, as one VoiceOver element: whose it is and what it is ("Alice, Photo") and its place in the
+/// author's stories ("Story 2 of 5"). Swiping up or down moves to the next or previous story where the right or left
+/// tap would (past the last story that is the next author's first one; see `storyAccessibilityNavigate`); the custom
+/// actions switch authors where the sideways swipe would. Double tap does nothing: the sighted tap on the story is the
+/// navigation above.
 final class StoryPagerAccessibilityElement: UIAccessibilityElement {
     weak var owner: StoryItemSetContainerComponent.View?
 
@@ -45,11 +46,11 @@ final class StoryPagerAccessibilityElement: UIAccessibilityElement {
     }
 
     override func accessibilityIncrement() {
-        self.owner?.storyAccessibilityNavigate(next: true)
+        self.owner?.storyAccessibilityNavigateAndFocus(next: true)
     }
 
     override func accessibilityDecrement() {
-        self.owner?.storyAccessibilityNavigate(next: false)
+        self.owner?.storyAccessibilityNavigateAndFocus(next: false)
     }
 
     override func accessibilityActivate() -> Bool {
@@ -59,9 +60,11 @@ final class StoryPagerAccessibilityElement: UIAccessibilityElement {
 
 /// The story viewer's author pager (`StoryContainerScreenComponent.View`), as the shown story's element uses it.
 protocol StoryAccessibilityPeerNavigating: AnyObject {
-    /// The authors a sideways swipe would move to.
+    /// The authors a sideways swipe would move to now: none while the swipe is not allowed (the interaction guide or
+    /// the viewers sheet is up).
     func accessibilityNeighbourPeers() -> (previous: EnginePeer?, next: EnginePeer?)
-    /// Moves to the next or previous author as the sideways swipe does; `false` when there is none.
+    /// Moves to the next or previous author as the sideways swipe does; `false` when there is none or when the swipe
+    /// is not allowed now (the interaction guide or the viewers sheet is up).
     func accessibilityNavigatePeer(next: Bool) -> Bool
     /// Moves VoiceOver focus to the story shown once a navigation has settled.
     func accessibilityFocusShownStory()
@@ -91,9 +94,14 @@ extension StoryItemSetContainerComponent.View {
 
         var elements: [Any] = []
 
+        var reactionPickerView: UIView?
         if let reactionContextNode = self.reactionContextNode, let view = isShown(reactionContextNode.view) {
-            // The reaction picker covers the story: only it is read until it closes.
-            return [view]
+            if self.displayLikeReactions {
+                // The picker opened from Like covers the story and takes every tap until it closes (escape closes it).
+                return [view]
+            }
+            // The quick reactions shown over the focused, empty reply field: read with the field, before it.
+            reactionPickerView = view
         }
 
         if self.viewListDisplayState == .hidden {
@@ -130,6 +138,9 @@ extension StoryItemSetContainerComponent.View {
             if let view = isShown(self.visibleItems[component.slice.item.id]?.footerPanel?.view) {
                 elements.append(view)
             }
+            if let reactionPickerView {
+                elements.append(reactionPickerView)
+            }
             if let view = isShown(self.inputPanel.view) {
                 elements.append(view)
             }
@@ -147,12 +158,21 @@ extension StoryItemSetContainerComponent.View {
         guard let component = self.component else {
             return nil
         }
+        let kind: String
         switch component.slice.item.storyItem.media {
         case .image:
-            return component.strings.VoiceOver_Chat_Photo
+            kind = component.strings.VoiceOver_Chat_Photo
         default:
-            return component.strings.VoiceOver_Chat_Video
+            kind = component.strings.VoiceOver_Chat_Video
         }
+        // The author as the header names it, so a move to another author's story says whose it is.
+        let author: String
+        if component.slice.effectivePeer.id == component.context.account.peerId {
+            author = component.strings.Story_HeaderYourStory
+        } else {
+            author = component.slice.effectivePeer.compactDisplayTitle
+        }
+        return author + ", " + kind
     }
 
     func storyAccessibilityPosition() -> String? {
@@ -178,18 +198,23 @@ extension StoryItemSetContainerComponent.View {
         guard let component = self.component, let visibleItem = self.visibleItems[component.slice.item.id], visibleItem.contentContainerView.window != nil else {
             return self.bounds
         }
-        return visibleItem.contentContainerView.convert(visibleItem.contentContainerView.bounds, to: self)
+        var frame = visibleItem.contentContainerView.convert(visibleItem.contentContainerView.bounds, to: self)
+        // Below the header's controls, which lie over the story's top, so touch exploration finds them.
+        if self.viewListDisplayState == .hidden, self.closeButton.alpha >= 0.01 {
+            let headerMaxY = self.closeButton.convert(self.closeButton.bounds, to: self).maxY
+            if headerMaxY > frame.minY && headerMaxY < frame.maxY {
+                frame.size.height -= headerMaxY - frame.minY
+                frame.origin.y = headerMaxY
+            }
+        }
+        return frame
     }
 
-    func storyAccessibilityNavigate(next: Bool) {
-        guard let component = self.component else {
-            return
-        }
-        // The same entry point as the tap zones on the story (`tapGesture`): past either end it moves to the next or
-        // previous author, or closes the viewer after the last one.
+    func storyAccessibilityNavigateAndFocus(next: Bool) {
         let containerView = self.storyContainerView()
-        component.navigate(next ? .next : .previous)
-        containerView?.accessibilityFocusShownStory()
+        if self.storyAccessibilityNavigate(next: next) {
+            containerView?.accessibilityFocusShownStory()
+        }
     }
 
     func storyAccessibilityPeerActions() -> [UIAccessibilityCustomAction]? {
@@ -229,7 +254,7 @@ extension StoryItemSetContainerComponent.View {
         }
         return nil
     }
-    
+
     /// The story element, created when VoiceOver first asks for it.
     func storyAccessibilityFocusElement() -> StoryPagerAccessibilityElement {
         if let current = self.storyPagerAccessibilityElement {

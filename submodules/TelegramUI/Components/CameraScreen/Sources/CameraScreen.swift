@@ -3195,8 +3195,10 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.containerView.addSubview(self.transitionDimView)
             self.view.addSubview(self.transitionCornersView)
             // VoiceOver: the camera picture and the transition decorations are not read (as in the QR scanner); the
-            // controls over them are.
-            self.previewContainerView.accessibilityElementsHidden = true
+            // controls over them are, and so are the detected-code frame and the collage tiles beside the picture.
+            self.mainPreviewContainerView.accessibilityElementsHidden = true
+            self.additionalPreviewContainerView.accessibilityElementsHidden = true
+            self.previewBlurView.accessibilityElementsHidden = true
             self.transitionCornersView.accessibilityElementsHidden = true
             self.backgroundView.accessibilityElementsHidden = true
             

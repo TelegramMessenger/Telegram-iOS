@@ -549,6 +549,20 @@ public final class MessageInputActionButtonComponent: Component {
             self.button.accessibilityValue = accessibilityValue
             self.button.accessibilityTraits = accessibilityTraits
             self.button.view.accessibilityElementsHidden = accessibilityLabel == nil
+            // The long press (Like's reaction picker, Send's options) as a "More" action, while the long press is on.
+            if component.longPressAction != nil && accessibilityLabel != nil {
+                if self.button.accessibilityCustomActions == nil {
+                    self.button.accessibilityCustomActions = [UIAccessibilityCustomAction(name: component.strings.Common_More, actionHandler: { [weak self] _ in
+                        guard let self, let longPressAction = self.component?.longPressAction else {
+                            return false
+                        }
+                        longPressAction(self.button.view, nil)
+                        return true
+                    })]
+                }
+            } else {
+                self.button.accessibilityCustomActions = nil
+            }
             
             var sendAlpha: CGFloat = 0.0
             var microphoneAlpha: CGFloat = 0.0

@@ -17309,3 +17309,6 @@ Error: %8$@";
 "VoiceOver.MessageInput.Timer" = "Timer";
 "VoiceOver.MediaEditor.Adjustments" = "Adjustments";
 "VoiceOver.MediaEditor.Rotate" = "Rotate";
+"VoiceOver.Reactions.ShowAll" = "Show All Reactions";
+"VoiceOver.Reactions.Stars" = "Star Reaction";
+"VoiceOver.Reactions.Premium" = "Premium Reactions";

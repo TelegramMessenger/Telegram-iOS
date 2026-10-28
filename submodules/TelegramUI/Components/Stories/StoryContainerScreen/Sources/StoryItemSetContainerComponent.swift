@@ -361,6 +361,8 @@ public final class StoryItemSetContainerComponent: Component {
         var isBuffering: Bool = false
         var customSubtitle: String?
         var requestedNext: Bool = false
+        /// Under VoiceOver the story stays at its end instead of moving on; its timer is paused there.
+        var isHeldAtEndForAccessibility: Bool = false
         var footerPanel: ComponentView<Empty>?
         
         init() {
@@ -552,6 +554,78 @@ public final class StoryItemSetContainerComponent: Component {
                 return self.storyAccessibilityElements()
             } set(value) {
             }
+        }
+        
+        /// VoiceOver's escape (two-finger scrub) closes what a tap outside closes, in the order `tapGesture` checks
+        /// them: the reaction picker, the active input, the viewers sheet, an expanded caption; otherwise the viewer, as
+        /// the Close button does.
+        public override func accessibilityPerformEscape() -> Bool {
+            guard self.component != nil else {
+                return false
+            }
+            if self.displayLikeReactions {
+                self.displayLikeReactions = false
+                self.sendMessageContext.currentInputMode = .text
+                self.willDismissReactionContextNode = self.reactionContextNode
+                if hasFirstResponder(self) {
+                    self.endEditing(true)
+                }
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                self.updateIsProgressPaused()
+            } else if self.hasActiveDeactivateableInput() {
+                Queue.mainQueue().justDispatch {
+                    self.deactivateInput()
+                }
+            } else if let captionItem = self.captionItem, (captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText), let captionItemView = captionItem.view.view as? StoryContentCaptionComponent.View {
+                if captionItem.externalState.isSelectingText {
+                    captionItemView.cancelTextSelection()
+                } else {
+                    captionItemView.collapse(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
+                }
+            } else {
+                // With the viewers sheet up this collapses it; otherwise it closes the viewer.
+                self.closePressed()
+            }
+            return true
+        }
+        
+        /// Whether the story element's swipe up/down may move between stories now. It may where a sighted tap or the
+        /// viewers-sheet carousel swipe would navigate, and not while the tap would first close something (the reaction
+        /// picker, the keyboard or input panel, an expanded caption) or while the viewers sheet is fully expanded:
+        /// escape closes those first. Evaluated when VoiceOver asks.
+        func storyAccessibilityCanNavigate() -> Bool {
+            if self.displayLikeReactions || self.hasActiveDeactivateableInput() || self.viewListDisplayState == .full {
+                return false
+            }
+            if let captionItem = self.captionItem, captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText {
+                return false
+            }
+            return true
+        }
+        
+        /// The story element's swipe up (`next`) or down. With the viewers sheet at half height it moves within this
+        /// author's stories as the sheet's sideways carousel swipe does (`viewListPanGesture`); otherwise it makes the final
+        /// call of the right/left tap zones (`tapGesture`), so past either end it moves to the next or previous author, or
+        /// closes the viewer after the last.
+        func storyAccessibilityNavigate(next: Bool) -> Bool {
+            guard let component = self.component, self.storyAccessibilityCanNavigate() else {
+                return false
+            }
+            if self.viewListDisplayState == .half {
+                guard let currentIndex = component.slice.allItems.firstIndex(where: { $0.id == component.slice.item.id }) else {
+                    return false
+                }
+                let targetIndex = next ? currentIndex + 1 : currentIndex - 1
+                guard targetIndex >= 0 && targetIndex < component.slice.allItems.count else {
+                    return false
+                }
+                let targetItem = component.slice.allItems[targetIndex]
+                self.animateNextNavigationId = targetItem.id
+                component.navigate(.id(targetItem.id))
+                return true
+            }
+            component.navigate(next ? .next : .previous)
+            return true
         }
         
         override init(frame: CGRect) {
@@ -910,6 +984,10 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
                 itemView.rewind()
+            }
+            if visibleItem.isHeldAtEndForAccessibility {
+                visibleItem.isHeldAtEndForAccessibility = false
+                self.updateIsProgressPaused()
             }
         }
         
@@ -1468,6 +1546,9 @@ public final class StoryItemSetContainerComponent: Component {
             if component.pinchState != nil {
                 return .pause
             }
+            if let visibleItem = self.visibleItems[component.slice.item.id], visibleItem.isHeldAtEndForAccessibility {
+                return .pause
+            }
             if self.verticalPanState != nil {
                 return .pause
             }
@@ -1647,12 +1728,21 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 // Under VoiceOver a story does not move on by itself when its time is up: reading the
-                                // header, caption and reply row takes longer than a story lasts. The story element's
-                                // swipe up moves on (StoryItemSetContainerAccessibility.swift).
-                                if progress >= 1.0 && canSwitch && !visibleItem.requestedNext && !isVoiceOverRunningForLayout {
-                                    visibleItem.requestedNext = true
-                                    
-                                    component.navigate(.next)
+                                // header, caption and reply row takes longer than a story lasts. It is held (paused) at its
+                                // end; the story element's swipe up moves on (StoryItemSetContainerAccessibility.swift).
+                                // DEBUG builds launched with `--force-voiceover-layout` behave the same for sighted use.
+                                // If VoiceOver is turned off while a story is held, a tap moves on.
+                                if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
+                                    if isVoiceOverRunningForLayout {
+                                        if !visibleItem.isHeldAtEndForAccessibility {
+                                            visibleItem.isHeldAtEndForAccessibility = true
+                                            self.updateIsProgressPaused()
+                                        }
+                                    } else {
+                                        visibleItem.requestedNext = true
+                                        
+                                        component.navigate(.next)
+                                    }
                                 }
                             }
                         },
@@ -2748,6 +2838,8 @@ public final class StoryItemSetContainerComponent: Component {
             if self.component?.slice.item.id != component.slice.item.id {
                 isFirstItem = self.component == nil
                 itemChanged = self.component != nil
+                // A story shown again starts its time again, so it is not held at its end any more.
+                self.visibleItems[component.slice.item.id]?.isHeldAtEndForAccessibility = false
                 self.initializedOffset = false
                 
                 resetInputContents = .text(NSAttributedString())
