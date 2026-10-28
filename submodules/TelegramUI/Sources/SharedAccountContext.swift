@@ -1558,8 +1558,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callUnlockVideoNotificationDisposable = (combineLatest(queue: .mainQueue(),
             call.state,
             self.applicationBindings.applicationInForeground
-        )
-        |> deliverOnMainQueue).startStrict(next: { [weak self] callState, applicationInForeground in
+        )).startStrict(next: { [weak self] callState, applicationInForeground in
             self?.updateCallUnlockVideoNotificationState { state in
                 state.update(callState: callState.state, applicationInForeground: applicationInForeground)
             }
@@ -1616,6 +1615,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     return
                 }
                 
+                // No sound: the call is already in progress.
                 let content = UNMutableNotificationContent()
                 content.body = text
                 content.userInfo = [CallUnlockVideoNotificationState.userInfoKey: internalId.uuidString]

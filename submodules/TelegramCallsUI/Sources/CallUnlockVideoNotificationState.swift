@@ -8,6 +8,9 @@ import AccountContext
 /// to unlock and open Telegram's call screen. It is shown once, `postDelay` after the answer, because
 /// answering a video call on an unlocked device brings the app to the foreground by itself, and taken
 /// down when the call ends or the app comes to the foreground.
+///
+/// "In the background" stands for "locked", which iOS does not report: an answer that never brings
+/// the app forward on an unlocked device (headset, Apple Watch, CarPlay) posts it too.
 public struct CallUnlockVideoNotificationState: Equatable {
     public enum Phase: Equatable {
         case awaitingAnswer
