@@ -171,6 +171,16 @@ The three approaches already known not to fix the released state:
 false mid-animation, the chat nils `pinToTopStableId`, and the `lowestPinnedItemIndex == nil` release fires
 — permanently.
 
+#### Stacking from the bottom (`stacksFromBottom`)
+
+`ListViewImpl.stackFromBottom` for a non-rotated host (the chat's inline bot results list): a whole collection that fits
+between the insets rests on the BOTTOM inset edge. One slack, `stackFromBottomSlack` (`max(0, bottom edge − top edge −
+window height)`, zero unless the whole collection is loaded), is folded into `buildWindow`'s whole-collection placement
+(`placeWholeCollection`, also wherever the anchor left a fitting window: a row that grew can push the last one past the
+bottom edge) and `loadedEdgeRange`'s minimum, as `max` with the pin's slack. For a collection that fits that minimum is
+exactly the natural maximum, so the scroll range is the one resting offset. Set it before the first rows: a pass measures
+the old placement with the current value. `StackFromBottomTests`.
+
 #### The scroll hold (`CoreListScrollHold`)
 
 A `scrollTo` may carry a hold: a visible-area edge (`topInset`, `bottomInset`, `visibleCenter`) and a point
@@ -234,8 +244,8 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
   — the default, used instead of `convert(_:from:)`. `settledFrame(of:)` is where it WILL BE; only for
   reporting a just-submitted pass's outcome alongside its transition. Both are ancestor-path-agnostic. See "Content offsets" in
   `docs/chat/corelist-chat-history-backend.md`.
-- `CoreListItemView.visibleRectUpdated(_:)`: the row's part of the FULL viewport (insets count), in its own
-  coordinates, or `nil`; fired after the final offset is installed in `applyChanges`/`rebuildFromScratch`
+- `CoreListItemView.visibleRectUpdated(_:)`: the row's part of the FULL viewport (insets count; `visibleRectInsets`
+  ends the band sooner, for a list running on under the keyboard), in its own coordinates, or `nil`; fired after the final offset is installed in `applyChanges`/`rebuildFromScratch`
   and at the end of `handleUserScroll` (settled frames at the live offset; an animated move reports the
   destination). Don't publish from `render()` (old offset). Departures get `nil` via weak refs to the
   last-visible views. Default no-op; `CoreListNodeHostView` maps it to `ListViewItemNode.visibility`.
