@@ -270,7 +270,6 @@ private final class PeerWalletOverlayComponent: Component {
             CATransaction.setDisableActions(true)
             defer { CATransaction.commit() }
             let p = max(0.0, min(1.0, self.progress))
-            let motion = !UIAccessibility.isReduceMotionEnabled
             let dismissing = self.isDismissing
             let backgroundAlpha = self.backgroundHidden ? 0.0 : self.backgroundProgress
             self.blurView.alpha = backgroundAlpha
@@ -297,7 +296,7 @@ private final class PeerWalletOverlayComponent: Component {
                 let elapsed = time - impact
                 return 1.0 + arrival * lag / ((impact - hold) * ringRate) * exp(-ringDamping * elapsed) * sin(ringRate * elapsed) * tail
             }
-            if motion, self.usesFlight, let source = self.sourceFrame {
+            if self.usesFlight, let source = self.sourceFrame {
                 let halfWidth = self.cardFrame.width * 0.5
                 let halfHeight = self.cardFrame.height * 0.5
                 let corners = [CGPoint(x: -halfWidth, y: -halfHeight), CGPoint(x: halfWidth, y: -halfHeight), CGPoint(x: halfWidth, y: halfHeight), CGPoint(x: -halfWidth, y: halfHeight)]
@@ -408,8 +407,8 @@ private final class PeerWalletOverlayComponent: Component {
             card.updateScrollTransform(transform)
             if let button = self.sendButton.view {
                 let buttonProgress = self.usesFlight ? flight(p - (dismissing ? 0.0 : 0.06), start: 2.4, arrival: 0.25) : 1.0 - pow(1.0 - min(1.0, p / 0.77), 3.0)
-                button.center = CGPoint(x: self.buttonFrame.midX, y: self.buttonFrame.midY + (motion ? (self.animationSize.height - self.buttonFrame.minY + 8.0) * (1.0 - buttonProgress) : 0.0))
-                button.alpha = motion ? 1.0 : p
+                button.center = CGPoint(x: self.buttonFrame.midX, y: self.buttonFrame.midY + (self.animationSize.height - self.buttonFrame.minY + 8.0) * (1.0 - buttonProgress))
+                button.alpha = 1.0
             }
         }
 
@@ -470,12 +469,12 @@ private final class PeerWalletOverlayComponent: Component {
         private func beginPendingAnimation() {
             guard self.pendingAnimateIn, self.window != nil, !self.bounds.isEmpty, !self.cardFrame.isEmpty else { return }
             self.pendingAnimateIn = false
-            self.usesFlight = !UIAccessibility.isReduceMotionEnabled && self.prepareShutter(initialSource: self.initialSource)
+            self.usesFlight = self.prepareShutter(initialSource: self.initialSource)
             self.initialSource = nil
             self.applyProgress()
             self.alpha = 1.0
             self.isDismissing = false
-            self.animate(to: 1.0, duration: UIAccessibility.isReduceMotionEnabled ? 0.25 : (self.usesFlight ? 0.79 : 0.65), completion: { [weak self] in
+            self.animate(to: 1.0, duration: self.usesFlight ? 0.79 : 0.65, completion: { [weak self] in
                 self?.setNoticeVisible(true, duration: 0.2)
             })
         }
@@ -490,7 +489,7 @@ private final class PeerWalletOverlayComponent: Component {
             self.initialSource = nil
             self.isUserInteractionEnabled = false
             self.setNoticeVisible(false, duration: 0.06)
-            if !UIAccessibility.isReduceMotionEnabled && self.prepareShutter() {
+            if self.prepareShutter() {
                 self.usesFlight = true
                 self.isDismissing = self.progress >= 1.0
                 self.applyProgress()
@@ -500,7 +499,7 @@ private final class PeerWalletOverlayComponent: Component {
                 self.animator?.invalidate()
                 self.animator = nil
                 self.restoreSource()
-                if !UIAccessibility.isReduceMotionEnabled, let button = self.sendButton.view {
+                if let button = self.sendButton.view {
                     button.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: self.animationSize.height - button.frame.minY + 8.0), duration: 0.15, removeOnCompletion: false, additive: true)
                 }
                 self.alpha = 0.0
