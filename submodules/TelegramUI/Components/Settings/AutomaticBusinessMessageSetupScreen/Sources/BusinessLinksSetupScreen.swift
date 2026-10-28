@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -344,8 +343,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "MessageLinkEmoji"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)

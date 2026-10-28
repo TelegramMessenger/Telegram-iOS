@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -258,7 +257,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
             if let current = self.animatedStickerNode {
                 animatedStickerNode = current
             } else {
-                animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
+                animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 animatedStickerNode.started = { [weak self] in
                     self?.emojiImageNode.isHidden = true
                 }

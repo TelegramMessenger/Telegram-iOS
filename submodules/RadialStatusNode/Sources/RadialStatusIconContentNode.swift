@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -36,7 +35,7 @@ final class RadialStatusIconContentNode: RadialStatusContentNode {
         self.isOpaque = false
         
         if case .timeout = icon {
-            let animationNode = FireIconNode(animate: true, lottieSettings: .noAccountFallback)
+            let animationNode = FireIconNode(animate: true)
             self.animationNode = animationNode
             self.addSubnode(animationNode)
         }

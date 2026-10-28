@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -77,8 +76,7 @@ final class PlaceholderComponent: Component {
             let animationSize = self.animation.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "Photos"),
-                    lottieSettings: component.context.lottieRenderingSettings
+                    content: LottieComponent.AppBundleContent(name: "Photos")
                 )),
                 environment: {},
                 containerSize: CGSize(width: animationHeight, height: animationHeight)

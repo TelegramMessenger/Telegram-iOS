@@ -12,7 +12,6 @@ swift_library(
     deps = [
         "//submodules/ShimmerEffect",
         "//submodules/AsyncDisplayKit",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/Display",
         "//submodules/ComponentFlow",

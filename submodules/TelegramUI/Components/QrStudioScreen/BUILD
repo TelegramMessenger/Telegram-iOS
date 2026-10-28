@@ -64,7 +64,6 @@ swift_library(
         "//submodules/DeviceAccess",
         "//submodules/WallpaperResources",
         "//submodules/LottieBinding",
-        "//submodules/LottieSettings",
         "//submodules/GZip",
         "//submodules/AppBundle",
         "//submodules/WallpaperBackgroundNode",

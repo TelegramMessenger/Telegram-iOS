@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -111,7 +110,7 @@ final class TrendingTopItemNode: ASDisplayNode {
         }
     }
     
-    func setup(account: Account, item: StickerPackItem, itemSize: CGSize, synchronousLoads: Bool, lottieSettings: LottieRenderingSettings) {
+    func setup(account: Account, item: StickerPackItem, itemSize: CGSize, synchronousLoads: Bool) {
         let file = item.file._parse()
         self.file = file
         self.itemSize = itemSize
@@ -121,7 +120,7 @@ final class TrendingTopItemNode: ASDisplayNode {
             if let currentAnimationNode = self.animationNode {
                 animationNode = currentAnimationNode
             } else {
-                animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+                animationNode = DefaultAnimatedStickerNodeImpl()
                 animationNode.transform = self.imageNode.transform
                 animationNode.visibility = self.visibility
                 self.animationNode = animationNode

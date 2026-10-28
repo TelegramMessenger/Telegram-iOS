@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1223,8 +1222,7 @@ public final class ListComposePollOptionComponent: Component {
                                 name: animationName
                             ),
                             color: component.theme.chat.inputPanel.inputControlColor.blitOver(component.theme.list.itemBlocksBackgroundColor, alpha: 1.0),
-                            size: modeSelectorSize,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            size: modeSelectorSize
                         )),
                         effectAlignment: .center,
                         action: { [weak self] in

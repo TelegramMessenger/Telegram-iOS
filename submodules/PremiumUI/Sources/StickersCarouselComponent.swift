@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -109,8 +108,8 @@ private class StickerNode: ASDisplayNode {
         self.imageNode = TransformImageNode()
     
         if file.isPremiumSticker || forceIsPremium {
-            let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
-            //let animationNode = DirectAnimatedStickerNode(lottieSettings: self.context.lottieRenderingSettings)
+            let animationNode = DefaultAnimatedStickerNodeImpl()
+            //let animationNode = DirectAnimatedStickerNode()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             
@@ -131,7 +130,7 @@ private class StickerNode: ASDisplayNode {
                 
                 let additionalAnimationNode: AnimatedStickerNode
                 
-                additionalAnimationNode = DirectAnimatedStickerNode(lottieSettings: self.context.lottieRenderingSettings)
+                additionalAnimationNode = DirectAnimatedStickerNode()
                 
                 var pathPrefix: String?
                 pathPrefix = context.engine.resources.shortLivedResourceCachePathPrefix(id: EngineMediaResource.Id(effect.resource.id))

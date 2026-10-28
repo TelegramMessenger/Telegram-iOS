@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -158,14 +157,14 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
     
     public var success: ((Bool) -> Void)?
     
-    public init(account: Account, size: CGSize = CGSize(width: 184.0, height: 184.0), lottieSettings: LottieRenderingSettings) {
+    public init(account: Account, size: CGSize = CGSize(width: 184.0, height: 184.0)) {
         self.animationSize = size
-        self.backNode = ManagedAnimationNode(size: self.animationSize, lottieSettings: lottieSettings)
+        self.backNode = ManagedAnimationNode(size: self.animationSize)
         let reelSize = CGSize(width: 384.0, height: 384.0)
-        self.leftReelNode = DiceAnimatedStickerNode(account: account, size: reelSize, lottieSettings: lottieSettings)
-        self.centerReelNode = DiceAnimatedStickerNode(account: account, size: reelSize, lottieSettings: lottieSettings)
-        self.rightReelNode = DiceAnimatedStickerNode(account: account, size: reelSize, lottieSettings: lottieSettings)
-        self.frontNode = ManagedAnimationNode(size: self.animationSize, lottieSettings: lottieSettings)
+        self.leftReelNode = DiceAnimatedStickerNode(account: account, size: reelSize)
+        self.centerReelNode = DiceAnimatedStickerNode(account: account, size: reelSize)
+        self.rightReelNode = DiceAnimatedStickerNode(account: account, size: reelSize)
+        self.frontNode = ManagedAnimationNode(size: self.animationSize)
         
         super.init()
         
@@ -262,14 +261,12 @@ class DiceAnimatedStickerNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
-    private let lottieSettings: LottieRenderingSettings
 
-    init(account: Account, size: CGSize, lottieSettings: LottieRenderingSettings) {
-        self.lottieSettings = lottieSettings
+    init(account: Account, size: CGSize) {
         self.account = account
         self.intrinsicSize = size
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.autoplay = true
         
         super.init()
@@ -307,9 +304,9 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         let item = self.trackStack.removeFirst()
         
         if let state = self.state, state.item.source == item.source {
-            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state, lottieSettings: self.lottieSettings)
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
         } else {
-            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil, lottieSettings: self.lottieSettings)
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil)
         }
         
         var source: AnimatedStickerNodeSource?

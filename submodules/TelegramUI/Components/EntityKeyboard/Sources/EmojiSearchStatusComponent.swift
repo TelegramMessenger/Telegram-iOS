@@ -17,7 +17,6 @@ import AudioToolbox
 import SwiftSignalKit
 import GZip
 import LottieBinding
-import LottieSettings
 import AppBundle
 import Lottie
 
@@ -46,7 +45,7 @@ private final class LottieDirectContent: LottieComponent.Content {
     override func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: self.path)) {
             let result = TGGUnzipData(data, 2 * 1024 * 1024) ?? data
-            f(.animation(data: result, cacheKey: nil))
+            f(.animation(data: result))
         }
         
         return EmptyDisposable
@@ -171,8 +170,8 @@ final class EmojiSearchStatusComponent: Component {
             }
         }
         
-        init?(content: ContentState, data: Data, displaySize: CGSize, frameRange: ClosedRange<Int>?, previousAnimationState: EmojiSearchStatusAnimationState?, lottieSettings: LottieRenderingSettings) {
-            guard let animationInstance = makeLottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: lottieSettings) else {
+        init?(content: ContentState, data: Data, displaySize: CGSize, frameRange: ClosedRange<Int>?, previousAnimationState: EmojiSearchStatusAnimationState?) {
+            guard let animationInstance = makeLottieInstance(data: data, fitzModifier: .none, colorReplacements: nil) else {
                 return nil
             }
             self.content = content
@@ -470,9 +469,9 @@ final class EmojiSearchStatusComponent: Component {
                 
                 if canSwitchNow {
                     /*if let currentAnimationState = self.currentAnimationState, case .search = currentAnimationState.content, case .progress = component.content {
-                        self.switchToContent(content: .searchToProgress, lottieSettings: component.context.lottieRenderingSettings)
+                        self.switchToContent(content: .searchToProgress)
                     } else {*/
-                        self.switchToContent(content: ContentState(content: component.content), lottieSettings: component.context.lottieRenderingSettings)
+                        self.switchToContent(content: ContentState(content: component.content))
                     //}
                 } else {
                     self.pendingContent = component.content
@@ -487,7 +486,7 @@ final class EmojiSearchStatusComponent: Component {
             return availableSize
         }
         
-        private func switchToContent(content: ContentState, lottieSettings: LottieRenderingSettings) {
+        private func switchToContent(content: ContentState) {
             guard let displaySize = self.displaySize else {
                 return
             }
@@ -706,14 +705,13 @@ final class EmojiSearchStatusComponent: Component {
                     resolvedFrameRange = resolvedLowerBound ... max(resolvedLowerBound, resolvedUpperBound)
                 }
                 
-                self.currentAnimationState = LottieAnimationState(content: content, data: data, displaySize: displaySize, frameRange: resolvedFrameRange, previousAnimationState: previousAnimationState, lottieSettings: lottieSettings)
+                self.currentAnimationState = LottieAnimationState(content: content, data: data, displaySize: displaySize, frameRange: resolvedFrameRange, previousAnimationState: previousAnimationState)
             } else {
                 self.currentAnimationState = nil
             }
         }
         
         private func updateAnimation() {
-            let lottieSettings = self.component?.context.lottieRenderingSettings ?? .noAccountFallback
             var needsAnimation = false
             
             for (tempView, tempTintView, animationState) in self.disappearingAnimationStates {
@@ -745,10 +743,10 @@ final class EmojiSearchStatusComponent: Component {
                     
                     if currentAnimationState.isCompleted {
                         if self.pendingContent == nil, let automaticNextState = currentAnimationState.content.automaticNextState {
-                            self.switchToContent(content: automaticNextState, lottieSettings: lottieSettings)
+                            self.switchToContent(content: automaticNextState)
                         } else if let pendingContent = self.pendingContent {
                             self.pendingContent = nil
-                            self.switchToContent(content: ContentState(content: pendingContent), lottieSettings: lottieSettings)
+                            self.switchToContent(content: ContentState(content: pendingContent))
                         } else {
                             break
                         }

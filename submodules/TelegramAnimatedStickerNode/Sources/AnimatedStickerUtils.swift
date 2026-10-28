@@ -7,7 +7,6 @@ import TelegramCore
 import Compression
 import GZip
 import LottieBinding
-import LottieSettings
 import MediaResources
 import UniformTypeIdentifiers
 import MediaResources
@@ -17,7 +16,7 @@ import ManagedFile
 import UniversalMediaPlayer
 import SoftwareVideo
 
-public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String, lottieSettings: LottieRenderingSettings) -> Signal<EngineTempBoxFile, NoError> {
+public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil) -> Signal<EngineTempBoxFile, NoError> {
     return Signal({ subscriber in
         let queue = Queue()
         
@@ -30,7 +29,7 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
             
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
-                if let player = makeLottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: cacheKey, settings: lottieSettings) {
+                if let player = makeLottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil) {
                     if cancelled.with({ $0 }) {
                         return
                     }
@@ -117,7 +116,7 @@ private let threadPool: ThreadPool = {
     return ThreadPool(threadCount: 3, threadPriority: 0.5)
 }()
 
-public func cacheAnimatedStickerFrames(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil, cacheKey: String, lottieSettings: LottieRenderingSettings) -> Signal<EngineCachedMediaResourceRepresentationResult, NoError> {
+public func cacheAnimatedStickerFrames(data: Data, size: CGSize, fitzModifier: EmojiFitzModifier? = nil) -> Signal<EngineCachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         let cancelled = Atomic<Bool>(value: false)
         
@@ -133,7 +132,7 @@ public func cacheAnimatedStickerFrames(data: Data, size: CGSize, fitzModifier: E
        
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
-                if let player = makeLottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: cacheKey, settings: lottieSettings) {
+                if let player = makeLottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil) {
                     let endFrame = Int(player.frameCount)
                     
                     if cancelled.with({ $0 }) {

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -79,7 +78,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.labelNode = TextNodeWithEntities()
         self.labelNode.textNode.isUserInteractionEnabled = false
         self.labelNode.textNode.displaysAsynchronously = false
@@ -91,7 +90,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.mediaBackgroundNode.displaysAsynchronously = false
         self.mediaBackgroundNode.displayWithoutProcessing = true
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.addSubnode(self.labelNode.textNode)
     }

@@ -1,6 +1,5 @@
 import Foundation
 import AccountContext
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -122,8 +121,7 @@ final class QuickReplyEmptyStateComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "WriteEmoji"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 120.0)

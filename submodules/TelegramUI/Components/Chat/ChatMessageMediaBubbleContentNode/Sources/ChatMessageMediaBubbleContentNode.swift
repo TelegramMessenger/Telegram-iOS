@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -37,10 +36,10 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.interactiveImageNode = ChatMessageInteractiveMediaNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.interactiveImageNode)
         

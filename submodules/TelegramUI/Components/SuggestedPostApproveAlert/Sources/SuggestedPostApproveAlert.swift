@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Markdown
@@ -368,8 +367,7 @@ private final class SuggestedPostAlertImpl: AlertController {
                         content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                         startingPosition: .begin,
                         size: CGSize(width: 32.0, height: 32.0),
-                        playOnce: playOnce,
-                        lottieSettings: .noAccountFallback
+                        playOnce: playOnce
                     )),
                     content: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(

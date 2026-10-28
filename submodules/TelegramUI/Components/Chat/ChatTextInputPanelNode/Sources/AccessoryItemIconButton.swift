@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -313,8 +312,7 @@ final class AccessoryItemIconButton: HighlightTrackingButton, GlassBackgroundVie
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: animationName),
-                        color: self.theme.chat.inputPanel.inputControlColor.withAlphaComponent(1.0),
-                        lottieSettings: .noAccountFallback
+                        color: self.theme.chat.inputPanel.inputControlColor.withAlphaComponent(1.0)
                     )),
                     environment: {},
                     containerSize: animationFrame.size

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import Display
 import UIKit
 import ComponentFlow
@@ -390,8 +389,7 @@ final class MessageItemComponent: Component {
                         placeholderColor: nil,
                         startingPosition: .end,
                         size: CGSize(width: 40.0, height: 40.0),
-                        loop: false,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        loop: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: 40.0, height: 40.0)

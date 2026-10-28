@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -61,7 +60,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     
     private var countryName: String?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.titleNode = TextNode()
         self.titleBadgeLabel = TextNode()
         self.textClippingNode = ASDisplayNode()
@@ -71,7 +70,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         self.statusNode = ChatMessageDateAndStatusNode()
         self.lineNode = ASDisplayNode()
 
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.textClippingNode.clipsToBounds = true
         self.addSubnode(self.textClippingNode)

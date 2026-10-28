@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -1345,8 +1344,7 @@ final class AvatarEditorScreenComponent: Component {
                     color: theme.list.itemCheckColors.foregroundColor,
                     startingPosition: .begin,
                     size: CGSize(width: 30.0, height: 30.0),
-                    loop: true,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: true
                 ))))
             }
             

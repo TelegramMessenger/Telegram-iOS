@@ -111,8 +111,7 @@ public final class EmptyStateIndicatorComponent: Component {
                     component: AnyComponent(AnimatedStickerComponent(
                         account: component.context.account,
                         animation: AnimatedStickerComponent.Animation(source: .bundle(name: animationName), loop: true),
-                        size: CGSize(width: 120.0, height: 120.0),
-                        lottieSettings: component.context.lottieRenderingSettings
+                        size: CGSize(width: 120.0, height: 120.0)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 120.0, height: 120.0)

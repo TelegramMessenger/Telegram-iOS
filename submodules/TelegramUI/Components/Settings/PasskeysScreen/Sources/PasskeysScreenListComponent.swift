@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -132,8 +131,7 @@ final class PasskeysScreenListComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "passkey_logo"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 124.0, height: 124.0)

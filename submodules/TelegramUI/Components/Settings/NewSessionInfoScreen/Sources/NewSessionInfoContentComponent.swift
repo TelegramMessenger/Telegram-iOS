@@ -1,6 +1,5 @@
 import Foundation
 import AccountContext
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -145,8 +144,7 @@ public final class NewSessionInfoContentComponent: Component {
                 transition: transition,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "SessionReviewIcon"),
-                    color: .white,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    color: .white
                 )),
                 environment: {},
                 containerSize: CGSize(width: 70.0, height: 70.0)

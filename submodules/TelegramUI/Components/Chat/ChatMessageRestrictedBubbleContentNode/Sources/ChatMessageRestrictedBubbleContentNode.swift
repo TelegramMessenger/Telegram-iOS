@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -15,11 +14,11 @@ public class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNod
     private let textNode: TextNode
     private let statusNode: ChatMessageDateAndStatusNode
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.textNode = TextNode()
         self.statusNode = ChatMessageDateAndStatusNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft

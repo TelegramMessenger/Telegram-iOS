@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import SwiftSignalKit
 import Compression
 import Display
@@ -269,14 +268,12 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
     
     public var forceSynchronous = false
     
-    private let lottieSettings: LottieRenderingSettings
 
-    public init(useMetalCache: Bool = false, lottieSettings: LottieRenderingSettings) {
+    public init(useMetalCache: Bool = false) {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
         
         self.useMetalCache = useMetalCache
-        self.lottieSettings = lottieSettings
         
         super.init()
         
@@ -478,7 +475,6 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
             let useMetalCache = self.useMetalCache
-            let lottieSettings = self.lottieSettings
             self.queue.async { [weak self] in
                 var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
                 if maybeFrameSource == nil {
@@ -487,7 +483,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                         if directData.6 {
                             maybeFrameSource = VideoStickerDirectFrameSource(queue: queue, path: directData.1, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                         } else {
-                            maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5, lottieSettings: lottieSettings)
+                            maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5)
                         }
                     } else if let (cachedData, cachedDataComplete, _) = cachedData {
                         if #available(iOS 9.0, *) {
@@ -597,7 +593,6 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
             let useMetalCache = self.useMetalCache
-            let lottieSettings = self.lottieSettings
             self.queue.async { [weak self] in
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 let notifyUpdated: (() -> Void)? = nil
@@ -605,7 +600,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                     if directData.6 {
                         maybeFrameSource = VideoStickerDirectFrameSource(queue: queue, path: directData.1, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                     } else {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5, lottieSettings: lottieSettings)
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5)
                     }
                 } else if let (cachedData, cachedDataComplete, _) = cachedData {
                     if #available(iOS 9.0, *) {
@@ -723,7 +718,6 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
         let frameSourceHolder = self.frameSource
         let timerHolder = self.timer
         let useMetalCache = self.useMetalCache
-        let lottieSettings = self.lottieSettings
         
         let action = { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
@@ -733,7 +727,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                     if directData.6 {
                         maybeFrameSource = VideoStickerDirectFrameSource(queue: queue, path: directData.1, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                     } else {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5, lottieSettings: lottieSettings)
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5)
                     }
                     if case .end = position {
                         maybeFrameSource?.skipToEnd()

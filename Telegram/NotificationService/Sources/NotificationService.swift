@@ -9,7 +9,6 @@ import OpenSSLEncryptionProvider
 import TelegramUIPreferences
 import WebPBinding
 import LottieBinding
-import LottieSettings
 import GZip
 import UIKit
 import Intents
@@ -280,9 +279,9 @@ private extension CGSize {
     }
 }
 
-private func convertLottieImage(data: Data, size: CGSize, forceSquare: Bool, lottieSettings: LottieRenderingSettings) -> UIImage? {
+private func convertLottieImage(data: Data, size: CGSize, forceSquare: Bool) -> UIImage? {
     let decompressedData = TGGUnzipData(data, 512 * 1024) ?? data
-    guard let animation = makeLottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: lottieSettings) else {
+    guard let animation = makeLottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil) else {
         return nil
     }
     let actualSize: CGSize
@@ -496,7 +495,6 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, i
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private struct NotificationContent: CustomStringConvertible {
-    var lottieSettings: LottieRenderingSettings = .noAccountFallback
     struct CustomEmoji {
         var range: Range<Int>
         var fileId: Int64
@@ -652,7 +650,7 @@ private struct NotificationContent: CustomStringConvertible {
                             guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
                                 continue
                             }
-                            if let lottieImage = convertLottieImage(data: fileData, size: CGSize(width: 40.0, height: 40.0), forceSquare: false, lottieSettings: self.lottieSettings) {
+                            if let lottieImage = convertLottieImage(data: fileData, size: CGSize(width: 40.0, height: 40.0), forceSquare: false) {
                                 image = lottieImage
                             } else if let webpImage = WebP.convert(fromWebP: fileData) {
                                 image = webpImage
@@ -975,18 +973,6 @@ private final class NotificationServiceHandler {
                     return _internal_cachedNotificationSoundList(transaction: transaction)
                 }
 
-                // The extension has a postbox but no AccountContext, so the backend
-                // is read straight from app configuration. Carried through the
-                // combineLatest that already feeds this closure rather than read
-                // synchronously at the render site.
-                let lottieSettings = stateManager.postbox.transaction { transaction -> LottieRenderingSettings in
-                    let appConfiguration = currentAppConfiguration(transaction: transaction)
-                    if let data = appConfiguration.data, let _ = data["ios_killswitch_disable_tlottie"] {
-                        return LottieRenderingSettings(backend: .rlottie)
-                    }
-                    return LottieRenderingSettings(backend: .tlottie)
-                }
-
                 // Read up front so that the first content handed over, the one shown if the
                 // extension runs out of time, already names the account. Only when it is named:
                 // every transaction here takes the database write lock the app may hold.
@@ -1002,9 +988,8 @@ private final class NotificationServiceHandler {
                 strongSelf.notificationKeyDisposable.set((combineLatest(queue: strongSelf.queue,
                     existingMasterNotificationsKey(postbox: stateManager.postbox),
                     settings,
-                    lottieSettings,
                     recipientAccountName
-                ) |> deliverOn(strongSelf.queue)).start(next: { notificationsKey, notificationSoundList, lottieSettings, recipientAccountName in
+                ) |> deliverOn(strongSelf.queue)).start(next: { notificationsKey, notificationSoundList, recipientAccountName in
                     guard let strongSelf = self else {
                         let content = NotificationContent(isLockedMessage: nil)
                         updateCurrentContent(content)
@@ -1971,7 +1956,7 @@ private final class NotificationServiceHandler {
                                                             stateManager.postbox.mediaBox.storeResourceData(resource.id, data: mediaData, synchronous: true)
                                                         }
                                                         if let storedPath = stateManager.postbox.mediaBox.completedResourcePath(resource) {
-                                                            if let data = try? Data(contentsOf: URL(fileURLWithPath: storedPath)), let image = convertLottieImage(data: data, size: CGSize(width: 200.0, height: 200.0), forceSquare: false, lottieSettings: lottieSettings) {
+                                                            if let data = try? Data(contentsOf: URL(fileURLWithPath: storedPath)), let image = convertLottieImage(data: data, size: CGSize(width: 200.0, height: 200.0), forceSquare: false) {
                                                                 let tempFile = TempBox.shared.tempFile(fileName: "image.png")
                                                                 let _ = try? image.pngData()?.write(to: URL(fileURLWithPath: tempFile.path))
                                                                 if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: tempFile.path), options: nil) {

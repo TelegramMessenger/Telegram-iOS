@@ -1,4 +1,3 @@
-import LottieSettings
 import UIKit
 import UserNotifications
 import UserNotificationsUI
@@ -267,12 +266,10 @@ public final class NotificationViewControllerImpl {
                 return context != nil
             }
             |> take(1)
-            |> mapToSignal { context -> Signal<(Account, FileMediaReference?, LottieRenderingSettings), NoError> in
-                guard let context else {
+            |> mapToSignal { context -> Signal<(Account, FileMediaReference?), NoError> in
+                guard let account = context?.account else {
                     return .complete()
                 }
-                let account = context.account
-                let lottieSettings = context.lottieRenderingSettings
                 return account.postbox.messageAtId(messageId)
                 |> take(1)
                 |> map { message in
@@ -286,7 +283,7 @@ public final class NotificationViewControllerImpl {
                     } else {
                         fileReference = .standalone(media: file)
                     }
-                    return (account, fileReference, lottieSettings)
+                    return (account, fileReference)
                 }
             }
             |> deliverOnMainQueue).startStrict(next: { [weak self, weak view] accountAndImage in
@@ -299,7 +296,7 @@ public final class NotificationViewControllerImpl {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = DefaultAnimatedStickerNodeImpl(lottieSettings: accountAndImage.2)
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             strongSelf.animatedStickerNode = animatedStickerNode
                             animatedStickerNode.started = {
                                 guard let strongSelf = self else {

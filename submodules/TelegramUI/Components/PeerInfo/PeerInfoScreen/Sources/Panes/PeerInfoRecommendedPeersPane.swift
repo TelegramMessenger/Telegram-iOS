@@ -22,7 +22,6 @@ import ButtonComponent
 import EdgeEffect
 import ComponentDisplayAdapters
 import LottieComponent
-import LottieSettings
 import PeerInfoPaneNode
 
 private struct RecommendedPeersListTransaction {
@@ -412,8 +411,7 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 color: buttonForegroundColor,
                                 startingPosition: .begin,
                                 size: CGSize(width: 30.0, height: 30.0),
-                                loop: true,
-                                lottieSettings: self.context.lottieRenderingSettings
+                                loop: true
                             )))
                         ], spacing: 4.0)
                     )),

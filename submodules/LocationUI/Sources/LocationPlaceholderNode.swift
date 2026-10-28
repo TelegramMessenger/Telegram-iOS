@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -27,7 +26,7 @@ final class LocationPlaceholderNode: ASDisplayNode {
     var settingsPressed: () -> Void = {}
     var cameraPressed: () -> Void = {}
     
-    init(content: Content, lottieSettings: LottieRenderingSettings) {
+    init(content: Content) {
         self.content = content
         
         let name: String
@@ -38,7 +37,7 @@ final class LocationPlaceholderNode: ASDisplayNode {
                 playbackMode = .loop
         }
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: 320, height: 320, playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

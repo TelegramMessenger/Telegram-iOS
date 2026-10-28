@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -40,7 +39,7 @@ public class ChatMessageCommunityChangedBubbleContentNode: ChatMessageBubbleCont
     
     private var absoluteRect: (CGRect, CGSize)?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 24.0
@@ -65,7 +64,7 @@ public class ChatMessageCommunityChangedBubbleContentNode: ChatMessageBubbleCont
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.avatarShadowNode)

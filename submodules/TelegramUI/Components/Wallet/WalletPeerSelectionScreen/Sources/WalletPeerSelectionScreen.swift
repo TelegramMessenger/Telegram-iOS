@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AppBundle
 import Display
@@ -1933,8 +1932,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(LottieComponent(
                         content: LottieComponent.AppBundleContent(name: displaysEmptyRecentPeers ? "Loupe" : "ChatListNoResults"),
-                        startingPosition: .begin,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        startingPosition: .begin
                     )),
                     environment: {},
                     containerSize: CGSize(width: animationHeight, height: animationHeight)

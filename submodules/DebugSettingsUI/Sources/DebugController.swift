@@ -743,7 +743,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case insertWidgetGames
     case mediaGridLegacy(Bool)
     case sharedMediaGridLegacy(Bool)
-    case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
     case videoMessageCameraMode(ExperimentalUISettings.VideoMessageCameraMode)
@@ -796,7 +795,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .experimentsHeader, .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
+        case .crash, .resetBiometricsData, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .inputDecEngineEditor, .coreListChatBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
         case .inputDecTextBackend, .springSendAnimation, .fakeWalletTransfers, .chatMediaEditorLegacy, .insertWidgetConformanceSet, .insertWidgetGames, .mediaGridLegacy, .sharedMediaGridLegacy:
             return DebugControllerSection.experiments.rawValue
@@ -851,8 +850,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 21
         case .coreListChatBackend:
             return 22
-        case .forceRLottieBackend:
-            return 23
         case .respectSystemMicrophone:
             return 24
         case .useModernVideoMessagePipeline:
@@ -1550,16 +1547,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     controller.dismiss()
                 })
             })
-        case let .forceRLottieBackend(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Lottie: force rlottie", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.forceRLottieBackend = value
-                        return EnginePreferencesEntry(settings)
-                    })
-                }).start()
-            })
         case let .respectSystemMicrophone(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Recording: respect system microphone", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -2054,7 +2041,6 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.debugRatingLayout(experimentalSettings.debugRatingLayout))
     }
     entries.append(.coreListChatBackend(experimentalSettings.coreListChatBackend))
-    entries.append(.forceRLottieBackend(experimentalSettings.forceRLottieBackend))
     entries.append(.respectSystemMicrophone(experimentalSettings.respectSystemMicrophone))
     let useModernVideoMessagePipeline = (experimentalSettings.useModernVideoMessagePipeline ?? (context?.getAppConfigValue("ios_killswitch_disable_neo_round_camera_v2") == nil)) && experimentalSettings.videoMessageCameraMode != .legacy
     entries.append(.useModernVideoMessagePipeline(useModernVideoMessagePipeline))

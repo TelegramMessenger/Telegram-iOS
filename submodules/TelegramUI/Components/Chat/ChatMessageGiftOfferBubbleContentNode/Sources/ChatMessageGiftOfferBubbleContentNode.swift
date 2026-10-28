@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -77,7 +76,7 @@ public class ChatMessageGiftOfferBubbleContentNode: ChatMessageBubbleContentNode
     
     private var cachedTonImage: (UIImage, UIColor)?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
@@ -86,7 +85,7 @@ public class ChatMessageGiftOfferBubbleContentNode: ChatMessageBubbleContentNode
         self.subtitleNode.textNode.isUserInteractionEnabled = false
         self.subtitleNode.textNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode.textNode)

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Photos
 import Display
@@ -360,8 +359,7 @@ final class ForumSettingsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "Topics"),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)

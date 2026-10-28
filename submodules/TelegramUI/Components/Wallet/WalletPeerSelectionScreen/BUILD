@@ -12,7 +12,6 @@ swift_library(
     deps = [
         "//submodules/TelegramUI/Components/SideColumnLayout",
         "//submodules/AccountContext",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AppBundle",
         "//submodules/AsyncDisplayKit",
         "//submodules/ComponentFlow",

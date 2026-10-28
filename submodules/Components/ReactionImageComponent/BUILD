@@ -17,7 +17,6 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/GZip:GZip",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",

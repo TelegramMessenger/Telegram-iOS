@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 @preconcurrency import WebKit
 import Display
