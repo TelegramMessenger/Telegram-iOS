@@ -3234,43 +3234,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             }
         }
         
-        if interfaceState.slowmodeState == nil || isScheduledMessages, let contextPlaceholder = interfaceState.inputTextPanelState.contextPlaceholder {
-            let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
-            let contextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
-            contextPlaceholder.addAttribute(.foregroundColor, value: placeholderColor.withAlphaComponent(1.0), range: NSRange(location: 0, length: contextPlaceholder.length))
-            let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - textFieldInsets.left - textFieldInsets.right - actualTextInputViewInternalInsets.left - actualTextInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let tintContextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
-            tintContextPlaceholder.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintContextPlaceholder.length))
-            let contextPlaceholderNode = placeholderApply()
-            if let currentContextPlaceholderNode = self.contextPlaceholderNode, currentContextPlaceholderNode !== contextPlaceholderNode {
-                self.contextPlaceholderNode = nil
-                currentContextPlaceholderNode.removeFromSupernode()
-            }
-            
-            if self.contextPlaceholderNode !== contextPlaceholderNode {
-                contextPlaceholderNode.displaysAsynchronously = false
-                contextPlaceholderNode.isUserInteractionEnabled = false
-                self.contextPlaceholderNode = contextPlaceholderNode
-                self.textInputContainerBackgroundView.contentView.insertSubview(contextPlaceholderNode.view, aboveSubview: self.textPlaceholderNode.view)
-            }
-            
-            let _ = placeholderApply()
-            
-            let placeholderTransition: ContainedViewLayoutTransition
-            if placeholderSize.size.width == contextPlaceholderNode.frame.width {
-                placeholderTransition = transition
-            } else {
-                placeholderTransition = .immediate
-            }
-            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + actualTextInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel + (accessoryPanel != nil ? 52.0 : 0.0)), size: placeholderSize.size))
-            contextPlaceholderNode.view.setMonochromaticEffect(tintColor: placeholderColor)
-            contextPlaceholderNode.alpha = audioRecordingItemsAlpha * placeholderColor.alpha
-        } else {
-            if let contextPlaceholderNode = self.contextPlaceholderNode {
-                self.contextPlaceholderNode = nil
-                contextPlaceholderNode.removeFromSupernode()
-                self.textPlaceholderNode.alpha = 1.0 * placeholderColor.alpha
-            }
+        // An inline bot's placeholder: laid out below, once the field's buttons are, which it must end before.
+        let contextPlaceholder: NSAttributedString? = (interfaceState.slowmodeState == nil || isScheduledMessages) ? interfaceState.inputTextPanelState.contextPlaceholder : nil
+        if contextPlaceholder == nil, let contextPlaceholderNode = self.contextPlaceholderNode {
+            self.contextPlaceholderNode = nil
+            contextPlaceholderNode.removeFromSupernode()
+            self.textPlaceholderNode.alpha = 1.0 * placeholderColor.alpha
         }
         
         if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages && rightSlowModeInset.isZero {
@@ -3338,6 +3307,41 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         self.currentTextInputBackgroundWidthOffset = textInputBackgroundWidthOffset
+        
+        // The typed text in a clear colour, then the placeholder: one line that ends where the field's buttons begin (the
+        // search layout's clear button, the send button, the accessory buttons), as the field's own placeholder does.
+        if let contextPlaceholder {
+            let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
+            let contextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
+            contextPlaceholder.addAttribute(.foregroundColor, value: placeholderColor.withAlphaComponent(1.0), range: NSRange(location: 0, length: contextPlaceholder.length))
+            let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, nextButtonTopRight.x - actualTextInputViewInternalInsets.left), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let tintContextPlaceholder = NSMutableAttributedString(attributedString: contextPlaceholder)
+            tintContextPlaceholder.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintContextPlaceholder.length))
+            let contextPlaceholderNode = placeholderApply()
+            if let currentContextPlaceholderNode = self.contextPlaceholderNode, currentContextPlaceholderNode !== contextPlaceholderNode {
+                self.contextPlaceholderNode = nil
+                currentContextPlaceholderNode.removeFromSupernode()
+            }
+            
+            if self.contextPlaceholderNode !== contextPlaceholderNode {
+                contextPlaceholderNode.displaysAsynchronously = false
+                contextPlaceholderNode.isUserInteractionEnabled = false
+                self.contextPlaceholderNode = contextPlaceholderNode
+                self.textInputContainerBackgroundView.contentView.insertSubview(contextPlaceholderNode.view, aboveSubview: self.textPlaceholderNode.view)
+            }
+            
+            let _ = placeholderApply()
+            
+            let placeholderTransition: ContainedViewLayoutTransition
+            if placeholderSize.size.width == contextPlaceholderNode.frame.width {
+                placeholderTransition = transition
+            } else {
+                placeholderTransition = .immediate
+            }
+            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + actualTextInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel + (accessoryPanel != nil ? 52.0 : 0.0)), size: placeholderSize.size))
+            contextPlaceholderNode.view.setMonochromaticEffect(tintColor: placeholderColor)
+            contextPlaceholderNode.alpha = audioRecordingItemsAlpha * placeholderColor.alpha
+        }
         
         let textPlaceholderSize: CGSize
         let textPlaceholderMaxWidth: CGFloat = max(1.0, nextButtonTopRight.x - 12.0)
