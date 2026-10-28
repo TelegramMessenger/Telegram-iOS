@@ -6,7 +6,8 @@ public enum ChatMessageCopyLinkKind: Equatable {
     /// A supergroup message or a channel post: the link the server exports for it.
     case channelMessage
     /// A message in a channel's direct messages. These are a separate channel (a monoforum) without a
-    /// username, so the link is always a private `t.me/c/` one, which only the channel's admins can open.
+    /// username, so the link is always a private `t.me/c/` one, which only those who see the conversation
+    /// (the channel's admins and the user on the other side) can open.
     case directMessages
 }
 
