@@ -51,8 +51,9 @@ func richText(from run: TextRun) -> RichText? {
     }
     if let link = attributes.link {
         // The editor keeps mentions and dates as `tg://user?id=` / `tg://timestamp?t=` links
-        // (`MentionDateMarkers`); they go out as a mention and a date, as the composer sends them
-        // (`ChatInputContentInstantPage`), not as links. A mention marker is always a user's, by its raw id.
+        // (`MentionDateMarkers`); they go out as a mention and a date, not as links, as from the composer
+        // (`ChatInputContentInstantPage`, which nests the styles outside them). A mention marker is always a
+        // user's, by its raw id.
         switch classifyChatLink(link) {
         case let .mention(peerId):
             result = .textMentionName(text: result, peerId: peerId.id._internalGetInt64Value())
@@ -61,6 +62,10 @@ func richText(from run: TextRun) -> RichText? {
         case let .url(url):
             result = .url(text: result, url: url, webpageId: nil)
         }
+    }
+    // Outermost, as the composer's (`ChatInputContentInstantPage`): a link or mention inside a spoiler is hidden too.
+    if attributes.spoiler {
+        result = .textSpoiler(text: result)
     }
     return result
 }

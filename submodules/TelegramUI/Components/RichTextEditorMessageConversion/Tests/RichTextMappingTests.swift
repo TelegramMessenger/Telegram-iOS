@@ -35,6 +35,20 @@ final class RichTextMappingTests: XCTestCase {
         XCTAssertEqual(richText(from: run("site", link: "https://telegram.org")), .url(text: .plain("site"), url: "https://telegram.org", webpageId: nil))
     }
 
+    func testASpoilerIsSentHidden() {
+        var attributes = CharacterAttributes.plain
+        attributes.spoiler = true
+        attributes.bold = true
+        XCTAssertEqual(richText(from: TextRun(text: "secret", attributes: attributes)), .textSpoiler(text: .bold(.plain("secret"))))
+    }
+
+    func testALinkInsideASpoilerIsHiddenToo() {
+        var attributes = CharacterAttributes.plain
+        attributes.spoiler = true
+        attributes.link = "https://telegram.org"
+        XCTAssertEqual(richText(from: TextRun(text: "site", attributes: attributes)), .textSpoiler(text: .url(text: .plain("site"), url: "https://telegram.org", webpageId: nil)))
+    }
+
     func testAMarkerOfAnImpossibleUserIdStaysALink() {
         XCTAssertEqual(richText(from: run("x", link: "tg://user?id=0")), .url(text: .plain("x"), url: "tg://user?id=0", webpageId: nil))
     }
