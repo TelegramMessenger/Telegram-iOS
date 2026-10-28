@@ -16,9 +16,10 @@ class HTMLImageElement : public HTMLElement {
 public:
     using HTMLElement::HTMLElement;
 
-    /// The rendered content size while the image is being rendered (a layout query, widget-sandbox v0.2.3), else the
-    /// attribute when it parses, else the natural size (0 when there is none or while pending). Setting one sets the
-    /// attribute.
+    /// The rendered content size while the image is being rendered (a layout query, widget-sandbox v0.2.3), where a
+    /// dimension the CSS leaves auto reads 0 while the image is pending (a browser lays it out before it decodes;
+    /// `RenderTree::BoxMetrics::autoWidth` / `autoHeight`), else the attribute when it parses, else the natural size (0
+    /// when there is none or while pending). Setting one sets the attribute.
     uint32_t width(JSContext* ctx) const;
     uint32_t height(JSContext* ctx) const;
     void setWidth(JSContext* ctx, uint32_t value);

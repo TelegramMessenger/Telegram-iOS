@@ -1,7 +1,9 @@
 // A locale tag with a unicode extension (`-u-nu-…`, `-u-ca-…`, `-u-hc-…`) on iOS. Until widget-sandbox v0.2.2 the glue
 // built such a locale with Locale(identifier:), which misreads it, and its force-unwraps then trapped, taking the app
 // down; WidgetRuntime dropped extensions until every request kind was shown to answer one (follow-ups plan, Task 3).
-// Now a widget's tag reaches the glue as it wrote it, as upstream's shim sends it.
+// Now a widget's tag reaches the glue with only the unicode extension keywords its constructor reads, each with a value
+// this client supports; other extensions and private use are dropped (ECMA-402 ResolveLocale; upstream's shim sends the
+// tag whole).
 import Foundation
 import XCTest
 
@@ -52,8 +54,9 @@ final class WRIntlExtensionTests: XCTestCase {
         return requests
     }
 
-    /// The safety the runtime's pass-through rests on: each request answers, none traps (a trap would end the test
-    /// process, as it would the app).
+    /// The glue's safety for a tag with an extension: each request answers, none traps (a trap would end the test
+    /// process, as it would the app). These tags hold more than the runtime sends (attributes, private use, unfiltered
+    /// keywords), so the glue stays safe should that filter ever let one through.
     func testEveryRequestKindAnswersATagWithAnExtension() throws {
         var answered = 0
         for tag in Self.tags {
@@ -134,6 +137,10 @@ final class WRIntlExtensionTests: XCTestCase {
         XCTAssertEqual(session.evaluate(forTesting: "new Intl.PluralRules('ru-u-nu-latn').select(2)"), "few")
         XCTAssertEqual(session.evaluate(forTesting: "new Intl.PluralRules('fa-u-nu-arabext').select(0)"), "one")
         XCTAssertEqual(session.evaluate(forTesting: "new Intl.PluralRules('ar-u-nu-arab').resolvedOptions().locale"), "ar")
+        // Any other extension and private use, too (they reached Foundation as `@…=` keywords on the language key).
+        XCTAssertEqual(session.evaluate(forTesting: "new Intl.PluralRules('ar-t-en').select(2)"), "two")
+        XCTAssertEqual(session.evaluate(forTesting: "new Intl.PluralRules('ru-x-private').select(2)"), "few")
+        XCTAssertEqual(session.evaluate(forTesting: "new Intl.PluralRules('ar-a-bc-u-nu-arab').select(2)"), "two")
         withExtendedLifetime(delegate) {}
     }
 
@@ -171,6 +178,29 @@ final class WRIntlExtensionTests: XCTestCase {
         for cycle in ["h11", "h12", "h23", "h24", "h99"] {
             for (call, answer) in zip(Self.calls, self.answers(session, "en-u-hc-\(cycle)")) {
                 XCTAssertFalse(answer.isEmpty || answer.contains("Error"), "en-u-hc-\(cycle): \(call) → \(answer)")
+            }
+        }
+        withExtendedLifetime(delegate) {}
+    }
+
+    /// Every collation CLDR names, `standard` and `search` (which a `co` keyword may not name), an unknown one, and the
+    /// numeric and case-first keywords, through every call: what Collator keeps answers, the rest is dropped before the
+    /// glue.
+    func testEveryCollationAnswers() throws {
+        let delegate = Delegate()
+        let session = try XCTUnwrap(WRSession(width: 300.0, dark: false, scale: 2.0, delegate: delegate))
+        XCTAssertTrue(session.boot(withSource: "<!doctype html><p>x</p>"))
+        let collations = "big5han compat dict direct ducet emoji eor gb2312 phonebk phonetic pinyin reformed searchjl stroke trad unihan zhuyin standard search bogus"
+        for collation in collations.split(separator: " ") {
+            for tag in ["de-u-co-\(collation)", "zh-u-co-\(collation)-kn-true", "sv-u-co-\(collation)-kf-upper"] {
+                for (call, answer) in zip(Self.calls, self.answers(session, tag)) {
+                    XCTAssertFalse(answer.isEmpty || answer.contains("Error"), "\(tag): \(call) → \(answer)")
+                }
+            }
+        }
+        for keyword in ["kn-true", "kn-false", "kn", "kn-bogus", "kf-upper", "kf-lower", "kf-false", "kf-bogus"] {
+            for (call, answer) in zip(Self.calls, self.answers(session, "en-u-\(keyword)")) {
+                XCTAssertFalse(answer.isEmpty || answer.contains("Error"), "en-u-\(keyword): \(call) → \(answer)")
             }
         }
         withExtendedLifetime(delegate) {}

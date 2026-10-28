@@ -207,8 +207,8 @@ the gate differently asks for its own relayout, because nothing else lays out a 
   the tag whole. In its glue, though, an unknown numbering system (`en-u-nu-bogus`) makes Foundation's relative
   formatter trap, crashing the app, and an extension breaks the plural rules (widget-sandbox VENDOR.md). v0.2.3's glue
   applies what is kept on iOS 16 and later. **A glue change or a new table value must keep `WRIntlExtensionTests`
-  green**: it runs every call a widget can make with every CLDR numbering system and calendar on iOS, and a trap
-  there is the app's crash. The runtime record's Intl section has the protocol and the divergences.
+  green**: it runs every call a widget can make with every CLDR numbering system, calendar, hour cycle and collation on
+  iOS, and a trap there is the app's crash. The runtime record's Intl section has the protocol and the divergences.
 - **Swift reaches the runtime only through `WRSession`**, on the widget's queue, one call at a time. It catches what
   C++ throws, latches `failed` and drops the runtime; every later call answers its empty default. A stop or failure
   after the boot published freezes the widget, and **a frozen widget is a picture**: `WidgetTreeRenderer` keeps its
