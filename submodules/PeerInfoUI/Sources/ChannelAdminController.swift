@@ -1697,7 +1697,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                         var text = presentationData.strings.Login_UnknownError
                         switch error {
                         case .tooMuchJoined:
-                            text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                            text = presentationData.strings.Invite_ChannelsTooMuch
                         case .restricted:
                             if let admin = adminPeer {
                                 switch channel.info {
@@ -1784,7 +1784,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             case let .addMemberError(addMemberError):
                                 switch addMemberError {
                                 case .tooMuchJoined:
-                                    text = presentationData.strings.Group_ErrorSupergroupConversionNotPossible
+                                    text = presentationData.strings.Invite_ChannelsTooMuch
                                 case .restricted:
                                     if let admin = adminPeer {
                                         text = presentationData.strings.Privacy_GroupsAndChannels_InviteToCommunityError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
@@ -1941,7 +1941,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                 return
                             }
 
-                            // Every other refusal keeps the editor open with an explanation; closing it silently looked like a successful add (#47).
+                            // Every other refusal keeps the editor open with an explanation; closing it silently looked like a successful add.
                             updateState { current in
                                 return current.withUpdatedUpdating(false)
                             }
