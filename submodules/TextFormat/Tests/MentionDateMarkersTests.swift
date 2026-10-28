@@ -7,18 +7,25 @@ final class MentionDateMarkersTests: XCTestCase {
         let peerId = EnginePeer.Id(12345)
         let url = mentionMarkdownURL(peerId: peerId)
         XCTAssertEqual(url, "tg://user?id=12345")
-        XCTAssertEqual(parseMentionPeerId(fromURL: url), peerId)
+        XCTAssertEqual(url.flatMap { parseMentionPeerId(fromURL: $0) }, peerId)
     }
 
-    func testMentionLargeChannelPeer() {
-        // The internal PeerId.toInt64() packs namespace and id bits — for current Telegram peer
-        // namespaces and realistic ID magnitudes the result is non-negative; the parser handles
-        // signed values correctly regardless. Use a large valid channel peer id to exercise the
-        // codec with multi-digit values. (The Telegram Bot API uses negative IDs for channels,
-        // but that convention does not apply to the internal PeerId packed format used here.)
-        let peerId = EnginePeer.Id(576460730828587007)
+    func testMentionCarriesTheRawUserId() {
+        // Telegram's own `tg://user?id=` link carries the raw user id, which a packed PeerId differs from for
+        // every id of 2^32 and above: a pasted external link must name the same user.
+        let peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value((1 << 33) + 5))
         let url = mentionMarkdownURL(peerId: peerId)
-        XCTAssertEqual(parseMentionPeerId(fromURL: url), peerId)
+        XCTAssertEqual(url, "tg://user?id=8589934597")
+        XCTAssertEqual(parseMentionPeerId(fromURL: "tg://user?id=8589934597"), peerId)
+    }
+
+    func testOnlyAUserHasAMentionMarker() {
+        let channelId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(777))
+        XCTAssertNil(mentionMarkdownURL(peerId: channelId))
+        XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=0"))
+        XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=-5"))
+        XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=72057594037927936"))
+        XCTAssertNil(mentionMarkdownURL(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0))))
     }
 
     func testMentionParseRejectsNonMatching() {
@@ -57,8 +64,8 @@ final class MentionDateMarkersTests: XCTestCase {
     }
 
     func testCodecBoundaryValues() {
-        // Zero peer id and a negative timestamp both parse cleanly (no sign/zero special-casing).
-        XCTAssertEqual(parseMentionPeerId(fromURL: "tg://user?id=0"), EnginePeer.Id(0))
+        // A negative timestamp parses cleanly (no sign special-casing); a user id of zero is no user.
+        XCTAssertNil(parseMentionPeerId(fromURL: "tg://user?id=0"))
         XCTAssertEqual(parseDate(fromURL: "tg://timestamp?t=-1"), -1)
     }
 }

@@ -1795,7 +1795,7 @@ public final class PendingMessageManager {
                     } else if let attribute = attribute as? SuggestedPostMessageAttribute {
                         suggestedPost = attribute.apiSuggestedPost(fixMinTime: Int32(Date().timeIntervalSince1970 + 10))
                     } else if let attribute = attribute as? RichTextMessageAttribute {
-                        apiRichMessage = attribute.apiInputRichMessage()
+                        apiRichMessage = attribute.apiInputRichMessage(users: apiInputRichMessageUsers(attribute.instantPage, peer: { message.peers[$0] }))
                         flags |= Int32(1 << 23)
                     }
                 }
