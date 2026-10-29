@@ -42,6 +42,16 @@ final class ItemListDisclosureTitleWidthTests: XCTestCase {
         XCTAssertEqual(titleWidth, 79.0)
     }
 
+    func testValueOfExactlyTwoThirdsKeepsItsWidth() {
+        XCTAssertEqual(self.narrowed(titleWidth: 200.0, labelWidth: 174.0), 87.0)
+        XCTAssertNil(self.narrowed(titleWidth: 200.0, labelWidth: 175.0))
+    }
+
+    // A title badge wider than the row leaves the title no room to give: keep the old split, never a negative width.
+    func testNoRoomForTitleKeepsOldSplit() {
+        XCTAssertNil(self.narrowed(titleWidth: 100.0, labelWidth: 40.0, labelSharedWidth: 120.0, titleSharedWidth: -10.0))
+    }
+
     func testFractionalRoomIsFloored() {
         XCTAssertEqual(self.narrowed(titleWidth: 230.0, labelWidth: 72.0, labelSharedWidth: 261.67, titleSharedWidth: 261.67), 189.0)
     }

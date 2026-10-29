@@ -514,8 +514,13 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 if let (titleBadgeLayout, _) = titleBadgeTextNodeLayout {
                     titleSharedWidth -= 5.0 + titleBadgeLayout.size.width
                 }
-                if labelSharedWidth - titleLayout.size.width >= labelWidth {
+                // As before, whether the value fits beside the title does not count a title badge.
+                let labelRoom = labelSharedWidth - titleLayout.size.width
+                if labelRoom >= labelWidth {
                     labelLayoutAndApply = fullLabelLayoutAndApply
+                } else if labelRoom > labelWidth - 1.0, case let titleFirstLabelLayoutAndApply = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: labelRoom, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())), !titleFirstLabelLayoutAndApply.0.truncated {
+                    // The measured width is rounded up: the value still fits within a point of it.
+                    labelLayoutAndApply = titleFirstLabelLayoutAndApply
                 } else if let narrowedTitleWidth = itemListDisclosureNarrowedTitleWidth(titleWidth: titleLayout.size.width, labelWidth: labelWidth, labelSharedWidth: labelSharedWidth, titleSharedWidth: titleSharedWidth) {
                     if item.context == nil {
                         titleLayoutAndApply = makeTitleLayout(makeTitleArguments(narrowedTitleWidth))
