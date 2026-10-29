@@ -3761,6 +3761,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                 }
             }
+            if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem {
+                // "All Messages" is not the peer's own title: no status or verification marks.
+                currentCredibilityIconContent = nil
+                currentVerifiedIconContent = nil
+                currentStatusIconContent = nil
+            }
             if let currentSecretIconImage = currentSecretIconImage {
                 titleIconsWidth += currentSecretIconImage.size.width + 2.0
             }

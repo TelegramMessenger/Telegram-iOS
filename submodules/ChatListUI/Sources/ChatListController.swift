@@ -7057,9 +7057,15 @@ private final class ChatListLocationContext {
                     return
                 }
                 let isSavedMessages = peerId == self.context.account.peerId
-                if let peer = peerView.peers[peerId].flatMap(EnginePeer.init) {
-                    self.updateSideListAvatarButton(peer: peer, isSavedMessages: isSavedMessages, theme: presentationData.theme)
+                // A channel's direct messages show as the channel: its avatar and its title.
+                var mainPeer = peerView.peers[peerId].flatMap(EnginePeer.init)
+                if let channel = peerView.peers[peerId] as? TelegramChannel, channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let linkedPeer = peerView.peers[linkedMonoforumId] {
+                    mainPeer = EnginePeer(linkedPeer)
                 }
+                if let mainPeer {
+                    self.updateSideListAvatarButton(peer: mainPeer, isSavedMessages: isSavedMessages, theme: presentationData.theme)
+                }
+                let customTitle: String? = isSavedMessages ? presentationData.strings.Conversation_SavedMessages : (mainPeer?.id != peerId ? mainPeer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) : nil)
                 self.chatTitleComponent = ChatTitleComponent(
                     context: self.context,
                     theme: presentationData.theme,
@@ -7068,7 +7074,7 @@ private final class ChatListLocationContext {
                     dateTimeFormat: presentationData.dateTimeFormat,
                     nameDisplayOrder: presentationData.nameDisplayOrder,
                     displayBackground: self.parentController?.isSideList ?? false,
-                    content: .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: isSavedMessages ? presentationData.strings.Conversation_SavedMessages : nil, customSubtitle: isSavedMessages ? nil : presentationData.strings.Chat_SideList_DirectMessages, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: nil, customMessageCount: nil, hidePeerStatus: isSavedMessages, isEnabled: true),
+                    content: .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: customTitle, customSubtitle: isSavedMessages ? nil : presentationData.strings.Chat_SideList_DirectMessages, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: nil, customMessageCount: nil, hidePeerStatus: isSavedMessages, isEnabled: true),
                     activities: nil,
                     networkState: nil,
                     tapped: {

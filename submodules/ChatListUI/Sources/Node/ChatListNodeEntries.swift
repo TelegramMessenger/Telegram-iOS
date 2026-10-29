@@ -1008,7 +1008,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
 
 /// The chat side list's "All Messages" row for a Saved Messages list: the parent's own chat, previewing the latest
 /// message of any of its sub-chats, placed first (just below the header entry).
-func chatListSideListAllThreadsEntry(entries: [ChatListNodeEntry], parentPeer: EnginePeer) -> ChatListNodeEntry? {
+func chatListSideListAllThreadsEntry(entries: [ChatListNodeEntry], parentPeer: EngineRenderedPeer) -> ChatListNodeEntry? {
     var latest: ChatListNodeEntry.PeerEntryData?
     for entry in entries {
         guard case let .PeerEntry(peerEntry) = entry, let message = peerEntry.messages.last else {
@@ -1023,7 +1023,7 @@ func chatListSideListAllThreadsEntry(entries: [ChatListNodeEntry], parentPeer: E
         return nil
     }
     data.index = .chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.predecessor)
-    data.peer = EngineRenderedPeer(peer: parentPeer)
+    data.peer = parentPeer
     data.avatarPeer = nil
     data.readState = nil
     data.hasUnseenMentions = false

@@ -2200,9 +2200,10 @@ public final class ChatListNode: ListViewImpl {
         
         let isSideList = self.isSideList
         // The chat side list's "All Messages" row stands for the parent: Saved Messages or a channel's direct messages.
-        let sideListParentPeer: Signal<EnginePeer?, NoError>
+        let sideListParentPeer: Signal<EngineRenderedPeer?, NoError>
         if isSideList, case let .savedMessagesChats(parentPeerId) = location {
-            sideListParentPeer = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: parentPeerId))
+            // Rendered, so a channel's direct messages carry the channel for the row's avatar.
+            sideListParentPeer = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: parentPeerId))
         } else {
             sideListParentPeer = .single(nil)
         }
@@ -2213,7 +2214,7 @@ public final class ChatListNode: ListViewImpl {
             sideListParentPeer
         )
         |> map { accountPeer, parentPeer -> ChatListNodeAccountPeerState in
-            return ChatListNodeAccountPeerState(isPremium: accountPeer?.isPremium ?? false, peer: parentPeer)
+            return ChatListNodeAccountPeerState(isPremium: accountPeer?.isPremium ?? false, parentPeer: parentPeer)
         }
         |> distinctUntilChanged
         
@@ -2237,7 +2238,7 @@ public final class ChatListNode: ListViewImpl {
             let innerIsMainTab = location == .chatList(groupId: .root) && chatListFilter == nil
             
             var (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId, isMainTab: innerIsMainTab)
-            if isSideList, case .savedMessagesChats = location, let parentPeer = accountIsPremiumAndPeer.peer, let allThreadsEntry = chatListSideListAllThreadsEntry(entries: rawEntries, parentPeer: parentPeer) {
+            if isSideList, case .savedMessagesChats = location, let parentPeer = accountIsPremiumAndPeer.parentPeer, let allThreadsEntry = chatListSideListAllThreadsEntry(entries: rawEntries, parentPeer: parentPeer) {
                 rawEntries.append(allThreadsEntry)
                 rawEntries.sort()
             }
@@ -4378,9 +4379,9 @@ func chatListItemTags(location: ChatListControllerLocation, accountPeerId: Engin
 /// The account's premium for the rows, and the chat side list's parent peer for its "All Messages" row.
 private struct ChatListNodeAccountPeerState: Equatable {
     var isPremium: Bool
-    var peer: EnginePeer?
+    var parentPeer: EngineRenderedPeer?
 
     static func ==(lhs: ChatListNodeAccountPeerState, rhs: ChatListNodeAccountPeerState) -> Bool {
-        return lhs.isPremium == rhs.isPremium && (lhs.peer == nil) == (rhs.peer == nil)
+        return lhs.isPremium == rhs.isPremium && (lhs.parentPeer == nil) == (rhs.parentPeer == nil) && lhs.parentPeer?.chatOrMonoforumMainPeer?.id == rhs.parentPeer?.chatOrMonoforumMainPeer?.id
     }
 }
