@@ -20,7 +20,8 @@ import ComponentDisplayAdapters
 extension ChatControllerImpl {
     func updateRightNavigationButtons(presentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition) {
         var buttonsAnimated = transition.isAnimated
-        if let button = rightNavigationButtonForChatInterfaceState(context: self.context, presentationInterfaceState: presentationInterfaceState, strings: presentationInterfaceState.strings, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton, moreInfoNavigationButton: self.moreInfoNavigationButton) {
+        let sideListKind = self.currentSideListKind(presentationInterfaceState: presentationInterfaceState)
+        if let button = rightNavigationButtonForChatInterfaceState(context: self.context, presentationInterfaceState: presentationInterfaceState, strings: presentationInterfaceState.strings, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton, moreInfoNavigationButton: self.moreInfoNavigationButton, sideListKind: sideListKind) {
             if self.rightNavigationButton != button {
                 if let currentButton = self.rightNavigationButton?.action, currentButton == button.action {
                     buttonsAnimated = false
@@ -31,7 +32,7 @@ extension ChatControllerImpl {
             self.rightNavigationButton = nil
         }
 
-        if let button = secondaryRightNavigationButtonForChatInterfaceState(context: self.context, presentationInterfaceState: presentationInterfaceState, strings: presentationInterfaceState.strings, currentButton: self.secondaryRightNavigationButton, target: self, selector: #selector(self.secondaryRightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton, moreInfoNavigationButton: self.moreInfoNavigationButton) {
+        if let button = secondaryRightNavigationButtonForChatInterfaceState(context: self.context, presentationInterfaceState: presentationInterfaceState, strings: presentationInterfaceState.strings, currentButton: self.secondaryRightNavigationButton, target: self, selector: #selector(self.secondaryRightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton, moreInfoNavigationButton: self.moreInfoNavigationButton, sideListKind: sideListKind) {
             if self.secondaryRightNavigationButton != button {
                 if let currentButton = self.secondaryRightNavigationButton?.action, currentButton == button.action {
                     buttonsAnimated = false

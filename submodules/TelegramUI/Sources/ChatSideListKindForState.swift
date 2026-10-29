@@ -1,0 +1,46 @@
+import Foundation
+import TelegramCore
+import AccountContext
+import ChatPresentationInterfaceState
+
+/// The side list this chat shows its sidebar button for, or nil. The navigation buttons and the topics strips both ask
+/// this, so the button and the strip never show together.
+func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentationInterfaceState, context: AccountContext, isRegularWidth: Bool) -> ChatSideListKind? {
+    guard let peerId = state.chatLocation.peerId else {
+        return nil
+    }
+    if case .standard(.default) = state.mode {
+    } else {
+        return nil
+    }
+    if state.subject != nil {
+        return nil
+    }
+    let peer = state.renderedPeer?.peers[peerId] ?? state.renderedPeer?.peer
+    var isForum = false
+    var isMonoforum = false
+    var isAdminMonoforum = false
+    var isBotWithThreads = false
+    if let channel = peer as? TelegramChannel {
+        isForum = channel.isForum
+        isMonoforum = channel.isMonoForum
+        if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = state.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
+            isAdminMonoforum = true
+        }
+    } else if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum) {
+        isBotWithThreads = true
+    }
+    if peerId == context.account.peerId, !state.hasSavedChats {
+        return nil
+    }
+    return chatSideListKind(
+        peerId: peerId,
+        accountPeerId: context.account.peerId,
+        isForum: isForum,
+        isMonoforum: isMonoforum,
+        isAdminMonoforum: isAdminMonoforum,
+        isBotWithThreads: isBotWithThreads,
+        isRegularWidth: isRegularWidth,
+        enabled: context.usesChatSideList
+    )
+}

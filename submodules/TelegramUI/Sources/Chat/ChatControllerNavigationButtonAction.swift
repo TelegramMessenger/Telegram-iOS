@@ -127,6 +127,8 @@ extension ChatControllerImpl {
         switch action {
         case .spacer, .toggleInfoPanel:
             break
+        case .toggleSideList:
+            self.toggleSideList()
         case .cancelMessageSelection:
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
         case .clearHistory:

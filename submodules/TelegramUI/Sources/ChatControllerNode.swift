@@ -1475,7 +1475,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var footerPanels: [HeaderPanelContainerComponent.Panel] = []
         let hideTopPanels = self.controller?.hideTopPanels ?? false
         
-        if !hideTopPanels, self.chatPresentationInterfaceState.search == nil, let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+        if !hideTopPanels, self.chatPresentationInterfaceState.search == nil, let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false, sideListActive: chatSideListKindForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, isRegularWidth: layout.metrics.widthClass == .regular) != nil) {
             let panel = HeaderPanelContainerComponent.Panel(
                 key: "topics",
                 orderIndex: 0,
@@ -1793,7 +1793,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var immediatelyLayoutFloatingTopicsNodeAndAnimateAppearance = false
         var didChangeFloatingTopicsPanel = false
         
-        if let floatingTopicsPanelComponent = floatingTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+        if let floatingTopicsPanelComponent = floatingTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false, sideListActive: chatSideListKindForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, isRegularWidth: layout.metrics.widthClass == .regular) != nil) {
             if self.floatingTopicsPanel == nil {
                 self.floatingTopicsPanel = (ComponentView(), floatingTopicsPanelComponent)
                 immediatelyLayoutFloatingTopicsNodeAndAnimateAppearance = true
