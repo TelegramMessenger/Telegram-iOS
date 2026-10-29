@@ -1125,6 +1125,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             guard let strongSelf = self else {
                 return false
             }
+            // With the side list open a right swipe closes the list, not the chat.
+            if strongSelf.sideListOffset > 0.0 {
+                return true
+            }
             if let _ = strongSelf.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
                 return true
             }
@@ -1206,12 +1210,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     /// How far the chat is moved left for the side list (`ChatSideListPanelNode`); the panel itself is the controller's.
     private(set) var sideListOffset: CGFloat = 0.0
 
-    func updateSideListOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateSideListOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         self.sideListOffset = offset
         guard let (layout, _) = self.validLayout else {
+            completion?()
             return
         }
-        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: layout.size))
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: layout.size), completion: { _ in
+            completion?()
+        })
     }
 
     func forceUpdateWarpContents() {

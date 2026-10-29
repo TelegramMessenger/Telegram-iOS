@@ -94,3 +94,13 @@ public func chatSideListSelection(kind: ChatSideListKind, currentThreadId: Int64
     }
     return .switchThread(selectedThreadId, messageId: messageId)
 }
+
+/// The parent and thread a tap in a chat list resolves to. A Saved Messages or direct-messages list (and its search)
+/// shows the parent's threads as peers, so a peer without a thread is the parent's thread with that peer's id; a row of
+/// the parent itself is its own thread (Saved Messages' "My Notes"), a search hit for it is the parent's chat.
+public func chatSideListResolvedSelection(location: ChatListControllerLocation, peerId: EnginePeer.Id, threadId: Int64?, isListRow: Bool) -> (peerId: EnginePeer.Id, threadId: Int64?) {
+    if case let .savedMessagesChats(parentPeerId) = location, threadId == nil, isListRow || peerId != parentPeerId {
+        return (parentPeerId, peerId.toInt64())
+    }
+    return (peerId, threadId)
+}

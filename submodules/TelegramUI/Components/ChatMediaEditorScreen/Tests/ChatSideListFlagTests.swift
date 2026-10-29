@@ -117,4 +117,34 @@ final class ChatSideListFlagTests: XCTestCase {
         let value = chatSideListSelection(kind: .savedMessages(peerId: self.accountPeerId), currentThreadId: 7, selectedPeerId: self.accountPeerId, selectedThreadId: nil, messageId: nil)
         XCTAssertEqual(value, .switchThread(nil, messageId: nil))
     }
+
+    func testSavedListRowMapsToParentThread() {
+        let value = chatSideListResolvedSelection(location: .savedMessagesChats(peerId: self.accountPeerId), peerId: self.otherUserPeerId, threadId: nil, isListRow: true)
+        XCTAssertEqual(value.peerId, self.accountPeerId)
+        XCTAssertEqual(value.threadId, self.otherUserPeerId.toInt64())
+    }
+
+    func testSavedListMyNotesRowMapsToOwnThread() {
+        let value = chatSideListResolvedSelection(location: .savedMessagesChats(peerId: self.accountPeerId), peerId: self.accountPeerId, threadId: nil, isListRow: true)
+        XCTAssertEqual(value.peerId, self.accountPeerId)
+        XCTAssertEqual(value.threadId, self.accountPeerId.toInt64())
+    }
+
+    func testSavedSearchPeerHitMapsToParentThread() {
+        let value = chatSideListResolvedSelection(location: .savedMessagesChats(peerId: self.channelPeerId), peerId: self.otherUserPeerId, threadId: nil, isListRow: false)
+        XCTAssertEqual(value.peerId, self.channelPeerId)
+        XCTAssertEqual(value.threadId, self.otherUserPeerId.toInt64())
+    }
+
+    func testSearchHitWithThreadIsUnchanged() {
+        let value = chatSideListResolvedSelection(location: .savedMessagesChats(peerId: self.accountPeerId), peerId: self.accountPeerId, threadId: 9, isListRow: false)
+        XCTAssertEqual(value.peerId, self.accountPeerId)
+        XCTAssertEqual(value.threadId, 9)
+    }
+
+    func testForumLocationIsUnchanged() {
+        let value = chatSideListResolvedSelection(location: .forum(peerId: self.botPeerId), peerId: self.botPeerId, threadId: 3, isListRow: true)
+        XCTAssertEqual(value.peerId, self.botPeerId)
+        XCTAssertEqual(value.threadId, 3)
+    }
 }

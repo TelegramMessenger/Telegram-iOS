@@ -21,6 +21,7 @@ extension ChatControllerImpl {
     func updateRightNavigationButtons(presentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition) {
         var buttonsAnimated = transition.isAnimated
         let sideListKind = self.currentSideListKind(presentationInterfaceState: presentationInterfaceState)
+        self.sideListButtonKind = sideListKind
         if let button = rightNavigationButtonForChatInterfaceState(context: self.context, presentationInterfaceState: presentationInterfaceState, strings: presentationInterfaceState.strings, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton, moreInfoNavigationButton: self.moreInfoNavigationButton, sideListKind: sideListKind) {
             if self.rightNavigationButton != button {
                 if let currentButton = self.rightNavigationButton?.action, currentButton == button.action {

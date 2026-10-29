@@ -150,19 +150,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     public var onDidAppear: (() -> Void)?
     public var interceptPeerSelection: ((EnginePeer.Id, Int64?, EngineMessage.Id?) -> Bool)?
     
-    /// Offers a tap to `interceptPeerSelection`. A Saved Messages or direct-messages row is a peer of the parent's list,
-    /// so it resolves to the parent's thread with that peer's id, as the push path below does.
+    /// Offers a tap to `interceptPeerSelection`, resolved to the parent's thread (`chatSideListResolvedSelection`).
     private func interceptsSelection(peer: EnginePeer, threadId: Int64?, messageId: EngineMessage.Id?, isListRow: Bool) -> Bool {
         guard let interceptPeerSelection = self.interceptPeerSelection else {
             return false
         }
-        var peerId = peer.id
-        var threadId = threadId
-        if isListRow, case let .savedMessagesChats(parentPeerId) = self.location, threadId == nil {
-            peerId = parentPeerId
-            threadId = peer.id.toInt64()
-        }
-        return interceptPeerSelection(peerId, threadId, messageId)
+        let resolved = chatSideListResolvedSelection(location: self.location, peerId: peer.id, threadId: threadId, isListRow: isListRow)
+        return interceptPeerSelection(resolved.peerId, resolved.threadId, messageId)
     }
         
     private var passcodeLockTooltipDisposable = MetaDisposable()

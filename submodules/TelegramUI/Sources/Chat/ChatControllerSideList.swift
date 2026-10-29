@@ -86,9 +86,15 @@ extension ChatControllerImpl {
             break
         }
         panel.listController.updateNavigationCustomData(highlightedLocation, progress: 1.0, transition: .immediate)
-        panel.listController.viewWillAppear(true)
-        self.setSideListOpenFraction(1.0, transition: ChatControllerImpl.sideListTransition)
-        panel.listController.viewDidAppear(true)
+        let wasOpen = self.sideListOpenFraction > 0.0
+        if !wasOpen {
+            panel.listController.viewWillAppear(true)
+        }
+        self.setSideListOpenFraction(1.0, transition: ChatControllerImpl.sideListTransition, completion: { [weak panel] in
+            if !wasOpen {
+                panel?.listController.viewDidAppear(true)
+            }
+        })
     }
 
     func closeSideList(animated: Bool) {
@@ -96,8 +102,33 @@ extension ChatControllerImpl {
             return
         }
         panel.listController.viewWillDisappear(animated)
-        self.setSideListOpenFraction(0.0, transition: animated ? ChatControllerImpl.sideListTransition : .immediate)
-        panel.listController.viewDidDisappear(animated)
+        self.setSideListOpenFraction(0.0, transition: animated ? ChatControllerImpl.sideListTransition : .immediate, completion: { [weak panel] in
+            panel?.listController.viewDidDisappear(animated)
+        })
+    }
+
+    enum SideListAppearance {
+        case willAppear
+        case didAppear
+        case willDisappear
+        case didDisappear
+    }
+
+    /// The chat's own appearance reaches the list only while the list is open; opening and closing send their own.
+    func forwardSideListAppearance(_ appearance: SideListAppearance, animated: Bool) {
+        guard let panel = self.sideListPanel, self.sideListOpenFraction > 0.0 else {
+            return
+        }
+        switch appearance {
+        case .willAppear:
+            panel.listController.viewWillAppear(animated)
+        case .didAppear:
+            panel.listController.viewDidAppear(animated)
+        case .willDisappear:
+            panel.listController.viewWillDisappear(animated)
+        case .didDisappear:
+            panel.listController.viewDidDisappear(animated)
+        }
     }
 
     private func handleSideListSelection(peerId: EnginePeer.Id, threadId: Int64?, messageId: EngineMessage.Id?) -> Bool {
@@ -127,30 +158,37 @@ extension ChatControllerImpl {
         guard let panel = self.sideListPanel else {
             return
         }
+        let wasOpen = self.sideListOpenFraction > 0.0
         self.sideListPanel = nil
         self.sideListOpenFraction = 0.0
+        if wasOpen {
+            panel.listController.viewWillDisappear(false)
+            panel.listController.viewDidDisappear(false)
+        }
         self.chatDisplayNode.updateSideListOffset(0.0, transition: .immediate)
         panel.listController.willMove(toParent: nil)
         panel.removeFromSupernode()
         panel.listController.removeFromParent()
     }
 
-    func setSideListOpenFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+    func setSideListOpenFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         self.sideListOpenFraction = fraction
-        self.updateSideListLayout(transition: transition)
+        self.updateSideListLayout(transition: transition, completion: completion)
     }
 
-    func updateSideListLayout(transition: ContainedViewLayoutTransition) {
+    func updateSideListLayout(transition: ContainedViewLayoutTransition, completion: (() -> Void)? = nil) {
         guard let panel = self.sideListPanel, let layout = self.validLayout else {
+            completion?()
             return
         }
         // The chat stopped being one with a side list (the killswitch, a width change): put it back.
         if self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != panel.kind {
             self.removeSideListPanel()
+            completion?()
             return
         }
         let offset = self.sideListOpenFraction * (layout.size.width - ChatSideListPanelNode.stripWidth)
-        self.chatDisplayNode.updateSideListOffset(offset, transition: transition)
+        self.chatDisplayNode.updateSideListOffset(offset, transition: transition, completion: completion)
         transition.updateFrame(node: panel, frame: CGRect(origin: CGPoint(), size: layout.size))
         panel.updateLayout(layout: layout, openFraction: self.sideListOpenFraction, transition: transition)
     }

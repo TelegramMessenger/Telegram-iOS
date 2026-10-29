@@ -320,6 +320,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var sideListPanel: ChatSideListPanelNode?
     var sideListOpenFraction: CGFloat = 0.0
+    var sideListButtonKind: ChatSideListKind?
     
     var historyStateDisposable: Disposable?
     
@@ -7805,6 +7806,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        self.forwardSideListAppearance(.willAppear, animated: animated)
 
         self.walletTransferAnimationsVisible = true
         self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemNode in
@@ -7977,6 +7979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        self.forwardSideListAppearance(.didAppear, animated: animated)
         
         self.didAppear = true
         
@@ -8421,8 +8424,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        self.forwardSideListAppearance(.didDisappear, animated: animated)
+    }
+    
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        self.forwardSideListAppearance(.willDisappear, animated: animated)
 
         self.walletTransferAnimationsVisible = false
         
@@ -8627,6 +8636,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
         
         self.updateSideListLayout(transition: transition)
+        // The strip is chosen per layout; keep the button in step when the width class or the flag changed.
+        if self.currentSideListKind(presentationInterfaceState: self.presentationInterfaceState) != self.sideListButtonKind {
+            self.updateRightNavigationButtons(presentationInterfaceState: self.presentationInterfaceState, transition: .immediate)
+        }
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
