@@ -176,6 +176,9 @@ Review and runtime findings, fixed:
   the buttons covered the page's right column (#68). The background spans the strip; full screen is unchanged.
 - Small centred controls stay on the axis of their content: camera preview Done, face scan Cancel, the round record
   button, the landscape wallet Send, the quick-reply empty-state button.
+- The wallet Send screen's custom keypad is a bottom panel, as the passcode screen's (the same component): in portrait
+  its keys span the strip with `bottomEdgeSideInsets()` (#53). In landscape they are a fixed-width block under the
+  band-centred Send button and keep the band, on that button's axis.
 
 Deliberately not changed:
 
