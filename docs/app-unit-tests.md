@@ -95,6 +95,12 @@ the chat a split view's detail pane shows. When the split goes away (folding iPh
 chat and progress 0; a progress without a chat must count as no selection in progress, or every row on screen takes
 `1 - 0` as its highlight and stays gray, and a pressed row shows none.
 
+`//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests` covers `EntityKeyboardSideInsets.swift`, the
+emoji / stickers / GIFs keyboard's placement beside the Duo's side strip: the grid and the centred controls (group
+headers, the GIFs / Stickers / Emoji switcher) centre on the band between the side insets, and the side strips the pack
+rows are clipped by; with equal side insets the old expressions come out exactly. The clipping itself is checked on
+the Duo simulator.
+
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the

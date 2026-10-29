@@ -181,4 +181,6 @@ other device stays byte-identical; the band helpers above are built that way.
   caption panel: a caption above the media keeps clear of folded portrait's status corner),
   `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` (the round video
   message preview kept above the input panel, its trailing buttons clear of the status corner, touches reaching the
-  panel above a bot keyboard).
+  panel above a bot keyboard),
+  `//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests`
+  (the emoji / stickers / GIFs keyboard's grid, headers and switcher on the band).
