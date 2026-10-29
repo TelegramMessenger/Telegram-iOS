@@ -83,8 +83,8 @@ final class SectionHeaderComponent: Component {
             
             let height: CGFloat = 28.0
             let sideInset: CGFloat = 16.0
-            let leftInset: CGFloat = sideInset + component.leftInset
-            let rightInset: CGFloat = component.rightInset
+            let titleMinX: CGFloat = sideInset + component.leftInset
+            let trailingInset: CGFloat = component.rightInset
             
             let previousTitleFrame = self.title.view?.frame
             
@@ -104,10 +104,10 @@ final class SectionHeaderComponent: Component {
                     text: .plain(NSAttributedString(string: component.title, font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - titleMinX - trailingInset, height: 100.0)
             )
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: titleMinX, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -132,7 +132,7 @@ final class SectionHeaderComponent: Component {
                         })
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - titleMinX - trailingInset, height: 100.0)
                 )
                 if let view = self.action.view {
                     if view.superview == nil {
@@ -142,7 +142,7 @@ final class SectionHeaderComponent: Component {
                             view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                         }
                     }
-                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - rightInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
+                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - trailingInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
                     view.frame = actionFrame
                 }
             } else if let view = self.action.view, view.superview != nil {

@@ -1125,15 +1125,14 @@ final class ShareWithPeersScreenComponent: Component {
                 
                 var minSectionHeader: UIView?
                 do {
-                    // A pinned header (outside the list's clipping) spans the side strip, its title in the band.
-                    let sectionHeaderBandInsets: (left: CGFloat, right: CGFloat)
+                    var isStories = false
                     if case .stories = component.stateContext.subject {
-                        sectionHeaderBandInsets = (0.0, 0.0)
-                    } else {
-                        sectionHeaderBandInsets = self.bandInsets(environment: environment)
+                        isStories = true
                     }
+                    // A pinned header (outside the list's clipping) spans the side strip, its title in the band.
+                    let sectionHeaderBandInsets: (left: CGFloat, right: CGFloat) = isStories ? (0.0, 0.0) : self.bandInsets(environment: environment)
                     var sectionHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset - sectionHeaderBandInsets.left, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width + sectionHeaderBandInsets.left + sectionHeaderBandInsets.right, height: section.insets.top))
-                    if case .stories = component.stateContext.subject {
+                    if isStories {
                         sectionHeaderFrame = CGRect(origin: CGPoint(x: sectionHeaderFrame.minX, y: sectionOffset), size: sectionHeaderFrame.size)
                     } else {
                         let sectionHeaderMinY = topOffset + itemLayout.containerInset + itemLayout.navigationHeight

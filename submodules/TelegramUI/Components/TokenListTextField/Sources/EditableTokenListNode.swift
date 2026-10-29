@@ -454,7 +454,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         let placeholderSize = self.placeholderNode.measure(CGSize(width: max(1.0, width - sideInset - rightSideInset), height: CGFloat.greatestFiniteMagnitude))
-        if width - currentOffset.x < placeholderSize.width {
+        // The right inset's excess over the left one (iPhone Duo's side strip) is not room for the placeholder.
+        if width - currentOffset.x - max(0.0, rightSideInset - sideInset) < placeholderSize.width {
             currentOffset.y += 28.0
             currentOffset.x = sideInset
         }
