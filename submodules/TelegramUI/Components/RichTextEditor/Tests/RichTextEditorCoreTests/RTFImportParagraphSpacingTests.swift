@@ -105,4 +105,9 @@ final class RTFImportParagraphSpacingTests: XCTestCase {
     func test_noTrailingBlankLine() {
         XCTAssertEqual(lines("{\\rtf1\\ansi\\pard\\sa300 a\\\nb\\\n}"), ["a", "", "b"])
     }
+
+    /// A stylesheet entry's spacing is not the body's.
+    func test_stylesheetSpacing_isIgnored() {
+        XCTAssertEqual(lines("{\\rtf1\\ansi{\\stylesheet{\\s1\\sa400 Heading;}}a\\\nb\\\n}"), ["a", "b"])
+    }
 }

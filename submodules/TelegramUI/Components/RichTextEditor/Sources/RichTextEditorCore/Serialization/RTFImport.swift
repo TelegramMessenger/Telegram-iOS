@@ -350,21 +350,23 @@ final class RTFDocumentParser {
                 flushTableIfAny()
                 flushParagraph()   // resets curListLevel/curListMarkerText
             }
-            // Read by the flushes above (the paragraph \pard ends); the new paragraph sets its own.
-            curSpaceBefore = 0
-            curSpaceAfter = 0
             // else: inTable is true but currentParagraphInTable was already false — this is a \pard
             // at the start of a new cell (Word's \pard\intbl pattern). The next \intbl will restore
             // currentParagraphInTable. Do NOT flush the table here; let \par handle it.
+
+            // Read by the flushes above (the paragraph \pard ends); the new paragraph sets its own.
+            curSpaceBefore = 0
+            curSpaceAfter = 0
         case "tab":
             // \tab inside a \listtext / \pntext group is a marker separator — suppress it.
             if !state.inListText { appendText("\t") }
         case "line":
             appendText("\n")
         case "sa":
-            curSpaceAfter = max(0, param ?? 0)
+            // Not a stylesheet entry's or another skipped destination's spacing: only the body's.
+            if !state.skipDestination { curSpaceAfter = max(0, param ?? 0) }
         case "sb":
-            curSpaceBefore = max(0, param ?? 0)
+            if !state.skipDestination { curSpaceBefore = max(0, param ?? 0) }
         default:
             break        // unknown control word → no-op
         }

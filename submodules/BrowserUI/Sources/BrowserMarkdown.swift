@@ -1021,7 +1021,8 @@ public enum MarkdownSourceLineBreaks {
     /// Pasted text (a reply copied from ChatGPT, say) as it reads: a single newline stays a line break, and a
     /// blank line between two top-level blocks becomes an empty `.paragraph(.empty)` between them — the only
     /// empty paragraphs the parse emits — so a caller can keep it as a blank line or drop it. The blank lines
-    /// need the parser's source positions (iOS 16); on iOS 15 there are none.
+    /// come from the parser's source positions (iOS 16; none on iOS 15), which miss the one after an indented
+    /// code block and those around a thematic break (`markdownTopLevelBlockSourceLines`).
     case keep
 }
 
@@ -1306,7 +1307,6 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
     var nodesByIdentity: [Int: MarkdownIntentNode] = [:]
     var rootNodes: [MarkdownIntentNode] = []
     var rootIdentities: Set<Int> = []
-    var rootSourceLines: [Int: ClosedRange<Int>] = [:]
     var didAbort = false
 
     attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: []) { attributes, range, stop in
@@ -1352,13 +1352,7 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
         if let rootNode = orderedNodes.first, rootIdentities.insert(rootNode.identity).inserted {
             rootNodes.append(rootNode)
         }
-        if context.keepsSourceLineBreaks, let rootNode = orderedNodes.first, let lines = markdownSourceLines(attributes: attributes) {
-            if let current = rootSourceLines[rootNode.identity] {
-                rootSourceLines[rootNode.identity] = min(current.lowerBound, lines.lowerBound) ... max(current.upperBound, lines.upperBound)
-            } else {
-                rootSourceLines[rootNode.identity] = lines
-            }
-        }
+
         if orderedNodes.count >= 2 {
             for index in 0 ..< (orderedNodes.count - 1) {
                 orderedNodes[index].append(child: orderedNodes[index + 1])
@@ -1373,7 +1367,7 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
         return nil
     }
     if context.keepsSourceLineBreaks {
-        return markdownPageResultKeepingBlankLines(rootNodes: rootNodes, rootSourceLines: rootSourceLines, context: context)
+        return markdownPageResultKeepingBlankLines(rootNodes: rootNodes, rootSourceLines: markdownTopLevelBlockSourceLines(attributedString), context: context)
     }
     guard let blocks = markdownBlocks(from: rootNodes, context: context, depth: 0), !context.budget.isExceeded else {
         return nil
@@ -1382,36 +1376,28 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
 }
 
 /// The top-level blocks with an empty paragraph wherever the source had a blank line between two of them
-/// (`MarkdownSourceLineBreaks.keep`). A block whose source lines are unknown (iOS 15, or text the parser
-/// synthesised) gets none before or after it.
+/// (`MarkdownSourceLineBreaks.keep`). A block whose source lines are unknown (iOS 15, a thematic break) gets none
+/// before or after it.
+@available(iOS 15.0, *)
 private func markdownPageResultKeepingBlankLines(rootNodes: [MarkdownIntentNode], rootSourceLines: [Int: ClosedRange<Int>], context: MarkdownConversionContext) -> MarkdownPageResult? {
-    var blocks: [InstantPageBlock] = []
-    var previousLastLine: Int?
+    var blocksByNode: [(blocks: [InstantPageBlock], lines: ClosedRange<Int>?)] = []
     for node in rootNodes {
         guard let nodeBlocks = markdownBlocks(from: [node], context: context, depth: 0), !context.budget.isExceeded else {
             return nil
         }
-        if nodeBlocks.isEmpty {
-            continue
+        if !nodeBlocks.isEmpty {
+            blocksByNode.append((nodeBlocks, rootSourceLines[node.identity]))
         }
-        let lines = rootSourceLines[node.identity]
-        if let previousLastLine, let lines, lines.lowerBound > previousLastLine + 1 {
+    }
+    let blankLineBefore = markdownBlankLineBeforeBlocks(blocksByNode.map(\.lines))
+    var blocks: [InstantPageBlock] = []
+    for (index, item) in blocksByNode.enumerated() {
+        if blankLineBefore[index] {
             blocks.append(.paragraph(.empty))
         }
-        blocks.append(contentsOf: nodeBlocks)
-        previousLastLine = lines?.upperBound
+        blocks.append(contentsOf: item.blocks)
     }
     return context.makePageResult(blocks: blocks)
-}
-
-private func markdownSourceLines(attributes: [NSAttributedString.Key: Any]) -> ClosedRange<Int>? {
-    guard #available(iOS 16.0, *) else {
-        return nil
-    }
-    guard let position = attributes[NSAttributedString.Key(AttributeScopes.FoundationAttributes.MarkdownSourcePositionAttribute.name)] as? AttributedString.MarkdownSourcePosition else {
-        return nil
-    }
-    return min(position.startLine, position.endLine) ... max(position.startLine, position.endLine)
 }
 
 private func markdownBlocks(from nodes: [MarkdownIntentNode], context: MarkdownConversionContext, depth: Int) -> [InstantPageBlock]? {
@@ -1783,8 +1769,10 @@ private func markdownInlineContent(from attributedString: NSAttributedString, co
             consumeNextSoftBreak = false
         }
 
-        if context.keepsSourceLineBreaks, let inlineIntent, inlineIntent.contains(markdownSoftBreakInlineIntent), text == " " {
-            fragments.append(.richText(markdownApplyHTMLStyles(htmlStyles, to: .plain("\n"))))
+        // The run's own formatting carries over, so a break inside `**…**` does not split the entity in two.
+        // (Foundation emits no soft break inside a link's label: it drops it, joining the two words.)
+        if context.keepsSourceLineBreaks, markdownRunIsSoftBreak(attributes, text: text) {
+            fragments.append(.richText(markdownApplyHTMLStyles(htmlStyles, to: markdownApplyingInlineIntent(inlineIntent, to: .plain("\n")))))
             return
         }
 
