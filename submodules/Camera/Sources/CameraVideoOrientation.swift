@@ -15,8 +15,9 @@ public enum CameraVideoOrientation: Equatable {
     /// The camera is fixed in the device body and a connection's orientation names a body position, while a window's
     /// interface orientation is measured against its own screen. `screenPortrait` is the body position in which that
     /// screen's portrait reads upright (`DeviceMetrics.screenPortraitDeviceOrientation(size:)`): portrait on every
-    /// screen but iPhone Duo's inner one, where the window's orientation is taken as it is, and `landscapeRight` there
-    /// (the inner screen's portrait is the body in `UIDeviceOrientation.landscapeLeft`).
+    /// screen but iPhone Duo's inner one, so the window's orientation passes through, and `landscapeRight` there (the
+    /// inner screen's portrait is the body in `UIDeviceOrientation.landscapeLeft`). The call screens make the same
+    /// conversion for their video (`callInterfaceOrientationInDeviceFrame`).
     public init(interfaceOrientation: CameraVideoOrientation, screenPortrait: CameraVideoOrientation) {
         self.init(quarterTurns: interfaceOrientation.quarterTurns + screenPortrait.quarterTurns)
     }

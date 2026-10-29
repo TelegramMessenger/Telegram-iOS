@@ -727,15 +727,10 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         let titleSpacing: CGFloat = 48.0
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
 
-        // The camera preview follows the device into landscape where this screen can be landscape: an iPad, and iPhone
-        // Duo's unfolded screen (regular width, so this portrait-only-on-phones screen rotates there too).
-        var previewFollowsDeviceOrientation = false
+        // The camera preview follows the device into landscape on an iPad. iPhone Duo's unfolded screen, where this
+        // screen rotates too, needs nothing here: the preview's connection already takes the body's orientation there
+        // (`CameraVideoOrientation`), and `UIDevice.orientation` is a quarter turn from that screen's.
         if case .tablet = layout.deviceMetrics.type {
-            previewFollowsDeviceOrientation = true
-        } else if case .iPhoneDuo = layout.deviceMetrics, case .regular = layout.metrics.widthClass {
-            previewFollowsDeviceOrientation = true
-        }
-        if previewFollowsDeviceOrientation {
             if UIDevice.current.orientation == .landscapeLeft {
                 self.previewView.layer.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
             } else if UIDevice.current.orientation == .landscapeRight {
