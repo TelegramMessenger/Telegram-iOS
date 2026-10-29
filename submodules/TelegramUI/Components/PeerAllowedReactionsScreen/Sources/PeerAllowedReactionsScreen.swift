@@ -1211,6 +1211,10 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             }
                             if self.selectedReactionRange != range {
                                 self.selectedReactionRange = range
+                                // A knob dragged onto the other one collapses the selection to a caret, as in text.
+                                if let range, range.length == 0 {
+                                    self.caretPosition = range.location
+                                }
                                 if !self.isUpdating {
                                     self.state?.updated(transition: .immediate)
                                 }

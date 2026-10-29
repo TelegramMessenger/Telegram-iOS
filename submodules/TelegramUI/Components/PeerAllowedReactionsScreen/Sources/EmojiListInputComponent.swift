@@ -294,12 +294,10 @@ final class EmojiListInputComponent: Component {
         
         private func updateTextSelection(component: EmojiListInputComponent) {
             if self.textSelectionTheme !== component.theme, let textSelectionNode = self.textSelectionNode {
+                textSelectionNode.cancelSelection()
                 self.textSelectionNode = nil
                 textSelectionNode.highlightAreaNode.view.removeFromSuperview()
                 textSelectionNode.view.removeFromSuperview()
-                if component.selectedRange != nil {
-                    component.updateSelectedRange(nil)
-                }
             }
             
             let textSelectionNode: TextSelectionNode
@@ -495,7 +493,11 @@ final class EmojiListInputComponent: Component {
                         }
                     )
                     self.itemLayers[itemKey] = itemLayer
-                    self.layer.addSublayer(itemLayer)
+                    if let textSelectionNode = self.textSelectionNode {
+                        self.layer.insertSublayer(itemLayer, below: textSelectionNode.view.layer)
+                    } else {
+                        self.layer.addSublayer(itemLayer)
+                    }
                 }
                 itemLayer.isVisibleForAnimations = true
                 
