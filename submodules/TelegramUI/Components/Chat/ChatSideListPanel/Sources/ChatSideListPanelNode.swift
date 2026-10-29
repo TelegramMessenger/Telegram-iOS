@@ -17,6 +17,8 @@ public final class ChatSideListPanelNode: ASDisplayNode {
     public let kind: ChatSideListKind
     public let listController: ChatListController
 
+    /// The list's background, for the owner to put below the chat: the chat's rounded corners show it.
+    public let backgroundNode: ASDisplayNode
     private let listContainer: ASDisplayNode
     private let stripNode: ASDisplayNode
     private var newTopicButton: SolidRoundedButtonNode?
@@ -43,6 +45,10 @@ public final class ChatSideListPanelNode: ASDisplayNode {
         self.closeAccessibilityLabel = presentationData.strings.Chat_SideList_Close
         self.kind = kind
         self.listController = listController
+
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
+        self.backgroundNode.isHidden = true
 
         self.listContainer = ASDisplayNode()
         self.listContainer.clipsToBounds = true
@@ -167,6 +173,7 @@ public final class ChatSideListPanelNode: ASDisplayNode {
         let offset = openFraction * (layout.size.width - ChatSideListPanelNode.stripWidth)
         let listLayout = self.listLayout(layout)
         let listFrame = CGRect(origin: CGPoint(x: layout.size.width - offset, y: 0.0), size: listLayout.size)
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.listContainer, frame: listFrame)
         transition.updateFrame(node: self.stripNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, listFrame.minX), height: layout.size.height)))
 

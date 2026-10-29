@@ -67,6 +67,7 @@ extension ChatControllerImpl {
                 self.updateChatLocationThread(threadId: nil)
             }
             self.sideListPanel = panel
+            self.chatDisplayNode.insertSubnode(panel.backgroundNode, at: 0)
             self.chatDisplayNode.addSubnode(panel)
             listController.didMove(toParent: self)
             // Lay it out closed first, so the opening animates in from the right edge.
@@ -167,6 +168,7 @@ extension ChatControllerImpl {
         }
         self.chatDisplayNode.updateSideListOffset(0.0, transition: .immediate)
         panel.listController.willMove(toParent: nil)
+        panel.backgroundNode.removeFromSupernode()
         panel.removeFromSupernode()
         panel.listController.removeFromParent()
     }
@@ -188,7 +190,16 @@ extension ChatControllerImpl {
             return
         }
         let offset = self.sideListOpenFraction * (layout.size.width - ChatSideListPanelNode.stripWidth)
-        self.chatDisplayNode.updateSideListOffset(offset, transition: transition, completion: completion)
+        // The list's background shows only through the chat card's corners, from opening until fully closed.
+        if self.sideListOpenFraction > 0.0 {
+            panel.backgroundNode.isHidden = false
+        }
+        self.chatDisplayNode.updateSideListOffset(offset, transition: transition, completion: { [weak self, weak panel] in
+            if let self, let panel, self.sideListOpenFraction == 0.0 {
+                panel.backgroundNode.isHidden = true
+            }
+            completion?()
+        })
         transition.updateFrame(node: panel, frame: CGRect(origin: CGPoint(), size: layout.size))
         panel.updateLayout(layout: layout, openFraction: self.sideListOpenFraction, transition: transition)
     }

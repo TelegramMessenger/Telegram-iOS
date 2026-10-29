@@ -1216,6 +1216,19 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             completion?()
             return
         }
+        // Moved aside, the chat is a card: its right corners take the screen's radius over the list's background.
+        if offset > 0.0 {
+            self.wrappingNode.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            self.wrappingNode.clipsToBounds = true
+            transition.updateCornerRadius(node: self.wrappingNode, cornerRadius: layout.deviceMetrics.screenCornerRadius)
+        } else {
+            transition.updateCornerRadius(node: self.wrappingNode, cornerRadius: 0.0, completion: { [weak self] _ in
+                guard let self, self.sideListOffset == 0.0 else {
+                    return
+                }
+                self.wrappingNode.clipsToBounds = false
+            })
+        }
         transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: layout.size), completion: { _ in
             completion?()
         })
