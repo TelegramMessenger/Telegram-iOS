@@ -3261,6 +3261,7 @@ Unused sets are archived when you add more.";
 "AuthSessions.LoggedIn" = "Websites";
 "AuthSessions.LogOutApplications" = "Disconnect All Websites";
 "AuthSessions.LogOutApplicationsHelp" = "You can log in on websites that support signing in with Telegram.";
+"AuthSessions.LogOutApplicationsText" = "Are you sure you want to disconnect all websites where you logged in with Telegram?";
 "AuthSessions.LoggedInWithTelegram" = "CONNECTED WEBSITES";
 "AuthSessions.LogOut" = "Disconnect";
 "AuthSessions.Message" = "You allowed this bot to message you when you logged in on %@.";
