@@ -40,66 +40,10 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-private final class SortHeaderButton: HighlightableButtonNode {
-    let referenceNode: ContextReferenceContentNode
-    let containerNode: ContextControllerSourceNode
-    private let textNode: ImmediateTextNode
-    
-    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
-
-    init(presentationData: PresentationData) {
-        self.referenceNode = ContextReferenceContentNode()
-        self.containerNode = ContextControllerSourceNode()
-        self.containerNode.animateScale = false
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-
-        super.init()
-
-        self.containerNode.addSubnode(self.referenceNode)
-        self.referenceNode.addSubnode(self.textNode)
-        self.addSubnode(self.containerNode)
-
-        self.containerNode.shouldBegin = { [weak self] location in
-            guard let strongSelf = self, let _ = strongSelf.contextAction else {
-                return false
-            }
-            return true
-        }
-        self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.contextAction?(strongSelf.containerNode, gesture)
-        }
-
-        self.update(theme: presentationData.theme, strings: presentationData.strings)
-    }
-
-    override func didLoad() {
-        super.didLoad()
-        self.view.isOpaque = false
-    }
-
-    func update(theme: PresentationTheme, strings: PresentationStrings) {
-        self.textNode.attributedText = NSAttributedString(string: strings.Contacts_Sort, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
-        let size = self.textNode.updateLayout(CGSize(width: 100.0, height: 44.0))
-        self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((44.0 - size.height) / 2.0)), size: size)
-        
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 44.0))
-        self.referenceNode.frame = self.containerNode.bounds
-        
-        self.accessibilityLabel = strings.Contacts_Sort
-    }
-    
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        let size = self.textNode.updateLayout(CGSize(width: 100.0, height: 44.0))
-        
-        return CGSize(width: size.width, height: 44.0)
-    }
-
-    func onLayout() {
-    }
+/// Where the screen lives: the tab bar, or pushed (from Settings), with a back button.
+public enum ContactsControllerMode {
+    case tab
+    case navigation
 }
 
 public class ContactsController: ViewController {
@@ -141,14 +85,16 @@ public class ContactsController: ViewController {
         }
     }
     
-    private let sortButton: SortHeaderButton
+    private let sortButton: ContactsSortButton
+    let mode: ContactsControllerMode
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, mode: ContactsControllerMode = .tab) {
         self.context = context
+        self.mode = mode
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.sortButton = SortHeaderButton(presentationData: self.presentationData)
+        self.sortButton = ContactsSortButton(presentationData: self.presentationData)
         
         super.init(navigationBarPresentationData: nil)
         
@@ -566,40 +512,9 @@ public class ContactsController: ViewController {
     }
     
     func presentSortMenu(sourceView: UIView, gesture: ContextGesture?) {
-        let updateSortOrder: (ContactsSortOrder) -> Void = { [weak self] sortOrder in
-            if let strongSelf = self {
-                strongSelf.sortOrderPromise.set(.single(sortOrder))
-                let _ = updateContactSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current -> ContactSynchronizationSettings in
-                    var updated = current
-                    updated.sortOrder = sortOrder
-                    return updated
-                }).start()
-            }
-        }
-        
-        let presentationData = self.presentationData
-        let items: Signal<[ContextMenuItem], NoError> = self.context.sharedContext.accountManager.transaction { transaction in
-            return transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)
-        }
-        |> map { entry -> [ContextMenuItem] in
-            let currentSettings: ContactSynchronizationSettings
-            if let entry = entry?.get(ContactSynchronizationSettings.self) {
-                currentSettings = entry
-            } else {
-                currentSettings = .defaultSettings
-            }
-            
-            var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Contacts_Sort_ByLastSeen, icon: { theme in return currentSettings.sortOrder == .presence ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage() }, action: { _, f in
-                f(.default)
-                updateSortOrder(.presence)
-            })))
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Contacts_Sort_ByName, icon: { theme in return currentSettings.sortOrder == .natural ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage() }, action: { _, f in
-                f(.default)
-                updateSortOrder(.natural)
-            })))
-            return items
-        }
+        let items = contactsSortMenuItems(context: self.context, presentationData: self.presentationData, chosen: { [weak self] sortOrder in
+            self?.sortOrderPromise.set(.single(sortOrder))
+        })
         
         var sourceView = sourceView
         if let navigationBarComponentView = self.contactsNode.navigationBarView.view as? ChatListNavigationBar.View, let headerContentView = navigationBarComponentView.headerContent.view as? ChatListHeaderComponent.View, let value = headerContentView.navigationButtonContextContainer(sourceView: sourceView) {

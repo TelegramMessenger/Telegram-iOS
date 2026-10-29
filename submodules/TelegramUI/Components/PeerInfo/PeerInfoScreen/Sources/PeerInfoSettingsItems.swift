@@ -228,6 +228,10 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
         interaction.openSettings(.recentCalls)
     }))
+    // Contacts live here rather than in the tab bar, which News took.
+    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 21, text: presentationData.strings.Contacts_Title, icon: PresentationResourcesSettings.contacts, action: {
+        interaction.openSettings(.contacts)
+    }))
     
     let devicesLabel: String
     if let settings = data.globalSettings, let otherSessionsCount = settings.otherSessionsCount {

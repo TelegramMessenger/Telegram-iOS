@@ -321,7 +321,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             rightButtons = []
         } else {
             title = self.presentationData.strings.Contacts_Title
-            leftButton = NavigationBarComponent.Button(id: "sort",
+            let sortButton = NavigationBarComponent.Button(id: "sort",
                 content: .text(title: self.presentationData.strings.Contacts_Sort, isBold: false),
                 action: { [weak self] sourceView in
                     guard let self else {
@@ -331,7 +331,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     self.controller?.presentSortMenu(sourceView: sourceView, gesture: nil)
                 }
             )
-            rightButtons = [NavigationBarComponent.Button(id: "add",
+            let addButton = NavigationBarComponent.Button(id: "add",
                 content: .icon(imageName: "Chat List/AddIcon"),
                 action: { [weak self] _ in
                     guard let self else {
@@ -339,16 +339,31 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     }
                     self.controller?.addPressed()
                 }
-            )]
+            )
+            // Pushed, the left is the back button's: Sort stands on the right, its own capsule beside Add.
+            if self.controller?.mode == .navigation {
+                leftButton = nil
+                rightButtons = [sortButton, addButton]
+            } else {
+                leftButton = sortButton
+                rightButtons = [addButton]
+            }
         }
         
+        // Pushed (from Settings) the header has a back button.
+        var backPressed: (() -> Void)?
+        if self.controller?.mode == .navigation {
+            backPressed = { [weak self] in
+                self?.controller?.navigationController?.popViewController(animated: true)
+            }
+        }
         let primaryContent = ChatListHeaderComponent.Content(
             title: self.presentationData.strings.Contacts_Title,
             titleComponent: nil,
             chatListTitle: NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
             leftButton: leftButton,
             rightButtons: rightButtons,
-            backPressed: nil
+            backPressed: backPressed
         )
         
         let navigationBarSize = self.navigationBarView.update(
