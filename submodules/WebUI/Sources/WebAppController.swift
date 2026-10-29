@@ -411,7 +411,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             if let strongSelf = self {
                                 let imageSize: CGSize
                                 if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                                    let minSize = min(layout.size.width, layout.size.height)
+                                    let (stripLeft, stripRight) = strongSelf.pageStripInsets(layout: layout)
+                                    let minSize = min(layout.size.width - stripLeft - stripRight, layout.size.height)
                                     imageSize = CGSize(width: minSize, height: minSize * 2.0)
                                 } else {
                                     imageSize = CGSize(width: 78.0, height: 78.0)
@@ -903,6 +904,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        /// iPhone Duo: in the sheet the page keeps to the band beside a side strip, where the navigation bar's
+        /// back/close and more buttons stand (most pages ignore the safe area we report); the background spans
+        /// the strip. Full screen fills the screen beside the strip. Zero without a strip.
+        private func pageStripInsets(layout: ContainerViewLayout) -> (left: CGFloat, right: CGFloat) {
+            if self.controller?.isFullscreen ?? false {
+                return (0.0, 0.0)
+            }
+            return (
+                layout.sideStrip(edge: .left) != nil ? layout.safeInsets.left : 0.0,
+                layout.sideStrip(edge: .right) != nil ? layout.safeInsets.right : 0.0
+            )
+        }
+        
         private var updateWebViewWhenStable = false
                 
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1038,11 +1052,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             }
             
-            // iPhone Duo: in the sheet the page keeps to the band beside a side strip, where the navigation
-            // bar's back/close and more buttons stand (most pages ignore the safe area we report); the
-            // background spans the strip. Full screen fills the screen beside the strip. Zero without a strip.
-            let stripLeft: CGFloat = !controller.isFullscreen && layout.sideStrip(edge: .left) != nil ? layout.safeInsets.left : 0.0
-            let stripRight: CGFloat = !controller.isFullscreen && layout.sideStrip(edge: .right) != nil ? layout.safeInsets.right : 0.0
+            let (stripLeft, stripRight) = self.pageStripInsets(layout: layout)
             
             if let webView = self.webView {
                 let inputHeight = self.validLayout?.0.inputHeight ?? 0.0
@@ -4233,7 +4243,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         configuration.rect = CGRect(origin: .zero, size: webView.frame.size)
 
         let imageView = UIImageView()
-        imageView.frame = CGRect(origin: .zero, size: webView.frame.size)
+        imageView.frame = CGRect(origin: CGPoint(x: webView.frame.minX, y: 0.0), size: webView.frame.size)
         webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
             imageView.image = image
         })
