@@ -131,8 +131,8 @@ halt, no viewport track. Below `scrollTo`, the pin latch and a scroll hold; not 
 from the top inset edge, but never above the edge: a row partly under it lands on it, so a collapsed row stays
 in view. A `.fixed` anchor (the placement needs no new height), projected exactly as `.preserveVisibleContent`'s
 witness (inset compensation, pin slack, `additionalScrollDistance`), with the same end clipping, no halt and no
-viewport track. A row the old window did not load, or one leaving, makes the pass a `.preserveVisibleContent`
-one. `PreservedItemAnchorTests`.
+viewport track. A row the old window did not load, one wholly above the edge, or one leaving makes the pass a
+`.preserveVisibleContent` one. `PreservedItemAnchorTests`.
 
 `reachedLoadedEdges`/`onLoadedEdgeReached` (transitions only): lines at `loadedEdgeMargin` and
 `logicalSize.height - loadedEdgeMargin` (positive loads later), independent of insets and engine limits,

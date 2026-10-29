@@ -131,8 +131,9 @@ public enum CoreListAnchorMode: Equatable {
     ///
     /// It is placed as `preserveVisibleContent` places its witness: an inset change in the same pass
     /// carries it with the edge, the list's ends win, and there is no momentum halt and no viewport
-    /// track. A row the old window did not load, or one leaving the collection, makes the pass a
-    /// `preserveVisibleContent` one. Yields to `scrollTo`, the pin latch and a scroll hold.
+    /// track. A row the old window did not load, one wholly above the top inset edge, or one leaving the
+    /// collection makes the pass a `preserveVisibleContent` one. Yields to `scrollTo`, the pin latch and a
+    /// scroll hold.
     case preserveItem(AnyHashable)
 }
 
@@ -2803,6 +2804,9 @@ public final class CoreVirtualListView: UIView {
                                    pinsLoadedTop: true,
                                    sourceWindow: nil)
         priorItems = _items
+        // Every `render()` caller marks the transaction first. Nothing is tracked after the reset above, so
+        // this records nothing; it keeps a later pass in the same turn from reading the rebuild as committed.
+        beginModelWrites()
         render()
         var initialOffset = containerOriginY - activeWindow.minY
         let edges = loadedEdgeRange(for: activeWindow, originY: containerOriginY)
@@ -2913,8 +2917,9 @@ public final class CoreVirtualListView: UIView {
            ) {
             return preserved
         }
-        // `.preserveItem` comes here when the old window did not load its row or the row is leaving,
-        // which makes the pass exactly a `.preserveVisibleContent` one.
+        // `.preserveItem` comes here when the old window did not load its row, the row lies wholly above
+        // the top inset edge or the row is leaving, which makes the pass exactly a `.preserveVisibleContent`
+        // one.
         let resolvesTopInsetWitness: Bool
         switch anchorMode {
         case .preserveVisibleContent, .preserveItem:
@@ -3092,7 +3097,8 @@ public final class CoreVirtualListView: UIView {
     /// edge when it sat above it. A `.fixed` anchor, because the placement does not depend on the row's
     /// new height, and so the offset composition projects it exactly as it does
     /// `resolvePreservedAnchor`'s witness (inset compensation, pin slack, `additionalScrollDistance`).
-    /// Nil when the old window did not load the row or the row is leaving the collection.
+    /// Nil when the old window did not load the row, the row lies wholly above the edge, or the row is
+    /// leaving the collection.
     private func resolvePreservedItemAnchor(identity: AnyHashable,
                                             diff: ItemDiff,
                                             oldItems: [CoreListItem],
@@ -3106,6 +3112,9 @@ public final class CoreVirtualListView: UIView {
               let newIndex = diff.survivingNewIndex(forOldIndex: item.index)
         else { return nil }
         let screenMinY = oldContainerOriginY - oldWindow.minY + item.frame.minY - oldSettledOffset
+        // Wholly above the edge (loaded in the preload band, or under the top inset): pulling it onto the
+        // edge would jump the content by its height and more. The pass keeps what is on screen instead.
+        guard screenMinY + item.frame.height > oldTopInset else { return nil }
         return ResolvedAnchor(index: newIndex,
                               pointOffset: max(screenMinY, oldTopInset),
                               preservesVisibleContent: true)
@@ -3814,6 +3823,9 @@ public final class CoreVirtualListView: UIView {
         }
     }
 
+    /// Re-bases every loaded row's position. A caller calls `beginModelWrites()` first in the same
+    /// transaction (a pass's entry, a window-changing `rebalanceActiveWindow`, `rebuildFromScratch`):
+    /// without it a later pass in the turn samples this re-base as motion.
     private func render() {
         let window = activeWindow
         let newOriginY = computeContainerOriginY(for: window)

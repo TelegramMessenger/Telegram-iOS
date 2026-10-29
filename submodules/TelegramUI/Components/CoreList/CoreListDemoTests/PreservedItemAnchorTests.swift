@@ -90,9 +90,9 @@ final class PreservedItemAnchorTests: XCTestCase {
 
     // MARK: - The fallback
 
-    /// A row the old window did not load (row 0 of a list scrolled to row 50), a row leaving in the same
-    /// pass, and an identity the list never had each make the pass exactly a `.preserveVisibleContent`
-    /// one. The pass grows every row, so a fallback that kept the named row, or the `.automatic` anchor,
+    /// A row the old window did not load (row 0 of a list scrolled to row 50), a loaded row wholly above
+    /// the top inset edge (row 45, at -130...-30 in the preload band), a row leaving in the same pass, and
+    /// an identity the list never had each make the pass exactly a `.preserveVisibleContent` one. The pass grows every row, so a fallback that kept the named row, or the `.automatic` anchor,
     /// would land elsewhere.
     func testAnIdentityThatCannotBePreservedFallsBackToPreserveVisibleContent() throws {
         func layout(removing removed: Int?,
@@ -115,6 +115,13 @@ final class PreservedItemAnchorTests: XCTestCase {
                           "precondition: the automatic anchor lands elsewhere")
         XCTAssertEqual(layout(removing: nil) { ids in .preserveItem(ids[0]) }, preserved,
                        "a row the old window did not load")
+        do {
+            let (fixture, ids) = makeFixture()
+            XCTAssertTrue(fixture.loadedIndices.contains(45), "precondition: row 45 is loaded")
+            XCTAssertLessThanOrEqual(try settledY(fixture, ids[45]) + 100, insets.top, "precondition: wholly above the edge")
+        }
+        XCTAssertEqual(layout(removing: nil) { ids in .preserveItem(ids[45]) }, preserved,
+                       "a loaded row wholly above the top inset edge")
         XCTAssertEqual(layout(removing: nil) { _ in .preserveItem(AnyHashable("missing")) }, preserved,
                        "an identity the list never had")
         XCTAssertEqual(layout(removing: 50) { ids in .preserveItem(ids[50]) },
