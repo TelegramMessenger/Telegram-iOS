@@ -5050,8 +5050,9 @@ public final class EmojiPagerContentComponent: Component {
                         vibrancyEffectView.addSubview(visibleEmptySearchResultsView.tintContainerView)
                     }
                 }
-                // Centred on the band, under the search field (iPhone Duo's side strip makes the side insets differ).
-                let emptySearchResultsSize = CGSize(width: availableSize.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: availableSize.height - itemLayout.searchInsets.top - itemLayout.searchHeight)
+                // Centred on the band, under the search field: iPhone Duo's side strip is left out of it.
+                let emptySearchResultsStrips = entityKeyboardSideStrips(leftInset: itemLayout.searchInsets.left, rightInset: itemLayout.searchInsets.right)
+                let emptySearchResultsSize = CGSize(width: availableSize.width - emptySearchResultsStrips.left - emptySearchResultsStrips.right, height: availableSize.height - itemLayout.searchInsets.top - itemLayout.searchHeight)
                 visibleEmptySearchResultsView.update(
                     context: component.context,
                     theme: keyboardChildEnvironment.theme,
@@ -5062,7 +5063,7 @@ public final class EmojiPagerContentComponent: Component {
                     searchInitiallyHidden: component.searchInitiallyHidden,
                     transition: emptySearchResultsTransition
                 )
-                emptySearchResultsTransition.setFrame(view: visibleEmptySearchResultsView, frame: CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top + itemLayout.searchHeight), size: emptySearchResultsSize))
+                emptySearchResultsTransition.setFrame(view: visibleEmptySearchResultsView, frame: CGRect(origin: CGPoint(x: emptySearchResultsStrips.left, y: itemLayout.searchInsets.top + itemLayout.searchHeight), size: emptySearchResultsSize))
             } else {
                 if let visibleEmptySearchResultsView = self.visibleEmptySearchResultsView {
                     self.visibleEmptySearchResultsView = nil
