@@ -531,8 +531,19 @@ public class ChatListItem: ListViewItem {
         return AnyEquatable(ChatListItemNeighborDescriptor(
             headerId: self.header?.id,
             isPinned: self.isPinned,
-            hasActiveRevealControls: self.hasActiveRevealControls
+            hasActiveRevealControls: self.hasActiveRevealControls,
+            sideListHighlightKey: self.sideListHighlightKey
         ))
+    }
+    
+    var sideListHighlightKey: ChatListSideListHighlightKey? {
+        if !self.interaction.isSideListMode {
+            return nil
+        }
+        if case let .peer(peerData) = self.content, peerData.isSideListAllThreadsItem {
+            return .allThreads
+        }
+        return self.content.chatLocation.flatMap(ChatListSideListHighlightKey.location)
     }
 
     public var isPinned: Bool {
@@ -583,6 +594,7 @@ public class ChatListItem: ListViewItem {
                 last = true
             }
             node.insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
+            let nextSideListHighlightKey = neighbors.next?.base(ChatListNeighborFacet.self)?.sideListHighlightKey
             
             let (nodeLayout, apply) = node.asyncLayout()(self, params, first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls)
             
@@ -592,6 +604,7 @@ public class ChatListItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
+                        node.nextSideListHighlightKey = nextSideListHighlightKey
                         node.setupItem(item: self, synchronousLoads: synchronousLoads)
                         apply(synchronousLoads, false)
                         node.updateIsHighlighted(transition: .immediate)
@@ -622,9 +635,11 @@ public class ChatListItem: ListViewItem {
                         animated = false
                     }
                     
+                    let nextSideListHighlightKey = neighbors.next?.base(ChatListNeighborFacet.self)?.sideListHighlightKey
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, nextIsPinned, nextHasActiveRevealControls)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
+                            nodeValue.nextSideListHighlightKey = nextSideListHighlightKey
                             apply(false, animated)
                         })
                     }
@@ -2251,7 +2266,31 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         return reallyHighlighted
     }
     
+    var nextSideListHighlightKey: ChatListSideListHighlightKey?
+    private var separatorBaseIsHidden = false
+    
+    /// In the chat side list the separators above and below the highlighted plate are hidden; this row's separator is
+    /// the one between it and the next row.
+    func updateSideListSeparatorVisibility() {
+        guard let item = self.item, item.interaction.isSideListMode else {
+            return
+        }
+        var nextIsHighlighted = false
+        switch self.nextSideListHighlightKey {
+        case .allThreads:
+            nextIsHighlighted = item.interaction.highlightedChatLocation == nil
+        case let .location(location):
+            nextIsHighlighted = item.interaction.highlightedChatLocation?.location == location
+        case .none:
+            break
+        }
+        self.separatorNode.isHidden = self.separatorBaseIsHidden || self.reallyHighlighted || nextIsHighlighted
+    }
+    
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        defer {
+            self.updateSideListSeparatorVisibility()
+        }
         let highlightProgress: CGFloat = self.item?.interaction.highlightedChatLocation?.progress ?? 1.0
         self.updateSeparatorAlpha(transition: transition)
         
@@ -2734,7 +2773,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            if useInlineAuthorPrefix {
+            // The side list's "All Messages" row names the sub-chat its latest message is in, inline.
+            if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem, let message = messages.last, let threadId = message.threadId {
+                let threadPeerId = EnginePeer.Id(threadId)
+                if threadPeerId == item.context.account.peerId {
+                    inlineAuthorPrefix = item.presentationData.strings.DialogList_MyNotes
+                } else if let threadPeer = message.peers[threadPeerId] {
+                    inlineAuthorPrefix = EnginePeer(threadPeer).compactDisplayTitle
+                }
+            } else if useInlineAuthorPrefix {
                 if case let .user(author) = messages.last?.author {
                     if author.id == item.context.account.peerId {
                         inlineAuthorPrefix = item.presentationData.strings.DialogList_You
@@ -2803,7 +2850,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
 
                     var peerText: String?
                     if case .savedMessagesChats = item.chatListLocation {
-                        if let message = messages.last, let forwardInfo = message.forwardInfo, let author = forwardInfo.author {
+                        // Compact side-list rows show no author line, as in the design.
+                        if !item.isSideListCompactPeerRow, let message = messages.last, let forwardInfo = message.forwardInfo, let author = forwardInfo.author {
                             if author.id != itemPeer.chatMainPeer?.id {
                                 peerText = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
@@ -4142,6 +4190,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
                 itemHeight += measureLayout.size.height * 2.0
                 itemHeight += 20.0
+            } else if item.isSideListCompactPeerRow || (item.interaction.isSideListMode && item.interaction.isInlineMode) {
+                // The side list's rows fit their preview (one or two lines), as in the design.
+                let textLineCount = CGFloat(max(1, min(2, textLayout.numberOfLines)))
+                itemHeight = titleLayout.size.height + measureLayout.size.height * textLineCount + 24.0
             } else {
                 itemHeight += titleLayout.size.height
                 itemHeight += measureLayout.size.height * 3.0
@@ -4149,7 +4201,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 itemHeight += authorSpacing
             }
                         
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + floor(item.presentationData.fontSize.itemListBaseFontSize * 8.0 / 17.0)), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
+            // A side-list row centers its title and preview between the paddings.
+            let sideListContentOffset: CGFloat = (item.isSideListCompactPeerRow || (item.interaction.isSideListMode && item.interaction.isInlineMode)) ? 4.0 : 0.0
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + floor(item.presentationData.fontSize.itemListBaseFontSize * 8.0 / 17.0) + sideListContentOffset), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = 0.0
@@ -5397,7 +5451,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let iconOrigin: CGFloat
                         if case .animation = currentVerifiedIconContent {
-                            iconOrigin = contentRect.origin.x
+                            // In a compact side-list row the inline avatar holds the title's left cutout.
+                            iconOrigin = contentRect.origin.x + (item.isSideListCompactPeerRow ? 22.0 : 0.0)
                         } else {
                             iconOrigin = nextTitleIconOrigin
                         }
@@ -5506,6 +5561,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.separatorNode.isHidden = true
                         }
                     }
+                    strongSelf.separatorBaseIsHidden = strongSelf.separatorNode.isHidden
+                    strongSelf.updateSideListSeparatorVisibility()
                     
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: itemHeight)))
                     let backgroundColor: UIColor
