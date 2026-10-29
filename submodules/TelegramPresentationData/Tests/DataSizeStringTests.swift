@@ -10,30 +10,62 @@ final class DataSizeStringTests: XCTestCase {
         gigabyte: { PresentationStrings.FormattedString(string: "\($0) ГБ", ranges: []) }
     )
 
+    private func kb(_ value: Double) -> Int64 {
+        return Int64(value * 1024.0)
+    }
+
     private func mb(_ value: Double) -> Int64 {
         return Int64(value * 1024.0 * 1024.0)
     }
 
-    func testDefaultKeepsDecimal() {
+    private func gb(_ value: Double) -> Int64 {
+        return Int64(value * 1024.0 * 1024.0 * 1024.0)
+    }
+
+    private func compact(_ size: Int64) -> String {
+        return dataSizeString(size, compact: true, formatting: self.formatting)
+    }
+
+    func testDefaultFormatUnchanged() {
         XCTAssertEqual(dataSizeString(self.mb(131.5), formatting: self.formatting), "131,5 МБ")
-        XCTAssertEqual(dataSizeString(self.mb(27.25 * 1024.0), formatting: self.formatting), "27,2 ГБ")
+        XCTAssertEqual(dataSizeString(self.mb(48.85), formatting: self.formatting), "48,8 МБ")
+        XCTAssertEqual(dataSizeString(self.mb(1000.0), formatting: self.formatting), "1000 МБ")
+        XCTAssertEqual(dataSizeString(self.gb(27.25), formatting: self.formatting), "27,2 ГБ")
     }
 
-    // Data and Storage's usage rows: no decimal from 100 units up, so the value fits beside a long Russian title.
-    func testOmitDecimalFrom100() {
-        XCTAssertEqual(dataSizeString(self.mb(131.5), omitDecimalFrom100: true, formatting: self.formatting), "131 МБ")
-        XCTAssertEqual(dataSizeString(self.mb(100.9), omitDecimalFrom100: true, formatting: self.formatting), "100 МБ")
-        XCTAssertEqual(dataSizeString(self.mb(150.0 * 1024.0 + 512.0), omitDecimalFrom100: true, formatting: self.formatting), "150 ГБ")
-        XCTAssertEqual(dataSizeString(Int64(512.5 * 1024.0), omitDecimalFrom100: true, formatting: self.formatting), "512 КБ")
+    // Data and Storage's usage rows: KB and MB keep a decimal only below 10.
+    func testCompactKilobytesAndMegabytes() {
+        XCTAssertEqual(self.compact(self.mb(9.95)), "9,9 МБ")
+        XCTAssertEqual(self.compact(self.mb(10.0)), "10 МБ")
+        XCTAssertEqual(self.compact(self.mb(48.85)), "48 МБ")
+        XCTAssertEqual(self.compact(self.mb(131.5)), "131 МБ")
+        XCTAssertEqual(self.compact(self.mb(999.9)), "999 МБ")
+        XCTAssertEqual(self.compact(self.mb(5.0)), "5 МБ")
+        XCTAssertEqual(self.compact(self.kb(512.5)), "512 КБ")
+        XCTAssertEqual(self.compact(self.kb(1.5)), "1,5 КБ")
+        XCTAssertEqual(self.compact(999), "999 Б")
+        XCTAssertEqual(self.compact(0), "0 Б")
     }
 
-    func testOmitDecimalFrom100KeepsSmallerValues() {
-        XCTAssertEqual(dataSizeString(self.mb(99.95), omitDecimalFrom100: true, formatting: self.formatting), "99,9 МБ")
-        XCTAssertEqual(dataSizeString(self.mb(27.25 * 1024.0), omitDecimalFrom100: true, formatting: self.formatting), "27,2 ГБ")
-        XCTAssertEqual(dataSizeString(self.mb(1.5), omitDecimalFrom100: true, formatting: self.formatting), "1,5 МБ")
+    // GB keeps its decimal below 100.
+    func testCompactGigabytes() {
+        XCTAssertEqual(self.compact(self.gb(1.0)), "1 ГБ")
+        XCTAssertEqual(self.compact(self.gb(27.25)), "27,2 ГБ")
+        XCTAssertEqual(self.compact(self.gb(99.95)), "99,9 ГБ")
+        XCTAssertEqual(self.compact(self.gb(100.0)), "100 ГБ")
+        XCTAssertEqual(self.compact(self.gb(131.5)), "131 ГБ")
+    }
+
+    // From 1000 units up a size shows in the next unit, rounded to one decimal: "1000 МБ" would not fit.
+    func testCompactThousandShowsInNextUnit() {
+        XCTAssertEqual(self.compact(self.mb(1000.0)), "1 ГБ")
+        XCTAssertEqual(self.compact(self.mb(1023.9)), "1 ГБ")
+        XCTAssertEqual(self.compact(self.mb(1024.0)), "1 ГБ")
+        XCTAssertEqual(self.compact(self.kb(1000.0)), "1 МБ")
+        XCTAssertEqual(self.compact(1000), "1 КБ")
     }
 
     func testForceDecimalWins() {
-        XCTAssertEqual(dataSizeString(self.mb(131.0), forceDecimal: true, omitDecimalFrom100: true, formatting: self.formatting), "131,0 МБ")
+        XCTAssertEqual(dataSizeString(self.mb(131.0), forceDecimal: true, compact: true, formatting: self.formatting), "131,0 МБ")
     }
 }
