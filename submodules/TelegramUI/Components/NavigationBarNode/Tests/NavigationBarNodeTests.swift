@@ -858,7 +858,7 @@ final class NavigationBarNodeTests: XCTestCase {
     }
 
     // The renderer's capsules follow a pill that moved once the transition has run (the glass lingering above the bar):
-    // what the pill shows takes up from where it was, with no step, rides the shape on the way and comes to rest with it
+    // what the pill shows takes up from where it was, with no step, rides the shape on the way and comes to rest centred
     // where the bar draws the pill.
     func test_renderer_aMovedTitlePill_movesItsPlatter() {
         let bottom = self.makeLaidOutNode(title: "List", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
@@ -887,16 +887,18 @@ final class NavigationBarNodeTests: XCTestCase {
         let midwayItems = platterView.currentItemsFramesForTesting(.trailing(1))
         XCTAssertLessThan(midwayItems.first?.midX ?? 0.0, itemsBefore.first?.midX ?? 0.0, "on its way")
         XCTAssertGreaterThan(midwayItems.first?.midX ?? 0.0, movedFrame.midX, "on its way")
-        // The narrower pill's contents take the shape's size on its spring rather than at once, so what is laid out
-        // against their edge does not step.
-        XCTAssertEqual(midwayItems.first?.size, platterView.platterStateForTesting(.trailing(1))?.frame.size)
-        XCTAssertNotEqual(midwayItems.first?.size, movedFrame.size)
+        // The contents keep their size while the shape's changes: the lent title lays itself out about their centre, so
+        // no change of its width, immediate or animated, moves it sideways.
+        XCTAssertEqual(midwayItems.first?.size, itemsBefore.first?.size)
         self.time.advance(by: 1.5)
         XCTAssertEqual(platterView.platterStateForTesting(.trailing(1))?.frame, movedFrame)
-        XCTAssertEqual(platterView.currentItemsFramesForTesting(.trailing(1)), [movedFrame])
+        let restingItems = platterView.currentItemsFramesForTesting(.trailing(1))
+        XCTAssertEqual(restingItems.map { CGPoint(x: $0.midX, y: $0.midY) }, [CGPoint(x: movedFrame.midX, y: movedFrame.midY)])
+        XCTAssertEqual(restingItems.first?.size, itemsBefore.first?.size)
         // The view itself, as the capsules' layout placed it.
         if let lentContent = titleView.lentContent {
-            XCTAssertEqual(lentContent.convert(lentContent.bounds, to: platterView), movedFrame)
+            let lentFrame = lentContent.convert(lentContent.bounds, to: platterView)
+            XCTAssertEqual(CGPoint(x: lentFrame.midX, y: lentFrame.midY), CGPoint(x: movedFrame.midX, y: movedFrame.midY))
         } else {
             XCTFail("nothing lent")
         }
