@@ -11,19 +11,26 @@ final class SectionHeaderComponent: Component {
     let title: String
     let actionTitle: String?
     let action: (() -> Void)?
+    // Insets of the title and the action beyond their margin (iPhone Duo's side strip, which the background spans).
+    let leftInset: CGFloat
+    let rightInset: CGFloat
     
     init(
         theme: PresentationTheme,
         style: ShareWithPeersScreenComponent.Style,
         title: String,
         actionTitle: String?,
-        action: (() -> Void)?
+        action: (() -> Void)?,
+        leftInset: CGFloat = 0.0,
+        rightInset: CGFloat = 0.0
     ) {
         self.theme = theme
         self.style = style
         self.title = title
         self.actionTitle = actionTitle
         self.action = action
+        self.leftInset = leftInset
+        self.rightInset = rightInset
     }
     
     static func ==(lhs: SectionHeaderComponent, rhs: SectionHeaderComponent) -> Bool {
@@ -37,6 +44,12 @@ final class SectionHeaderComponent: Component {
             return false
         }
         if lhs.actionTitle != rhs.actionTitle {
+            return false
+        }
+        if lhs.leftInset != rhs.leftInset {
+            return false
+        }
+        if lhs.rightInset != rhs.rightInset {
             return false
         }
         return true
@@ -69,8 +82,9 @@ final class SectionHeaderComponent: Component {
             self.state = state
             
             let height: CGFloat = 28.0
-            let leftInset: CGFloat = 16.0
-            let rightInset: CGFloat = 0.0
+            let sideInset: CGFloat = 16.0
+            let leftInset: CGFloat = sideInset + component.leftInset
+            let rightInset: CGFloat = component.rightInset
             
             let previousTitleFrame = self.title.view?.frame
             
@@ -128,7 +142,7 @@ final class SectionHeaderComponent: Component {
                             view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                         }
                     }
-                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - leftInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
+                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - rightInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
                     view.frame = actionFrame
                 }
             } else if let view = self.action.view, view.superview != nil {

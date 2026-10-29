@@ -1125,7 +1125,14 @@ final class ShareWithPeersScreenComponent: Component {
                 
                 var minSectionHeader: UIView?
                 do {
-                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
+                    // A pinned header (outside the list's clipping) spans the side strip, its title in the band.
+                    let sectionHeaderBandInsets: (left: CGFloat, right: CGFloat)
+                    if case .stories = component.stateContext.subject {
+                        sectionHeaderBandInsets = (0.0, 0.0)
+                    } else {
+                        sectionHeaderBandInsets = self.bandInsets(environment: environment)
+                    }
+                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset - sectionHeaderBandInsets.left, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width + sectionHeaderBandInsets.left + sectionHeaderBandInsets.right, height: section.insets.top))
                     if case .stories = component.stateContext.subject {
                         sectionHeaderFrame = CGRect(origin: CGPoint(x: sectionHeaderFrame.minX, y: sectionOffset), size: sectionHeaderFrame.size)
                     } else {
@@ -1193,7 +1200,9 @@ final class ShareWithPeersScreenComponent: Component {
                                         let transition = ComponentTransition(animation: .curve(duration: 0.35, curve: .spring))
                                         self.state?.updated(transition: transition)
                                     }
-                                }
+                                },
+                                leftInset: sectionHeaderBandInsets.left,
+                                rightInset: sectionHeaderBandInsets.right
                             )),
                             environment: {},
                             containerSize: sectionHeaderFrame.size
@@ -2244,6 +2253,12 @@ final class ShareWithPeersScreenComponent: Component {
             }
         }
         
+        // iPhone Duo: the list and the header keep to the band beside the side strip (and clear of the status corner
+        // at its end); the backgrounds still span the screen. Equal insets keep the full width.
+        private func bandInsets(environment: ViewControllerComponentContainer.Environment) -> (left: CGFloat, right: CGFloat) {
+            return environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+        }
+        
         private var hasBlocksStyle: Bool {
             guard let component = self.component else {
                 return false
@@ -2335,9 +2350,7 @@ final class ShareWithPeersScreenComponent: Component {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             
-            // iPhone Duo: the list and the header keep to the band beside the side strip (and clear of the status corner
-            // at its end); the backgrounds still span the screen. Equal insets keep the full width.
-            let bandInsets: (left: CGFloat, right: CGFloat) = environment.safeInsets.left != environment.safeInsets.right ? (environment.safeInsets.left, environment.safeInsets.right) : (0.0, 0.0)
+            let bandInsets = self.bandInsets(environment: environment)
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width - bandInsets.left - bandInsets.right
             
@@ -2507,6 +2520,8 @@ final class ShareWithPeersScreenComponent: Component {
                         placeholder: placeholder,
                         tokens: tokens,
                         sideInset: sideInset,
+                        leftInset: bandInsets.left,
+                        rightInset: bandInsets.right,
                         deleteToken: { [weak self] tokenId in
                             guard let self else {
                                 return
@@ -2532,7 +2547,7 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: contentWidth, height: 1000.0)
+                    containerSize: CGSize(width: containerWidth, height: 1000.0)
                 )
                 
                 let searchQuery = self.navigationTextFieldState.text
@@ -2919,7 +2934,9 @@ final class ShareWithPeersScreenComponent: Component {
                 navigationTitleView.bounds = CGRect(origin: CGPoint(), size: navigationTitleFrame.size)
             }
             
-            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: contentSideInset, y: navigationHeight), size: navigationTextFieldSize)
+            // iPhone Duo: the search field and its separators span the side strip, as the header's background does; its
+            // tokens and text keep to the band.
+            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: navigationTextFieldSize)
             if let navigationTextFieldView = self.navigationTextField.view {
                 if navigationTextFieldView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTextFieldView)

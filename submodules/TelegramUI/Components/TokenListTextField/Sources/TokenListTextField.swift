@@ -87,6 +87,9 @@ public final class TokenListTextField: Component {
     public let placeholder: String
     public let tokens: [Token]
     public let sideInset: CGFloat
+    // Insets of the tokens and the text beyond `sideInset` (iPhone Duo's side strip, which the field's separator spans).
+    public let leftInset: CGFloat
+    public let rightInset: CGFloat
     public let deleteToken: (AnyHashable) -> Void
     public let isFocusedUpdated: (Bool) -> Void
     
@@ -97,6 +100,8 @@ public final class TokenListTextField: Component {
         placeholder: String,
         tokens: [Token],
         sideInset: CGFloat,
+        leftInset: CGFloat = 0.0,
+        rightInset: CGFloat = 0.0,
         deleteToken: @escaping (AnyHashable) -> Void,
         isFocusedUpdated: @escaping (Bool) -> Void = { _ in }
     ) {
@@ -106,6 +111,8 @@ public final class TokenListTextField: Component {
         self.placeholder = placeholder
         self.tokens = tokens
         self.sideInset = sideInset
+        self.leftInset = leftInset
+        self.rightInset = rightInset
         self.deleteToken = deleteToken
         self.isFocusedUpdated = isFocusedUpdated
     }
@@ -127,6 +134,12 @@ public final class TokenListTextField: Component {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.leftInset != rhs.leftInset {
+            return false
+        }
+        if lhs.rightInset != rhs.rightInset {
             return false
         }
         return true
@@ -243,8 +256,8 @@ public final class TokenListTextField: Component {
             let height = tokenListNode.updateLayout(
                 tokens: mappedTokens,
                 width: availableSize.width,
-                leftInset: component.sideInset,
-                rightInset: component.sideInset,
+                leftInset: component.sideInset + component.leftInset,
+                rightInset: component.sideInset + component.rightInset,
                 transition: transition.containedViewLayoutTransition
             )
             let size = CGSize(width: availableSize.width, height: height)
