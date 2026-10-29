@@ -2073,9 +2073,17 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         transition.updateFrame(node: self.changeEmailActionTitleNode, frame: changeEmailActionFrame)
         transition.updateFrame(node: self.resendCodeActionTitleNode, frame: resendCodeActionFrame)
         
+        // The content reaches the lowest row below the fields: the skip action's, or the actions' second row where they
+        // stack (in the fields' narrower row on iPhone Duo they stack in English too), which stays under the keyboard
+        // otherwise. Typing hides the actions without a layout, so this counts them whenever the mode has them.
+        var contentMaxY = skipButtonFrame.maxY
+        if let resendCodeActionText = self.resendCodeActionTitleNode.attributedText, resendCodeActionText.length != 0 {
+            contentMaxY = max(contentMaxY, resendCodeActionButtonFrame.maxY)
+        }
+        
         transition.animateView {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0)
-            self.scrollNode.view.contentSize = CGSize(width: contentAreaSize.width, height: max(availableAreaSize.height, skipButtonFrame.maxY + bottomInset))
+            self.scrollNode.view.contentSize = CGSize(width: contentAreaSize.width, height: max(availableAreaSize.height, contentMaxY + bottomInset))
         }
     }
 }
