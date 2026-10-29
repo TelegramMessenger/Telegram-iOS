@@ -199,15 +199,22 @@ top), so the post goes in above the first row, under the header, and the search 
 
 ## The tab without the server's feed (2026-10-23)
 
-`isNewsFeedEnabled` (the tab) now follows only the `news_feed_enabled` kill switch; the server's feed is a
-separate question, `isNewsFeedServerAvailable` (the app config's `dev == 1`, as before). The server grants
+`isNewsFeedEnabled` (the tab, Add to News) is `dev || news_feed_enabled`: dev accounts always, any other account
+only when the server sends the switch true or nonzero (missing means off). The server's feed is a separate question,
+`isNewsFeedServerAvailable`: `dev == 1`, unless the same switch is false or 0 (for dev it stays a kill switch). The server grants
 `dev` per authorization and only to sessions created by the official app: a build signed with a personal team
 and api_id never gets it, and the official api_id/api_hash in such a build is refused at login. So without
 `dev` the Added page runs on `AddedFeedSource.localChannels` (`LocalChannelsFeedContextImpl` in TelegramCore): the
 40 most recently active subscribed broadcast channels (main and archived chat lists), each one's latest 10 posts
-through the account's view tracker (holes are filled with `messages.getHistory` as a chat does), merged newest first
-by `EngineFeedPosition`, live, and handed to the screen as its newest 100 (history updates merged at most every 0.4 s
-after the first window). Load older widens that window by 100 and, when the merged posts run short, asks every
+through a plain Postbox history view, merged newest first by `EngineFeedPosition` (off the main queue), live, and
+handed to the screen as its newest 100 (history updates merged at most every 0.4 s after the first window).
+**Never through `viewTracker`**: its history views poll each channel (`polledChannel`, a `getChannelDifference`
+every server timeout), 40 at once for every account that opened News. A Postbox view still fills its holes with
+`messages.getHistory`, and these channels' new posts arrive as the chat list's do. Each channel keeps its own view:
+a reorder of the chat list adds and drops channels, it never reopens the others. The merge stops at the frontier,
+the newest of the oldest posts loaded from each channel that has older ones left: below it a busier channel's posts
+are not loaded yet, and a quieter one's listed there would be out of order (Load older would insert rows above
+them, already counted read). Load older widens that window by 100 and, when the merged posts run short, asks every
 channel for 10 more, up to 60; nothing is ever "newer" than the live window, so the New posts pill never shows; the
 read mark is kept under its own cache key (`localChannelsFeedFilterId = -1`) and never sent to the server. The screen
 opens on Added in that case; For you stays the server's and shows its error row for accounts without the feed. The UI

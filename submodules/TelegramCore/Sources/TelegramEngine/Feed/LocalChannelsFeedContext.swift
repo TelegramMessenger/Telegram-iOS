@@ -17,13 +17,25 @@ private let localFeedCoalesceInterval: Double = 0.4
 /// The local feed's own read mark, apart from the server feed's filters (which are never negative).
 let localChannelsFeedFilterId: Int32 = -1
 
+/// One followed channel's latest posts.
+private final class LocalFeedChannel {
+    let disposable = MetaDisposable()
+    /// Nil until its history view first arrives.
+    var posts: [FeedPageMessage]?
+    /// The view reaches the channel's first post: nothing older is left to load.
+    var isExhausted = false
+}
+
 /// The Added feed built on the device, without the server's feed: the latest posts of the subscribed broadcast
-/// channels (the chat list's, main and archived), merged by date, newest first. Each channel's history comes
-/// through the account's view tracker, so holes are filled with `messages.getHistory` as opening the chat would,
-/// and the feed follows new posts live. "Older" asks every channel for more of its posts; there is never anything
-/// "newer" than the window, which is live.
+/// channels (the chat list's, main and archived), merged by date, newest first. Each channel's history is a plain
+/// Postbox view: its holes are filled with `messages.getHistory`, but the channel is never polled (these are the
+/// chat list's channels, whose new posts arrive as the chat list's do), so 40 channels cost the server nothing
+/// while the feed is open. "Older" asks every channel for more of its posts; there is never anything "newer" than
+/// the window, which is live.
 final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
     private let queue: Queue
+    /// The chat lists' flattening and the posts' merge run here, off `queue` (the main queue).
+    private let workQueue = Queue()
     private let account: Account
 
     private var state: AddedFeedContext.State
@@ -32,9 +44,10 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
     private var postsPerChannel = localFeedInitialPostsPerChannel
     private var windowSize = localFeedWindowPage
     private var channelIds: [PeerId] = []
+    private var channels: [PeerId: LocalFeedChannel] = [:]
     private var merged: [EngineFeedEntry] = []
-    private var lastMessages: [FeedPageMessage] = []
-    private var pendingPosts: [FeedPageMessage]?
+    private var mergeGeneration = 0
+    private var hasPendingPosts = false
     private var coalesceTimer: SwiftSignalKit.Timer?
     private var hasReadState = false
     private var pendingReadPosition: EngineFeedPosition?
@@ -42,7 +55,6 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
 
     private let readStateDisposable = MetaDisposable()
     private let channelsDisposable = MetaDisposable()
-    private let postsDisposable = MetaDisposable()
     private let readWriteDisposable = MetaDisposable()
 
     var stateSignal: Signal<AddedFeedContext.State, NoError> {
@@ -77,7 +89,9 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
     deinit {
         self.readStateDisposable.dispose()
         self.channelsDisposable.dispose()
-        self.postsDisposable.dispose()
+        for channel in self.channels.values {
+            channel.disposable.dispose()
+        }
         self.readWriteDisposable.dispose()
         self.readTimer?.invalidate()
         self.coalesceTimer?.invalidate()
@@ -92,7 +106,7 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         let account = self.account
         let summaryComponents = ChatListEntrySummaryComponents()
         let groupIds: [PeerGroupId] = [.root, Namespaces.PeerGroup.archive]
-        let channels = combineLatest(queue: self.queue, groupIds.map { groupId -> Signal<[(ChatListIndex, PeerId)], NoError> in
+        let channels = combineLatest(queue: self.workQueue, groupIds.map { groupId -> Signal<[(ChatListIndex, PeerId)], NoError> in
             return account.postbox.tailChatListView(groupId: groupId, filterPredicate: nil, count: 500, summaryComponents: summaryComponents, extractCachedData: nil, accountPeerId: account.peerId)
             |> map { view, _ -> [(ChatListIndex, PeerId)] in
                 var result: [(ChatListIndex, PeerId)] = []
@@ -115,75 +129,118 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
                 return
             }
             self.channelIds = channelIds
-            self.subscribePosts()
+            self.updateChannelSubscriptions(resubscribe: false)
         }))
     }
 
-    /// Every followed channel's latest posts, merged whenever any of them changes.
-    private func subscribePosts() {
-        let account = self.account
-        let count = self.postsPerChannel
-        let signals = self.channelIds.map { peerId -> Signal<[FeedPageMessage], NoError> in
-            return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: count, fixedCombinedReadStates: nil)
-            |> map { view, _, _ -> [FeedPageMessage] in
-                var result: [FeedPageMessage] = []
-                for entry in view.entries {
-                    let message = entry.message
-                    guard message.id.namespace == Namespaces.Message.Cloud else {
-                        continue
-                    }
-                    // Service messages (a pinned post, a changed photo) are no posts; nor is an empty message.
-                    if message.media.contains(where: { $0 is TelegramMediaAction }) {
-                        continue
-                    }
-                    if message.text.isEmpty && message.media.isEmpty {
-                        continue
-                    }
-                    result.append(FeedPageMessage(id: message.id, timestamp: message.timestamp, groupingKey: message.groupingKey))
-                }
-                return result
-            }
+    /// Follows each channel in `channelIds`: a channel that leaves the list is dropped and one that joins it is
+    /// added, the others keep their views (a reorder changes nothing). `resubscribe` re-opens every view, for a
+    /// new `postsPerChannel`.
+    private func updateChannelSubscriptions(resubscribe: Bool) {
+        let ids = Set(self.channelIds)
+        for (peerId, channel) in self.channels where !ids.contains(peerId) || resubscribe {
+            channel.disposable.dispose()
+            self.channels.removeValue(forKey: peerId)
         }
-        guard !signals.isEmpty else {
-            self.postsDisposable.set(nil)
-            self.applyPosts([])
+        for peerId in self.channelIds where self.channels[peerId] == nil {
+            let channel = LocalFeedChannel()
+            self.channels[peerId] = channel
+            channel.disposable.set((self.channelPosts(peerId: peerId, count: self.postsPerChannel)
+            |> deliverOn(self.queue)).start(next: { [weak self, weak channel] posts, isExhausted in
+                guard let self, let channel else {
+                    return
+                }
+                channel.posts = posts
+                channel.isExhausted = isExhausted
+                self.postsUpdated()
+            }))
+        }
+        self.postsUpdated()
+    }
+
+    /// A channel's latest `count` posts, newest last, and whether they reach its first post.
+    private func channelPosts(peerId: PeerId, count: Int) -> Signal<([FeedPageMessage], Bool), NoError> {
+        return self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
+        |> map { view, _, _ -> ([FeedPageMessage], Bool) in
+            var result: [FeedPageMessage] = []
+            for entry in view.entries {
+                let message = entry.message
+                guard message.id.namespace == Namespaces.Message.Cloud else {
+                    continue
+                }
+                // Service messages (a pinned post, a changed photo) are no posts; nor is an empty message.
+                if message.media.contains(where: { $0 is TelegramMediaAction }) {
+                    continue
+                }
+                if message.text.isEmpty && message.media.isEmpty {
+                    continue
+                }
+                result.append(FeedPageMessage(id: message.id, timestamp: message.timestamp, groupingKey: message.groupingKey))
+            }
+            return (result, view.earlierId == nil && !view.holeEarlier)
+        }
+    }
+
+    /// The first window goes out once every channel has answered; while channel histories keep arriving, later
+    /// ones are merged a few times a second at most.
+    private func postsUpdated() {
+        if self.channels.values.contains(where: { $0.posts == nil }) {
             return
         }
-        self.postsDisposable.set((combineLatest(queue: self.queue, signals)
-        |> deliverOn(self.queue)).start(next: { [weak self] lists in
-            self?.receivePosts(lists.flatMap { $0 })
-        }))
-    }
-
-    /// The first window goes out at once; while channel histories keep arriving, later ones are merged a few
-    /// times a second at most.
-    private func receivePosts(_ messages: [FeedPageMessage]) {
         if self.state.isLoadingInitial || self.coalesceTimer == nil {
-            self.applyPosts(messages)
+            self.mergePosts()
+            self.coalesceTimer?.invalidate()
             let timer = SwiftSignalKit.Timer(timeout: localFeedCoalesceInterval, repeat: false, completion: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.coalesceTimer = nil
-                if let pending = self.pendingPosts {
-                    self.pendingPosts = nil
-                    self.receivePosts(pending)
+                if self.hasPendingPosts {
+                    self.hasPendingPosts = false
+                    self.postsUpdated()
                 }
             }, queue: self.queue)
             self.coalesceTimer = timer
             timer.start()
         } else {
-            self.pendingPosts = messages
+            self.hasPendingPosts = true
         }
     }
 
-    private func applyPosts(_ messages: [FeedPageMessage]) {
-        self.lastMessages = messages
-        func position(_ message: FeedPageMessage) -> EngineFeedPosition {
-            return EngineFeedPosition(date: message.timestamp, peerId: message.id.peerId, id: message.id.id)
+    /// Merges the channels' posts on `workQueue`, down to the frontier: the newest of the oldest posts loaded from
+    /// each channel that has older ones left. Below it a busier channel's posts are not loaded yet, so listing
+    /// a quieter one's there would put them out of order (and Load older would insert rows above them).
+    private func mergePosts() {
+        self.mergeGeneration += 1
+        let generation = self.mergeGeneration
+        let lists = self.channels.values.map { ($0.posts ?? [], $0.isExhausted) }
+        self.workQueue.async { [weak self] in
+            func position(_ message: FeedPageMessage) -> EngineFeedPosition {
+                return EngineFeedPosition(date: message.timestamp, peerId: message.id.peerId, id: message.id.id)
+            }
+            var frontier: EngineFeedPosition?
+            for (posts, isExhausted) in lists where !isExhausted {
+                if let oldest = posts.map(position).min(), frontier.flatMap({ oldest <= $0 }) != true {
+                    frontier = oldest
+                }
+            }
+            var messages = lists.flatMap { $0.0 }
+            if let frontier {
+                messages = messages.filter { position($0) >= frontier }
+            }
+            let newestFirst = messages.sorted(by: { position($0) > position($1) })
+            let merged = groupFeedMessages(newestFirst).sorted(by: { $0.position > $1.position })
+            self?.queue.async {
+                guard let self, self.mergeGeneration == generation else {
+                    return
+                }
+                self.merged = merged
+                self.applyWindow()
+            }
         }
-        let newestFirst = messages.sorted(by: { position($0) > position($1) })
-        self.merged = groupFeedMessages(newestFirst).sorted(by: { $0.position > $1.position })
+    }
+
+    private func applyWindow() {
         let entries = Array(self.merged.prefix(self.windowSize))
         let isFirstWindow = self.state.isLoadingInitial
         self.state.entries = entries
@@ -209,7 +266,7 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
         self.postsPerChannel = localFeedInitialPostsPerChannel
         self.windowSize = localFeedWindowPage
         if self.hasReadState {
-            self.subscribePosts()
+            self.updateChannelSubscriptions(resubscribe: true)
         }
     }
 
@@ -238,12 +295,12 @@ final class LocalChannelsFeedContextImpl: AddedFeedContextSource {
             // Enough is merged already, or the channels are exhausted: just widen the window.
             self.state.isLoadingOlder = true
             self.pushState()
-            self.applyPosts(self.lastMessages)
+            self.applyWindow()
         } else {
             self.postsPerChannel = min(localFeedMaxPostsPerChannel, self.postsPerChannel + localFeedPostsPerChannelStep)
             self.state.isLoadingOlder = true
             self.pushState()
-            self.subscribePosts()
+            self.updateChannelSubscriptions(resubscribe: true)
         }
     }
 

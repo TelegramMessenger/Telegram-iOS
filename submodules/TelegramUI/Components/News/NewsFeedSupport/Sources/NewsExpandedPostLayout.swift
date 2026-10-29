@@ -1,13 +1,13 @@
 import Foundation
 import CoreGraphics
 
-/// An expanded post row's measures (the "-1T Valuation" mockup, Channels frame): a 36 pt avatar at the left, the
-/// channel line, the message bubble's content and the media in a horizontal gallery.
+/// An expanded post row's measures: a 36 pt avatar at the left, the channel line, the message bubble's content and
+/// the media in a horizontal gallery.
 public enum NewsExpandedPostMetrics {
     public static let avatarInset: CGFloat = 8.0
     public static let avatarSize: CGFloat = 36.0
     public static let avatarTop: CGFloat = 5.0
-    /// Between the avatar and the content: the bubble's tail on the mockup.
+    /// Between the avatar and the content, where a chat bubble's tail would be.
     public static let avatarContentSpacing: CGFloat = 10.0
     public static let rightInset: CGFloat = 16.0
     public static let headerTop: CGFloat = 6.0
@@ -26,7 +26,7 @@ public enum NewsExpandedPostMetrics {
     public static let galleryTopSpacing: CGFloat = 6.0
     public static let showMoreTopSpacing: CGFloat = 2.0
     public static let bottomInset: CGFloat = 8.0
-    /// A post longer than this shows "Show more" instead of the rest (spec).
+    /// A post longer than this many lines shows "Show more" instead of the rest.
     public static let collapsedLineLimit = 10
 
     /// The chat bubble's own geometry (`ChatMessageItemLayoutConstants`, `ChatMessageBubbleItemNode`), which the row
@@ -57,7 +57,7 @@ public struct NewsExpandedGalleryLayout {
 /// One media's frame in the gallery, from its dimensions. A single photo keeps its aspect within the column: as tall
 /// as the gallery allows, or as wide as the column when it is wider than that. Several photos share the gallery's
 /// height, each as wide as its aspect makes it, never narrower than the minimum or wider than the column, so a
-/// carousel of portraits reads as on the mockup (190 × 270 side by side).
+/// carousel of portraits shows them side by side (190 × 270 each).
 public func newsExpandedGalleryLayout(dimensions: [CGSize], columnWidth: CGFloat) -> NewsExpandedGalleryLayout {
     let metrics = NewsExpandedPostMetrics.self
     let columnWidth = max(1.0, columnWidth)

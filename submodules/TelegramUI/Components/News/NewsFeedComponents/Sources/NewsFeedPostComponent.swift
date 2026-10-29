@@ -415,6 +415,11 @@ public final class NewsFeedPostComponent: Component {
         deinit {
             self.timeTimer?.invalidate()
             self.highlightTimer?.invalidate()
+            // The run's avatar outlives a row of it: it forgets the row's gallery and swipe.
+            for view in self.floatingAvatarViews {
+                view.setObstacle(nil, for: self)
+                view.setSwipeOffset(0.0, for: self)
+            }
         }
 
         /// The row's place in a new-posts block, as last laid out: the list draws the block's glow over its rows.
@@ -655,17 +660,17 @@ public final class NewsFeedPostComponent: Component {
 
         public func attachedItemsUpdated(_ attachments: [UIView & CoreListAttachedItemView]) {
             for view in self.floatingAvatarViews {
-                view.obstacle = nil
-                view.swipeOffset = 0.0
+                view.setObstacle(nil, for: self)
+                view.setSwipeOffset(0.0, for: self)
             }
             self.floatingAvatarViews = attachments.compactMap { $0 as? NewsFloatingAvatarView }
             for view in self.floatingAvatarViews {
-                view.obstacle = { [weak self, weak view] in
+                view.setObstacle({ [weak self, weak view] in
                     guard let self, let view, let contentView = self.expandedContentView, contentView.superview != nil, let galleryFrame = contentView.galleryFrame else {
                         return nil
                     }
                     return (contentView.convert(galleryFrame, to: view), contentView.galleryScrolledDistance)
-                }
+                }, for: self)
                 view.frameChanged = { [weak self] in
                     self?.component?.floatingAvatarsChanged?()
                 }
@@ -686,7 +691,7 @@ public final class NewsFeedPostComponent: Component {
         private func updateFloatingAvatarSwipe(_ offset: CGFloat) {
             for view in self.floatingAvatarViews {
                 let avatarFrame = view.convert(view.restingAvatarFrame, to: self)
-                view.swipeOffset = self.bounds.intersects(avatarFrame) ? offset : 0.0
+                view.setSwipeOffset(self.bounds.intersects(avatarFrame) ? offset : 0.0, for: self)
             }
         }
 
@@ -1092,20 +1097,7 @@ public final class NewsFeedPostComponent: Component {
 
                 if let videoDuration {
                     // A text shadow, not a layer shadow: no offscreen pass for every video row while scrolling.
-                    let shadow = NSShadow()
-                    shadow.shadowColor = UIColor(white: 0.0, alpha: 0.35)
-                    shadow.shadowBlurRadius = 3.0
-                    shadow.shadowOffset = CGSize()
-                    let string = NSMutableAttributedString()
-                    if let playImage = UIImage(systemName: "play.fill", withConfiguration: UIImage.SymbolConfiguration(font: Font.semibold(11.0)))?.withTintColor(.white, renderingMode: .alwaysOriginal) {
-                        let attachment = NSTextAttachment()
-                        attachment.image = playImage
-                        string.append(NSAttributedString(attachment: attachment))
-                        string.append(NSAttributedString(string: " "))
-                    }
-                    string.append(NSAttributedString(string: stringForDuration(Int32(videoDuration)), font: Font.semibold(11.0), textColor: .white))
-                    string.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: string.length))
-                    self.videoLabel.attributedText = string
+                    self.videoLabel.attributedText = newsVideoDurationString(duration: videoDuration)
                     let labelSize = self.videoLabel.sizeThatFits(CGSize(width: thumbnailFrame.width, height: 100.0))
                     self.videoLabel.frame = newsVideoLabelFrame(pictureFrame: thumbnailFrame, labelSize: labelSize, inset: NewsPostRowMetrics.videoLabelInset)
                     self.videoLabel.isHidden = false
@@ -1259,7 +1251,7 @@ public final class NewsFeedPostComponent: Component {
                 transition.setFrame(view: timeView, frame: layout.timeFrame)
             }
 
-            // The mockup's separator runs under the content column, from its left edge to the right inset.
+            // The separator runs under the content column, from its left edge to the right inset.
             let pixel = 1.0 / UIScreenScale
             let separator = CGRect(x: contentX, y: layout.height - pixel, width: max(0.0, width - contentX - metrics.rightInset), height: pixel)
             let postText = newsPostText(component: component, maxLength: Int(contentWidth * 2.0))
@@ -1683,7 +1675,7 @@ public final class NewsFeedPostComponent: Component {
         /// A pass that changes the row's height (a mode morph, Show more) lays everything in it out at the new height
         /// at once, while the host animates this view's frame on that pass's transition
         /// (`CoreListComponentItemView.update`). Clipped to its bounds until the transition ends, the row reveals a
-        /// taller layout as it grows and cuts the old one as it shrinks, as the mockup's cell does. Unclipped, it would
+        /// taller layout as it grows and cuts the old one as it shrinks. Unclipped, it would
         /// draw over the rows below, which ride the same spring and draw nothing behind themselves. Only while the
         /// height animates: at rest a handed-off avatar may stand partly outside the row (`handOffAvatar`).
         private func clipWhileHeightAnimates(transition: ComponentTransition) {
@@ -1698,8 +1690,7 @@ public final class NewsFeedPostComponent: Component {
             })
         }
 
-        /// A mode morph is landing: the row takes no tap, highlight, long press or new swipe until it has, as the
-        /// mockup's rows ignore them while a transition runs (`busy`). Its content may be drawn far from its model
+        /// A mode morph is landing: the row takes no tap, highlight, long press or new swipe until it has. Its content may be drawn far from its model
         /// frame meanwhile (a swipe's slide back), and a press would hand the avatar over mid-flight. The list's scroll
         /// and the pager still begin on it (`NewsPostRevealView` refuses only its own recognizers). Whatever stops the
         /// animation lifts the gate, a newer morph excepted: a row taken off screen loses its animations at once and
@@ -1895,4 +1886,23 @@ private final class LensBlurCleanup: NSObject, CAAnimationDelegate {
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         self.layer?.filters = nil
     }
+}
+
+/// "▶ 0:12": a video's duration over its picture, white with a soft shadow (the compact row's thumbnail and the
+/// expanded post's gallery).
+func newsVideoDurationString(duration: Double) -> NSAttributedString {
+    let shadow = NSShadow()
+    shadow.shadowColor = UIColor(white: 0.0, alpha: 0.35)
+    shadow.shadowBlurRadius = 3.0
+    shadow.shadowOffset = CGSize()
+    let string = NSMutableAttributedString()
+    if let playImage = UIImage(systemName: "play.fill", withConfiguration: UIImage.SymbolConfiguration(font: Font.semibold(11.0)))?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+        let attachment = NSTextAttachment()
+        attachment.image = playImage
+        string.append(NSAttributedString(attachment: attachment))
+        string.append(NSAttributedString(string: " "))
+    }
+    string.append(NSAttributedString(string: stringForDuration(Int32(duration)), font: Font.semibold(11.0), textColor: .white))
+    string.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: string.length))
+    return string
 }

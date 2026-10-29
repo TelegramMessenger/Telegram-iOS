@@ -392,6 +392,13 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         if self.isNodeLoaded {
             self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection
         }
+        self.revealRecognizerAvailabilityUpdated()
+    }
+
+    /// The control has just set `disablesInteractiveTransitionGestureRecognizer` (it does on every render): with left
+    /// options, or while open, a screen's pager keeps only its edge directions over the row. A host that decides the
+    /// pager's access itself sets the flag again here. (`ItemListRevealOptionsItemView`'s twin.)
+    open func revealRecognizerAvailabilityUpdated() {
     }
 
     open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption]), enableAnimations: Bool = true) {

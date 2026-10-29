@@ -80,7 +80,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var listInsets = UIEdgeInsets()
     /// For you's "Post hidden" flow, for the screen's lifetime (spec §2). Added has none: its rows swipe only for
-    /// Expand.
+    /// Expand / Collapse.
     private let forYouFeedback = NewsPostFeedbackController(tab: .forYou)
     /// Likes and dislikes, sent one at a time in the order they were cast.
     private var voteQueue = NewsPostVoteQueue()
@@ -309,9 +309,12 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let shrinks = displayMode == .compact
         let activeRestsAtTop = self.activeList === self.forYouList ? forYouRestsAtTop : addedRestsAtTop
         self.activeList.prepareHeightChange(screens: shrinks || activeRestsAtTop ? 4.0 : 3.0, preloadsRows: shrinks, duration: NewsScreenNode.displayModeTransition.duration)
-        // One pass per list, in which every row's position and height ride one spring.
-        self.updateForYouList(transition: NewsScreenNode.displayModeTransition, anchorMode: forYouRestsAtTop ? .preserveVisibleContent : .preserveCentredContent)
-        self.updateAddedList(transition: NewsScreenNode.displayModeTransition, anchorMode: addedRestsAtTop ? .preserveVisibleContent : .preserveCentredContent)
+        // One pass per list: on the page on screen every row's position and height ride one spring; the page off
+        // screen switches at once (its morph would be unseen work, and would hold its rows' touches for its length).
+        let forYouTransition: CoreListTransition = self.activeList === self.forYouList ? NewsScreenNode.displayModeTransition : .immediate
+        let addedTransition: CoreListTransition = self.activeList === self.addedList ? NewsScreenNode.displayModeTransition : .immediate
+        self.updateForYouList(transition: forYouTransition, anchorMode: forYouRestsAtTop ? .preserveVisibleContent : .preserveCentredContent)
+        self.updateAddedList(transition: addedTransition, anchorMode: addedRestsAtTop ? .preserveVisibleContent : .preserveCentredContent)
         if self.activeList === self.addedList {
             // A pass without a scroll target reports no programmatic scroll (`onProgrammaticScroll`): the read mark
             // and the pill read where the rows will rest.

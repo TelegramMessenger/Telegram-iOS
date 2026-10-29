@@ -54,7 +54,7 @@ public final class NewsFloatingAvatarAttachedItem: CoreListAttachedItem {
 
 /// The floating avatar's view: the avatar at the row's avatar position, over a band as wide as the list. It takes no
 /// touches (the row under it does). A gallery scrolled under the avatar's column moves it aside
-/// (`newsExpandedAvatarOffset`): the row tells this view where its gallery is through `obstacle`. The row hides it
+/// (`newsExpandedAvatarOffset`): each row of the run tells this view where its gallery is (`setObstacle`). The row hides it
 /// (`isHidden`) while its own avatar stands in for it: pressed or lifted into a context menu, or flying into this
 /// one's place in a morph from compact. It shows in the frame that avatar hides.
 public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
@@ -63,15 +63,22 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
     private var restingFrame = CGRect()
 
     public var onContentDidChange: ((Bool) -> Void)?
-    /// The scrolled gallery under this avatar's column, if any, in this view's coordinates: its frame and how far
-    /// its content has moved from rest. Asked on every stick update and whenever the row says it changed.
-    var obstacle: (() -> (frame: CGRect, scrolled: CGFloat)?)?
-    /// How far the row the avatar sits on has slid for its swipe: the avatar slides with it.
-    var swipeOffset: CGFloat = 0.0 {
-        didSet {
-            if self.swipeOffset != oldValue {
-                self.applyObstacle()
-            }
+    /// Every row of the run shares this view. Per row: its scrolled gallery, if any, in this view's coordinates (its
+    /// frame and how far its content has moved from rest), asked on every stick update and whenever a row says it
+    /// changed; and how far the row has slid for its swipe, nonzero only on the row the avatar sits on.
+    private var obstacles: [ObjectIdentifier: () -> (frame: CGRect, scrolled: CGFloat)?] = [:]
+    private var swipeOffsets: [ObjectIdentifier: CGFloat] = [:]
+
+    func setObstacle(_ obstacle: (() -> (frame: CGRect, scrolled: CGFloat)?)?, for row: AnyObject) {
+        self.obstacles[ObjectIdentifier(row)] = obstacle
+    }
+
+    /// The avatar slides with the row it sits on.
+    func setSwipeOffset(_ offset: CGFloat, for row: AnyObject) {
+        let key = ObjectIdentifier(row)
+        if (self.swipeOffsets[key] ?? 0.0) != offset {
+            self.swipeOffsets[key] = offset == 0.0 ? nil : offset
+            self.applyObstacle()
         }
     }
 
@@ -172,11 +179,15 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
         guard let avatarView = self.avatar.view else {
             return
         }
+        // Only a gallery beside the avatar moves it (the others give 0), and the avatar sits on one row only.
         var offset: CGFloat = 0.0
-        if let obstacle = self.obstacle?() {
-            offset = newsExpandedAvatarOffset(galleryScrolled: obstacle.scrolled, galleryFrame: obstacle.frame, avatarFrame: self.restingFrame)
+        for obstacle in self.obstacles.values {
+            if let obstacle = obstacle() {
+                offset = min(offset, newsExpandedAvatarOffset(galleryScrolled: obstacle.scrolled, galleryFrame: obstacle.frame, avatarFrame: self.restingFrame))
+            }
         }
-        avatarView.frame = self.restingFrame.offsetBy(dx: offset + self.swipeOffset, dy: 0.0)
+        let swipeOffset = self.swipeOffsets.values.max(by: { abs($0) < abs($1) }) ?? 0.0
+        avatarView.frame = self.restingFrame.offsetBy(dx: offset + swipeOffset, dy: 0.0)
         self.frameChanged?()
     }
 }

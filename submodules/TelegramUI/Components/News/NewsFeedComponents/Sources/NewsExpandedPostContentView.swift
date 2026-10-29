@@ -250,20 +250,7 @@ private final class NewsGalleryItemView: UIView {
         apply()
         if let duration = item.videoDuration {
             // A text shadow, not a layer shadow: no offscreen pass for every video while scrolling.
-            let shadow = NSShadow()
-            shadow.shadowColor = UIColor(white: 0.0, alpha: 0.35)
-            shadow.shadowBlurRadius = 3.0
-            shadow.shadowOffset = CGSize()
-            let string = NSMutableAttributedString()
-            if let playImage = UIImage(systemName: "play.fill", withConfiguration: UIImage.SymbolConfiguration(font: Font.semibold(11.0)))?.withTintColor(.white, renderingMode: .alwaysOriginal) {
-                let attachment = NSTextAttachment()
-                attachment.image = playImage
-                string.append(NSAttributedString(attachment: attachment))
-                string.append(NSAttributedString(string: " "))
-            }
-            string.append(NSAttributedString(string: stringForDuration(Int32(duration)), font: Font.semibold(11.0), textColor: .white))
-            string.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: string.length))
-            self.durationLabel.attributedText = string
+            self.durationLabel.attributedText = newsVideoDurationString(duration: duration)
             let labelSize = self.durationLabel.sizeThatFits(CGSize(width: size.width, height: 100.0))
             self.durationLabel.frame = newsVideoLabelFrame(pictureFrame: CGRect(origin: CGPoint(), size: size), labelSize: labelSize, inset: NewsExpandedPostMetrics.galleryLabelInset)
             self.durationLabel.isHidden = false
@@ -309,7 +296,6 @@ private final class NewsHorizontalStripView: UIScrollView {
         self.contentInsetAdjustmentBehavior = .never
         self.delaysContentTouches = false
         self.canCancelContentTouches = true
-        self.panGestureRecognizer.addTarget(self, action: #selector(self.panned))
     }
 
     required init?(coder: NSCoder) {
@@ -321,7 +307,9 @@ private final class NewsHorizontalStripView: UIScrollView {
         return self.contentOffset.x + self.contentInset.left
     }
 
-    @objc private func panned() {
+    // Runs on every offset change, the deceleration and the bounce back included (a pan target stops at the lift).
+    override func layoutSubviews() {
+        super.layoutSubviews()
         self.scrolled?()
     }
 
@@ -337,6 +325,14 @@ private final class NewsBubbleSlot {
     /// Where the item's content lies in it, from the last layout.
     private(set) var contentFrame = CGRect()
     private(set) var size = CGSize()
+    /// The row is in a window (the News screen is on screen): media in the bubble play only then.
+    var isInWindow = false {
+        didSet {
+            if self.isInWindow != oldValue {
+                self.updateVisibility()
+            }
+        }
+    }
 
     init() {
         // The bubble lays itself out for the chat's rotated list: turned back here.
@@ -376,9 +372,17 @@ private final class NewsBubbleSlot {
         if let itemNode = self.itemNode {
             // Where the bubble's content lies in its item: the text starts a fixed distance into it.
             self.contentFrame = (itemNode as? ChatMessageItemView)?.contentFrame() ?? CGRect(origin: CGPoint(x: 3.0, y: itemNode.insets.top), size: self.size)
-            // On screen, as far as the chat's media are concerned: a video plays as it would in the chat.
-            itemNode.visibility = .visible(1.0, CGRect(origin: CGPoint(), size: self.size))
+            self.updateVisibility()
         }
+    }
+
+    /// In a window, the whole bubble counts as on screen for the chat's media: a video plays as it would in the
+    /// chat. Out of one (another tab, a pushed chat) nothing plays.
+    private func updateVisibility() {
+        guard let itemNode = self.itemNode, itemNode.supernode != nil else {
+            return
+        }
+        itemNode.visibility = self.isInWindow ? .visible(1.0, CGRect(origin: CGPoint(), size: self.size)) : .none
     }
 
     /// Places the container so the content's text starts at `textOrigin`, and returns the content's bottom. Never
@@ -550,6 +554,13 @@ final class NewsExpandedPostContentView: UIView {
         self.addSubview(self.galleryView)
         self.galleryView.scrolled = { [weak self] in
             self?.galleryScrolled?()
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        for slot in [self.bubble, self.previewBubble] {
+            slot.isInWindow = self.window != nil
         }
     }
 
