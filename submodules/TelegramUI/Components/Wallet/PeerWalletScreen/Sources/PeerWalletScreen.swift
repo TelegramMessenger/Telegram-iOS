@@ -679,13 +679,14 @@ private final class PeerWalletOverlayComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, min(430.0, availableSize.width - 60.0)), height: 52.0)
+                containerSize: CGSize(width: max(1.0, min(430.0, contentWidth - 60.0)), height: 52.0)
             )
             if let buttonView = self.sendButton.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
-                self.buttonFrame = CGRect(x: floor((availableSize.width - buttonSize.width) * 0.5), y: buttonTop, width: buttonSize.width, height: buttonSize.height)
+                // A small centred control under band-centred content: it keeps the card's band and axis.
+                self.buttonFrame = CGRect(x: floor(centerX - buttonSize.width * 0.5), y: buttonTop, width: buttonSize.width, height: buttonSize.height)
                 transition.setFrame(view: buttonView, frame: self.buttonFrame)
             }
             self.animationSize = availableSize
