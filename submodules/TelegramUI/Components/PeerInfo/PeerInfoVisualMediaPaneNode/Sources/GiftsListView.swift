@@ -470,16 +470,11 @@ final class GiftsListView: UIView {
         let optionSpacing: CGFloat = 10.0
         let itemsSideInset = params.sideInset + 16.0
         
-        let defaultItemsInRow: Int
-        if params.size.width > params.size.height || params.size.width > 480.0 {
-            if case .tablet = params.deviceMetrics.type {
-                defaultItemsInRow = 4
-            } else {
-                defaultItemsInRow = 5
-            }
-        } else {
-            defaultItemsInRow = 3
+        var isTablet = false
+        if case .tablet = params.deviceMetrics.type {
+            isTablet = true
         }
+        let defaultItemsInRow = peerInfoGiftsItemsInRow(size: params.size, itemsSideInset: itemsSideInset, spacing: optionSpacing, isTablet: isTablet)
         let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
         let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
         let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
