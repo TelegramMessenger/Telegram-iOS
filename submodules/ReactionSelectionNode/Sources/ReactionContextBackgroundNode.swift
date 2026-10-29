@@ -148,6 +148,19 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.backgroundClippingLayer.addSublayer(self.backgroundMaskNode.layer)
     }
     
+    /// What the background covers: the panel with a 10pt margin, and the tail's circles below it. Hidden circles
+    /// (`displayTail` false) keep the height they give it but do not widen it: the tail's anchor can lie well past the
+    /// panel's end (a story's input row, which it points to, is wider than iPhone Duo's landscape card), and the glass
+    /// then reached out to it, past the reactions and the story. Circles under the panel give the same bounds either way.
+    static func contentBounds(backgroundFrame: CGRect, largeCircleFrame: CGRect, smallCircleFrame: CGRect, displayTail: Bool) -> CGRect {
+        let panelBounds = backgroundFrame.insetBy(dx: -10.0, dy: -10.0)
+        let bounds = panelBounds.union(largeCircleFrame).union(smallCircleFrame)
+        if displayTail {
+            return bounds
+        }
+        return CGRect(x: panelBounds.minX, y: bounds.minY, width: panelBounds.width, height: bounds.height)
+    }
+    
     func updateIsIntersectingContent(isIntersectingContent: Bool, transition: ContainedViewLayoutTransition) {
         let shadowAlpha: CGFloat = isIntersectingContent ? 1.0 : 0.0
         transition.updateAlpha(layer: self.backgroundShadowLayer, alpha: shadowAlpha)
@@ -226,7 +239,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.minX + 3.0 - smallCircleSize, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         }
         
-        let contentBounds = backgroundFrame.insetBy(dx: -10.0, dy: -10.0).union(largeCircleFrame).union(smallCircleFrame)
+        let contentBounds = ReactionContextBackgroundNode.contentBounds(backgroundFrame: backgroundFrame, largeCircleFrame: largeCircleFrame, smallCircleFrame: smallCircleFrame, displayTail: displayTail)
         
         transition.updateFrame(node: self.backgroundMaskNode, frame: backgroundMaskNodeFrame, beginWithCurrentState: true)
         transition.updateFrame(layer: self.backgroundClippingLayer, frame: backgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)

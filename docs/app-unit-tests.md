@@ -90,6 +90,11 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
+`//submodules/ReactionSelectionNode:ReactionSelectionNodeTests` covers `ReactionContextBackgroundNode.contentBounds`,
+what the reaction panel's background (the glass) covers. Its tail's circles widen it only when the tail is shown: a
+hidden tail can point well past the panel (a story's input row, wider than iPhone Duo's landscape card), and the glass
+reached out to it. Circles under the panel give the same bounds as before.
+
 `//submodules/ContactsPeerItem:ContactsPeerItemTests` covers `ContactItemHighlighting`, the Contacts list's highlight of
 the chat a split view's detail pane shows. When the split goes away (folding iPhone Duo) it clears the selection with no
 chat and progress 0; a progress without a chat must count as no selection in progress, or every row on screen takes
