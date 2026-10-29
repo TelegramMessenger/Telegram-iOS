@@ -5563,6 +5563,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.separatorNode.isHidden = true
                         }
                     }
+                    if last && item.interaction.isSideListMode {
+                        // The side list ends without a closing separator.
+                        strongSelf.separatorNode.isHidden = true
+                    }
                     strongSelf.separatorBaseIsHidden = strongSelf.separatorNode.isHidden
                     strongSelf.updateSideListSeparatorVisibility()
                     
