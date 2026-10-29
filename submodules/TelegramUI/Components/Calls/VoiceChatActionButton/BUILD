@@ -62,7 +62,6 @@ swift_library(
     ],
     deps = [
         "//submodules/Display",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/MetalEngine",
         "//submodules/ComponentFlow",
         "//submodules/UIKitRuntimeUtils",

@@ -54,7 +54,12 @@ final class UnreadMessagesScanTests: XCTestCase {
             transaction.updatePeersInternal([chat] + peers, update: { _, updated in updated })
             transaction.updatePeerChatListInclusion(chat.id, inclusion: .ifHasMessagesOrOneOf(groupId: .root, pinningIndex: nil, minTimestamp: nil))
             let _ = transaction.addMessages(messages, location: .UpperHistoryBlock)
-            transaction.resetIncomingReadStates([chat.id: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readUpTo, maxOutgoingReadId: 0, maxKnownId: messages.map { $0.id.id }.max() ?? 0, count: unread, markedUnread: false)]])
+            transaction.resetIncomingReadStates([chat.id: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readUpTo, maxOutgoingReadId: 0, maxKnownId: messages.compactMap { message -> Int32? in
+                if case let .Id(id) = message.id {
+                    return id.id
+                }
+                return nil
+            }.max() ?? 0, count: unread, markedUnread: false)]])
         }
     }
 

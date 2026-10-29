@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -76,7 +75,7 @@ public final class PermissionContentNode: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         
         if case let .animation(animation) = icon {
-            self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+            self.animationNode = DefaultAnimatedStickerNodeImpl()
             
             self.animationNode?.setup(source: AnimatedStickerNodeLocalFileSource(name: animation), width: 320, height: 320, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animationNode?.visibility = true

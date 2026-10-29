@@ -126,6 +126,30 @@ public enum UpdateChannelAdminRightsError {
     case adminsTooMuch
 }
 
+// Maps a channels.editAdmin refusal to the case the admin editor can explain; only unknown errors stay .generic.
+func updateChannelAdminRightsError(errorDescription: String) -> UpdateChannelAdminRightsError {
+    switch errorDescription {
+    case "USER_NOT_MUTUAL_CONTACT":
+        return .addMemberError(.notMutualContact)
+    case "USER_PRIVACY_RESTRICTED":
+        return .addMemberError(.restricted(nil))
+    case "USER_CHANNELS_TOO_MUCH":
+        return .addMemberError(.tooMuchJoined)
+    case "USERS_TOO_MUCH":
+        return .addMemberError(.limitExceeded)
+    case "BOTS_TOO_MUCH":
+        return .addMemberError(.tooMuchBots)
+    case "BOT_GROUPS_BLOCKED":
+        return .addMemberError(.botDoesntSupportGroups)
+    case "USER_KICKED":
+        return .addMemberError(.kicked)
+    case "ADMINS_TOO_MUCH":
+        return .adminsTooMuch
+    default:
+        return .generic
+    }
+}
+
 func _internal_fetchChannelParticipant(account: Account, peerId: PeerId, participantId: PeerId) -> Signal<ChannelParticipant?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ChannelParticipant?, NoError> in
         if let peer = transaction.getPeer(peerId), let adminPeer = transaction.getPeer(participantId), let inputPeer = apiInputPeer(adminPeer) {
@@ -216,20 +240,12 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                             |> then(
                                 account.network.request(Api.functions.channels.editAdmin(flags: flags, channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(Api.ChatAdminRights.Cons_chatAdminRights(flags: 0)), rank: rank ?? ""))
                                 |> mapError { error -> UpdateChannelAdminRightsError in
-                                    return .generic
+                                    return updateChannelAdminRightsError(errorDescription: error.errorDescription)
                                 }
                                 |> map { [$0] }
                             )
-                        } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
-                            return .fail(.addMemberError(.notMutualContact))
-                        } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
-                            return .fail(.addMemberError(.restricted(nil)))
-                        } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
-                            return .fail(.addMemberError(.tooMuchJoined))
-                        } else if error.errorDescription == "ADMINS_TOO_MUCH" {
-                            return .fail(.adminsTooMuch)
                         }
-                        return .fail(.generic)
+                        return .fail(updateChannelAdminRightsError(errorDescription: error.errorDescription))
                     }
                     |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), UpdateChannelAdminRightsError> in
                         for updates in result {

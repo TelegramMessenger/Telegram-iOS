@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -24,7 +23,7 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
     private let unreadIconNode: ASImageNode
     private var statusNode: RadialStatusNode?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isUserInteractionEnabled = false
         
@@ -52,7 +51,7 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
         
         self.buttonNode = HighlightTrackingButtonNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.buttonNode.addSubnode(self.separatorNode)
         self.buttonNode.addSubnode(self.countNode)

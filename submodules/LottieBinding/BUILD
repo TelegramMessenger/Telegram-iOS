@@ -10,8 +10,6 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/LottieSettings:LottieSettings",
-        "//submodules/rlottie:RLottieBinding",
         "//submodules/tlottie:TLottieBinding",
     ],
     visibility = [
@@ -25,8 +23,6 @@ swift_library(
     srcs = glob(["Tests/**/*.swift"]),
     deps = [
         ":LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
-        "//submodules/rlottie:RLottieBinding",
         "//submodules/tlottie:TLottieBinding",
     ],
 )

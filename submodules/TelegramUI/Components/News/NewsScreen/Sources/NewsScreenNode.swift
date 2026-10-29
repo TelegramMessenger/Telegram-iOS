@@ -144,7 +144,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             guard let self else {
                 return
             }
-            self.headerView.segmentNode.updateRefreshDrop(pose: pose, theme: self.presentationData.theme, lottieSettings: self.context.lottieRenderingSettings)
+            self.headerView.segmentNode.updateRefreshDrop(pose: pose, theme: self.presentationData.theme)
         }
         self.refreshController.onInsertRows = { [weak self] page, slides in
             self?.revealPullRefresh(page: page, slides: slides)

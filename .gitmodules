@@ -1,7 +1,4 @@
 
-[submodule "submodules/rlottie/rlottie"]
-	path = submodules/rlottie/rlottie
-	url=../rlottie.git
 [submodule "build-system/bazel-rules/rules_apple"]
 	path = build-system/bazel-rules/rules_apple
 url=https://github.com/ali-fareed/rules_apple.git

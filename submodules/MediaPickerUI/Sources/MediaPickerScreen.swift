@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -2419,7 +2418,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     if let current = self.placeholderNode {
                         placeholderNode = current
                     } else {
-                        placeholderNode = MediaPickerPlaceholderNode(content: .bannedSendMedia(text: banDescription, canBoost: controller.canBoostToUnrestrict), lottieSettings: controller.context.lottieRenderingSettings)
+                        placeholderNode = MediaPickerPlaceholderNode(content: .bannedSendMedia(text: banDescription, canBoost: controller.canBoostToUnrestrict))
                         placeholderNode.boostPressed = { [weak controller] in
                             controller?.openBoost()
                         }
@@ -2625,7 +2624,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 if let current = self.placeholderNode {
                     placeholderNode = current
                 } else {
-                    placeholderNode = MediaPickerPlaceholderNode(content: qrCode ? .qrCodeIntro : .intro(story: story), lottieSettings: controller.context.lottieRenderingSettings)
+                    placeholderNode = MediaPickerPlaceholderNode(content: qrCode ? .qrCodeIntro : .intro(story: story))
                     placeholderNode.settingsPressed = { [weak self] in
                         self?.controller?.context.sharedContext.applicationBindings.openSettings()
                     }

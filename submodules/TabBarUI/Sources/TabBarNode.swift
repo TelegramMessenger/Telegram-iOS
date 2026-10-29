@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
@@ -116,10 +115,8 @@ private final class TabBarItemNode: ASDisplayNode {
     
     var pointerInteraction: PointerInteraction?
     
-    private let lottieSettings: LottieRenderingSettings
 
-    init(lottieSettings: LottieRenderingSettings) {
-        self.lottieSettings = lottieSettings
+    override init() {
         self.extractedContainerNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         
@@ -136,7 +133,7 @@ private final class TabBarItemNode: ASDisplayNode {
         
         self.animationContainerNode = ASDisplayNode()
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: lottieSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.autoplay = true
         self.animationNode.automaticallyLoadLastFrame = true
         
@@ -360,10 +357,8 @@ class TabBarNode: ASDisplayNode, ASGestureRecognizerDelegate {
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
-    private let lottieSettings: LottieRenderingSettings
 
-    init(theme: PresentationTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, lottieSettings: LottieRenderingSettings) {
-        self.lottieSettings = lottieSettings
+    init(theme: PresentationTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void) {
         self.itemSelected = itemSelected
         self.contextAction = contextAction
         self.swipeAction = swipeAction
@@ -463,7 +458,7 @@ class TabBarNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var tabBarNodeContainers: [TabBarNodeContainer] = []
         for i in 0 ..< self.tabBarItems.count {
             let item = self.tabBarItems[i]
-            let node = TabBarItemNode(lottieSettings: self.lottieSettings)
+            let node = TabBarItemNode()
             let container = TabBarNodeContainer(item: item, imageNode: node, updateBadge: { [weak self] value in
                 self?.updateNodeBadge(i, value: value)
             }, updateTitle: { [weak self] _, _ in

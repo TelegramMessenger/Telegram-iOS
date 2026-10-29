@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import SwiftSignalKit
 import Display
@@ -1856,8 +1855,7 @@ private final class TextProcessingSheetComponent: Component {
                     titleItem: titleString.isEmpty ? nil : AnyComponent(TitleComponent(
                         theme: theme,
                         title: titleString,
-                        isProcessing: self.contentExternalState.isProcessing,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        isProcessing: self.contentExternalState.isProcessing
                     )),
                     leftItem: AnyComponent(
                         GlassBarButtonComponent(
@@ -1978,8 +1976,7 @@ private final class TextProcessingSheetComponent: Component {
                             content: LottieComponent.AppBundleContent(name: "PremiumStar"),
                             startingPosition: .begin,
                             size: CGSize(width: 32.0, height: 32.0),
-                            playOnce: playOnce,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            playOnce: playOnce
                         )),
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
@@ -2109,8 +2106,7 @@ private final class TextProcessingSheetComponent: Component {
                             content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                             startingPosition: .begin,
                             size: CGSize(width: 32.0, height: 32.0),
-                            playOnce: playOnce,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            playOnce: playOnce
                         )),
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
@@ -2410,18 +2406,15 @@ private final class TitleComponent: Component {
     let theme: PresentationTheme
     let title: String
     let isProcessing: Bool
-    let lottieSettings: LottieRenderingSettings
     
     init(
         theme: PresentationTheme,
         title: String,
-        isProcessing: Bool,
-        lottieSettings: LottieRenderingSettings
+        isProcessing: Bool
     ) {
         self.theme = theme
         self.title = title
         self.isProcessing = isProcessing
-        self.lottieSettings = lottieSettings
     }
     
     static func ==(lhs: TitleComponent, rhs: TitleComponent) -> Bool {
@@ -2493,8 +2486,7 @@ private final class TitleComponent: Component {
                         placeholderColor: nil,
                         startingPosition: .begin,
                         size: CGSize(width: 30.0, height: 30.0),
-                        loop: true,
-                        lottieSettings: component.lottieSettings
+                        loop: true
                     )),
                     environment: {},
                     containerSize: CGSize(width: 30.0, height: 30.0)

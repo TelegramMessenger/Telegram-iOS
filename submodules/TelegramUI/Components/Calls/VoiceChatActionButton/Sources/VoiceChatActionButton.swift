@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -131,7 +130,7 @@ public final class VoiceChatActionButton: HighlightTrackingButtonNode {
         self.containerNode = ASDisplayNode()
         self.containerNode.isUserInteractionEnabled = false
         self.backgroundNode = VoiceChatActionButtonBackgroundNode()
-        self.iconNode = VoiceChatActionButtonIconNode(isColored: false, lottieSettings: .noAccountFallback)
+        self.iconNode = VoiceChatActionButtonIconNode(isColored: false)
         
         self.labelContainerNode = ASDisplayNode()
         self.titleLabel = ImmediateTextNode()

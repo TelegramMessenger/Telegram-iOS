@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -59,7 +58,7 @@ final class InviteRequestsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     init(item: InviteRequestsEmptyStateItem) {
         self.item = item
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: item.context.lottieRenderingSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

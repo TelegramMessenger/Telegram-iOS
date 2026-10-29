@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -564,10 +563,10 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
 public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode {
     private let buttonsNode: MessageReactionButtonsNode
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.buttonsNode = MessageReactionButtonsNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.buttonsNode)
         

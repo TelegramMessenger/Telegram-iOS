@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import SwiftSignalKit
 import Display
@@ -257,8 +256,7 @@ private final class BrowserScreenComponent: CombinedComponent {
                                             ),
                                             color: environment.theme.chat.inputPanel.panelControlColor,
                                             size: CGSize(width: 34.0, height: 34.0),
-                                            playOnce: moreButtonPlayOnce,
-                                            lottieSettings: context.component.context.lottieRenderingSettings
+                                            playOnce: moreButtonPlayOnce
                                         )
                                     ),
                                     action: {

@@ -431,6 +431,23 @@ public extension ContainerViewLayout {
         )
     }
 
+    /// A list narrowed by `base` on each side (a centred blocks-style list): its `left` and `width` in this layout,
+    /// `listSideMargins(base:)` from the edges, and the safe insets its rows still need. A side strip (iPhone Duo) is
+    /// outside the list then, so that side's inset is 0; rows that fill the list's width with their background while
+    /// their card stops at the inset would otherwise show the strip's width of background beside the card. Without
+    /// a strip: `base` on each side and `safeInsets`.
+    func centeredListPlacement(base: CGFloat) -> (left: CGFloat, width: CGFloat, safeInsets: UIEdgeInsets) {
+        let margins = self.listSideMargins(base: base)
+        var safeInsets = self.safeInsets
+        if self.sideStrip(edge: .left) != nil {
+            safeInsets.left = 0.0
+        }
+        if self.sideStrip(edge: .right) != nil {
+            safeInsets.right = 0.0
+        }
+        return (margins.left, self.size.width - margins.left - margins.right, safeInsets)
+    }
+
     /// Frames for a top-anchored column of `count` controls of `itemSize`, `spacing` apart, in the side
     /// strip (the right one if there is one, else the left), 22pt from the screen edge. The first control
     /// starts 8pt below a block above the strip, and never above `minY`. Nil without a strip, without

@@ -58,7 +58,6 @@ swift_library(
         "//submodules/TooltipUI",
         "//submodules/TelegramNotices",
         "//submodules/TelegramUI/Components/LottieComponent",
-        "//submodules/LottieSettings",
         "//submodules/TelegramUI/Components/SegmentControlComponent",
         "//submodules/UIKitRuntimeUtils",
     ],

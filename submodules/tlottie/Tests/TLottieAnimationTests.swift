@@ -18,7 +18,7 @@ final class TLottieAnimationTests: XCTestCase {
     }
 
     /// tlottie's Composition::frame_count() returns 1 for any composition it can
-    /// prove static, where rlottie reports the authored range. The detection is
+    /// prove static, rather than the authored range. The detection is
     /// documented conservative — true guarantees every playable frame is
     /// identical — so collapsing is visually lossless, but the reported count
     /// differs and anything deriving a duration from it will too.

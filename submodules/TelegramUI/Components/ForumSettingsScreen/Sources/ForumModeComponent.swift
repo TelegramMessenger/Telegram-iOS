@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -213,8 +212,7 @@ private final class ItemComponent: Component {
                     LottieComponent(
                         content: LottieComponent.AppBundleContent(name: component.animation),
                         color: component.isSelected ? component.theme.list.itemCheckColors.fillColor : component.theme.list.itemSecondaryTextColor,
-                        loop: false,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        loop: false
                     )
                 ),
                 environment: {},

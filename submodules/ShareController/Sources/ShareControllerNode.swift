@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -277,8 +276,7 @@ private final class ShareContentInfoView: UIView {
             transition: .immediate,
             component: AnyComponent(LottieComponent(
                 content: LottieComponent.AppBundleContent(name: "anim_collectible_username"),
-                loop: false,
-                lottieSettings: .noAccountFallback
+                loop: false
             )),
             environment: {},
             containerSize: CGSize(width: 30.0, height: 30.0)

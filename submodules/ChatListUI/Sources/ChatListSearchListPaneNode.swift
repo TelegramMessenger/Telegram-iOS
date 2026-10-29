@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1879,7 +1878,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsTextNode.lineSpacing = 0.2
         self.emptyResultsTextNode.isHidden = true
 
-        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.emptyResultsAnimationNode.isHidden = true
 
         if key == .channels || key == .apps {
@@ -1902,7 +1901,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             self.emptyRecentTextNode = emptyRecentTextNode
 
-            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl()
             emptyRecentAnimationNode.isHidden = true
             self.emptyRecentAnimationNode = emptyRecentAnimationNode
 

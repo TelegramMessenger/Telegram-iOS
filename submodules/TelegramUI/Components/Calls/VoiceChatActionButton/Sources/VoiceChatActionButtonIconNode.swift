@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -19,9 +18,9 @@ public final class VoiceChatActionButtonIconNode: ManagedAnimationNode {
     private let isColored: Bool
     private var iconState: VoiceChatActionButtonIconAnimationState = .mute
     
-    public init(isColored: Bool, lottieSettings: LottieRenderingSettings) {
+    public init(isColored: Bool) {
         self.isColored = isColored
-        super.init(size: CGSize(width: 100.0, height: 100.0), lottieSettings: lottieSettings)
+        super.init(size: CGSize(width: 100.0, height: 100.0))
         
         self.trackTo(item: ManagedAnimationItem(source: .local("VoiceUnmute"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
     }

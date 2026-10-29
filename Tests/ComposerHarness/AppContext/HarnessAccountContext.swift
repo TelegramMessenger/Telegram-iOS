@@ -7,7 +7,6 @@ import AnimationCache
 import MultiAnimationRenderer
 import DCTAnimationCacheImpl
 import DCTMultiAnimationRendererImpl
-import LottieSettings
 import FetchManagerImpl
 
 /// The live members are the ones `ChatTextInputPanelNode` actually reads. Everything else lives in
@@ -65,11 +64,6 @@ public final class HarnessAccountContext: AccountContext {
     // The remaining members the panel reads. Each is a REAL default that the app itself falls back
     // to before its configuration arrives from the server — not an invented value. Anything with
     // no genuine default stays in the generated file and traps.
-
-    /// Read at `ChatTextInputPanelNode.swift:2049`-adjacent rendering paths.
-    public var lottieRenderingSettings: LottieRenderingSettings {
-        return LottieRenderingSettings(backend: .tlottie)
-    }
 
     /// The app builds this from server colour options; with none fetched it is the empty set,
     /// which is exactly what an offline harness has.

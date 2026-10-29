@@ -26,7 +26,6 @@ import MultiAnimationRenderer
 import Photos
 import TextFormat
 import WalletContext
-import LottieSettings
 import Postbox
 import AccountContext
 

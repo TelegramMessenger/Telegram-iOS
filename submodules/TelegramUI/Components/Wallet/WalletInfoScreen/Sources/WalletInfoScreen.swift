@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AccountContext
@@ -375,8 +374,7 @@ private final class WalletInfoSheetContent: CombinedComponent {
                         startingPosition: .begin,
                         size: animationSize,
                         loop: content.logo.loop,
-                        playOnce: content.logo.loop ? nil : state.playRecoveryAnimation,
-                        lottieSettings: component.context.lottieRenderingSettings
+                        playOnce: content.logo.loop ? nil : state.playRecoveryAnimation
                     ),
                     availableSize: animationSize,
                     transition: context.transition

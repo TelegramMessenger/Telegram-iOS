@@ -3,14 +3,13 @@ import UIKit
 import AnimationCache
 import Display
 import LottieBinding
-import LottieSettings
 import GZip
 import WebPBinding
 
-public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOnly: Bool, writer: AnimationCacheItemWriter, firstFrameOnly: Bool, customColor: UIColor?, lottieSettings: LottieRenderingSettings) {
+public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOnly: Bool, writer: AnimationCacheItemWriter, firstFrameOnly: Bool, customColor: UIColor?) {
     let work: () -> Void = {
         let decompressedData = TGGUnzipData(data, 2 * 1024 * 1024) ?? data
-        guard let animation = makeLottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "", settings: lottieSettings) else {
+        guard let animation = makeLottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil) else {
             writer.finish()
             return
         }

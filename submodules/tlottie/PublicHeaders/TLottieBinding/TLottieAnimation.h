@@ -35,7 +35,7 @@ typedef NS_ENUM(int32_t, TLottieFitzModifier) {
 @property (nonatomic, readonly) CGSize dimensions;
 
 /// colorReplacements maps source colour to target colour, both NSNumber-wrapped
-/// 0xAARRGGBB, matching RLottieInstance's dictionary exactly.
+/// 0xAARRGGBB.
 - (instancetype _Nullable)initWithData:(NSData * _Nonnull)data
                           fitzModifier:(TLottieFitzModifier)fitzModifier
                      colorReplacements:(NSDictionary * _Nullable)colorReplacements;

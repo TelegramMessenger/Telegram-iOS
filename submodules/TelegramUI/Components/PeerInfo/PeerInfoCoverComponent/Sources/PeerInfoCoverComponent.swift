@@ -400,8 +400,7 @@ public final class PeerInfoCoverComponent: Component {
                             resource: .media(media: .standalone(media: patternFile), resource: patternFile.resource),
                             type: AnimationCacheAnimationType(file: patternFile),
                             keyframeOnly: false,
-                            customColor: .white,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            customColor: .white
                         ),
                         completion: { [weak self] _, _ in
                             guard let self else {

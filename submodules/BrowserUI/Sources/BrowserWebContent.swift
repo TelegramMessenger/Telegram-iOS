@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -804,8 +803,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                         theme: self.presentationData.theme,
                         title: self.presentationData.strings.Browser_ErrorTitle,
                         text: error.localizedDescription,
-                        insets: insets,
-                        lottieSettings: self.context.lottieRenderingSettings
+                        insets: insets
                     )
                 ),
                 environment: {},
@@ -1770,20 +1768,17 @@ private final class ErrorComponent: CombinedComponent {
     let text: String
     let insets: UIEdgeInsets
   
-    let lottieSettings: LottieRenderingSettings
 
     init(
         theme: PresentationTheme,
         title: String,
         text: String,
-        insets: UIEdgeInsets,
-        lottieSettings: LottieRenderingSettings
+        insets: UIEdgeInsets
     ) {
         self.theme = theme
         self.title = title
         self.text = text
         self.insets = insets
-        self.lottieSettings = lottieSettings
     }
     
     static func ==(lhs: ErrorComponent, rhs: ErrorComponent) -> Bool {
@@ -1827,8 +1822,7 @@ private final class ErrorComponent: CombinedComponent {
             
             let animation = animation.update(
                 component: LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
-                    lottieSettings: context.component.lottieSettings
+                    content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
                 ),
                 environment: {},
                 availableSize: CGSize(width: animationSize, height: animationSize),

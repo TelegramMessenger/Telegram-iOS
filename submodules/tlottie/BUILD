@@ -9,8 +9,8 @@ load("@rules_rust//rust:defs.bzl", "rust_static_library", "rust_test")
 #
 # -Cpanic=abort: a Rust panic cannot unwind across `extern "C"` anyway (Rust
 # aborts at the boundary), so this costs no recoverability and saves the
-# landing-pad tables. Consequence to know: a tlottie bug is an app crash, where
-# the C++ rlottie would more likely render garbage.
+# landing-pad tables. Consequence to know: a tlottie bug is an app crash, not a
+# garbled frame.
 _TLOTTIE_FLAGS = [
     "-Copt-level=3",
     "-Ccodegen-units=1",

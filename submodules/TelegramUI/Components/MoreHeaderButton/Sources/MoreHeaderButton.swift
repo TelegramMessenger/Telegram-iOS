@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -89,8 +88,7 @@ public final class MoreHeaderButton: HighlightableButtonNode {
                     content: LottieComponent.AppBundleContent(
                         name: "anim_morewide"
                     ),
-                    color: self.color,
-                    lottieSettings: .noAccountFallback
+                    color: self.color
                 )),
                 environment: {},
                 containerSize: animationSize

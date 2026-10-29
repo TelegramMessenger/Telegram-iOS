@@ -1227,7 +1227,8 @@ when that stableId changes**. `:2521-2530` turns that into a `.top(0.0)` scroll,
 `pointOffset(for:index:height:view:)` (`:369-372`) replaces the requested position wholesale for a
 lowest-pin-to-edge index — `ListViewImpl` does the same at `ListView.swift:3146-3170`, and the chat
 relies on the list to know better. CoreList engages `holdsPinnedRow` when a `scrollTo` names
-`lowestPinnedItemIndex`, so this one scroll is the entire engagement path. Cold start is covered: a
+`lowestPinnedItemIndex` with `pinsRow` set: this scroll, and any other chat jump that lands on that row (the default,
+as `ListViewImpl` arms on any scroll to a pin-to-edge item); the backend's message-widget resize targets clear it. Cold start is covered: a
 fresh history node has `pinToTopStableId == nil`, so opening a chat with an answer already streaming
 fires it on the first view.
 

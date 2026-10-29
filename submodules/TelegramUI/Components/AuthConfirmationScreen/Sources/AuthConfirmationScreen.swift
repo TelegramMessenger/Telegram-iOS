@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -495,8 +494,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                     if let file {
                         items.append(
                             AnyComponentWithIdentity(id: "animatedIcon", component: AnyComponent(
-                                LottieComponent(content: LottieComponent.ResourceContent(context: component.context, file: file, attemptSynchronously: true, providesPlaceholder: true), placeholderColor: theme.list.mediaPlaceholderColor, startingPosition: .begin, size: CGSize(width: 32.0, height: 32.0), loop: true, playOnce: nil,
-                    lottieSettings: component.context.lottieRenderingSettings)
+                                LottieComponent(content: LottieComponent.ResourceContent(context: component.context, file: file, attemptSynchronously: true, providesPlaceholder: true), placeholderColor: theme.list.mediaPlaceholderColor, startingPosition: .begin, size: CGSize(width: 32.0, height: 32.0), loop: true, playOnce: nil)
                             ))
                         )
                     } else {

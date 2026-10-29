@@ -61,7 +61,9 @@ constants.
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
-  `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`.
+  `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`;
+  `layout.centeredListPlacement(base:)` for a list narrowed on both sides whose rows fill its width (their side
+  insets then take no strip, which the margin already clears).
 - Legacy hosts: `reservedCornersForHostedLayout(size:orientation:)`; `LegacyComponentsContext.statusIslandTrailingInset`.
 - Status bar style: `layout.coversStatusCorner(frame:)` tells whether a surface still overlaps the status corner block;
   `NavigationModalContainer.presentedCardFrame` is a card's frame including an interactive dismiss.
@@ -176,4 +178,14 @@ other device stays byte-identical; the band helpers above are built that way.
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
   widths in and outside a chat), `//submodules/PasswordSetupUI:PasswordSetupUITests` (the 2FA data input's
   bands and its button-row actions per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
-  flow's content and bottom-button bands per posture).
+  flow's content and bottom-button bands per posture, and the password screen's column above the keyboard: on the
+  Duo's short screens it drops the animation so Forgot password keeps its gap below the field),
+  `//submodules/TelegramUI/Components/ChatMediaEditorScreen:ChatMediaEditorScreenTests` (the chat media editor's
+  trimmer, counter and camera button, Edit Cover title beside a strip),
+  `//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests` (the media editors'
+  caption panel: a caption above the media keeps clear of folded portrait's status corner),
+  `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` (the round video
+  message preview kept above the input panel, its trailing buttons clear of the status corner, touches reaching the
+  panel above a bot keyboard),
+  `//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests`
+  (the emoji / stickers / GIFs keyboard's grid, headers and switcher on the band).

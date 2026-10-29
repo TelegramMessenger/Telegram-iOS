@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import ComponentFlow
 import Display
@@ -352,8 +351,7 @@ public final class RichTextMediaContentComponent: Component {
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "anim_baremoredots"),
                     color: .white,
-                    startingPosition: .begin,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    startingPosition: .begin
                 )),
                 environment: {},
                 containerSize: buttonSize

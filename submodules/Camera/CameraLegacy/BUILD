@@ -20,7 +20,6 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Utils/DeviceModel",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AppBundle",
         "//submodules/GZip",
     ],
