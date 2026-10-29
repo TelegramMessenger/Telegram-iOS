@@ -1119,6 +1119,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             })
         }
         
+        if applicationBindings.isMainApp {
+            self.removeStaleCallUnlockVideoNotifications()
+        }
+        
         /*if #available(iOS 13.0, *) {
             let userInterfaceStyle: UIUserInterfaceStyle
             if self.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
@@ -1601,7 +1605,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private func postCallUnlockVideoNotification(internalId: CallSessionInternalId) {
         let identifier = CallUnlockVideoNotificationState.identifier(internalId: internalId)
-        let text = self.currentPresentationData.with({ $0 }).strings.Call_UnlockToSeeVideoNotification
+        let strings = self.currentPresentationData.with({ $0 }).strings
+        let text = UIDevice.current.userInterfaceIdiom == .pad ? strings.Call_UnlockToSeeVideoNotificationPad : strings.Call_UnlockToSeeVideoNotification
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings(completionHandler: { [weak self] settings in
             Queue.mainQueue().async {
@@ -1635,6 +1640,30 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
         center.removeDeliveredNotifications(withIdentifiers: [identifier])
+    }
+    
+    /// A notification whose call ended while the app was not running (terminated or crashed during the call) stays in
+    /// Notification Center, since nothing that would take it down is alive any more; launching removes it. The current
+    /// call's own is kept, should it already be up.
+    private func removeStaleCallUnlockVideoNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications(completionHandler: { [weak self] notifications in
+            let identifiers = notifications.map(\.request).filter({ $0.content.userInfo[CallUnlockVideoNotificationState.userInfoKey] != nil }).map(\.identifier)
+            if identifiers.isEmpty {
+                return
+            }
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                let currentIdentifier = self.callUnlockVideoNotificationInternalId.flatMap(CallUnlockVideoNotificationState.identifier(internalId:))
+                let staleIdentifiers = identifiers.filter({ $0 != currentIdentifier })
+                if !staleIdentifiers.isEmpty {
+                    Logger.shared.log("SharedAccountContext", "removing \(staleIdentifiers.count) stale call unlock video notifications")
+                    center.removeDeliveredNotifications(withIdentifiers: staleIdentifiers)
+                }
+            }
+        })
     }
     
     private func presentControllerWithCurrentCall() {

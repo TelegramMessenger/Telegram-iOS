@@ -1,13 +1,14 @@
 import Foundation
 import AccountContext
 
-/// When the "Unlock your phone to see and share video" notification is shown for a call.
+/// When the "Unlock your phone to see and share video" notification ("your iPad" on iPad) is shown for a call.
 ///
 /// An incoming video call answered from the system call screen while Telegram is in the background
 /// (the lock screen) continues in the CallKit UI, which has no video. The notification leads the user
 /// to unlock and open Telegram's call screen. It is shown once, `postDelay` after the answer, because
 /// answering a video call on an unlocked device brings the app to the foreground by itself, and taken
-/// down when the call ends or the app comes to the foreground.
+/// down when the call ends or the app comes to the foreground. One left behind by a call that ended while the app was
+/// not running is removed at the next launch (`SharedAccountContextImpl`).
 ///
 /// "In the background" stands for "locked", which iOS does not report: an answer that never brings
 /// the app forward on an unlocked device (headset, Apple Watch, CarPlay) posts it too.
