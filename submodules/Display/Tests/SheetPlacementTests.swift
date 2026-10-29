@@ -58,15 +58,35 @@ final class SheetPlacementTests: XCTestCase {
         XCTAssertEqual(portrait.contentSideInsets, UIEdgeInsets())
     }
 
-    // MARK: sheetContentBandInsets
+    // MARK: sheetBandPlacement
 
-    func test_contentBand_onlyInLandscapeBesideAStrip() {
-        XCTAssertEqual(sheetContentBandInsets(containerSize: self.coverLandscape, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 21.0, right: 84.0)), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0))
-        XCTAssertEqual(sheetContentBandInsets(containerSize: self.coverLandscape, safeInsets: UIEdgeInsets(top: 0.0, left: 84.0, bottom: 21.0, right: 0.0)), UIEdgeInsets(top: 0.0, left: 84.0, bottom: 0.0, right: 0.0))
+    func test_band_unfoldedLandscape_sheetKeepsClearOfTheRightStrip() {
+        // The status corner (84x120) is at the top of the right strip: the whole sheet, not only its content,
+        // stays left of it, so the content is centred on the sheet and nothing of the sheet runs under the block.
+        let p = sheetBandPlacement(containerSize: CGSize(width: 951.0, height: 669.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 21.0, right: 84.0))
+        XCTAssertEqual(p?.minX, 0.0)
+        XCTAssertEqual(p?.width, 867.0)
+        XCTAssertEqual(p?.contentSideInsets, UIEdgeInsets())
+    }
+
+    func test_band_coverLandscape_sheetKeepsToTheBand() {
+        let left = sheetBandPlacement(containerSize: self.coverLandscape, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 21.0, right: 84.0))
+        XCTAssertEqual(left?.minX, 0.0)
+        XCTAssertEqual(left?.width, 594.0)
+        XCTAssertEqual(left?.contentSideInsets, UIEdgeInsets())
+        let right = sheetBandPlacement(containerSize: self.coverLandscape, safeInsets: UIEdgeInsets(top: 0.0, left: 84.0, bottom: 21.0, right: 0.0))
+        XCTAssertEqual(right?.minX, 84.0)
+        XCTAssertEqual(right?.width, 594.0)
+        XCTAssertEqual(right?.contentSideInsets, UIEdgeInsets())
+    }
+
+    func test_band_portraitAndEqualInsets_spanTheContainerAsBefore() {
         // Folded portrait: a bottom panel across the strip, as before.
-        XCTAssertNil(sheetContentBandInsets(containerSize: self.coverPortrait, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 84.0)))
-        // Equal insets: unchanged.
-        XCTAssertNil(sheetContentBandInsets(containerSize: CGSize(width: 932.0, height: 430.0), safeInsets: UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0)))
+        XCTAssertNil(sheetBandPlacement(containerSize: self.coverPortrait, safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 84.0)))
+        // Unfolded portrait: no side insets.
+        XCTAssertNil(sheetBandPlacement(containerSize: CGSize(width: 669.0, height: 951.0), safeInsets: UIEdgeInsets(top: 82.0, left: 0.0, bottom: 20.0, right: 0.0)))
+        // A notched phone in landscape (equal insets): unchanged.
+        XCTAssertNil(sheetBandPlacement(containerSize: CGSize(width: 932.0, height: 430.0), safeInsets: UIEdgeInsets(top: 0.0, left: 59.0, bottom: 21.0, right: 59.0)))
     }
 
     // MARK: sheetHeaderCornerInsets

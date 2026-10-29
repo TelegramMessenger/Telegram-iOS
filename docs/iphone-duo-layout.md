@@ -56,7 +56,7 @@ constants.
   with a sheet. Component environments carry `statusBarHeight` (compact), `fullStatusBarHeight`,
   `navigationBarTrailingButtonsInset` and `reservedCorners`; a screen that builds an
   `Environment` by hand must pass them all (the defaults are 0 / `.none`).
-- Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetContentBandInsets`,
+- Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetBandPlacement`,
   `centeredAlertSideInsets` for centred alerts (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
@@ -92,6 +92,9 @@ These are the user's decisions; a screen that follows them is correct, one that 
    - a **small centred control** on the axis of band-centred content (a fixed-width button, a round record button,
      a Done drawn on a camera preview, a text Cancel under a ring): moving it puts it 42pt off that axis;
    - a **tall sheet that scrolls up to the top** (share, import stickers): its corner buttons would reach the block;
+   - a **full-width sheet in landscape** beside a strip (`SheetComponent`): the whole sheet, background included,
+     keeps to the band and its content is centred on it; spanning the screen it ran under the strip's corner block
+     (unfolded landscape's status corner) with its content off the sheet's centre;
    - a **panel that grows upward** (a text input above the keyboard): it takes the band of its actual rows, as the
      chat's input panel does;
    - anything beside the **side tab bar**, which sits in the strip at the bottom of the root screens;
