@@ -73,6 +73,16 @@ constants.
 - Status bar style: `layout.coversStatusCorner(frame:)` tells whether a surface still overlaps the status corner block;
   `NavigationModalContainer.presentedCardFrame` is a card's frame including an interactive dismiss.
 - `deviceMetrics.isIPhoneDuoInnerScreen(size:)`: a full-screen layout on the unfolded screen (either orientation).
+- `deviceMetrics.screenPortraitDeviceOrientation(size:)`: the body position (`UIDevice.orientation`) in which the
+  screen's portrait reads upright. Landscape-left on the inner screen, portrait elsewhere. `UIDevice.orientation` is
+  measured against the body on both screens and a window's interface orientation against its own screen, so code that
+  compares the two (call video rotation: `callInterfaceOrientationInDeviceFrame`) converts first. Measured on the
+  device with `AVCaptureDevice.RotationCoordinator` (iOS 27.1): inner portrait = body landscape-left, inner
+  landscape-right = body upside down.
+- The fold: `layout.division`, the active `.division` region (half open). Flat and sheet modals pass it on in their
+  content's coordinates (`NavigationModalContainer`; it was dropped there in portrait until 2026-10-29, so nothing
+  presented as a modal saw a fold running across the screen). The 1:1 call screen splits at a fold across the inner
+  screen: the main video centered above it, the self-view centered below it with the buttons.
 - Bar buttons: `UIBarButtonItem.staysInRow` / `NavigationBarComponent.Button.staysInRow` /
   `ItemListNavigationButton(staysInRow:)` keep a button in the row instead of the side column.
 

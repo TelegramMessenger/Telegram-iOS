@@ -114,6 +114,39 @@ final class CallVideoRotationTests: XCTestCase {
         XCTAssertEqual(resolveCallVideoRotationAngle(angle: self.threeQuarters, followsDeviceOrientation: true, interfaceOrientation: .landscapeLeft, deviceOrientation: deviceOrientationMatching(.landscapeLeft)), 0.0)
     }
 
+    /// A screen whose portrait is the device's (every screen but iPhone Duo's inner one) keeps the
+    /// window's interface orientation as it is.
+    func testScreenWithTheDevicesPortraitKeepsTheInterfaceOrientation() {
+        for orientation in [UIInterfaceOrientation.portrait, .landscapeLeft, .landscapeRight, .portraitUpsideDown] {
+            XCTAssertEqual(callInterfaceOrientationInDeviceFrame(orientation, screenPortrait: .portrait), orientation)
+        }
+    }
+
+    /// iPhone Duo's inner screen, measured on the device (iOS 27.1) with
+    /// `AVCaptureDevice.RotationCoordinator`: its portrait interface is the body in landscape-left and
+    /// its landscape-right interface the body upside down. Held so the inner screen reads upright, the
+    /// coordinator's preview angle for the back camera was 0 in portrait and 270 in landscape-right;
+    /// the capturer tags local frames with the body-portrait 90.
+    func testIPhoneDuoInnerScreenIsAQuarterTurnFromTheBody() {
+        let innerPortrait = callInterfaceOrientationInDeviceFrame(.portrait, screenPortrait: .landscapeLeft)
+        XCTAssertEqual(deviceOrientationMatching(innerPortrait), .landscapeLeft)
+        let innerLandscapeRight = callInterfaceOrientationInDeviceFrame(.landscapeRight, screenPortrait: .landscapeLeft)
+        XCTAssertEqual(deviceOrientationMatching(innerLandscapeRight), .portraitUpsideDown)
+
+        // The local preview, upright on the inner screen.
+        XCTAssertEqual(resolveCallVideoRotationAngle(angle: self.quarter, followsDeviceOrientation: true, interfaceOrientation: innerPortrait, deviceOrientation: .landscapeLeft), 0.0)
+        XCTAssertEqual(resolveCallVideoRotationAngle(angle: self.quarter, followsDeviceOrientation: true, interfaceOrientation: innerLandscapeRight, deviceOrientation: .portraitUpsideDown), self.threeQuarters)
+
+        // A remote frame on the upright inner screen is shown as sent.
+        for angle in self.quarterTurns {
+            XCTAssertEqual(resolveCallVideoRotationAngle(angle: angle, followsDeviceOrientation: false, interfaceOrientation: innerPortrait, deviceOrientation: .landscapeLeft), angle)
+            XCTAssertEqual(resolveCallVideoRotationAngle(angle: angle, followsDeviceOrientation: false, interfaceOrientation: innerLandscapeRight, deviceOrientation: .portraitUpsideDown), angle)
+        }
+        // The portrait-locked inner screen turned sideways with the body upright: the remote frame
+        // turns a quarter back against the screen, as on the cover screen in landscape-right.
+        XCTAssertEqual(resolveCallVideoRotationAngle(angle: 0.0, followsDeviceOrientation: false, interfaceOrientation: innerPortrait, deviceOrientation: .portrait), self.threeQuarters)
+    }
+
     /// `VideoContainerView` compares the result against the literals `Float.pi * 0.5` and
     /// `Float.pi * 3.0 / 2.0` with `==`, so a sum that lands one ulp off would silently skip the
     /// width/height swap. The result must be bit-identical to those literals.

@@ -95,6 +95,19 @@ public extension DeviceMetrics {
         }
         return matchesSize(portraitSize(size), CGSize(width: 669.0, height: 951.0))
     }
+
+    /// The device position, as `UIDevice.orientation` reports it, in which the portrait of the screen showing a window of
+    /// `size` reads upright. `UIDevice.orientation` is measured against the device body on both of iPhone Duo's screens,
+    /// while a window's interface orientation is measured against its own screen, and the inner screen's portrait is the
+    /// body held in landscape-left (measured on an iPhone19,4, iOS 27.1, with `AVCaptureDevice.RotationCoordinator`: in
+    /// the inner screen's portrait the coordinator's capture angle is the one the cover screen gets in landscape-left,
+    /// and the inner screen's landscape-right is the body upside down). Portrait on every other device and screen.
+    func screenPortraitDeviceOrientation(size: CGSize) -> UIDeviceOrientation {
+        if self.isIPhoneDuoInnerScreen(size: size) {
+            return .landscapeLeft
+        }
+        return .portrait
+    }
 }
 
 /// The reserved corners for a full-screen layout built outside the window's own layout pass (a legacy host that hands
