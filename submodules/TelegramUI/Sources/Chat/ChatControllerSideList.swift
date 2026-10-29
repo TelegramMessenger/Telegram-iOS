@@ -84,7 +84,7 @@ extension ChatControllerImpl {
             if let threadId = self.chatLocation.threadId {
                 highlightedLocation = .peer(id: EnginePeer.Id(threadId))
             }
-        case .botThreads:
+        case .botThreads, .forum:
             break
         }
         panel.listController.updateNavigationCustomData(highlightedLocation, progress: 1.0, transition: .immediate)

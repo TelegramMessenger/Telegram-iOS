@@ -7608,7 +7608,12 @@ private final class ChatListLocationContext {
             avatarNode = ChatListSideListAvatarButtonNode()
             self.sideListAvatarNode = avatarNode
         }
-        avatarNode.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: isSavedMessages ? .savedMessagesIcon : nil, emptyColor: theme.list.mediaPlaceholderColor)
+        // A forum's avatar is a rounded square, as everywhere forums show.
+        var clipStyle: AvatarNodeClipStyle = .round
+        if case let .channel(channel) = peer, channel.isForum {
+            clipStyle = .roundedRect
+        }
+        avatarNode.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: isSavedMessages ? .savedMessagesIcon : nil, emptyColor: theme.list.mediaPlaceholderColor, clipStyle: clipStyle)
         self.rightButton = NavigationBarComponent.Button(id: "sideListAvatar",
             content: .node(avatarNode),
             action: { [weak self] _ in

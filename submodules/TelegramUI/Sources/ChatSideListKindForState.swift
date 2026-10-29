@@ -18,11 +18,14 @@ func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentation
     }
     let peer = state.renderedPeer?.peers[peerId] ?? state.renderedPeer?.peer
     var isForum = false
+    var isInlineForum = false
     var isMonoforum = false
     var isAdminMonoforum = false
     var isBotWithThreads = false
     if let channel = peer as? TelegramChannel {
         isForum = channel.isForum
+        // As the topics strip decides: a forum viewed as messages.
+        isInlineForum = channel.isForum && state.viewForumAsMessages
         isMonoforum = channel.isMonoForum
         if channel.isMonoForum, let linkedMonoforumId = channel.linkedMonoforumId, let mainChannel = state.renderedPeer?.peers[linkedMonoforumId] as? TelegramChannel, mainChannel.hasPermission(.manageDirect) {
             isAdminMonoforum = true
@@ -38,6 +41,7 @@ func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentation
         peerId: peerId,
         accountPeerId: context.account.peerId,
         isForum: isForum,
+        isInlineForum: isInlineForum,
         isMonoforum: isMonoforum,
         isAdminMonoforum: isAdminMonoforum,
         isBotWithThreads: isBotWithThreads,

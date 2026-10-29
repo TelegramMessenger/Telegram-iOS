@@ -23,11 +23,13 @@ public enum ChatSideListKind: Equatable {
     case savedMessages(peerId: EnginePeer.Id)
     case monoforum(peerId: EnginePeer.Id)
     case botThreads(peerId: EnginePeer.Id)
+    /// A forum shown as messages (its chat carries the topics strip today).
+    case forum(peerId: EnginePeer.Id)
 
     /// The peer whose threads the list shows: the chat's own peer in every kind.
     public var parentPeerId: EnginePeer.Id {
         switch self {
-        case let .savedMessages(peerId), let .monoforum(peerId), let .botThreads(peerId):
+        case let .savedMessages(peerId), let .monoforum(peerId), let .botThreads(peerId), let .forum(peerId):
             return peerId
         }
     }
@@ -36,7 +38,7 @@ public enum ChatSideListKind: Equatable {
         switch self {
         case let .savedMessages(peerId), let .monoforum(peerId):
             return .savedMessagesChats(peerId: peerId)
-        case let .botThreads(peerId):
+        case let .botThreads(peerId), let .forum(peerId):
             return .forum(peerId: peerId)
         }
     }
@@ -50,19 +52,24 @@ public enum ChatSideListKind: Equatable {
     }
 }
 
-/// Which side list a chat with `peerId` gets, or nil for none. Forums are left out on purpose: they keep their strip.
+/// Which side list a chat with `peerId` gets, or nil for none. A forum gets one only when shown as messages
+/// (`isInlineForum`); one opened as its topic list keeps that screen.
 public func chatSideListKind(
     peerId: EnginePeer.Id,
     accountPeerId: EnginePeer.Id,
     isForum: Bool,
+    isInlineForum: Bool,
     isMonoforum: Bool,
     isAdminMonoforum: Bool,
     isBotWithThreads: Bool,
     isRegularWidth: Bool,
     enabled: Bool
 ) -> ChatSideListKind? {
-    if !enabled || isRegularWidth || isForum {
+    if !enabled || isRegularWidth {
         return nil
+    }
+    if isForum {
+        return isInlineForum ? .forum(peerId: peerId) : nil
     }
     if peerId == accountPeerId {
         return .savedMessages(peerId: peerId)

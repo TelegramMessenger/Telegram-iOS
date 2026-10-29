@@ -10,6 +10,7 @@ final class ChatSideListFlagTests: XCTestCase {
     private func kind(
         peerId: EnginePeer.Id,
         isForum: Bool = false,
+        isInlineForum: Bool = false,
         isMonoforum: Bool = false,
         isAdminMonoforum: Bool = false,
         isBotWithThreads: Bool = false,
@@ -20,6 +21,7 @@ final class ChatSideListFlagTests: XCTestCase {
             peerId: peerId,
             accountPeerId: self.accountPeerId,
             isForum: isForum,
+            isInlineForum: isInlineForum,
             isMonoforum: isMonoforum,
             isAdminMonoforum: isAdminMonoforum,
             isBotWithThreads: isBotWithThreads,
@@ -77,6 +79,24 @@ final class ChatSideListFlagTests: XCTestCase {
 
     func testForumExcluded() {
         XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true))
+    }
+
+    func testInlineForum() {
+        let value = self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true)
+        XCTAssertEqual(value, .forum(peerId: self.channelPeerId))
+        XCTAssertEqual(value?.listLocation, .forum(peerId: self.channelPeerId))
+        XCTAssertEqual(value?.parentPeerId, self.channelPeerId)
+        XCTAssertEqual(value?.showsNewTopicButton, false)
+    }
+
+    func testInlineForumDisabled() {
+        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true, enabled: false))
+        XCTAssertNil(self.kind(peerId: self.channelPeerId, isForum: true, isInlineForum: true, isRegularWidth: true))
+    }
+
+    func testForumTopicSelectionSwitches() {
+        let value = chatSideListSelection(kind: .forum(peerId: self.channelPeerId), currentThreadId: 1, selectedPeerId: self.channelPeerId, selectedThreadId: 4, messageId: nil)
+        XCTAssertEqual(value, .switchThread(4, messageId: nil))
     }
 
     func testRegularWidthExcluded() {
