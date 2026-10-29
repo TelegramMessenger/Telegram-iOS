@@ -220,5 +220,27 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
         for node in self.pageImageNodes {
             node.updateHiddenMedia(media: media)
         }
+        InstantPageV2SlideshowView.updatePageControlHidden(self.pageControlNode.view, isHidden: InstantPageV2SlideshowView.pageControlIsHidden(medias: self.item.medias, hiddenMedia: media))
+    }
+
+    // The gallery flies its copy of the photo on a surface above this view and removes it only when the close
+    // transition lands, so dots left visible under it pop in at that moment. Like chat media's overlays
+    // (`ChatMessageInteractiveMediaNode.updateIsHidden`), they hide while one of this carousel's media is in the
+    // gallery and fade back in when the gallery hands it back.
+    static func pageControlIsHidden(medias: [InstantPageMedia], hiddenMedia: InstantPageMedia?) -> Bool {
+        guard let hiddenMedia else {
+            return false
+        }
+        return medias.contains(where: { instantPageMediaMatchesNodeIdentity($0, hiddenMedia) })
+    }
+
+    static func updatePageControlHidden(_ view: UIView, isHidden: Bool) {
+        if view.isHidden == isHidden {
+            return
+        }
+        view.isHidden = isHidden
+        if !isHidden {
+            view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
     }
 }
