@@ -470,9 +470,10 @@ public func instantPageButtonColors(
 /// The fill a pressed pill shows. A plain pill keeps the host's `panelHighlightedBackgroundColor` (a
 /// chat bubble passes its accent colour); a link-styled one, which has no fill, keeps it too. A
 /// coloured pill highlights in a shade of its own fill instead, or a red `danger` pill would turn the
-/// host's blue under the finger: a translucent tint (an incoming bubble's 15%) doubles its opacity, and
-/// a solid fill darkens in a light theme and lightens in a dark one, where a darker shade would sink
-/// into the bubble.
+/// host's blue under the finger: a faint tint (an incoming bubble's 15%) doubles its opacity, and a
+/// solid fill darkens in a light theme and lightens in a dark one, where a darker shade would sink into
+/// the bubble. A fill already at that end goes the other way, or it would not change at all: a dark
+/// theme's outgoing `primary` pill is white (`accentControlColor`).
 public func instantPageButtonHighlightedFill(
     _ color: ReplyMarkupButton.Style.Color?,
     theme: InstantPageTheme,
@@ -483,9 +484,10 @@ public func instantPageButtonHighlightedFill(
         return theme.panelHighlightedBackgroundColor
     }
     let fill = instantPageButtonColors(color, theme: theme, isInline: isInline, isDisabled: false).fill
-    if fill.alpha < 1.0 {
+    if fill.alpha < 0.5 {
         return fill.withMultipliedAlpha(2.0)
     }
     let isDark = theme.type == .dark || theme.type == .gray
-    return fill.mixedWith(isDark ? .white : .black, alpha: 0.2)
+    let lightens = isDark ? fill.lightness < 0.8 : fill.lightness < 0.2
+    return fill.mixedWith(lightens ? .white : .black, alpha: 0.2)
 }

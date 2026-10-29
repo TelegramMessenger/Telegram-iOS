@@ -15,8 +15,9 @@ final class InstantPageButtonHighlightTests: XCTestCase {
     private let primary = UIColor(rgb: 0x007aff)
 
     /// The colours `ChatMessageRichDataBubbleContentNode` hands the renderer: an incoming bubble tints
-    /// `danger`/`success` at 15%, an outgoing one fills them solid; `primary` is solid in both.
-    private func theme(isDark: Bool, isIncoming: Bool) -> InstantPageTheme {
+    /// `danger`/`success` at 15%, an outgoing one fills them solid; `primary` is solid in both, and in an
+    /// outgoing bubble it is the theme's `accentControlColor` (white in Night), which `primaryFill` stands in for.
+    private func theme(isDark: Bool, isIncoming: Bool, primaryFill: UIColor? = nil) -> InstantPageTheme {
         return InstantPageTheme(
             type: isDark ? .dark : .light,
             pageBackgroundColor: .clear,
@@ -44,7 +45,7 @@ final class InstantPageButtonHighlightTests: XCTestCase {
             buttonDangerForegroundColor: isIncoming ? self.danger : .white,
             buttonSuccessBackgroundColor: isIncoming ? self.success.withMultipliedAlpha(0.15) : self.success,
             buttonSuccessForegroundColor: isIncoming ? self.success : .white,
-            checkboxFill: self.primary,
+            checkboxFill: primaryFill ?? self.primary,
             checkboxForeground: .white
         )
     }
@@ -116,6 +117,30 @@ final class InstantPageButtonHighlightTests: XCTestCase {
             XCTAssertEqual(self.rgba(highlighted).a, 1.0, accuracy: 0.001)
             XCTAssertGreaterThan(self.luminance(highlighted), self.luminance(fill) + 0.05)
         }
+    }
+
+    /// A fill already at the theme's end goes the other way, or pressing would not change it: Night's
+    /// outgoing `primary` pill is white, and lightening white is white.
+    func testAWhitePillDarkensEvenInADarkTheme() {
+        let theme = self.theme(isDark: true, isIncoming: false, primaryFill: .white)
+        let highlighted = instantPageButtonHighlightedFill(.primary, theme: theme, isInline: false)
+        XCTAssertEqual(self.rgba(highlighted).a, 1.0, accuracy: 0.001)
+        XCTAssertLessThan(self.luminance(highlighted), self.luminance(.white) - 0.05)
+    }
+
+    func testANearBlackPillLightensEvenInALightTheme() {
+        let fill = UIColor(rgb: 0x101010)
+        let theme = self.theme(isDark: false, isIncoming: false, primaryFill: fill)
+        let highlighted = instantPageButtonHighlightedFill(.primary, theme: theme, isInline: false)
+        XCTAssertGreaterThan(self.luminance(highlighted), self.luminance(fill) + 0.05)
+    }
+
+    /// Doubling the opacity of a nearly opaque fill would barely change it, so it shades instead.
+    func testANearlyOpaquePillShadesInsteadOfDoublingItsOpacity() {
+        let fill = self.primary.withMultipliedAlpha(0.9)
+        let theme = self.theme(isDark: false, isIncoming: false, primaryFill: fill)
+        let highlighted = instantPageButtonHighlightedFill(.primary, theme: theme, isInline: false)
+        XCTAssertLessThan(self.luminance(highlighted), self.luminance(fill) - 0.05)
     }
 
     /// The bug itself: no coloured pill, in any bubble or theme, highlights in the accent colour.
