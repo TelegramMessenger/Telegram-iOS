@@ -56,8 +56,8 @@ constants.
   with a sheet. Component environments carry `statusBarHeight` (compact), `fullStatusBarHeight`,
   `navigationBarTrailingButtonsInset` and `reservedCorners`; a screen that builds an
   `Environment` by hand must pass them all (the defaults are 0 / `.none`).
-- Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetContentBandInsets`
-  (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
+- Sheets: `sheetHeaderCornerInsets(...)`, `resizableSheetHorizontalPlacement`, `sheetContentBandInsets`,
+  `centeredAlertSideInsets` for centred alerts (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
@@ -109,6 +109,11 @@ These are the user's decisions; a screen that follows them is correct, one that 
      or "Change Email", and "Re-send Code"): they line up with the fields above them, while the button itself spans the strip
      (`twoFactorDataInputHorizontalLayout` in PasswordSetupUI). In the login flow they keep to the button's frame, as
      above.
+
+   **Centred alerts** (`AlertScreen`, `AlertControllerNode`) keep the axis of the screen's sheets
+   (`centeredAlertSideInsets`), whatever is behind them: the screen's centre in folded portrait, where sheets span the
+   strip (the band only when the keyboard lifts the alert into the corner block), and the band's in landscape, where
+   sheets keep to it. Over band-centred content in folded portrait (a list) an alert is therefore 42pt off its axis.
 4. **Unfolded portrait island**: top bars use the compact status height (16), trailing buttons move left by the
    island's width (134), the title stays centred. Editors, camera, stories and full-screen live stream keep their top
    row on the island's clock line (centre ≈ 47) and mirror it at the bottom; pop-up cards stay below the island;
@@ -198,4 +203,6 @@ other device stays byte-identical; the band helpers above are built that way.
   (the emoji / stickers / GIFs keyboard's grid, headers and switcher on the band),
   `//submodules/TelegramUI/Components/CameraScreen:CameraScreenTests`
   (the story camera's dual-camera front preview: on UP a bottom corner keeps to the shutter, as where the 9:16
-  viewfinder fits).
+  viewfinder fits),
+  `//submodules/Display:DisplayTests` (`CenteredAlertSideInsetsTests`:
+  a centred alert's band per posture).
