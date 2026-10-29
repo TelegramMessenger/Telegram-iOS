@@ -299,7 +299,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
         private var inlineTextTonImage: (UIImage, UIColor)?
         
         public var transitionData: ChatInputAccessoryPanelTransitionData? {
-            guard let textView = self.text.view else {
+            guard let textView = self.isOptionsHintVisible ? self.hintText.view : self.text.view else {
                 return nil
             }
             return ChatInputAccessoryPanelTransitionData(
@@ -1054,8 +1054,9 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 containerSize: CGSize(width: textContainerWidth, height: 100.0)
             )
             
+            let hintFont = Font.regular(14.0)
             let fittingHintString: (String, String) -> String = { full, short in
-                let fullWidth = NSAttributedString(string: full, font: Font.regular(14.0), textColor: .black).boundingRect(with: CGSize(width: 1000.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).width
+                let fullWidth = NSAttributedString(string: full, font: hintFont, textColor: .black).boundingRect(with: CGSize(width: 1000.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).width
                 return ceil(fullWidth) + textRenderInsets.left + textRenderInsets.right <= textContainerWidth ? full : short
             }
             let hintString: String?
@@ -1076,7 +1077,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         placeholderColor: environment.theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.1),
-                        text: .plain(NSAttributedString(string: hintString, font: Font.regular(14.0), textColor: secondaryTextColor)),
+                        text: .plain(NSAttributedString(string: hintString, font: hintFont, textColor: secondaryTextColor)),
                         insets: textRenderInsets,
                         displaysAsynchronously: false
                     )),
@@ -1090,7 +1091,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         placeholderColor: UIColor.black.withAlphaComponent(0.1),
-                        text: .plain(NSAttributedString(string: hintString, font: Font.regular(14.0), textColor: .black)),
+                        text: .plain(NSAttributedString(string: hintString, font: hintFont, textColor: .black)),
                         insets: textRenderInsets,
                         displaysAsynchronously: false
                     )),
@@ -1141,6 +1142,9 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 
                 transition.setAlpha(view: hintTextView, alpha: isOptionsHintVisible ? 1.0 : 0.0)
                 transition.setAlpha(view: hintTintTextView, alpha: isOptionsHintVisible ? 1.0 : 0.0)
+            } else {
+                self.hintText.view?.alpha = 0.0
+                self.hintTintText.view?.alpha = 0.0
             }
             
             return size
