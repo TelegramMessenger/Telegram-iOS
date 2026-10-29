@@ -760,9 +760,9 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             }
             if showRecordMore {
                 let recordMoreRows: (minY: CGFloat, maxY: CGFloat) = (availableSize.height - 22.0 - trailingButtonSize, availableSize.height - 22.0)
-                trailingColumnRows = trailingColumnRows.flatMap { (min($0.minY, recordMoreRows.minY), max($0.maxY, recordMoreRows.maxY)) } ?? recordMoreRows
+                trailingColumnRows = trailingColumnRows.map { (min($0.minY, recordMoreRows.minY), max($0.maxY, recordMoreRows.maxY)) } ?? recordMoreRows
             }
-            let trailingColumnInset = trailingColumnRows.flatMap { videoMessageCameraTrailingControlInset(minY: $0.minY, maxY: $0.maxY, containerHeight: component.layoutHeight, safeInsets: component.safeInsets, reservedCorners: environment.reservedCorners) } ?? 0.0
+            let trailingColumnInset = trailingColumnRows.map { videoMessageCameraTrailingControlInset(minY: $0.minY, maxY: $0.maxY, containerHeight: component.layoutHeight, safeInsets: component.safeInsets, reservedCorners: environment.reservedCorners) } ?? 0.0
             
             if showViewOnce {
                 let viewOnceButton = viewOnceButton.update(
@@ -1471,7 +1471,13 @@ public class VideoMessageCameraScreen: ViewController {
             self.dismissAllTooltips()
             
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: self.view)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX - 20.0, y: absoluteFrame.midY + 53.0), size: CGSize())
+            // The tooltip points at the chat's pause button, under the view-once button unless that one keeps clear of
+            // iPhone Duo's status corner (the pause button stays in the input panel's column).
+            var columnInset: CGFloat = 0.0
+            if let layout = self.validLayout {
+                columnInset = videoMessageCameraTrailingControlInset(minY: absoluteFrame.minY, maxY: absoluteFrame.maxY, containerHeight: layout.size.height, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners)
+            }
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX + columnInset - 20.0, y: absoluteFrame.midY + 53.0), size: CGSize())
             
             let tooltipController = TooltipScreen(
                 account: context.account,
