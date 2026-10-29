@@ -354,10 +354,16 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     /// turn's passes to move the glass on from there.
     private struct BackgroundBeforePass {
         let firstRow: UIView?
-        let firstRowTop: CGFloat?
+        /// The glass's top less its first row's, on screen. Both ride the content's motion, so what tells them apart is
+        /// their places in the content and their own animations, each its presented position less its model one: a
+        /// row's frame from the list (`presentedFrame(of:)`) is its model one, without its own slide, at the engine's
+        /// last sampled offset, a frame behind a flight.
+        let glassGapFromFirstRow: CGFloat?
         let glassTop: CGFloat
         /// The content's motion under way on the mirror (its presented origin less its model one).
         let moverMotion: CGFloat
+        /// The part of `moverMotion` a viewport animation adds; the rest is a flight's.
+        let viewportMotion: CGFloat
     }
     
     /// Keys of the animations the panel puts on the glass.
@@ -371,11 +377,17 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         let firstRow = entries.next()?.view
         let glassLayer = self.backgroundView.layer.presentation() ?? self.backgroundView.layer
         let moverLayer = self.backgroundMover.layer.presentation() ?? self.backgroundMover.layer
+        let glassGapFromFirstRow = firstRow.map { row -> CGFloat in
+            let rowLayer = row.layer
+            let rowMotion = (rowLayer.presentation() ?? rowLayer).frame.minY - rowLayer.frame.minY
+            return glassLayer.frame.minY - (self.listView.contentFrame(of: row).minY + rowMotion)
+        }
         return BackgroundBeforePass(
             firstRow: firstRow,
-            firstRowTop: firstRow.map { self.listView.presentedFrame(of: $0).minY },
+            glassGapFromFirstRow: glassGapFromFirstRow,
             glassTop: glassLayer.frame.minY - moverLayer.bounds.origin.y,
-            moverMotion: moverLayer.bounds.origin.y - self.backgroundMover.layer.bounds.origin.y
+            moverMotion: moverLayer.bounds.origin.y - self.backgroundMover.layer.bounds.origin.y,
+            viewportMotion: self.listView.viewportAnimationOffset
         )
     }
     
@@ -442,18 +454,19 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             return
         }
         let layoutTransition = ComponentTransition(transition).containedViewLayoutTransition
-        if firstRow === before.firstRow, let firstRowTop = before.firstRowTop {
+        if firstRow === before.firstRow, let gap = before.glassGapFromFirstRow {
             self.copyAdditiveAnimations(from: firstRow.layer, keyPath: "position.y", into: "row.", onlyUncommitted: false)
-            self.slideBackground(from: before.glassTop - firstRowTop, transition: layoutTransition, durationWhenImmediate: 0.2)
+            self.slideBackground(from: gap, transition: layoutTransition, durationWhenImmediate: 0.2)
         } else if case .animated = layoutTransition {
             let newTop = self.listView.settledFrame(of: firstRow).minY
             guard before.glassTop > 0.0 || newTop > 0.0 else {
                 return
             }
             // This turn's viewport track has no `beginTime` yet (this commit resolves it), and CoreList folds what an
-            // earlier one had left into it; with none, the mirror's motion carries on and the slide starts against it.
+            // earlier one had left into it, so the slide starts against a flight's motion alone; with none, the mirror's
+            // motion carries on and the slide starts against all of it.
             let cancelsViewportMotion = self.copyAdditiveAnimations(from: self.backgroundMover.layer, keyPath: "bounds.origin.y", into: "viewport.", onlyUncommitted: true)
-            let carriedMotion = cancelsViewportMotion ? 0.0 : before.moverMotion
+            let carriedMotion = cancelsViewportMotion ? before.moverMotion - before.viewportMotion : before.moverMotion
             self.slideBackground(from: max(before.glassTop, 0.0) - newTop + carriedMotion, transition: layoutTransition, durationWhenImmediate: nil)
         }
     }

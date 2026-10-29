@@ -232,6 +232,9 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
 - `lastTouchCaughtMovingContent` (`PhysicsScrollEngine` only): whether the latest touch landed on a flight or a
   deceleration and stopped it; set at touch-down, kept until the next. A host's tap selection reads it at the lift, as
   the drag's `.began` can be held until then by an ancestor's pop recognizer.
+- `viewportAnimationOffset`: what a pass's viewport track still adds to the content host's `bounds.origin.y` (model
+  clock), a flight's motion excluded; a view on a content motion mirror reads its mirror's presented motion less this
+  as the flight's part, which a later pass does not fold into its own track (`ViewportAnimationOffsetTests`).
 - `isScrollDecelerating` (at `didEndDragging`, every mode); `isScrollFlightActive` (`.keyframe` only);
   `didEndScrolling` fires when a flight ends AND when `.stepped`/UIKit deceleration rests
   (`onDidEndDecelerating`; `SteppedDecelerationEndTests`).

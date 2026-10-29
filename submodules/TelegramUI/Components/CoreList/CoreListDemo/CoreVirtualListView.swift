@@ -865,6 +865,11 @@ public final class CoreVirtualListView: UIView {
     // to learn whether momentum follows the release: `isScrollFlightActive` answers that only for `.keyframe`,
     // since `.stepped` and UIKit decelerations publish no flight.
     public var isScrollDecelerating: Bool { engine.isDecelerating }
+    // What a pass's viewport animation (a `scrollTo`'s travel, a size or inset pass's correction) still adds to the
+    // content host's `bounds.origin.y`, on the model clock: zero when none runs. A flight's motion is not in it. A view
+    // riding the content motion mirror tells the two apart by it: a later pass folds this part into its own track, while
+    // a flight carries on.
+    public var viewportAnimationOffset: CGFloat { animationController.viewportOffset(at: animationController.now()) }
     // Signed distance the engine offset sits beyond its declared edges — negative past `min`, positive
     // past `max`, zero within. The analogue of reading `scrollView.contentOffset.y` against its content
     // bounds, and correct to sample at `didEndDragging`: `launchFlight` parks the LAYER at the settled
