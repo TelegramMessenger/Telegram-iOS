@@ -174,4 +174,6 @@ other device stays byte-identical; the band helpers above are built that way.
   flow's content and bottom-button bands per posture, and the password screen's column above the keyboard: on the
   Duo's short screens it drops the animation so Forgot password keeps its gap below the field),
   `//submodules/TelegramUI/Components/ChatMediaEditorScreen:ChatMediaEditorScreenTests` (the chat media editor's
-  trimmer, counter and camera button, Edit Cover title beside a strip).
+  trimmer, counter and camera button, Edit Cover title beside a strip),
+  `//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests` (the media editors'
+  caption panel: a caption above the media keeps clear of folded portrait's status corner).
