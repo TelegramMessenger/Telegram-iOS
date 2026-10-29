@@ -1624,6 +1624,11 @@ public final class GiftItemComponent: Component {
                     let selectionLayer: SimpleShapeLayer
                     if let current = self.selectionLayer {
                         selectionLayer = current
+                        // The item can be resized while selected (a rotation, or iPhone Duo folding or unfolding),
+                        // so the outline follows the background rather than keeping the size it was created at.
+                        selectionLayer.strokeColor = selectionColor.cgColor
+                        transition.setFrame(layer: selectionLayer, frame: selectionFrame)
+                        transition.setShapeLayerPath(layer: selectionLayer, path: CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil))
                     } else {
                         selectionLayer = SimpleShapeLayer()
                         self.selectionLayer = selectionLayer
