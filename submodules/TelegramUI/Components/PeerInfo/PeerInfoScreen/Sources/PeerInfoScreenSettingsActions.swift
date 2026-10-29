@@ -85,7 +85,7 @@ extension PeerInfoScreenNode {
         case .recentCalls:
             push(CallListController(context: context, mode: .navigation))
         case .contacts:
-            push(ContactsController(context: context, mode: .navigation))
+            push(ContactsController(context: context))
         case .devices:
             let _ = (self.activeSessionsContextAndCount.get()
             |> take(1)

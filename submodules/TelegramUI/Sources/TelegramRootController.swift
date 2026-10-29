@@ -917,7 +917,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             rootTabController.selectedIndex = index
         }
         
-        let contactsController = ContactsController(context: self.context, mode: .navigation)
+        let contactsController = ContactsController(context: self.context)
         self.contactsController = contactsController
         self.pushViewController(contactsController)
     }

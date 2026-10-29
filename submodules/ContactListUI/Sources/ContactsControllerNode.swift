@@ -340,22 +340,14 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                     self.controller?.addPressed()
                 }
             )
-            // Pushed, the left is the back button's: Sort stands on the right, its own capsule beside Add.
-            if self.controller?.mode == .navigation {
-                leftButton = nil
-                rightButtons = [sortButton, addButton]
-            } else {
-                leftButton = sortButton
-                rightButtons = [addButton]
-            }
+            // The left is the back button's: Sort stands on the right, its own capsule beside Add.
+            leftButton = nil
+            rightButtons = [sortButton, addButton]
         }
         
         // Pushed (from Settings) the header has a back button.
-        var backPressed: (() -> Void)?
-        if self.controller?.mode == .navigation {
-            backPressed = { [weak self] in
-                self?.controller?.navigationController?.popViewController(animated: true)
-            }
+        let backPressed: (() -> Void)? = { [weak self] in
+            self?.controller?.navigationController?.popViewController(animated: true)
         }
         let primaryContent = ChatListHeaderComponent.Content(
             title: self.presentationData.strings.Contacts_Title,
