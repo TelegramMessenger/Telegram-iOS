@@ -279,8 +279,14 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             let initialVelocity = !delta.isZero ? velocity.y / delta : 0.0
             
             let currentContentOffset = scrollView.contentOffset
+            // Scrolled within a sheet taller than the screen, resting on its top: it decelerates, no further down than
+            // that rest.
+            let scrollsWithinSheet = contentOffset < 0.0 && !self.isCentered && !self.currentHasInputHeight && scrollView.contentSize.height > scrollView.bounds.height
+            let proposedContentOffset = targetContentOffset.pointee
             targetContentOffset.pointee = currentContentOffset
-            if velocity.y > 300.0 {
+            if scrollsWithinSheet {
+                targetContentOffset.pointee = CGPoint(x: proposedContentOffset.x, y: max(0.0, proposedContentOffset.y))
+            } else if velocity.y > 300.0 {
                 self.component?.willDismiss()
                 self.animateOut(initialVelocity: initialVelocity, completion: {
                     self.dismiss?(false)
@@ -590,15 +596,17 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             self.scrollView.isScrollEnabled = component.isScrollEnabled
             
             self.ignoreScrolling = false
+            // A sheet taller than the screen rests with its top in view and scrolls up to its bottom.
+            let restingOffset = sheetRestingScrollOffset(contentHeight: contentSize.height, containerHeight: availableSize.height, keepsBottomVisible: sheetEnvironment.isCentered || sheetEnvironment.hasInputHeight)
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
-                self.scrollView.contentOffset = CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height))
+                self.scrollView.contentOffset = CGPoint(x: 0.0, y: restingOffset)
             } else if component.followContentSizeChanges, !previousContentSize.height.isZero, previousContentSize != contentSize {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: availableSize), completion: { _ in
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: restingOffset), size: availableSize), completion: { _ in
                     updateContentSize()
                 })
             }
             if self.currentHasInputHeight != previousHasInputHeight {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: self.scrollView.bounds.size))
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: restingOffset), size: self.scrollView.bounds.size))
             }
             
             self.currentAvailableSize = availableSize

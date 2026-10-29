@@ -60,6 +60,7 @@ constants.
   (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
+- A sheet taller than the screen: `sheetRestingScrollOffset` (`SheetComponent` rests it on its top).
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
   `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`.
 - Legacy hosts: `reservedCornersForHostedLayout(size:orientation:)`; `LegacyComponentsContext.statusIslandTrailingInset`.
@@ -146,6 +147,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
   `layout.intrinsicInsets.bottom` (20pt); the Duo's `safeInsets.bottom` is 0. The story camera keeps its controls above
   it; the editor's bar, the drawing screen's and the sticker frame sit 62pt above it on the folded screen. Beside the
   unfolded island the bar mirrors the top row, which already clears it.
+- A sheet taller than the screen resting on its bottom: `SheetComponent` used to, which put its header (close button,
+  title) above the screen, out of reach, since the sheet scrolls no further down. The Duo's screens are short enough
+  for a list sheet to overflow (the report reasons: ~715pt; 678pt folded, 669pt unfolded landscape). It now rests on
+  its top and scrolls up to its bottom (`sheetRestingScrollOffset`), except while the keyboard is up.
 - Something parked just past the content's edge, off-screen on a phone, shows in the strip beside a band: the story
   viewer's resting cube neighbours sat 40pt into FP's strip. Clip to the band (the stories turn the clip off while
   opening and closing, which can start or end at an avatar in the strip).

@@ -121,7 +121,9 @@ private final class SheetPageContent: CombinedComponent {
             let theme = environment.theme
             let strings = environment.strings
             
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            // Each side keeps its own inset: beside iPhone Duo's side strip (folded portrait) only one side has one.
+            let leftInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightInset: CGFloat = 16.0 + environment.safeInsets.right
             
             var contentSize = CGSize(width: context.availableSize.width, height: 26.0)
                         
@@ -250,11 +252,11 @@ private final class SheetPageContent: CombinedComponent {
                     isModal: true
                 ),
                 environment: {},
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
+                availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
             context.add(section
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + section.size.height / 2.0))
+                .position(CGPoint(x: leftInset + section.size.width / 2.0, y: contentSize.height + section.size.height / 2.0))
             )
             contentSize.height += section.size.height
             
