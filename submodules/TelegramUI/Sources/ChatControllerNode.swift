@@ -1203,6 +1203,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         return CGSize(width: layout.size.width, height: height)
     }
     
+    /// How far the chat is moved left for the side list (`ChatSideListPanelNode`); the panel itself is the controller's.
+    private(set) var sideListOffset: CGFloat = 0.0
+
+    func updateSideListOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.sideListOffset = offset
+        guard let (layout, _) = self.validLayout else {
+            return
+        }
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: layout.size))
+    }
+
     func forceUpdateWarpContents() {
         guard let (layout, _) = self.validLayout else {
             return
@@ -1218,7 +1229,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition = protoTransition
         }
         
-        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: -self.sideListOffset, y: 0.0), size: layout.size))
         self.wrappingNode.update(size: layout.size, cornerRadius: layout.deviceMetrics.screenCornerRadius, transition: ComponentTransition(transition))
         
         if let statusBar = self.statusBar {

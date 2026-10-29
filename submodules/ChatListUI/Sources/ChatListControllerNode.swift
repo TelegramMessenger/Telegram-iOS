@@ -1694,6 +1694,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var effectiveStorySubscriptions: EngineStorySubscriptions?
         if let controller = self.controller, case .forum = controller.location {
             effectiveStorySubscriptions = nil
+        } else if let controller = self.controller, case .savedMessagesChats = controller.location {
+            // A thread list, like a forum's: stories would take the header's title.
+            effectiveStorySubscriptions = nil
         } else {
             if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                 effectiveStorySubscriptions = controller.orderedStorySubscriptions

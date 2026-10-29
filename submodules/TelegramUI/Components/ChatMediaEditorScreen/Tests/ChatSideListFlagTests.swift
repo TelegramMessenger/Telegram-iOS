@@ -89,4 +89,32 @@ final class ChatSideListFlagTests: XCTestCase {
         XCTAssertNil(self.kind(peerId: self.botPeerId, isBotWithThreads: true, enabled: false))
         XCTAssertNil(self.kind(peerId: self.channelPeerId, isMonoforum: true, isAdminMonoforum: true, enabled: false))
     }
+
+    private let otherUserPeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(4))
+    private let messageId = EngineMessage.Id(peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(2)), namespace: Namespaces.Message.Cloud, id: 10)
+
+    func testSelectionOtherThreadSwitches() {
+        let value = chatSideListSelection(kind: .botThreads(peerId: self.botPeerId), currentThreadId: 5, selectedPeerId: self.botPeerId, selectedThreadId: 6, messageId: nil)
+        XCTAssertEqual(value, .switchThread(6, messageId: nil))
+    }
+
+    func testSelectionSameThreadClosesOnly() {
+        let value = chatSideListSelection(kind: .botThreads(peerId: self.botPeerId), currentThreadId: 5, selectedPeerId: self.botPeerId, selectedThreadId: 5, messageId: nil)
+        XCTAssertEqual(value, .closeOnly)
+    }
+
+    func testSelectionSameThreadWithMessageSwitches() {
+        let value = chatSideListSelection(kind: .botThreads(peerId: self.botPeerId), currentThreadId: 5, selectedPeerId: self.botPeerId, selectedThreadId: 5, messageId: self.messageId)
+        XCTAssertEqual(value, .switchThread(5, messageId: self.messageId))
+    }
+
+    func testSelectionForeignPeerPassesThrough() {
+        let value = chatSideListSelection(kind: .savedMessages(peerId: self.accountPeerId), currentThreadId: nil, selectedPeerId: self.otherUserPeerId, selectedThreadId: nil, messageId: nil)
+        XCTAssertEqual(value, .passThrough)
+    }
+
+    func testSavedMessagesAllMessagesIsNilThread() {
+        let value = chatSideListSelection(kind: .savedMessages(peerId: self.accountPeerId), currentThreadId: 7, selectedPeerId: self.accountPeerId, selectedThreadId: nil, messageId: nil)
+        XCTAssertEqual(value, .switchThread(nil, messageId: nil))
+    }
 }

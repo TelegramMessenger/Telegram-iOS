@@ -74,3 +74,23 @@ public func chatSideListKind(
         return nil
     }
 }
+
+/// What tapping a row (or a search result) in the side list does.
+public enum ChatSideListSelection: Equatable {
+    /// Switch the open chat to `threadId` in place (nil: the parent's own chat), optionally at a message.
+    case switchThread(Int64?, messageId: EngineMessage.Id?)
+    /// The row of the chat already open: just close the list.
+    case closeOnly
+    /// Not one of the parent's threads (a search hit elsewhere): let the list open it as usual.
+    case passThrough
+}
+
+public func chatSideListSelection(kind: ChatSideListKind, currentThreadId: Int64?, selectedPeerId: EnginePeer.Id, selectedThreadId: Int64?, messageId: EngineMessage.Id?) -> ChatSideListSelection {
+    if selectedPeerId != kind.parentPeerId {
+        return .passThrough
+    }
+    if selectedThreadId == currentThreadId && messageId == nil {
+        return .closeOnly
+    }
+    return .switchThread(selectedThreadId, messageId: messageId)
+}

@@ -17282,3 +17282,4 @@ Error: %8$@";
 "Chat.SideList.Open" = "Show Chat List";
 "Chat.SideList.Close" = "Hide Chat List";
 "Chat.SideList.NewTopic" = "New Topic";
+"Chat.SideList.DirectMessages" = "Direct messages";

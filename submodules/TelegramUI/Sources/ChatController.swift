@@ -111,6 +111,7 @@ import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatMessageBubbleContentNode
 import ChatNavigationButton
+import ChatSideListPanel
 import WebsiteType
 import PeerInfoScreen
 import MediaEditor
@@ -316,6 +317,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var moreBarButton: MoreHeaderButton
     var moreInfoNavigationButton: ChatNavigationButton?
+    
+    var sideListPanel: ChatSideListPanelNode?
+    var sideListOpenFraction: CGFloat = 0.0
     
     var historyStateDisposable: Disposable?
     
@@ -8621,6 +8625,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
         self.navigationBar?.additionalContentNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.additionalNavigationBarHitTestSlop, right: 0.0)
+        
+        self.updateSideListLayout(transition: transition)
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {

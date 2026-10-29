@@ -148,6 +148,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var didAppear = false
     private var dismissSearchOnDisappear = false
     public var onDidAppear: (() -> Void)?
+    public var interceptPeerSelection: ((EnginePeer.Id, Int64?, EngineMessage.Id?) -> Bool)?
+    
+    /// Offers a tap to `interceptPeerSelection`. A Saved Messages or direct-messages row is a peer of the parent's list,
+    /// so it resolves to the parent's thread with that peer's id, as the push path below does.
+    private func interceptsSelection(peer: EnginePeer, threadId: Int64?, messageId: EngineMessage.Id?, isListRow: Bool) -> Bool {
+        guard let interceptPeerSelection = self.interceptPeerSelection else {
+            return false
+        }
+        var peerId = peer.id
+        var threadId = threadId
+        if isListRow, case let .savedMessagesChats(parentPeerId) = self.location, threadId == nil {
+            peerId = parentPeerId
+            threadId = peer.id.toInt64()
+        }
+        return interceptPeerSelection(peerId, threadId, messageId)
+    }
         
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
@@ -1401,6 +1417,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let self else {
                     return
                 }
+                if self.interceptsSelection(peer: peer, threadId: threadId, messageId: nil, isListRow: true) {
+                    self.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
+                    return
+                }
                 
                 let subject: ChatControllerSubject? = nil
                 
@@ -1739,6 +1759,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, threadId, messageId, deactivateOnAction in
             if let strongSelf = self {
+                if strongSelf.interceptsSelection(peer: peer, threadId: threadId, messageId: messageId, isListRow: false) {
+                    if deactivateOnAction {
+                        strongSelf.deactivateSearch(animated: false)
+                    }
+                    return
+                }
                 strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
                 |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] actualPeer in
                     if let strongSelf = strongSelf {
@@ -1769,6 +1795,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer, threadId, dismissSearch in
             if let strongSelf = self {
+                if strongSelf.interceptsSelection(peer: peer, threadId: threadId, messageId: nil, isListRow: false) {
+                    if dismissSearch {
+                        strongSelf.deactivateSearch(animated: false)
+                    }
+                    return
+                }
                 let storedPeer = strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer) |> map { _ -> Void in return Void() }
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).startStrict(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
@@ -7010,7 +7042,36 @@ private final class ChatListLocationContext {
                     presentationData: presentationData
                 )
             })
-        case .savedMessagesChats:
+        case let .savedMessagesChats(peerId):
+            // Pushed screens show this list inside the profile; the chat side list hosts it bare, so it titles itself.
+            self.titleDisposable = (combineLatest(queue: Queue.mainQueue(),
+                context.account.viewTracker.peerView(peerId),
+                parentController.updatedPresentationData.1
+            )
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, presentationData in
+                guard let self else {
+                    return
+                }
+                let isSavedMessages = peerId == self.context.account.peerId
+                self.chatTitleComponent = ChatTitleComponent(
+                    context: self.context,
+                    theme: presentationData.theme,
+                    preferClearGlass: false,
+                    strings: presentationData.strings,
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    displayBackground: false,
+                    content: .peer(peerView: ChatTitleContent.PeerData(peerView: peerView), customTitle: isSavedMessages ? presentationData.strings.Conversation_SavedMessages : nil, customSubtitle: isSavedMessages ? nil : presentationData.strings.Chat_SideList_DirectMessages, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: nil, customMessageCount: nil, hidePeerStatus: isSavedMessages, isEnabled: true),
+                    activities: nil,
+                    networkState: nil,
+                    tapped: {
+                    },
+                    longTapped: { [weak self] in
+                        self?.parentController?.activateSearch()
+                    }
+                )
+                self.parentController?.requestLayout(transition: .immediate)
+            })
             self.didSetReady = true
             self.ready.set(.single(true))
         }

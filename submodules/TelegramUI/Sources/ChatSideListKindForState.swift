@@ -30,7 +30,8 @@ func chatSideListKindForChatPresentationInterfaceState(_ state: ChatPresentation
     } else if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum) {
         isBotWithThreads = true
     }
-    if peerId == context.account.peerId, !state.hasSavedChats {
+    // Saved Messages without sub-chats has nothing to list; a sub-chat always has at least itself.
+    if peerId == context.account.peerId, case .peer = state.chatLocation, !state.hasSavedChats {
         return nil
     }
     return chatSideListKind(
