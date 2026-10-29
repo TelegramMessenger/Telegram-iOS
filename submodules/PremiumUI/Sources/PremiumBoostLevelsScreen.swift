@@ -1080,7 +1080,7 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
                         }
                         
                         dismissReplaceImpl = { [weak replaceController] in
-                            replaceController?.dismiss(animated: true)
+                            replaceController?.dismissAnimated()
                         }
                     } else if let boost = self.occupiedBoosts.first, let occupiedPeer = boost.peer {
                         if let cooldown = boost.cooldownUntil {

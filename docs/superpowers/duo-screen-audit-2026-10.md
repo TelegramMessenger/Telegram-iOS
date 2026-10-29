@@ -164,11 +164,16 @@ Real bugs found on the way:
 Review and runtime findings, fixed:
 
 - The join-link card's close button slides clear of the FP block when the card rises to it.
+- The profile wallet card's Send Money button (`PeerWalletScreen`) is a small centred control under the band-centred
+  card: it was centred on the screen and `W - 60` wide, 42pt off the card's axis and into the strip (#58).
 - The peer picker's text input and forward panels grow upward (to half the screen), so they take the band of their
   actual rows, like the chat's input panel.
 - The sticker pack's visible glass button was a different node from the legacy one the fixer changed; caught by an
   FP capture, not by the two reviewers.
 - Share and import-sticker sheets stay in the band: tall scrolling grids whose corner buttons rise to the block.
+- A mini app in the sheet (`WebAppController`) keeps its page to the band: the page spanned the strip under the
+  navigation bar's close and more buttons, which stand there, and most pages ignore the safe area reported to them, so
+  the buttons covered the page's right column (#68). The background spans the strip; full screen is unchanged.
 - Small centred controls stay on the axis of their content: camera preview Done, face scan Cancel, the round record
   button, the landscape wallet Send, the quick-reply empty-state button.
 

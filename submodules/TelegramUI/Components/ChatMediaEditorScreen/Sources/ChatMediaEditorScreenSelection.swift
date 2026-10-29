@@ -99,11 +99,7 @@ extension ChatMediaEditorScreen.Node {
         let captionBaseHeight = self.captionPanelView?.baseHeight() ?? 0.0
         let checkFrame = chatMediaEditorCheckButtonFrame(size: layout.size, safeInsets: safeInsets)
         transition.updateFrame(view: checkButton, frame: checkFrame)
-        var counterSafeInsets = safeInsets
-        let counterSideInsets = bottomEdgeSideInsets(safeInsets: safeInsets, reservedCorners: layout.reservedCorners)
-        counterSafeInsets.left = counterSideInsets.left
-        counterSafeInsets.right = counterSideInsets.right
-        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: counterSafeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo)
+        counterButton.frame = chatMediaEditorCounterButtonFrame(size: layout.size, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo)
         let stripFrame = chatMediaEditorStripFrame(size: layout.size, safeInsets: safeInsets, toolbarMinY: toolbarFrame.minY, captionBaseHeight: captionBaseHeight, hasVideoHeader: self.subject.isVideo, cellSize: stripView.cellSize)
         if stripView.frame != stripFrame {
             stripView.frame = stripFrame

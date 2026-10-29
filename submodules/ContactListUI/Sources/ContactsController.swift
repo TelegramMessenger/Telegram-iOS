@@ -556,9 +556,13 @@ public class ContactsController: ViewController {
     }
     
     private func deactivateSearch(animated: Bool) {
-        self.contactsNode.deactivateSearch(placeholderNode: self.searchContentNode()?.placeholderNode, animated: animated)
+        // The search bar animates back into the placeholder's frame as it is when the search deactivates, so the
+        // bar is laid out without the active search first (beside iPhone Duo's status island the active search's
+        // placeholder is narrower), as the chat list does.
+        let completion = self.contactsNode.deactivateSearch(placeholderNode: self.searchContentNode()?.placeholderNode, animated: animated)
         (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.5, curve: .spring))
         self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
+        completion?()
     }
     
     func presentSortMenu(sourceView: UIView, gesture: ContextGesture?) {
