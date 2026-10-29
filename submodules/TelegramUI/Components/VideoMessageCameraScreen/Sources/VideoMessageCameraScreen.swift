@@ -751,6 +751,19 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                 }
             }
             
+            // The view-once and record-more buttons (40pt circles) share one column, which keeps clear of a corner
+            // block that reaches either of them.
+            let trailingButtonSize: CGFloat = 40.0
+            var trailingColumnRows: (minY: CGFloat, maxY: CGFloat)?
+            if showViewOnce {
+                trailingColumnRows = (availableSize.height - 8.0 - viewOnceOffset - trailingButtonSize, availableSize.height - 8.0 - viewOnceOffset)
+            }
+            if showRecordMore {
+                let recordMoreRows: (minY: CGFloat, maxY: CGFloat) = (availableSize.height - 22.0 - trailingButtonSize, availableSize.height - 22.0)
+                trailingColumnRows = trailingColumnRows.flatMap { (min($0.minY, recordMoreRows.minY), max($0.maxY, recordMoreRows.maxY)) } ?? recordMoreRows
+            }
+            let trailingColumnInset = trailingColumnRows.flatMap { videoMessageCameraTrailingControlInset(minY: $0.minY, maxY: $0.maxY, containerHeight: component.layoutHeight, safeInsets: component.safeInsets, reservedCorners: environment.reservedCorners) } ?? 0.0
+            
             if showViewOnce {
                 let viewOnceButton = viewOnceButton.update(
                     component: PlainButtonComponent(
@@ -790,10 +803,8 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     availableSize: availableSize,
                     transition: context.transition
                 )
-                let viewOnceButtonY = availableSize.height - viewOnceButton.size.height / 2.0 - 8.0 - viewOnceOffset
-                let viewOnceButtonTrailingInset = videoMessageCameraTrailingControlInset(minY: viewOnceButtonY - viewOnceButton.size.height / 2.0, maxY: viewOnceButtonY + viewOnceButton.size.height / 2.0, containerHeight: component.layoutHeight, safeInsets: component.safeInsets, reservedCorners: environment.reservedCorners)
                 context.add(viewOnceButton
-                    .position(CGPoint(x: availableSize.width - viewOnceButtonTrailingInset - viewOnceButton.size.width / 2.0 - sideInset, y: viewOnceButtonY))
+                    .position(CGPoint(x: availableSize.width - trailingColumnInset - viewOnceButton.size.width / 2.0 - sideInset, y: availableSize.height - viewOnceButton.size.height / 2.0 - 8.0 - viewOnceOffset))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
@@ -832,10 +843,8 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                     availableSize: availableSize,
                     transition: context.transition
                 )
-                let recordMoreButtonY = availableSize.height - recordMoreButton.size.height / 2.0 - 22.0
-                let recordMoreButtonTrailingInset = videoMessageCameraTrailingControlInset(minY: recordMoreButtonY - recordMoreButton.size.height / 2.0, maxY: recordMoreButtonY + recordMoreButton.size.height / 2.0, containerHeight: component.layoutHeight, safeInsets: component.safeInsets, reservedCorners: environment.reservedCorners)
                 context.add(recordMoreButton
-                    .position(CGPoint(x: availableSize.width - recordMoreButtonTrailingInset - recordMoreButton.size.width / 2.0 - sideInset, y: recordMoreButtonY))
+                    .position(CGPoint(x: availableSize.width - trailingColumnInset - recordMoreButton.size.width / 2.0 - sideInset, y: availableSize.height - recordMoreButton.size.height / 2.0 - 22.0))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )

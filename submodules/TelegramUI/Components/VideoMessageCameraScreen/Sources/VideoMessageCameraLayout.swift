@@ -19,9 +19,9 @@ func videoMessageCameraPreviewFrameAbovePanel(frame: CGRect, bandMinX: CGFloat, 
     return CGRect(origin: CGPoint(x: x, y: maxY - side), size: CGSize(width: side, height: side))
 }
 
-/// The part of the right edge a control in the rows `minY..maxY` keeps clear of: on iPhone Duo the side strip where
-/// its corner block reaches the rows (folded portrait's status corner is 170pt tall, so the view-once button above a
-/// bot keyboard's panel would sit under the clock), else none, as before on every other device.
+/// The part of the right edge the trailing buttons' column in the rows `minY..maxY` keeps clear of: on iPhone Duo the
+/// side strip where its corner block reaches the rows (folded portrait's status corner is 170pt tall, so the view-once
+/// button above a bot keyboard's panel would sit under the clock), else none, as before on every other device.
 func videoMessageCameraTrailingControlInset(minY: CGFloat, maxY: CGFloat, containerHeight: CGFloat, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> CGFloat {
     if reservedCorners == .none {
         return 0.0

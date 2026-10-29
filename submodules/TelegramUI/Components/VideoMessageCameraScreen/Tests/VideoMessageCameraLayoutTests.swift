@@ -38,11 +38,13 @@ final class VideoMessageCameraLayoutTests: XCTestCase {
         XCTAssertEqual(frame, phoneFrame)
     }
 
-    // The view-once button above a bot keyboard's panel (rows 122..162) would sit under the status corner: it keeps
-    // clear of the strip. The record-more button lower down (rows 210..250) stays in the strip, below the corner.
+    // Above a bot keyboard's panel (top 272) the view-once button while recording (rows 122..162), and the column of
+    // view-once and record-more in the preview (rows 157..250), reach the status corner: the column keeps clear of the
+    // strip, both buttons together. Lower down, below the corner (rows 450..540, no keyboard), it stays in the strip.
     func testTrailingControlsKeepClearOfStatusCorner() {
         XCTAssertEqual(videoMessageCameraTrailingControlInset(minY: 122.0, maxY: 162.0, containerHeight: 678.0, safeInsets: self.foldedSafeInsets, reservedCorners: self.foldedCorners), 84.0)
-        XCTAssertEqual(videoMessageCameraTrailingControlInset(minY: 210.0, maxY: 250.0, containerHeight: 678.0, safeInsets: self.foldedSafeInsets, reservedCorners: self.foldedCorners), 0.0)
+        XCTAssertEqual(videoMessageCameraTrailingControlInset(minY: 157.0, maxY: 250.0, containerHeight: 678.0, safeInsets: self.foldedSafeInsets, reservedCorners: self.foldedCorners), 84.0)
+        XCTAssertEqual(videoMessageCameraTrailingControlInset(minY: 450.0, maxY: 540.0, containerHeight: 678.0, safeInsets: self.foldedSafeInsets, reservedCorners: self.foldedCorners), 0.0)
     }
 
     // Every other device keeps the controls where they were, whatever its side insets.
