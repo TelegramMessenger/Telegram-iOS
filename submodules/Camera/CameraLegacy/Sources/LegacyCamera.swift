@@ -568,8 +568,8 @@ private final class CameraContext {
         self.session.session.beginConfiguration()
         f()
         self.session.session.commitConfiguration()
-        // A configuration can make the previews' connections anew (the first input, and every camera or mode change
-        // on a multi-cam session), and a new connection starts in portrait, which is not the body's orientation on
+        // A configuration that changes an input makes the previews' connections anew (the first input, camera flips,
+        // dual and mode changes), and a new connection starts in portrait, which is not the body's orientation on
         // iPhone Duo's inner screen.
         let previewViews = [self.simplePreviewView, self.secondaryPreviewView]
         Queue.mainQueue().async {
