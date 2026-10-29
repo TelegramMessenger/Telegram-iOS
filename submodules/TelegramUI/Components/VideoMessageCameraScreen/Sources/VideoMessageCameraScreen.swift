@@ -1379,23 +1379,27 @@ public class VideoMessageCameraScreen: ViewController {
             // is only as tall as the input panel's top edge, so on a small screen the controls pinned to
             // its bottom edge sit inside that square's bottom corners while remaining outside the circle.
             // `super.hitTest` has already resolved which of the two the touch really landed on, so only
-            // fall back to the preview when it did not land on a control.
+            // fall back to the preview when it did not land on a control. Over the input panel's rows the
+            // square's corners cover the panel's trash and send, so there only the circle is the preview's.
+            var passesToInputPanel = false
+            if let controller = self.controller, let layout = self.validLayout {
+                let insets = layout.insets(options: .input)
+                passesToInputPanel = videoMessageCameraPassesTouchToInputPanel(y: point.y, layoutHeight: layout.size.height, bottomInset: max(insets.bottom, layout.additionalInsets.bottom), inputPanelFrame: controller.inputPanelFrame.0, hasInputNode: controller.inputPanelFrame.1)
+            }
+            
             if let resultPreviewView = self.resultPreviewView, !self.isComponentControl(result) {
-                if resultPreviewView.bounds.contains(self.view.convert(point, to: resultPreviewView)) {
+                if videoMessageCameraPreviewClaimsTouch(point: self.view.convert(point, to: resultPreviewView), bounds: resultPreviewView.bounds, overInputPanel: passesToInputPanel) {
                     return resultPreviewView
                 }
             }
             
-            if let controller = self.controller, let layout = self.validLayout {
-                let insets = layout.insets(options: .input)
-                if videoMessageCameraPassesTouchToInputPanel(y: point.y, layoutHeight: layout.size.height, bottomInset: max(insets.bottom, layout.additionalInsets.bottom), inputPanelFrame: controller.inputPanelFrame.0, hasInputNode: controller.inputPanelFrame.1) {
-                    if layout.metrics.isTablet {
-                        if point.x < layout.size.width * 0.33 {
-                            return result
-                        }
+            if passesToInputPanel, let layout = self.validLayout {
+                if layout.metrics.isTablet {
+                    if point.x < layout.size.width * 0.33 {
+                        return result
                     }
-                    return nil
                 }
+                return nil
             }
             
             return result

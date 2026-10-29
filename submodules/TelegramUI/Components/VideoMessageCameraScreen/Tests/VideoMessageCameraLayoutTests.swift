@@ -68,4 +68,23 @@ final class VideoMessageCameraLayoutTests: XCTestCase {
         XCTAssertFalse(videoMessageCameraPassesTouchToInputPanel(y: 790.0, layoutHeight: 874.0, bottomInset: 34.0, inputPanelFrame: panelFrame, hasInputNode: false))
         XCTAssertFalse(videoMessageCameraPassesTouchToInputPanel(y: 290.0, layoutHeight: 678.0, bottomInset: 0.0, inputPanelFrame: CGRect(x: 0.0, y: 272.0, width: 466.0, height: 40.0), hasInputNode: false))
     }
+
+    // iPhone 17 Pro above a tall bot keyboard: the preview's 369pt square (y 165..534) reaches into the panel's rows
+    // (y 497..549). There a corner of the square, over the panel's trash, is not the preview's; the circle is.
+    func testPreviewClaimsOnlyItsCircleOverTheInputPanel() {
+        let bounds = CGRect(x: 0.0, y: 0.0, width: 369.0, height: 369.0)
+        let lowerLeftCorner = CGPoint(x: 10.0, y: 360.0)
+        let circleBottom = CGPoint(x: 184.5, y: 360.0)
+        XCTAssertFalse(videoMessageCameraPreviewClaimsTouch(point: lowerLeftCorner, bounds: bounds, overInputPanel: true))
+        XCTAssertTrue(videoMessageCameraPreviewClaimsTouch(point: circleBottom, bounds: bounds, overInputPanel: true))
+        XCTAssertFalse(videoMessageCameraPreviewClaimsTouch(point: CGPoint(x: 184.5, y: 380.0), bounds: bounds, overInputPanel: true))
+    }
+
+    // Away from the input panel the preview keeps its whole square, as before.
+    func testPreviewClaimsItsSquareElsewhere() {
+        let bounds = CGRect(x: 0.0, y: 0.0, width: 369.0, height: 369.0)
+        XCTAssertTrue(videoMessageCameraPreviewClaimsTouch(point: CGPoint(x: 10.0, y: 360.0), bounds: bounds, overInputPanel: false))
+        XCTAssertTrue(videoMessageCameraPreviewClaimsTouch(point: CGPoint(x: 184.5, y: 184.5), bounds: bounds, overInputPanel: false))
+        XCTAssertFalse(videoMessageCameraPreviewClaimsTouch(point: CGPoint(x: 400.0, y: 10.0), bounds: bounds, overInputPanel: false))
+    }
 }
