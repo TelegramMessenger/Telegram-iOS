@@ -275,8 +275,9 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
-        let safeInsets = layout.safeInsets
+        var safeInsets = layout.safeInsets
         var size = layout.size
+        var listOriginX: CGFloat = 0.0
         if case .blocks = self.listStyle {
             if let contactsAuthorization = self.contactsAuthorization, contactsAuthorization != .allowed {
                 insets.top += 23.0
@@ -290,12 +291,17 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             } else {
                 inset = 0.0
             }
-            size.width -= inset * 2.0
+            // iPhone Duo: the list stops 16pt short of the side strip and its rows take no inset for it, so their
+            // background does not run past their cards into the strip.
+            let placement = layout.centeredListPlacement(base: inset)
+            size.width = placement.width
+            safeInsets = placement.safeInsets
+            listOriginX = placement.left
         }
         
         self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
         
-        self.contactListNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: 0.0), size: size)
+        self.contactListNode.frame = CGRect(origin: CGPoint(x: listOriginX, y: 0.0), size: size)
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
