@@ -312,7 +312,7 @@ final class CameraNeo: NSObject, CameraProtocol {
 
         let outputUrl = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString).appendingPathExtension("mp4")
         let orientation: AVCaptureVideoOrientation
-        if DeviceModel.current.isIpad {
+        if cameraRecordsRoundVideoInPreviewOrientation {
             orientation = self.previewView?.captureOrientation ?? .portrait
         } else {
             orientation = .portrait
