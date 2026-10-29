@@ -41,4 +41,10 @@ final class HarnessChatGPTPasteTests: XCTestCase {
         XCTAssertEqual(content.plainText, "Position Summary\nPosition: Private Household Butler\nEmployment: Full-time\none\ntwo\nWe are looking for a candidate.", "\(content.blocks)")
         XCTAssertFalse(content.isEntityExpressible())
     }
+
+    /// A `---` between sections has no source position and no form in the composer: it is the blank line.
+    func testThematicBreakBetweenInlineOnlySectionsIsABlankLine() throws {
+        let content = try self.paste("**Salary:** Competitive\n\n---\n\n**Day Off:** 1 day per week")
+        XCTAssertEqual(content.plainText, "Salary: Competitive\n\nDay Off: 1 day per week", "\(content.blocks)")
+    }
 }

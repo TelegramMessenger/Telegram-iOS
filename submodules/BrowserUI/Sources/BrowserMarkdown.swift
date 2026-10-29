@@ -1020,7 +1020,8 @@ public enum MarkdownSourceLineBreaks {
     /// blank line between two top-level blocks becomes an empty `.paragraph(.empty)` between them — the only
     /// empty paragraphs the parse emits — so a caller can keep it as a blank line or drop it. The blank lines
     /// come from the parser's source positions (iOS 16; none on iOS 15), which miss the one after an indented
-    /// code block and those around a thematic break (`markdownTopLevelBlockSourceLines`).
+    /// code block (`markdownTopLevelBlockSourceLines`). A thematic break (`---`) becomes that empty paragraph
+    /// itself.
     case keep
 }
 
@@ -1382,7 +1383,11 @@ private func markdownPageResultKeepingBlankLines(rootNodes: [MarkdownIntentNode]
         guard let nodeBlocks = markdownBlocks(from: [node], context: context, depth: 0), !context.budget.isExceeded else {
             return nil
         }
-        if !nodeBlocks.isEmpty {
+        if nodeBlocks.count == 1, case .divider = nodeBlocks[0] {
+            // A thematic break between sections has no composer form (a divider becomes nothing) and no
+            // source position: it is the blank line between them, and its unknown lines add none beside it.
+            blocksByNode.append(([.paragraph(.empty)], nil))
+        } else if !nodeBlocks.isEmpty {
             blocksByNode.append((nodeBlocks, rootSourceLines[node.identity]))
         }
     }
