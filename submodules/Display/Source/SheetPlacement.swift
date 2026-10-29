@@ -122,3 +122,18 @@ public func sheetHeaderCornerInsets(containerWidth: CGFloat, sheetMinX: CGFloat,
     }
     return result
 }
+
+/// The scroll offset a full-width sheet (`SheetComponent`) rests at: its bottom at the container's bottom, as always,
+/// unless it is taller than the container. Such a sheet (the report reasons on iPhone Duo's unfolded landscape, 669pt
+/// high, or any phone in landscape) rests with its top at the container's top, as it already opened and snapped back,
+/// and scrolls up to its bottom; resting on its bottom after a rotation or a content change, it showed its header
+/// (close button, title) above the screen. A sheet that grew by the keyboard's height, or cannot scroll to
+/// its bottom (`keepsBottomVisible`), still rests on its bottom, keeping what is just above the keyboard, or its
+/// action, in view.
+public func sheetRestingScrollOffset(contentHeight: CGFloat, containerHeight: CGFloat, keepsBottomVisible: Bool) -> CGFloat {
+    let bottomResting = contentHeight - containerHeight
+    if keepsBottomVisible {
+        return bottomResting
+    }
+    return min(bottomResting, 0.0)
+}

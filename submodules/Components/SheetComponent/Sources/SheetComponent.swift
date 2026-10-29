@@ -279,8 +279,14 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             let initialVelocity = !delta.isZero ? velocity.y / delta : 0.0
             
             let currentContentOffset = scrollView.contentOffset
+            // Scrolled within a sheet taller than the screen, resting on its top: it decelerates, no further down than
+            // that rest.
+            let scrollsWithinSheet = self.currentRestsOnTop && currentContentOffset.y > 0.0
+            let proposedContentOffset = targetContentOffset.pointee
             targetContentOffset.pointee = currentContentOffset
-            if velocity.y > 300.0 {
+            if scrollsWithinSheet {
+                targetContentOffset.pointee = CGPoint(x: proposedContentOffset.x, y: max(0.0, proposedContentOffset.y))
+            } else if velocity.y > 300.0 {
                 self.component?.willDismiss()
                 self.animateOut(initialVelocity: initialVelocity, completion: {
                     self.dismiss?(false)
@@ -395,6 +401,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         }
         
         private var currentHasInputHeight = false
+        private var currentRestsOnTop = false
         private var isCentered = false
         private var currentAvailableSize: CGSize?
         func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -588,15 +595,25 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             self.scrollView.isScrollEnabled = component.isScrollEnabled
             
             self.ignoreScrolling = false
+            // A sheet taller than the screen rests with its top in view and scrolls up to its bottom.
+            let restingOffset = sheetRestingScrollOffset(contentHeight: contentSize.height, containerHeight: availableSize.height, keepsBottomVisible: sheetEnvironment.isCentered || sheetEnvironment.hasInputHeight || !component.isScrollEnabled)
+            self.currentRestsOnTop = restingOffset < contentSize.height - availableSize.height
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
-                self.scrollView.contentOffset = CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height))
+                self.scrollView.contentOffset = CGPoint(x: 0.0, y: restingOffset)
             } else if component.followContentSizeChanges, !previousContentSize.height.isZero, previousContentSize != contentSize {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: availableSize), completion: { _ in
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: restingOffset), size: availableSize), completion: { _ in
                     updateContentSize()
                 })
             }
             if self.currentHasInputHeight != previousHasInputHeight {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: self.scrollView.bounds.size))
+                // When the keyboard goes down, a sheet taller than the screen stays where it was, down to its new bottom,
+                // so what sat just above the keyboard (a comment field's Send) stays in view instead of the sheet
+                // jumping to its top.
+                var targetOffset = restingOffset
+                if previousHasInputHeight, !self.currentHasInputHeight, self.currentRestsOnTop {
+                    targetOffset = max(restingOffset, min(self.scrollView.bounds.minY, contentSize.height - availableSize.height))
+                }
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: targetOffset), size: self.scrollView.bounds.size))
             }
             
             self.currentAvailableSize = availableSize

@@ -60,6 +60,11 @@ constants.
   `centeredAlertSideInsets` for centred alerts (`Display/Source/SheetPlacement.swift`); per-corner bottoms with `layout.screenCornerRadii.sheetBottomCornerRadii(inset:)` and
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
+- A sheet taller than the screen: `sheetRestingScrollOffset`. On every device `SheetComponent` rests it on its top, as
+  it opens and snaps back, and it scrolls up to its bottom; it used to jump to its bottom, header above the screen,
+  after a rotation, a content change or the keyboard toggling (#79: the report reasons, ~715pt, on the Duo's 678pt
+  folded and 669pt unfolded-landscape screens; phones in landscape too). While the keyboard is up, or where the sheet
+  cannot scroll, it rests on its bottom, and when the keyboard goes down it stays where it was.
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
   `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`;
   `layout.centeredListPlacement(base:)` for a list narrowed on both sides whose rows fill its width (their side
