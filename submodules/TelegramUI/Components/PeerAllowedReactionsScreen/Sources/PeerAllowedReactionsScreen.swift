@@ -118,6 +118,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private let stableEmptyResultEmojiDisposable = MetaDisposable()
         
         private var caretPosition: Int?
+        private var isAllReactionsSelected: Bool = false
+        private weak var reactionInputMenu: ContextMenuController?
         
         private var displayInput: Bool = false
         private var recenterOnCaret: Bool = false
@@ -370,7 +372,58 @@ final class PeerAllowedReactionsScreenComponent: Component {
             let statsController = component.context.sharedContext.makeChannelStatsController(context: component.context, updatedPresentationData: nil, peerId: component.peerId, boosts: true, boostStatus: boostStatus)
             self.environment?.controller()?.push(statsController)
         }
-        
+
+        private func displayReactionInputMenu() {
+            guard let environment = self.environment, let reactionInputView = self.reactionInput?.view as? EmojiListInputComponent.View else {
+                return
+            }
+            guard let enabledReactions = self.enabledReactions, !enabledReactions.isEmpty, !self.isApplyingSettings else {
+                return
+            }
+
+            var actions: [ContextMenuAction] = []
+            if self.isAllReactionsSelected {
+                actions.append(ContextMenuAction(content: .text(title: environment.strings.Common_Delete, accessibilityLabel: environment.strings.Common_Delete), action: { [weak self] in
+                    self?.deleteSelectedReactions()
+                }))
+            } else {
+                actions.append(ContextMenuAction(content: .text(title: environment.strings.TextSelection_SelectAll, accessibilityLabel: environment.strings.TextSelection_SelectAll), action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.reactionInputMenu?.dismiss()
+                    self.isAllReactionsSelected = true
+                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                    self.displayReactionInputMenu()
+                }))
+            }
+
+            self.reactionInputMenu?.dismiss()
+            let contextMenu = makeContextMenuController(actions: actions, isDark: environment.theme.overallDarkAppearance)
+            self.reactionInputMenu = contextMenu
+            environment.controller()?.present(contextMenu, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceViewAndRect: { [weak self, weak reactionInputView] in
+                guard let self, let reactionInputView else {
+                    return nil
+                }
+                return (reactionInputView, reactionInputView.menuSourceRect(), self, self.bounds)
+            }, bounce: false))
+        }
+
+        private func deleteSelectedReactions() {
+            guard self.isAllReactionsSelected else {
+                return
+            }
+            self.isAllReactionsSelected = false
+            self.enabledReactions = []
+            self.caretPosition = 0
+            self.areStarsReactionsEnabled = false
+            self.recenterOnCaret = true
+
+            if !self.isUpdating {
+                self.state?.updated(transition: .spring(duration: 0.25))
+            }
+        }
+
         func update(component: PeerAllowedReactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -491,6 +544,13 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             }
                             
                             AudioServicesPlaySystemSound(0x450)
+                            
+                            if self.isAllReactionsSelected {
+                                self.isAllReactionsSelected = false
+                                enabledReactions.removeAll()
+                                self.caretPosition = 0
+                                self.areStarsReactionsEnabled = false
+                            }
                             
                             if let index = enabledReactions.firstIndex(where: { $0.file.fileId.id == itemFile.fileId.id }) {
                                 enabledReactions.remove(at: index)
@@ -1010,6 +1070,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         }
                         if self.isEnabled != value {
                             self.isEnabled = value
+                            self.isAllReactionsSelected = false
                             
                             if self.isEnabled {
                                 if var enabledReactions = self.enabledReactions, enabledReactions.isEmpty {
@@ -1134,6 +1195,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         reactionItems: enabledReactions,
                         isInputActive: self.displayInput,
                         caretPosition: caretPosition,
+                        isAllSelected: self.isAllReactionsSelected && !enabledReactions.isEmpty,
                         activateInput: { [weak self] in
                             guard let self else {
                                 return
@@ -1148,10 +1210,14 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             guard let self else {
                                 return
                             }
-                            if self.caretPosition != value {
+                            if self.caretPosition != value || self.isAllReactionsSelected {
                                 self.caretPosition = value
+                                self.isAllReactionsSelected = false
                                 self.state?.updated(transition: .immediate)
                             }
+                        },
+                        displayMenu: { [weak self] in
+                            self?.displayReactionInputMenu()
                         }
                     )),
                     environment: {},
@@ -1391,6 +1457,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                             return
                                         }
                                         self.areStarsReactionsEnabled = value
+                                        self.isAllReactionsSelected = false
                                         
                                         var enabledReactions = self.enabledReactions ?? []
                                         if self.areStarsReactionsEnabled {
@@ -1607,6 +1674,10 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         separatorColor: environment.theme.list.itemBlocksSeparatorColor,
                         backspace: enabledReactions.isEmpty ? nil : { [weak self] in
                             guard let self, var enabledReactions = self.enabledReactions, !enabledReactions.isEmpty else {
+                                return
+                            }
+                            if self.isAllReactionsSelected {
+                                self.deleteSelectedReactions()
                                 return
                             }
                             if let caretPosition = self.caretPosition, caretPosition < enabledReactions.count {

@@ -57,8 +57,10 @@ final class EmojiListInputComponent: Component {
     let reactionItems: [EmojiComponentReactionItem]
     let isInputActive: Bool
     let caretPosition: Int
+    let isAllSelected: Bool
     let activateInput: () -> Void
     let setCaretPosition: (Int) -> Void
+    let displayMenu: () -> Void
     
     init(
         context: AccountContext,
@@ -67,8 +69,10 @@ final class EmojiListInputComponent: Component {
         reactionItems: [EmojiComponentReactionItem],
         isInputActive: Bool,
         caretPosition: Int,
+        isAllSelected: Bool,
         activateInput: @escaping () -> Void,
-        setCaretPosition: @escaping (Int) -> Void
+        setCaretPosition: @escaping (Int) -> Void,
+        displayMenu: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -76,8 +80,10 @@ final class EmojiListInputComponent: Component {
         self.reactionItems = reactionItems
         self.isInputActive = isInputActive
         self.caretPosition = caretPosition
+        self.isAllSelected = isAllSelected
         self.activateInput = activateInput
         self.setCaretPosition = setCaretPosition
+        self.displayMenu = displayMenu
     }
     
     static func ==(lhs: EmojiListInputComponent, rhs: EmojiListInputComponent) -> Bool {
@@ -99,6 +105,9 @@ final class EmojiListInputComponent: Component {
         if lhs.caretPosition != rhs.caretPosition {
             return false
         }
+        if lhs.isAllSelected != rhs.isAllSelected {
+            return false
+        }
         return true
     }
     
@@ -109,6 +118,7 @@ final class EmojiListInputComponent: Component {
         private var itemLayers: [Int64: EmojiKeyboardItemLayer] = [:]
         private let trailingPlaceholder = ComponentView<Empty>()
         private let caretIndicator: CaretIndicatorView
+        private let selectionLayer: SimpleShapeLayer
         
         override init(frame: CGRect) {
             self.caretIndicator = CaretIndicatorView(frame: CGRect())
@@ -119,9 +129,15 @@ final class EmojiListInputComponent: Component {
                 context.fillPath()
             })?.stretchableImage(withLeftCapWidth: 1, topCapHeight: 2).withRenderingMode(.alwaysTemplate)
             
+            self.selectionLayer = SimpleShapeLayer()
+            self.selectionLayer.opacity = 0.0
+            
             super.init(frame: frame)
             
+            self.layer.addSublayer(self.selectionLayer)
+            
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            self.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
         }
         
         required init(coder: NSCoder) {
@@ -155,6 +171,25 @@ final class EmojiListInputComponent: Component {
                     component.activateInput()
                 }
             }
+        }
+        
+        @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            if case .began = recognizer.state {
+                component.displayMenu()
+            }
+        }
+        
+        func menuSourceRect() -> CGRect {
+            if let component = self.component, component.isAllSelected, let path = self.selectionLayer.path {
+                return path.boundingBoxOfPath
+            }
+            if !self.caretIndicator.isHidden {
+                return self.caretIndicator.frame
+            }
+            return self.bounds
         }
         
         func caretRect() -> CGRect? {
@@ -226,10 +261,11 @@ final class EmojiListInputComponent: Component {
             }
             
             self.caretIndicator.tintColor = component.theme.list.itemAccentColor
-            self.caretIndicator.isHidden = !component.isInputActive
+            self.caretIndicator.isHidden = !component.isInputActive || component.isAllSelected
             
             var caretFrame = CGRect(origin: CGPoint(x: trailingPlaceholderFrame.minX, y: trailingPlaceholderFrame.minY + floorToScreenPixels((trailingPlaceholderFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0))
             
+            let selectionPath = CGMutablePath()
             var validIds: [Int64] = []
             for i in 0 ..< component.reactionItems.count {
                 let item = component.reactionItems[i]
@@ -285,6 +321,11 @@ final class EmojiListInputComponent: Component {
                 
                 itemTransition.setFrame(layer: itemLayer, frame: itemFrame)
                 
+                if i % itemsPerRow == 0 {
+                    let rowItemCount = min(itemsPerRow, component.reactionItems.count - i)
+                    selectionPath.addRect(CGRect(origin: CGPoint(x: itemFrame.minX - floor(itemSpacing * 0.5), y: itemFrame.minY - floor(itemSpacing * 0.5)), size: CGSize(width: CGFloat(rowItemCount) * (itemSize + itemSpacing), height: itemSize + itemSpacing)))
+                }
+                
                 if component.caretPosition == i {
                     caretFrame = CGRect(origin: CGPoint(x: itemFrame.minX - 2.0, y: itemFrame.minY + floorToScreenPixels((itemFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0))
                 } else if i == component.reactionItems.count - 1 && component.caretPosition == i + 1 {
@@ -315,6 +356,12 @@ final class EmojiListInputComponent: Component {
             for key in removedIds {
                 self.itemLayers.removeValue(forKey: key)
             }
+            
+            self.selectionLayer.fillColor = component.theme.list.itemAccentColor.withMultipliedAlpha(0.2).cgColor
+            if component.isAllSelected {
+                self.selectionLayer.path = selectionPath
+            }
+            transition.setAlpha(layer: self.selectionLayer, alpha: component.isAllSelected ? 1.0 : 0.0)
             
             if !transition.animation.isImmediate && abs(caretFrame.midY - self.caretIndicator.center.y) > 2.0 {
                 if let caretSnapshot = self.caretIndicator.snapshotView(afterScreenUpdates: false) {
