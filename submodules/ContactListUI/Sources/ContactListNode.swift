@@ -2155,8 +2155,7 @@ public final class ContactListNode: ASDisplayNode {
     }
     
     public func updateSelectedChatLocation(_ chatLocation: ChatLocation?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.interaction?.itemHighlighting.chatLocation = chatLocation
-        self.interaction?.itemHighlighting.progress = progress
+        self.interaction?.itemHighlighting.update(chatLocation: chatLocation, progress: progress)
         
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ContactsPeerItemNode {
