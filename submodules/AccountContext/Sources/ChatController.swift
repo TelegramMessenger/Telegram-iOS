@@ -74,6 +74,10 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let hidesAuthorHeader: Bool
     /// A feed row: no share arrow beside the bubble.
     public let hidesShareButton: Bool
+    /// The host takes the gestures the bubble does not act on (the News tab's post row): its context gesture is off,
+    /// the host showing its own menu on a long press, and its tap recogniser fails on plain text instead of
+    /// waiting for a double tap, so the host's tap fires.
+    public let hostHandlesGestures: Bool
     public let isParticipant: Bool
     public let invitedOn: Int32?
     
@@ -120,7 +124,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         invitedOn: Int32? = nil,
         hidesBubbleBackground: Bool = false,
         hidesAuthorHeader: Bool = false,
-        hidesShareButton: Bool = false
+        hidesShareButton: Bool = false,
+        hostHandlesGestures: Bool = false
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -163,6 +168,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.hidesBubbleBackground = hidesBubbleBackground
         self.hidesAuthorHeader = hidesAuthorHeader
         self.hidesShareButton = hidesShareButton
+        self.hostHandlesGestures = hostHandlesGestures
         self.isParticipant = isParticipant
         self.invitedOn = invitedOn
     }
@@ -277,6 +283,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.hidesShareButton != rhs.hidesShareButton {
+            return false
+        }
+        if lhs.hostHandlesGestures != rhs.hostHandlesGestures {
             return false
         }
         if lhs.isParticipant != rhs.isParticipant {

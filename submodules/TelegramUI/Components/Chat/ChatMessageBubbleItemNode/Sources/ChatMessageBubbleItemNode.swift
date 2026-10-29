@@ -1403,6 +1403,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
                 
+                // Nothing of the bubble's own under the finger: a host taking such taps gets them at once, with
+                // this recogniser out of the way (it would otherwise begin on the lift, waiting for a double tap).
+                if strongSelf.item?.associatedData.hostHandlesGestures == true {
+                    return .fail
+                }
+                
                 if !strongSelf.backgroundNode.frame.contains(point) {
                     return .waitForDoubleTap
                 }
@@ -5809,6 +5815,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if item.message.timestamp < 10 && !strongSelf.isQuickReplyMessageInputCustomContents() {
             hasMenuGesture = false
         }
+        if item.associatedData.hostHandlesGestures {
+            hasMenuGesture = false
+        }
         strongSelf.mainContainerNode.isGestureEnabled = hasMenuGesture
         for contentContainer in strongSelf.contentContainers {
             contentContainer.containerNode.isGestureEnabled = hasMenuGesture
@@ -5865,6 +5874,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
+    override public func ownsGesture(_ gesture: TapLongTapOrDoubleTapGesture, at point: CGPoint) -> Bool {
+        guard let action = self.gestureRecognized(gesture: gesture, location: point, recognizer: nil) else {
+            return false
+        }
+        if case .openContextMenu = action {
+            return false
+        }
+        return true
+    }
+
     override public func shouldAnimateHorizontalFrameTransition() -> Bool {
         return false
     }
