@@ -23,6 +23,9 @@ public struct CallUnlockVideoNotificationState: Equatable {
 
     public static let postDelay: Double = 1.0
     public static let userInfoKey = "callUnlockVideo"
+    /// The notification's category: its text is the lock screen's placeholder, so it shows while previews are hidden
+    /// ("When Unlocked", the default), when the phone is locked, which is when it is read.
+    public static let categoryIdentifier = "cuv"
 
     public static func identifier(internalId: UUID) -> String {
         return "call_unlock_video_\(internalId)"

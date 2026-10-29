@@ -1624,6 +1624,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let content = UNMutableNotificationContent()
                 content.body = text
                 content.userInfo = [CallUnlockVideoNotificationState.userInfoKey: internalId.uuidString]
+                content.categoryIdentifier = CallUnlockVideoNotificationState.categoryIdentifier
                 
                 Logger.shared.log("SharedAccountContext", "adding call unlock video notification \(internalId)")
                 center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil), withCompletionHandler: { error in
