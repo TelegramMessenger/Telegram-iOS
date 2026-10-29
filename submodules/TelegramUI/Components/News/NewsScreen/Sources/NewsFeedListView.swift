@@ -30,6 +30,11 @@ final class NewsFeedListView: UIView {
     /// Set only during this list's own passes, whose rows are on screen at once; rows a scroll builds load
     /// their avatars in the background.
     let rowLoading = NewsFeedRowLoading()
+    /// The new-posts blocks' glows, under the rows, which draw the blocks' fill. A glow runs through all of its block's
+    /// rows (Feed3 `FreshBlock`), so no row can draw it. This view is the list's content motion mirror, so the glows
+    /// ride the content as the rows do; each sits at its block's rows and takes its first row's own slide in a pass.
+    private let freshGlowMirror = UIView()
+    private var freshGlowViews: [NewsFreshGlowView] = []
     private let skeletonView = NewsFeedSkeletonView()
     private var showsSkeleton = false
     private var skeletonParameters: (theme: PresentationTheme, rowLayout: NewsSkeletonModelRow)?
@@ -47,6 +52,14 @@ final class NewsFeedListView: UIView {
     }
 
     var reduceMotion = false
+    /// The new-posts blocks' glow colour.
+    var accentColor: UIColor = .clear {
+        didSet {
+            if !self.accentColor.isEqual(oldValue) {
+                self.updateFreshGlows()
+            }
+        }
+    }
     /// Content just replaced the skeleton: the next pass cascades its rows in.
     private var pendingCascade = false
     private var cascadeStart: (time: Double, firstIndex: Int)?
@@ -64,7 +77,10 @@ final class NewsFeedListView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        self.freshGlowMirror.isUserInteractionEnabled = false
+        self.addSubview(self.freshGlowMirror)
         self.addSubview(self.coreList)
+        self.coreList.addContentMotionMirror(self.freshGlowMirror)
         // Over the rows.
         self.skeletonView.isHidden = true
         self.addSubview(self.skeletonView)
@@ -83,6 +99,8 @@ final class NewsFeedListView: UIView {
             self.onVisibleRowsChanged?()
             self.layoutSkeleton()
             self.applyCascade()
+            // Rows loaded or rebased.
+            self.updateFreshGlows()
         }
         self.coreList.didEndDragging = { [weak self] in
             guard let self else {
@@ -112,6 +130,8 @@ final class NewsFeedListView: UIView {
 
     func update(size: CGSize, insets: UIEdgeInsets, items: [CoreListComponentItem], scrollTo: CoreListScrollTarget?, anchorMode: CoreListAnchorMode, animatesInsertions: Bool = true, transition: CoreListTransition) {
         self.coreList.frame = CGRect(origin: CGPoint(), size: size)
+        // The mirror's `bounds.origin` is the content's; its frame only sizes it.
+        self.freshGlowMirror.frame = self.coreList.frame
         self.items = items
         self.insets = insets
         self.withSynchronousRowLoading {
@@ -126,6 +146,59 @@ final class NewsFeedListView: UIView {
             self.onProgrammaticScroll?()
         }
         self.applyCascade()
+        self.updateFreshGlows()
+    }
+
+    // MARK: New-posts glow (spec §4.2)
+
+    /// Keys of the row slides a glow copies.
+    private static let freshGlowSlideKeyPrefix = "newsFreshGlow.row."
+
+    /// Places each block's glow at its rows, in the content's coordinates (the mirror's), and gives it its first row's
+    /// own slide: a pass slides a row that stays loaded with additive `position.y` tracks while its resting place changes
+    /// at once. Copies keep their begin times (an uncommitted one commits with the row's), so this runs after every pass
+    /// and on every scroll frame, from scratch.
+    private func updateFreshGlows() {
+        // No fresh row loaded and no glow up, as on almost every scroll frame.
+        guard !self.freshGlowViews.isEmpty || self.coreList.loadedItemViews.contains(where: { self.postRow($0)?.freshSegment != nil }) else {
+            return
+        }
+        var rows: [(frame: CGRect, segment: NewsFreshSegment?)] = []
+        var rowLayers: [CALayer] = []
+        for entry in self.coreList.loadedItemEntries {
+            rows.append((self.coreList.contentFrame(of: entry.view), self.postRow(entry.view)?.freshSegment))
+            rowLayers.append(entry.view.layer)
+        }
+        let blocks = newsFreshGlowBlocks(rows: rows)
+        while self.freshGlowViews.count > blocks.count {
+            self.freshGlowViews.removeLast().removeFromSuperview()
+        }
+        for (index, block) in blocks.enumerated() {
+            let glowView: NewsFreshGlowView
+            if index < self.freshGlowViews.count {
+                glowView = self.freshGlowViews[index]
+            } else {
+                glowView = NewsFreshGlowView(frame: CGRect())
+                self.freshGlowMirror.addSubview(glowView)
+                self.freshGlowViews.append(glowView)
+            }
+            let layout = block.layout
+            glowView.frame = layout.frame
+            glowView.update(layout: layout, revealTime: block.revealTime, accentColor: self.accentColor)
+
+            let glowLayer = glowView.layer
+            for key in glowLayer.animationKeys() ?? [] where key.hasPrefix(Self.freshGlowSlideKeyPrefix) {
+                glowLayer.removeAnimation(forKey: key)
+            }
+            let rowLayer = rowLayers[block.firstRow]
+            for key in rowLayer.animationKeys() ?? [] {
+                guard let animation = rowLayer.animation(forKey: key) as? CAPropertyAnimation, animation.keyPath == "position.y", animation.isAdditive, let copy = animation.copy() as? CAPropertyAnimation else {
+                    continue
+                }
+                copy.delegate = nil
+                glowLayer.add(copy, forKey: Self.freshGlowSlideKeyPrefix + key)
+            }
+        }
     }
 
     // MARK: Swipe (spec §1, §4, §5)
@@ -286,6 +359,7 @@ final class NewsFeedListView: UIView {
         // CoreList reports nothing for a pass it ran itself.
         self.onScrollOffsetChanged?(self.scrollOffset(settled: false), .immediate)
         self.layoutSkeleton()
+        self.updateFreshGlows()
     }
 
     /// How far the list is pulled past its resting top, hold included; 0 when scrolled or unknown.
@@ -371,6 +445,7 @@ final class NewsFeedListView: UIView {
         }
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
         self.onProgrammaticScroll?()
+        self.updateFreshGlows()
     }
 
     func scrollToTop() {

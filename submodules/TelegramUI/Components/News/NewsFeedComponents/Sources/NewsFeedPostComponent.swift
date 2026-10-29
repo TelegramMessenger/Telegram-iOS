@@ -263,6 +263,11 @@ public final class NewsFeedPostComponent: Component {
             self.highlightTimer?.invalidate()
         }
 
+        /// The row's place in a new-posts block, as last laid out: the list draws the block's glow over its rows.
+        public var freshSegment: NewsFreshSegment? {
+            return self.component?.fresh
+        }
+
         /// Where the last layout put the avatar, the channel name and each line of the text, in the row's own
         /// coordinates: the loading skeleton is measured from them.
         public var avatarFrame: CGRect {

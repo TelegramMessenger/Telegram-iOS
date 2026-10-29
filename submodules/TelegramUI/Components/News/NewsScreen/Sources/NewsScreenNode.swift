@@ -115,6 +115,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
 
         self.forYouList.reduceMotion = self.presentationData.reduceMotion
+        self.forYouList.accentColor = self.presentationData.theme.list.itemAccentColor
 
         self.forYouList.onEdgeReached = { [weak self] edge in
             if edge == .bottom {
@@ -285,6 +286,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.presentationData = presentationData
         self.forYouList.reduceMotion = presentationData.reduceMotion
         self.addedList.reduceMotion = presentationData.reduceMotion
+        self.forYouList.accentColor = presentationData.theme.list.itemAccentColor
+        self.addedList.accentColor = presentationData.theme.list.itemAccentColor
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -540,6 +543,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
     private func bindAddedList(_ list: NewsFeedListView) {
         list.reduceMotion = self.presentationData.reduceMotion
+        list.accentColor = self.presentationData.theme.list.itemAccentColor
         list.onEdgeReached = { [weak self] edge in
             switch edge {
             case .top:
