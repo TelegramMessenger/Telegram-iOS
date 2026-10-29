@@ -27,7 +27,7 @@ public func pastedMarkdownContentIsRicherThanPlain(_ content: ChatInputContent) 
 
 /// Pasted markdown parsed with `MarkdownSourceLineBreaks.keep` carries every blank line of the source as an
 /// empty body paragraph. They are kept only where they read as the blank lines they were: in a host that keeps
-/// them (`keepsBlankLines`, the chat composer) and content that is sent as text + entities, where an empty
+/// them (`keepsBlankLines`, the chat composer, inline or expanded) and content that is sent as text + entities, where an empty
 /// paragraph is one more "\n". Content that needs a rich message (a heading, a list, a table, …) loses them, as
 /// does every paste into a host that only writes rich messages: a rich message spaces its blocks itself, so an
 /// empty paragraph there would double the gap.

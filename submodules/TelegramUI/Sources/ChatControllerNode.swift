@@ -4857,7 +4857,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self.controller?.presentFormulaEditor(initialValue: initialValue, completion: completion)
                 },
                 pastedMarkdownParser: { context, text in
-                    return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: false)
+                    // The expanded composer keeps a pasted reply's blank lines as the inline one does: it sends the same
+                    // text + entities whenever the content allows.
+                    return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: true)
                 }
             )
             editorScreen.navigationPresentation = .modal

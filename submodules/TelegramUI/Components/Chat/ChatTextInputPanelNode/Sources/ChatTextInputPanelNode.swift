@@ -5728,12 +5728,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             // the markers as literal text via the structure-preserving RTFImport path; otherwise keep the
             // inline-preserving legacy conversion. (When rich input is enabled, the native-routing branch above
             // has already claimed a list paste — this serves the legacy-only configuration.)
-            attributedString = legacyChatInputAttributedString(fromRTF: data) ?? chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtf, paragraphSpacingAsBlankLines: true)
+            attributedString = legacyChatInputAttributedString(fromRTF: data) ?? chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtf)
         } else if let data = pasteboard.data(forPasteboardType: "com.apple.flat-rtfd") {
             if let _ = pasteboard.data(forPasteboardType: "com.apple.notes.richtext"), DeviceModel.current.isIpad, let htmlData = pasteboard.data(forPasteboardType: "public.html") {
-                attributedString = chatInputStateStringFromRTF(htmlData, type: NSAttributedString.DocumentType.html, paragraphSpacingAsBlankLines: true)
+                attributedString = chatInputStateStringFromRTF(htmlData, type: NSAttributedString.DocumentType.html)
             } else {
-                attributedString = legacyChatInputAttributedString(fromRTF: data) ?? chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd, paragraphSpacingAsBlankLines: true)
+                attributedString = legacyChatInputAttributedString(fromRTF: data) ?? chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)
             }
         }
 

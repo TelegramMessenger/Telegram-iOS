@@ -1,18 +1,10 @@
 import Foundation
 
 public enum RTFImport {
-    /// `paragraphSpacingAsBlankLines`: a gap between two top-level paragraphs that exists only as paragraph
-    /// spacing (`\saN` after the first, `\sbN` before the second) of at least
-    /// `RTFDocumentParser.blankLineSpacingTwips` becomes an empty paragraph — a blank line, once the document is
-    /// flattened to text. WebKit writes a copied page's paragraph margins that way (a ChatGPT reply in Safari:
-    /// `<p>`, `<h3>`, `<li>`). Items of one list stay on consecutive lines, and a gap that already is an empty
-    /// paragraph gains no second one. For a paste that flattens to plain text; off, the import is unchanged.
-    public static func document(fromRTF data: Data, paragraphSpacingAsBlankLines: Bool = false) -> Document? {
+    public static func document(fromRTF data: Data) -> Document? {
         // Cheap guard: must look like RTF.
         guard data.starts(with: Array("{\\rtf".utf8)) || String(decoding: data.prefix(16), as: UTF8.self).contains("{\\rtf") else { return nil }
-        let parser = RTFDocumentParser()
-        parser.paragraphSpacingAsBlankLines = paragraphSpacingAsBlankLines
-        let blocks = parser.parse(RTFTokenizer.tokenize(data))
+        let blocks = RTFDocumentParser().parse(RTFTokenizer.tokenize(data))
         return blocks.isEmpty ? nil : Document(blocks: blocks)
     }
 }
@@ -33,12 +25,6 @@ private struct RTFState {
 }
 
 final class RTFDocumentParser {
-    /// 8pt: WebKit's paragraph margins (≥ 12pt) and Word's default 8pt after a paragraph read as a blank line,
-    /// Google Docs' 6pt after a heading does not.
-    static let blankLineSpacingTwips = 160
-
-    var paragraphSpacingAsBlankLines = false
-
     private var stack: [RTFState] = [RTFState()]
     private var state: RTFState {
         get { stack[stack.count - 1] }
@@ -53,13 +39,6 @@ final class RTFDocumentParser {
     private var curListLevel: Int? = nil     // set by \ilvlN or \lsN
     private var curListMarkerText = ""       // text captured inside \listtext / \pntext
     private var curSawListText = false       // a \listtext/\pntext marker group was seen this paragraph
-
-    // Paragraph spacing in twips (paragraph formatting: kept across \par, reset by \pard).
-    private var curSpaceBefore = 0           // \sbN
-    private var curSpaceAfter = 0            // \saN
-    // The last top-level text block's spacing after it, and whether it was a list item; nil after an empty
-    // paragraph or a table, or before the first block (no blank line goes there).
-    private var previousBlockGap: (spaceAfter: Int, isListItem: Bool)? = nil
 
     // Field handling state (parser-level, not group-scoped).
     private var fldInstText = ""             // accumulates \fldinst text
@@ -134,7 +113,6 @@ final class RTFDocumentParser {
         guard !runs.isEmpty else {
             if allowEmpty {
                 blocks.append(.paragraph(ParagraphBlock(id: .generate(), style: .body, runs: [])))
-                previousBlockGap = nil
             }
             runs = []
             curListLevel = nil
@@ -142,9 +120,6 @@ final class RTFDocumentParser {
             curSawListText = false
             return
         }
-        // A paragraph of nothing but whitespace (a page's `<p>&nbsp;</p>` or `<p><br></p>` spacer) already is
-        // the blank line between its neighbours: none is added beside it.
-        let isBlankLine = runs.allSatisfy { $0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         // Code: every run mono → merge into a trailing code block.
         if runs.allSatisfy({ $0.attributes.inlineCode }) {
             let stripped = runs.map { TextRun(text: $0.text, attributes: CharacterAttributes()) }
@@ -152,10 +127,8 @@ final class RTFDocumentParser {
                 last.runs.append(TextRun(text: "\n")); last.runs.append(contentsOf: stripped)
                 blocks[blocks.count - 1] = .code(last)
             } else {
-                if !isBlankLine { appendBlankLineForParagraphGap(isListItem: false) }
                 blocks.append(.code(CodeBlock(id: .generate(), runs: stripped)))
             }
-            previousBlockGap = isBlankLine ? nil : (curSpaceAfter, false)
             runs = []; return
         }
         let pt = state.fontSizeHalfPoints / 2
@@ -179,22 +152,11 @@ final class RTFDocumentParser {
                 runs[0] = TextRun(text: det.remainder, attributes: first.attributes)
             }
         }
-        if !isBlankLine { appendBlankLineForParagraphGap(isListItem: list != nil) }
         blocks.append(.paragraph(ParagraphBlock(id: .generate(), style: style, list: list, runs: runs)))
-        previousBlockGap = isBlankLine ? nil : (curSpaceAfter, list != nil)
         runs = []
         curListLevel = nil
         curListMarkerText = ""
         curSawListText = false
-    }
-
-    /// `paragraphSpacingAsBlankLines`: an empty paragraph before the block being appended when the spacing
-    /// between it and the previous one reads as a blank line (see `RTFImport.document`).
-    private func appendBlankLineForParagraphGap(isListItem: Bool) {
-        guard paragraphSpacingAsBlankLines, let previous = previousBlockGap else { return }
-        if previous.isListItem && isListItem { return }
-        guard max(previous.spaceAfter, curSpaceBefore) >= RTFDocumentParser.blankLineSpacingTwips else { return }
-        blocks.append(.paragraph(ParagraphBlock(id: .generate(), style: .body, runs: [])))
     }
 
     private func handle(_ tok: RTFToken) {
@@ -356,20 +318,11 @@ final class RTFDocumentParser {
             // else: inTable is true but currentParagraphInTable was already false — this is a \pard
             // at the start of a new cell (Word's \pard\intbl pattern). The next \intbl will restore
             // currentParagraphInTable. Do NOT flush the table here; let \par handle it.
-
-            // Read by the flushes above (the paragraph \pard ends); the new paragraph sets its own.
-            curSpaceBefore = 0
-            curSpaceAfter = 0
         case "tab":
             // \tab inside a \listtext / \pntext group is a marker separator — suppress it.
             if !state.inListText { appendText("\t") }
         case "line":
             appendText("\n")
-        case "sa":
-            // Not a stylesheet entry's or another skipped destination's spacing: only the body's.
-            if !state.skipDestination { curSpaceAfter = max(0, param ?? 0) }
-        case "sb":
-            if !state.skipDestination { curSpaceBefore = max(0, param ?? 0) }
         default:
             break        // unknown control word → no-op
         }
@@ -457,7 +410,6 @@ final class RTFDocumentParser {
             return
         }
         blocks.append(.table(TableBlock(id: .generate(), columns: tableColumns, rows: tableRows)))
-        previousBlockGap = nil
         // Reset ALL table accumulators so a following \trowd starts clean.
         tableRows = []
         tableColumns = []
