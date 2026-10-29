@@ -8,9 +8,10 @@ private let pastedParagraphGapBlankLineSpacing: CGFloat = 8.0
 
 /// Pasted rich text (RTF, HTML) flattens to plain text with one "\n" per paragraph. A copied web page — a
 /// ChatGPT reply in Safari — separates its paragraphs with margins only, which arrive as `NSParagraphStyle`
-/// spacing and would be lost; this inserts a blank line wherever the spacing between two non-empty paragraphs
-/// reaches `pastedParagraphGapBlankLineSpacing`. Never between two items of a list, never next to an empty
-/// paragraph (no gap becomes two blank lines), and plain text, which has no paragraph style, is unchanged.
+/// spacing and would be lost; this inserts a blank line wherever the spacing between two non-blank paragraphs
+/// reaches `pastedParagraphGapBlankLineSpacing`. Never between two items of a list, never next to a paragraph
+/// of nothing but whitespace (an empty one, a page's `<p>&nbsp;</p>` spacer: no gap becomes two blank lines),
+/// and plain text, which has no paragraph style, is unchanged.
 /// Paragraphs are split at "\n" only: a U+2028 line break (`<br>`) stays inside its paragraph.
 public func attributedStringWithParagraphSpacingAsBlankLines(_ string: NSAttributedString) -> NSAttributedString {
     let text = string.string as NSString
@@ -31,7 +32,7 @@ public func attributedStringWithParagraphSpacingAsBlankLines(_ string: NSAttribu
     for index in stride(from: paragraphs.count - 1, to: 0, by: -1) {
         let previous = paragraphs[index - 1]
         let next = paragraphs[index]
-        guard previous.length != 0, next.length != 0 else {
+        guard !text.substring(with: previous).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !text.substring(with: next).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             continue
         }
         let previousStyle = string.attribute(.paragraphStyle, at: previous.location, effectiveRange: nil) as? NSParagraphStyle

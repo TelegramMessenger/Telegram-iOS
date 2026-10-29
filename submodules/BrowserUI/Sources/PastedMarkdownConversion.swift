@@ -2,7 +2,6 @@ import Foundation
 import TelegramCore
 import AccountContext
 import TextFormat
-import BrowserUI
 
 /// Parses pasted plain text as CommonMark markdown (the same parser used on the rich-message send path)
 /// and returns a `ChatInputContent` when the result carries formatting or structure that ordinary
@@ -23,7 +22,7 @@ import BrowserUI
 /// ChatGPT puts one "Key: value" per line, which CommonMark joins into one line. Its blank lines stay blank lines
 /// when `keepsBlankLines` (the chat composer) and the content is sent as text + entities; see
 /// `pastedMarkdownContentResolvingBlankLines`.
-func chatInputContentFromPastedMarkdown(context: AccountContext, plainText: String, keepsBlankLines: Bool) -> ChatInputContent? {
+public func chatInputContentFromPastedMarkdown(context: AccountContext, plainText: String, keepsBlankLines: Bool) -> ChatInputContent? {
     guard let attribute = inputRichTextAttributeFromText(context: context, text: plainText, lineBreaks: .keep) else {
         return nil
     }

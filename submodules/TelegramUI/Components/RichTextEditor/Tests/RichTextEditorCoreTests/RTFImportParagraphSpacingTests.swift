@@ -110,4 +110,10 @@ final class RTFImportParagraphSpacingTests: XCTestCase {
     func test_stylesheetSpacing_isIgnored() {
         XCTAssertEqual(lines("{\\rtf1\\ansi{\\stylesheet{\\s1\\sa400 Heading;}}a\\\nb\\\n}"), ["a", "b"])
     }
+
+    /// A spacer paragraph (`<p>&nbsp;</p>`, `<p><br></p>`) already is the blank line: none is added beside it.
+    func test_whitespaceOnlySpacer_isABlankLine() {
+        XCTAssertEqual(lines("{\\rtf1\\ansi\\pard\\sa300 a\\\n\\uc0\\u160 \\\nb\\\n}"), ["a", "\u{00A0}", "b"])
+        XCTAssertEqual(lines("{\\rtf1\\ansi\\pard\\sa300 a\\\n\\uc0\\u8232 \\\nb\\\n}"), ["a", "\u{2028}", "b"])
+    }
 }

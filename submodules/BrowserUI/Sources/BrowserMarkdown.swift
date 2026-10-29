@@ -12,8 +12,6 @@ private let markdownImageURLAttribute = NSAttributedString.Key("NSImageURL")
 private let markdownAlternateDescriptionAttribute = NSAttributedString.Key("NSAlternateDescription")
 
 @available(iOS 15.0, *)
-private let markdownSoftBreakInlineIntent = InlinePresentationIntent(rawValue: 1 << 6)
-@available(iOS 15.0, *)
 private let markdownHardBreakInlineIntent = InlinePresentationIntent(rawValue: 1 << 7)
 @available(iOS 15.0, *)
 private let markdownInlineHTMLInlineIntent = InlinePresentationIntent(rawValue: 1 << 8)
@@ -1352,7 +1350,6 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
         if let rootNode = orderedNodes.first, rootIdentities.insert(rootNode.identity).inserted {
             rootNodes.append(rootNode)
         }
-
         if orderedNodes.count >= 2 {
             for index in 0 ..< (orderedNodes.count - 1) {
                 orderedNodes[index].append(child: orderedNodes[index + 1])
@@ -1762,7 +1759,7 @@ private func markdownInlineContent(from attributedString: NSAttributedString, co
         }
 
         if consumeNextSoftBreak {
-            if let inlineIntent, inlineIntent.contains(markdownSoftBreakInlineIntent), text == " " {
+            if markdownRunIsSoftBreak(attributes, text: text) {
                 consumeNextSoftBreak = false
                 return
             }

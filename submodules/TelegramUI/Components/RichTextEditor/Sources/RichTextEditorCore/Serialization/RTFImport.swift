@@ -2,7 +2,7 @@ import Foundation
 
 public enum RTFImport {
     /// `paragraphSpacingAsBlankLines`: a gap between two top-level paragraphs that exists only as paragraph
-    /// spacing (`\\saN` after the first, `\\sbN` before the second) of at least
+    /// spacing (`\saN` after the first, `\sbN` before the second) of at least
     /// `RTFDocumentParser.blankLineSpacingTwips` becomes an empty paragraph — a blank line, once the document is
     /// flattened to text. WebKit writes a copied page's paragraph margins that way (a ChatGPT reply in Safari:
     /// `<p>`, `<h3>`, `<li>`). Items of one list stay on consecutive lines, and a gap that already is an empty
@@ -142,6 +142,9 @@ final class RTFDocumentParser {
             curSawListText = false
             return
         }
+        // A paragraph of nothing but whitespace (a page's `<p>&nbsp;</p>` or `<p><br></p>` spacer) already is
+        // the blank line between its neighbours: none is added beside it.
+        let isBlankLine = runs.allSatisfy { $0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         // Code: every run mono → merge into a trailing code block.
         if runs.allSatisfy({ $0.attributes.inlineCode }) {
             let stripped = runs.map { TextRun(text: $0.text, attributes: CharacterAttributes()) }
@@ -149,10 +152,10 @@ final class RTFDocumentParser {
                 last.runs.append(TextRun(text: "\n")); last.runs.append(contentsOf: stripped)
                 blocks[blocks.count - 1] = .code(last)
             } else {
-                appendBlankLineForParagraphGap(isListItem: false)
+                if !isBlankLine { appendBlankLineForParagraphGap(isListItem: false) }
                 blocks.append(.code(CodeBlock(id: .generate(), runs: stripped)))
             }
-            previousBlockGap = (curSpaceAfter, false)
+            previousBlockGap = isBlankLine ? nil : (curSpaceAfter, false)
             runs = []; return
         }
         let pt = state.fontSizeHalfPoints / 2
@@ -176,9 +179,9 @@ final class RTFDocumentParser {
                 runs[0] = TextRun(text: det.remainder, attributes: first.attributes)
             }
         }
-        appendBlankLineForParagraphGap(isListItem: list != nil)
+        if !isBlankLine { appendBlankLineForParagraphGap(isListItem: list != nil) }
         blocks.append(.paragraph(ParagraphBlock(id: .generate(), style: style, list: list, runs: runs)))
-        previousBlockGap = (curSpaceAfter, list != nil)
+        previousBlockGap = isBlankLine ? nil : (curSpaceAfter, list != nil)
         runs = []
         curListLevel = nil
         curListMarkerText = ""

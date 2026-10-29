@@ -561,7 +561,7 @@ string — `**bold**` becomes bold, `# Heading` / `- list` / a `|`-table become 
 only (no drag-&-drop, programmatic insert, or share-extension prefill). Always-on; undo is the escape hatch.
 
 **Pipeline (reuses the send-path parser).** `chatInputContentFromPastedMarkdown(context:plainText:)`
-(`TelegramUI/Sources/PastedMarkdownConversion.swift`) runs the same CommonMark parser the rich-message *send*
+(`BrowserUI/Sources/PastedMarkdownConversion.swift`) runs the same CommonMark parser the rich-message *send*
 path uses — `inputRichTextAttributeFromText` (`BrowserUI/BrowserMarkdown.swift`, Apple `NSAttributedString(markdown:)`
 with default options) → `InstantPage` → `chatInputContent(fromInstantPage:)` → `ChatInputContent`. A pure gate
 `pastedMarkdownContentIsRicherThanPlain(_:)` (`TextFormat/PastedMarkdownGate.swift`) returns nil when the parse
@@ -604,10 +604,10 @@ label, so those entities are unaffected. **The same rule is applied on the other
 (`storeAttributedTextInPasteboard`) is deliberately NOT touched: it keeps whatever entities the source message
 carried.
 
-**Why the monolith owns the parse.** `BrowserUI` already depends on `ChatRichTextEditorComposer`, so neither the
+**Why the parse is injected.** `BrowserUI` already depends on `ChatRichTextEditorComposer`, so neither the
 panel, the attachment screen, nor the `RichTextEditor` package may import it (cycle). The parse therefore lives in
-the `TelegramUI` monolith (the one layer that can import `BrowserUI` + `AccountContext`) and is **injected downward
-as a closure**. The `RichTextEditor` package stays markdown-free: it exposes a neutral
+`BrowserUI` and the `TelegramUI` monolith **injects it downward as a closure**; the composer harness
+(`Tests/ComposerHarness`) injects the same function. The `RichTextEditor` package stays markdown-free: it exposes a neutral
 `plainTextFragmentTransformer: ((String) -> Document?)?` it calls without knowing what markdown is.
 
 **Wiring.**
@@ -681,7 +681,7 @@ when the message is sent — a separate send-path change.
 | markers (mention/date, code) | `TextFormat/.../MentionDateMarkers.swift`, `CodeBlockMarkers.swift` |
 | native node | `Chat/ChatRichTextEditorComposer/Sources/RichTextEditorChatInputNode.swift` |
 | panel (GET/SET, node select) | `Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift` |
-| markdown-on-paste parse (monolith) | `TelegramUI/Sources/PastedMarkdownConversion.swift` |
+| markdown-on-paste parse | `BrowserUI/Sources/PastedMarkdownConversion.swift` |
 | markdown-on-paste gate | `TextFormat/Sources/PastedMarkdownGate.swift` (`+ Tests/PastedMarkdownGateTests.swift`) |
 | self-referential-link strip (paste) | `TextFormat/Sources/SelfReferentialLinks.swift` (`+ Tests/SelfReferentialLinkTests.swift`); editor-side duplicate `RichTextEditorCore/Model/SelfReferentialLinks.swift` |
 | CommonMark → InstantPage (send + paste) | `BrowserUI/Sources/BrowserMarkdown.swift` (`inputRichTextAttributeFromText`) |

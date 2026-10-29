@@ -45,6 +45,7 @@ import WalletContext
 import WalletSendScreen
 import ChatMediaEditorScreen
 import ChatMediaSend
+import BrowserUI
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {

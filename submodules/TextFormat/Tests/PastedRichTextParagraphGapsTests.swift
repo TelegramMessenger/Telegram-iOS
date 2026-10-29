@@ -41,6 +41,14 @@ final class PastedRichTextParagraphGapsTests: XCTestCase {
         XCTAssertEqual(attributedStringWithParagraphSpacingAsBlankLines(string).string, "a\n\nb")
     }
 
+    /// A spacer paragraph (`<p>&nbsp;</p>`, `<p><br></p>`) already is the blank line: none is added beside it.
+    func test_whitespaceOnlySpacer_isABlankLine() {
+        let nbsp = joined([paragraph("a", spacingAfter: 15.0), paragraph("\u{00A0}", spacingAfter: 15.0), paragraph("b", spacingAfter: 15.0)])
+        XCTAssertEqual(attributedStringWithParagraphSpacingAsBlankLines(nbsp).string, "a\n\u{00A0}\nb")
+        let lineBreak = joined([paragraph("a", spacingAfter: 15.0), paragraph("\u{2028}", spacingAfter: 15.0), paragraph("b", spacingAfter: 15.0)])
+        XCTAssertEqual(attributedStringWithParagraphSpacingAsBlankLines(lineBreak).string, "a\n\u{2028}\nb")
+    }
+
     func test_lineSeparator_isNotAParagraphBreak() {
         let string = joined([paragraph("Position: Butler\u{2028}Employment: Full-time", spacingAfter: 15.0), paragraph("Next", spacingAfter: 15.0)])
         XCTAssertEqual(attributedStringWithParagraphSpacingAsBlankLines(string).string, "Position: Butler\u{2028}Employment: Full-time\n\nNext")

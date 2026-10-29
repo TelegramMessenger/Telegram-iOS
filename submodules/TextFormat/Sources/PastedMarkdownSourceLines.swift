@@ -5,17 +5,16 @@ import Foundation
 /// blocks. Here, beside the paste gate, so the parser's behaviour is pinned by `TextFormatTests`.
 
 /// A CommonMark soft break — a single newline inside a paragraph — which Foundation emits as a `" "` run whose
-/// inline presentation intent has the soft-break bit set (bit 6; Foundation declares no name for it).
+/// inline presentation intent contains `.softBreak`.
 @available(iOS 15.0, *)
 public func markdownRunIsSoftBreak(_ attributes: [NSAttributedString.Key: Any], text: String) -> Bool {
     guard text == " " else {
         return false
     }
-    let softBreak = InlinePresentationIntent(rawValue: 1 << 6)
     if let intent = attributes[NSAttributedString.Key("NSInlinePresentationIntent")] as? InlinePresentationIntent {
-        return intent.contains(softBreak)
+        return intent.contains(.softBreak)
     } else if let intent = attributes[NSAttributedString.Key("NSInlinePresentationIntent")] as? NSNumber {
-        return InlinePresentationIntent(rawValue: intent.uintValue).contains(softBreak)
+        return InlinePresentationIntent(rawValue: intent.uintValue).contains(.softBreak)
     }
     return false
 }

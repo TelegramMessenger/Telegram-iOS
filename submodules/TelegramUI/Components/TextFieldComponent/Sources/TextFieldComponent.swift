@@ -525,12 +525,9 @@ public final class TextFieldComponent: Component {
                     // become line breaks, as in the length-limited paste below, rather than the whole paste being
                     // refused.
                     let collapsed = NSMutableAttributedString(attributedString: attributedString)
-                    while true {
-                        let blankLine = (collapsed.string as NSString).range(of: "\n\n")
-                        if blankLine.location == NSNotFound {
-                            break
-                        }
-                        collapsed.deleteCharacters(in: NSRange(location: blankLine.location, length: 1))
+                    // Back to front, so a deletion leaves the matches still to visit where they were.
+                    for match in try! NSRegularExpression(pattern: "\n{2,}").matches(in: collapsed.string, range: NSRange(location: 0, length: collapsed.length)).reversed() {
+                        collapsed.deleteCharacters(in: NSRange(location: match.range.location + 1, length: match.range.length - 1))
                     }
                     attributedString = collapsed
                 }
