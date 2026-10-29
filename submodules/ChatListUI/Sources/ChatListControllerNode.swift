@@ -1743,7 +1743,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 accessoryPanelContainer: self.controller?.accessoryPanelContainer,
                 accessoryPanelContainerHeight: self.controller?.accessoryPanelContainerHeight ?? 0.0,
                 // The chat side list's header is clear over the list, as in the design.
-                hidesEdgeEffect: self.controller?.isSideList ?? false,
+                hasEdgeEffect: !(self.controller?.isSideList ?? false),
                 activateSearch: { [weak self] searchContentNode in
                     guard let self, let controller = self.controller else {
                         return

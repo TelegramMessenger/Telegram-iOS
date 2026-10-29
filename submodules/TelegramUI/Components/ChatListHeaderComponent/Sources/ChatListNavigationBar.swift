@@ -77,8 +77,6 @@ public final class ChatListNavigationBar: Component {
     public let accessoryPanelContainer: ASDisplayNode?
     public let accessoryPanelContainerHeight: CGFloat
     public let hasEdgeEffect: Bool
-    /// No edge effect at all (the chat side list): the content scrolls under a clear header.
-    public let hidesEdgeEffect: Bool
     public let edgeEffectColor: UIColor?
     public let hasOwnGlassContainer: Bool
     public let activateSearch: (NavigationBarSearchContentNode) -> Void
@@ -113,7 +111,6 @@ public final class ChatListNavigationBar: Component {
         hasEdgeEffect: Bool = true,
         edgeEffectColor: UIColor? = nil,
         hasOwnGlassContainer: Bool = true,
-        hidesEdgeEffect: Bool = false,
         activateSearch: @escaping (NavigationBarSearchContentNode) -> Void,
         openStatusSetup: @escaping (UIView) -> Void,
         allowAutomaticOrder: @escaping () -> Void,
@@ -143,7 +140,6 @@ public final class ChatListNavigationBar: Component {
         self.hasEdgeEffect = hasEdgeEffect
         self.edgeEffectColor = edgeEffectColor
         self.hasOwnGlassContainer = hasOwnGlassContainer
-        self.hidesEdgeEffect = hidesEdgeEffect
         self.activateSearch = activateSearch
         self.openStatusSetup = openStatusSetup
         self.allowAutomaticOrder = allowAutomaticOrder
@@ -213,9 +209,6 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.hasEdgeEffect != rhs.hasEdgeEffect {
-            return false
-        }
-        if lhs.hidesEdgeEffect != rhs.hidesEdgeEffect {
             return false
         }
         if lhs.edgeEffectColor != rhs.edgeEffectColor {
@@ -594,7 +587,6 @@ public final class ChatListNavigationBar: Component {
             edgeEffectHeight = max(0.0, edgeEffectHeight)
             let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: currentLayout.size.width, height: edgeEffectHeight))
             transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
-            self.edgeEffectView.isHidden = component.hidesEdgeEffect
             self.edgeEffectView.update(content: nil, blur: true, alpha: ChatListNavigationBar.View.edgeEffectTintAlpha, rect: edgeEffectFrame, edge: .top, edgeSize: min(ChatListNavigationBar.View.edgeEffectEdgeLength, edgeEffectHeight), transition: transition)
             
             let headerTransition = transition

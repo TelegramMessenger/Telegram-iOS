@@ -7701,6 +7701,7 @@ private final class ChatListSideListAvatarButtonNode: ASDisplayNode {
 
     override func layout() {
         super.layout()
-        self.avatarNode.frame = self.bounds
+        // Inside the button's glass, as the chat header's avatar sits.
+        self.avatarNode.frame = self.bounds.insetBy(dx: 3.0, dy: 3.0)
     }
 }
