@@ -44,6 +44,16 @@ private struct NotificationItemSpring {
     }
 }
 
+// `DeviceMetrics.type` counts the iPad minis as phones.
+private func isIPad(_ deviceMetrics: DeviceMetrics) -> Bool {
+    switch deviceMetrics {
+    case .iPadMini, .iPadMini6thGen:
+        return true
+    default:
+        return deviceMetrics.type == .tablet
+    }
+}
+
 final class NotificationItemContainerNode: ASDisplayNode {
     private struct Motion {
         let springs: [NotificationItemSpring]
@@ -321,6 +331,10 @@ final class NotificationItemContainerNode: ASDisplayNode {
                 } else {
                     contentInsets.top += 29.0
                 }
+            } else if let statusBarHeight = layout.statusBarHeight, statusBarHeight > 20.0, isIPad(layout.deviceMetrics) {
+                // The iPad status bar is not hidden while a banner shows (`NotificationContainerController`), and the latest
+                // iPadOS blurs whatever is under it: keep the banner below it.
+                contentInsets.top = max(contentInsets.top, statusBarHeight + 6.0)
             }
             
             let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: false)
