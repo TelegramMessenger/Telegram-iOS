@@ -410,13 +410,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         )
     }
     
-    /// A loaded row's top in the content's coordinates as last committed, its own slide included: it sits in the list's
-    /// row container, a direct child of the content, which never animates. Nil before its first commit.
+    /// A loaded row's top in the content's coordinates as last committed, its own slide included, through the parents it
+    /// was committed in (a row back from a crossing carry was committed in another overlay than the one it is in now).
+    /// Nil before its first commit.
     private func presentedContentTop(of row: UIView) -> CGFloat? {
-        guard let rowPresentation = row.layer.presentation(), let containerPresentation = row.layer.superlayer?.presentation() else {
+        guard let rowPresentation = row.layer.presentation(), let contentPresentation = self.listView.scrollGestureHostView.layer.presentation() else {
             return nil
         }
-        return containerPresentation.frame.minY - containerPresentation.bounds.minY + rowPresentation.frame.minY
+        return rowPresentation.convert(rowPresentation.bounds, to: contentPresentation).minY
     }
     
     /// Places the glass in the content's coordinates (the mirror's), at once: from the first loaded row's top, which is
