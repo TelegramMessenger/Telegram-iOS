@@ -61,7 +61,9 @@ constants.
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
-  `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`.
+  `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`;
+  `layout.centeredListPlacement(base:)` for a list narrowed on both sides whose rows fill its width (their side
+  insets then take no strip, which the margin already clears).
 - Legacy hosts: `reservedCornersForHostedLayout(size:orientation:)`; `LegacyComponentsContext.statusIslandTrailingInset`.
 - Status bar style: `layout.coversStatusCorner(frame:)` tells whether a surface still overlaps the status corner block;
   `NavigationModalContainer.presentedCardFrame` is a card's frame including an interactive dismiss.
