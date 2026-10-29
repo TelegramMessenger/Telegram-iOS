@@ -106,6 +106,11 @@ the Duo simulator.
 (in the fields' row in Settings, in the button's frame in the login flow); with equal side insets all are the previous
 ones.
 
+`//submodules/ItemListUI:ItemListUITests` covers `itemListDisclosureLabelConstrainedWidth`, the room an
+`ItemListDisclosureItem` row leaves its trailing value after the title: the legacy reserve by default, or the
+`minimumLabelSpacing` a row names (Data and Storage's usage rows use 6pt, so «Использование трафика» and a compact
+size share a 390pt line; on 375pt and narrower the value truncates). Titles are never shortened for the value.
+
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the
@@ -126,6 +131,8 @@ existed). No builtin raw value an older build does not know reaches `"t"` or `"t
 extensions force-unwrap at launch. The bubble-free theme is built and recoloured as the app does. Building a
 `PresentationTheme` works in the test process (`makePresentationTheme` takes a `MediaBox` on a temporary directory);
 `PresentationStrings` does not, so no `PresentationData` and no theme names in these tests.
+It also covers `dataSizeString`'s `compact` format ("48 МБ", "131 МБ", "27,2 ГБ", "1 ГБ" for 1000 MB), with a
+`DataSizeStringFormatting` built from plain `FormattedString`s instead of the app's strings.
 
 The RichTextEditor SwiftPM package keeps its own suite (`swift test` / `Scripts/iostest.sh`). MtProtoKit's suite
 (`//submodules/MtProtoKit:MtProtoKitTests`) also runs on macOS: `swift test` in `submodules/MtProtoKit` (the package's
