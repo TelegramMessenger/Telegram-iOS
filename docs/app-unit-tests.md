@@ -83,6 +83,11 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
+`//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests` covers `EntityKeyboardSideInsets.swift`, the
+emoji / stickers / GIFs keyboard's placement beside the Duo's side strip: the grid and the centred controls (group
+headers, the GIFs / Stickers / Emoji switcher) centre on the band between the side insets, and the pack rows are clipped
+to it; with equal side insets the old expressions come out exactly.
+
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the
