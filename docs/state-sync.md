@@ -718,7 +718,9 @@ transaction that parses the answer, `historyFillReconciliation` reads the stored
 the fill started from (by id, or from the tag's date-ordered index in a tag fill), and each one the answer lacks is a
 candidate. `historyFillConfirmationPlan` takes at most `historyFillConfirmationLimit` (200) of them, nearest the edge
 first; with more, the fill closes only `closedRange`, cut just before the nearest left-over on each side (it always
-holds the edge), and the rest stays a hole for the next fill. The same transaction reads the `stableVersion` of each
+holds the edge), and makes the rest of `filledRange` a hole for the next fill, also where it was none: an earlier
+fill can have closed part of it over messages since deleted (one held across a cleared history and an account reset).
+The same transaction reads the `stableVersion` of each
 batch candidate and of each answer message already stored. With candidates, nothing is stored and no hole closes until
 `confirmStoredMessages` answers (through the fill's own source, so a preload fill confirms through its download
 session); a fill disposed meanwhile writes nothing. Then one transaction stores the answer without the messages deleted
