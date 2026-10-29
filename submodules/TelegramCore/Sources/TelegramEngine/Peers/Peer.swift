@@ -582,8 +582,8 @@ public extension EnginePeer {
         return self._asPeer().hasCustomNameColor
     }
 
-    func hasSensitiveContent(platform: String) -> Bool {
-        return self._asPeer().hasSensitiveContent(platform: platform)
+    func hasSensitiveContent(platform: String, contentSettings: ContentSettings) -> Bool {
+        return self._asPeer().hasSensitiveContent(platform: platform, contentSettings: contentSettings)
     }
 }
 

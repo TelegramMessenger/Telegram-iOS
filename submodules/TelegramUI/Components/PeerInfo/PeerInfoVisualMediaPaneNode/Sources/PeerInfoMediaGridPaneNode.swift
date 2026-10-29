@@ -231,7 +231,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         }
         let rawMessage = message._asMessage()
         var hasSpoiler = rawMessage.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) && !self.revealedSpoilerMessageIds.contains(message.id)
-        if rawMessage.isSensitiveContent(platform: "ios") {
+        if rawMessage.isSensitiveContent(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) {
             hasSpoiler = true
         }
         let isHidden = self.hiddenMedia[message.id] != nil
@@ -578,7 +578,7 @@ public final class PeerInfoMediaGridPaneNode: ASDisplayNode, PeerInfoVisualMedia
         }
         if let selectionState = self.chatControllerInteraction.selectionState {
             self.chatControllerInteraction.toggleMessagesSelection([message.id], !selectionState.selectedIds.contains(message.id))
-        } else if !message._asMessage().isSensitiveContent(platform: "ios") {
+        } else if !message._asMessage().isSensitiveContent(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) {
             let _ = self.chatControllerInteraction.openMessage(message._asMessage(), OpenMessageParams(mode: .default))
         }
     }
