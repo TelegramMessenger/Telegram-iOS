@@ -1369,8 +1369,8 @@ public final class StoryItemSetContainerComponent: Component {
             if let inputView = self.inputPanel.view, let inputViewHitTest = inputView.hitTest(self.convert(point, to: inputView), with: event) {
                 return inputViewHitTest
             }
-            // The footer row can be wider than the card (`minimumInputPanelWidth`), as the input row can: its ends outside
-            // the card take touches too; its empty space there stays the backdrop's.
+            // The footer row can be wider than the card (`minimumInputPanelWidth`), as the input row can: its controls outside
+            // the card take touches too (the views button on the left, as on a phone); its empty space stays the backdrop's.
             if !self.bounds.contains(point), let component = self.component, let footerPanelView = self.visibleItems[component.slice.item.id]?.footerPanel?.view, let footerPanelHitTest = footerPanelView.hitTest(self.convert(point, to: footerPanelView), with: event), footerPanelHitTest !== footerPanelView {
                 return footerPanelHitTest
             }
