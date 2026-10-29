@@ -1038,6 +1038,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             }
             
+            // iPhone Duo: in the sheet the page keeps to the band beside a side strip, where the navigation
+            // bar's back/close and more buttons stand (most pages ignore the safe area we report); the
+            // background spans the strip. Full screen fills the screen beside the strip. Zero without a strip.
+            let stripLeft: CGFloat = !controller.isFullscreen && layout.sideStrip(edge: .left) != nil ? layout.safeInsets.left : 0.0
+            let stripRight: CGFloat = !controller.isFullscreen && layout.sideStrip(edge: .right) != nil ? layout.safeInsets.right : 0.0
+            
             if let webView = self.webView {
                 let inputHeight = self.validLayout?.0.inputHeight ?? 0.0
                 
@@ -1052,7 +1058,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let topInset: CGFloat = controller.isFullscreen ? 0.0 : navigationBarHeight
                 
-                let webViewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - topInset - frameBottomInset)))
+                let webViewFrame = CGRect(origin: CGPoint(x: stripLeft, y: topInset), size: CGSize(width: layout.size.width - stripLeft - stripRight, height: max(1.0, layout.size.height - topInset - frameBottomInset)))
                 if !webView.frame.width.isZero && webView.frame != webViewFrame {
                     self.updateWebViewWhenStable = true
                 }
@@ -1111,8 +1117,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     customInsets.bottom = layout.intrinsicInsets.bottom
                 }
-                customInsets.left = layout.safeInsets.left
-                customInsets.right = layout.safeInsets.right
+                customInsets.left = layout.safeInsets.left - stripLeft
+                customInsets.right = layout.safeInsets.right - stripRight
                 webView.customInsets = customInsets
                 
                 if let controller = self.controller {
@@ -1148,7 +1154,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     placeholderY = floorToScreenPixels((height - placeholderSize.height) / 2.0)
                 }
-                let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
+                let placeholderFrame =  CGRect(origin: CGPoint(x: stripLeft + floorToScreenPixels((layout.size.width - stripLeft - stripRight - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
             }
