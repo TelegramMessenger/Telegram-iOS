@@ -69,6 +69,7 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//submodules/UndoUI:UndoUITests`, `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests`,
 `//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests`,
 `//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen:ChatSendStarsScreenTests`,
+`//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests`,
 `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests`,
 `//submodules/TelegramPresentationData:TelegramPresentationDataTests`,
 `//submodules/MtProtoKit:MtProtoKitTests` (also `swift test` in `submodules/MtProtoKit` on macOS), and the targets the
