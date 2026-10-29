@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import CoreText
 import AsyncDisplayKit
+import SwiftSignalKit
 import Display
 import ComponentFlow
 import AccountContext
@@ -210,6 +211,11 @@ private final class NewsGalleryItemView: UIView {
     private let durationLabel = UILabel()
     private(set) var mediaId: EngineMedia.Id?
     var action: (() -> Void)?
+    /// The photo this view shows, for the media viewer's hidden media: while the viewer shows it, the photo here is
+    /// hidden, as the chat hides its own (the viewer zooms out of a copy).
+    private var shownMedia: (accountId: AccountRecordId, messageId: EngineMessage.Id, media: EngineMedia)?
+    private var hiddenMediaDisposable: Disposable?
+    private var hiddenIds = Set<GalleryHiddenMediaId>()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -229,11 +235,42 @@ private final class NewsGalleryItemView: UIView {
         preconditionFailure()
     }
 
+    deinit {
+        self.hiddenMediaDisposable?.dispose()
+    }
+
     @objc private func tapped() {
         self.action?()
     }
 
+    private func updateHidden() {
+        var isHidden = false
+        if let shown = self.shownMedia {
+            let media = shown.media._asMedia()
+            isHidden = self.hiddenIds.contains(where: { id in
+                if case let .chat(accountId, messageId, hiddenMedia) = id {
+                    return accountId == shown.accountId && messageId == shown.messageId && hiddenMedia.isEqual(to: media)
+                }
+                return false
+            })
+        }
+        self.imageNode.isHidden = isHidden
+        self.durationLabel.alpha = isHidden ? 0.0 : 1.0
+    }
+
     func update(context: AccountContext, item: NewsGalleryMedia, size: CGSize) {
+        if self.hiddenMediaDisposable == nil {
+            self.hiddenMediaDisposable = (context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds()
+            |> deliverOnMainQueue).start(next: { [weak self] ids in
+                guard let self else {
+                    return
+                }
+                self.hiddenIds = ids
+                self.updateHidden()
+            })
+        }
+        self.shownMedia = (context.account.id, item.message.id, item.media)
+        self.updateHidden()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
         if self.mediaId != item.id {
             self.mediaId = item.id

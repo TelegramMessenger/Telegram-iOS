@@ -1,8 +1,9 @@
 import Foundation
 import CoreGraphics
 
-/// A pinch on the feed switches Compact and Expanded, the "…" menu's choice. The whole feed follows the fingers down
-/// to `switchScale` (or up to its inverse): there the rows morph, with a tap of haptics, and past it the feed only
+/// A pinch on the feed switches Compact and Expanded, the "…" menu's choice: out expands, in compacts (a pinch toward
+/// the mode on screen only gives). The whole feed follows the fingers down to `switchScale` (or up to its inverse):
+/// there the rows morph, with a tap of haptics, and past it the feed only
 /// gives a little more, as a scroll view past its end does. On release the feed springs back to 1.
 public enum NewsFeedPinch {
     /// The feed's scale at which the mode switches: a pinch in to 0.8, or out to 1 / 0.8.

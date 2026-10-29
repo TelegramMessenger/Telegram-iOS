@@ -224,7 +224,7 @@ is the same in both modes: `NewsAddedFeedBinding` chooses the source, nothing el
 
 - **A pinch on the feed switches the modes** (`NewsFeedPinch` in NewsFeedSupport): the lists' container
   follows the fingers to 0.8 in (1.25 out), switches there, and rubber-bands past it; on release it springs back
-  to 1. Every animated switch, of the feed (the pinch, the menu) or of one row (the swipe), taps `.medium`
+  to 1. Out expands and in compacts, as Photos zooms its grid; a pinch toward the mode on screen only gives. Every animated switch, of the feed (the pinch, the menu) or of one row (the swipe), taps `.medium`
   haptics in `applyDisplayMode` / `postSwipeAction`. The pinch first folds the search block under the top row (a
   scroll by the block's height), or the scaled feed would pass through it. That fold is the pinch's, not the user's: a
   list that rested at its top with the search open goes back to its top on the 0.5 s spring once the pinch is over and

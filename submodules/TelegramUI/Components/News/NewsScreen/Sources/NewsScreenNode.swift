@@ -557,8 +557,12 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             let progress = newsFeedPinchProgress(ratio: recognizer.scale)
             self.setFeedScale(newsFeedPinchScale(progress: progress), transition: .immediate)
             if self.pinchState.update(progress: progress) {
-                // The rows morph while the feed is still held small: the switch is seen where the fingers are.
-                self.setDisplayMode(self.displayMode == .compact ? .expanded : .compact)
+                // Out expands, in compacts, as Photos zooms its grid; toward the mode on screen the feed only gives.
+                // The rows morph while the feed is still held scaled: the switch is seen where the fingers are.
+                let displayMode: NewsFeedDisplayMode = progress > 0.0 ? .expanded : .compact
+                if displayMode != self.displayMode {
+                    self.setDisplayMode(displayMode)
+                }
             }
         case .ended, .cancelled, .failed:
             self.setFeedScale(1.0, transition: .animated(duration: 0.5, curve: .spring))
