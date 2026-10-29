@@ -1563,15 +1563,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         let sourceButtonFrame = self.startButton.frame
         transition.updateFrame(node: self.startButton, frame: self.menuButton.frame)
-        transition.updateFrame(node: self.startButton.buttonBackgroundNode, frame: CGRect(origin: .zero, size: self.menuButton.frame.size))
         let sourceButtonTextPosition = self.startButton.titleNode.position
         transition.updatePosition(node: self.startButton.titleNode, position: CGPoint(x: self.menuButton.frame.width / 2.0, y: self.menuButton.frame.height / 2.0))
         
         let sourceButtonCornerRadius = self.startButton.buttonCornerRadius
         // The menu button draws a capsule (`menuButtonBackgroundView`), rounder than its node's clipping radius.
         let targetCornerRadius = self.menuButton.frame.height * 0.5
-        transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: targetCornerRadius)
-        // The button's glass chrome and shimmer keep its full-width size: clip them to the shrinking background.
+        // Every layer drawing the button's shape follows the frame on the same timing, its corner radius going from
+        // Start's to the menu button's: the shape stays one capsule throughout, with no layer keeping its own corner.
+        self.startButton.updateShape(size: self.menuButton.frame.size, cornerRadius: targetCornerRadius, transition: transition)
+        // The glass chrome keeps its width (see `updateShape`): clip the button to the same capsule.
         self.startButton.clipsToBounds = true
         self.startButton.cornerRadius = sourceButtonCornerRadius
         transition.updateCornerRadius(node: self.startButton, cornerRadius: targetCornerRadius)
@@ -1606,10 +1607,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 self.startButton.isHidden = true
                 self.startButton.layer.removeAnimation(forKey: "opacity")
                 self.startButton.frame = sourceButtonFrame
-                self.startButton.buttonBackgroundNode.frame = CGRect(origin: .zero, size: sourceButtonFrame.size)
+                self.startButton.updateShape(size: sourceButtonFrame.size, cornerRadius: sourceButtonCornerRadius, transition: .immediate)
                 self.startButton.titleNode.position = sourceButtonTextPosition
                 self.startButton.titleNode.layer.removeAllAnimations()
-                self.startButton.buttonBackgroundNode.cornerRadius = sourceButtonCornerRadius
                 self.startButton.clipsToBounds = false
                 self.startButton.cornerRadius = 0.0
                 self.startButton.highlightEnabled = true
