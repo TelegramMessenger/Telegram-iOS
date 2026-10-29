@@ -1367,11 +1367,17 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             // A menu that opens above its reference (a tab bar item, say) and is taller than the space above it would
             // start above the screen, where the scroller cannot reach: its content only extends downward. Lay the menu
             // out from the top inset instead and make the content taller by the overflow, so it opens scrolled to where
-            // it was and its top can be scrolled into view.
+            // it was and its top can be scrolled into view. A menu that morphs out of its source and grows upward (an
+            // editor's toolbar above the keyboard, a pushed submenu taller than the room above it) is handled alike; its
+            // additional actions stack above it, so they count towards its top.
             var actionsTopOverflow: CGFloat = 0.0
-            if morphMenuAnchor == nil, actionsAboveReference, actionsFrame.minY < contentTopInset {
-                actionsTopOverflow = contentTopInset - actionsFrame.minY
-                actionsFrame.origin.y = contentTopInset
+            var actionsMinY = contentTopInset
+            if let morphMenuAnchor, morphMenuAnchor.growsUpward, additionalActionsSize.height > 0.0 {
+                actionsMinY += additionalActionsSize.height + 10.0
+            }
+            if actionsAboveReference, actionsFrame.minY < actionsMinY {
+                actionsTopOverflow = actionsMinY - actionsFrame.minY
+                actionsFrame.origin.y = actionsMinY
             }
             
             // iPhone Duo: on a side with a side strip the menu stays out of the strip where a corner block (the
