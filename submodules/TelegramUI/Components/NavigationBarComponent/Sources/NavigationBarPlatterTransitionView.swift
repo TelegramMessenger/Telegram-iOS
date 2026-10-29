@@ -124,6 +124,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
         /// Centred in their capsule wherever it is, rather than where their bar has them: a title pill its bar moved
         /// (`switchTo`).
         var ridesPlatter = false
+        /// While riding: how far they still are from their capsule's centre, easing to nothing, so that they take up
+        /// from where they were.
+        var rideOffsetX = NavigationSpringCurve.constant(0.0, rest: .glass(0.01))
+        var rideOffsetY = NavigationSpringCurve.constant(0.0, rest: .glass(0.01))
 
         init(side: SideKind, view: UIView, frame: CGRect, appearance: CGFloat, motion: NavigationBarGlassMotion) {
             self.side = side
@@ -134,12 +138,21 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.blurRadius = motion.blurRadius
         }
 
-        /// Where the items are in their capsule when the capsule is at `platterFrame`.
-        func center(inPlatterAt platterFrame: CGRect) -> CGPoint {
+        /// Where the items are in their capsule at `time`, the capsule being at `platterFrame`.
+        func center(inPlatterAt platterFrame: CGRect, time: Double) -> CGPoint {
             if self.ridesPlatter {
-                return CGPoint(x: platterFrame.width * 0.5, y: platterFrame.height * 0.5)
+                return CGPoint(x: platterFrame.width * 0.5 + self.rideOffsetX.value(at: time), y: platterFrame.height * 0.5 + self.rideOffsetY.value(at: time))
             }
             return CGPoint(x: self.frame.midX - platterFrame.minX, y: self.frame.midY - platterFrame.minY)
+        }
+
+        /// From now on centred in their capsule, now at `platterFrame` with its centre moving at `platterVelocity`: they
+        /// start where they are, at rest, and ease into the centre.
+        func startRiding(platterFrame: CGRect, platterVelocity: CGPoint, spring: NavigationTransitionSpring, at time: Double) {
+            let center = self.center(inPlatterAt: platterFrame, time: time)
+            self.ridesPlatter = true
+            self.rideOffsetX = NavigationSpringCurve(startTime: time, from: center.x - platterFrame.width * 0.5, velocity: -platterVelocity.x, target: 0.0, spring: spring, rest: .glass(0.01))
+            self.rideOffsetY = NavigationSpringCurve(startTime: time, from: center.y - platterFrame.height * 0.5, velocity: -platterVelocity.y, target: 0.0, spring: spring, rest: .glass(0.01))
         }
     }
 
@@ -243,7 +256,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                 result = max(result, kick.restTime)
             }
             for items in self.items {
-                result = max(result, items.appearance.restTime)
+                result = max(result, items.appearance.restTime, items.rideOffsetX.restTime, items.rideOffsetY.restTime)
             }
             return result
         }
@@ -262,6 +275,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.kick = self.kick?.rebased(by: time)
             for items in self.items {
                 items.appearance = items.appearance.rebased(by: time)
+                items.rideOffsetX = items.rideOffsetX.rebased(by: time)
+                items.rideOffsetY = items.rideOffsetY.rebased(by: time)
             }
         }
 
@@ -282,6 +297,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.kick = nil
             for items in self.items {
                 items.appearance = settled(items.appearance)
+                items.rideOffsetX = settled(items.rideOffsetX)
+                items.rideOffsetY = settled(items.rideOffsetY)
             }
         }
 
@@ -672,9 +689,12 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     if platter.isTitlePill, let currentItems, currentItems.side == side, currentItems.frame != frame {
                         // The bar moved its title pill (the chat header re-centred once the push has ended): what the
                         // pill shows rides the shape to the new place instead of staying behind and snapping at the
-                        // hand-over (issue #88).
+                        // hand-over (issue #88), taking up from where it is.
+                        if !currentItems.ridesPlatter {
+                            let platterVelocity = CGPoint(x: platter.x.velocity(at: self.time) + platter.width.velocity(at: self.time) * 0.5, y: platter.y.velocity(at: self.time) + platter.height.velocity(at: self.time) * 0.5)
+                            currentItems.startRiding(platterFrame: platter.frame(at: self.time), platterVelocity: platterVelocity, spring: motion.transition, at: self.time)
+                        }
                         currentItems.frame = frame
-                        currentItems.ridesPlatter = true
                     }
                     if currentItems?.side != side {
                         if otherSignature == target.signatures[role], let currentItems {
@@ -978,10 +998,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
             glowView.animate(sizes: glassFrames.map { $0.size }, glows: times.map { platter.glow.value(at: $0) }, timing: timing, isDark: platter.isDark)
         }
         for items in platter.items {
-            // Each bar's items stay where that bar has them while the shape morphs around them.
+            // Each bar's items stay where that bar has them while the shape morphs around them (unless they ride it).
             let appearances = times.map { max(0.0, min(1.0, items.appearance.value(at: $0))) }
             let scales = times.map { items.appearance.value(at: $0) }
-            add(items.view.layer, "position", frames.map { NSValue(cgPoint: items.center(inPlatterAt: $0)) })
+            add(items.view.layer, "position", zip(times, frames).map { NSValue(cgPoint: items.center(inPlatterAt: $0.1, time: $0.0)) })
             add(items.view.layer, "transform", scales.map { a in NSValue(caTransform3D: CATransform3DMakeScale(1.0 + a * (items.maxScale.width - 1.0), 1.0 + a * (items.maxScale.height - 1.0), 1.0)) })
             add(items.view.layer, "opacity", appearances.map { NSNumber(value: Float(1.0 - $0)) })
             self.addBlurKeyframes(to: items.view.layer, radii: appearances.map { items.blurRadius * $0 }, timing: timing)
@@ -1103,10 +1123,10 @@ public final class NavigationBarPlatterTransitionView: UIView {
         }
         ComponentTransition.immediate.setBlur(layer: platter.itemsHost.layer, radius: platter.blurRadius * d)
         for items in platter.items {
-            // Each bar's items stay where that bar has them while the shape morphs around them.
+            // Each bar's items stay where that bar has them while the shape morphs around them (unless they ride it).
             let a = max(0.0, min(1.0, items.appearance.value(at: self.time)))
             items.view.bounds = CGRect(origin: CGPoint(), size: items.frame.size)
-            items.view.center = items.center(inPlatterAt: frame)
+            items.view.center = items.center(inPlatterAt: frame, time: self.time)
             items.view.transform = CGAffineTransform(scaleX: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.width - 1.0), y: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.height - 1.0))
             items.view.alpha = 1.0 - a
             ComponentTransition.immediate.setBlur(layer: items.view.layer, radius: items.blurRadius * a)
@@ -1161,7 +1181,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         }
         let frame = platter.frame(at: self.now)
         return platter.items.filter { !$0.isLeaving }.map { items in
-            let center = items.center(inPlatterAt: frame)
+            let center = items.center(inPlatterAt: frame, time: self.now)
             return CGRect(x: frame.minX + center.x - items.frame.width * 0.5, y: frame.minY + center.y - items.frame.height * 0.5, width: items.frame.width, height: items.frame.height)
         }
     }

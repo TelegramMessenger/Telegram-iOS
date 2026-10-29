@@ -250,6 +250,11 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         guard self.isLingering else {
             return
         }
+        // A bar gone (the popped screen released during the linger) leaves the renderer nothing to read: hand over.
+        guard self.bottom.source != nil, self.top.source != nil else {
+            self.endLingering()
+            return
+        }
         self.renderer.update(size: self.bounds.size, fraction: self.fraction, bottomFrame: self.bottom.frame, topFrame: self.top.frame, transition: .immediate)
     }
 

@@ -854,7 +854,8 @@ final class NavigationBarNodeTests: XCTestCase {
     }
 
     // The renderer's capsules follow a pill that moved once the transition has run (the glass lingering above the bar):
-    // the pill's platter, and what it shows with it, come to rest where the bar draws the pill.
+    // what the pill shows takes up from where it was, with no step, rides the shape on the way and comes to rest with it
+    // where the bar draws the pill.
     func test_renderer_aMovedTitlePill_movesItsPlatter() {
         let bottom = self.makeLaidOutNode(title: "List", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
         let (top, titleView) = self.makePillNode(rightItems: [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)])
@@ -865,22 +866,30 @@ final class NavigationBarNodeTests: XCTestCase {
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
         renderer.beginTransition(isInteractive: false, toTop: true)
         self.time.advance(by: 0.3)
-        let restingFrame = renderer.platterViewForTesting?.platterStateForTesting(.trailing(1))?.frame
+        guard let platterView = renderer.platterViewForTesting, let restingFrame = platterView.platterStateForTesting(.trailing(1))?.frame else {
+            return XCTFail("no pill platter")
+        }
+        let itemsBefore = platterView.currentItemsFramesForTesting(.trailing(1))
         titleView.size = CGSize(width: 100.0, height: 56.0)
         self.layout(top)
         let movedFrame = titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY)
         XCTAssertNotEqual(restingFrame, movedFrame)
         renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 1.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
-        // What the pill shows rides its shape on the way, rather than staying where the pill was and snapping at the end.
-        self.time.advance(by: 0.05)
-        guard let platterView = renderer.platterViewForTesting, let midway = platterView.platterStateForTesting(.trailing(1))?.frame else {
-            return XCTFail("no pill platter")
-        }
-        XCTAssertNotEqual(midway.minX, movedFrame.minX)
-        XCTAssertEqual(platterView.currentItemsFramesForTesting(.trailing(1)).map { $0.midX }, [midway.midX])
+        let itemsAtFollow = platterView.currentItemsFramesForTesting(.trailing(1))
+        XCTAssertEqual(itemsAtFollow.count, 1)
+        XCTAssertEqual(itemsAtFollow.first?.midX ?? 0.0, itemsBefore.first?.midX ?? -1.0, accuracy: 0.001, "no step where it starts to follow")
+        self.time.advance(by: 0.1)
+        let midwayItems = platterView.currentItemsFramesForTesting(.trailing(1))
+        XCTAssertGreaterThan(midwayItems.first?.midX ?? 0.0, itemsBefore.first?.midX ?? 0.0, "on its way")
         self.time.advance(by: 1.5)
         XCTAssertEqual(platterView.platterStateForTesting(.trailing(1))?.frame, movedFrame)
         XCTAssertEqual(platterView.currentItemsFramesForTesting(.trailing(1)), [movedFrame])
+        // The view itself, as the capsules' layout placed it.
+        if let lentContent = titleView.lentContent {
+            XCTAssertEqual(lentContent.convert(lentContent.bounds, to: platterView), movedFrame)
+        } else {
+            XCTFail("nothing lent")
+        }
     }
 
     // With two right platters already (an accent circle and a capsule) the pill has no slot: not reported, never hidden.

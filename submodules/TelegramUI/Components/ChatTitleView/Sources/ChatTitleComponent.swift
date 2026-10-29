@@ -1438,8 +1438,10 @@ public final class ChatTitleComponent: Component {
                 }
                 transition.setFrame(view: backgroundView, frame: containerFrame)
                 backgroundView.update(size: containerFrame.size, cornerRadius: containerFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: isEnabled, transition: transition)
-                // Not while a transition has it (`lendGlassPillContent`, `lendExpansionLabels`): the transition places it.
-                if self.lentContentWrapper == nil && self.lentExpansionLabels == nil {
+                // Not while an expansion has it (`lendExpansionLabels`): the expansion places it. Lent to a navigation
+                // transition (`lendGlassPillContent`) it stays at its wrapper's origin, which the transition places, and
+                // takes the pill's size, so a pill that grows while the transition draws it is not clipped.
+                if self.lentExpansionLabels == nil {
                     transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
                 }
                 self.contentContainer.layer.cornerRadius = containerFrame.height * 0.5

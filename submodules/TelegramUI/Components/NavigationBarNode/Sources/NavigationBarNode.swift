@@ -501,7 +501,7 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         self.updateSideColumn(rowView: rowView, region: sideColumn, transition: rowTransition)
         self.layoutTitleView(layout: layout, rowView: rowView, contentVerticalOrigin: contentVerticalOrigin, transition: transition)
         // A title pill moved under the transition's glass: the glass follows it rather than snap at the hand-over.
-        self.glassHold.titlePillLaidOut(self.transitionTitlePill?.frame)
+        self.glassHold.titlePillLaidOut(self.transitionTitlePill)
 
         if sideColumnExtentChanged && !isContainerLayout {
             self.sideColumnExtentUpdated?(transition)
@@ -930,7 +930,7 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     }
 
     public func holdGlass(_ held: Bool, interrupted: (() -> Void)?, titlePillMoved: (() -> Void)?) -> Bool {
-        self.glassHold.hold(held, interrupted: interrupted, titlePillMoved: titlePillMoved, content: self.currentContent, rowFrame: self.currentRowFrame, titlePillFrame: self.transitionTitlePill?.frame)
+        self.glassHold.hold(held, interrupted: interrupted, titlePillMoved: titlePillMoved, content: self.currentContent, rowFrame: self.currentRowFrame, titlePill: self.transitionTitlePill)
         self.applyGlassVisibility()
         return true
     }
