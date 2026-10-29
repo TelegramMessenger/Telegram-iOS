@@ -99,8 +99,9 @@ private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNod
         
         if !hasPanel {
             // The panes start at the returned height, measured from the top of the screen like `defaultHeight` (the
-            // navigation bar's bottom, status bar included). The profile's search bar container is 10pt below the status
-            // bar and the content sits 6pt above it, so the 60pt content ends 4pt below the navigation bar.
+            // navigation bar's bottom, status bar included). With the regular 60pt navigation bar the profile's search bar
+            // container is 10pt below the status bar and the content sits 6pt above it, so the 60pt content ends 4pt
+            // below the navigation bar (with the 68pt form-sheet bar it ends at it, leaving a 4pt gap).
             contentHeight = defaultHeight + 4.0
         }
         

@@ -2510,7 +2510,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             edgeEffectFrame.origin.y += floorToScreenPixels(realAreaExpansionFraction * 50.0)
         }
-
+        
         if additive {
             transition.updateFrameAdditive(layer: self.headerEdgeEffectView.layer, frame: edgeEffectFrame)
         } else {
