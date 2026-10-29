@@ -57,19 +57,19 @@ public func resizableSheetHorizontalPlacement(containerSize: CGSize, safeInsets:
     return SheetHorizontalPlacement(minX: minX, width: width, contentSideInsets: contentSideInsets)
 }
 
-/// The insets of the band a full-width sheet's content keeps to (`SheetComponent`), or nil where it spans
-/// the container as it always has.
+/// Where a full-width sheet (`SheetComponent`) sits instead of spanning its container, or nil where it spans the
+/// container as it always has.
 ///
-/// Only a landscape layout beside a side strip has one: there the strip runs the full height and carries a
-/// corner block at one end, which a sheet tall enough to reach it would run under (folded landscape-left: the
-/// bottom-right block beside the sheet's bottom button). The sheet's background still spans the container;
-/// the content keeps to the band and has no side inset of its own. In portrait the sheet stays a bottom panel
-/// across the strip, below the status corner.
-public func sheetContentBandInsets(containerSize: CGSize, safeInsets: UIEdgeInsets) -> UIEdgeInsets? {
+/// Only a landscape layout beside a side strip has one: there the strip runs the full height and carries a corner
+/// block at one end (the unfolded screen's status corner at the top, folded landscape-left's block at the bottom),
+/// which a sheet spanning the container would run under, with its content kept to the band off the sheet's centre.
+/// The whole sheet keeps to the band instead, clear of the strip and its block, and its content has no side inset
+/// to keep. In portrait the sheet stays a bottom panel across the strip, below the status corner.
+public func sheetBandPlacement(containerSize: CGSize, safeInsets: UIEdgeInsets) -> SheetHorizontalPlacement? {
     if containerSize.width <= containerSize.height || safeInsets.left == safeInsets.right {
         return nil
     }
-    return UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: 0.0, right: safeInsets.right)
+    return SheetHorizontalPlacement(minX: safeInsets.left, width: containerSize.width - safeInsets.left - safeInsets.right, contentSideInsets: UIEdgeInsets())
 }
 
 /// How much further in a sheet's header controls (close, title, trailing button) move on each side so they do
