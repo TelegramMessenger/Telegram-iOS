@@ -458,20 +458,16 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 maxTitleWidth -= 5.0 + titleBadgeTextNodeLayoutValue.0.size.width
             }
             
-            let titleArguments = TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
-            let (titleLayoutAndApply) = item.context == nil ? makeTitleLayout(titleArguments) : nil
-            let (titleWithEntitiesLayoutAndApply) = item.context != nil ? makeTitleWithEntitiesLayout(titleArguments) : nil
-            
-            let titleLayout: TextNodeLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
-            
             let detailFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
             let labelFont: UIFont
             let labelBadgeColor: UIColor
-            var labelConstrain: CGFloat = params.width - params.rightInset - leftInset - 40.0 - titleLayout.size.width - 10.0
+            // The room the title and a trailing value share on one line.
+            var labelSharedWidth: CGFloat = params.width - params.rightInset - leftInset - 40.0 - 10.0
             if item.iconPeer != nil {
-                labelConstrain -= 6.0
+                labelSharedWidth -= 6.0
             }
+            var labelSharesTitleLine = false
             
             switch item.labelStyle {
             case .badge:
@@ -483,10 +479,14 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             case .detailText, .multilineDetailText:
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = detailFont
-                labelConstrain = params.width - params.rightInset - 40.0 - leftInset
             case let .coloredText(color):
                 labelBadgeColor = color
                 labelFont = defaultLabelFont
+                labelSharesTitleLine = true
+            case .text:
+                labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
+                labelFont = defaultLabelFont
+                labelSharesTitleLine = true
             default:
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = defaultLabelFont
@@ -495,8 +495,34 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             if case .multilineDetailText = item.labelStyle {
                 multilineLabel = true
             }
+            let labelString = item.attributedLabel ?? NSAttributedString(string: item.label, font: labelFont, textColor: labelBadgeColor)
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: item.attributedLabel ?? NSAttributedString(string: item.label, font: labelFont, textColor: labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            // A short trailing value keeps its measured width; a long title truncates or wraps instead of it.
+            var titleConstrainedWidth = maxTitleWidth
+            if labelSharesTitleLine && labelString.length != 0 {
+                let (naturalLabelLayout, _) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, labelSharedWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                var titleSharedWidth = labelSharedWidth
+                if let (titleBadgeLayout, _) = titleBadgeTextNodeLayout {
+                    titleSharedWidth -= 5.0 + titleBadgeLayout.size.width
+                }
+                titleConstrainedWidth = itemListDisclosureTitleConstrainedWidth(maxTitleWidth: maxTitleWidth, sharedWidth: titleSharedWidth, labelWidth: naturalLabelLayout.size.width)
+            }
+            
+            let titleArguments = TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: titleConstrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
+            let (titleLayoutAndApply) = item.context == nil ? makeTitleLayout(titleArguments) : nil
+            let (titleWithEntitiesLayoutAndApply) = item.context != nil ? makeTitleWithEntitiesLayout(titleArguments) : nil
+            
+            let titleLayout: TextNodeLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
+            
+            let labelConstrain: CGFloat
+            switch item.labelStyle {
+            case .detailText, .multilineDetailText:
+                labelConstrain = params.width - params.rightInset - 40.0 - leftInset
+            default:
+                labelConstrain = labelSharedWidth - titleLayout.size.width
+            }
+            
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var additionalDetailLabelInfo: (TextNodeLayout, () -> TextNode)?
             if let additionalDetailLabel = item.additionalDetailLabel {
