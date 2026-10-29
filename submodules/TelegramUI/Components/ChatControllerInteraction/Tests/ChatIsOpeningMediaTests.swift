@@ -61,13 +61,13 @@ final class ChatIsOpeningMediaTests: XCTestCase {
 
         blockInteraction.set(.single(true))
         self.wait(self.unannouncedTimeout + self.margin)
-        XCTAssertEqual(recorder.values.last, true)
+        XCTAssertEqual(recorder.values, [true, true])
 
         blockInteraction.set(.single(false))
-        XCTAssertEqual(recorder.values.last, false)
+        XCTAssertEqual(recorder.values, [true, true, false])
 
         self.wait(self.announcedTimeout + self.margin)
-        XCTAssertEqual(recorder.values.last, false)
+        XCTAssertEqual(recorder.values, [true, true, false])
     }
 
     // A gallery that reports it is opening but never that it arrived does not leave the chat's media blocked.
@@ -78,9 +78,9 @@ final class ChatIsOpeningMediaTests: XCTestCase {
 
         blockInteraction.set(.single(true))
         self.wait(self.unannouncedTimeout + self.margin)
-        XCTAssertEqual(recorder.values.last, true)
+        XCTAssertEqual(recorder.values, [true, true])
 
         self.wait(self.announcedTimeout - self.unannouncedTimeout)
-        XCTAssertEqual(recorder.values.last, false)
+        XCTAssertEqual(recorder.values, [true, true, false])
     }
 }
