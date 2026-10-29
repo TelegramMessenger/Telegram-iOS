@@ -20,12 +20,12 @@ public struct MediaGridUniformLayout: MediaGridLayout {
         self.columns = columns
         self.count = count
 
-        let contentWidth = geometry.width - 2.0 * geometry.sideInset
+        let contentWidth = geometry.contentWidth
         let width = floor((contentWidth - geometry.spacing * CGFloat(columns - 1)) / CGFloat(columns) * geometry.scale) / geometry.scale
         let height = floor(width * cellAspect * geometry.scale) / geometry.scale
         self.itemSize = CGSize(width: width, height: height)
 
-        let originPixels = Int((geometry.sideInset * geometry.scale).rounded())
+        let originPixels = Int((geometry.leftInset * geometry.scale).rounded())
         let spanPixels = max(0, Int(((contentWidth + geometry.spacing) * geometry.scale).rounded()))
         let spacingPixels = Int((geometry.spacing * geometry.scale).rounded())
         self.columnOriginPixels = originPixels
@@ -138,7 +138,7 @@ public struct MediaGridUniformLayout: MediaGridLayout {
         guard point.x.isFinite, point.y.isFinite, self.columns > 0, self.columnSpanPixels > 0 else {
             return nil
         }
-        let dx = point.x - self.geometry.sideInset
+        let dx = point.x - self.geometry.leftInset
         let dy = point.y - self.geometry.topInset
         if dx < 0 || dy < 0 || self.rowCount == 0 {
             return nil

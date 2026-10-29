@@ -3,19 +3,30 @@ import CoreGraphics
 
 public struct MediaGridGeometry: Equatable {
     public var width: CGFloat
-    public var sideInset: CGFloat
+    // The two sides differ on iPhone Duo, whose side strip is on one side only.
+    public var leftInset: CGFloat
+    public var rightInset: CGFloat
     public var topInset: CGFloat
     public var bottomInset: CGFloat
     public var spacing: CGFloat
     public var scale: CGFloat
 
-    public init(width: CGFloat, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, spacing: CGFloat, scale: CGFloat) {
+    public init(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, spacing: CGFloat, scale: CGFloat) {
         self.width = width
-        self.sideInset = sideInset
+        self.leftInset = leftInset
+        self.rightInset = rightInset
         self.topInset = topInset
         self.bottomInset = bottomInset
         self.spacing = spacing
         self.scale = scale
+    }
+
+    public init(width: CGFloat, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, spacing: CGFloat, scale: CGFloat) {
+        self.init(width: width, leftInset: sideInset, rightInset: sideInset, topInset: topInset, bottomInset: bottomInset, spacing: spacing, scale: scale)
+    }
+
+    public var contentWidth: CGFloat {
+        return self.width - self.leftInset - self.rightInset
     }
 }
 

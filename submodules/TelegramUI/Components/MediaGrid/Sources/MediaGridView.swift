@@ -1908,7 +1908,7 @@ public final class MediaGridView: UIView {
         let insets = self.geometryInsets
         let headerHeight = max(0.0, self.headerHeight)
         self.interactiveTopInset = insets.top + headerHeight
-        let baseGeometry = MediaGridGeometry(width: size.width, sideInset: max(insets.left, insets.right), topInset: self.interactiveTopInset, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
+        let baseGeometry = MediaGridGeometry(width: size.width, leftInset: insets.left, rightInset: insets.right, topInset: self.interactiveTopInset, bottomInset: insets.bottom, spacing: 1.0, scale: self.displayScale)
         let headerFrame = CGRect(x: 0.0, y: insets.top, width: size.width, height: headerHeight)
         if let transition = self.transition {
             if !self.needsLayoutRebuild && transition.targetLayout.geometry == self.levelGeometry(baseGeometry, level: transition.targetLevel) && headerFrame == self.headerFrame {
@@ -1934,7 +1934,7 @@ public final class MediaGridView: UIView {
             var anchor: (index: Int, fraction: CGFloat)?
             if let previous = self.gridLayout {
                 let old = previous.geometry
-                if self.anchorsNextRebuild || old.width != geometry.width || old.sideInset != geometry.sideInset || old.scale != geometry.scale {
+                if self.anchorsNextRebuild || old.width != geometry.width || old.leftInset != geometry.leftInset || old.rightInset != geometry.rightInset || old.scale != geometry.scale {
                     anchor = self.validRotationAnchor(count: previous.count) ?? self.topAnchor(in: previous)
                 }
             }
