@@ -164,13 +164,21 @@ Real bugs found on the way:
 Review and runtime findings, fixed:
 
 - The join-link card's close button slides clear of the FP block when the card rises to it.
+- The profile wallet card's Send Money button (`PeerWalletScreen`) is a small centred control under the band-centred
+  card: it was centred on the screen and `W - 60` wide, 42pt off the card's axis and into the strip (#58).
 - The peer picker's text input and forward panels grow upward (to half the screen), so they take the band of their
   actual rows, like the chat's input panel.
 - The sticker pack's visible glass button was a different node from the legacy one the fixer changed; caught by an
   FP capture, not by the two reviewers.
 - Share and import-sticker sheets stay in the band: tall scrolling grids whose corner buttons rise to the block.
+- A mini app in the sheet (`WebAppController`) keeps its page to the band: the page spanned the strip under the
+  navigation bar's close and more buttons, which stand there, and most pages ignore the safe area reported to them, so
+  the buttons covered the page's right column (#68). The background spans the strip; full screen is unchanged.
 - Small centred controls stay on the axis of their content: camera preview Done, face scan Cancel, the round record
   button, the landscape wallet Send, the quick-reply empty-state button.
+- The wallet Send screen's custom keypad is a bottom panel, as the passcode screen's (the same component): in portrait
+  its keys span the strip with `bottomEdgeSideInsets()` (#53). In landscape they are a fixed-width block under the
+  band-centred Send button and keep the band, on that button's axis.
 
 Deliberately not changed:
 
@@ -179,8 +187,13 @@ Deliberately not changed:
 - Login intro (legacy RMIntroViewController): its Start button stays in the band. Since issue #18 the phone entry's
   button keeps the band too on the folded screen (`authorizationBottomBand`), so it no longer widens as it animates in
   from it.
-- SheetComponent's landscape band, emoji keyboards and the business intro emoji panel (grows to 540pt in search),
-  PeerInfoPaneContainer, the chat's footer panels and input media, toasts.
+- SheetComponent's landscape band, the business intro emoji panel (grows to 540pt in search), PeerInfoPaneContainer,
+  the chat's footer panels, toasts.
+
+Changed later: the emoji / stickers / GIFs keyboard (issue #71, `EntityKeyboardSideInsets.swift`). Its background
+spans the strip; the grids, group headers and the GIFs / Stickers / Emoji switcher centre on the band (its accessory
+buttons sit inside it), the pack rows and a header's embedded row are clipped to it, and its in-keyboard search keeps
+clear of the strip and the status corner block.
 
 Runtime-checked (folded): Text Size Cancel/Set span 0..466 (portrait-only modal); wallpaper preview Apply 30..436;
 language sheet spans in FP, screen-centred in FR, clear of the bottom-right block in FL; sticker pack button spans in

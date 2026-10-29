@@ -562,8 +562,9 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
     /// screen bottom there, growing upward until its top reaches the screen's top inset, which its top then keeps, the
     /// rest of the growth going downward; a top already past the inset stays (the inset is a ceiling, never crossed), and
     /// a shrink keeps the bottom. None while the list holds a pinned row (the user's message while a bot streams its
-    /// reply, until a drag): every pass re-places that row, so any target that moved it would see it jump back on the
-    /// next; the pin anchors the pass instead and every widget grows away from it, a bottom anchor included. The target
+    /// reply, until a drag or a held jump to another message, which ends it): every pass re-places that row, so any
+    /// target that moved it would see it jump back on the next; the pin anchors the pass instead and every widget grows
+    /// away from it, a bottom anchor included. Under a held jump the widget's edge wins (the user, 2026-10-29). The target
     /// is the pass's own (no hold), never arms the pin (`pinsRow: false`: aimed at a released pin's row it would arm it
     /// again), is placed from the row's new height and clamped at the ends as any target is (the list never shows
     /// space past its ends), and it replaces a held jump. Settled geometry, so passes in flight compose.

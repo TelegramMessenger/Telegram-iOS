@@ -45,6 +45,7 @@ import WalletContext
 import WalletSendScreen
 import ChatMediaEditorScreen
 import ChatMediaSend
+import BrowserUI
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -1240,7 +1241,7 @@ extension ChatControllerImpl {
                                 self.presentFormulaEditor(initialValue: initialValue, completion: completion)
                             },
                             pastedMarkdownParser: { context, text in
-                                return chatInputContentFromPastedMarkdown(context: context, plainText: text)
+                                return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: false)
                             }
                         )
                         completion(controller, controller.mediaPickerContext)

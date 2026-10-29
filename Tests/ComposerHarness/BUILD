@@ -221,6 +221,9 @@ swift_library(
         # `Document` / `RichTextEditorClipboard`, for the drag-and-drop tests' fragments.
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorCore",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorUIKit",
+        # A stub accessory panel (reply / edit bar) of a chosen height, for `HarnessInlinePlaceholderTests`.
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/Chat/ChatInputAccessoryPanel",
     ],
 )
 

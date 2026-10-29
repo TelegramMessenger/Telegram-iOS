@@ -2,6 +2,8 @@ import XCTest
 import UIKit
 import Display
 import MessageWidget
+@testable import CoreList
+@testable import ChatHistoryListViewBackend
 @testable import WidgetHarnessLib
 
 /// Tier 1: widget-sandbox v0.1.3's resize anchor in the REAL chat bubbles on the chat's list (integration.md "Which edge
@@ -304,9 +306,9 @@ final class WidgetHarnessResizeTests: XCTestCase {
     }
 
     /// Under a post pinned to the top of the screen (the chat's pin while a bot streams its reply under the user's
-    /// message) the list re-places the pinned row on every pass until a drag, with room below the newest post: a
-    /// top-anchored widget there keeps its top and grows into that room and past it, and the pinned post stays, during
-    /// the change and on the next pass. Growing upward would push the pinned post up, and the pin would pull it back down
+    /// message) the list re-places the pinned row on every pass until a drag (or a held jump to another post), with room
+    /// below the newest post: a top-anchored widget there keeps its top and grows into that room and past it, and the
+    /// pinned post stays, during the change and on the next pass. Growing upward would push the pinned post up, and the pin would pull it back down
     /// on the next pass (the review of 2026-10-28).
     func testUnderAPinnedPostATopAnchoredBubbleKeepsItsTop() throws {
         let (root, _) = try self.load([Self.tall, Self.text, Self.box, Self.growTopFar])
@@ -349,6 +351,58 @@ final class WidgetHarnessResizeTests: XCTestCase {
         host.updateMessage(path: Self.text)
         let later = self.settle(root) { _ in true }
         XCTAssertNear(later[Self.text]?.minY, before[Self.text]?.minY, "after a later pass: before \(before), later \(later)")
+    }
+
+    /// Under a post pinned to the top, the chat's jump to another message, which it holds (a tap on a reply), ends the pin,
+    /// so a widget there keeps its anchored edge as under any held jump (the user's call, 2026-10-29): a top-anchored one
+    /// keeps its top, and a later pass moves nothing. The pin used to put the pinned post back on the screen's top on the
+    /// next pass, taking the jumped-to widget with it.
+    func testUnderAPinnedPostAHeldJumpLetsAWidgetKeepItsEdge() throws {
+        let (root, _) = try self.load([Self.box, Self.text, Self.growTop, Self.tall])
+        let host = try XCTUnwrap(root.listHost)
+        host.pinToTop(path: Self.text)
+        let pinned = self.settle(root) { _ in true }
+        let pinnedTop = pinned[Self.text]?.minY ?? 0.0
+        XCTAssertTrue(pinnedTop > self.topInset(root) - 0.6 && pinnedTop < self.topInset(root) + 12.0, "the post is not pinned to the top: \(pinned)")
+        host.scrollTo(messageIndex: 2, hold: .always)
+        let before = self.settle(root) { _ in true }
+        XCTAssertTrue(host.isHoldingScrollTarget, "the jump is not held")
+        XCTAssertGreaterThan(before[Self.growTop]?.minY ?? 0.0, (pinned[Self.growTop]?.minY ?? 0.0) + 100.0, "the jump left the widget under the pinned post: pinned \(pinned), jumped \(before)")
+        self.assertOffTheBottom(root, before, newest: Self.tall)
+        try self.click(root, Self.growTop)
+        let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
+        let message = "pinned \(pinned), before \(before), after \(after)"
+        XCTAssertNear(after[Self.growTop]?.minY, before[Self.growTop]?.minY, message)
+        XCTAssertNear(after[Self.tall]?.minY, before[Self.tall].map { $0.minY + 120.0 }, message)
+        host.updateMessage(path: Self.text)
+        let later = self.settle(root) { _ in true }
+        XCTAssertNear(later[Self.growTop]?.minY, after[Self.growTop]?.minY, "after a later pass: after \(after), later \(later)")
+    }
+
+    /// A widget's resize target keeps a row where it is; it is not a scroll to the pin (`CoreListScrollTarget.pinsRow`
+    /// false). Aimed at a pinned post whose pin a drag released, it must not pin it again, or the next pass would put the
+    /// post back on the screen's top. The pinned post is the widget itself; the drag is the scroll engine's own
+    /// began/ended callbacks, which release the pin exactly as a finger does.
+    func testAResizeDoesNotPinAReleasedPinnedPostAgain() throws {
+        let (root, _) = try self.load([Self.box, Self.text, Self.growTop, Self.tall])
+        let host = try XCTUnwrap(root.listHost)
+        let backend = try XCTUnwrap(host.listView as? CoreListChatHistoryBackend, "the harness list is not the CoreList backend")
+        host.pinToTop(path: Self.growTop)
+        let pinned = self.settle(root) { _ in true }
+        XCTAssertTrue(backend.coreList.holdsPinnedRowAtBottomEdge, "precondition: the post is not pinned: \(pinned)")
+        backend.coreList.engine.onWillBeginDragging?()
+        backend.coreList.engine.onDidEndDragging?()
+        XCTAssertFalse(backend.coreList.holdsPinnedRowAtBottomEdge, "precondition: the drag did not release the pin")
+        // Away from the pin's place, with a scroll that is not to the pinned post.
+        host.scrollTo(messageIndex: 1)
+        let before = self.settle(root) { _ in true }
+        XCTAssertGreaterThan(before[Self.growTop]?.minY ?? 0.0, (pinned[Self.growTop]?.minY ?? 0.0) + 100.0, "precondition: the widget is still at the pin's place: pinned \(pinned), before \(before)")
+        try self.click(root, Self.growTop)
+        let after = self.settle(root) { ($0[Self.growTop]?.height ?? 0.0) > (before[Self.growTop]?.height ?? 0.0) + 100.0 }
+        XCTAssertFalse(backend.coreList.holdsPinnedRowAtBottomEdge, "the resize pinned the post again")
+        host.updateMessage(path: Self.text)
+        let later = self.settle(root) { _ in true }
+        XCTAssertNear(later[Self.growTop]?.minY, after[Self.growTop]?.minY, "a later pass moved the widget: pinned \(pinned), before \(before), after \(after), later \(later)")
     }
 
     /// Review Focus 1: a bubble whose anchored top is above the screen keeps it there; what is on screen below it moves.

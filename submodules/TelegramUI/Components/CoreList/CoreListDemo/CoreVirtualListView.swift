@@ -135,6 +135,9 @@ public enum CoreListAnchorMode: Equatable {
 /// it), by a `scroll(by:)` that can move at the presented position, by any later `scrollTo` (a holding
 /// one arms a new hold), by the row leaving the collection, by a full replace, and by
 /// `releaseScrollHold()`.
+///
+/// Arming a hold on a row other than the pinned row releases the pin latch (`holdsPinnedRowAtBottomEdge`), which
+/// would otherwise put the pinned row back on the edge on the next pass.
 public struct CoreListScrollHold {
     public enum Edge {
         /// `viewportInsets.top` — under the chat's π rotation, the input-panel edge.
@@ -556,9 +559,9 @@ public final class CoreVirtualListView: UIView {
     ///
     /// Engaged by an explicit `scrollTo` at the pinned index whose `pinsRow` is set (the default; a
     /// target that only keeps a row in place clears it); released on finger-down, by a `scroll(by:)`
-    /// that can move at the presented position, on the pinned row leaving the collection, and on a full
-    /// replace. Release is PERMANENT for that pin — scrolling back to the edge does not re-engage it,
-    /// matching `ListViewImpl`.
+    /// that can move at the presented position, by a holding `scrollTo` that arms its hold on another
+    /// row, on the pinned row leaving the collection, and on a full replace. Release is PERMANENT for
+    /// that pin — scrolling back to the edge does not re-engage it, matching `ListViewImpl`.
     ///
     /// This answers WHERE the pinned row goes. `bottomEdgePinSlack` answers whether the list has
     /// scroll ROOM to rest there, and is deliberately independent of this flag.
@@ -583,6 +586,38 @@ public final class CoreVirtualListView: UIView {
     private var holdSlack: (min: CGFloat, max: CGFloat) = (0, 0)
 
     public var isHoldingScrollTarget: Bool { heldRow != nil }
+
+    /// Makes `view` move exactly as the content does: every model write of the content host's `bounds.origin.y` and
+    /// every animation of it (a `.keyframe` flight and its brake on the render server, a pass's viewport track) is
+    /// repeated on its layer. For a view outside the list that must ride the content but not take what the list's own
+    /// view takes (its mask): a follower placed from per-frame callbacks trails a render-server flight by the commit's
+    /// frame or two. Give `view` the list's bounds in a shared superview and place its content at
+    /// `contentFrame(of:)`. `PhysicsScrollEngine` only; with another engine it does nothing and returns false.
+    @discardableResult
+    public func addContentMotionMirror(_ view: UIView) -> Bool {
+        guard let host = engine.contentHost as? ContentMotionHostView, let layer = host.mirroringLayer else {
+            return false
+        }
+        layer.addMirror(view.layer)
+        return true
+    }
+
+    public func removeContentMotionMirror(_ view: UIView) {
+        (engine.contentHost as? ContentMotionHostView)?.mirroringLayer?.removeMirror(view.layer)
+    }
+
+    /// Whether the latest touch landed on moving content (a flight or a deceleration), which it stopped: that touch is the
+    /// scroll's, not a tap on a row. Set at touch-down and kept until the next one, so it answers for a touch at its
+    /// lift whatever order the touch reached the list's recognizers in. `PhysicsScrollEngine` only; false otherwise.
+    public var lastTouchCaughtMovingContent: Bool {
+        (engine as? PhysicsScrollEngine)?.lastTouchCaughtMovingContent ?? false
+    }
+
+    /// A row's frame in the content's own coordinates, where it stays put while the content scrolls: those of a
+    /// content motion mirror (`addContentMotionMirror`). Settled (model) geometry.
+    public func contentFrame(of view: UIView) -> CGRect {
+        engine.contentHost.convert(view.bounds, from: view)
+    }
 
     /// Ends the hold without moving anything. The chat calls it from scroll-to-end, which issues no
     /// scroll when the list already rests at its newest edge.
@@ -673,6 +708,20 @@ public final class CoreVirtualListView: UIView {
         didSet {
             guard loadedEdgeMargin != oldValue else { return }
             refreshReachedLoadedEdges()
+        }
+    }
+    /// A whole collection that fits between the insets rests on the BOTTOM inset edge instead of the top one, and its
+    /// scroll range is that offset (`ListViewImpl.stackFromBottom`). A collection taller than that area, or not wholly
+    /// loaded, is placed as without it. Set it before the first rows: a pass measures the old placement with the
+    /// current value, so flipping it under rows misreads where they were.
+    public var stacksFromBottom = false
+    /// Ends the band rows are visible in (`CoreListItemView.visibleRectUpdated`) this far inside the viewport, for a host
+    /// whose list runs on under something opaque (the keyboard). Default none: the insets are visible, interactive list
+    /// space, and the band is the whole viewport.
+    public var visibleRectInsets: UIEdgeInsets = .zero {
+        didSet {
+            guard visibleRectInsets != oldValue, !isApplyingChanges else { return }
+            notifyVisibleRects()
         }
     }
     let engine: ScrollEngine
@@ -816,6 +865,11 @@ public final class CoreVirtualListView: UIView {
     // to learn whether momentum follows the release: `isScrollFlightActive` answers that only for `.keyframe`,
     // since `.stepped` and UIKit decelerations publish no flight.
     public var isScrollDecelerating: Bool { engine.isDecelerating }
+    // What a pass's viewport animation (a `scrollTo`'s travel, a size or inset pass's correction) still adds to the
+    // content host's `bounds.origin.y`, on the model clock: zero when none runs. A flight's motion is not in it. A view
+    // riding the content motion mirror tells the two apart by it: a later pass folds this part into its own track, while
+    // a flight carries on.
+    public var viewportAnimationOffset: CGFloat { animationController.viewportOffset(at: animationController.now()) }
     // Signed distance the engine offset sits beyond its declared edges — negative past `min`, positive
     // past `max`, zero within. The analogue of reading `scrollView.contentOffset.y` against its content
     // bounds, and correct to sample at `didEndDragging`: `launchFlight` parks the LAYER at the settled
@@ -1933,6 +1987,12 @@ public final class CoreVirtualListView: UIView {
                                   hold: hold,
                                   distance: landedMinY + hold.rowPoint(landed.frame.height, landed.view)
                                       - holdEdgeY(hold.edge))
+                // A held jump to another row ends the pin: the user went somewhere else, and the latch, which
+                // `resolveAnchor` ranks above the hold, would put the pinned row back on the edge on the next pass.
+                // Only where a hold arms: a landing that yields to the newest edge holds nothing and keeps the pin.
+                if scrollTo.index != lowestPinnedItemIndex {
+                    holdsPinnedRow = false
+                }
             }
         }
         retireHoldSlack()
@@ -3047,7 +3107,7 @@ public final class CoreVirtualListView: UIView {
     /// Reports each loaded row the part of itself inside the viewport. Uses the same projection
     /// `rebalanceActiveWindow` uses, against the FULL viewport rect — insets stay visible space.
     private func notifyVisibleRects() {
-        let viewportRect = CGRect(origin: .zero, size: logicalSize)
+        let viewportRect = CGRect(origin: .zero, size: logicalSize).inset(by: visibleRectInsets)
         let contentBaseY = containerOriginY - activeWindow.minY
         let scrollY = engine.offset
 
@@ -3284,20 +3344,38 @@ public final class CoreVirtualListView: UIView {
         }
         appendUntilCoveredOrAtBottom()
 
-        if !holdsAnchor,
+        // A whole collection that fits between the insets rests on the top inset edge, or with `stacksFromBottom` on
+        // the bottom one (the pin's slack, which brings the pinned row to that edge too, wins when larger). Matched by
+        // construction with `loadedEdgeRange`'s minimum, which declares the same slack.
+        func placeWholeCollection() {
+            let stackSlack = stackFromBottomSlack(for: window, itemCount: _items.count)
+            guard stackSlack > 0 else {
+                translate(&window, by: topEdge - window.minY)
+                return
+            }
+            // `loadedEdgeRange`'s minimum, term for term: the larger of the two slacks, then a released hold's.
+            translate(&window, by: viewportInsets.top + max(bottomEdgePinSlack(for: window), stackSlack) + holdSlack.min - window.minY)
+        }
+
+        // Stacked wherever the anchor put it: a row that grew can have pushed the last one past the bottom edge with
+        // room above still, which the branch below, keyed on room below, does not see. A held build skips this as it
+        // skips both underfill alignments.
+        if !holdsAnchor, stackFromBottomSlack(for: window, itemCount: _items.count) > 0 {
+            placeWholeCollection()
+        } else if !holdsAnchor,
            window.endIndex == _items.count - 1,
            window.maxY < bottomEdge {
             let wholeCollectionIsUnderfilled = window.startIndex == 0
                 && window.height + viewportInsets.top + viewportInsets.bottom
                     <= logicalSize.height
             if wholeCollectionIsUnderfilled {
-                translate(&window, by: topEdge - window.minY)
+                placeWholeCollection()
             } else if alignBottomIfUnderfilled() {
                 prependUntilCoveredOrAtTop()
                 if window.startIndex == 0,
                    window.height + viewportInsets.top + viewportInsets.bottom
                         <= logicalSize.height {
-                    translate(&window, by: topEdge - window.minY)
+                    placeWholeCollection()
                 } else {
                     _ = alignTopIfUnderfilled()
                 }
@@ -3433,12 +3511,22 @@ public final class CoreVirtualListView: UIView {
                       - (viewportInsets.top + span))
     }
 
+    /// How far `stacksFromBottom` rests a whole collection below the top inset edge: the room between it and the bottom
+    /// inset edge. Zero unless the option is on and the whole collection is loaded and fits between the insets. Folded
+    /// into `buildWindow`'s placement of that collection and `loadedEdgeRange`'s minimum, which must agree, as the pin's
+    /// slack and its placement do (`max` of the two: the pin's is the larger when both apply).
+    private func stackFromBottomSlack(for window: Window, itemCount: Int) -> CGFloat {
+        guard stacksFromBottom, !window.isEmpty, window.startIndex == 0, window.endIndex == itemCount - 1 else { return 0 }
+        return max(0, logicalSize.height - viewportInsets.bottom - (viewportInsets.top + window.height))
+    }
+
     /// How far a held placement puts the window short of each loaded edge: the gap between the newest
     /// row and the top edge (pin slack included), and between the oldest row and the bottom inset edge.
     /// Zero for an edge that is not loaded, and clamped at zero, like the pin slack — never placement
     /// leaking into the scroll range.
     private func heldWindowSlack(_ window: Window) -> (min: CGFloat, max: CGFloat) {
-        let topEdge = viewportInsets.top + bottomEdgePinSlack(for: window)
+        let topEdge = viewportInsets.top + max(bottomEdgePinSlack(for: window),
+                                               stackFromBottomSlack(for: window, itemCount: _items.count))
         let bottomEdge = logicalSize.height - viewportInsets.bottom
         let minimum = window.startIndex == 0 ? max(0, window.minY - topEdge) : 0
         let maximum = window.endIndex == _items.count - 1 ? max(0, bottomEdge - window.maxY) : 0
@@ -3478,8 +3566,12 @@ public final class CoreVirtualListView: UIView {
         // `refreshReachedLoadedEdges()` both come through here and `rebalanceActiveWindow()` re-renders,
         // so user scrolling, momentum and self-update flushes all see it with no extra plumbing. The
         // scroll hold's slack rides both edges the same way.
+        // The bottom stack's slack takes the pin's place when larger (see `buildWindow`): for a collection that fits,
+        // this minimum is then exactly the natural maximum, so the range is the one resting offset.
         let minimum: CGFloat? = window.startIndex == 0
-            ? viewportGeometry.minimumOffset - bottomEdgePinSlack(for: window) - slack.min
+            ? viewportGeometry.minimumOffset
+                - max(bottomEdgePinSlack(for: window), stackFromBottomSlack(for: window, itemCount: count))
+                - slack.min
             : nil
         let maximum: CGFloat? = window.endIndex == count - 1
             ? viewportGeometry.maximumOffset(

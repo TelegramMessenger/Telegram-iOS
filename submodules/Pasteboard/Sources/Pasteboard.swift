@@ -273,7 +273,10 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
     return string
 }
 
-public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.DocumentType) -> NSAttributedString? {
+/// `paragraphSpacingAsBlankLines`: a paragraph gap that is only paragraph spacing (a copied web page's margins) becomes
+/// a blank line (`attributedStringWithParagraphSpacingAsBlankLines`). Only the chat composer asks for it: elsewhere
+/// (captions, `TextFieldComponent` fields) pasted paragraphs stay one line apart.
+public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.DocumentType, paragraphSpacingAsBlankLines: Bool = false) -> NSAttributedString? {
     if let attributedString = try? NSAttributedString(data: data, options: [NSAttributedString.DocumentReadingOptionKey.documentType: type], documentAttributes: nil) {
         let updatedString = NSMutableAttributedString(attributedString: attributedString)
         updatedString.enumerateAttribute(NSAttributedString.Key.link, in: NSRange(location: 0, length: attributedString.length), using: { value, range, _ in
@@ -295,7 +298,9 @@ public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.D
         // Paste direction: a link whose label IS its own URL (an anchor whose text is the URL, the common
         // shape of a copied web link) carries nothing a plain URL would not, so it pastes as plain text and
         // the server detects it. A genuine text link — a label that differs from its target — is kept.
-        return chatInputStateString(attributedString: updatedString).flatMap(chatInputTextStrippingSelfReferentialLinks)
+        // With `paragraphSpacingAsBlankLines`, the gaps become blank lines before the paragraph styles are dropped.
+        let gapsResolved = paragraphSpacingAsBlankLines ? attributedStringWithParagraphSpacingAsBlankLines(updatedString) : updatedString
+        return chatInputStateString(attributedString: gapsResolved).flatMap(chatInputTextStrippingSelfReferentialLinks)
     }
     return nil
 }

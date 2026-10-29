@@ -1038,7 +1038,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self?.paste(data)
         }
         self.textInputPanelNode?.pastedMarkdownParser = { context, text in
-            return chatInputContentFromPastedMarkdown(context: context, plainText: text)
+            return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: true)
         }
         self.textInputPanelNode?.displayAttachmentMenu = { [weak self] in
             self?.displayAttachmentMenu()
@@ -2887,6 +2887,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 if let emojisPanelNode = inputContextPanelNode as? EmojisChatInputContextPanelNode {
                     emojisPanelNode.cursorAnchorX = self.textInputPanelNode?.currentCaretRect(in: emojisPanelNode.view)?.midX
                 }
+                inputContextPanelNode.coveredBottomInset = insets.bottom
                 inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + inputPanelsHeight + 8.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
 
@@ -2894,6 +2895,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             if let emojisPanelNode = inputContextPanelNode as? EmojisChatInputContextPanelNode {
                 emojisPanelNode.cursorAnchorX = self.textInputPanelNode?.currentCaretRect(in: emojisPanelNode.view)?.midX
             }
+            inputContextPanelNode.coveredBottomInset = insets.bottom
             inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + inputPanelsHeight + 8.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
         }
         
@@ -4855,7 +4857,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self.controller?.presentFormulaEditor(initialValue: initialValue, completion: completion)
                 },
                 pastedMarkdownParser: { context, text in
-                    return chatInputContentFromPastedMarkdown(context: context, plainText: text)
+                    return chatInputContentFromPastedMarkdown(context: context, plainText: text, keepsBlankLines: false)
                 }
             )
             editorScreen.navigationPresentation = .modal

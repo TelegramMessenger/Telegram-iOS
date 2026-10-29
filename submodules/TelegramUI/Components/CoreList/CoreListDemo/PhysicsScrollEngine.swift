@@ -5,7 +5,8 @@ import UIKit
 /// layout math is unchanged — only the driver differs. Touch only; trackpad and `.keyframe`
 /// deceleration during virtualization are future increments.
 public final class PhysicsScrollEngine: NSObject, ScrollEngine {
-    private let host = UIView()
+    /// Repeats the content's motion on mirror layers (`CoreVirtualListView.addContentMotionMirror`).
+    private let host = ContentMotionHostView()
     private let core: PhysicsScrollCore
     private let pan = PhysicsPanGestureRecognizer(target: nil, action: nil)
     private var displayLink: CADisplayLink?
@@ -35,6 +36,8 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     /// `shouldBeginImmediately` would find the motion already stopped and never force the `.began` that
     /// absorbs the tap.
     private var caughtMovingContentAtTouchDown = false
+    /// Whether the latest touch landed on moving content, which it stopped (`CoreVirtualListView.lastTouchCaughtMovingContent`).
+    var lastTouchCaughtMovingContent: Bool { caughtMovingContentAtTouchDown }
 
     /// How a flick/bounce plays out after release. `.stepped` (default) integrates the physics on the
     /// main thread once per frame (the original behaviour); `.keyframe` precomputes the whole path and
@@ -666,6 +669,12 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     private func catchMotionForFingerRest() {
         if flight != nil {
             catchFlight(braking: true)      // interactive, same as the touch catch — see `catchFlight`
+            // The physics stops with the flight, as the stepped branch's does. A drag that begins rebuilds it anyway
+            // (`beginDrag`), but one may never begin: an ancestor's pop recognizer wins, or a tracking `UIControl`
+            // refuses it. Left `.decelerating` with nothing driving it, the engine reported a deceleration until the next
+            // drag (`isScrollDecelerating`) and took the next tap on still content for another catch. The streak was
+            // decided at touch-down (`beginTouchTracking`), and the offset is where the catch put it.
+            core.cancelDeceleration()
         } else if core.isDecelerating {
             stopDisplayLink()
             core.cancelDeceleration()

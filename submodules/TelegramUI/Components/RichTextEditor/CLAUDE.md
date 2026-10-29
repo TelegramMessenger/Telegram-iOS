@@ -194,6 +194,8 @@ opaque action becomes `.disabled` (`Document.convertingUnsupportedButtonActions(
   codepages beyond cp1252.
   - A backslash before a literal CR/LF (how Cocoa apps write a break) is `\par`; raw CR/LF is ignored; `\line` is soft.
     Consecutive `\par`s emit empty paragraphs, the end-of-document flush does not (`RTFImportCorpusTests`).
+  - `paragraphSpacingAsBlankLines` (the legacy composer's list paste only): a gap of ≥ 8pt of `\sa`/`\sb` between
+    two top-level paragraphs, not two list items, becomes an empty paragraph (`RTFImportParagraphSpacingTests`).
   - `Document.strippingSelfReferentialLinks()` (both results of `fragment(fromRTF:)`; never the private fragment UTI)
     turns a link whose text is its own URL into plain text; the composer's markdown-on-paste applies the same rule
     host-side. `linkIsSelfReferential(text:url:)` duplicates `TextFormat`'s `chatInputLinkIsSelfReferential` on

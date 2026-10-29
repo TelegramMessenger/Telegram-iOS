@@ -63,22 +63,20 @@ WR_TEST(testTheLocaleARequestNames) {
     env.eval("(1).toLocaleString(); new Intl.NumberFormat(['ar-EG-u-nu-latn', 'en']).format(1)");
     CHECK_EQ(env.host().intlRequests.size(), size_t(2));
     CHECK_EQ(env.host().intlRequests[0], std::string("{\"kind\":\"number\",\"locale\":\"ru-RU\",\"opts\":{},\"value\":1}"));
-    // The tag as the widget wrote it, extension and all (as upstream's shim sends it; follow-ups plan, Task 3).
+    // The tag as the widget wrote it, its unicode extension reduced to the keywords its constructor reads (here `nu`).
     CHECK_EQ(env.host().intlRequests[1], std::string("{\"kind\":\"number\",\"locale\":\"ar-EG-u-nu-latn\",\"opts\":{},\"value\":1}"));
     env.eval("new Date(0).toLocaleDateString('hi-IN-u-nu-deva-ca-indian-x-y', { dateStyle: 'full' }); new Intl.Collator('de-u-co-phonebk-kn').compare('a', 'b')");
     CHECK_EQ(env.host().intlRequests[2],
-             std::string("{\"kind\":\"dateMethod\",\"method\":\"toLocaleDateString\",\"locale\":\"hi-IN-u-ca-indian-nu-deva-x-y\",\"opts\":{\"dateStyle\":\"full\"},\"value\":0}"));
+             std::string("{\"kind\":\"dateMethod\",\"method\":\"toLocaleDateString\",\"locale\":\"hi-IN-u-ca-indian-nu-deva\",\"opts\":{\"dateStyle\":\"full\"},\"value\":0}"));
     CHECK_EQ(env.host().intlRequests[3], std::string("{\"kind\":\"compare\",\"locale\":\"de-u-co-phonebk-kn\",\"opts\":{},\"a\":\"a\",\"b\":\"b\"}"));
 }
 
-/// The final review's C1: the locale list is deduplicated through a hash set and holds at most kMaxLocaleList distinct
-/// tags (a RangeError beyond), so many distinct tags cost linear work, not the quadratic compares of a list search.
 /// ECMA-402 ResolveLocale (follow-ups review, C1 and I1): a request keeps only the unicode extension keywords its
 /// constructor reads (NumberFormat and RelativeTimeFormat nu; DateTimeFormat ca, hc, nu; Collator co, kf, kn; PluralRules
 /// and ListFormat none), each with a value this client supports, sorted by key. Other keywords, attributes and unknown
 /// values never reach the glue: an unknown numbering system makes Foundation's relative formatter trap (the app's
 /// crash), and the glue reads plural rules from a language key an extension breaks. Other extensions and private use
-/// stay.
+/// are dropped too, as a resolved locale has none of them (they reached the glue's plural key as `@…=` keywords).
 WR_TEST(testOnlyARelevantSupportedKeywordReachesTheHost) {
     HostEnv env;
     env.host().intlAnswer = wr_test::echoIntl;
@@ -108,11 +106,18 @@ WR_TEST(testOnlyARelevantSupportedKeywordReachesTheHost) {
     CHECK_EQ(localeOf("new Intl.ListFormat('en-u-nu-thai').format(['a'])"), std::string("en"));
     CHECK_EQ(localeOf("new Intl.Collator('de-u-co-bogus-kn-false').compare('a', 'b')"), std::string("de-u-kn-false"));
     CHECK_EQ(localeOf("new Intl.Collator('de-u-kn-true-co-phonebk').compare('a', 'b')"), std::string("de-u-co-phonebk-kn"));
-    CHECK_EQ(localeOf("new Intl.NumberFormat('de-t-en-u-nu-thai-x-a').format(1)"), std::string("de-t-en-u-nu-thai-x-a"));
+    // ECMA-402: a `co` keyword may not name `standard` or `search`.
+    CHECK_EQ(localeOf("new Intl.Collator('de-u-co-standard').compare('a', 'b')"), std::string("de"));
+    CHECK_EQ(localeOf("new Intl.Collator('de-u-co-search').compare('a', 'b')"), std::string("de"));
+    CHECK_EQ(localeOf("new Intl.NumberFormat('de-t-en-u-nu-thai-x-a').format(1)"), std::string("de-u-nu-thai"));
+    CHECK_EQ(localeOf("new Intl.PluralRules('ar-t-en').select(2)"), std::string("ar"));
+    CHECK_EQ(localeOf("new Intl.DateTimeFormat('ja-JP-a-bc-u-ca-japanese-x-y').format(0)"), std::string("ja-JP-u-ca-japanese"));
     CHECK_EQ(localeOf("(1).toLocaleString('en-u-nu-bogus')"), std::string("en"));
     CHECK_EQ(localeOf("new Date(0).toLocaleDateString('en-u-nu-bogus-ca-roc')"), std::string("en-u-ca-roc"));
 }
 
+/// The final review's C1: the locale list is deduplicated through a hash set and holds at most kMaxLocaleList distinct
+/// tags (a RangeError beyond), so many distinct tags cost linear work, not the quadratic compares of a list search.
 WR_TEST(testManyDistinctLocalesAreRefused) {
     HostEnv env;
     env.eval(kErr);

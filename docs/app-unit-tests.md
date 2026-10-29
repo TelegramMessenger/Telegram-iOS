@@ -10,7 +10,9 @@ value box, using `@testable import Postbox`; add new Postbox regression tests un
 
 `//submodules/TelegramCallsUI:TelegramCallsUITests` drives `SharedCallAudioContext` through a fake
 `ManagedAudioSession` (implementable from outside through `ManagedAudioSessionControl`'s public closure initializer).
-Creating the context builds a real tgcalls audio device, which is fine in the simulator test process.
+Creating the context builds a real tgcalls audio device, which is fine in the simulator test process. It also pins
+where the group call header puts its "speaking" line (`VideoChatTitleComponent.View.layoutActivityStatusNode`, with a
+real `ChatTitleActivityNode`; the component itself needs `PresentationStrings`).
 
 `//submodules/TelegramAudio:TelegramAudioTests` covers pure `ManagedAudioSessionType` helpers such as
 `voiceMessageRecording(beginWithTone:pauseMusicOnRecording:)` (the mapping for the Data & Storage "Pause Music While
@@ -50,6 +52,11 @@ title and its avatar, so a Saved Messages token draws the Saved Messages icon ra
 placement of the icons before a chat header's title: a secret chat's lock next to the name, and a third-party
 verification icon to the left of the lock, never on top of it.
 
+`//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` covers the round video
+message camera's placement helpers (`VideoMessageCameraLayout.swift`): on iPhone Duo the preview kept above the chat's
+input panel and the trailing buttons clear of the status corner, and on every phone the touches that reach the panel
+above a bot keyboard, which the window does not report as input.
+
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests` covers `avatarGalleryUserEntries`, the one builder both
 user-gallery paths use. Slot 0 is the peer record's current photo, but `photos.getUserPhotos` keeps its order when an
 older photo is made the main one again (the server swaps a copy under a **new photo id** into that photo's place), so
@@ -83,6 +90,27 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
+`//submodules/ContactsPeerItem:ContactsPeerItemTests` covers `ContactItemHighlighting`, the Contacts list's highlight of
+the chat a split view's detail pane shows. When the split goes away (folding iPhone Duo) it clears the selection with no
+chat and progress 0; a progress without a chat must count as no selection in progress, or every row on screen takes
+`1 - 0` as its highlight and stays gray, and a pressed row shows none.
+
+`//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests` covers `EntityKeyboardSideInsets.swift`, the
+emoji / stickers / GIFs keyboard's placement beside the Duo's side strip: the grid and the centred controls (group
+headers, the GIFs / Stickers / Emoji switcher) centre on the band between the side insets, and the side strips the pack
+rows are clipped by; with equal side insets the old expressions come out exactly. The clipping itself is checked on
+the Duo simulator.
+
+`//submodules/PasswordSetupUI:PasswordSetupUITests` covers `twoFactorDataInputHorizontalLayout`, the bands of the
+2FA data input screen per Duo posture: content, bottom button, and the text actions that take the hidden button's place
+(in the fields' row in Settings, in the button's frame in the login flow); with equal side insets all are the previous
+ones.
+
+`//submodules/ItemListUI:ItemListUITests` covers `itemListDisclosureLabelConstrainedWidth`, the room an
+`ItemListDisclosureItem` row leaves its trailing value after the title: the legacy reserve by default, or the
+`minimumLabelSpacing` a row names (Data and Storage's usage rows use 6pt, so «Использование трафика» and a compact
+size share a 390pt line; on 375pt and narrower the value truncates). Titles are never shortened for the value.
+
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the
@@ -103,6 +131,8 @@ existed). No builtin raw value an older build does not know reaches `"t"` or `"t
 extensions force-unwrap at launch. The bubble-free theme is built and recoloured as the app does. Building a
 `PresentationTheme` works in the test process (`makePresentationTheme` takes a `MediaBox` on a temporary directory);
 `PresentationStrings` does not, so no `PresentationData` and no theme names in these tests.
+It also covers `dataSizeString`'s `compact` format ("48 МБ", "131 МБ", "27,2 ГБ", "1 ГБ" for 1000 MB), with a
+`DataSizeStringFormatting` built from plain `FormattedString`s instead of the app's strings.
 
 The RichTextEditor SwiftPM package keeps its own suite (`swift test` / `Scripts/iostest.sh`). MtProtoKit's suite
 (`//submodules/MtProtoKit:MtProtoKitTests`) also runs on macOS: `swift test` in `submodules/MtProtoKit` (the package's
