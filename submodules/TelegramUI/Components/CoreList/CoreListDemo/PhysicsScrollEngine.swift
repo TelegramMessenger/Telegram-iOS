@@ -669,6 +669,12 @@ public final class PhysicsScrollEngine: NSObject, ScrollEngine {
     private func catchMotionForFingerRest() {
         if flight != nil {
             catchFlight(braking: true)      // interactive, same as the touch catch — see `catchFlight`
+            // The physics stops with the flight, as the stepped branch's does. A drag that begins rebuilds it anyway
+            // (`beginDrag`), but one may never begin: an ancestor's pop recognizer wins, or a tracking `UIControl`
+            // refuses it. Left `.decelerating` with nothing driving it, the engine reported a deceleration until the next
+            // drag (`isScrollDecelerating`) and took the next tap on still content for another catch. The streak was
+            // decided at touch-down (`beginTouchTracking`), and the offset is where the catch put it.
+            core.cancelDeceleration()
         } else if core.isDecelerating {
             stopDisplayLink()
             core.cancelDeceleration()

@@ -641,6 +641,11 @@ clock); `TestScrollEngine` has no render server.
   late (early costs a few ms; late is the step). Only interactive catches brake;
   `setOffset`/`haltMotionInPlace`/`tearDown` impose their own position. `presentation()` cannot detect it.
   `FlightCatchContinuityTests`; `TestScrollEngine` keeps the hard stop.
+- **A touch-down catch idles the physics too** (`core.cancelDeceleration()` in `catchMotionForFingerRest`): the drag
+  that would rebuild it may never begin (an ancestor's pop recognizer wins, a tracking `UIControl` refuses it), and a core
+  left `.decelerating` with no driver reported `isScrollDecelerating` until the next drag and took the next tap for
+  another catch (`lastTouchCaughtMovingContent`). The streak is decided before it (`beginTouchTracking`).
+  `CatchWithoutDragTests`.
 - **UIScrollView's one-frame release hand-off is a model-write driver's compensation; a baked deceleration
   must NOT keep it.** (`-[UIScrollView _endPanNormal:]` steps once synchronously from
   `now − 1/maxFPS`; `.stepped` inherits it.) A baked `Trajectory` played from an explicit `beginTime` is
