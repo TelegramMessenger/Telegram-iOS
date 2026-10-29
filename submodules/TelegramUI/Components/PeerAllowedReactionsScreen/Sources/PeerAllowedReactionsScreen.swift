@@ -372,7 +372,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             let statsController = component.context.sharedContext.makeChannelStatsController(context: component.context, updatedPresentationData: nil, peerId: component.peerId, boosts: true, boostStatus: boostStatus)
             self.environment?.controller()?.push(statsController)
         }
-
+        
         private func displayReactionInputMenu() {
             guard let environment = self.environment, let reactionInputView = self.reactionInput?.view as? EmojiListInputComponent.View else {
                 return
@@ -380,7 +380,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             guard let enabledReactions = self.enabledReactions, !enabledReactions.isEmpty, !self.isApplyingSettings else {
                 return
             }
-
+            
             var actions: [ContextMenuAction] = []
             if self.isAllReactionsSelected {
                 actions.append(ContextMenuAction(content: .text(title: environment.strings.Common_Delete, accessibilityLabel: environment.strings.Common_Delete), action: { [weak self] in
@@ -391,13 +391,12 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.reactionInputMenu?.dismiss()
                     self.isAllReactionsSelected = true
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                     self.displayReactionInputMenu()
                 }))
             }
-
+            
             self.reactionInputMenu?.dismiss()
             let contextMenu = makeContextMenuController(actions: actions, isDark: environment.theme.overallDarkAppearance)
             self.reactionInputMenu = contextMenu
@@ -408,9 +407,9 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 return (reactionInputView, reactionInputView.menuSourceRect(), self, self.bounds)
             }, bounce: false))
         }
-
+        
         private func deleteSelectedReactions() {
-            guard self.isAllReactionsSelected else {
+            guard self.isAllReactionsSelected, !self.isApplyingSettings else {
                 return
             }
             self.isAllReactionsSelected = false
@@ -418,12 +417,12 @@ final class PeerAllowedReactionsScreenComponent: Component {
             self.caretPosition = 0
             self.areStarsReactionsEnabled = false
             self.recenterOnCaret = true
-
+            
             if !self.isUpdating {
                 self.state?.updated(transition: .spring(duration: 0.25))
             }
         }
-
+        
         func update(component: PeerAllowedReactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
