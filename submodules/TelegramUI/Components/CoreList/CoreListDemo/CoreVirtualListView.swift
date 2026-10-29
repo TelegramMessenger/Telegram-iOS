@@ -186,22 +186,29 @@ public struct CoreListScrollTarget {
     public let direction: Direction?
     /// Non-nil to hold the target where this scroll lands it — see `CoreListScrollHold`.
     public let hold: CoreListScrollHold?
+    /// Whether this is a scroll TO the pinned row, which arms the pin latch (`holdsPinnedRow`) when it targets the lowest
+    /// `pinsToBottomEdge` row. A target that only keeps a row where it is passes false: aimed at the pinned row after a
+    /// drag released the latch, it would arm it again, and the next pass would pull the row back to the edge.
+    public let pinsRow: Bool
 
     public init(index: Int, pointOffset: CGFloat) {
         self.index = index
         self.resolve = { _, _ in pointOffset }
         self.direction = nil
         self.hold = nil
+        self.pinsRow = true
     }
 
     public init(index: Int,
                 direction: Direction? = nil,
                 hold: CoreListScrollHold? = nil,
+                pinsRow: Bool = true,
                 resolve: @escaping (CGFloat, UIView & CoreListItemView) -> CGFloat) {
         self.index = index
         self.resolve = resolve
         self.direction = direction
         self.hold = hold
+        self.pinsRow = pinsRow
     }
 }
 
@@ -547,7 +554,8 @@ public final class CoreVirtualListView: UIView {
     /// row's index shifts every time a message arrives, and `lowestPinnedItemIndex` is already
     /// re-derived per pass, so there is nothing here to go stale.
     ///
-    /// Engaged by an explicit `scrollTo` at the pinned index; released on finger-down, by a `scroll(by:)`
+    /// Engaged by an explicit `scrollTo` at the pinned index whose `pinsRow` is set (the default; a
+    /// target that only keeps a row in place clears it); released on finger-down, by a `scroll(by:)`
     /// that can move at the presented position, on the pinned row leaving the collection, and on a full
     /// replace. Release is PERMANENT for that pin — scrolling back to the edge does not re-engage it,
     /// matching `ListViewImpl`.
@@ -923,8 +931,8 @@ public final class CoreVirtualListView: UIView {
 
     /// Whether the latch holds a `pinsToBottomEdge` row (`holdsPinnedRow`): every pass without a
     /// `scrollTo` re-places that row against the bottom edge, so a host's own target that moves it is
-    /// undone on the next pass. The latch alone, landed or not (`isStrictlyPinnedToBottomEdge` also
-    /// asks whether its animation has landed).
+    /// undone on the next pass, and a host keeping rows in place leaves the pass to the latch. The latch
+    /// alone, landed or not (`isStrictlyPinnedToBottomEdge` also asks whether its animation has landed).
     public var holdsPinnedRowAtBottomEdge: Bool { holdsPinnedRow }
 
     /// Whether a `pinsToBottomEdge` row is currently HELD against the bottom edge, as opposed to
@@ -1488,7 +1496,7 @@ public final class CoreVirtualListView: UIView {
             // The row left the collection, or this is a full replace — a chat switch or hole reload,
             // whose incoming collection must not inherit a hold from the outgoing one.
             holdsPinnedRow = false
-        } else if let scrollTo, scrollTo.index == lowestPinnedItemIndex {
+        } else if let scrollTo, scrollTo.pinsRow, scrollTo.index == lowestPinnedItemIndex {
             // `ListView.swift:2737`. The chat produces exactly one of these per streamed answer, from
             // `scrollToPinToTopStableId` (`ChatHistoryListNode.swift:2244-2246`), which fires only when
             // the pinned stableId CHANGES.
@@ -2730,7 +2738,7 @@ public final class CoreVirtualListView: UIView {
         if holdsPinnedRow, let pinnedIndex = lowestPinnedItemIndex {
             // Above `preserveVisibleContent`: loading older history above a held pin must not move it.
             // Below `scrollTo`: an explicit jump still wins, and re-arms the latch when it targets the
-            // pin.
+            // pin with `pinsRow`.
             //
             // Reads ONLY the pinned row's own height — no span, no window membership, no loading
             // precondition, because anchoring on a row loads it. That is the whole reason this is an

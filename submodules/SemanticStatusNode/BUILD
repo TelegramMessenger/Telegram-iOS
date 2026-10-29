@@ -15,7 +15,6 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/GZip:GZip",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AppBundle:AppBundle",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/Components/HierarchyTrackingLayer",

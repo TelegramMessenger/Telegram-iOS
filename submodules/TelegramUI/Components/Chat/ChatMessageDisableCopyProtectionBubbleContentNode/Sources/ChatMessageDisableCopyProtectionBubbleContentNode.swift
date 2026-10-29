@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -75,7 +74,7 @@ public class ChatMessageDisableCopyProtectionBubbleContentNode: ChatMessageBubbl
     
     private var cachedTonImage: (UIImage, UIColor)?
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.textNode = TextNodeWithEntities()
         self.textNode.textNode.isUserInteractionEnabled = false
         self.textNode.textNode.displaysAsynchronously = false
@@ -84,7 +83,7 @@ public class ChatMessageDisableCopyProtectionBubbleContentNode: ChatMessageBubbl
         self.infoNode.textNode.isUserInteractionEnabled = false
         self.infoNode.textNode.displaysAsynchronously = false
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.infoNode.textNode)

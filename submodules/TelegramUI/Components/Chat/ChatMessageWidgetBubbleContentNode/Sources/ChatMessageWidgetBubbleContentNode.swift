@@ -6,7 +6,6 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
-import LottieSettings
 import AccountContext
 import ChatMessageBubbleContentNode
 import ChatMessageDateAndStatusNode
@@ -113,7 +112,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
     private var textSelectionAdapter: MessageWidgetTextSelectionAdapter?
     private var textSelectionNode: TextSelectionNode?
 
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.registry = MessageWidgetRegistry()
         self.clipView = UIView()
         self.clipView.clipsToBounds = true
@@ -121,7 +120,7 @@ public final class ChatMessageWidgetBubbleContentNode: ChatMessageBubbleContentN
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.pillView = UnsupportedContentPillView()
 
-        super.init(lottieSettings: lottieSettings)
+        super.init()
 
         self.pillView.action = { [weak self] in
             guard let item = self?.item else {

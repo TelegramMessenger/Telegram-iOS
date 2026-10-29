@@ -12,7 +12,6 @@ swift_library(
     deps = [
         "//submodules/PasscodeCore",
         "//submodules/Display",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AccountContext",
         "//submodules/Markdown",
         "//submodules/ComponentFlow",

@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -296,8 +295,7 @@ final class CraftTableComponent: Component {
                                             content: LottieComponent.AppBundleContent(name: "CraftFail"),
                                             color: .white,
                                             size: CGSize(width: 52.0, height: 52.0),
-                                            playOnce: self.craftFailPlayOnce,
-                                            lottieSettings: component.context.lottieRenderingSettings
+                                            playOnce: self.craftFailPlayOnce
                                         )
                                     )),
                                     backgroundColor: .white.withAlphaComponent(0.1),
@@ -336,8 +334,7 @@ final class CraftTableComponent: Component {
                                 LottieComponent(
                                     content: LottieComponent.AppBundleContent(name: "Anvil"),
                                     size: CGSize(width: 52.0, height: 52.0),
-                                    playOnce: self.anvilPlayOnce,
-                                    lottieSettings: component.context.lottieRenderingSettings
+                                    playOnce: self.anvilPlayOnce
                                 )
                             ))
                         )

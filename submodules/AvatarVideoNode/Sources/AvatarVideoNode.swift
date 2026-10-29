@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -82,7 +81,7 @@ public final class AvatarVideoNode: ASDisplayNode {
         if self.useAnimationNode {
             self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(animationFile), resource: chatMessageStickerResource(file: animationFile, small: false)).startStrict())
             
-            let animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.autoplay = false
             self.animationNode = animationNode
             animationNode.started = { [weak self] in

@@ -9,8 +9,8 @@ enum LottieBindingTestFixtures {
     ///
     /// The opacity is *animated* on purpose: tlottie's `frame_count()` returns 1
     /// for any composition it can prove static, so a motionless fixture would
-    /// make the two backends disagree on metadata for a reason that has nothing
-    /// to do with the factory.
+    /// report a single frame for a reason that has nothing to do with the
+    /// factory.
     static func solidRed(width: Int = 32, height: Int = 32,
                          frameRate: Int = 60, frameCount: Int = 60) -> Data {
         let opacity = """

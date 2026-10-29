@@ -13,7 +13,6 @@ swift_library(
     ],
     deps = [
         "//submodules/AccountContext",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/AppBundle:AppBundle",
         "//submodules/TelegramCore",
         "//submodules/InstantPageUI",

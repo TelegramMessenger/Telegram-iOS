@@ -128,7 +128,7 @@ private final class LargeEmojiAlertContentNode: ASDisplayNode {
         self.imageNode = TransformImageNode()
         self.imageNode.displaysAsynchronously = false
         self.imageNode.isUserInteractionEnabled = false
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: context.lottieRenderingSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
 
         super.init()
 

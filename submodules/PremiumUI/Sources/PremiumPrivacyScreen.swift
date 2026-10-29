@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -207,8 +206,7 @@ private final class SheetContent: CombinedComponent {
             let icon = icon.update(
                 component: LottieComponent(
                     content: LottieComponent.AppBundleContent(name: iconName),
-                    playOnce: state.playOnce,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    playOnce: state.playOnce
                 ),
                 availableSize: CGSize(width: 70, height: 70),
                 transition: .immediate

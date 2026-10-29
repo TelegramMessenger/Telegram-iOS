@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -306,7 +305,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                     colors[colorToReplace] = color.rgb
                 }
             }
-            self.animationNode = SimpleAnimationNode(animationName: animation, replaceColors: colors, size: CGSize(width: 66.0, height: 66.0), playOnce: true, startFrame: startFrame, lottieSettings: .noAccountFallback)
+            self.animationNode = SimpleAnimationNode(animationName: animation, replaceColors: colors, size: CGSize(width: 66.0, height: 66.0), playOnce: true, startFrame: startFrame)
             if !enableAnimations {
                 self.animationNode!.seekToEnd(immediately: true)
             }

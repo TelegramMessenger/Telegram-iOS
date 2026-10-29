@@ -10,7 +10,7 @@ import MessageWidget
 /// widget grows upward there until its top reaches the screen's top inset, and the rest downward (the user's rule,
 /// 2026-10-28, replacing decision 1's "the anchor wins at the bottom too"); a widget's first height is placed as any new
 /// message is (decision 2), and the list never shows space past its ends (decision 3). The fixtures are
-/// `Fixtures/resize/`: each sets its anchor first, then changes by 120 pt (`grow-top-far` by 480 pt). Each chat is taller
+/// `Fixtures/resize/`: each sets its anchor first, then changes by 120 pt (`grow-top-far` and `grow-bottom-far` by 480 pt). Each chat is taller
 /// than the screen (older filler posts): a chat that fits the screen cannot scroll, so nothing in it can keep an edge the
 /// list's own placement does not. A test of the anchor off the chat's bottom scrolls there and checks it is
 /// (`assertOffTheBottom`): `load` leaves the chat at its bottom.
@@ -25,6 +25,7 @@ final class WidgetHarnessResizeTests: XCTestCase {
     private static let growTop = "fixture/resize/grow-top.html"
     private static let growBottom = "fixture/resize/grow-bottom.html"
     private static let growTopFar = "fixture/resize/grow-top-far.html"
+    private static let growBottomFar = "fixture/resize/grow-bottom-far.html"
     private static let shrinkTop = "fixture/resize/shrink-top.html"
     private static let timerTop = "fixture/resize/timer-top.html"
     private static let text = "fixture/text.html"
@@ -322,6 +323,29 @@ final class WidgetHarnessResizeTests: XCTestCase {
         let message = "room \(room), before \(before), after \(after)"
         XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
         XCTAssertNear(after[Self.growTopFar]?.minY, before[Self.growTopFar]?.minY, message)
+        host.updateMessage(path: Self.text)
+        let later = self.settle(root) { _ in true }
+        XCTAssertNear(later[Self.text]?.minY, before[Self.text]?.minY, "after a later pass: before \(before), later \(later)")
+    }
+
+    /// Under a held pin a bottom-anchored widget cannot keep its bottom: the pinned post above it would go up and the pin
+    /// would pull it back down on the next pass. The pin anchors the pass instead, so the widget grows downward, into the
+    /// room below and past it, and the pinned post stays (the review of 2026-10-28).
+    func testUnderAPinnedPostABottomAnchoredBubbleLeavesThePinInPlace() throws {
+        let (root, _) = try self.load([Self.tall, Self.text, Self.box, Self.growBottomFar])
+        let host = try XCTUnwrap(root.listHost)
+        host.pinToTop(path: Self.text)
+        let before = self.settle(root) { _ in true }
+        let bottomLine = Double(root.view.bounds.height - root.view.safeAreaInsets.bottom)
+        let room = bottomLine - (before[Self.growBottomFar]?.maxY ?? bottomLine)
+        let pinnedTop = before[Self.text]?.minY ?? 0.0
+        XCTAssertTrue(pinnedTop > self.topInset(root) - 0.6 && pinnedTop < self.topInset(root) + 12.0, "the post is not pinned to the top: \(before)")
+        XCTAssertTrue(room > 20.0 && room < 440.0, "the room below the newest post is not under its growth: \(room), \(before)")
+        try self.click(root, Self.growBottomFar)
+        let after = self.settle(root) { ($0[Self.growBottomFar]?.height ?? 0.0) > (before[Self.growBottomFar]?.height ?? 0.0) + 400.0 }
+        let message = "room \(room), before \(before), after \(after)"
+        XCTAssertNear(after[Self.text]?.minY, before[Self.text]?.minY, message)
+        XCTAssertNear(after[Self.growBottomFar]?.minY, before[Self.growBottomFar]?.minY, message)
         host.updateMessage(path: Self.text)
         let later = self.settle(root) { _ in true }
         XCTAssertNear(later[Self.text]?.minY, before[Self.text]?.minY, "after a later pass: before \(before), later \(later)")

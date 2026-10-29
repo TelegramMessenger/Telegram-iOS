@@ -33,7 +33,6 @@ swift_library(
         "//submodules/TelegramUI/Components/News/NewsFeedSupport",
         "//submodules/ItemListUI",
         "//submodules/LottieBinding",
-        "//submodules/LottieSettings",
         "//submodules/GZip",
         "//submodules/AppBundle",
     ],

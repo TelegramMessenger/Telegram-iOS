@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -66,7 +65,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.subject = subject
         self.isLoading = isLoading
         
-        self.animationNode = DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false

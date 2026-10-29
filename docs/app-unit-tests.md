@@ -10,7 +10,9 @@ value box, using `@testable import Postbox`; add new Postbox regression tests un
 
 `//submodules/TelegramCallsUI:TelegramCallsUITests` drives `SharedCallAudioContext` through a fake
 `ManagedAudioSession` (implementable from outside through `ManagedAudioSessionControl`'s public closure initializer).
-Creating the context builds a real tgcalls audio device, which is fine in the simulator test process.
+Creating the context builds a real tgcalls audio device, which is fine in the simulator test process. It also pins
+where the group call header puts its "speaking" line (`VideoChatTitleComponent.View.layoutActivityStatusNode`, with a
+real `ChatTitleActivityNode`; the component itself needs `PresentationStrings`).
 
 `//submodules/TelegramAudio:TelegramAudioTests` covers pure `ManagedAudioSessionType` helpers such as
 `voiceMessageRecording(beginWithTone:pauseMusicOnRecording:)` (the mapping for the Data & Storage "Pause Music While

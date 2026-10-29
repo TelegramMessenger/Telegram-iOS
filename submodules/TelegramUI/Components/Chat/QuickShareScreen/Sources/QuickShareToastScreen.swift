@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -285,8 +284,7 @@ private final class QuickShareToastScreenComponent: Component {
                         name: animationName
                     ),
                     size: CGSize(width: 38.0, height: 38.0),
-                    loop: false,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    loop: false
                 )),
                 environment: {},
                 containerSize: iconSize

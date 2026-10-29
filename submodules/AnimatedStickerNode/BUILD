@@ -30,7 +30,6 @@ swift_library(
         "//submodules/YuvConversion:YuvConversion",
         "//submodules/GZip:GZip",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/MediaResources:MediaResources",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/ManagedFile:ManagedFile",

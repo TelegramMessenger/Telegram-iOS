@@ -14,7 +14,6 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/Display:Display",
         "//submodules/LottieBinding:LottieBinding",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/GZip:GZip",
         "//submodules/WebPBinding:WebPBinding",
     ],

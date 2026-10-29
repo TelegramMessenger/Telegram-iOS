@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import TelegramPresentationData
@@ -197,7 +196,7 @@ public final class VideoPlaybackControlsComponent: Component {
             if let current = self.centerButtonIconNode, current.size == centerButtonIconSize {
                 centerButtonIconNode = current
             } else {
-                centerButtonIconNode = PlayPauseIconNode(size: centerButtonIconSize, lottieSettings: .noAccountFallback)
+                centerButtonIconNode = PlayPauseIconNode(size: centerButtonIconSize)
                 if let current = self.centerButtonIconNode {
                     centerButtonIconNode.frame = current.frame
                     current.view.removeFromSuperview()
@@ -236,10 +235,10 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
     private let duration: Double = 0.35
     private var iconState: PlayPauseIconNodeState = .pause
     
-    override init(size: CGSize, lottieSettings: LottieRenderingSettings) {
+    override init(size: CGSize) {
         self.size = size
         
-        super.init(size: size, lottieSettings: lottieSettings)
+        super.init(size: size)
         
         self.trackTo(item: ManagedAnimationItem(source: .local("anim_playpause"), frames: .range(startFrame: 41, endFrame: 41), duration: 0.01))
     }

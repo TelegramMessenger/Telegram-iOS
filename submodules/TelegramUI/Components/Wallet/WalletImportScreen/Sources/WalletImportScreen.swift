@@ -1,6 +1,5 @@
 import PasscodeCore
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import AccountContext
@@ -1665,8 +1664,7 @@ private final class WalletImportScreenComponent: Component {
                     startingPosition: .begin,
                     size: animationSize,
                     loop: false,
-                    playOnce: self.playAnimation,
-                    lottieSettings: component.context.lottieRenderingSettings
+                    playOnce: self.playAnimation
                 )),
                 environment: {},
                 containerSize: animationSize

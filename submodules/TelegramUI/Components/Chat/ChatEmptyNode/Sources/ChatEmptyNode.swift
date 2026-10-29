@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -1051,10 +1050,8 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
     private var currentStrings: PresentationStrings?
     
     private let stars: Int64?
-    private let lottieSettings: LottieRenderingSettings
     
     public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?, stars: Int64?) {
-        self.lottieSettings = context.lottieRenderingSettings
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         self.isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         self.stars = stars
@@ -1238,8 +1235,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
                         content: LottieComponent.AppBundleContent(name: "PremiumRequired"),
                         color: serviceColor.primaryText,
                         size: CGSize(width: 120.0, height: 120.0),
-                        loop: true,
-                        lottieSettings: self.lottieSettings
+                        loop: true
                     )
                 )
             }

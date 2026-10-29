@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import Display
 import ComponentFlow
@@ -154,8 +153,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                         icon: AnyComponent(LottieComponent(
                             content: LottieComponent.AppBundleContent(name: "anim_infotip"),
                             startingPosition: .begin,
-                            size: CGSize(width: 32.0, height: 32.0),
-                            lottieSettings: component.context.lottieRenderingSettings
+                            size: CGSize(width: 32.0, height: 32.0)
                         )),
                         content: AnyComponent(MultilineTextComponent(
                             text: .markdown(text: environment.strings.Story_StealthMode_ToastCooldownText, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
@@ -276,8 +274,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                             color: environment.theme.list.itemCheckColors.foregroundColor,
                             startingPosition: .begin,
                             size: CGSize(width: 30.0, height: 30.0),
-                            loop: true,
-                            lottieSettings: component.context.lottieRenderingSettings
+                            loop: true
                         )))
                     ], spacing: 4.0)
                 ))

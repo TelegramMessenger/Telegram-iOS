@@ -171,6 +171,7 @@ other device stays byte-identical; the band helpers above are built that way.
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
   widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
-  flow's content and bottom-button bands per posture),
+  flow's content and bottom-button bands per posture, and the password screen's column above the keyboard: on the
+  Duo's short screens it drops the animation so Forgot password keeps its gap below the field),
   `//submodules/TelegramUI/Components/ChatMediaEditorScreen:ChatMediaEditorScreenTests` (the chat media editor's
   trimmer, counter and camera button, Edit Cover title beside a strip).

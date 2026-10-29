@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UniformTypeIdentifiers
 import UIKit
 import Display
@@ -719,7 +718,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.menuButtonClippingNode.clipsToBounds = true
         self.menuButtonClippingNode.isUserInteractionEnabled = false
         
-        self.menuButtonIconNode = MenuIconNode(lottieSettings: context.lottieRenderingSettings)
+        self.menuButtonIconNode = MenuIconNode()
         self.menuButtonIconNode.isUserInteractionEnabled = false
         self.menuButtonIconNode.customColor = presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor
         self.menuButtonTextNode = ImmediateTextNode()
@@ -1557,16 +1556,25 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if transition.isAnimated {
             self.animatingTransition = true
             self.startButton.highlightEnabled = false
+            // It lies over the menu button until it has faded out: taps must reach the menu button, not send /start again.
+            self.startButton.isUserInteractionEnabled = false
         }
         
         let sourceButtonFrame = self.startButton.frame
         transition.updateFrame(node: self.startButton, frame: self.menuButton.frame)
-        transition.updateFrame(node: self.startButton.buttonBackgroundNode, frame: CGRect(origin: .zero, size: self.menuButton.frame.size))
         let sourceButtonTextPosition = self.startButton.titleNode.position
         transition.updatePosition(node: self.startButton.titleNode, position: CGPoint(x: self.menuButton.frame.width / 2.0, y: self.menuButton.frame.height / 2.0))
         
         let sourceButtonCornerRadius = self.startButton.buttonCornerRadius
-        transition.updateCornerRadius(node: self.startButton.buttonBackgroundNode, cornerRadius: self.menuButton.cornerRadius)
+        // The menu button draws a capsule (`menuButtonBackgroundView`), rounder than its node's clipping radius.
+        let targetCornerRadius = self.menuButton.frame.height * 0.5
+        // Every layer drawing the button's shape follows the frame on the same timing, its corner radius going from
+        // Start's to the menu button's: the shape stays one capsule throughout, with no layer keeping its own corner.
+        self.startButton.updateShape(size: self.menuButton.frame.size, cornerRadius: targetCornerRadius, transition: transition)
+        // The glass chrome keeps its width (see `updateShape`): clip the button to the same capsule.
+        self.startButton.clipsToBounds = true
+        self.startButton.cornerRadius = sourceButtonCornerRadius
+        transition.updateCornerRadius(node: self.startButton, cornerRadius: targetCornerRadius)
         transition.animateTransformScale(layer: self.startButton.titleNode.layer, from: CGPoint(x: 1.0, y: 1.0), to: CGPoint(x: 0.4, y: 0.4))
         Queue.mainQueue().justDispatch {
             self.startButton.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -1586,19 +1594,37 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.glassBackgroundContainer.contentView.addSubview(menuTextSnapshotView)
         menuTextSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x - menuContentDelta, y: self.menuButton.position.y), completion: { [weak self, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
-            self?.animatingTransition = false
+            guard let self else {
+                return
+            }
+            let completion: () -> Void = {
+                self.animatingTransition = false
+                
+                menuIconSnapshotView?.removeFromSuperview()
+                menuTextSnapshotView?.removeFromSuperview()
+                
+                self.startButton.isHidden = true
+                self.startButton.layer.removeAnimation(forKey: "opacity")
+                self.startButton.frame = sourceButtonFrame
+                self.startButton.updateShape(size: sourceButtonFrame.size, cornerRadius: sourceButtonCornerRadius, transition: .immediate)
+                self.startButton.titleNode.position = sourceButtonTextPosition
+                self.startButton.titleNode.layer.removeAllAnimations()
+                self.startButton.clipsToBounds = false
+                self.startButton.cornerRadius = 0.0
+                self.startButton.highlightEnabled = true
+                self.startButton.isUserInteractionEnabled = true
+            }
             
-            menuIconSnapshotView?.removeFromSuperview()
-            menuTextSnapshotView?.removeFromSuperview()
-            
-            self?.menuButton.isHidden = false
-            self?.startButton.isHidden = true
-            self?.startButton.frame = sourceButtonFrame
-            self?.startButton.buttonBackgroundNode.frame = CGRect(origin: .zero, size: sourceButtonFrame.size)
-            self?.startButton.titleNode.position = sourceButtonTextPosition
-            self?.startButton.titleNode.layer.removeAllAnimations()
-            self?.startButton.buttonBackgroundNode.cornerRadius = sourceButtonCornerRadius
-            self?.startButton.highlightEnabled = true
+            // The morphed button is solid, the menu button glass: reveal the menu button underneath by fading the
+            // morphed button out instead of swapping them in one frame. The snapshots carry the title until then.
+            self.menuButton.isHidden = false
+            if transition.isAnimated {
+                self.startButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    completion()
+                })
+            } else {
+                completion()
+            }
         })
     }
     
@@ -1855,11 +1881,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             hasMenuButton = false
         }
         
-        let buttonInset: CGFloat = max(leftInset, 16.0)
-        let maximumButtonWidth: CGFloat = min(430.0, width)
-        let buttonHeight = self.startButton.updateLayout(width: maximumButtonWidth - buttonInset * 2.0, transition: transition)
-        let buttonSize = CGSize(width: maximumButtonWidth - buttonInset * 2.0, height: buttonHeight)
-        self.startButton.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: 6.0), size: buttonSize)
+        // While the Start button morphs into the menu button (`animateBotButtonOutToMenu`), its frame belongs to that
+        // animation: any layout in the meantime (the chat updates as /start is sent) would stretch it back into a
+        // full-width bar holding the menu button's title until the morph completes.
+        if displayBotStartButton || !self.animatingTransition {
+            let buttonInset: CGFloat = max(leftInset, 16.0)
+            let maximumButtonWidth: CGFloat = min(430.0, width)
+            let buttonHeight = self.startButton.updateLayout(width: maximumButtonWidth - buttonInset * 2.0, transition: transition)
+            let buttonSize = CGSize(width: maximumButtonWidth - buttonInset * 2.0, height: buttonHeight)
+            self.startButton.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: 6.0), size: buttonSize)
+        }
         
         var hideOffset: CGPoint = .zero
         if displayBotStartButton {
@@ -2702,8 +2733,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "BinBlue"),
                     color: interfaceState.theme.chat.inputPanel.panelControlColor,
-                    startingPosition: .begin,
-                    lottieSettings: self.context?.lottieRenderingSettings ?? .noAccountFallback
+                    startingPosition: .begin
                 )),
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
@@ -2958,8 +2988,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         component: AnyComponent(LottieComponent(
                             content: LottieComponent.AppBundleContent(name: "BinRed"),
                             color: UIColor(rgb: 0xFF3B30),
-                            startingPosition: .begin,
-                            lottieSettings: self.context?.lottieRenderingSettings ?? .noAccountFallback
+                            startingPosition: .begin
                         )),
                         environment: {},
                         containerSize: CGSize(width: 40.0, height: 40.0)

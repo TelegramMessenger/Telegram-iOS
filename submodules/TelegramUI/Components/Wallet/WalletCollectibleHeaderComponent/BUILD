@@ -13,7 +13,6 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
         "//submodules/GZip",
-        "//submodules/LottieSettings:LottieSettings",
         "//submodules/Display",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramPresentationData",

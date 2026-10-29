@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -142,7 +141,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.containerNode = ContainerNode()
         self.containerNode.clipsToBounds = true
         
@@ -150,7 +149,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.textAccessibilityOverlayNode = TextAccessibilityOverlayNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.containerNode)
         

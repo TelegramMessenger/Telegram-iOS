@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -36,7 +35,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private let addButtonNode: ChatMessageAttachedContentButtonNode
     private let messageButtonNode: ChatMessageAttachedContentButtonNode
     
-    required public init(lottieSettings: LottieRenderingSettings) {
+    required public init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.titleNode = TextNode()
@@ -44,7 +43,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.addButtonNode = ChatMessageAttachedContentButtonNode()
         self.messageButtonNode = ChatMessageAttachedContentButtonNode()
         
-        super.init(lottieSettings: lottieSettings)
+        super.init()
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)

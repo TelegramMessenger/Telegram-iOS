@@ -1,5 +1,4 @@
 import Foundation
-import LottieSettings
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -198,11 +197,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.selectionView = UIView()
         self.selectionView?.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.mixedWith(theme.contextMenu.backgroundColor.withMultipliedAlpha(0.4), alpha: 0.5)
         
-        self.staticAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode(lottieSettings: self.context.lottieRenderingSettings) : DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+        self.staticAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
     
         if hasAppearAnimation {
             self.staticAnimationNode.isHidden = true
-            self.animateInAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode(lottieSettings: self.context.lottieRenderingSettings) : DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            self.animateInAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
         }
         
         super.init()
@@ -344,7 +343,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         if isExpanded && !self.hasAppearAnimation {
             self.staticAnimationNode.play(firstFrame: false, fromIndex: 0)
         } else if isExpanded, self.animationNode == nil {
-            let animationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode(lottieSettings: self.context.lottieRenderingSettings) : DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+            let animationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             self.addSubnode(animationNode)
@@ -443,7 +442,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         if self.animationNode == nil {
             if isPreviewing {
                 if self.stillAnimationNode == nil {
-                    let stillAnimationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode(lottieSettings: self.context.lottieRenderingSettings) : DefaultAnimatedStickerNodeImpl(lottieSettings: self.context.lottieRenderingSettings)
+                    let stillAnimationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
                     self.stillAnimationNode = stillAnimationNode
                     self.addSubnode(stillAnimationNode)
                     
