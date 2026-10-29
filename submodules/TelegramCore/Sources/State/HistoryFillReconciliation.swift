@@ -39,7 +39,7 @@ struct HistoryFillConfirmationPlan: Equatable {
     var batch: [MessageId]
     /// `filledRange` when every candidate is in `batch`. Otherwise `filledRange` cut just before the
     /// nearest candidate left over on each side of the edge, so no unconfirmed message is revealed; the
-    /// rest stays a hole for the next fill. It always holds the edge (the start of a `.range`, the anchor
+    /// fill makes the rest a hole for the next fill, also where it was none (Holes.swift). It always holds the edge (the start of a `.range`, the anchor
     /// of an `.aroundId`), so the view's next hole is a new, smaller one, never the one just filled.
     var closedRange: ClosedRange<MessageId.Id>
 }

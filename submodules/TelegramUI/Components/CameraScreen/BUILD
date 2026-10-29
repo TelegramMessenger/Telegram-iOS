@@ -109,9 +109,11 @@ swift_test(
     srcs = [
         "Sources/CameraScreenGating.swift",
         "Sources/CameraBatchModel.swift",
+        "Sources/CameraDualPreviewPlacement.swift",
         "Tests/CameraScreenGatingTests.swift",
         "Tests/CameraBatchTests.swift",
         "Tests/CameraScreenChatChromeTests.swift",
+        "Tests/CameraDualPreviewPlacementTests.swift",
     ],
     copts = [
         "-warnings-as-errors",

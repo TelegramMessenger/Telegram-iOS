@@ -25,11 +25,24 @@ import TextFormat
 import TextNodeWithEntities
 
 public final class ContactItemHighlighting {
-    public var chatLocation: ChatLocation?
-    public var progress: CGFloat = 1.0
+    public private(set) var chatLocation: ChatLocation?
+    public private(set) var progress: CGFloat = 1.0
     
     public init(chatLocation: ChatLocation? = nil) {
         self.chatLocation = chatLocation
+    }
+    
+    /// `progress` describes the selection of `chatLocation`; without one there is nothing in progress (as the chat list
+    /// drops its highlighted location). The split view clears its selection with `(nil, 0.0)` when it goes away (folding
+    /// iPhone Duo); keeping that 0 gave every row `1 - 0` and left it gray.
+    public func update(chatLocation: ChatLocation?, progress: CGFloat) {
+        self.chatLocation = chatLocation
+        self.progress = chatLocation == nil ? 1.0 : progress
+    }
+    
+    /// The highlight alpha of a row: `isSelected` is a row being pressed or showing `chatLocation`.
+    public func highlightAlpha(isSelected: Bool) -> CGFloat {
+        return isSelected ? self.progress : 1.0 - self.progress
     }
 }
 
@@ -748,7 +761,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         if let item = self.item, !item.enabled {
             reallyHighlighted = false
         }
-        let highlightProgress: CGFloat = self.item?.itemHighlighting?.progress ?? 1.0
         if let item = self.item {
             switch item.peer {
             case let .peer(_, chatPeer):
@@ -766,7 +778,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             transition.updateTintColor(layer: avatarBadgeBackground.layer, color: item.presentationData.theme.list.itemHighlightedBackgroundColor.mixedWith(item.presentationData.theme.list.plainBackgroundColor, alpha: reallyHighlighted ? 0.0 : 1.0))
         }
         
-        let baseAlpha = reallyHighlighted ? highlightProgress : 1.0 - highlightProgress
+        let baseAlpha = self.item?.itemHighlighting?.highlightAlpha(isSelected: reallyHighlighted) ?? (reallyHighlighted ? 1.0 : 0.0)
         self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: baseAlpha > 0, transition: transition, aboveNodes: [self.separatorNode, self.backgroundNode], highlightAlpha: baseAlpha)
         if let item = self.item, let avatarBadgeBackground = self.avatarBadgeBackground {
             transition.updateTintColor(layer: avatarBadgeBackground.layer, color: item.presentationData.theme.list.itemHighlightedBackgroundColor.mixedWith(item.presentationData.theme.list.plainBackgroundColor, alpha: 1.0 - self.highlightedBackgroundNode.alpha))

@@ -1052,8 +1052,9 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 let actualContentWidth = self.visibleItemSize * CGFloat(self.itemsPerRow) + self.horizontalSpacing * CGFloat(self.itemsPerRow - 1)
-                self.itemInsets.left = floorToScreenPixels((width - actualContentWidth) / 2.0)
-                self.itemInsets.right = self.itemInsets.left
+                let gridSideInsets = entityKeyboardGridSideInsets(width: width, gridWidth: actualContentWidth, leftInset: containerInsets.left, rightInset: containerInsets.right)
+                self.itemInsets.left = gridSideInsets.left
+                self.itemInsets.right = gridSideInsets.right
                 
                 self.itemInsets.top += self.customContentHeight
                 
@@ -3347,6 +3348,12 @@ public final class EmojiPagerContentComponent: Component {
                     
                     let hasTopSeparator = false
                     
+                    // A header's embedded row scrolls sideways: it spans the band, clear of iPhone Duo's side strip.
+                    let headerStrips = entityKeyboardSideStrips(leftInset: itemLayout.headerInsets.left, rightInset: itemLayout.headerInsets.right)
+                    var embeddedHeaderInsets = itemLayout.headerInsets
+                    embeddedHeaderInsets.left -= headerStrips.left
+                    embeddedHeaderInsets.right -= headerStrips.right
+                    
                     let (groupHeaderSize, centralContentWidth) = groupHeaderView.update(
                         context: component.context,
                         theme: keyboardChildEnvironment.theme,
@@ -3363,7 +3370,7 @@ public final class EmojiPagerContentComponent: Component {
                         embeddedItems: itemGroup.isEmbedded ? itemGroup.items : nil,
                         isStickers: component.itemLayoutType == .detailed,
                         constrainedSize: CGSize(width: itemLayout.contentSize.width - itemLayout.headerInsets.left - itemLayout.headerInsets.right, height: itemGroupLayout.headerHeight),
-                        insets: itemLayout.headerInsets,
+                        insets: embeddedHeaderInsets,
                         cache: component.animationCache,
                         renderer: component.animationRenderer,
                         attemptSynchronousLoad: attemptSynchronousLoads
@@ -3374,7 +3381,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     headerCentralContentWidth = centralContentWidth
                     
-                    let groupHeaderFrame = CGRect(origin: CGPoint(x: floor((itemLayout.contentSize.width - groupHeaderSize.width) / 2.0), y: itemGroupLayout.frame.minY + 1.0), size: groupHeaderSize)
+                    let groupHeaderFrame = CGRect(origin: CGPoint(x: floor(entityKeyboardBandCenteredX(width: groupHeaderSize.width, containerWidth: itemLayout.contentSize.width, leftInset: itemLayout.headerInsets.left, rightInset: itemLayout.headerInsets.right)), y: itemGroupLayout.frame.minY + 1.0), size: groupHeaderSize)
                     groupHeaderView.bounds = CGRect(origin: CGPoint(), size: groupHeaderFrame.size)
                     groupHeaderTransition.setPosition(view: groupHeaderView, position: CGPoint(x: groupHeaderFrame.midX, y: groupHeaderFrame.midY))
                 }
@@ -3412,7 +3419,7 @@ public final class EmojiPagerContentComponent: Component {
                     let groupBorderVerticalTopOffset: CGFloat = 8.0
                     let groupBorderVerticalInset: CGFloat = 6.0
                     
-                    let groupBorderFrame = CGRect(origin: CGPoint(x: groupBorderHorizontalInset, y: itemGroupLayout.frame.minY + groupBorderVerticalTopOffset), size: CGSize(width: itemLayout.width - groupBorderHorizontalInset * 2.0, height: itemGroupLayout.frame.size.height - groupBorderVerticalTopOffset + groupBorderVerticalInset))
+                    let groupBorderFrame = CGRect(origin: CGPoint(x: groupBorderHorizontalInset, y: itemGroupLayout.frame.minY + groupBorderVerticalTopOffset), size: CGSize(width: itemLayout.width - itemLayout.itemInsets.left - itemLayout.itemInsets.right + 8.0, height: itemGroupLayout.frame.size.height - groupBorderVerticalTopOffset + groupBorderVerticalInset))
                     
                     if groupBorderLayer.bounds.size != groupBorderFrame.size || headerSizeUpdated {
                         let headerWidth: CGFloat
@@ -5043,7 +5050,9 @@ public final class EmojiPagerContentComponent: Component {
                         vibrancyEffectView.addSubview(visibleEmptySearchResultsView.tintContainerView)
                     }
                 }
-                let emptySearchResultsSize = CGSize(width: availableSize.width, height: availableSize.height - itemLayout.searchInsets.top - itemLayout.searchHeight)
+                // Centred on the band, under the search field: iPhone Duo's side strip is left out of it.
+                let emptySearchResultsStrips = entityKeyboardSideStrips(leftInset: itemLayout.searchInsets.left, rightInset: itemLayout.searchInsets.right)
+                let emptySearchResultsSize = CGSize(width: availableSize.width - emptySearchResultsStrips.left - emptySearchResultsStrips.right, height: availableSize.height - itemLayout.searchInsets.top - itemLayout.searchHeight)
                 visibleEmptySearchResultsView.update(
                     context: component.context,
                     theme: keyboardChildEnvironment.theme,
@@ -5054,7 +5063,7 @@ public final class EmojiPagerContentComponent: Component {
                     searchInitiallyHidden: component.searchInitiallyHidden,
                     transition: emptySearchResultsTransition
                 )
-                emptySearchResultsTransition.setFrame(view: visibleEmptySearchResultsView, frame: CGRect(origin: CGPoint(x: 0.0, y: itemLayout.searchInsets.top + itemLayout.searchHeight), size: emptySearchResultsSize))
+                emptySearchResultsTransition.setFrame(view: visibleEmptySearchResultsView, frame: CGRect(origin: CGPoint(x: emptySearchResultsStrips.left, y: itemLayout.searchInsets.top + itemLayout.searchHeight), size: emptySearchResultsSize))
             } else {
                 if let visibleEmptySearchResultsView = self.visibleEmptySearchResultsView {
                     self.visibleEmptySearchResultsView = nil

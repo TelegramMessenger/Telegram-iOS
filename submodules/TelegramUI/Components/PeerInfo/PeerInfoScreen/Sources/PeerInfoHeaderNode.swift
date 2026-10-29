@@ -83,6 +83,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private let chatLocation: ChatLocation
     
     private(set) var isAvatarExpanded: Bool
+    /// The title and buttons laid on the expanded photo's lower part.
+    var expandedAvatarBottomHeight: CGFloat {
+        return (self.isSettings || self.isMyProfile) ? 60.0 : 98.0
+    }
     var skipCollapseCompletion = false
     var ignoreCollapse = false
     
@@ -1202,13 +1206,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(0.0, transition: transition)
         self.avatarOverlayNode.updateTransitionFraction(0.0, transition: transition)
         
-        let expandedAvatarControlsHeight: CGFloat = 61.0
-        var expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
-        if self.isSettings || self.isMyProfile {
-            expandedAvatarListHeight = expandedAvatarListHeight + 60.0
-        } else {
-            expandedAvatarListHeight = expandedAvatarListHeight + 98.0
-        }
+        let expandedAvatarListHeight = peerInfoExpandedAvatarHeight(containerSize: CGSize(width: width, height: containerHeight), bottomHeight: self.expandedAvatarBottomHeight)
         
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
                 

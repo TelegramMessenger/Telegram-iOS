@@ -1616,6 +1616,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             if !gallery {
+                // A portrait container too short for the expanded photo (the unfolded Duo's detail pane) would collapse
+                // it at once: the tap opens the photo instead. Landscape keeps what it did.
+                if let (layout, _) = strongSelf.validLayout, layout.size.width <= layout.size.height, !peerInfoAvatarExpansionFits(containerSize: layout.size, bottomHeight: strongSelf.headerNode.expandedAvatarBottomHeight) {
+                    strongSelf.openAvatarGallery(peer: peer, entries: entries, centralEntry: entries.first, animateTransition: true)
+                    return
+                }
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 strongSelf.headerNode.updateIsAvatarExpanded(true, transition: transition)
                 
@@ -5639,7 +5645,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         let navigationHeight = self.updateNavigationHeight(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, defaultHeight: navigationHeight, insets: UIEdgeInsets(), transition: transition)
         
-        if self.headerNode.isAvatarExpanded && layout.size.width > layout.size.height {
+        if self.headerNode.isAvatarExpanded && !peerInfoAvatarExpansionFits(containerSize: layout.size, bottomHeight: self.headerNode.expandedAvatarBottomHeight) {
             self.headerNode.updateIsAvatarExpanded(false, transition: transition)
         }
         
@@ -6209,12 +6215,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let offsetY = self.scrollNode.view.contentOffset.y
             var shouldBeExpanded: Bool?
             
-            var isLandscape = false
-            if let (layout, _) = self.validLayout, layout.size.width > layout.size.height {
-                isLandscape = true
-            }
+            let expansionFits = self.validLayout.flatMap { peerInfoAvatarExpansionFits(containerSize: $0.0.size, bottomHeight: self.headerNode.expandedAvatarBottomHeight) } ?? true
             if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
-                if let peer = self.data?.peer, self.chatLocation.threadId == nil, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && !isLandscape {
+                if let peer = self.data?.peer, self.chatLocation.threadId == nil, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && expansionFits {
                     shouldBeExpanded = true
                     
                     if self.canOpenAvatarByDragging && self.headerNode.isAvatarExpanded && offsetY <= -32.0 {

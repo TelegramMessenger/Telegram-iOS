@@ -1227,10 +1227,22 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             applyStoredMessageConfirmation(transaction: transaction, accountPeerId: accountPeerId, mediaBox: postbox.mediaBox, confirmation: confirmation, versions: reconciliation.versions)
                             reopenedIds = transaction.filterStoredMessageIds(confirmation.missing).filter { closedRange.contains($0.id) }.sorted()
                         }
-                        
+
                         switch peerInput {
                         case let .direct(peerId, threadId):
                             transaction.removeHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: closedRange)
+                            // What a partial close leaves of the filled range holds candidates not yet confirmed.
+                            // It is a hole afterwards, also where it was none: an earlier fill may have closed part
+                            // of it over messages the server has since deleted (one held across a cleared history,
+                            // truth seed 361), and only a fill that reaches them again confirms them.
+                            if confirmation != nil {
+                                if filledRange.lowerBound < closedRange.lowerBound {
+                                    transaction.addHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: filledRange.lowerBound ... (closedRange.lowerBound - 1))
+                                }
+                                if closedRange.upperBound < filledRange.upperBound {
+                                    transaction.addHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: (closedRange.upperBound + 1) ... filledRange.upperBound)
+                                }
+                            }
                             for id in reopenedIds {
                                 transaction.addHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: id.id ... id.id)
                             }
