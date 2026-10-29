@@ -18,11 +18,17 @@ import BrowserUI
 /// landed in the composer as a text link (`textUrl`) instead of as plain text the server auto-detects.
 /// A genuine text link — `[label](url)`, a label that differs from its target — is untouched and still
 /// classifies as rich.
-func chatInputContentFromPastedMarkdown(context: AccountContext, plainText: String) -> ChatInputContent? {
-    guard let attribute = inputRichTextAttributeFromText(context: context, text: plainText) else {
+///
+/// The text is read as it was written, not as CommonMark (`MarkdownSourceLineBreaks.keep`): a reply copied from
+/// ChatGPT puts one "Key: value" per line, which CommonMark joins into one line. Its blank lines stay blank lines
+/// when `keepsBlankLines` (the chat composer) and the content is sent as text + entities; see
+/// `pastedMarkdownContentResolvingBlankLines`.
+func chatInputContentFromPastedMarkdown(context: AccountContext, plainText: String, keepsBlankLines: Bool) -> ChatInputContent? {
+    guard let attribute = inputRichTextAttributeFromText(context: context, text: plainText, lineBreaks: .keep) else {
         return nil
     }
-    let content = chatInputContentStrippingSelfReferentialLinks(chatInputContent(fromInstantPage: attribute.instantPage))
+    let parsed = chatInputContentStrippingSelfReferentialLinks(chatInputContent(fromInstantPage: attribute.instantPage))
+    let content = pastedMarkdownContentResolvingBlankLines(parsed, keepsBlankLines: keepsBlankLines)
     guard pastedMarkdownContentIsRicherThanPlain(content) else {
         return nil
     }

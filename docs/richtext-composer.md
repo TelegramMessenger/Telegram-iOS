@@ -568,6 +568,21 @@ with default options) → `InstantPage` → `chatInputContent(fromInstantPage:)`
 is nothing but unformatted `.body` paragraphs, so ordinary text (incl. multi-line) falls through to the default
 plain paste; CommonMark's paired-delimiter rules mean a stray `*`/`-` never triggers.
 
+**Line breaks are read as written, not as CommonMark (#70).** The paste parses with
+`lineBreaks: .keep` (`MarkdownSourceLineBreaks`): a single newline stays a line break (CommonMark's soft break
+joined a ChatGPT reply's "**Key:** value" lines into one), and a blank line between two top-level blocks comes back
+as an empty paragraph (source positions, iOS 16+). `pastedMarkdownContentResolvingBlankLines` keeps those only in the
+chat composer (`keepsBlankLines: true`) and only when the content is sent as text + entities; content that needs a
+rich message (heading, list, table, …) drops them and the renderer spaces its blocks, as do the article editor's
+pastes (decided for #70; keeping them in rich messages too was the alternative). The send path and `.md` documents
+keep CommonMark (`.commonMark`).
+
+**RTF paste keeps paragraph gaps.** A copied web page (a ChatGPT reply in Safari) separates its paragraphs with
+margins only, `\saN`/`\sbN` in the RTF. Both legacy-field RTF routes turn a gap of ≥ 8pt between two non-empty
+paragraphs (never between two list items) into a blank line: `legacyChatInputAttributedString(fromRTF:)` through
+`RTFImport.document(fromRTF:paragraphSpacingAsBlankLines: true)`, `chatInputStateStringFromRTF` through
+`attributedStringWithParagraphSpacingAsBlankLines` (`TextFormat/PastedRichTextParagraphGaps.swift`).
+
 **Self-referential links are stripped BEFORE that gate (load-bearing — a pasted URL must stay plain).** Apple's
 `NSAttributedString(markdown:)` applies the **GFM autolink extension**, so a bare `https://…` — and also a bare
 `www.…` host or an email address, each of which the parser *rewrites* into `http://www.…` / `mailto:…` — comes

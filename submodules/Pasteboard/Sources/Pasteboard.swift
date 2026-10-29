@@ -295,7 +295,9 @@ public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.D
         // Paste direction: a link whose label IS its own URL (an anchor whose text is the URL, the common
         // shape of a copied web link) carries nothing a plain URL would not, so it pastes as plain text and
         // the server detects it. A genuine text link — a label that differs from its target — is kept.
-        return chatInputStateString(attributedString: updatedString).flatMap(chatInputTextStrippingSelfReferentialLinks)
+        // A paragraph gap that is only paragraph spacing (a copied web page's margins) becomes a blank line
+        // before the paragraph styles are dropped.
+        return chatInputStateString(attributedString: attributedStringWithParagraphSpacingAsBlankLines(updatedString)).flatMap(chatInputTextStrippingSelfReferentialLinks)
     }
     return nil
 }

@@ -335,16 +335,19 @@ private final class MarkdownConversionContext {
     fileprivate let documentURL: URL?
     fileprivate let formulasByPlaceholder: [String: MarkdownFormulaDescriptor]
     fileprivate let budget: MarkdownConversionBudget
+    /// Pasted text (`MarkdownSourceLineBreaks.keep`): see `inputRichTextAttributeFromText`.
+    fileprivate let keepsSourceLineBreaks: Bool
     private var nextRemoteMediaId: Int64 = 0
     private var nextLocalMediaId: Int64 = 0
 
     private(set) var media: [EngineMedia.Id: EngineRawMedia] = [:]
 
-    init(context: AccountContext, documentURL: URL?, formulasByPlaceholder: [String: MarkdownFormulaDescriptor], budget: MarkdownConversionBudget) {
+    init(context: AccountContext, documentURL: URL?, formulasByPlaceholder: [String: MarkdownFormulaDescriptor], budget: MarkdownConversionBudget, keepsSourceLineBreaks: Bool) {
         self.context = context
         self.documentURL = documentURL
         self.formulasByPlaceholder = formulasByPlaceholder
         self.budget = budget
+        self.keepsSourceLineBreaks = keepsSourceLineBreaks
     }
 
     func makePageResult(blocks: [InstantPageBlock]) -> MarkdownPageResult {
@@ -1010,14 +1013,26 @@ func markdownWebpage(context: AccountContext, file: FileMediaReference) -> (webP
     return (webPage, fileURL)
 }
 
-public func inputRichTextAttributeFromText(context: AccountContext, text: String) -> RichTextMessageAttribute? {
+/// How a markdown source's own line breaks are read.
+public enum MarkdownSourceLineBreaks {
+    /// CommonMark: a single newline inside a paragraph is a soft break, read as a space, and blank lines only
+    /// separate blocks. What a document (or a message typed as markdown) means.
+    case commonMark
+    /// Pasted text (a reply copied from ChatGPT, say) as it reads: a single newline stays a line break, and a
+    /// blank line between two top-level blocks becomes an empty `.paragraph(.empty)` between them — the only
+    /// empty paragraphs the parse emits — so a caller can keep it as a blank line or drop it. The blank lines
+    /// need the parser's source positions (iOS 16); on iOS 15 there are none.
+    case keep
+}
+
+public func inputRichTextAttributeFromText(context: AccountContext, text: String, lineBreaks: MarkdownSourceLineBreaks = .commonMark) -> RichTextMessageAttribute? {
     guard #available(iOS 15.0, *) else {
         return nil
     }
     guard let data = text.data(using: .utf8) else {
         return nil
     }
-    guard let webpage = markdownWebpage(context: context, file: nil, data: data), case let .Loaded(content) = webpage.content, let instantPage = content.instantPage else {
+    guard let webpage = markdownWebpage(context: context, file: nil, data: data, keepsSourceLineBreaks: lineBreaks == .keep), case let .Loaded(content) = webpage.content, let instantPage = content.instantPage else {
         return nil
     }
     return RichTextMessageAttribute(instantPage: instantPage._parse(), fullInstantPage: nil)
@@ -1191,7 +1206,7 @@ public func richMarkdownAttributeIfNeeded(context: AccountContext, attributedTex
 }
 
 @available(iOS 15.0, *)
-private func markdownWebpage(context: AccountContext, file: (file: FileMediaReference, url: URL)?, data: Data) -> TelegramMediaWebpage? {
+private func markdownWebpage(context: AccountContext, file: (file: FileMediaReference, url: URL)?, data: Data, keepsSourceLineBreaks: Bool = false) -> TelegramMediaWebpage? {
     let limits = markdownSafetyLimits
     guard markdownPassesPreflight(data: data, limits: limits) else {
         return nil
@@ -1209,9 +1224,13 @@ private func markdownWebpage(context: AccountContext, file: (file: FileMediaRefe
         } else {
             baseURL = nil
         }
+        var options = AttributedString.MarkdownParsingOptions()
+        if keepsSourceLineBreaks, #available(iOS 16.0, *) {
+            options.appliesSourcePositionAttributes = true
+        }
         attributedString = try NSAttributedString(
             markdown: Data(preparedSource.text.utf8),
-            options: .init(),
+            options: options,
             baseURL: baseURL
         )
     } catch {
@@ -1219,7 +1238,7 @@ private func markdownWebpage(context: AccountContext, file: (file: FileMediaRefe
     }
     
     let budget = MarkdownConversionBudget(limits: limits)
-    let conversionContext = MarkdownConversionContext(context: context, documentURL: file?.url, formulasByPlaceholder: preparedSource.formulasByPlaceholder, budget: budget)
+    let conversionContext = MarkdownConversionContext(context: context, documentURL: file?.url, formulasByPlaceholder: preparedSource.formulasByPlaceholder, budget: budget, keepsSourceLineBreaks: keepsSourceLineBreaks)
     guard let pageResult = markdownPageResult(from: attributedString, context: conversionContext) else {
         return nil
     }
@@ -1287,6 +1306,7 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
     var nodesByIdentity: [Int: MarkdownIntentNode] = [:]
     var rootNodes: [MarkdownIntentNode] = []
     var rootIdentities: Set<Int> = []
+    var rootSourceLines: [Int: ClosedRange<Int>] = [:]
     var didAbort = false
 
     attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: []) { attributes, range, stop in
@@ -1332,6 +1352,13 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
         if let rootNode = orderedNodes.first, rootIdentities.insert(rootNode.identity).inserted {
             rootNodes.append(rootNode)
         }
+        if context.keepsSourceLineBreaks, let rootNode = orderedNodes.first, let lines = markdownSourceLines(attributes: attributes) {
+            if let current = rootSourceLines[rootNode.identity] {
+                rootSourceLines[rootNode.identity] = min(current.lowerBound, lines.lowerBound) ... max(current.upperBound, lines.upperBound)
+            } else {
+                rootSourceLines[rootNode.identity] = lines
+            }
+        }
         if orderedNodes.count >= 2 {
             for index in 0 ..< (orderedNodes.count - 1) {
                 orderedNodes[index].append(child: orderedNodes[index + 1])
@@ -1345,10 +1372,46 @@ private func markdownPageResult(from attributedString: NSAttributedString, conte
     guard !didAbort, !context.budget.isExceeded else {
         return nil
     }
+    if context.keepsSourceLineBreaks {
+        return markdownPageResultKeepingBlankLines(rootNodes: rootNodes, rootSourceLines: rootSourceLines, context: context)
+    }
     guard let blocks = markdownBlocks(from: rootNodes, context: context, depth: 0), !context.budget.isExceeded else {
         return nil
     }
     return context.makePageResult(blocks: blocks)
+}
+
+/// The top-level blocks with an empty paragraph wherever the source had a blank line between two of them
+/// (`MarkdownSourceLineBreaks.keep`). A block whose source lines are unknown (iOS 15, or text the parser
+/// synthesised) gets none before or after it.
+private func markdownPageResultKeepingBlankLines(rootNodes: [MarkdownIntentNode], rootSourceLines: [Int: ClosedRange<Int>], context: MarkdownConversionContext) -> MarkdownPageResult? {
+    var blocks: [InstantPageBlock] = []
+    var previousLastLine: Int?
+    for node in rootNodes {
+        guard let nodeBlocks = markdownBlocks(from: [node], context: context, depth: 0), !context.budget.isExceeded else {
+            return nil
+        }
+        if nodeBlocks.isEmpty {
+            continue
+        }
+        let lines = rootSourceLines[node.identity]
+        if let previousLastLine, let lines, lines.lowerBound > previousLastLine + 1 {
+            blocks.append(.paragraph(.empty))
+        }
+        blocks.append(contentsOf: nodeBlocks)
+        previousLastLine = lines?.upperBound
+    }
+    return context.makePageResult(blocks: blocks)
+}
+
+private func markdownSourceLines(attributes: [NSAttributedString.Key: Any]) -> ClosedRange<Int>? {
+    guard #available(iOS 16.0, *) else {
+        return nil
+    }
+    guard let position = attributes[NSAttributedString.Key(AttributeScopes.FoundationAttributes.MarkdownSourcePositionAttribute.name)] as? AttributedString.MarkdownSourcePosition else {
+        return nil
+    }
+    return min(position.startLine, position.endLine) ... max(position.startLine, position.endLine)
 }
 
 private func markdownBlocks(from nodes: [MarkdownIntentNode], context: MarkdownConversionContext, depth: Int) -> [InstantPageBlock]? {
@@ -1718,6 +1781,11 @@ private func markdownInlineContent(from attributedString: NSAttributedString, co
                 return
             }
             consumeNextSoftBreak = false
+        }
+
+        if context.keepsSourceLineBreaks, let inlineIntent, inlineIntent.contains(markdownSoftBreakInlineIntent), text == " " {
+            fragments.append(.richText(markdownApplyHTMLStyles(htmlStyles, to: .plain("\n"))))
+            return
         }
 
         if let image = context.resolveImage(attributes: attributes) {

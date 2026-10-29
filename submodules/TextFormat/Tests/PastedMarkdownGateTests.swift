@@ -40,4 +40,48 @@ final class PastedMarkdownGateTests: XCTestCase {
         let content = ChatInputContent(blocks: [.code(ChatInputCode(language: nil, runs: [ChatInputRun(text: "print(1)")]))])
         XCTAssertTrue(pastedMarkdownContentIsRicherThanPlain(content))
     }
+
+    // MARK: - Source blank lines (`pastedMarkdownContentResolvingBlankLines`)
+
+    private var blankLine: ChatInputBlock {
+        return para([])
+    }
+
+    func test_blankLines_keptWhenEntityExpressible() {
+        var bold = ChatInputInlineAttributes(); bold.bold = true
+        let content = ChatInputContent(blocks: [
+            para([ChatInputRun(text: "Position:", attributes: bold), ChatInputRun(text: " Butler\nEmployment: Full-time")]),
+            blankLine,
+            para([ChatInputRun(text: "Second paragraph")])
+        ])
+        XCTAssertEqual(pastedMarkdownContentResolvingBlankLines(content, keepsBlankLines: true), content)
+    }
+
+    func test_blankLines_droppedWhenContentNeedsRichMessage() {
+        let content = ChatInputContent(blocks: [
+            para([ChatInputRun(text: "Title")], style: .heading2),
+            blankLine,
+            para([ChatInputRun(text: "Body")]),
+            blankLine,
+            para([ChatInputRun(text: "item")], list: ChatInputListMembership(marker: .bullet, level: 0))
+        ])
+        XCTAssertEqual(pastedMarkdownContentResolvingBlankLines(content, keepsBlankLines: true), ChatInputContent(blocks: [
+            para([ChatInputRun(text: "Title")], style: .heading2),
+            para([ChatInputRun(text: "Body")]),
+            para([ChatInputRun(text: "item")], list: ChatInputListMembership(marker: .bullet, level: 0))
+        ]))
+    }
+
+    func test_blankLines_droppedWhenHostDoesNotKeepThem() {
+        let content = ChatInputContent(blocks: [para([ChatInputRun(text: "one")]), blankLine, para([ChatInputRun(text: "two")])])
+        XCTAssertEqual(pastedMarkdownContentResolvingBlankLines(content, keepsBlankLines: false), ChatInputContent(blocks: [
+            para([ChatInputRun(text: "one")]),
+            para([ChatInputRun(text: "two")])
+        ]))
+    }
+
+    func test_blankLines_doNotMakePlainTextRicher() {
+        let content = ChatInputContent(blocks: [para([ChatInputRun(text: "one")]), blankLine, para([ChatInputRun(text: "two")])])
+        XCTAssertFalse(pastedMarkdownContentIsRicherThanPlain(pastedMarkdownContentResolvingBlankLines(content, keepsBlankLines: true)))
+    }
 }
