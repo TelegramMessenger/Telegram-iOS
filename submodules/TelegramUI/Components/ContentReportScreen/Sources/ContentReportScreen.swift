@@ -121,9 +121,11 @@ private final class SheetPageContent: CombinedComponent {
             let theme = environment.theme
             let strings = environment.strings
             
-            // Each side keeps its own inset: beside iPhone Duo's side strip (folded portrait) only one side has one.
+            // Each side keeps its own inset: beside iPhone Duo's side strip (folded portrait) only one side has one, and
+            // the centred title and animation keep to the band between them.
             let leftInset: CGFloat = 16.0 + environment.safeInsets.left
             let rightInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = (environment.safeInsets.left + context.availableSize.width - environment.safeInsets.right) / 2.0
             
             var contentSize = CGSize(width: context.availableSize.width, height: 26.0)
                         
@@ -136,7 +138,7 @@ private final class SheetPageContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
             )
             
-            let constrainedTitleWidth = context.availableSize.width - 60.0 * 2.0
+            let constrainedTitleWidth = context.availableSize.width - abs(environment.safeInsets.left - environment.safeInsets.right) - 60.0 * 2.0
             
             let titleString: String
             if let title = component.title {
@@ -151,7 +153,7 @@ private final class SheetPageContent: CombinedComponent {
                 transition: .immediate
             )
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
+                .position(CGPoint(x: bandCenterX, y: contentSize.height + title.size.height / 2.0))
             )
             contentSize.height += title.size.height
             contentSize.height += 40.0
@@ -196,7 +198,7 @@ private final class SheetPageContent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(animation
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + animation.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: contentSize.height + animation.size.height / 2.0))
                 )
                 contentSize.height += animation.size.height
                 contentSize.height += 18.0

@@ -281,7 +281,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             let currentContentOffset = scrollView.contentOffset
             // Scrolled within a sheet taller than the screen, resting on its top: it decelerates, no further down than
             // that rest.
-            let scrollsWithinSheet = contentOffset < 0.0 && !self.isCentered && !self.currentHasInputHeight && scrollView.contentSize.height > scrollView.bounds.height
+            let scrollsWithinSheet = self.currentRestsOnTop && currentContentOffset.y > 0.0
             let proposedContentOffset = targetContentOffset.pointee
             targetContentOffset.pointee = currentContentOffset
             if scrollsWithinSheet {
@@ -401,6 +401,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
         }
         
         private var currentHasInputHeight = false
+        private var currentRestsOnTop = false
         private var isCentered = false
         private var currentAvailableSize: CGSize?
         func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -597,7 +598,8 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
             
             self.ignoreScrolling = false
             // A sheet taller than the screen rests with its top in view and scrolls up to its bottom.
-            let restingOffset = sheetRestingScrollOffset(contentHeight: contentSize.height, containerHeight: availableSize.height, keepsBottomVisible: sheetEnvironment.isCentered || sheetEnvironment.hasInputHeight)
+            let restingOffset = sheetRestingScrollOffset(contentHeight: contentSize.height, containerHeight: availableSize.height, keepsBottomVisible: sheetEnvironment.isCentered || sheetEnvironment.hasInputHeight || !component.isScrollEnabled)
+            self.currentRestsOnTop = restingOffset < contentSize.height - availableSize.height
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
                 self.scrollView.contentOffset = CGPoint(x: 0.0, y: restingOffset)
             } else if component.followContentSizeChanges, !previousContentSize.height.isZero, previousContentSize != contentSize {

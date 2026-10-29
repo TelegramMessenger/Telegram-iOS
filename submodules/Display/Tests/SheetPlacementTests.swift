@@ -78,13 +78,14 @@ final class SheetPlacementTests: XCTestCase {
     }
 
     func test_resting_sheetTallerThanTheContainer_topAtTheContainersTop() {
-        // Unfolded landscape, the report reasons (#79): resting on its bottom, its header was 46pt above the screen
-        // and out of reach, since the sheet scrolls no further down than that.
+        // Unfolded landscape, the report reasons (#79): resting on its bottom, it opened with its header 46pt above
+        // the screen.
         XCTAssertEqual(sheetRestingScrollOffset(contentHeight: 715.0, containerHeight: 669.0, keepsBottomVisible: false), 0.0)
     }
 
     func test_resting_withTheKeyboard_keepsTheBottomInView() {
-        // A sheet that grew by the keyboard's height keeps what is above the keyboard (the text field) in view.
+        // A sheet that grew by the keyboard's height keeps what is above the keyboard (the text field) in view; one
+        // that cannot scroll keeps its bottom (its action) in view.
         XCTAssertEqual(sheetRestingScrollOffset(contentHeight: 900.0, containerHeight: 669.0, keepsBottomVisible: true), 231.0)
         XCTAssertEqual(sheetRestingScrollOffset(contentHeight: 500.0, containerHeight: 669.0, keepsBottomVisible: true), -169.0)
     }

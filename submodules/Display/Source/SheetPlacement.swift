@@ -57,19 +57,6 @@ public func resizableSheetHorizontalPlacement(containerSize: CGSize, safeInsets:
     return SheetHorizontalPlacement(minX: minX, width: width, contentSideInsets: contentSideInsets)
 }
 
-/// The scroll offset a full-width sheet (`SheetComponent`) rests at: its bottom at the container's bottom, as always,
-/// unless it is taller than the container. Such a sheet (the report reasons on iPhone Duo's unfolded landscape, 669pt
-/// high) rests with its top at the container's top and scrolls up to its bottom; resting on its bottom it left its
-/// header above the screen, beyond the furthest it scrolls down. A sheet that grew by the keyboard's height
-/// (`keepsBottomVisible`) still rests on its bottom, keeping what is just above the keyboard in view.
-public func sheetRestingScrollOffset(contentHeight: CGFloat, containerHeight: CGFloat, keepsBottomVisible: Bool) -> CGFloat {
-    let bottomResting = contentHeight - containerHeight
-    if keepsBottomVisible {
-        return bottomResting
-    }
-    return min(bottomResting, 0.0)
-}
-
 /// The insets of the band a full-width sheet's content keeps to (`SheetComponent`), or nil where it spans
 /// the container as it always has.
 ///
@@ -101,4 +88,18 @@ public func sheetHeaderCornerInsets(containerWidth: CGFloat, sheetMinX: CGFloat,
         result.right = max(0.0, topRight.width - (containerWidth - sheetMinX - sheetWidth))
     }
     return result
+}
+
+/// The scroll offset a full-width sheet (`SheetComponent`) rests at: its bottom at the container's bottom, as always,
+/// unless it is taller than the container. Such a sheet (the report reasons on iPhone Duo's unfolded landscape, 669pt
+/// high) rests with its top at the container's top and scrolls up to its bottom; resting on its bottom it opened with
+/// its header (close button, title) above the screen. A sheet that grew by the keyboard's height, or cannot scroll to
+/// its bottom (`keepsBottomVisible`), still rests on its bottom, keeping what is just above the keyboard, or its
+/// action, in view.
+public func sheetRestingScrollOffset(contentHeight: CGFloat, containerHeight: CGFloat, keepsBottomVisible: Bool) -> CGFloat {
+    let bottomResting = contentHeight - containerHeight
+    if keepsBottomVisible {
+        return bottomResting
+    }
+    return min(bottomResting, 0.0)
 }
