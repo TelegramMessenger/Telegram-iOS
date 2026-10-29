@@ -105,7 +105,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         if let currentButton, currentButton.action == .toggleSideList {
             return currentButton
         } else {
-            let buttonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SidebarIcon"), color: presentationInterfaceState.theme.rootController.navigationBar.primaryTextColor), style: .plain, target: target, action: selector)
+            let buttonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SideListIcon"), color: presentationInterfaceState.theme.rootController.navigationBar.primaryTextColor), style: .plain, target: target, action: selector)
             buttonItem.accessibilityLabel = strings.Chat_SideList_Open
             return ChatNavigationButton(action: .toggleSideList, buttonItem: buttonItem)
         }
