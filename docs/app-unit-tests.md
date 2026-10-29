@@ -83,6 +83,11 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
+`//submodules/ContactsPeerItem:ContactsPeerItemTests` covers `ContactItemHighlighting`, the Contacts list's highlight of
+the chat a split view's detail pane shows. When the split goes away (folding iPhone Duo) it clears the selection with no
+chat and progress 0; a progress without a chat must count as no selection in progress, or every row on screen takes
+`1 - 0` as its highlight and stays gray, and a pressed row shows none.
+
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the
