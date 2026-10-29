@@ -2304,9 +2304,11 @@ extension ChatControllerImpl {
                 let cachedData: Signal<(CachedPeerData?, [MessageId: Message]), NoError>
                 if let peerId = chatLocation.peerId {
                     // A reply thread's panel shows the thread's top message (a comments thread: the channel post), which
-                    // the cached data's own messages do not include, so it is observed beside them.
+                    // the cached data's own messages do not include, so it is observed beside them. Not for a forum
+                    // topic: a channel's shows its own pinned message, and a bot's (not `isForum` below) would show
+                    // the topic's root message.
                     var threadTopMessageId: MessageId?
-                    if case let .replyThread(replyThreadMessage) = chatLocation {
+                    if case let .replyThread(replyThreadMessage) = chatLocation, !replyThreadMessage.isForumPost {
                         threadTopMessageId = replyThreadMessage.effectiveTopId
                     }
                     var keys: [PostboxViewKey] = [.cachedPeerDataWithMessages(peerId: peerId)]
