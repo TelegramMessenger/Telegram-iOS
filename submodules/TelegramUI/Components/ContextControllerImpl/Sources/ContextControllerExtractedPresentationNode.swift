@@ -673,6 +673,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     func replaceItems(items: ContextController.Items, animated: Bool?) {
         self.actionsStackNode.usesClearGlass = items.usesClearGlass
         self.actionsStackNode.glassBlurRadius = items.glassBlurRadius
+        self.actionsStackNode.minimumListWidth = items.minimumListWidth
         if case .twoLists = items.content {
             let stackItems = makeContextControllerActionsStackItem(items: items)
             self.actionsStackNode.replace(item: stackItems.first!, animated: animated)
@@ -1019,7 +1020,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
                 // Keep the placement for the menu's lifetime even if the source stops opting in.
                 if liquidMorphSource != nil || self.hasActiveLiquidMorph {
-                    morphMenuAnchor = (referenceRect, transitionInfo.actionsPosition == .top, referenceRect.midX >= layout.size.width * 0.5, transitionInfo.centersMorphedActions)
+                    let alignsRight: Bool
+                    switch transitionInfo.morphedActionsAlignment {
+                    case .automatic:
+                        alignsRight = referenceRect.midX >= layout.size.width * 0.5
+                    case .leading:
+                        alignsRight = false
+                    case .trailing:
+                        alignsRight = true
+                    }
+                    morphMenuAnchor = (referenceRect, transitionInfo.actionsPosition == .top, alignsRight, transitionInfo.centersMorphedActions)
                 }
                 contentRect = referenceRect.insetBy(dx: -2.0, dy: 0.0)
                 contentRect.size.width += 5.0

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import SwiftSignalKit
 import Display
 import ComponentFlow
 import TelegramPresentationData
@@ -519,6 +520,10 @@ public final class ChatTitleComponent: Component {
         private var component: ChatTitleComponent?
         private weak var state: EmptyComponentState?
         
+        /// An agent bot's chat shows its model under the title, and follows the composer's model chip.
+        private var agentSelectionPeerId: EnginePeer.Id?
+        private let agentSelectionDisposable = MetaDisposable()
+        
         override init(frame: CGRect) {
             self.contentContainer = UIView()
             self.contentContainer.clipsToBounds = true
@@ -541,6 +546,27 @@ public final class ChatTitleComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.agentSelectionDisposable.dispose()
+        }
+        
+        private func observeAgentSelection(peerId: EnginePeer.Id) {
+            if self.agentSelectionPeerId == peerId {
+                return
+            }
+            self.agentSelectionPeerId = peerId
+            // The signal delivers the current value at once, inside the update that subscribes; skip it.
+            var isFirst = true
+            self.agentSelectionDisposable.set((AgentChatPlaceholderOptions.shared.selectionSignal(peerId: peerId)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                if isFirst {
+                    isFirst = false
+                    return
+                }
+                self?.state?.updated(transition: .spring(duration: 0.4))
+            }))
         }
         
         @objc private func onTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -948,6 +974,11 @@ public final class ChatTitleComponent: Component {
                                     state = .info(string, .generic)
                                 } else if user.flags.contains(.isSupport) {
                                     let statusText = component.strings.Bot_GenericSupportStatus
+                                    let string = NSAttributedString(string: statusText, font: subtitleFont, textColor: component.theme.chat.inputPanel.inputControlColor)
+                                    state = .info(string, .generic)
+                                } else if let _ = user.botInfo, isAgentBotPeer(appConfiguration: component.context.currentAppConfiguration.with({ $0 }), peerId: user.id) {
+                                    self.observeAgentSelection(peerId: user.id)
+                                    let statusText = AgentChatPlaceholderOptions.shared.selection(peerId: user.id).model.fullTitle
                                     let string = NSAttributedString(string: statusText, font: subtitleFont, textColor: component.theme.chat.inputPanel.inputControlColor)
                                     state = .info(string, .generic)
                                 } else if let _ = user.botInfo {

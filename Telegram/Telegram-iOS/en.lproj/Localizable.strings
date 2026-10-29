@@ -17277,3 +17277,4 @@ Error: %8$@";
 "Agent.Connected.Title" = "%@ connected!";
 "Agent.Connected.Text" = "You can now use %@.";
 "Agent.Connected.Start" = "Start";
+"Agent.InputPlaceholder" = "Ask Agent anything";
