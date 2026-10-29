@@ -26,7 +26,7 @@ public struct MediaGridGeometry: Equatable {
     }
 
     public var contentWidth: CGFloat {
-        return self.width - self.leftInset - self.rightInset
+        return self.width - (self.leftInset + self.rightInset)
     }
 }
 
