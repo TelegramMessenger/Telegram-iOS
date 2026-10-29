@@ -17,6 +17,9 @@ import WidgetItems
 /// while it is still the account the app has current (see `usableAccountRecordId`). Read and
 /// written on the main queue only.
 private var accountCache: Account?
+/// The open of the current record's account, shared by the handlers that ask for it while it
+/// runs (`SharedOpening`). Main queue only.
+private let accountOpening = SharedOpening<AccountRecordId, Account>()
 
 /// The account record the extension may answer from: the app's current record, unless that
 /// record has been logged out. Logging out marks the record before the app moves its
@@ -236,16 +239,17 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 // new one is opened beside it.
                 previous.shouldBeServiceTaskMaster.set(.single(.never))
                 accountCache = nil
+                accountOpening.clear()
             }
-            guard currentRecordId != nil else {
+            guard let currentRecordId else {
                 return .single(nil)
             }
-            return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, tokenType: nil, tokenEnvironment: nil, signatureDict: nil)), externalRequestVerificationStream: .never(), externalRecaptchaRequestVerification: { _, _ in return .never() }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
+            return accountOpening.value(for: currentRecordId, open: { currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, tokenType: nil, tokenEnvironment: nil, signatureDict: nil)), externalRequestVerificationStream: .never(), externalRecaptchaRequestVerification: { _, _ in return .never() }, autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
                         case .upgrading:
-                            return .complete()
+                            return .single(nil)
                         case let .authorized(account):
                             return applicationSettings(accountManager: accountManager)
                             |> deliverOnMainQueue
@@ -258,13 +262,13 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                                 return account
                             }
                         case .unauthorized:
-                            return .complete()
+                            return .single(nil)
                     }
                 } else {
                     return .single(nil)
                 }
             }
-            |> take(1)
+            |> take(1) })
         }
         self.accountPromise.set(firstValueOrNil(account))
     }
@@ -648,12 +652,12 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
             
             account.shouldBeServiceTaskMaster.set(.single(.now))
-            account.resetStateManagement()
-            
-            let completion: Signal<Void, NoError> = account.stateManager.pollStateUpdateCompletion()
-            |> map { _ in
-                return Void()
-            }
+
+            // The notification extension's poll, not the app's sync: it never resets the account
+            // (`pollUntilDone`).
+            let completion: Signal<Void, NoError> = pollUntilDone({
+                return account.stateManager.standalonePollDifference()
+            })
             
             return (completion |> timeout(4.0, queue: Queue.mainQueue(), alternate: .single(Void())))
             |> castError(IntentHandlingError.self)

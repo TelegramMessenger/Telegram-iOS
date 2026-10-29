@@ -61,7 +61,9 @@ constants.
   `CALayer.applyCornerRadiiIfNeeded` (`Display/Source/CALayerCornerRadii.swift`, private `cornerRadii` via KVC,
   guarded by `cornerRadiiSupported`).
 - Side column / tab bar / lists: `layout.sideColumnFrames(...)`, `tabBarSidePlacement(layout:itemCount:)`,
-  `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`.
+  `chatInputPanelSideInsets(layout:bandMinY:bandMaxY:column:)`, `layout.listSideMargins(base:)`;
+  `layout.centeredListPlacement(base:)` for a list narrowed on both sides whose rows fill its width (their side
+  insets then take no strip, which the margin already clears).
 - Legacy hosts: `reservedCornersForHostedLayout(size:orientation:)`; `LegacyComponentsContext.statusIslandTrailingInset`.
 - Status bar style: `layout.coversStatusCorner(frame:)` tells whether a surface still overlaps the status corner block;
   `NavigationModalContainer.presentedCardFrame` is a card's frame including an interactive dismiss.
@@ -103,6 +105,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
      button share one axis; only the system keyboard spans the strip there. Unfolded it spans the strip on the axis
      of the centred content (rule 2's exception). `authorizationBottomBand` in AuthorizationUtils; the same screens as
      rule 2's exception.
+   - the **text actions that take a hidden button's place** in Settings' 2FA data input ("Can't access your email?"
+     or "Change Email", and "Re-send Code"): they line up with the fields above them, while the button itself spans the strip
+     (`twoFactorDataInputHorizontalLayout` in PasswordSetupUI). In the login flow they keep to the button's frame, as
+     above.
 
    **Centred alerts** (`AlertScreen`, `AlertControllerNode`) keep the axis of the screen's sheets
    (`centeredAlertSideInsets`), whatever is behind them: the screen's centre in folded portrait, where sheets span the
@@ -145,7 +151,14 @@ These are the user's decisions; a screen that follows them is correct, one that 
 - Two status heights mixed in unfolded portrait (compact for one part, full for the other).
 - `UIScreen.main` used for layout while unfolded.
 - `widthClass == .regular` treated as iPad.
+- "Landscape" meaning "too short for this": unfolded landscape's detail pane is portrait-shaped (about 631x669) but
+  hardly taller than wide. A profile's expanded photo (`min(w, h − 61) + 98`) reached past its bottom, leaving no list to
+  drag, so the profile opened from a chat's avatar could not scroll; `peerInfoAvatarExpansionFits` asks for the room.
 - A 9:16 preview taller than the screen (UP, FP) leaving negative space below it for the bottom controls.
+- Something anchored to that preview's bottom edge, which on UP is below the screen: the dual camera's front preview
+  keeps to the shutter there (`cameraDualPreviewCenter`), though the capture keeps it at the frame's corner. On FP the
+  edge is the screen's, under the lifted controls, and the preview keeps the corner the capture uses, as on home-button
+  phones.
 - A bottom row lifted by a constant tuned for home-button phones, until the Duo the only phones whose 9:16 preview is
   taller than the screen: measured from the screen edge, it lands on the home indicator. The indicator is
   `layout.intrinsicInsets.bottom` (20pt); the Duo's `safeInsets.bottom` is 0. The story camera keeps its controls above
@@ -175,6 +188,21 @@ other device stays byte-identical; the band helpers above are built that way.
   stripped before committing).
 - Pure placement helpers have tests: `//submodules/TelegramUI/Components/TabBarLayout:TabBarLayoutTests`
   (side tab bar and its edit toolbar per posture), `//submodules/UndoUI:UndoUITests` (the undo toast's panel and text
-  widths in and outside a chat), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
-  flow's content and bottom-button bands per posture), `//submodules/Display:DisplayTests` (`CenteredAlertSideInsetsTests`:
+  widths in and outside a chat), `//submodules/PasswordSetupUI:PasswordSetupUITests` (the 2FA data input's
+  bands and its button-row actions per posture), `//submodules/AuthorizationUtils:AuthorizationUtilsTests` (the login
+  flow's content and bottom-button bands per posture, and the password screen's column above the keyboard: on the
+  Duo's short screens it drops the animation so Forgot password keeps its gap below the field),
+  `//submodules/TelegramUI/Components/ChatMediaEditorScreen:ChatMediaEditorScreenTests` (the chat media editor's
+  trimmer, counter and camera button, Edit Cover title beside a strip),
+  `//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests` (the media editors'
+  caption panel: a caption above the media keeps clear of folded portrait's status corner),
+  `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` (the round video
+  message preview kept above the input panel, its trailing buttons clear of the status corner, touches reaching the
+  panel above a bot keyboard),
+  `//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests`
+  (the emoji / stickers / GIFs keyboard's grid, headers and switcher on the band),
+  `//submodules/TelegramUI/Components/CameraScreen:CameraScreenTests`
+  (the story camera's dual-camera front preview: on UP a bottom corner keeps to the shutter, as where the 9:16
+  viewfinder fits),
+  `//submodules/Display:DisplayTests` (`CenteredAlertSideInsetsTests`:
   a centred alert's band per posture).

@@ -80,17 +80,22 @@ final class EntitySearchContentEnvironment: Equatable {
     let theme: PresentationTheme
     let deviceMetrics: DeviceMetrics
     let inputHeight: CGFloat
+    /// iPhone Duo's side strips (`entityKeyboardSideStrips`): the search bar, its close button and the results keep
+    /// clear of the strip and its status corner, as in `EntitySearchContainerController`.
+    let sideStrips: (left: CGFloat, right: CGFloat)
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         deviceMetrics: DeviceMetrics,
-        inputHeight: CGFloat
+        inputHeight: CGFloat,
+        sideStrips: (left: CGFloat, right: CGFloat)
     ) {
         self.context = context
         self.theme = theme
         self.deviceMetrics = deviceMetrics
         self.inputHeight = inputHeight
+        self.sideStrips = sideStrips
     }
     
     static func ==(lhs: EntitySearchContentEnvironment, rhs: EntitySearchContentEnvironment) -> Bool {
@@ -104,6 +109,9 @@ final class EntitySearchContentEnvironment: Equatable {
             return false
         }
         if lhs.inputHeight != rhs.inputHeight {
+            return false
+        }
+        if lhs.sideStrips != rhs.sideStrips {
             return false
         }
         return true
@@ -156,8 +164,8 @@ final class EntitySearchContentComponent: Component {
                 transition.setFrame(view: containerNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
                 containerNode.updateLayout(
                     size: availableSize,
-                    leftInset: 0.0,
-                    rightInset: 0.0,
+                    leftInset: environmentValue.sideStrips.left,
+                    rightInset: environmentValue.sideStrips.right,
                     bottomInset: 0.0,
                     inputHeight: environmentValue.inputHeight,
                     deviceMetrics: environmentValue.deviceMetrics,

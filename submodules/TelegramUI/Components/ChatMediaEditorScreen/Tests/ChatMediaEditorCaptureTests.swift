@@ -9,6 +9,7 @@ import ChatMediaSend
 import MediaCropComponent
 import ComponentFlow
 import ChatMediaEditorScreen
+import Display
 
 private func capturedPhoto(_ uniqueId: String) -> ChatMediaEditorCapturedItem {
     return ChatMediaEditorCapturedItem(uniqueId: uniqueId, content: .image(path: "/tmp/\(uniqueId).jpg", dimensions: PixelDimensions(width: 4032, height: 3024)), thumbnail: nil)
@@ -202,9 +203,9 @@ final class ChatMediaEditorCaptureTests: XCTestCase {
         XCTAssertFalse(chatMediaEditorCameraReviewShowsSelection(itemCount: 1))
         XCTAssertTrue(chatMediaEditorCameraReviewShowsSelection(itemCount: 2))
         let size = CGSize(width: 402.0, height: 874.0)
-        let frame = chatMediaEditorCameraButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), toolbarMinY: 791.0, captionBaseHeight: 50.0, hasVideoHeader: false, hasSelection: true)
+        let frame = chatMediaEditorCameraButtonFrame(size: size, safeInsets: UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), reservedCorners: .none, toolbarMinY: 791.0, captionBaseHeight: 50.0, hasVideoHeader: false, hasSelection: true)
         XCTAssertEqual(frame, CGRect(x: 306.0, y: 685.0, width: 44.0, height: 44.0))
-        let single = chatMediaEditorCameraButtonFrame(size: size, safeInsets: .zero, toolbarMinY: 791.0, captionBaseHeight: 50.0, hasVideoHeader: true, hasSelection: false)
+        let single = chatMediaEditorCameraButtonFrame(size: size, safeInsets: .zero, reservedCorners: .none, toolbarMinY: 791.0, captionBaseHeight: 50.0, hasVideoHeader: true, hasSelection: false)
         XCTAssertEqual(single, CGRect(x: 356.0, y: 639.0, width: 44.0, height: 44.0))
     }
 
@@ -220,12 +221,31 @@ final class ChatMediaEditorCaptureTests: XCTestCase {
         let size = CGSize(width: 402.0, height: 874.0)
         for safeInsets in [UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 84.0)] {
             for hasVideoHeader in [false, true] {
-                let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader)
+                let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader)
                 let circle = chatMediaEditorCounterCircleFrame.offsetBy(dx: counter.minX, dy: counter.minY)
-                let camera = chatMediaEditorCameraButtonFrame(size: size, safeInsets: safeInsets, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader, hasSelection: true)
+                let camera = chatMediaEditorCameraButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: .none, toolbarMinY: 791.0, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader, hasSelection: true)
                 XCTAssertLessThanOrEqual(abs(camera.midY - circle.midY), 0.5)
                 XCTAssertEqual(circle.maxX, size.width - safeInsets.right - 17.0)
                 XCTAssertLessThan(camera.maxX, circle.minX)
+            }
+        }
+    }
+
+    func testCameraButtonStaysBesideTheCounterBesideAStrip() {
+        let foldedPortrait = (CGSize(width: 466.0, height: 678.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), ContainerViewLayoutCorners(topLeft: nil, topRight: CGSize(width: 84.0, height: 170.0), bottomLeft: nil, bottomRight: nil), CGFloat(0.0))
+        let unfoldedLandscape = (CGSize(width: 951.0, height: 669.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), ContainerViewLayoutCorners(topLeft: nil, topRight: CGSize(width: 84.0, height: 120.0), bottomLeft: nil, bottomRight: nil), CGFloat(0.0))
+        let foldedLandscapeLeft = (CGSize(width: 678.0, height: 466.0), UIEdgeInsets(top: 0.0, left: 0.0, bottom: 20.0, right: 84.0), ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: CGSize(width: 84.0, height: 82.0)), CGFloat(84.0))
+        let phone = (CGSize(width: 402.0, height: 874.0), UIEdgeInsets(top: 62.0, left: 0.0, bottom: 34.0, right: 0.0), ContainerViewLayoutCorners.none, CGFloat(0.0))
+        for (size, safeInsets, reservedCorners, rowRightInset) in [foldedPortrait, unfoldedLandscape, foldedLandscapeLeft, phone] {
+            for hasVideoHeader in [false, true] {
+                let toolbarMinY = size.height - safeInsets.bottom - 49.0
+                let counter = chatMediaEditorCounterButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: reservedCorners, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader)
+                let circle = chatMediaEditorCounterCircleFrame.offsetBy(dx: counter.minX, dy: counter.minY)
+                let camera = chatMediaEditorCameraButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: reservedCorners, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader, hasSelection: true)
+                XCTAssertEqual(circle.minX - camera.maxX, 4.0)
+                XCTAssertEqual(counter.maxX, size.width - rowRightInset)
+                let single = chatMediaEditorCameraButtonFrame(size: size, safeInsets: safeInsets, reservedCorners: reservedCorners, toolbarMinY: toolbarMinY, captionBaseHeight: 52.0, hasVideoHeader: hasVideoHeader, hasSelection: false)
+                XCTAssertEqual(single.maxX, size.width - rowRightInset - 2.0)
             }
         }
     }

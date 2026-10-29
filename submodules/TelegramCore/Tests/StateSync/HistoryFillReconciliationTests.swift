@@ -221,6 +221,35 @@ final class HistoryFillReconciliationTests: StateSyncTestCase {
         XCTAssertNil(self.fixture.message(self.messageId(peerId, 1)))
     }
 
+    /// The part of the filled range a partial close leaves is a hole afterwards even where it was none
+    /// before: 41...60 is stored outside any hole (an earlier fill closed it, as one held across a cleared
+    /// history did in truth seed 361). The fill reaches 1 from the top, confirms 51...250 gone and closes
+    /// 51...top; 41...50 must stay under a hole, or nothing reaches them again and they show forever.
+    func testPartialCloseLeavesItsWholeRestAHole() {
+        self.fixture.seedAccount(state: self.state(pts: 100))
+        let peerId = self.seedUserChat(500)
+        self.storeHistoryFillMessages(peerId: peerId, ids: Array(1 ... 250))
+        self.addHistoryFillHole(peerId)
+        self.fixture.transaction { transaction -> Void in
+            transaction.removeHole(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 41 ... 60)
+        }
+        XCTAssertEqual(self.fixture.holes(peerId: peerId), IndexSet(integersIn: 1 ... 40).union(IndexSet(integersIn: 61 ... Int(Int32.max - 1))))
+        self.server.always(getHistory, { _ in .result(StateSyncApi.messages([])) })
+        self.server.always(getMessages, { _ in .result(StateSyncApi.messages([])) })
+
+        let first = self.runHistoryFill(peerInput: .direct(peerId: peerId, threadId: nil), direction: self.downwardFillDirection(peerId))
+
+        XCTAssertEqual(first?.removedIndices, IndexSet(integersIn: 51 ... Int(Int32.max - 1)))
+        XCTAssertEqual(self.fixture.holes(peerId: peerId), IndexSet(integersIn: 1 ... 50))
+        XCTAssertNotNil(self.fixture.message(self.messageId(peerId, 45)))
+
+        let _ = self.runHistoryFill(peerInput: .direct(peerId: peerId, threadId: nil), direction: self.downwardFillDirection(peerId, from: 50))
+
+        XCTAssertEqual(self.fixture.holes(peerId: peerId), IndexSet())
+        XCTAssertNil(self.fixture.message(self.messageId(peerId, 45)))
+        XCTAssertNil(self.fixture.message(self.messageId(peerId, 1)))
+    }
+
     /// A fill around an anchor confirms the 200 candidates nearest the anchor (1...200 around 100) and
     /// closes up to the nearest one left over (201), so the anchor itself leaves the hole.
     func testAroundFillClosesAroundItsAnchor() {

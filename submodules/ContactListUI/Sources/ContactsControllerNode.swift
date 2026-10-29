@@ -520,11 +520,16 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }, placeholder: placeholderNode)
     }
     
-    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode?, animated: Bool) {
+    /// Ends the search; the returned closure animates the search bar out into `placeholderNode` and is called once the
+    /// navigation bar has been laid out without the active search.
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode?, animated: Bool) -> (() -> Void)? {
         self.isSearchDisplayControllerActive = nil
-        if let searchDisplayController = self.searchDisplayController {
+        guard let searchDisplayController = self.searchDisplayController else {
+            return nil
+        }
+        self.searchDisplayController = nil
+        return { [weak placeholderNode] in
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
-            self.searchDisplayController = nil
         }
     }
 }
