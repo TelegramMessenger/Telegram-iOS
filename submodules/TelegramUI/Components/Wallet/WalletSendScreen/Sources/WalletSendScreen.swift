@@ -2373,11 +2373,15 @@ private final class WalletSendScreenComponent: Component {
             }
 
             let isKeyboardVisible = !isInAttachmentMenu || self.hasActivatedAmountInput
-            // The keyboard at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
-            let keyboardSideInsets = environment.bottomEdgeSideInsets()
+            // In portrait the keyboard at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block at
+            // the bottom. In landscape its keys are a fixed-width block under the band-centred Send button, so they keep
+            // the band and that button's axis.
             var keyboardSafeInsets = environment.safeInsets
-            keyboardSafeInsets.left = keyboardSideInsets.left
-            keyboardSafeInsets.right = keyboardSideInsets.right
+            if !isLandscape {
+                let keyboardSideInsets = environment.bottomEdgeSideInsets()
+                keyboardSafeInsets.left = keyboardSideInsets.left
+                keyboardSafeInsets.right = keyboardSideInsets.right
+            }
             let keyboardSize = self.keyboard.update(
                 transition: transition,
                 component: AnyComponent(WalletSendKeyboardComponent(
