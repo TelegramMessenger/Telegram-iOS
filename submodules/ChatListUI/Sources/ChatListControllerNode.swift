@@ -633,11 +633,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     if id != selectedId {
                         itemNode.emptyNode?.restartAnimation()
                         
-                        if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                            let scrollOffset = clippedScrollOffset
-                            
-                            let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
-                        }
+                        self.scrollToNavigationBarOffset(itemNode: itemNode)
                     }
                 }
                 
@@ -718,6 +714,8 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     let isNavigationHidden = currentItemNode.listNode.isNavigationHidden
                     for (_, itemNode) in self.itemNodes {
                         if itemNode !== currentItemNode {
+                            // A list whose rows load during the swipe was not aligned when it began.
+                            self.scrollToNavigationBarOffset(itemNode: itemNode)
                             itemNode.listNode.adjustScrollOffsetForNavigation(isNavigationHidden: isNavigationHidden)
                         }
                     }
@@ -779,7 +777,8 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     }
                     let switchToId = self.availableFilters[updatedIndex].id
                     if switchToId != self.selectedId, let itemNode = self.itemNodes[switchToId] {
-                        let _ = itemNode
+                        // Its rows may have loaded after the last change of the swipe, at the top of its own scroll range.
+                        self.scrollToNavigationBarOffset(itemNode: itemNode)
                         self.selectedId = switchToId
                         applyNodeAsCurrent = switchToId
                     }
@@ -804,6 +803,14 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
             }
         default:
             break
+        }
+    }
+    
+    // The header shows the current list's scroll state, and switching lists does not change it: a list becoming current
+    // is scrolled to match it (the search field and an expanded stories row stay as they are).
+    private func scrollToNavigationBarOffset(itemNode: ChatListContainerItemNode) {
+        if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
+            let _ = itemNode.listNode.scrollToOffsetFromTop(clippedScrollOffset, animated: false)
         }
     }
     
@@ -910,11 +917,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     return
                 }
                 
-                if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                    let scrollOffset = clippedScrollOffset
-                    
-                    let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
-                }
+                self.scrollToNavigationBarOffset(itemNode: itemNode)
                 
                 self.selectedId = id
                 self.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
@@ -955,11 +958,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     strongSelf.pendingItemNode = nil
                     itemNode.listNode.tempTopInset = strongSelf.tempTopInset
                     
-                    if let controller = strongSelf.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                        let scrollOffset = clippedScrollOffset
-                        
-                        let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
-                    }
+                    strongSelf.scrollToNavigationBarOffset(itemNode: itemNode)
                     
                     guard let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = strongSelf.validLayout else {
                         strongSelf.itemNodes[id] = itemNode
