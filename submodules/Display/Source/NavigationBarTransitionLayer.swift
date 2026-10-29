@@ -250,7 +250,8 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         guard self.isLingering else {
             return
         }
-        // A bar gone (the popped screen released during the linger) leaves the renderer nothing to read: hand over.
+        // A bar gone leaves the renderer nothing to read: hand over. After a pop that is the usual case (the popped screen
+        // is released when the pop completes), so there a moved pill hands over rather than being followed.
         guard self.bottom.source != nil, self.top.source != nil else {
             self.endLingering()
             return
@@ -271,7 +272,7 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         self.renderer.end()
         let source = self.lingeringSource
         self.lingeringSource = nil
-        let _ = source?.holdGlass(false, interrupted: nil)
+        let _ = source?.holdGlass(false, interrupted: nil, titlePillMoved: nil)
         let handovers = self.lingerHandovers
         self.lingerHandovers = []
         handovers.forEach { $0() }

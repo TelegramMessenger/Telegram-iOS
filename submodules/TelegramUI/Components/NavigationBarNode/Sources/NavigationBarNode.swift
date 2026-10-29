@@ -500,7 +500,8 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
 
         self.updateSideColumn(rowView: rowView, region: sideColumn, transition: rowTransition)
         self.layoutTitleView(layout: layout, rowView: rowView, contentVerticalOrigin: contentVerticalOrigin, transition: transition)
-        // A title pill moved under the transition's glass: the glass follows it rather than snap at the hand-over.
+        // A title pill moved under the transition's glass: the glass follows it rather than snap at the hand-over. It
+        // re-reads this bar now, which is safe: the row, its content and the title view are laid out by here.
         self.glassHold.titlePillLaidOut(self.transitionTitlePill)
 
         if sideColumnExtentChanged && !isContainerLayout {

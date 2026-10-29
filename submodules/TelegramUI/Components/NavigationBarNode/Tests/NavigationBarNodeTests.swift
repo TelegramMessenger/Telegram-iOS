@@ -45,7 +45,11 @@ private final class PillTitleView: UIView, NavigationBarGlassPillTitleView {
             }
         }
     }
-    let pillFrame = CGRect(x: 10.0, y: 6.0, width: 120.0, height: 44.0)
+    /// Where the pill starts in the view; it ends 10 pt before the view's end.
+    var pillX: CGFloat = 10.0
+    var pillFrame: CGRect {
+        return CGRect(x: self.pillX, y: 6.0, width: self.size.width - 10.0 - self.pillX, height: 44.0)
+    }
     var glassPillFrame: CGRect? {
         return self.pillFrame
     }
@@ -871,6 +875,7 @@ final class NavigationBarNodeTests: XCTestCase {
         }
         let itemsBefore = platterView.currentItemsFramesForTesting(.trailing(1))
         titleView.size = CGSize(width: 100.0, height: 56.0)
+        titleView.pillX = 0.0
         self.layout(top)
         let movedFrame = titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY)
         XCTAssertNotEqual(restingFrame, movedFrame)
@@ -880,7 +885,12 @@ final class NavigationBarNodeTests: XCTestCase {
         XCTAssertEqual(itemsAtFollow.first?.midX ?? 0.0, itemsBefore.first?.midX ?? -1.0, accuracy: 0.001, "no step where it starts to follow")
         self.time.advance(by: 0.1)
         let midwayItems = platterView.currentItemsFramesForTesting(.trailing(1))
-        XCTAssertGreaterThan(midwayItems.first?.midX ?? 0.0, itemsBefore.first?.midX ?? 0.0, "on its way")
+        XCTAssertLessThan(midwayItems.first?.midX ?? 0.0, itemsBefore.first?.midX ?? 0.0, "on its way")
+        XCTAssertGreaterThan(midwayItems.first?.midX ?? 0.0, movedFrame.midX, "on its way")
+        // The narrower pill's contents take the shape's size on its spring rather than at once, so what is laid out
+        // against their edge does not step.
+        XCTAssertEqual(midwayItems.first?.size, platterView.platterStateForTesting(.trailing(1))?.frame.size)
+        XCTAssertNotEqual(midwayItems.first?.size, movedFrame.size)
         self.time.advance(by: 1.5)
         XCTAssertEqual(platterView.platterStateForTesting(.trailing(1))?.frame, movedFrame)
         XCTAssertEqual(platterView.currentItemsFramesForTesting(.trailing(1)), [movedFrame])

@@ -146,6 +146,12 @@ public final class NavigationBarPlatterTransitionView: UIView {
             return CGPoint(x: self.frame.midX - platterFrame.minX, y: self.frame.midY - platterFrame.minY)
         }
 
+        /// Their size in their capsule, the capsule being at `platterFrame`: a riding title pill's takes the capsule's on its
+        /// spring, so what is laid out against its edge (the lent title, resized by its own layout) stays continuous.
+        func size(inPlatterAt platterFrame: CGRect) -> CGSize {
+            return self.ridesPlatter ? platterFrame.size : self.frame.size
+        }
+
         /// From now on centred in their capsule, now at `platterFrame` with its centre moving at `platterVelocity`: they
         /// start where they are, at rest, and ease into the centre.
         func startRiding(platterFrame: CGRect, platterVelocity: CGPoint, spring: NavigationTransitionSpring, at time: Double) {
@@ -689,7 +695,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     if platter.isTitlePill, let currentItems, currentItems.side == side, currentItems.frame != frame {
                         // The bar moved its title pill (the chat header re-centred once the push has ended): what the
                         // pill shows rides the shape to the new place instead of staying behind and snapping at the
-                        // hand-over (issue #88), taking up from where it is.
+                        // hand-over, taking up from where it is.
                         if !currentItems.ridesPlatter {
                             let platterVelocity = CGPoint(x: platter.x.velocity(at: self.time) + platter.width.velocity(at: self.time) * 0.5, y: platter.y.velocity(at: self.time) + platter.height.velocity(at: self.time) * 0.5)
                             currentItems.startRiding(platterFrame: platter.frame(at: self.time), platterVelocity: platterVelocity, spring: motion.transition, at: self.time)
@@ -1002,6 +1008,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
             let appearances = times.map { max(0.0, min(1.0, items.appearance.value(at: $0))) }
             let scales = times.map { items.appearance.value(at: $0) }
             add(items.view.layer, "position", zip(times, frames).map { NSValue(cgPoint: items.center(inPlatterAt: $0.1, time: $0.0)) })
+            if items.ridesPlatter {
+                add(items.view.layer, "bounds", frames.map { NSValue(cgRect: CGRect(origin: CGPoint(), size: items.size(inPlatterAt: $0))) })
+            }
             add(items.view.layer, "transform", scales.map { a in NSValue(caTransform3D: CATransform3DMakeScale(1.0 + a * (items.maxScale.width - 1.0), 1.0 + a * (items.maxScale.height - 1.0), 1.0)) })
             add(items.view.layer, "opacity", appearances.map { NSNumber(value: Float(1.0 - $0)) })
             self.addBlurKeyframes(to: items.view.layer, radii: appearances.map { items.blurRadius * $0 }, timing: timing)
@@ -1125,7 +1134,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
         for items in platter.items {
             // Each bar's items stay where that bar has them while the shape morphs around them (unless they ride it).
             let a = max(0.0, min(1.0, items.appearance.value(at: self.time)))
-            items.view.bounds = CGRect(origin: CGPoint(), size: items.frame.size)
+            items.view.bounds = CGRect(origin: CGPoint(), size: items.size(inPlatterAt: frame))
             items.view.center = items.center(inPlatterAt: frame, time: self.time)
             items.view.transform = CGAffineTransform(scaleX: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.width - 1.0), y: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.height - 1.0))
             items.view.alpha = 1.0 - a
@@ -1182,7 +1191,8 @@ public final class NavigationBarPlatterTransitionView: UIView {
         let frame = platter.frame(at: self.now)
         return platter.items.filter { !$0.isLeaving }.map { items in
             let center = items.center(inPlatterAt: frame, time: self.now)
-            return CGRect(x: frame.minX + center.x - items.frame.width * 0.5, y: frame.minY + center.y - items.frame.height * 0.5, width: items.frame.width, height: items.frame.height)
+            let size = items.size(inPlatterAt: frame)
+            return CGRect(x: frame.minX + center.x - size.width * 0.5, y: frame.minY + center.y - size.height * 0.5, width: size.width, height: size.height)
         }
     }
 
