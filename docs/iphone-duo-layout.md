@@ -150,6 +150,10 @@ These are the user's decisions; a screen that follows them is correct, one that 
   hardly taller than wide. A profile's expanded photo (`min(w, h − 61) + 98`) reached past its bottom, leaving no list to
   drag, so the profile opened from a chat's avatar could not scroll; `peerInfoAvatarExpansionFits` asks for the room.
 - A 9:16 preview taller than the screen (UP, FP) leaving negative space below it for the bottom controls.
+- Something anchored to that preview's bottom edge, which on UP is below the screen: the dual camera's front preview
+  keeps to the shutter there (`cameraDualPreviewCenter`), though the capture keeps it at the frame's corner. On FP the
+  edge is the screen's, under the lifted controls, and the preview keeps the corner the capture uses, as on home-button
+  phones.
 - A bottom row lifted by a constant tuned for home-button phones, until the Duo the only phones whose 9:16 preview is
   taller than the screen: measured from the screen edge, it lands on the home indicator. The indicator is
   `layout.intrinsicInsets.bottom` (20pt); the Duo's `safeInsets.bottom` is 0. The story camera keeps its controls above
@@ -191,4 +195,7 @@ other device stays byte-identical; the band helpers above are built that way.
   message preview kept above the input panel, its trailing buttons clear of the status corner, touches reaching the
   panel above a bot keyboard),
   `//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboardTests`
-  (the emoji / stickers / GIFs keyboard's grid, headers and switcher on the band).
+  (the emoji / stickers / GIFs keyboard's grid, headers and switcher on the band),
+  `//submodules/TelegramUI/Components/CameraScreen:CameraScreenTests`
+  (the story camera's dual-camera front preview: on UP a bottom corner keeps to the shutter, as where the 9:16
+  viewfinder fits).
