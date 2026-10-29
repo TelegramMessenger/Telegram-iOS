@@ -416,6 +416,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private var liquidMorphReferenceInfo: ContextControllerReferenceViewInfo?
     private var liquidMorphReferenceRect: CGRect?
     private var appliedActionsTopOverflow: CGFloat = 0.0
+    private var appliedTopPushedItemId: ObjectIdentifier?
     private let actionsStackNode: ContextControllerActionsStackNodeImpl
     private let additionalActionsStackNode: ContextControllerActionsStackNode
     
@@ -1369,7 +1370,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             // out from the top inset instead and make the content taller by the overflow, so it opens scrolled to where
             // it was and its top can be scrolled into view. A menu that morphs out of its source and grows upward (an
             // editor's toolbar above the keyboard, a pushed submenu taller than the room above it) is handled alike; its
-            // additional actions stack above it, so they count towards its top.
+            // additional actions stack above it, so they count towards its top. A pushed submenu opens scrolled to its top
+            // instead, so its Back row is in view (below).
             var actionsTopOverflow: CGFloat = 0.0
             var actionsMinY = contentTopInset
             if let morphMenuAnchor, morphMenuAnchor.growsUpward, additionalActionsSize.height > 0.0 {
@@ -1500,13 +1502,21 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             let contentSize = CGSize(width: layout.size.width, height: contentHeight)
             
-            if self.scroller.contentSize != contentSize {
+            // A submenu just pushed onto a menu above its reference that it overflows opens scrolled to its top, so its
+            // Back row is in view; the items nearest the reference are reached by scrolling. The root menu keeps its
+            // place at the reference. A submenu returned to by a pop restores its stored scroll position instead.
+            let topPushedItemId = self.actionsStackNode.topPushedItemId
+            let opensPushedItemAtTop = topPushedItemId != nil && topPushedItemId != self.appliedTopPushedItemId && actionsTopOverflow > 0.0 && self.actionsStackNode.storedScrollingState == nil
+            
+            if self.scroller.contentSize != contentSize || opensPushedItemAtTop {
                 let previousContentOffset = self.scroller.contentOffset
                 self.scroller.contentSize = contentSize
                 if let storedScrollingState = self.actionsStackNode.storedScrollingState {
                     self.actionsStackNode.clearStoredScrollingState()
                     
                     self.scroller.contentOffset = CGPoint(x: 0.0, y: storedScrollingState)
+                } else if opensPushedItemAtTop {
+                    self.scroller.contentOffset = CGPoint(x: 0.0, y: 0.0)
                 } else if actionsTopOverflow != self.appliedActionsTopOverflow {
                     // The overflow is what the menu is scrolled by to sit at its reference: when a relayout (rotation,
                     // a fold) changes it, move the offset with it, or the menu drifts off its reference and, once it
@@ -1522,6 +1532,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             self.appliedActionsTopOverflow = actionsTopOverflow
+            self.appliedTopPushedItemId = topPushedItemId
             
             self.actionsStackNode.updatePanSelection(isEnabled: contentSize.height <= layout.size.height)
             
