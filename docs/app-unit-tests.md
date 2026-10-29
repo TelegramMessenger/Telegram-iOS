@@ -52,6 +52,11 @@ title and its avatar, so a Saved Messages token draws the Saved Messages icon ra
 placement of the icons before a chat header's title: a secret chat's lock next to the name, and a third-party
 verification icon to the left of the lock, never on top of it.
 
+`//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` covers the round video
+message camera's placement helpers (`VideoMessageCameraLayout.swift`): on iPhone Duo the preview kept above the chat's
+input panel and the trailing buttons clear of the status corner, and on every phone the touches that reach the panel
+above a bot keyboard, which the window does not report as input.
+
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests` covers `avatarGalleryUserEntries`, the one builder both
 user-gallery paths use. Slot 0 is the peer record's current photo, but `photos.getUserPhotos` keeps its order when an
 older photo is made the main one again (the server swaps a copy under a **new photo id** into that photo's place), so

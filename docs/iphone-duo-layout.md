@@ -176,4 +176,7 @@ other device stays byte-identical; the band helpers above are built that way.
   `//submodules/TelegramUI/Components/ChatMediaEditorScreen:ChatMediaEditorScreenTests` (the chat media editor's
   trimmer, counter and camera button, Edit Cover title beside a strip),
   `//submodules/TelegramUI/Components/LegacyMessageInputPanel:LegacyMessageInputPanelTests` (the media editors'
-  caption panel: a caption above the media keeps clear of folded portrait's status corner).
+  caption panel: a caption above the media keeps clear of folded portrait's status corner),
+  `//submodules/TelegramUI/Components/VideoMessageCameraScreen:VideoMessageCameraScreenTests` (the round video
+  message preview kept above the input panel, its trailing buttons clear of the status corner, touches reaching the
+  panel above a bot keyboard).
