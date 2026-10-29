@@ -354,13 +354,16 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     /// turn's passes to move the glass on from there.
     private struct BackgroundBeforePass {
         let firstRow: UIView?
-        /// The glass's top less its first row's, on screen. Both ride the content's motion, so what tells them apart is
-        /// their places in the content and their own animations, each its presented position less its model one: a
-        /// row's frame from the list (`presentedFrame(of:)`) is its model one, without its own slide, at the engine's
-        /// last sampled offset, a frame behind a flight.
+        /// The glass's top less its first row's, on screen. Both ride the content's motion, so this compares their
+        /// presented places in the content, all from the last commit: a row's frame from the list (`presentedFrame(of:)`)
+        /// is its model one, without its own slide, at the engine's last sampled offset, a frame behind a flight; and a
+        /// model read can be newer than the commit (see `moverMotion`).
         let glassGapFromFirstRow: CGFloat?
         let glassTop: CGFloat
-        /// The content's motion under way on the mirror (its presented origin less its model one).
+        /// The content's motion under way on the mirror: its presented origin less its model one, as committed. A scroll
+        /// tick earlier in the turn can have rebased the content's coordinates, which moves the content's origin and
+        /// every row's place in the content together and nothing on screen; only the model has it yet. A committed row
+        /// with no slide of its own measures it: its place in the content now, less its presented one.
         let moverMotion: CGFloat
         /// The part of `moverMotion` a viewport animation adds; the rest is a flight's.
         let viewportMotion: CGFloat
@@ -377,18 +380,43 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         let firstRow = entries.next()?.view
         let glassLayer = self.backgroundView.layer.presentation() ?? self.backgroundView.layer
         let moverLayer = self.backgroundMover.layer.presentation() ?? self.backgroundMover.layer
-        let glassGapFromFirstRow = firstRow.map { row -> CGFloat in
-            let rowLayer = row.layer
-            let rowMotion = (rowLayer.presentation() ?? rowLayer).frame.minY - rowLayer.frame.minY
-            return glassLayer.frame.minY - (self.listView.contentFrame(of: row).minY + rowMotion)
+        var uncommittedRebase: CGFloat = 0.0
+        for (_, view) in self.listView.loadedItemEntries {
+            let slides = (view.layer.animationKeys() ?? []).contains { key in
+                (view.layer.animation(forKey: key) as? CAPropertyAnimation)?.keyPath == "position.y"
+            }
+            if !slides, let rowTop = self.presentedContentTop(of: view) {
+                uncommittedRebase = self.listView.contentFrame(of: view).minY - rowTop
+                break
+            }
+        }
+        var glassGapFromFirstRow: CGFloat?
+        if let firstRow {
+            if let glassPresentation = self.backgroundView.layer.presentation() {
+                // A row the last pass inserted can have no presentation yet (the commit is not on screen): it will show at
+                // its model place, as committed, while the glass keeps the slide that pass gave it.
+                let rowTop = self.presentedContentTop(of: firstRow) ?? (self.listView.contentFrame(of: firstRow).minY - uncommittedRebase)
+                glassGapFromFirstRow = glassPresentation.frame.minY - rowTop
+            } else {
+                glassGapFromFirstRow = self.backgroundView.layer.frame.minY - self.listView.contentFrame(of: firstRow).minY
+            }
         }
         return BackgroundBeforePass(
             firstRow: firstRow,
             glassGapFromFirstRow: glassGapFromFirstRow,
             glassTop: glassLayer.frame.minY - moverLayer.bounds.origin.y,
-            moverMotion: moverLayer.bounds.origin.y - self.backgroundMover.layer.bounds.origin.y,
+            moverMotion: moverLayer.bounds.origin.y - (self.backgroundMover.layer.bounds.origin.y - uncommittedRebase),
             viewportMotion: self.listView.viewportAnimationOffset
         )
+    }
+    
+    /// A loaded row's top in the content's coordinates as last committed, its own slide included: it sits in the list's
+    /// row container, a direct child of the content, which never animates. Nil before its first commit.
+    private func presentedContentTop(of row: UIView) -> CGFloat? {
+        guard let rowPresentation = row.layer.presentation(), let containerPresentation = row.layer.superlayer?.presentation() else {
+            return nil
+        }
+        return containerPresentation.frame.minY - containerPresentation.bounds.minY + rowPresentation.frame.minY
     }
     
     /// Places the glass in the content's coordinates (the mirror's), at once: from the first loaded row's top, which is
