@@ -215,6 +215,8 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         // Hold first, so that the bar's own glass never shows in between.
         guard source.holdGlass(true, interrupted: { [weak self] in
             self?.endLingering()
+        }, titlePillMoved: { [weak self] in
+            self?.followLingeringBar()
         }) else {
             self.putBack()
             return false
@@ -239,6 +241,16 @@ final class NavigationBarTransitionLayer: ASDisplayNode {
         self.lingerCap = lingerCap
         let _ = lingerCap.start(duration: 1.5, continuing: false)
         return true
+    }
+
+    /// The bar the glass lingers above moved its title pill (the chat header re-centred once the push has ended): the
+    /// glass re-reads both bars at the transition's end, so that its capsules head for the pill's new place on their
+    /// springs, and it settles where the bar draws the pill rather than snapping sideways at the hand-over.
+    private func followLingeringBar() {
+        guard self.isLingering else {
+            return
+        }
+        self.renderer.update(size: self.bounds.size, fraction: self.fraction, bottomFrame: self.bottom.frame, topFrame: self.top.frame, transition: .immediate)
     }
 
     /// The renderer's glass hands over to the bar it lingered above.

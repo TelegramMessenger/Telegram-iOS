@@ -121,6 +121,9 @@ public final class NavigationBarPlatterTransitionView: UIView {
         var maxScale: CGSize
         let blurRadius: CGFloat
         var isLeaving = false
+        /// Centred in their capsule wherever it is, rather than where their bar has them: a title pill its bar moved
+        /// (`switchTo`).
+        var ridesPlatter = false
 
         init(side: SideKind, view: UIView, frame: CGRect, appearance: CGFloat, motion: NavigationBarGlassMotion) {
             self.side = side
@@ -129,6 +132,14 @@ public final class NavigationBarPlatterTransitionView: UIView {
             self.appearance = .constant(appearance, rest: .glass(0.001))
             self.maxScale = motion.materializeScale(size: frame.size)
             self.blurRadius = motion.blurRadius
+        }
+
+        /// Where the items are in their capsule when the capsule is at `platterFrame`.
+        func center(inPlatterAt platterFrame: CGRect) -> CGPoint {
+            if self.ridesPlatter {
+                return CGPoint(x: platterFrame.width * 0.5, y: platterFrame.height * 0.5)
+            }
+            return CGPoint(x: self.frame.midX - platterFrame.minX, y: self.frame.midY - platterFrame.minY)
         }
     }
 
@@ -658,6 +669,13 @@ public final class NavigationBarPlatterTransitionView: UIView {
                     platter.isDark = target.isDark
                     let otherSignature = self.layout(side == .bottom ? .top : .bottom).signatures[role]
                     let currentItems = platter.items.first(where: { !$0.isLeaving })
+                    if platter.isTitlePill, let currentItems, currentItems.side == side, currentItems.frame != frame {
+                        // The bar moved its title pill (the chat header re-centred once the push has ended): what the
+                        // pill shows rides the shape to the new place instead of staying behind and snapping at the
+                        // hand-over (issue #88).
+                        currentItems.frame = frame
+                        currentItems.ridesPlatter = true
+                    }
                     if currentItems?.side != side {
                         if otherSignature == target.signatures[role], let currentItems {
                             // The same items: swap to this bar's identical copies.
@@ -963,7 +981,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             // Each bar's items stay where that bar has them while the shape morphs around them.
             let appearances = times.map { max(0.0, min(1.0, items.appearance.value(at: $0))) }
             let scales = times.map { items.appearance.value(at: $0) }
-            add(items.view.layer, "position", frames.map { NSValue(cgPoint: CGPoint(x: items.frame.midX - $0.minX, y: items.frame.midY - $0.minY)) })
+            add(items.view.layer, "position", frames.map { NSValue(cgPoint: items.center(inPlatterAt: $0)) })
             add(items.view.layer, "transform", scales.map { a in NSValue(caTransform3D: CATransform3DMakeScale(1.0 + a * (items.maxScale.width - 1.0), 1.0 + a * (items.maxScale.height - 1.0), 1.0)) })
             add(items.view.layer, "opacity", appearances.map { NSNumber(value: Float(1.0 - $0)) })
             self.addBlurKeyframes(to: items.view.layer, radii: appearances.map { items.blurRadius * $0 }, timing: timing)
@@ -1088,7 +1106,7 @@ public final class NavigationBarPlatterTransitionView: UIView {
             // Each bar's items stay where that bar has them while the shape morphs around them.
             let a = max(0.0, min(1.0, items.appearance.value(at: self.time)))
             items.view.bounds = CGRect(origin: CGPoint(), size: items.frame.size)
-            items.view.center = CGPoint(x: items.frame.midX - frame.minX, y: items.frame.midY - frame.minY)
+            items.view.center = items.center(inPlatterAt: frame)
             items.view.transform = CGAffineTransform(scaleX: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.width - 1.0), y: 1.0 + items.appearance.value(at: self.time) * (items.maxScale.height - 1.0))
             items.view.alpha = 1.0 - a
             ComponentTransition.immediate.setBlur(layer: items.view.layer, radius: items.blurRadius * a)
@@ -1134,6 +1152,18 @@ public final class NavigationBarPlatterTransitionView: UIView {
             tint: platter.tint,
             kick: platter.kick?.translation(at: time) ?? CGSize()
         )
+    }
+
+    /// Where a capsule's present items are now, in this view.
+    func currentItemsFramesForTesting(_ role: Role) -> [CGRect] {
+        guard let platter = self.platters[role] else {
+            return []
+        }
+        let frame = platter.frame(at: self.now)
+        return platter.items.filter { !$0.isLeaving }.map { items in
+            let center = items.center(inPlatterAt: frame)
+            return CGRect(x: frame.minX + center.x - items.frame.width * 0.5, y: frame.minY + center.y - items.frame.height * 0.5, width: items.frame.width, height: items.frame.height)
+        }
     }
 
     func leavingItemsViewsForTesting(_ role: Role) -> [UIView] {

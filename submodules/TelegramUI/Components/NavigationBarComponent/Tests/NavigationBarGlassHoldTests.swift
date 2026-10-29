@@ -40,6 +40,41 @@ final class NavigationBarGlassHoldTests: XCTestCase {
         XCTAssertFalse(hold.isHeld)
     }
 
+    // A layout that only moves the title's pill (the chat header re-centred under the glass) keeps the hold and asks
+    // the glass to follow it, once per move; the same pill again asks nothing.
+    func test_aMovedTitlePill_isFollowed_notHandedOver() {
+        let hold = self.makeHold()
+        var interruptions = 0
+        var moves = 0
+        hold.hold(true, interrupted: { interruptions += 1 }, titlePillMoved: { moves += 1 }, content: nil, rowFrame: CGRect(), titlePillFrame: CGRect(x: 100.0, y: 64.0, width: 178.0, height: 44.0))
+        hold.titlePillLaidOut(CGRect(x: 100.0, y: 64.0, width: 178.0, height: 44.0))
+        XCTAssertEqual(moves, 0)
+        hold.titlePillLaidOut(CGRect(x: 112.0, y: 64.0, width: 178.0, height: 44.0))
+        XCTAssertEqual(moves, 1)
+        hold.titlePillLaidOut(CGRect(x: 112.0, y: 64.0, width: 178.0, height: 44.0))
+        XCTAssertEqual(moves, 1)
+        XCTAssertEqual(interruptions, 0)
+        XCTAssertTrue(hold.isHeld)
+        hold.interrupt()
+        hold.titlePillLaidOut(CGRect(x: 120.0, y: 64.0, width: 178.0, height: 44.0))
+        XCTAssertEqual(moves, 1, "not after the hold")
+    }
+
+    // A pill that appears or goes under the glass is not one the glass can follow (it draws none, or one the bar no
+    // longer has): it hands over.
+    func test_aTitlePillAppearingOrGoing_handsOver() {
+        for (held, laidOut) in [(nil, CGRect(x: 112.0, y: 64.0, width: 178.0, height: 44.0)), (CGRect(x: 112.0, y: 64.0, width: 178.0, height: 44.0), nil)] {
+            let hold = self.makeHold()
+            var interruptions = 0
+            var moves = 0
+            hold.hold(true, interrupted: { interruptions += 1 }, titlePillMoved: { moves += 1 }, content: nil, rowFrame: CGRect(), titlePillFrame: held)
+            hold.titlePillLaidOut(laidOut)
+            XCTAssertEqual(interruptions, 1)
+            XCTAssertEqual(moves, 0)
+            XCTAssertFalse(hold.isHeld)
+        }
+    }
+
     // A hold nobody ends releases itself after 1.6 s times the duration factor.
     func test_aHoldNobodyEnds_releasesAfterItsCap() {
         let hold = self.makeHold()

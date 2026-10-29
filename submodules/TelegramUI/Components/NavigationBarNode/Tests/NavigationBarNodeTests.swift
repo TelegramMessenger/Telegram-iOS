@@ -59,8 +59,10 @@ private final class PillTitleView: UIView, NavigationBarGlassPillTitleView {
     }
     func animateLayoutTransition() {
     }
+    /// The size it reports: the bar centres it, so another width moves the pill.
+    var size = CGSize(width: 140.0, height: 56.0)
     func updateLayout(availableSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        return CGSize(width: 140.0, height: 56.0)
+        return self.size
     }
 }
 
@@ -824,6 +826,61 @@ final class NavigationBarNodeTests: XCTestCase {
         node.updateTransition(role: nil, fraction: 0.0, transition: .immediate)
         XCTAssertFalse(titleView.isGlassPillDetached)
         XCTAssertNil(titleView.lentContent)
+    }
+
+    // A layout that moves the pill under the glass lingering after a transition (the chat header re-centred once the
+    // push has ended) keeps the hold and asks the glass to follow the pill there, rather than settle where the bar no
+    // longer draws it and snap sideways at the hand-over; the pill stays detached meanwhile (issue #88).
+    func test_heldGlass_aMovedTitlePill_isFollowed() {
+        let (node, titleView) = self.makePillNode(rightItems: [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)])
+        var interruptions = 0
+        var moves = 0
+        let _ = node.holdGlass(true, interrupted: {
+            interruptions += 1
+        }, titlePillMoved: {
+            moves += 1
+        })
+        let pillBefore = node.componentTransitionState?.titlePill?.frame
+        self.layout(node)
+        XCTAssertEqual(moves, 0, "a layout that changes nothing")
+        titleView.size = CGSize(width: 100.0, height: 56.0)
+        self.layout(node)
+        XCTAssertNotEqual(node.componentTransitionState?.titlePill?.frame, pillBefore)
+        XCTAssertEqual(moves, 1)
+        XCTAssertEqual(interruptions, 0)
+        XCTAssertTrue(titleView.isGlassPillDetached)
+        let _ = node.holdGlass(false, interrupted: nil)
+        XCTAssertFalse(titleView.isGlassPillDetached)
+    }
+
+    // The renderer's capsules follow a pill that moved once the transition has run (the glass lingering above the bar):
+    // the pill's platter, and what it shows with it, come to rest where the bar draws the pill.
+    func test_renderer_aMovedTitlePill_movesItsPlatter() {
+        let bottom = self.makeLaidOutNode(title: "List", rightItem: UIBarButtonItem(title: "Edit", style: .plain, target: nil, action: nil))
+        let (top, titleView) = self.makePillNode(rightItems: [UIBarButtonItem(image: UIImage(), style: .plain, target: nil, action: nil)])
+        guard let renderer = makeNavigationBarTransitionRenderer(bottom: bottom, top: top) as? NavigationBarTransitionRendererImpl else {
+            return XCTFail("no renderer")
+        }
+        let frame = CGRect(x: 0.0, y: 0.0, width: 390.0, height: 107.0)
+        renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 0.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
+        renderer.beginTransition(isInteractive: false, toTop: true)
+        self.time.advance(by: 0.3)
+        let restingFrame = renderer.platterViewForTesting?.platterStateForTesting(.trailing(1))?.frame
+        titleView.size = CGSize(width: 100.0, height: 56.0)
+        self.layout(top)
+        let movedFrame = titleView.pillFrame.offsetBy(dx: titleView.frame.minX, dy: titleView.frame.minY)
+        XCTAssertNotEqual(restingFrame, movedFrame)
+        renderer.update(size: CGSize(width: 390.0, height: 844.0), fraction: 1.0, bottomFrame: frame, topFrame: frame, transition: .immediate)
+        // What the pill shows rides its shape on the way, rather than staying where the pill was and snapping at the end.
+        self.time.advance(by: 0.05)
+        guard let platterView = renderer.platterViewForTesting, let midway = platterView.platterStateForTesting(.trailing(1))?.frame else {
+            return XCTFail("no pill platter")
+        }
+        XCTAssertNotEqual(midway.minX, movedFrame.minX)
+        XCTAssertEqual(platterView.currentItemsFramesForTesting(.trailing(1)).map { $0.midX }, [midway.midX])
+        self.time.advance(by: 1.5)
+        XCTAssertEqual(platterView.platterStateForTesting(.trailing(1))?.frame, movedFrame)
+        XCTAssertEqual(platterView.currentItemsFramesForTesting(.trailing(1)), [movedFrame])
     }
 
     // With two right platters already (an accent circle and a capsule) the pill has no slot: not reported, never hidden.

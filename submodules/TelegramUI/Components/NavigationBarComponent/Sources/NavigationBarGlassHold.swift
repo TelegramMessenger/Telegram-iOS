@@ -3,12 +3,15 @@ import UIKit
 
 /// A bar holding its own glass hidden while a navigation transition's glass finishes above it (UIKit's capsules run on
 /// their own clock and outlive the screens' transition). The hold ends when the transition says so, or here: when the
-/// bar is touched, laid out with other content or another row frame, leaves the screen, or after a cap. Main thread.
+/// bar is touched, laid out with other content, another row frame or a title pill appearing or going, leaves the
+/// screen, or after a cap. A title pill that only moves is followed by the glass instead. Main thread.
 public final class NavigationBarGlassHold {
     private let schedule: (Double, @escaping () -> Void) -> Void
     private var interrupted: (() -> Void)?
+    private var titlePillMoved: (() -> Void)?
     private var heldContent: NavigationBarComponent.Content?
     private var heldRowFrame = CGRect()
+    private var heldTitlePillFrame: CGRect?
     private var generation = 0
     private var hasLeftHierarchy = false
 
@@ -34,11 +37,15 @@ public final class NavigationBarGlassHold {
         self.schedule = schedule
     }
 
-    public func hold(_ held: Bool, interrupted: (() -> Void)?, content: NavigationBarComponent.Content?, rowFrame: CGRect) {
+    /// `titlePillFrame`: the bar's title pill (the chat header), which the transition's glass draws, in the row's
+    /// coordinates; `titlePillMoved` asks the glass to follow it when a layout moves it.
+    public func hold(_ held: Bool, interrupted: (() -> Void)?, titlePillMoved: (() -> Void)? = nil, content: NavigationBarComponent.Content?, rowFrame: CGRect, titlePillFrame: CGRect? = nil) {
         self.generation += 1
         self.interrupted = held ? interrupted : nil
+        self.titlePillMoved = held ? titlePillMoved : nil
         self.heldContent = content
         self.heldRowFrame = rowFrame
+        self.heldTitlePillFrame = titlePillFrame
         self.isHeld = held
         if held {
             // The transition ends its linger within 1.5 s of animation time (stretched by Slow Animations, as the glass
@@ -59,6 +66,21 @@ public final class NavigationBarGlassHold {
         if self.isHeld, self.heldContent != content || self.heldRowFrame != rowFrame {
             self.interrupt()
         }
+    }
+
+    /// The bar laid out its title: a pill that moved (the chat header re-centred after the push) is followed by the glass,
+    /// which otherwise settles where the bar no longer draws it and the pill snaps sideways at the hand-over; one that
+    /// appeared or went hands over now.
+    public func titlePillLaidOut(_ frame: CGRect?) {
+        guard self.isHeld, frame != self.heldTitlePillFrame else {
+            return
+        }
+        if frame == nil || self.heldTitlePillFrame == nil {
+            self.interrupt()
+            return
+        }
+        self.heldTitlePillFrame = frame
+        self.titlePillMoved?()
     }
 
     /// Asks the transition's glass to hand over (once), and ends the hold if it did not.
