@@ -101,6 +101,11 @@ headers, the GIFs / Stickers / Emoji switcher) centre on the band between the si
 rows are clipped by; with equal side insets the old expressions come out exactly. The clipping itself is checked on
 the Duo simulator.
 
+`//submodules/PasswordSetupUI:PasswordSetupUITests` covers `twoFactorDataInputHorizontalLayout`, the bands of the
+2FA data input screen per Duo posture: content, bottom button, and the text actions that take the hidden button's place
+(in the fields' row in Settings, in the button's frame in the login flow); with equal side insets all are the previous
+ones.
+
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
 picker is presented over an invisible full-screen host that leaves only through the picker's callbacks. UIKit holds the

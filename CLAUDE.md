@@ -67,6 +67,7 @@ in a test process: [`docs/app-unit-tests.md`](docs/app-unit-tests.md)): `//submo
 `//submodules/TelegramUI/Components/Chat/EditableTokenListNode:EditableTokenListNodeTests`,
 `//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUITests`, `//submodules/MediaPlayer:UniversalMediaPlayerTests`,
 `//submodules/UndoUI:UndoUITests`, `//submodules/ContactsPeerItem:ContactsPeerItemTests`,
+`//submodules/PasswordSetupUI:PasswordSetupUITests`,
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests`,
 `//submodules/TelegramUI/Components/ChatTitleView:ChatTitleViewTests`,
 `//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen:ChatSendStarsScreenTests`,
