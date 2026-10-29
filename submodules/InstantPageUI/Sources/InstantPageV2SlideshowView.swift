@@ -164,12 +164,10 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
     // Scrolls, without animation, to the page showing `media` if this carousel holds it.
     @discardableResult
     private func showPage(of media: InstantPageMedia) -> Bool {
-        guard let index = InstantPageV2SlideshowView.scrollToPage(of: media, medias: self.item.medias, scrollView: self.scrollView) else {
-            return false
-        }
-        // `scrollViewDidScroll` has already followed the scroll; this covers a carousel not laid out yet.
-        self.pageControlNode.setPage(CGFloat(index))
-        return true
+        // A carousel created while the gallery is open may not be laid out yet; its pages need their frames
+        // before one can be scrolled to. The page dots follow the scroll in `scrollViewDidScroll`.
+        self.layoutIfNeeded()
+        return InstantPageV2SlideshowView.scrollToPage(of: media, medias: self.item.medias, scrollView: self.scrollView) != nil
     }
 
     static func scrollToPage(of media: InstantPageMedia, medias: [InstantPageMedia], scrollView: UIScrollView) -> Int? {

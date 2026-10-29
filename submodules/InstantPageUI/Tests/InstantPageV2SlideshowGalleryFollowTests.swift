@@ -40,6 +40,15 @@ final class InstantPageV2SlideshowGalleryFollowTests: XCTestCase {
         XCTAssertEqual(scrollView.contentOffset, CGPoint(x: 0.0, y: 0.0))
     }
 
+    func testACarouselWithoutWidthOwnsTheMediaButDoesNotScroll() {
+        let medias = [self.media(index: 1, id: 10), self.media(index: 2, id: 20)]
+        let scrollView = UIScrollView()
+
+        // It still answers for the media; there is no page width to scroll by yet.
+        XCTAssertEqual(InstantPageV2SlideshowView.scrollToPage(of: self.media(index: 2, id: 20), medias: medias, scrollView: scrollView), 1)
+        XCTAssertEqual(scrollView.contentOffset, .zero)
+    }
+
     func testIgnoresAnotherBlocksMedia() {
         let medias = [self.media(index: 1, id: 10), self.media(index: 2, id: 20)]
         let scrollView = self.pagedScrollView(pageCount: medias.count)
