@@ -359,6 +359,12 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `height` are the rendered content size while it is being rendered (`renderedContentSize`,
     `RenderTree::beingRendered`, whose ancestor walk is charged), else the attribute, else the natural size. While
     pending, a dimension the CSS leaves auto is 0: the render tree already knows the decoded size, a browser does not.
+    Consequences of laying it out at its decoded size meanwhile (the v0.2.3 review's M3, recorded, not changed):
+    `offsetWidth` / `offsetHeight` and `getBoundingClientRect()` read the laid-out size in the same frame (a browser:
+    the padding and border alone, for an auto dimension); `min-width` (or `min-height`) on an auto dimension does not clamp what `width` reads
+    (0, a browser gives the minimum); an image a flex or grid container stretches, or one `aspect-ratio` sizes from its
+    `width`/`height` attributes with the other dimension auto, also reads 0 where a browser sizes it before the decode;
+    and the ancestors' geometry and the widget's reported height already include the decoded size.
     At the window's load an image whose `src` changed meanwhile is left to its own task, so it fires once. V5d had made a `data:` image complete with
     its size at once.
   A hook is a pure function of its text and posts no diagnostic. The full record, with the strict budgets and the DOM
@@ -695,13 +701,14 @@ branch, `feature/message-widgets`; what still binds the code is recorded here.
     `intl::RelevantKeys`):
     - NumberFormat and RelativeTimeFormat `nu`; DateTimeFormat `ca`, `hc`, `nu`; Collator `co`, `kf`, `kn`;
     - each value from a conservative table: ECMA-402's 22 numbering systems with simple digit mappings, the calendars
-      Foundation has on iOS 15, the hour cycles, CLDR's collations;
-    - sorted by key, attributes dropped, other extensions and private use kept.
+      Foundation has on iOS 15, the hour cycles, CLDR's collations but `standard` and `search`;
+    - sorted by key; attributes, other extensions (`-t-`, `-a-`…) and private use dropped, as ECMA-402's resolved locale
+      has none (Foundation read them as `@…=` keywords on the plural rules' language key).
 
     Upstream's shim sends the tag whole, but in its glue an unknown numbering system makes `RelativeDateTimeFormatter`
     trap (the app's crash), and an extension breaks the plural rules' language key (widget-sandbox VENDOR.md). The
     glue applies what is kept on iOS 16 and later and drops it before. `WRIntlExtensionTests` runs every call a widget
-    can make with every CLDR numbering system and calendar on iOS. Until widget-sandbox v0.2.2 any extension took the
+    can make with every CLDR numbering system, calendar, hour cycle and collation on iOS. Until widget-sandbox v0.2.2 any extension took the
     app down:
     the glue built its `Locale` with `Locale(identifier:)`, and Foundation's identifier parsing drops a numbering
     system's 4-letter value: `ar-EG-u-nu-arab` becomes `ar_EG@numbers=yes`, and `fa-u-nu-arab`, `hi-IN-u-nu-deva` and
@@ -1280,8 +1287,11 @@ M1d's, from the old runtime (spec §10.1):
 - **`openTelegramLink` asks first**, as `openLink` does: Mini Apps open t.me links without a prompt, but resolving one
   is a network request the widget would cause.
 - **At the chat's bottom a top-anchored widget grows upward** (the user, 2026-10-28): the chat stays at its bottom
-  until the widget's top reaches the screen's top inset, and only the rest of the growth goes downward. sdk-v1 §5.6
-  keeps the anchored edge everywhere; the message widgets guide's "Which edge stays put" has the rule.
+  until the widget's top reaches the screen's top inset, and only the rest of the growth goes downward. And while the
+  chat holds a pinned message (a bot streaming its reply under the user's message, until a drag or a held jump to
+  another message), a widget grows away
+  from it whatever its anchor: a bottom-anchored one under it does not keep its bottom. sdk-v1 §5.6 keeps the anchored
+  edge everywhere; the message widgets guide's "Which edge stays put" has the rules.
 - **There is no source cap** (V1): M1d's 256 KiB cap is gone with the inline `tgwidget` blocks and `.tgw` files it
   covered. The old runtime booted an inline source of any size, and stopped it when its serialized document passed
   256 KiB.

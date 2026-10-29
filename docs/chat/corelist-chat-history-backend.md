@@ -1227,14 +1227,18 @@ when that stableId changes**. `:2521-2530` turns that into a `.top(0.0)` scroll,
 `pointOffset(for:index:height:view:)` (`:369-372`) replaces the requested position wholesale for a
 lowest-pin-to-edge index — `ListViewImpl` does the same at `ListView.swift:3146-3170`, and the chat
 relies on the list to know better. CoreList engages `holdsPinnedRow` when a `scrollTo` names
-`lowestPinnedItemIndex`, so this one scroll is the entire engagement path. Cold start is covered: a
+`lowestPinnedItemIndex` with `pinsRow` set: this scroll, and any other chat jump that lands on that row (the default,
+as `ListViewImpl` arms on any scroll to a pin-to-edge item); the backend's message-widget resize targets clear it. Cold start is covered: a
 fresh history node has `pinToTopStableId == nil`, so opening a chat with an answer already streaming
 fires it on the first view.
 
 **Release is permanent for that answer**, and is an event rather than a measurement: finger-down
-(`engine.onWillBeginDragging`), the pinned row leaving the collection, or a full replace. Dragging away
-mid-stream and scrolling back does **not** re-pin — only a new pinned message does. That is
-`ListViewImpl`'s behaviour, and it is why nothing here infers release from geometry.
+(`engine.onWillBeginDragging`), a jump the list holds landing on another message (a tap on a reply), the pinned row
+leaving the collection, or a full replace. Dragging away mid-stream and scrolling back does **not** re-pin — only a
+new pinned message does. That is `ListViewImpl`'s behaviour, and it is why nothing here infers release from geometry.
+The held jump is not: `ListViewImpl` keeps no jump (the chat never sets `experimentalSnapScrollToItem`), so there the
+next pass after any jump re-snaps to the pin. Here a held jump ends it (the user, 2026-10-29: while a scrolled-to
+message is held, a widget resizing keeps its own edge, which a pin pulling the list back would undo).
 
 **The slack still has to be computed inside the pass, and that is why it lives in CoreList.** It
 depends on the measured heights of the rows above the pin, which change on every streamed token — and
@@ -1492,13 +1496,14 @@ host-layer fade CoreList already installs.)
 
 **The track must be list-owned, not a raw CA animation on the row's layer.** Position tracks in
 `ListAnimationModel` are additive offsets decaying to zero, and `capturePresentedPositionOffsets()`
-reads `presented − model` on every bound live layer at the START of the next pass to recover exactly
-that quantity. An animation the backend added itself is indistinguishable from a track the model owns,
-so a second message landing mid-slide would resume against a displacement the model never issued —
-the same class of double-count that shipped once as every row snapping a whole growth backwards (see
-"Granular animation contract" in the CoreList `CLAUDE.md`). Going through
-`CoreVirtualListView.animateInsertedBlock(identities:origin:transition:)` also makes an overlapping
-arrival compose: `transitionPositionOffset` folds the in-flight `currentOffset` into the new track.
+reads presented minus the committed base on every live row with a running position track at the START
+of the next pass to recover exactly that quantity. On such a row an animation the backend added itself
+is indistinguishable from the track the model owns, so a second message landing mid-slide would resume
+against a displacement the model never issued — the same class of double-count that shipped once as
+every row snapping a whole growth backwards (see "Granular animation contract" in the CoreList
+`CLAUDE.md`). Going through `CoreVirtualListView.animateInsertedBlock(identities:origin:transition:)`
+also makes an overlapping arrival compose: `transitionPositionOffset` folds the in-flight
+`currentOffset` into the new track.
 
 **The block, not the row, is the unit.** Every named row takes the SAME offset — the run's total
 settled height, reserved space included — so a run arriving together keeps its spacing for the whole

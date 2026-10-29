@@ -117,6 +117,23 @@ loaded item crossing the old top-inset edge at its distance from that edge — a
 witness; a departing one falls back to the nearest survivor below, then above. It never measures old
 off-screen rows or post-corrects the offset, and yields to `scrollTo` and finite-edge clipping.
 
+`.preserveCentredContent` (opt-in, News's Compact ↔ Expanded morph) keeps the loaded row crossing the OLD
+visible centre line (midway between the inset edges) at its midpoint's distance from the line: the new
+geometry's line, or the old one under `compensatesInsetChange: false`. It is a `.resolved` anchor, placed from
+the row's NEW measured height on the pixel grid, so the row's position and height ride one curve and its
+midpoint stays still through the morph. A row that crossed the line still crosses it (top at or above, bottom
+below), so a reversal finds the same row; a departing one hands over to the nearest survivor below, then above.
+`.preserveVisibleContent`'s semantics: no loaded-top pin, the underfill alignments clip both ends, no momentum
+halt, no viewport track. Below `scrollTo`, the pin latch and a scroll hold; not for pinned lists.
+`CentredAnchorTests`.
+
+`.preserveItem(identity)` (opt-in, News's per-row Expand / Collapse swipe) keeps that row's top at its distance
+from the top inset edge, but never above the edge: a row partly under it lands on it, so a collapsed row stays
+in view. A `.fixed` anchor (the placement needs no new height), projected exactly as `.preserveVisibleContent`'s
+witness (inset compensation, pin slack, `additionalScrollDistance`), with the same end clipping, no halt and no
+viewport track. A row the old window did not load, one wholly above the edge, or one leaving makes the pass a
+`.preserveVisibleContent` one. `PreservedItemAnchorTests`.
+
 `reachedLoadedEdges`/`onLoadedEdgeReached` (transitions only): lines at `loadedEdgeMargin` and
 `logicalSize.height - loadedEdgeMargin` (positive loads later), independent of insets and engine limits,
 overscroll excluded; recomputed after construction, settlement, rebalancing and margin changes.
@@ -127,11 +144,13 @@ Observation only — pagination is caller-owned.
 Two mechanisms answer two questions (cf. `ListViewImpl`'s `experimentalSnapScrollToPinnedItem` +
 `calculatePinToEdgeTopInset`); merging them into one number is a known defect family.
 
-- **`holdsPinnedRow`, a latch: WHERE the row goes.** Engaged by `scrollTo` at `lowestPinnedItemIndex`;
-  released, **permanently** for that pin, on a user-driven scroll (`engine.onWillBeginDragging`, or a
-  `scroll(by:)` that can move at the presented position), the row leaving, or a full replace. Programmatic
-  writes keep it. While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below `scrollTo`,
-  above `preserveVisibleContent`), placed from its own height only (no loading precondition).
+- **`holdsPinnedRow`, a latch: WHERE the row goes.** Engaged by `scrollTo` at `lowestPinnedItemIndex` (one whose
+  `pinsRow` is set, the default); released, **permanently** for that pin, on a user-driven scroll
+  (`engine.onWillBeginDragging`, or a `scroll(by:)` that can move at the presented position), a scroll hold arming on
+  another row (the user jumped elsewhere; `testAHeldJumpToAnotherRowReleasesThePin`), the row leaving, or a full
+  replace. Programmatic writes keep it; a jump that holds nothing (a yielding landing on the newest edge) keeps it too.
+  While engaged, `resolveAnchor` returns `.resolved` on the pinned row (below `scrollTo`, above
+  `preserveVisibleContent`), placed from its own height only (no loading precondition).
 - **`bottomEdgePinSlack`, top-inset slack: is there ROOM.** Positive only while content above the pin is
   shorter than the viewport; `max(0, …)`-clamped; read from intra-window offsets and folded into the
   effective top inset at `buildWindow`'s `topEdge`, `loadedEdgeRange`'s `minimum` and
@@ -144,7 +163,9 @@ finger-down; a shrinking range would move content under the finger).
 
 `isStrictlyPinnedToBottomEdge` = latch + presented-frame check that the animation landed; the chat uses it
 to decide whether sending drops the pin (`ChatControllerLoadDisplayNode`). `holdsPinnedRowAtBottomEdge` is the latch
-alone, landed or not: the chat backend's message-widget resize targets read it, since every pass re-places the held row. `appendUntilPinnedRowLoaded`
+alone, landed or not: the chat backend makes no message-widget resize target while it holds, since every pass
+re-places the held row. Only a `scrollTo` with `pinsRow` (the default) arms the latch: a target that keeps a row in place
+passes false, or one aimed at a released pin's row would arm it again (`testATargetThatDoesNotPinLeavesAReleasedLatchReleased`). `appendUntilPinnedRowLoaded`
 runs only while disengaged and its `window.height < visibleArea` bound is correct — do not patch it.
 
 **A released anchor rides the EFFECTIVE top edge (`inset + slack`)**, so a streaming reply grows into the
@@ -167,6 +188,16 @@ The three approaches already known not to fix the released state:
 false mid-animation, the chat nils `pinToTopStableId`, and the `lowestPinnedItemIndex == nil` release fires
 — permanently.
 
+#### Stacking from the bottom (`stacksFromBottom`)
+
+`ListViewImpl.stackFromBottom` for a non-rotated host (the chat's inline bot results list): a whole collection that fits
+between the insets rests on the BOTTOM inset edge. One slack, `stackFromBottomSlack` (`max(0, bottom edge − top edge −
+window height)`, zero unless the whole collection is loaded), is folded into `buildWindow`'s whole-collection placement
+(`placeWholeCollection`, also wherever the anchor left a fitting window: a row that grew can push the last one past the
+bottom edge) and `loadedEdgeRange`'s minimum, as `max` with the pin's slack. For a collection that fits that minimum is
+exactly the natural maximum, so the scroll range is the one resting offset. Set it before the first rows: a pass measures
+the old placement with the current value. `StackFromBottomTests`.
+
 #### The scroll hold (`CoreListScrollHold`)
 
 A `scrollTo` may carry a hold: a visible-area edge (`topInset`, `bottomInset`, `visibleCenter`) and a point
@@ -182,6 +213,8 @@ above `preserveVisibleContent`). Keyed by identity, never index.
 - Released by: a drag beginning (`onWillBeginDragging`; physics: `.began` after hysteresis, or at once on
   moving content — a tap keeps it), any later `scrollTo`, the identity leaving, a full replace,
   `rebuildFromScratch`, `releaseScrollHold()`, a `scroll(by:)` that can move at the presented position.
+- Arming one on a row other than the pinned row releases the pin latch, so the two never hold at once (the pin
+  latch, which `resolveAnchor` ranks above the hold, would otherwise undo the jump on the next pass).
 
 While held, `buildWindow` skips the underfill alignments and loaded-top pin; `heldWindowSlack` turns their
 gaps into scroll room (`holdSlack`, both edges, ≥0, measured against the unfolded edges), folded into
@@ -213,6 +246,12 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
   a step that cannot move at the presented position changes nothing. Not an `additionalScrollDistance`
   pass, which after the latch's release re-anchors on the natural newest edge and drops a short reply's pin
   slack in one jump. `ScrollByTests`.
+- `lastTouchCaughtMovingContent` (`PhysicsScrollEngine` only): whether the latest touch landed on a flight or a
+  deceleration and stopped it; set at touch-down, kept until the next. A host's tap selection reads it at the lift, as
+  the drag's `.began` can be held until then by an ancestor's pop recognizer.
+- `viewportAnimationOffset`: what a pass's viewport track still adds to the content host's `bounds.origin.y` (model
+  clock), a flight's motion excluded; a view on a content motion mirror reads its mirror's presented motion less this
+  as the flight's part, which a later pass does not fold into its own track (`ViewportAnimationOffsetTests`).
 - `isScrollDecelerating` (at `didEndDragging`, every mode); `isScrollFlightActive` (`.keyframe` only);
   `didEndScrolling` fires when a flight ends AND when `.stepped`/UIKit deceleration rests
   (`onDidEndDecelerating`; `SteppedDecelerationEndTests`).
@@ -224,12 +263,20 @@ For TelegramUI's `CoreListChatHistoryBackend` and the News feeds:
   for a rotated host); the list measures the DISTANCE** (the block's settled height, reserved space included). List-owned on purpose: a host's own additive
   animation would be read back as a CoreList track by `capturePresentedPositionOffsets()`, and
   `transitionPosition` composes overlapping arrivals. Safe right after `applyChanges` (same scheduler).
+- `addContentMotionMirror(_:)` (`ContentMotionMirror.swift`; `PhysicsScrollEngine` only, false otherwise): the content
+  host's layer repeats on registered mirror layers every model write of its `bounds.origin.y` and every
+  `bounds.origin.y` animation added or removed (a drag's writes, a flight, its brake and re-emit, a pass's viewport
+  track), without their completions, so a view outside the list rides the content's motion; it places its own content
+  at `contentFrame(of:)`, a row's frame in the content's coordinates. A survivor's own slide in a pass (its additive
+  `position.y` track, while the offset jumps) is the row's, not the content's: a view that must follow a row copies it
+  from the row's layer (the inline results panel's glass does). A follower placed from per-frame callbacks trails a render-server flight by
+  the commit's frame or two (measured up to 60 pt, the inline results panel's glass). `ContentMotionMirrorTests`.
 - **Row geometry is a pair, and picking the wrong half is silent.** `presentedFrame(of:)` is where a row IS
   — the default, used instead of `convert(_:from:)`. `settledFrame(of:)` is where it WILL BE; only for
   reporting a just-submitted pass's outcome alongside its transition. Both are ancestor-path-agnostic. See "Content offsets" in
   `docs/chat/corelist-chat-history-backend.md`.
-- `CoreListItemView.visibleRectUpdated(_:)`: the row's part of the FULL viewport (insets count), in its own
-  coordinates, or `nil`; fired after the final offset is installed in `applyChanges`/`rebuildFromScratch`
+- `CoreListItemView.visibleRectUpdated(_:)`: the row's part of the FULL viewport (insets count; `visibleRectInsets`
+  ends the band sooner, for a list running on under the keyboard), in its own coordinates, or `nil`; fired after the final offset is installed in `applyChanges`/`rebuildFromScratch`
   and at the end of `handleUserScroll` (settled frames at the live offset; an animated move reports the
   destination). Don't publish from `render()` (old offset). Departures get `nil` via weak refs to the
   last-visible views. Default no-op; `CoreListNodeHostView` maps it to `ListViewItemNode.visibility`.
@@ -261,8 +308,8 @@ func applyChanges(items: [CoreListItem]? = nil,
   travel when no old identity survives.
 - **`additionalScrollDistance`**: points, positive moves content DOWN (cf. `ListViewImpl.transaction`),
   applied to the anchor before window construction, so it composes with clipping, carries and `scrollTo`.
-  Nonzero halts momentum (except under `.preserveVisibleContent`) and opts out of the loaded-top pin; at the
-  top edge a downward displacement is clipped, an upward one honoured.
+  Nonzero halts momentum (under `.automatic` only; the preserve modes keep a fling) and opts out of the
+  loaded-top pin; at the top edge a downward displacement is clipped, an upward one honoured.
 
 A pass: (1) serializes re-entrant requests, applies `newSize`; (2) validates unique identities, diffs
 survivors/inserts/deletes/LIS moves; (3) captures one transaction clock and the old settled state;
@@ -365,9 +412,14 @@ growing row's `.height` plus the next row's `.positionY`; the chat's item node s
 - `ListAnimationModel.resumeValue` asks a provider from `ListAnimationController`; `value(for:property:at:)`
   stays the settled answer (window building, `bottomEdgePinSlack`, `finalize`). Keep them separate.
 - `.height`, `.width`, `.opacity`: the presented value.
-- `.positionY`: from a snapshot taken at **PASS ENTRY** by `capturePresentedPositionOffsets()` (presented −
-  model value, before any write), cleared in `applyChanges`' `defer`. Never sample it later: `render()` has
-  written the new settled position by then and `transitionPositionOffset` would count the displacement twice.
+- `.positionY`: presented minus the **COMMITTED** base. The transaction's first row-base write (pass entry, or
+  a rebalance that changes the window) records `layer.position.y` for every live owner with a running
+  position track (`beginModelWrites`); a zero-size commit sentinel tells whether anything has been committed
+  since. An owner whose track or binding this transaction replaced is forgotten and resumes analytically.
+  Idle rows are never sampled. The snapshot is taken at pass entry by `capturePresentedPositionOffsets()` and
+  cleared in `applyChanges`' `defer`. Presented − model would be wrong: a pass or rebalance earlier in the
+  same runloop turn that grows or shrinks the window at its top re-bases the rows without a commit, and
+  that rebase would read as motion. `SameTransactionResumeTests`.
   Only `.live` owners (`ListAnimationOwner.hasPassWrittenPositionBase`): attachments (`renderAttachments()`
   rewrites their base every render) and `.exit`/`.transient`/`.ghostBlock` (rebased from `render()`) have a
   per-frame base that `presentation()` trails. `AttachmentResumeBaseTests`.
@@ -377,8 +429,8 @@ growing row's `.height` plus the next row's `.positionY`; the chat's item node s
   minus `newSettledY` (model gets `containerOriginY + localY`, layer `localY`); `.positionY` as
   `presented − layer.position.y` inside the provider.
 
-`PresentedPositionResumeBaseTests`, `PresentationResumeSamplingTests`, `PresentedResumeSeamTests` (see Tests
-for why only these reach the provider).
+`PresentedPositionResumeBaseTests`, `PresentationResumeSamplingTests`, `PresentedResumeSeamTests`,
+`SameTransactionResumeTests` (see Tests for why only these reach the provider).
 
 #### Core Animation output
 
@@ -550,7 +602,8 @@ clock); `TestScrollEngine` has no render server.
   boundary, deterministic order) and teardown.
   Failures print seed and action prefix; minimize into a focused suite before fixing. **Attachments are
   opt-in** (`includesAttachments: true`) on a SEPARATE RNG (focused suites replay the main sequence);
-  `testTheGrammarActuallyExercisesAttachments` is the non-vacuity guard.
+  `testTheGrammarActuallyExercisesAttachments` is the non-vacuity guard. Anchor modes likewise
+  (`includesAnchorModes: true`, a third RNG; `testTheGrammarActuallyExercisesTheAnchorModes`).
 
 ## Non-obvious gotchas
 
@@ -614,6 +667,11 @@ clock); `TestScrollEngine` has no render server.
   late (early costs a few ms; late is the step). Only interactive catches brake;
   `setOffset`/`haltMotionInPlace`/`tearDown` impose their own position. `presentation()` cannot detect it.
   `FlightCatchContinuityTests`; `TestScrollEngine` keeps the hard stop.
+- **A touch-down catch idles the physics too** (`core.cancelDeceleration()` in `catchMotionForFingerRest`): the drag
+  that would rebuild it may never begin (an ancestor's pop recognizer wins, a tracking `UIControl` refuses it), and a core
+  left `.decelerating` with no driver reported `isScrollDecelerating` until the next drag and took the next tap for
+  another catch (`lastTouchCaughtMovingContent`). The streak is decided before it (`beginTouchTracking`).
+  `CatchWithoutDragTests`.
 - **UIScrollView's one-frame release hand-off is a model-write driver's compensation; a baked deceleration
   must NOT keep it.** (`-[UIScrollView _endPanNormal:]` steps once synchronously from
   `now − 1/maxFPS`; `.stepped` inherits it.) A baked `Trajectory` played from an explicit `beginTime` is

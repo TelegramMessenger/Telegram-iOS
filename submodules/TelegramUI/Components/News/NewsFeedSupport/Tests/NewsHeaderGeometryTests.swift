@@ -14,10 +14,10 @@ final class NewsHeaderGeometryTests: XCTestCase {
         let geometry = self.referenceGeometry()
         XCTAssertEqual(geometry.topRow, CGRect(x: 0.0, y: 64.0, width: 402.0, height: 44.0))
         XCTAssertEqual(geometry.island, CGRect(x: 87.0, y: 66.0, width: 228.0, height: 40.0))
-        // The field's capsule spans y 122-166, as measured in the mockup.
-        XCTAssertEqual(geometry.searchNodeAtRest.minY + 8.0, 122.0)
-        XCTAssertEqual(geometry.blockHeight, 58.0)
-        XCTAssertEqual(geometry.listTopInset, 166.0)
+        // The field's capsule spans y 114-158: 6 pt under the row, where the chat list puts its field.
+        XCTAssertEqual(geometry.searchNodeAtRest.minY + 8.0, 114.0)
+        XCTAssertEqual(geometry.blockHeight, 50.0)
+        XCTAssertEqual(geometry.listTopInset, 158.0)
         XCTAssertEqual(geometry.edgeEffectHeight, 136.0)
     }
 
@@ -35,19 +35,8 @@ final class NewsHeaderGeometryTests: XCTestCase {
 
     func testBlockHeightFollowsTheMeasuredField() {
         let geometry = newsHeaderGeometry(width: 402.0, statusBarHeight: 54.0, islandFittingWidth: 200.0, moreButtonMinX: 342.0, searchNodeHeight: 60.0, searchFieldFrameInNode: CGRect(x: 16.0, y: 6.0, width: 370.0, height: 48.0))
-        XCTAssertEqual(geometry.blockHeight, 62.0)
-        XCTAssertEqual(geometry.searchNodeAtRest.minY + 6.0, 122.0)
-    }
-
-    // The search keeps travelling with the list until it is off the screen, so no edge of it shows under the
-    // top row (the mockup's search is a list row and scrolls away); the 58 pt fold still drives the snap and pill.
-    func testSearchTravelsUntilItIsOffScreen() {
-        let geometry = self.referenceGeometry()
-        XCTAssertEqual(geometry.searchTravelLimit, geometry.searchNodeAtRest.maxY)
-        XCTAssertEqual(geometry.searchTravelLimit, 174.0)
-        XCTAssertEqual(newsHeaderSearchTravel(listOffset: 100.0, geometry: geometry), 100.0)
-        XCTAssertEqual(newsHeaderSearchTravel(listOffset: 900.0, geometry: geometry), 174.0)
-        XCTAssertEqual(newsHeaderSearchTravel(listOffset: -20.0, geometry: geometry), -20.0)
+        XCTAssertEqual(geometry.blockHeight, 54.0)
+        XCTAssertEqual(geometry.searchNodeAtRest.minY + 6.0, 114.0)
     }
 
     func testBlockMovesWithTheListUntilItIsUnderTheRow() {

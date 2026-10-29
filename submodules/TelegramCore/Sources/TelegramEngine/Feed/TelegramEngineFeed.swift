@@ -10,8 +10,8 @@ public extension TelegramEngine {
             self.account = account
         }
 
-        public func addedFeedContext(filterId: Int32) -> AddedFeedContext {
-            return AddedFeedContext(account: self.account, filterId: filterId)
+        public func addedFeedContext(filterId: Int32, source: AddedFeedSource) -> AddedFeedContext {
+            return AddedFeedContext(account: self.account, filterId: filterId, source: source)
         }
 
         public func forYouFeedContext() -> ForYouFeedContext {

@@ -634,10 +634,12 @@ func documentRequiresNativeRichInput(_ document: Document) -> Bool {
 /// Legacy-input paste of external RTF that carries a LIST. iOS's own `NSAttributedString(rtf:)` flattens block
 /// structure (no `NSTextList`), so `chatInputStateStringFromRTF` drops list markers entirely. This path instead
 /// parses the RTF with the structure-preserving `RTFImport`, then renders each list item's marker (•, 1., …) as
-/// LITERAL TEXT via `attributedString(from:renderListMarkers:)`, preserving inline formatting. Returns nil when
-/// the RTF has no list (or doesn't parse) so the caller keeps its existing inline-preserving conversion.
+/// LITERAL TEXT via `attributedString(from:renderListMarkers:)`, preserving inline formatting. A paragraph gap
+/// that is only paragraph spacing (a copied web page's margins) becomes a blank line, as in
+/// `chatInputStateStringFromRTF`. Returns nil when the RTF has no list (or doesn't parse) so the caller keeps its
+/// existing inline-preserving conversion.
 public func legacyChatInputAttributedString(fromRTF data: Data) -> NSAttributedString? {
-    guard let document = RTFImport.document(fromRTF: data) else { return nil }
+    guard let document = RTFImport.document(fromRTF: data, paragraphSpacingAsBlankLines: true) else { return nil }
     let hasList = document.blocks.contains { block in
         if case .paragraph(let paragraph) = block, paragraph.list != nil { return true }
         return false

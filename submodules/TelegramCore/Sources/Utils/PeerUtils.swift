@@ -3,6 +3,24 @@ import Postbox
 
 public let anonymousSavedMessagesId: Int64 = 2666000
 
+public extension RestrictionRule {
+    // The server may join several platforms with a dash ("ios-android").
+    func appliesTo(platform: String, contentSettings: ContentSettings) -> Bool {
+        return self.platform.split(separator: "-").contains(where: { component in
+            let component = String(component)
+            return component == "all" || component == platform || contentSettings.addContentRestrictionReasons.contains(component)
+        })
+    }
+}
+
+extension Array where Element == RestrictionRule {
+    func containsSensitiveRule(platform: String, contentSettings: ContentSettings) -> Bool {
+        return self.contains(where: { rule in
+            return rule.reason == "sensitive" && rule.appliesTo(platform: platform, contentSettings: contentSettings)
+        })
+    }
+}
+
 public extension Peer {
     var debugDisplayTitle: String {
         switch self {
@@ -35,7 +53,7 @@ public extension Peer {
                 if rule.reason == "sensitive" {
                     continue
                 }
-                if rule.platform == "all" || rule.platform == platform || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
+                if rule.appliesTo(platform: platform, contentSettings: contentSettings) {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
                         return rule.text
                     }
@@ -262,7 +280,7 @@ public extension Peer {
         }
     }
     
-    func hasSensitiveContent(platform: String) -> Bool {
+    func hasSensitiveContent(platform: String, contentSettings: ContentSettings) -> Bool {
         var restrictionInfo: PeerAccessRestrictionInfo?
         switch self {
         case let user as TelegramUser:
@@ -273,10 +291,8 @@ public extension Peer {
             break
         }
         
-        if let restrictionInfo, let rule = restrictionInfo.rules.first(where: { $0.reason == "sensitive" }) {
-            if rule.platform == "all" || rule.platform == platform {
-                return true
-            }
+        if let restrictionInfo {
+            return restrictionInfo.rules.containsSensitiveRule(platform: platform, contentSettings: contentSettings)
         }
         return false
     }

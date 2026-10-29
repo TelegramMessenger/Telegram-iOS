@@ -411,7 +411,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             if let strongSelf = self {
                                 let imageSize: CGSize
                                 if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                                    let minSize = min(layout.size.width, layout.size.height)
+                                    let (stripLeft, stripRight) = strongSelf.pageStripInsets(layout: layout)
+                                    let minSize = min(layout.size.width - stripLeft - stripRight, layout.size.height)
                                     imageSize = CGSize(width: minSize, height: minSize * 2.0)
                                 } else {
                                     imageSize = CGSize(width: 78.0, height: 78.0)
@@ -903,6 +904,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        /// iPhone Duo: in the sheet the page keeps to the band beside a side strip, where the navigation bar's
+        /// back/close and more buttons stand (most pages ignore the safe area we report); the background spans
+        /// the strip. Full screen fills the screen beside the strip. Zero without a strip.
+        private func pageStripInsets(layout: ContainerViewLayout) -> (left: CGFloat, right: CGFloat) {
+            if self.controller?.isFullscreen ?? false {
+                return (0.0, 0.0)
+            }
+            return (
+                layout.sideStrip(edge: .left) != nil ? layout.safeInsets.left : 0.0,
+                layout.sideStrip(edge: .right) != nil ? layout.safeInsets.right : 0.0
+            )
+        }
+        
         private var updateWebViewWhenStable = false
                 
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1038,6 +1052,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             }
             
+            let (stripLeft, stripRight) = self.pageStripInsets(layout: layout)
+            
             if let webView = self.webView {
                 let inputHeight = self.validLayout?.0.inputHeight ?? 0.0
                 
@@ -1052,7 +1068,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let topInset: CGFloat = controller.isFullscreen ? 0.0 : navigationBarHeight
                 
-                let webViewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - topInset - frameBottomInset)))
+                let webViewFrame = CGRect(origin: CGPoint(x: stripLeft, y: topInset), size: CGSize(width: layout.size.width - stripLeft - stripRight, height: max(1.0, layout.size.height - topInset - frameBottomInset)))
                 if !webView.frame.width.isZero && webView.frame != webViewFrame {
                     self.updateWebViewWhenStable = true
                 }
@@ -1111,8 +1127,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     customInsets.bottom = layout.intrinsicInsets.bottom
                 }
-                customInsets.left = layout.safeInsets.left
-                customInsets.right = layout.safeInsets.right
+                customInsets.left = layout.safeInsets.left - stripLeft
+                customInsets.right = layout.safeInsets.right - stripRight
                 webView.customInsets = customInsets
                 
                 if let controller = self.controller {
@@ -1148,7 +1164,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     placeholderY = floorToScreenPixels((height - placeholderSize.height) / 2.0)
                 }
-                let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
+                let placeholderFrame =  CGRect(origin: CGPoint(x: stripLeft + floorToScreenPixels((layout.size.width - stripLeft - stripRight - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
             }
@@ -4227,7 +4243,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         configuration.rect = CGRect(origin: .zero, size: webView.frame.size)
 
         let imageView = UIImageView()
-        imageView.frame = CGRect(origin: .zero, size: webView.frame.size)
+        imageView.frame = CGRect(origin: CGPoint(x: webView.frame.minX, y: 0.0), size: webView.frame.size)
         webView.takeSnapshot(with: configuration, completionHandler: { image, _ in
             imageView.image = image
         })

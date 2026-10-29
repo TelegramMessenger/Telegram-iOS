@@ -245,9 +245,9 @@ bool keptKeyword(std::string_view key, std::string_view value, RelevantKeys keys
 
 /// `tag` (canonical, structurally valid) with its unicode extension reduced to the keywords keptKeyword keeps, sorted
 /// by key, a "true" type dropped (UTS 35's canonical form), and of a repeated key the first kept occurrence (UTS 35 takes
-/// the first occurrence; a dropped one leaves the key to a later one here, which is never less safe); the extensions in
-/// singleton order and private use last, as UTS 35 orders them. Other singletons (`-a-`…) stay: Foundation reads them
-/// as `@va=`, which spoils the glue's plural language key as `-u-` did, without a trap (follow-ups fix-wave review).
+/// the first occurrence; a dropped one leaves the key to a later one here, which is never less safe). Every other
+/// extension and private use is dropped, as ECMA-402's resolved locale has none: Foundation read them as `@va=`, which
+/// spoiled the glue's plural language key as `-u-` did, without a trap (follow-ups fix-wave review).
 std::string withRelevantKeywords(std::string_view tag, RelevantKeys keys) {
     std::vector<std::string_view> subtags;
     for (size_t start = 0, i = 0; i <= tag.size(); i++) {
@@ -257,9 +257,9 @@ std::string withRelevantKeywords(std::string_view tag, RelevantKeys keys) {
         }
     }
     std::string language;
-    std::vector<std::pair<char, std::string>> extensions;
     std::vector<std::pair<std::string, std::string>> keywords;
-    std::string privateUse;
+    // Every singleton but `u` (and private use, after `x`) is dropped with its subtags: a resolved locale has none, and
+    // Foundation took them as `@…=` keywords on the language key the glue reads plural rules from.
     char singleton = 0;
     std::string key, value;
     auto endKeyword = [&]() {
@@ -278,19 +278,12 @@ std::string withRelevantKeywords(std::string_view tag, RelevantKeys keys) {
         if (singleton != 'x' && subtag.size() == 1) {
             endKeyword();
             singleton = subtag[0];
-            if (singleton == 'x') {
-                privateUse = "-x";
-            } else if (singleton != 'u') {
-                extensions.emplace_back(singleton, std::string());
-            }
             continue;
         }
         if (singleton == 0) {
             language += (language.empty() ? "" : "-") + std::string(subtag);
-        } else if (singleton == 'x') {
-            privateUse += "-" + std::string(subtag);
         } else if (singleton != 'u') {
-            extensions.back().second += "-" + std::string(subtag);
+            continue;
         } else if (subtag.size() == 2) {
             endKeyword();
             key = std::string(subtag);
@@ -300,20 +293,15 @@ std::string withRelevantKeywords(std::string_view tag, RelevantKeys keys) {
         // A type before any key is an attribute: no constructor reads one.
     }
     endKeyword();
+    std::string out = language;
     if (!keywords.empty()) {
         std::sort(keywords.begin(), keywords.end());
-        std::string u;
+        out += "-u";
         for (const auto& [k, v] : keywords) {
-            u += "-" + k + (v.empty() ? "" : "-" + v);
+            out += "-" + k + (v.empty() ? "" : "-" + v);
         }
-        extensions.emplace_back('u', u);
     }
-    std::stable_sort(extensions.begin(), extensions.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-    std::string out = language;
-    for (const auto& [s, text] : extensions) {
-        out += "-" + std::string(1, s) + text;
-    }
-    return out + privateUse;
+    return out;
 }
 
 } // namespace

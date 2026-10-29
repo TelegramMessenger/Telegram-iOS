@@ -79,7 +79,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     public var rootTabController: TabBarController?
     
-    public var contactsController: ContactsController?
+    /// The Contacts screen `openContacts()` pushed; `getContactsController()` returns it while it is open.
+    private weak var contactsController: ContactsController?
     public var callListController: CallListController?
     public var chatListController: ChatListController?
     public var accountSettingsController: PeerInfoScreen?
@@ -212,19 +213,13 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         
         var controllers: [ViewController] = []
         
-        let contactsController = ContactsController(context: self.context)
-        contactsController.switchToChatsController = {  [weak self] in
-            self?.openChatsController(activateSearch: false)
-        }
-        controllers.append(contactsController)
-        
         if showCallsTab {
             controllers.append(callListController)
         }
-        controllers.append(chatListController)
         if showNewsTab {
             controllers.append(newsController)
         }
+        controllers.append(chatListController)
         
         var restoreSettignsController: (ViewController & SettingsController)?
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
@@ -248,7 +243,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         let chatsIndex = controllers.firstIndex(where: { $0 === chatListController }) ?? 0
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : chatsIndex)
         
-        self.contactsController = contactsController
         self.callListController = callListController
         self.newsController = newsController
         self.chatListController = chatListController
@@ -262,17 +256,16 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             return
         }
         var controllers: [ViewController] = []
-        controllers.append(self.contactsController!)
         if showCallsTab {
             controllers.append(self.callListController!)
         }
-        controllers.append(self.chatListController!)
         if showNewsTab, let newsController = self.newsController {
             controllers.append(newsController)
         }
+        controllers.append(self.chatListController!)
         controllers.append(self.accountSettingsController!)
 
-        // A removed selected tab would otherwise fall back to index 0 (Contacts): select Chats instead.
+        // A removed selected tab would otherwise fall back to index 0: select Chats instead.
         var selectedIndex: Int?
         if let currentController = rootTabController.currentController, !controllers.contains(where: { $0 === currentController }) {
             selectedIndex = controllers.firstIndex(where: { $0 === self.chatListController })
@@ -912,6 +905,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
     }
     
+    /// Contacts has no tab: the Settings tab, with the screen Settings ▸ Contacts pushes over it.
     public func openContacts() {
         guard let rootTabController = self.rootTabController else {
             return
@@ -919,9 +913,13 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         
         self.popToRoot(animated: false)
     
-        if let index = rootTabController.controllers.firstIndex(where: { $0 is ContactsController }) {
+        if let index = rootTabController.controllers.firstIndex(where: { $0 is PeerInfoScreenImpl }) {
             rootTabController.selectedIndex = index
         }
+        
+        let contactsController = ContactsController(context: self.context)
+        self.contactsController = contactsController
+        self.pushViewController(contactsController)
     }
         
     public func openSettings(edit: Bool) {

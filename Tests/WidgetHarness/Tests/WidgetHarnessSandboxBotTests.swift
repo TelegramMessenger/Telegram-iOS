@@ -79,8 +79,16 @@ final class WidgetHarnessSandboxBotTests: XCTestCase {
         XCTAssertTrue(self.wait(root) { _ in self.text(instance, "price") == "101.25" }, "price \(self.text(instance, "price")), asked \(asked)")
         XCTAssertEqual(self.text(instance, "note"), "live: the bot every 5 s")
         XCTAssertEqual(asked.first, "tick")
-        // The next tick, 5 s later, without a tap.
-        XCTAssertTrue(self.wait(root, timeout: 8.0) { _ in self.text(instance, "price") == "102.50" }, "price \(self.text(instance, "price")), asked \(asked)")
+        // The next tick, 5 s later, without a tap: the widget's own timer, so the wait leaves room for a loaded machine.
+        // That room would also absorb a tick refused as rate limited and retried, which the widget shows in its note.
+        var sawRateLimited = false
+        XCTAssertTrue(self.wait(root, timeout: 15.0) { _ in
+            if self.text(instance, "note") == "live: waiting…" {
+                sawRateLimited = true
+            }
+            return self.text(instance, "price") == "102.50"
+        }, "price \(self.text(instance, "price")), asked \(asked)")
+        XCTAssertFalse(sawRateLimited, "the second tick was refused as rate limited")
         // The bot's edit of the chat state (its answer to `like`) reaches the widget as chatDataChanged.
         host.replaceWidgetState(path: self.tickerPath, canQuery: true, chatData: "{\"likes\":3}", publicData: nil)
         XCTAssertTrue(self.wait(root) { _ in self.text(instance, "likes") == "3" }, "likes \(self.text(instance, "likes"))")

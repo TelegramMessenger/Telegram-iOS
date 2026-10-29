@@ -55,7 +55,9 @@ final class NewsAddedFeedBinding {
     var updated: ((_ windowReplaced: Bool) -> Void)?
 
     init(context: AccountContext) {
-        self.feed = context.engine.feed.addedFeedContext(filterId: 0)
+        // Without the server's feed (not a dev account) the page is built on the device from the subscribed channels.
+        let serverAvailable = isNewsFeedServerAvailable(appConfiguration: context.currentAppConfiguration.with { $0 })
+        self.feed = context.engine.feed.addedFeedContext(filterId: 0, source: serverAvailable ? .server : .localChannels)
         let engine = context.engine
         let state = self.feed.state
         let ids = state

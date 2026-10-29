@@ -828,6 +828,38 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         return buttonSize.height
     }
     
+    /// Lays out every layer that draws the button's shape (background, shimmer, border, glass chrome) at `size` with
+    /// `cornerRadius`, all on `transition`, so the button can morph into another capsule without any of them keeping
+    /// its own size or corner. The glass chrome keeps its width and extends past a narrower shape's right end: clip the
+    /// node to the same shape. Calling it with the button's own size and `buttonCornerRadius` on `.immediate`, once its
+    /// animations have finished, restores the button.
+    public func updateShape(size: CGSize, cornerRadius: CGFloat, transition: ContainedViewLayoutTransition) {
+        let frame = CGRect(origin: CGPoint(), size: size)
+        transition.updateFrame(node: self.buttonBackgroundNode, frame: frame)
+        transition.updateCornerRadius(node: self.buttonBackgroundNode, cornerRadius: cornerRadius)
+        
+        if let shimmerView = self.shimmerView, let borderView = self.borderView, let borderMaskView = self.borderMaskView, let borderShimmerView = self.borderShimmerView {
+            transition.updateFrame(view: shimmerView, frame: frame)
+            transition.updateCornerRadius(layer: shimmerView.layer, cornerRadius: cornerRadius)
+            transition.updateFrame(view: borderView, frame: frame)
+            transition.updateFrame(view: borderMaskView, frame: frame)
+            transition.updateCornerRadius(layer: borderMaskView.layer, cornerRadius: cornerRadius)
+            transition.updateFrame(view: borderShimmerView, frame: frame)
+        }
+        
+        if let chromeView = self.chromeView {
+            // The chrome is a stretchable capsule edge drawn for `buttonHeight`: a lower frame would squash only its
+            // vertical caps into elliptical corners. Scale it uniformly about its left edge instead, so its left arcs
+            // shrink exactly with the background's while it stays a capsule. Its width is left alone: animating it
+            // too would make the visible width (width × scale) lag the background's mid-animation.
+            let scale = size.height / self.buttonHeight
+            let chromeWidth = self.validLayout ?? size.width
+            transition.updateBounds(layer: chromeView.layer, bounds: CGRect(origin: CGPoint(), size: CGSize(width: chromeWidth, height: self.buttonHeight)))
+            transition.updatePosition(layer: chromeView.layer, position: CGPoint(x: chromeWidth * scale * 0.5, y: size.height * 0.5))
+            transition.updateTransformScale(layer: chromeView.layer, scale: scale)
+        }
+    }
+    
     @objc private func buttonPressed() {
         if self.isEnabled {
             self.pressed?()

@@ -764,6 +764,13 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open func makeContentSnapshot() -> (UIImage, CGRect)? {
         return nil
     }
+
+    /// Whether `gesture` at `point` (in this node) is the message's own: a tap on a link, a mention or its media, a
+    /// long press on a link. A host laying the message out among its own content (the News tab's post row) leaves
+    /// those to the message and takes the rest itself, taps on plain text and long presses included.
+    open func ownsGesture(_ gesture: TapLongTapOrDoubleTapGesture, at point: CGPoint) -> Bool {
+        return false
+    }
     
     open func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return nil

@@ -43,8 +43,8 @@ public func formatWithArgumentRanges(_ value: String, _ ranges: [(Int, NSRange)]
 
 public let defaultPresentationStrings = PresentationStrings(primaryComponent: PresentationStrings.Component(languageCode: "en", localizedName: "English", pluralizationRulesCode: nil, dict: NSDictionary(contentsOf: URL(fileURLWithPath: getAppBundle().path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "en")!)) as! [String : String]), secondaryComponent: nil, groupingSeparator: "")
 
-public func dataSizeString(_ size: Int, forceDecimal: Bool = false, formatting: DataSizeStringFormatting) -> String {
-    return dataSizeString(Int64(size), forceDecimal: forceDecimal, formatting: formatting)
+public func dataSizeString(_ size: Int, forceDecimal: Bool = false, compact: Bool = false, formatting: DataSizeStringFormatting) -> String {
+    return dataSizeString(Int64(size), forceDecimal: forceDecimal, compact: compact, formatting: formatting)
 }
 
 public struct DataSizeStringFormatting {
@@ -69,7 +69,12 @@ public struct DataSizeStringFormatting {
     }
 }
 
-public func dataSizeString(_ size: Int64, forceDecimal: Bool = false, formatting: DataSizeStringFormatting) -> String {
+/// `compact` keeps a size short (at most three digits below 1000 GB) for a value that has to fit beside a long title,
+/// as on Data and Storage's usage rows: see `compactDataSizeString`. `forceDecimal` takes precedence.
+public func dataSizeString(_ size: Int64, forceDecimal: Bool = false, compact: Bool = false, formatting: DataSizeStringFormatting) -> String {
+    if compact && !forceDecimal {
+        return compactDataSizeString(size, formatting: formatting)
+    }
     if size >= 1024 * 1024 * 1024 {
         let remainder = Int64((Double(size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102.4)).rounded(.down))
         if remainder != 0 || forceDecimal {
@@ -94,6 +99,38 @@ public func dataSizeString(_ size: Int64, forceDecimal: Bool = false, formatting
     } else {
         return formatting.byte("\(size)").string
     }
+}
+
+/// KB and MB show a decimal only below 10 ("9,5 MB", "48 MB", "131 MB"), GB below 100 ("27,2 GB", "131 GB"), and from
+/// 1000 units up a size shows in the next unit, rounded to one decimal ("1000 MB" is "1 GB"). Other decimals are rounded
+/// down, as in the default format.
+private func compactDataSizeString(_ size: Int64, formatting: DataSizeStringFormatting) -> String {
+    let units: [(size: Int64, format: (String) -> PresentationStrings.FormattedString)] = [
+        (1, formatting.byte),
+        (1024, formatting.kilobyte),
+        (1024 * 1024, formatting.megabyte),
+        (1024 * 1024 * 1024, formatting.gigabyte)
+    ]
+    var index = 0
+    while index + 1 < units.count && size >= units[index + 1].size {
+        index += 1
+    }
+    let unit = units[index]
+    let whole = size / unit.size
+    if whole >= 1000 && index + 1 < units.count {
+        let nextUnit = units[index + 1]
+        let tenths = Int64((Double(size) / Double(nextUnit.size) * 10.0).rounded())
+        if tenths % 10 == 0 {
+            return nextUnit.format("\(tenths / 10)").string
+        }
+        return nextUnit.format("\(tenths / 10)\(formatting.decimalSeparator)\(tenths % 10)").string
+    }
+    let decimalBelow: Int64 = index == units.count - 1 ? 100 : 10
+    let remainder = Int64((Double(size % unit.size) / (Double(unit.size) / 10.0)).rounded(.down))
+    if index == 0 || whole >= decimalBelow || remainder == 0 {
+        return unit.format("\(whole)").string
+    }
+    return unit.format("\(whole)\(formatting.decimalSeparator)\(remainder)").string
 }
 
 public func countString(_ count: Int64, forceDecimal: Bool = false) -> String {

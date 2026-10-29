@@ -3159,7 +3159,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             displaySpoiler = true
         } else if isSecretMedia {
             displaySpoiler = true
-        } else if message.isSensitiveContent(platform: "ios") {
+        } else if let context = self.context, message.isSensitiveContent(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
             if !self.showSensitiveContent {
                 displaySpoiler = true
                 icon = .eye
@@ -3177,7 +3177,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     guard let self else {
                         return
                     }
-                    if message.isSensitiveContent(platform: "ios") {
+                    if message.isSensitiveContent(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
                         self.activateAgeRestrictedMedia?()
                     } else {
                         self.internallyVisible = true
