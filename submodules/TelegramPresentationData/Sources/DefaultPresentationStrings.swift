@@ -43,8 +43,8 @@ public func formatWithArgumentRanges(_ value: String, _ ranges: [(Int, NSRange)]
 
 public let defaultPresentationStrings = PresentationStrings(primaryComponent: PresentationStrings.Component(languageCode: "en", localizedName: "English", pluralizationRulesCode: nil, dict: NSDictionary(contentsOf: URL(fileURLWithPath: getAppBundle().path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: "en")!)) as! [String : String]), secondaryComponent: nil, groupingSeparator: "")
 
-public func dataSizeString(_ size: Int, forceDecimal: Bool = false, formatting: DataSizeStringFormatting) -> String {
-    return dataSizeString(Int64(size), forceDecimal: forceDecimal, formatting: formatting)
+public func dataSizeString(_ size: Int, forceDecimal: Bool = false, omitDecimalFrom100: Bool = false, formatting: DataSizeStringFormatting) -> String {
+    return dataSizeString(Int64(size), forceDecimal: forceDecimal, omitDecimalFrom100: omitDecimalFrom100, formatting: formatting)
 }
 
 public struct DataSizeStringFormatting {
@@ -69,24 +69,26 @@ public struct DataSizeStringFormatting {
     }
 }
 
-public func dataSizeString(_ size: Int64, forceDecimal: Bool = false, formatting: DataSizeStringFormatting) -> String {
+/// `omitDecimalFrom100` drops the decimal from 100 units up ("131 MB", not "131.5 MB"), for a value that has to fit
+/// beside a long title; `forceDecimal` keeps it.
+public func dataSizeString(_ size: Int64, forceDecimal: Bool = false, omitDecimalFrom100: Bool = false, formatting: DataSizeStringFormatting) -> String {
     if size >= 1024 * 1024 * 1024 {
         let remainder = Int64((Double(size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102.4)).rounded(.down))
-        if remainder != 0 || forceDecimal {
+        if (remainder != 0 && !(omitDecimalFrom100 && size / (1024 * 1024 * 1024) >= 100)) || forceDecimal {
             return formatting.gigabyte("\(size / (1024 * 1024 * 1024))\(formatting.decimalSeparator)\(remainder)").string
         } else {
             return formatting.gigabyte("\(size / (1024 * 1024 * 1024))").string
         }
     } else if size >= 1024 * 1024 {
         let remainder = Int64((Double(size % (1024 * 1024)) / (1024.0 * 102.4)).rounded(.down))
-        if remainder != 0 || forceDecimal {
+        if (remainder != 0 && !(omitDecimalFrom100 && size / (1024 * 1024) >= 100)) || forceDecimal {
             return formatting.megabyte( "\(size / (1024 * 1024))\(formatting.decimalSeparator)\(remainder)").string
         } else {
             return formatting.megabyte("\(size / (1024 * 1024))").string
         }
     } else if size >= 1024 {
         let remainder = (size % (1024)) / (102)
-        if remainder != 0 || forceDecimal {
+        if (remainder != 0 && !(omitDecimalFrom100 && size / 1024 >= 100)) || forceDecimal {
             return formatting.kilobyte("\(size / 1024)\(formatting.decimalSeparator)\(remainder)").string
         } else {
             return formatting.kilobyte("\(size / 1024)").string

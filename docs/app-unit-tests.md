@@ -83,10 +83,10 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
-`//submodules/ItemListUI:ItemListUITests` covers `itemListDisclosureNarrowedTitleWidth`, how an
-`ItemListDisclosureItem` row splits its line between the title and a trailing value when they do not fit: a value
-needing at most two thirds of the shared room (a size, a count) keeps its full width and a long localized title truncates
-or wraps instead; a longer value is long on purpose and keeps the old title-first split. Rows that fit are unchanged.
+`//submodules/ItemListUI:ItemListUITests` covers `itemListDisclosureLabelConstrainedWidth`, the room an
+`ItemListDisclosureItem` row leaves its trailing value after the title: the legacy reserve by default, or the
+`minimumLabelSpacing` a row names (Data and Storage's usage rows use 8pt, so «Использование трафика» and a size without a
+decimal share a 390pt line). Titles are never shortened for the value.
 
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
@@ -108,6 +108,8 @@ existed). No builtin raw value an older build does not know reaches `"t"` or `"t
 extensions force-unwrap at launch. The bubble-free theme is built and recoloured as the app does. Building a
 `PresentationTheme` works in the test process (`makePresentationTheme` takes a `MediaBox` on a temporary directory);
 `PresentationStrings` does not, so no `PresentationData` and no theme names in these tests.
+It also covers `dataSizeString`'s `omitDecimalFrom100` ("131 МБ", not "131,5 МБ"), with a
+`DataSizeStringFormatting` built from plain `FormattedString`s instead of the app's strings.
 
 The RichTextEditor SwiftPM package keeps its own suite (`swift test` / `Scripts/iostest.sh`). MtProtoKit's suite
 (`//submodules/MtProtoKit:MtProtoKitTests`) also runs on macOS: `swift test` in `submodules/MtProtoKit` (the package's

@@ -349,11 +349,11 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
         let arguments = arguments as! DataAndStorageControllerArguments
         switch self {
             case let .storageUsage(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.storageUsage, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.storageUsage, title: text, label: value, sectionId: self.section, style: .blocks, minimumLabelSpacing: 8.0, action: {
                     arguments.openStorageUsage()
                 })
             case let .networkUsage(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.dataUsage, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.dataUsage, title: text, label: value, sectionId: self.section, style: .blocks, minimumLabelSpacing: 8.0, action: {
                     arguments.openNetworkUsage()
                 })
             case let .automaticDownloadHeader(_, text):
@@ -606,8 +606,8 @@ private func autosaveLabelAndValue(presentationData: PresentationData, settings:
 private func dataAndStorageControllerEntries(context: AccountContext, state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?], mediaSettings: MediaDisplaySettings, showSensitiveContentSetting: Bool) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
-    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
-    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title, dataSizeString(networkUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, omitDecimalFrom100: true, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title, dataSizeString(networkUsage, omitDecimalFrom100: true, formatting: DataSizeStringFormatting(presentationData: presentationData))))
     
     entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle.uppercased()))
     entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
