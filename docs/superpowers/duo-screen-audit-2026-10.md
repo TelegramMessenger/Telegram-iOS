@@ -196,7 +196,9 @@ clear of the strip and the status corner block.
 
 Changed later too: SheetComponent's landscape band (issue #72, `sheetBandPlacement`). Beside a strip in landscape the
 whole sheet, background included, keeps to the band instead of only its content, so it no longer runs under unfolded
-landscape's status corner; the strip shows the dimmed screen, and a tap there dismisses the sheet.
+landscape's status corner; the strip shows the dimmed screen, and a tap there dismisses the sheet. This also fixed the
+Disable Sharing sheet (issue #87, `PeerCopyProtectionInfoScreen`), runtime-checked folded: centred spanning FP, in the
+band with its content centred in FL and FR.
 
 Runtime-checked (folded): Text Size Cancel/Set span 0..466 (portrait-only modal); wallpaper preview Apply 30..436;
 language sheet spans in FP, screen-centred in FR, clear of the bottom-right block in FL; sticker pack button spans in
