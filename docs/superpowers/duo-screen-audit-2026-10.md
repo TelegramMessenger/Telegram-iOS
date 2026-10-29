@@ -187,13 +187,16 @@ Deliberately not changed:
 - Login intro (legacy RMIntroViewController): its Start button stays in the band. Since issue #18 the phone entry's
   button keeps the band too on the folded screen (`authorizationBottomBand`), so it no longer widens as it animates in
   from it.
-- SheetComponent's landscape band, the business intro emoji panel (grows to 540pt in search), PeerInfoPaneContainer,
-  the chat's footer panels, toasts.
+- The business intro emoji panel (grows to 540pt in search), PeerInfoPaneContainer, the chat's footer panels, toasts.
 
 Changed later: the emoji / stickers / GIFs keyboard (issue #71, `EntityKeyboardSideInsets.swift`). Its background
 spans the strip; the grids, group headers and the GIFs / Stickers / Emoji switcher centre on the band (its accessory
 buttons sit inside it), the pack rows and a header's embedded row are clipped to it, and its in-keyboard search keeps
 clear of the strip and the status corner block.
+
+Changed later too: SheetComponent's landscape band (issue #72, `sheetBandPlacement`). Beside a strip in landscape the
+whole sheet, background included, keeps to the band instead of only its content, so it no longer runs under unfolded
+landscape's status corner; the strip shows the dimmed screen, and a tap there dismisses the sheet.
 
 Runtime-checked (folded): Text Size Cancel/Set span 0..466 (portrait-only modal); wallpaper preview Apply 30..436;
 language sheet spans in FP, screen-centred in FR, clear of the bottom-right block in FL; sticker pack button spans in

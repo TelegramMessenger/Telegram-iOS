@@ -79,7 +79,7 @@ public func sheetBandPlacement(containerSize: CGSize, safeInsets: UIEdgeInsets) 
 /// screen-centered alert would reach one of its corner blocks (lifted by the keyboard in folded portrait), overlapping
 /// it by more than 1pt (a 300pt alert on the 466pt folded screen ends 1pt inside the 84pt block), so the alert centers
 /// on the screen whatever is behind it. In landscape, where sheets keep to the band (`resizableSheetHorizontalPlacement`,
-/// `sheetContentBandInsets`), the safe insets. Without corner blocks (every other device) the safe insets.
+/// `sheetBandPlacement`), the safe insets. Without corner blocks (every other device) the safe insets.
 public func centeredAlertSideInsets(alertWidth: CGFloat, alertMinY: CGFloat, alertMaxY: CGFloat, containerSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners) -> (left: CGFloat, right: CGFloat) {
     if containerSize.width > containerSize.height {
         return (safeInsets.left, safeInsets.right)
