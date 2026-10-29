@@ -4,8 +4,10 @@ import SwiftSignalKit
 
 final class ChatIsOpeningMediaTests: XCTestCase {
     private let queue = Queue()
-    private let unannouncedTimeout: Double = 0.1
-    private let announcedTimeout: Double = 0.3
+    private let unannouncedTimeout: Double = 0.2
+    private let announcedTimeout: Double = 1.0
+    // Checks are made well clear of either deadline, so a busy test runner oversleeping does not flip them.
+    private let margin: Double = 0.3
 
     private final class Recorder {
         private let lock = NSLock()
@@ -47,7 +49,7 @@ final class ChatIsOpeningMediaTests: XCTestCase {
         defer { disposable.dispose() }
 
         XCTAssertEqual(recorder.values, [true])
-        self.wait(self.unannouncedTimeout + 0.1)
+        self.wait(self.unannouncedTimeout + self.margin)
         XCTAssertEqual(recorder.values, [true, false])
     }
 
@@ -58,13 +60,13 @@ final class ChatIsOpeningMediaTests: XCTestCase {
         defer { disposable.dispose() }
 
         blockInteraction.set(.single(true))
-        self.wait(self.unannouncedTimeout + 0.1)
+        self.wait(self.unannouncedTimeout + self.margin)
         XCTAssertEqual(recorder.values.last, true)
 
         blockInteraction.set(.single(false))
         XCTAssertEqual(recorder.values.last, false)
 
-        self.wait(self.announcedTimeout + 0.1)
+        self.wait(self.announcedTimeout + self.margin)
         XCTAssertEqual(recorder.values.last, false)
     }
 
@@ -75,10 +77,10 @@ final class ChatIsOpeningMediaTests: XCTestCase {
         defer { disposable.dispose() }
 
         blockInteraction.set(.single(true))
-        self.wait(self.unannouncedTimeout + 0.1)
+        self.wait(self.unannouncedTimeout + self.margin)
         XCTAssertEqual(recorder.values.last, true)
 
-        self.wait(self.announcedTimeout)
+        self.wait(self.announcedTimeout - self.unannouncedTimeout)
         XCTAssertEqual(recorder.values.last, false)
     }
 }
