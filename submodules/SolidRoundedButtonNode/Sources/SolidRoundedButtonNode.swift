@@ -832,7 +832,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     /// Lays out every layer that draws the button's shape (background, shimmer, border, glass chrome) at `size` with
     /// `cornerRadius`, all on `transition`, so the button can morph into another capsule without any of them keeping
     /// its own size or corner. The glass chrome keeps its width and extends past a narrower shape's right end: clip the
-    /// node to the same shape. Calling it with the button's own size and `buttonCornerRadius` restores the button.
+    /// node to the same shape. Calling it with the button's own size and `buttonCornerRadius` on `.immediate`, once its
+    /// animations have finished, restores the button.
     public func updateShape(size: CGSize, cornerRadius: CGFloat, transition: ContainedViewLayoutTransition) {
         let frame = CGRect(origin: CGPoint(), size: size)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: frame)
