@@ -15,6 +15,7 @@ import PhotoResources
 import TextFormat
 import CompositeTextNode
 import ChatInterfaceState
+import TelegramNotices
 
 private func generateCloseIcon() -> UIImage {
     return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
@@ -276,6 +277,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
         private let titleNode: CompositeTextNode
         private let text = ComponentView<Empty>()
         private let tintText = ComponentView<Empty>()
+        private let hintText = ComponentView<Empty>()
+        private let hintTintText = ComponentView<Empty>()
         
         public let contentTintView: UIView
         
@@ -286,6 +289,11 @@ public final class ChatInputMessageAccessoryPanel: Component {
         
         private var messages: [EngineMessage] = []
         private var contentDisposable: Disposable?
+        
+        private var optionsHintDisposable: Disposable?
+        private var optionsHintTimer: SwiftSignalKit.Timer?
+        private var isOptionsHintVisible: Bool = false
+        private var isOptionsHintDisabled: Bool = false
         
         private var inlineTextStarImage: UIImage?
         private var inlineTextTonImage: (UIImage, UIColor)?
@@ -343,6 +351,8 @@ public final class ChatInputMessageAccessoryPanel: Component {
         
         deinit {
             self.contentDisposable?.dispose()
+            self.optionsHintDisposable?.dispose()
+            self.optionsHintTimer?.invalidate()
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -350,7 +360,65 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 return
             }
             if case .ended = recognizer.state {
+                if component.action != nil {
+                    self.hideOptionsHint(disable: true)
+                }
                 component.action?(self)
+            }
+        }
+        
+        // The reply and forward panels show "Tap here for reply/forward options" in place of the message preview for
+        // 3 seconds after they appear, at most 3 times in total; opening the options sets the counter to 3 (the
+        // panel's action, in ChatInterfaceStateAccessoryPanels), so it never shows again after that.
+        private func startOptionsHintIfNeeded(component: ChatInputMessageAccessoryPanel) {
+            let accountManager = component.context.sharedContext.accountManager
+            let getCount: Signal<Int32, NoError>
+            let incrementCount: Signal<Int, NoError>
+            switch component.contents {
+            case .reply:
+                getCount = ApplicationSpecificNotice.getChatReplyOptionsTip(accountManager: accountManager)
+                incrementCount = ApplicationSpecificNotice.incrementChatReplyOptionsTip(accountManager: accountManager)
+            case .forward:
+                getCount = ApplicationSpecificNotice.getChatForwardOptionsTip(accountManager: accountManager)
+                incrementCount = ApplicationSpecificNotice.incrementChatForwardOptionsTip(accountManager: accountManager)
+            case .edit, .linkPreview, .suggestPost:
+                return
+            }
+            self.optionsHintDisposable = (getCount
+            |> take(1)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] count in
+                guard let self, count < 3, !self.isOptionsHintDisabled else {
+                    return
+                }
+                let _ = incrementCount.startStandalone()
+                
+                self.isOptionsHintVisible = true
+                if !self.isUpdating {
+                    self.state?.updated(transition: .easeInOut(duration: 0.3), isLocal: true)
+                }
+                
+                self.optionsHintTimer?.invalidate()
+                let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+                    self?.hideOptionsHint(disable: false)
+                }, queue: Queue.mainQueue())
+                self.optionsHintTimer = timer
+                timer.start()
+            })
+        }
+        
+        private func hideOptionsHint(disable: Bool) {
+            if disable {
+                self.isOptionsHintDisabled = true
+                self.optionsHintDisposable?.dispose()
+                self.optionsHintDisposable = nil
+            }
+            self.optionsHintTimer?.invalidate()
+            self.optionsHintTimer = nil
+            if self.isOptionsHintVisible {
+                self.isOptionsHintVisible = false
+                if !self.isUpdating {
+                    self.state?.updated(transition: .easeInOut(duration: 0.3), isLocal: true)
+                }
             }
         }
         
@@ -414,9 +482,14 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 }
             }
             
+            let isFirstUpdate = self.component == nil
+            
             self.component = component
             self.state = state
             self.environment = environment
+            if isFirstUpdate {
+                self.startOptionsHintIfNeeded(component: component)
+            }
             self.longPressGestureRecognizer.isEnabled = component.longPressAction != nil
             
             if self.closeButtonIcon.image == nil {
@@ -945,6 +1018,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
             let titleSize = self.titleNode.update(constrainedSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0))
             
             let textRenderInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
+            let textContainerWidth = availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextWithEntitiesComponent(
@@ -959,7 +1033,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                     displaysAsynchronously: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)
+                containerSize: CGSize(width: textContainerWidth, height: 100.0)
             )
             let tintTextString = NSMutableAttributedString(attributedString: textString)
             tintTextString.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: tintTextString.length))
@@ -977,8 +1051,54 @@ public final class ChatInputMessageAccessoryPanel: Component {
                     displaysAsynchronously: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - lineFrame.maxX - textInsets.left - textInsets.right, height: 100.0)
+                containerSize: CGSize(width: textContainerWidth, height: 100.0)
             )
+            
+            let fittingHintString: (String, String) -> String = { full, short in
+                let fullWidth = NSAttributedString(string: full, font: Font.regular(14.0), textColor: .black).boundingRect(with: CGSize(width: 1000.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).width
+                return ceil(fullWidth) + textRenderInsets.left + textRenderInsets.right <= textContainerWidth ? full : short
+            }
+            let hintString: String?
+            switch component.contents {
+            case .reply:
+                hintString = fittingHintString(environment.strings.Chat_ReplyPanel_HintReplyOptions, environment.strings.Chat_ReplyPanel_HintReplyOptionsShort)
+            case .forward:
+                hintString = fittingHintString(environment.strings.Conversation_ForwardOptions_TapForOptions, environment.strings.Conversation_ForwardOptions_TapForOptionsShort)
+            case .edit, .linkPreview, .suggestPost:
+                hintString = nil
+            }
+            var hintTextSize: CGSize?
+            if let hintString {
+                hintTextSize = self.hintText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextWithEntitiesComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        placeholderColor: environment.theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.1),
+                        text: .plain(NSAttributedString(string: hintString, font: Font.regular(14.0), textColor: secondaryTextColor)),
+                        insets: textRenderInsets,
+                        displaysAsynchronously: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: textContainerWidth, height: 100.0)
+                )
+                let _ = self.hintTintText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextWithEntitiesComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        placeholderColor: UIColor.black.withAlphaComponent(0.1),
+                        text: .plain(NSAttributedString(string: hintString, font: Font.regular(14.0), textColor: .black)),
+                        insets: textRenderInsets,
+                        displaysAsynchronously: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: textContainerWidth, height: 100.0)
+                )
+            }
+            let isOptionsHintVisible = self.isOptionsHintVisible && hintTextSize != nil
             
             let titleTextSpacing: CGFloat = 1.0
             
@@ -1000,6 +1120,27 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 
                 transition.setPosition(view: tintTextView, position: textFrame.origin)
                 tintTextView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
+                
+                transition.setAlpha(view: textView, alpha: isOptionsHintVisible ? 0.0 : 1.0)
+                transition.setAlpha(view: tintTextView, alpha: isOptionsHintVisible ? 0.0 : 1.0)
+            }
+            
+            if let hintTextSize, let hintTextView = self.hintText.view, let hintTintTextView = self.hintTintText.view {
+                let hintTextFrame = CGRect(origin: textFrame.origin, size: hintTextSize)
+                if hintTextView.superview == nil {
+                    hintTextView.alpha = 0.0
+                    hintTextView.frame = hintTextFrame
+                    self.addSubview(hintTextView)
+                    
+                    hintTintTextView.alpha = 0.0
+                    hintTintTextView.frame = hintTextFrame
+                    self.contentTintView.addSubview(hintTintTextView)
+                }
+                transition.setFrame(view: hintTextView, frame: hintTextFrame)
+                transition.setFrame(view: hintTintTextView, frame: hintTextFrame)
+                
+                transition.setAlpha(view: hintTextView, alpha: isOptionsHintVisible ? 1.0 : 0.0)
+                transition.setAlpha(view: hintTintTextView, alpha: isOptionsHintVisible ? 1.0 : 0.0)
             }
             
             return size
