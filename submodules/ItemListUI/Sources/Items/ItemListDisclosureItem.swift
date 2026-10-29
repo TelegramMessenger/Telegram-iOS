@@ -497,22 +497,35 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             }
             let labelString = item.attributedLabel ?? NSAttributedString(string: item.label, font: labelFont, textColor: labelBadgeColor)
             
-            // A short trailing value keeps its measured width; a long title truncates or wraps instead of it.
-            var titleConstrainedWidth = maxTitleWidth
+            let makeTitleArguments: (CGFloat) -> TextNodeLayoutArguments = { width in
+                return TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
+            }
+            var titleLayoutAndApply = item.context == nil ? makeTitleLayout(makeTitleArguments(maxTitleWidth)) : nil
+            var titleWithEntitiesLayoutAndApply = item.context != nil ? makeTitleWithEntitiesLayout(makeTitleArguments(maxTitleWidth)) : nil
+            
+            var titleLayout: TextNodeLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
+            
+            var labelLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if labelSharesTitleLine && labelString.length != 0 {
-                let (naturalLabelLayout, _) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, labelSharedWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                // A short trailing value keeps its full width; a long title truncates or wraps instead of it.
+                let fullLabelLayoutAndApply = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, labelSharedWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let labelWidth = fullLabelLayoutAndApply.0.size.width
                 var titleSharedWidth = labelSharedWidth
                 if let (titleBadgeLayout, _) = titleBadgeTextNodeLayout {
                     titleSharedWidth -= 5.0 + titleBadgeLayout.size.width
                 }
-                titleConstrainedWidth = itemListDisclosureTitleConstrainedWidth(maxTitleWidth: maxTitleWidth, sharedWidth: titleSharedWidth, labelWidth: naturalLabelLayout.size.width)
+                if labelSharedWidth - titleLayout.size.width >= labelWidth {
+                    labelLayoutAndApply = fullLabelLayoutAndApply
+                } else if let narrowedTitleWidth = itemListDisclosureNarrowedTitleWidth(titleWidth: titleLayout.size.width, labelWidth: labelWidth, labelSharedWidth: labelSharedWidth, titleSharedWidth: titleSharedWidth) {
+                    if item.context == nil {
+                        titleLayoutAndApply = makeTitleLayout(makeTitleArguments(narrowedTitleWidth))
+                    } else {
+                        titleWithEntitiesLayoutAndApply = makeTitleWithEntitiesLayout(makeTitleArguments(narrowedTitleWidth))
+                    }
+                    titleLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
+                    labelLayoutAndApply = fullLabelLayoutAndApply
+                }
             }
-            
-            let titleArguments = TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: titleConstrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
-            let (titleLayoutAndApply) = item.context == nil ? makeTitleLayout(titleArguments) : nil
-            let (titleWithEntitiesLayoutAndApply) = item.context != nil ? makeTitleWithEntitiesLayout(titleArguments) : nil
-            
-            let titleLayout: TextNodeLayout = (titleWithEntitiesLayoutAndApply?.0 ?? titleLayoutAndApply?.0)!
             
             let labelConstrain: CGFloat
             switch item.labelStyle {
@@ -522,7 +535,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 labelConstrain = labelSharedWidth - titleLayout.size.width
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = labelLayoutAndApply ?? makeLabelLayout(TextNodeLayoutArguments(attributedString: labelString, backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var additionalDetailLabelInfo: (TextNodeLayout, () -> TextNode)?
             if let additionalDetailLabel = item.additionalDetailLabel {

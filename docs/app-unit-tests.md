@@ -83,10 +83,10 @@ chat's presentation context carries its history list's side insets (the safe ins
 context's left inset widens the toast's margin less the Duo's side strip; with equal side insets the metrics are the
 previous ones.
 
-`//submodules/ItemListUI:ItemListUITests` covers `itemListDisclosureTitleConstrainedWidth`, how an
-`ItemListDisclosureItem` row splits its line between the title and a trailing value: a value needing at most half the
-shared room (a size, a count) keeps its full width and a long localized title truncates or wraps instead; a longer value
-is long on purpose and keeps the old title-first split.
+`//submodules/ItemListUI:ItemListUITests` covers `itemListDisclosureNarrowedTitleWidth`, how an
+`ItemListDisclosureItem` row splits its line between the title and a trailing value when they do not fit: a value
+needing at most two thirds of the shared room (a size, a count) keeps its full width and a long localized title truncates
+or wraps instead; a longer value is long on purpose and keeps the old title-first split. Rows that fit are unchanged.
 
 `//submodules/LegacyMediaPickerUI:LegacyMediaPickerUITests` covers `DocumentPickerPresentation`, which tells when the
 system document picker of `legacyICloudFilePicker` ("Select from Files") is gone without a word to its delegate. The
