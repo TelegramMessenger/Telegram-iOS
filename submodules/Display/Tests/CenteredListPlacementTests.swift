@@ -26,6 +26,14 @@ final class CenteredListPlacementTests: XCTestCase {
         XCTAssertEqual(placement.safeInsets, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0))
     }
 
+    func test_coverLandscapeLeft_listStopsBeforeTheStrip_rowsTakeNoStripInset() {
+        let l = self.layout(size: CGSize(width: 678.0, height: 466.0), safeInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 84.0), corners: ContainerViewLayoutCorners(topLeft: nil, topRight: nil, bottomLeft: nil, bottomRight: CGSize(width: 84.0, height: 82.0)))
+        let placement = l.centeredListPlacement(base: 16.0)
+        XCTAssertEqual(placement.left, 16.0)
+        XCTAssertEqual(placement.width, 562.0)
+        XCTAssertEqual(placement.safeInsets, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 34.0, right: 0.0))
+    }
+
     func test_coverLandscapeRight_listStartsAfterTheStrip_rowsTakeNoStripInset() {
         let l = self.layout(size: CGSize(width: 678.0, height: 466.0), safeInsets: UIEdgeInsets(top: 0.0, left: 84.0, bottom: 34.0, right: 0.0), corners: ContainerViewLayoutCorners(topLeft: CGSize(width: 84.0, height: 84.0), topRight: nil, bottomLeft: nil, bottomRight: nil))
         let placement = l.centeredListPlacement(base: 16.0)

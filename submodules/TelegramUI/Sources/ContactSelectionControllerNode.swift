@@ -291,7 +291,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             } else {
                 inset = 0.0
             }
-            // iPhone Duo: the list stops 16pt short of the side strip and its rows take no inset for it, so their
+            // iPhone Duo: the list keeps at least 16pt clear of the side strip and its rows take no inset for it, so their
             // background does not run past their cards into the strip.
             let placement = layout.centeredListPlacement(base: inset)
             size.width = placement.width
