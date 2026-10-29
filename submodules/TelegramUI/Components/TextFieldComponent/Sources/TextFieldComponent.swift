@@ -519,18 +519,7 @@ public final class TextFieldComponent: Component {
                 attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)
             }
             
-            if var attributedString = attributedString {
-                if component.emptyLineHandling == .oneConsecutive, attributedString.string.contains("\n\n") {
-                    // A copied web page's paragraph gaps arrive as blank lines; this field keeps none, so they
-                    // become line breaks, as in the length-limited paste below, rather than the whole paste being
-                    // refused.
-                    let collapsed = NSMutableAttributedString(attributedString: attributedString)
-                    // Back to front, so a deletion leaves the matches still to visit where they were.
-                    for match in try! NSRegularExpression(pattern: "\n{2,}").matches(in: collapsed.string, range: NSRange(location: 0, length: collapsed.length)).reversed() {
-                        collapsed.deleteCharacters(in: NSRange(location: match.range.location + 1, length: match.range.length - 1))
-                    }
-                    attributedString = collapsed
-                }
+            if let attributedString = attributedString {
                 let current = self.inputState
                 let range = NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)
                 if component.externalHandlingForMultilinePaste, component.emptyLineHandling == .notAllowed, attributedString.string.contains("\n") {

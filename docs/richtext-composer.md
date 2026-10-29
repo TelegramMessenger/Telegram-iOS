@@ -584,8 +584,10 @@ to the renderer's spacing. The send path and `.md` documents keep CommonMark (`.
 margins only, `\saN`/`\sbN` in the RTF. Both legacy-field RTF routes turn a gap of ≥ 8pt between two paragraphs
 with text (never between two list items, never beside a whitespace-only spacer such as `<p>&nbsp;</p>`) into a
 blank line: `legacyChatInputAttributedString(fromRTF:)` through
-`RTFImport.document(fromRTF:paragraphSpacingAsBlankLines: true)`, `chatInputStateStringFromRTF` through
-`attributedStringWithParagraphSpacingAsBlankLines` (`TextFormat/PastedRichTextParagraphGaps.swift`).
+`RTFImport.document(fromRTF:paragraphSpacingAsBlankLines: true)`, `chatInputStateStringFromRTF(_:type:paragraphSpacingAsBlankLines: true)` through
+`attributedStringWithParagraphSpacingAsBlankLines` (`TextFormat/PastedRichTextParagraphGaps.swift`). Only the chat
+composer asks for it: media captions and `TextFieldComponent` fields keep pasted paragraphs one line apart, so a
+Word document (8pt after each paragraph) does not gain blank lines there.
 
 **Self-referential links are stripped BEFORE that gate (load-bearing — a pasted URL must stay plain).** Apple's
 `NSAttributedString(markdown:)` applies the **GFM autolink extension**, so a bare `https://…` — and also a bare
