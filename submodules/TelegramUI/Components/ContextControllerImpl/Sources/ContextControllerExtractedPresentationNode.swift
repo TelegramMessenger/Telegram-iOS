@@ -841,11 +841,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let current = self.reactionContextNode {
                 reactionContextNode = current
             } else {
+                var alignsToContentLeadingEdge = false
+                if case let .extracted(source) = self.source {
+                    if case .left = source.actionsHorizontalAlignment {
+                        alignsToContentLeadingEdge = true
+                    }
+                }
                 reactionContextNode = ReactionContextNode(
                     context: reactionItems.context,
                     animationCache: reactionItems.animationCache,
                     presentationData: presentationData,
-                    //style: .glass(isTinted: false),
                     items: reactionItems.reactionItems,
                     selectedItems: reactionItems.selectedReactionItems,
                     title: reactionItems.reactionsTitle,
@@ -874,6 +879,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     }
                 )
                 reactionContextNode.displayTail = !controller.hideReactionPanelTail
+                reactionContextNode.alignsToAnchorLeadingEdge = alignsToContentLeadingEdge
                 self.reactionContextNode = reactionContextNode
                 self.addSubnode(reactionContextNode)
                 
@@ -1319,8 +1325,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     actionsFrame.origin.x = actionsEdgeInset
                 }
             } else {
+                // `.left`: the menu starts exactly where the content does, even closer to the screen edge than a menu
+                // goes otherwise, so the two read as one column.
+                var actionsMinX = actionsEdgeInset
+                if case .left = actionsHorizontalAlignment {
+                    actionsMinX = min(actionsEdgeInset, max(0.0, contentParentGlobalFrame.minX + contentRect.minX))
+                }
                 if case .location = self.source {
                     actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.minX + actionsSideInset - 4.0
+                } else if case .left = actionsHorizontalAlignment {
+                    actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.minX
                 } else if case .right = actionsHorizontalAlignment {
                     actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.maxX - actionsSideInset - actionsSize.width - 1.0
                 } else {
@@ -1347,8 +1361,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 if actionsFrame.maxX > layout.size.width - actionsEdgeInset {
                     actionsFrame.origin.x = layout.size.width - actionsEdgeInset - actionsFrame.width
                 }
-                if actionsFrame.minX < actionsEdgeInset {
-                    actionsFrame.origin.x = actionsEdgeInset
+                if actionsFrame.minX < actionsMinX {
+                    actionsFrame.origin.x = actionsMinX
                 }
             }
             

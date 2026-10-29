@@ -67,7 +67,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
         constrainedWidth: CGFloat,
         type: DisplayType
     ) -> (proposedWidth: CGFloat, continueLayout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> Void)) {
-        let reactionColors: ReactionButtonComponent.Colors
+        var reactionColors: ReactionButtonComponent.Colors
         let themeColors: PresentationThemeBubbleColorComponents
         switch type {
         case .incoming:
@@ -132,6 +132,23 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb,
                 isDark: presentationData.theme.theme.overallDarkAppearance
             )
+        }
+        
+        // Without bubbles reactions on the page are glass capsules with the body's text colour; a chosen one is filled as
+        // in an incoming bubble (the freeform style is a white plate meant for wallpapers, which vanishes on the page).
+        var isInsideOutgoingBubble = false
+        if case .outgoing = type {
+            isInsideOutgoingBubble = true
+        }
+        if chatMessageBubblelessReactionsAreGlass(bubbleMode: presentationData.chatBubbleCorners.bubbleMode, isInsideOutgoingBubble: isInsideOutgoingBubble) {
+            reactionColors.isGlass = true
+            reactionColors.deselectedBackground = 0
+            reactionColors.deselectedStarsBackground = 0
+            reactionColors.deselectedForeground = presentationData.theme.theme.list.itemPrimaryTextColor.argb
+            let incomingColors = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
+            reactionColors.selectedBackground = incomingColors.reactionActiveBackground.argb
+            reactionColors.selectedForeground = incomingColors.reactionActiveForeground.argb
+            reactionColors.selectedIconTintColor = 0
         }
         
         var totalReactionCount: Int = 0
@@ -696,6 +713,9 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         public let isIncoming: Bool
         public let constrainedWidth: CGFloat
         public let centerAligned: Bool
+        /// The colours the buttons take: a plate over the wallpaper by default. Without bubbles the row stands on the
+        /// plain page, where that plate vanishes, so it takes an incoming bubble's reaction colours.
+        public let colorType: MessageReactionButtonsNode.DisplayType
 
         public init(
             context: AccountContext,
@@ -709,7 +729,8 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             accountPeer: EnginePeer?,
             isIncoming: Bool,
             constrainedWidth: CGFloat,
-            centerAligned: Bool
+            centerAligned: Bool,
+            colorType: MessageReactionButtonsNode.DisplayType = .freeform
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -723,6 +744,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             self.isIncoming = isIncoming
             self.constrainedWidth = constrainedWidth
             self.centerAligned = centerAligned
+            self.colorType = colorType
         }
     }
     
@@ -770,7 +792,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
                 associatedData: arguments.associatedData,
                 alignment: alignment,
                 constrainedWidth: arguments.constrainedWidth,
-                type: .freeform
+                type: arguments.colorType
             )
             
             return (buttonsUpdate.proposedWidth, { constrainedWidth in

@@ -1178,6 +1178,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         self.listView.visibleContentOffsetChanged = { [weak self] offset, _ in
             if let strongSelf = self {
                 strongSelf.contentPositionChanged(offset)
+                strongSelf.updateBubblelessSelectionVisibleTops()
                 
                 if strongSelf.tag == nil {
                     var atBottom = false
@@ -3966,6 +3967,23 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     /// `.top(offset)` scrolls back to (the backend's `itemNodeRelativeOffset(_:)`), if it has a node.
     private func itemNodeRelativeOffset(containingMessageId messageId: MessageId) -> CGFloat? {
         return self.liveItemNode(containingMessageId: messageId).flatMap { self.listView.itemNodeRelativeOffset($0) }
+    }
+    
+    /// Without bubbles a selected message taller than the screen keeps its checkmark under the visible top. The rows'
+    /// rendered frames carry it: CoreList's model frames park at a fling's destination (spec 5.8, 6.7).
+    public func updateBubblelessSelectionVisibleTops() {
+        guard self.controllerInteraction.selectionState != nil, !self.currentPresentationData.chatBubbleCorners.bubbleMode else {
+            return
+        }
+        let visibleTop = self.rotated ? self.bounds.height - self.insets.bottom : self.insets.top
+        self.forEachVisibleMessageItemNode { itemNode in
+            guard let stickyCheck = itemNode as? ChatMessageBubblelessStickySelectionCheck, let itemFrame = self.itemNodeFrame(itemNode) else {
+                return
+            }
+            // A rotated list's rows are upright: a row's top is its frame's far edge.
+            let distanceFromRowTop = self.rotated ? itemFrame.maxY - visibleTop : visibleTop - itemFrame.minY
+            stickyCheck.updateBubblelessSelectionVisibleTop(itemNode.bounds.minY + distanceFromRowTop)
+        }
     }
     
     public func forEachVisibleMessageItemNode(_ f: (ChatMessageItemView) -> Void) {

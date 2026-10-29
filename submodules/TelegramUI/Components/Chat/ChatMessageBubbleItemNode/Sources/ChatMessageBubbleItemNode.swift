@@ -90,6 +90,14 @@ import AvatarNode
 import ChatMessageSuggestedPostInfoNode
 import PremiumAlertController
 
+/// Without bubbles, the time after the author's name (and a post's views after it), as offsets from the end of the name.
+private struct BubblelessHeaderTime {
+    var dateSize: CGSize
+    var dateOffset: CGPoint
+    var dateApply: () -> TextNode
+    var views: (icon: UIImage, iconOrigin: CGPoint, size: CGSize, origin: CGPoint, apply: () -> TextNode)?
+}
+
 private struct BubbleItemAttributes {
     var index: Int?
     var isAttachment: Bool
@@ -217,7 +225,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 } else {
                     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing = .default
                     if previousItemIsFile {
-                        neighborSpacing = .overlap(file.isMusic ? 14.0 : 4.0)
+                        // Without bubbles the files of an album are as far apart as files sent one by one, a track
+                        // included.
+                        neighborSpacing = item.bubbleStyle == .bubbleless ? .default : .overlap(file.isMusic ? 14.0 : 4.0)
                     }
                     isFile = true
                     hasFiles = true
@@ -490,6 +500,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     if !reactionsAreInline && !hideAllAdditionalInfo, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes, isTags: firstMessage.areReactionsTags(accountPeerId: item.context.account.peerId)), !reactionsAttribute.reactions.isEmpty {
         if result.last?.1 == ChatMessageTextBubbleContentNode.self {
+        } else if item.bubbleStyle == .bubblelessCard && result.last?.1 != ChatMessageCommentFooterContentNode.self {
+            // Without bubbles a card keeps its reactions under its outline, as a message without a card does.
+            needReactions = true
         } else {
             if result.last?.1 == ChatMessagePollBubbleContentNode.self ||
                result.last?.1 == ChatMessageTodoBubbleContentNode.self ||
@@ -516,6 +529,35 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     if case .group = item.content, hasFiles {
         needSeparateContainers = true
         needReactions = false
+    }
+    
+    // Without bubbles incoming messages show no status, which is where text, captions, link previews, rich pages, fact
+    // checks, files, games, invoices and restricted messages keep their reactions: those go under the message instead, or
+    // into a reactions footer above a comments row or after an album of files.
+    if item.bubbleStyle.isBubbleless && !reactionsAreInline && !isAction && !hideAllAdditionalInfo {
+        let statusReactionClasses: [AnyClass] = [ChatMessageTextBubbleContentNode.self, ChatMessageWebpageBubbleContentNode.self, ChatMessageRichDataBubbleContentNode.self, ChatMessageFactCheckBubbleContentNode.self, ChatMessageFileBubbleContentNode.self, ChatMessageGameBubbleContentNode.self, ChatMessageInvoiceBubbleContentNode.self, ChatMessageRestrictedBubbleContentNode.self]
+        let hasReactions = mergedMessageReactions(attributes: firstMessage.attributes, isTags: firstMessage.areReactionsTags(accountPeerId: item.context.account.peerId))?.reactions.isEmpty == false
+        let endsWithComments = result.last?.1 == ChatMessageCommentFooterContentNode.self
+        switch chatMessageBubblelessReactionsPlacement(
+            style: item.bubbleStyle,
+            hasReactions: hasReactions,
+            statusHeldReactions: result.contains(where: { entry in statusReactionClasses.contains(where: { $0 == entry.1 }) }),
+            hasReactionsFooter: result.contains(where: { $0.1 == ChatMessageReactionsFooterContentNode.self }),
+            endsWithComments: endsWithComments,
+            hasSeparateContainers: needSeparateContainers
+        ) {
+        case .unchanged:
+            break
+        case .row:
+            needReactions = true
+        case .footer:
+            let footer: (Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes) = (firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .reactions, neighborSpacing: .default))
+            if endsWithComments {
+                result.insert(footer, at: result.count - 1)
+            } else {
+                result.append(footer)
+            }
+        }
     }
     
     // The last element reports unsupported content, which the caller needs before it can decide
@@ -573,6 +615,33 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         fileprivate func willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: Bool, transition: ContainedViewLayoutTransition) {
+            // Without bubbles an album item lifted alone uses the same card as a whole message (3.3 #7), not a bubble.
+            if let currentParams = self.currentParams, case .none = currentParams.backgroundType, !currentParams.presentationData.chatBubbleCorners.bubbleMode {
+                if isExtractedToContextPreview, self.liftsOnBubblelessCard {
+                    let cardNode: ASDisplayNode
+                    if let current = self.liftCardNode {
+                        cardNode = current
+                    } else {
+                        cardNode = ASDisplayNode()
+                        cardNode.isLayerBacked = true
+                        cardNode.alpha = 0.0
+                        self.sourceNode.contentNode.insertSubnode(cardNode, at: 0)
+                        self.liftCardNode = cardNode
+                    }
+                    let theme = currentParams.presentationData.theme.theme
+                    let rect = self.sourceNode.contentRect
+                    cardNode.backgroundColor = chatMessageBubblelessLiftColor(dark: theme.overallDarkAppearance, pageColor: theme.list.plainBackgroundColor)
+                    cardNode.frame = rect
+                    cardNode.cornerRadius = chatMessageBubblelessLiftCornerRadius(mainRadius: currentParams.presentationData.chatBubbleCorners.mainRadius, height: rect.height)
+                    transition.updateAlpha(node: cardNode, alpha: 1.0)
+                } else if let cardNode = self.liftCardNode {
+                    self.liftCardNode = nil
+                    transition.updateAlpha(node: cardNode, alpha: 0.0, completion: { [weak cardNode] _ in
+                        cardNode?.removeFromSupernode()
+                    })
+                }
+                return
+            }
             if isExtractedToContextPreview {
                 var offset: CGFloat = 0.0
                 var inset: CGFloat = 0.0
@@ -632,6 +701,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         fileprivate func isExtractedToContextPreviewUpdated(_ isExtractedToContextPreview: Bool) {
         }
         
+        // Whether the selection plate took the bubble-free look (its radius is undone when bubbles come back).
+        private var selectionBackgroundIsBubbleless = false
+        // Without bubbles: whether this album item lifts on a card of its own, and that card while lifted.
+        var liftsOnBubblelessCard = false
+        private var liftCardNode: ASDisplayNode?
+        
         fileprivate func update(size: CGSize, contentOrigin: CGPoint, selectionInsets: UIEdgeInsets, index: Int, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, presentationContext: ChatPresentationContext, mediaBox: MediaBox, messageSelection: Bool?) {
             self.currentParams = (size, contentOrigin, presentationData, graphics, backgroundType, presentationContext, mediaBox, messageSelection, selectionInsets)
             let bounds = CGRect(origin: CGPoint(), size: size)
@@ -658,13 +733,28 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 selectionBackgroundFrame = selectionBackgroundFrame.inset(by: selectionInsets)
                 
-                let bubbleColor = graphics.hasWallpaper ? messageTheme.bubble.withWallpaper.fill : messageTheme.bubble.withoutWallpaper.fill
-                let selectionColor = bubbleColor[0].withAlphaComponent(1.0).mixedWith(messageTheme.accentTextColor.withAlphaComponent(1.0), alpha: 0.08)
+                let selectionColor: UIColor
+                if case .none = backgroundType, !presentationData.chatBubbleCorners.bubbleMode {
+                    // Without bubbles a selected album item gets its own plate: the page with a little accent, 8pt wider
+                    // on each side, rounded like media (spec 5.8).
+                    selectionColor = presentationData.theme.theme.list.plainBackgroundColor.mixedWith(presentationData.theme.theme.chat.message.incoming.accentTextColor.withAlphaComponent(1.0), alpha: chatMessageBubblelessAlbumItemPlateAccentFraction)
+                    selectionBackgroundFrame = selectionBackgroundFrame.insetBy(dx: -8.0, dy: 0.0)
+                    self.selectionBackgroundNode?.cornerRadius = presentationData.chatBubbleCorners.mainRadius
+                    self.selectionBackgroundIsBubbleless = true
+                } else {
+                    let bubbleColor = graphics.hasWallpaper ? messageTheme.bubble.withWallpaper.fill : messageTheme.bubble.withoutWallpaper.fill
+                    selectionColor = bubbleColor[0].withAlphaComponent(1.0).mixedWith(messageTheme.accentTextColor.withAlphaComponent(1.0), alpha: 0.08)
+                    if self.selectionBackgroundIsBubbleless {
+                        self.selectionBackgroundIsBubbleless = false
+                        self.selectionBackgroundNode?.cornerRadius = 0.0
+                    }
+                }
                 
                 self.selectionBackgroundNode?.backgroundColor = selectionColor
                 self.selectionBackgroundNode?.frame = selectionBackgroundFrame
             } else if let selectionBackgroundNode = self.selectionBackgroundNode {
                 self.selectionBackgroundNode = nil
+                self.selectionBackgroundIsBubbleless = false
                 selectionBackgroundNode.removeFromSupernode()
             }
         }
@@ -690,6 +780,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var backgroundHighlightNode: ChatMessageBackground?
     private let shadowNode: ChatMessageShadowNode
     private var clippingNode: ChatMessageBubbleClippingNode
+    /// Without bubbles, a card's outline (polls, checklists, giveaways, calls); nil for every other message.
+    private var bubblelessCardOutlineNode: ASImageNode?
+    /// Without bubbles, the torn edges of the strip the chat tears around content this build cannot show (see
+    /// `updateBubblelessTear`); nil for every other message.
+    private var bubblelessTearLayer: SimpleShapeLayer?
+    private var bubblelessTearPathKey: (zones: [CGRect], width: CGFloat)?
     
     private var suggestedPostInfoNode: ChatMessageSuggestedPostInfoNode?
     
@@ -698,12 +794,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     private var selectionNode: ChatMessageSelectionNode?
+    // Without bubbles: where the selection checkmark centres, from the last layout (nil with bubbles).
+    private var bubblelessSelectionCheckCenterY: CGFloat?
+    // Without bubbles: the rect and card the message lifts on for its menu, from its last layout (spec 5.9); nil with bubbles.
+    private var bubblelessLift: ChatMessageBubblelessLift?
+    private var bubblelessLiftHidesHeader = false
+    private var bubblelessLiftCardNode: ASDisplayNode?
+    // What a lift hid of the header, so that the end of the lift restores exactly that, whatever a layout meanwhile decided.
+    private var bubblelessLiftHiddenHeader: (nodes: [ASDisplayNode], layers: [CALayer])?
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
     
     private var nameAvatarNode: AvatarNode?
     private var nameNode: TextNode?
+    private var bubblelessHeaderDateNode: TextNode?
+    private var bubblelessHeaderViewsIconNode: ASImageNode?
+    private var bubblelessHeaderViewsNode: TextNode?
     private var nameButtonNode: HighlightTrackingButtonNode?
     private var nameHighlightNode: ASImageNode?
     private var viaMeasureNode: TextNode?
@@ -879,7 +986,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 return .none
             }
             strongSelf.updateMainContainerActivationTarget(mosaicNode: nil)
-            if !strongSelf.backgroundNode.frame.contains(location) {
+            if !strongSelf.pressFrame().contains(location) {
                 return .none
             }
             if strongSelf.selectionNode != nil {
@@ -983,12 +1090,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             self?.accessibilityElementDidBecomeFocused()
         }
         
-        self.mainContextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview, _ in
-            guard let self, let _ = self.item else {
+        self.mainContextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview, transition in
+            guard let self, let item = self.item else {
                 return
             }
             for contentNode in self.contentNodes {
                 contentNode.willUpdateIsExtractedToContextPreview(isExtractedToContextPreview)
+            }
+            if self.bubblelessLift != nil || self.bubblelessLiftCardNode != nil || self.bubblelessLiftHiddenHeader != nil {
+                self.updateBubblelessLiftCard(isExtracted: isExtractedToContextPreview, item: item, transition: transition)
             }
         }
         self.mainContextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
@@ -1409,7 +1519,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     return .fail
                 }
                 
-                if !strongSelf.backgroundNode.frame.contains(point) {
+                if !strongSelf.pressFrame().contains(point) {
                     return .waitForDoubleTap
                 }
                 
@@ -1549,6 +1659,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         let authorNameLayout = TextNode.asyncLayout(self.nameNode)
+        let bubblelessHeaderDateLayout = self.bubblelessHeaderDateNode.map { TextNode.asyncLayout($0) }
+        let bubblelessHeaderViewsLayout = self.bubblelessHeaderViewsNode.map { TextNode.asyncLayout($0) }
         let viaMeasureLayout = TextNode.asyncLayout(self.viaMeasureNode)
         let rankBadgeLayout = TextNode.asyncLayout(self.rankBadgeNode)
         let ephemeralBadgeLayout = TextNode.asyncLayout(self.ephemeralBadgeTextNode)
@@ -1569,6 +1681,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let currentForwardInfo = self.appliedForwardInfo
         
         let isSelected = self.selectionNode?.selected
+        // Without bubbles a round video playing at full size takes the avatar column unless its transcription is
+        // expanded; read only while the node shows a message without a bubble.
+        let hasExpandedInstantVideoTranscription = self.item?.bubbleStyle.isBubbleless == true && self.contentNodes.contains(where: { ($0 as? ChatMessageInstantVideoBubbleContentNode)?.hasExpandedAudioTranscription == true })
         
         let weakSelf = Weak(self)
         
@@ -1585,6 +1700,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 dateHeaderAtBottom: dateHeaderAtBottom,
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,
+                bubblelessHeaderDateLayout: bubblelessHeaderDateLayout,
+                bubblelessHeaderViewsLayout: bubblelessHeaderViewsLayout,
                 viaMeasureLayout: viaMeasureLayout,
                 rankBadgeLayout: rankBadgeLayout,
                 ephemeralBadgeLayout: ephemeralBadgeLayout,
@@ -1601,7 +1718,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 layoutConstants: layoutConstants,
                 currentItem: currentItem,
                 currentForwardInfo: currentForwardInfo,
-                isSelected: isSelected
+                isSelected: isSelected,
+                hasExpandedInstantVideoTranscription: hasExpandedInstantVideoTranscription
             )
         }
     }
@@ -1615,6 +1733,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         dateHeaderAtBottom: ChatMessageHeaderSpec,
         currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, Int?, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
+        bubblelessHeaderDateLayout: ((TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode))?,
+        bubblelessHeaderViewsLayout: ((TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode))?,
         viaMeasureLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         rankBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         ephemeralBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
@@ -1631,7 +1751,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: ChatMessageAppliedForwardInfo?,
-        isSelected: Bool?
+        isSelected: Bool?,
+        hasExpandedInstantVideoTranscription: Bool
     ) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         let isPreview = item.presentationData.isPreview
         let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: isSelected)
@@ -1649,6 +1770,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let content = item.content
         let firstMessage = content.firstMessage
         let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
+        
+        let bubbleStyle = item.bubbleStyle
+        var layoutConstants = bubbleStyle.isBubbleless ? chatMessageBubblelessLayoutConstants(layoutConstants, mainRadius: item.presentationData.chatBubbleCorners.mainRadius, isCard: bubbleStyle == .bubblelessCard) : layoutConstants
+        // Without bubbles a channel without profiles has no avatar column to carry a follow-up post's time, so its posts
+        // keep their header on every post.
+        var isBubblelessChannelPost = false
+        if bubbleStyle.isBubbleless {
+            isBubblelessChannelPost = chatMessageBubblelessIsChannelPostWithoutProfiles(chatPeer: firstMessage.peers[firstMessage.id.peerId].flatMap({ EnginePeer($0) }))
+        }
         
         let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
         let ephemeralBadgeMessage = content.first(where: { message, _ in
@@ -1795,7 +1925,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ignoreNameHiding = true
                 }
                 
-                displayAuthorInfo = !mergedTop.merged && allowAuthor && peerId.isGroupOrChannel && effectiveAuthor != nil
+                if bubbleStyle.isBubbleless {
+                    // Without bubbles every incoming run is headed by its author, in a chat with a person too.
+                    displayAuthorInfo = chatMessageBubblelessHeadsRow(isMergedWithPrevious: mergedTop.merged, isChannelPostWithoutProfiles: isBubblelessChannelPost, chatPeerId: peerId) && allowAuthor && effectiveAuthor != nil
+                } else {
+                    displayAuthorInfo = !mergedTop.merged && allowAuthor && peerId.isGroupOrChannel && effectiveAuthor != nil
+                }
                 if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
                     displayAuthorInfo = false
                 }
@@ -1868,6 +2003,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
             } else if incoming {
+                hasAvatar = true
+            }
+            // Without bubbles a person's messages in a chat with them carry their avatar (see `ChatMessageItemImpl`); a
+            // bot's do not.
+            if bubbleStyle.isBubbleless, effectiveAuthor != nil, chatMessageBubblelessPrivateChatHasAvatar(style: bubbleStyle, isPreview: isPreview, chatPeer: firstMessage.peers[peerId].flatMap({ EnginePeer($0) })) {
                 hasAvatar = true
             }
             
@@ -2045,6 +2185,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             needsShareButton = false
             allowFullWidth = true
         }
+        
+        // Without bubbles there is no share button beside incoming messages: sharing stays in the context menu. An ad
+        // keeps its close and more buttons there.
+        if bubbleStyle.isBubbleless && !isAd {
+            needsShareButton = false
+        }
 
         var tmpWidth: CGFloat
         if allowFullWidth {
@@ -2063,7 +2209,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         var deliveryFailedInset: CGFloat = 0.0
         if isFailed {
-            deliveryFailedInset += 24.0
+            // Without bubbles the icon stands where the bubble's edge would be, so the bubble moves in by the icon and a
+            // gap. Your own messages keep their bubbles, so this reads the mode rather than the style.
+            deliveryFailedInset += item.presentationData.chatBubbleCorners.bubbleMode ? 24.0 : chatMessageBubblelessDeliveryFailedInset
         }
         
         tmpWidth -= deliveryFailedInset
@@ -2071,6 +2219,46 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset * 3.0 - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
         if (needsShareButton && !isSidePanelOpen) {
             maximumContentWidth -= 10.0
+        }
+        
+        // Without a bubble the content sits on the text column. In selection mode the column makes room for the
+        // checkmark, from the item's own selection state, so entering selection lays it out once.
+        let bubblelessColumn: (originX: CGFloat, width: CGFloat)?
+        if bubbleStyle.isBubbleless {
+            var inSelection = false
+            switch item.content {
+            case let .message(_, _, selection, _, _):
+                if case .selectable = selection {
+                    inSelection = true
+                }
+            case let .group(messages):
+                inSelection = messages.contains(where: { message in
+                    if case .selectable = message.2 {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+            }
+            // A round video playing at full size slides the run's avatar away and takes its column too.
+            var videoTakesAvatarColumn = false
+            if hasAvatar && !isSidePanelOpen && item.associatedData.currentlyPlayingMessageId == item.message.index && !hasExpandedInstantVideoTranscription && (item.message.minAutoremoveOrClearTimeout != viewOnceTimeout || item.associatedData.isStandalone) {
+                videoTakesAvatarColumn = item.message.media.contains(where: { ($0 as? TelegramMediaFile)?.isInstantVideo == true })
+            }
+            bubblelessColumn = chatMessageBubblelessColumn(baseWidth: baseWidth, leftInset: params.leftInset, hasAvatarColumn: hasAvatar && !isSidePanelOpen && !videoTakesAvatarColumn, inSelection: inSelection, deliveryFailedInset: deliveryFailedInset, hasSideButtons: chatMessageBubblelessHasSideButtons(needsShareButton: needsShareButton, needsSummarizeButton: needsSummarizeButton, isAd: isAd, isSidePanelOpen: isSidePanelOpen), widthFill: layoutConstants.bubble.maximumWidthFill)
+        } else {
+            bubblelessColumn = nil
+        }
+        // The side buttons stand in one column past the widest the content can be, instead of following each message's
+        // own width.
+        var bubblelessSideButtonsX: CGFloat?
+        if let bubblelessColumn {
+            maximumContentWidth = bubblelessColumn.width
+            bubblelessSideButtonsX = bubblelessColumn.originX + bubblelessColumn.width + 8.0
+        }
+        if let bubblelessColumn, bubbleStyle == .bubbleless, !item.message.media.contains(where: { ($0 as? TelegramMediaFile)?.isDisplayablePass == true }) {
+            // Without bubbles media may span the text column, as text does; a wallet pass keeps its size in bubbles.
+            layoutConstants.image.maxDimensions = chatMessageBubblelessMediaMaxDimensions(layoutConstants.image.maxDimensions, columnWidth: bubblelessColumn.width, isChannelPost: isBubblelessChannelPost, bubbleMaxWidth: layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth))
         }
         
         var hasInstantVideo = false
@@ -2081,11 +2269,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 break
             }
             if contentNodeItem.type == ChatMessageGiveawayBubbleContentNode.self {
-                maximumContentWidth = min(305.0, maximumContentWidth)
+                maximumContentWidth = min(bubbleStyle == .bubble ? 305.0 : chatMessageBubblelessGiveawayMaxWidth, maximumContentWidth)
                 break
             }
             if contentNodeItem.type == ChatMessageInstantVideoBubbleContentNode.self, !contentNodeItem.bubbleAttributes.isAttachment {
-                maximumContentWidth = baseWidth - 20.0
+                // Without bubbles the video grows, while playing, to the margins it is laid out between rather than to
+                // the screen's width.
+                if !bubbleStyle.isBubbleless {
+                    maximumContentWidth = baseWidth - 20.0
+                }
                 hasInstantVideo = true
                 break
             }
@@ -2329,6 +2521,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var hidesHeaders = false
+        // Without bubbles, content that hides the bubble's header (a round video) or draws with no background (a large
+        // sticker) keeps the author line other messages have, and only that line.
+        var bubblelessAuthorOnlyHeader = false
         var forceReactionsOutside = false
         var shareButtonOffset: CGPoint?
         var avatarOffset: CGFloat?
@@ -2365,7 +2560,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 prepareContentPosition = .linear(top: topPosition, bottom: refinedBottomPosition)
             }
             
-            let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, topMessage: item.content.firstMessage, content: item.content, read: read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes, isItemPinned: isItemPinned, isItemEdited: isItemEdited)
+            let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, topMessage: item.content.firstMessage, content: item.content, read: read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes, isItemPinned: isItemPinned, isItemEdited: isItemEdited, bubbleStyle: item.bubbleStyle)
             
             var itemSelection: Bool?
             switch content {
@@ -2385,14 +2580,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
             }
             
-            let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(contentItem, layoutConstants, prepareContentPosition, itemSelection, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), avatarInset)
-            maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
+            let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(contentItem, layoutConstants, prepareContentPosition, itemSelection, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), bubbleStyle.isBubbleless ? 0.0 : avatarInset)
+            // Without bubbles media does not set the message's width: a caption may run wider than its photo.
+            if !(bubbleStyle == .bubbleless && bubbleAttributes.neighborType == .media) {
+                maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
+            }
             
             if let offset = properties.shareButtonOffset {
                 shareButtonOffset = offset
             }
             if properties.hidesHeaders {
-                hidesHeaders = true
+                if bubbleStyle.isBubbleless {
+                    bubblelessAuthorOnlyHeader = true
+                } else {
+                    hidesHeaders = true
+                }
             }
             if properties.wantsReactionsOutside {
                 forceReactionsOutside = true
@@ -2459,11 +2661,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             displayEphemeralBadge = false
         }
 
+        if bubbleStyle.isBubbleless {
+            // Whatever a message starts with, its author line heads it: the run's avatar sits beside that line.
+            ignoreNameHiding = true
+        }
         var initialDisplayHeader = true
         if hidesHeaders || item.message.adAttribute != nil {
             initialDisplayHeader = false
         } else if let backgroundHiding, case .always = backgroundHiding {
-            initialDisplayHeader = false
+            if bubbleStyle.isBubbleless {
+                bubblelessAuthorOnlyHeader = true
+            } else {
+                initialDisplayHeader = false
+            }
         } else {
             var hasForwardLikeContent = false
             if firstMessage.forwardInfo != nil {
@@ -2674,7 +2884,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
                         
             if case .customChatContents = item.associatedData.subject {
-            } else if (mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment) && (!hasText || item.message.invertMedia) {
+            } else if !bubbleStyle.isBubbleless && (mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment) && (!hasText || item.message.invertMedia) {
                 let message = item.content.firstMessage
                 
                 var edited = false
@@ -2768,6 +2978,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         var nameNodeOriginY: CGFloat = 0.0
         var nameNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
+        var bubblelessHeaderTime: BubblelessHeaderTime?
+        var bubblelessHeaderRankOffset: CGFloat?
         var rankBadgeNodeSizeApply: (CGSize, () -> TextNode?, UIColor?) = (CGSize(), { nil }, nil)
         var ephemeralBadgeOriginY: CGFloat = 0.0
         var ephemeralBadgeNodeSizeApply: (CGSize, CGSize, () -> TextNode?) = (CGSize(), CGSize(), { nil })
@@ -2926,7 +3138,42 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 let closeButtonWidth: CGFloat = item.message.adAttribute != nil ? 18.0 : 0.0
                 
-                let sizeAndApply = authorNameLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - credibilityIconWidth - rankBadgeSizeAndApply.0.size.width - closeButtonWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                var nameMaximumWidth = maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - credibilityIconWidth - rankBadgeSizeAndApply.0.size.width - closeButtonWidth
+                var bubblelessHeaderRunWidth: CGFloat = 0.0
+                if bubbleStyle.isBubbleless {
+                    // Without a bubble the time leaves the corner and follows the name and its rank badge, on the name's
+                    // baseline. It is just the time: who signed a post and when a message was edited are at the top of
+                    // its context menu. A post keeps its view count after it: an eye and a short number.
+                    let dateFont = Font.regular(chatMessageBubblelessHeaderTimeFontSize(baseDisplaySize: item.presentationData.fontSize.baseDisplaySize))
+                    let timeText = stringForMessageTimestampStatus(context: item.context, message: EngineMessage(firstMessage), dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: item.presentationData.isPreview ? .full : .regular, associatedData: item.associatedData, ignoreAuthor: true)
+                    let dateLayout = bubblelessHeaderDateLayout ?? TextNode.asyncLayout(nil)
+                    let dateSizeAndApply = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: timeText, font: dateFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, maximumNodeWidth * 0.5), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    var rankSpace: CGFloat = 0.0
+                    if rankBadgeSizeAndApply.0.size.width > 0.0 {
+                        bubblelessHeaderRankOffset = credibilityIconWidth + chatMessageBubblelessHeaderTimeSpacing + chatMessageBubblelessHeaderRankSpacing
+                        rankSpace = rankBadgeSizeAndApply.0.size.width + chatMessageBubblelessHeaderRankTrailingSpacing + chatMessageBubblelessHeaderTimeSpacing
+                    }
+                    let dateOffset = CGPoint(x: credibilityIconWidth + chatMessageBubblelessHeaderTimeSpacing + rankSpace, y: floorToScreenPixels(nameFont.ascender - dateFont.ascender))
+                    bubblelessHeaderRunWidth = dateOffset.x + dateSizeAndApply.0.size.width
+                    
+                    var views: (icon: UIImage, iconOrigin: CGPoint, size: CGSize, origin: CGPoint, apply: () -> TextNode)?
+                    if let viewCount = firstMessage.attributes.first(where: { $0 is ViewCountMessageAttribute }) as? ViewCountMessageAttribute {
+                        let viewsText = compactNumericCountString(viewCount.count, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                        let viewsLayout = bubblelessHeaderViewsLayout ?? TextNode.asyncLayout(nil)
+                        let viewsSizeAndApply = viewsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewsText, font: dateFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                        let viewsIcon = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners).incomingDateAndStatusImpressionIcon
+                        let viewsIconOrigin = CGPoint(x: bubblelessHeaderRunWidth + chatMessageBubblelessHeaderViewsSpacing, y: dateOffset.y + 1.0 + floor((dateSizeAndApply.0.size.height - viewsIcon.size.height) * 0.5))
+                        let viewsOrigin = CGPoint(x: viewsIconOrigin.x + viewsIcon.size.width + chatMessageBubblelessHeaderViewsIconSpacing, y: dateOffset.y)
+                        views = (viewsIcon, viewsIconOrigin, viewsSizeAndApply.0.size, viewsOrigin, viewsSizeAndApply.1)
+                        bubblelessHeaderRunWidth = viewsOrigin.x + viewsSizeAndApply.0.size.width
+                    }
+                    bubblelessHeaderTime = BubblelessHeaderTime(dateSize: dateSizeAndApply.0.size, dateOffset: dateOffset, dateApply: dateSizeAndApply.1, views: views)
+                    
+                    // The time's run follows the name on its line.
+                    nameMaximumWidth -= bubblelessHeaderRunWidth - credibilityIconWidth
+                }
+                
+                let sizeAndApply = authorNameLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, nameMaximumWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 nameNodeSizeApply = (sizeAndApply.0.size, {
                     return sizeAndApply.1()
                 })
@@ -2952,6 +3199,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 var headerSizeWidth = nameAvatarSpaceWidth + nameNodeSizeApply.0.width + 8.0 + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets
+                if bubbleStyle.isBubbleless {
+                    // The clipping node is as wide as the header, so it must hold the time's run.
+                    headerSizeWidth += max(0.0, bubblelessHeaderRunWidth - credibilityIconWidth)
+                }
                 if hasTitleTopicNavigation {
                 } else if rankBadgeSizeAndApply.0.size.width > 0.0 {
                     headerSizeWidth += rankBadgeSizeAndApply.0.size.width + 3.0
@@ -2983,7 +3234,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
 
-            if !ignoreForward && !isInstantVideo, let forwardInfo = firstMessage.forwardInfo {
+            if !ignoreForward && !isInstantVideo && !bubblelessAuthorOnlyHeader, let forwardInfo = firstMessage.forwardInfo {
                 if headerSize.height.isZero {
                     headerSize.height += 5.0
                 }
@@ -3062,7 +3313,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 hasReply = true
             }
                         
-            if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil || isSummarized || replyIsLoading) {
+            if !isInstantVideo && !bubblelessAuthorOnlyHeader, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil || isSummarized || replyIsLoading) {
                 if headerSize.height.isZero {
                     headerSize.height += 11.0
                 } else {
@@ -3084,7 +3335,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
-                    associatedData: item.associatedData
+                    associatedData: item.associatedData,
+                    bubbleStyle: bubbleStyle
                 ))
                 replyInfoSizeApply = (sizeAndApply.0, { realSize, synchronousLoads, animation in sizeAndApply.1(realSize, synchronousLoads, animation) })
                 
@@ -3102,7 +3354,24 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         
-        let hideBackground: Bool
+        // Without bubbles the author's name and the first line under it lead a run: the run's sticky avatar centers on
+        // that lead, as the selection checkmark will.
+        var bubblelessLeadCenterY: CGFloat?
+        if bubbleStyle.isBubbleless && !isSidePanelOpen && displayHeader && authorNameString != nil {
+            bubblelessLeadCenterY = chatMessageBubblelessLeadCenterY(nameFont: nameFont, firstLineFont: item.presentationData.bubblelessIncomingBodyFont, nameHeight: nameNodeSizeApply.0.height)
+        }
+        
+        // Without bubbles a card starts below its author header, which stays outside of it, where media under the
+        // name does.
+        var bubblelessCardTopInset: CGFloat?
+        if bubbleStyle == .bubblelessCard {
+            if !headerSize.height.isZero {
+                headerSize.height += chatMessageBubblelessHeaderMediaSpacing
+            }
+            bubblelessCardTopInset = headerSize.height
+        }
+        
+        var hideBackground: Bool
         if item.associatedData.hidesBubbleBackground {
             hideBackground = true
         } else if let backgroundHiding {
@@ -3116,6 +3385,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         } else {
             hideBackground = false
+        }
+        if bubbleStyle.isBubbleless, case .none = alignment {
+            hideBackground = true
         }
         
         var removedContentNodeIndices: [Int]?
@@ -3382,12 +3654,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 accountPeer: item.associatedData.accountPeer,
                 isIncoming: incoming,
                 constrainedWidth: maximumNodeWidth,
-                centerAligned: centerAligned
+                centerAligned: centerAligned,
+                colorType: item.presentationData.chatBubbleCorners.bubbleMode ? .freeform : .incoming
             ))
             maxContentWidth = max(maxContentWidth, minWidth)
             reactionButtonsFinalize = buttonsLayout
         }
         
+        // Without bubbles media keeps its own width when a caption makes the message wider.
+        var bubblelessMediaWidths: [Int: CGFloat] = [:]
         for i in 0 ..< contentPropertiesAndLayouts.count {
             let (_, contentNodeProperties, preparePosition, _, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
             
@@ -3496,7 +3771,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
                 
-                let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight), wide: position.isWide))
+                var mosaicCorners = ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight)
+                if bubbleStyle == .bubbleless {
+                    // Without bubbles no bubble wraps the album: whatever sits above or below it, its outer corners are
+                    // round, and only the corners between its own items stay tight.
+                    mosaicCorners = ChatMessageBubbleContentMosaicPosition(
+                        topLeft: position.contains(.top) && position.contains(.left) ? .none(tail: false) : .merged,
+                        topRight: position.contains(.top) && position.contains(.right) ? .none(tail: false) : .merged,
+                        bottomLeft: position.contains(.bottom) && position.contains(.left) ? .none(tail: false) : .merged,
+                        bottomRight: position.contains(.bottom) && position.contains(.right) ? .none(tail: false) : .merged
+                    )
+                }
+                let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: mosaicCorners, wide: position.isWide))
                 
                 contentNodePropertiesAndFinalize.append((contentNodeProperties, nil, contentNodeFinalize, contentGroupId, itemSelection))
                 
@@ -3546,9 +3832,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else {
                     maxContentWidth = max(maxContentWidth, contentNodeWidth)
                 }
+                if bubbleStyle == .bubbleless && contentPropertiesAndLayouts[i].3.neighborType == .media {
+                    bubblelessMediaWidths[i] = contentNodeWidth
+                }
                 
                 contentNodePropertiesAndFinalize.append((contentNodeProperties, contentPosition, contentNodeFinalize, contentGroupId, itemSelection))
             }
+        }
+        
+        if bubbleStyle == .bubblelessCard && !item.content.firstMessage.media.contains(where: { $0 is TelegramMediaAction }) {
+            // Without bubbles a card is the column's width, so a poll or a checklist lines up with text and media on its
+            // edge; a call card (the one card with an action) is as wide as its line, and a giveaway keeps its own width.
+            maxContentWidth = max(maxContentWidth, maximumContentWidth)
         }
         
         var contentSize = CGSize(width: maxContentWidth, height: 0.0)
@@ -3583,8 +3878,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if mosaicIndex == 0 && (i == 0 || (i == 1 && detachedContentNodesHeight > 0)) {
                     if !headerSize.height.isZero {
-                        contentNodesHeight += 7.0
-                        totalContentNodesHeight += 7.0
+                        // Without bubbles an album starts where any media under the name does.
+                        let headerSpacing: CGFloat = bubbleStyle.isBubbleless ? chatMessageBubblelessHeaderMediaSpacing : 7.0
+                        contentNodesHeight += headerSpacing
+                        totalContentNodesHeight += headerSpacing
                     }
                 }
                 
@@ -3610,10 +3907,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let contentProperties = contentPropertiesAndLayouts[i].3
                 
                 if (i == 0 || (i == 1 && detachedContentNodesHeight > 0)) && !headerSize.height.isZero {
-                    if contentGroupId == nil {
-                        contentNodesHeight += properties.headerSpacing
+                    var headerSpacing = properties.headerSpacing
+                    if bubbleStyle.isBubbleless && headerSpacing > 0.0 {
+                        if bubbleStyle == .bubblelessCard {
+                            // Inside a card, whose outline already starts below the header, this is the card's padding.
+                            headerSpacing += 4.0
+                        } else {
+                            // Content that asks for room under the header (media, a map, a game) starts where any media
+                            // under the name does; text and files keep their own insets.
+                            headerSpacing = chatMessageBubblelessHeaderMediaSpacing
+                        }
                     }
-                    totalContentNodesHeight += properties.headerSpacing
+                    if contentGroupId == nil {
+                        contentNodesHeight += headerSpacing
+                    }
+                    totalContentNodesHeight += headerSpacing
                 }
                                 
                 if currentContainerGroupId != contentGroupId {
@@ -3650,7 +3958,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     contentNodeOriginY -= detachedContentNodesHeight - 4.0
                 }
                 
-                let (size, apply) = finalize(maxContentWidth)
+                var finalizeWidth = maxContentWidth
+                if bubbleStyle == .bubbleless, let mediaWidth = bubblelessMediaWidths[i] {
+                    finalizeWidth = min(mediaWidth, maxContentWidth)
+                }
+                let (size, apply) = finalize(finalizeWidth)
                 let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentNodeOriginY), size: size)
                 contentNodeFramesPropertiesAndApply.append((containerFrame, properties, contentGroupId == nil, apply))
                 
@@ -3726,7 +4038,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         var actionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)?
         if let actionButtonsFinalize = actionButtonsFinalize {
-            actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
+            var actionButtonsWidth = maxContentWidth
+            if let bubblelessColumn {
+                // Without bubbles buttons are as wide as media in the same place, rather than as the message's text
+                // happens to be.
+                actionButtonsWidth = max(actionButtonsWidth, min(bubblelessColumn.width, layoutConstants.image.maxDimensions.width))
+            }
+            actionButtonsSizeAndApply = actionButtonsFinalize(actionButtonsWidth)
         }
         
         var reactionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)?
@@ -3769,7 +4087,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let contentUpperRightCorner: CGPoint
         switch alignment {
             case .none:
-                backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: detachedContentNodesHeight + additionalTopHeight), size: layoutBubbleSize)
+                var incomingOriginX = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
+                if let bubblelessColumn {
+                    incomingOriginX = bubblelessColumn.originX
+                    if let avatarOffset, !avatarOffset.isZero {
+                        // A round video playing at full size slides the run's avatar away and takes its column.
+                        incomingOriginX = params.leftInset + chatMessageBubblelessMargin
+                    }
+                    if bubbleStyle == .bubblelessCard {
+                        // The card keeps the bubble's tail column, so its visible edge lands on the text column.
+                        incomingOriginX -= layoutConstants.bubble.contentInsets.left
+                    }
+                }
+                backgroundFrame = CGRect(origin: CGPoint(x: incoming ? incomingOriginX : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: detachedContentNodesHeight + additionalTopHeight), size: layoutBubbleSize)
                 contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                 contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
             case .center:
@@ -3791,8 +4121,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height + 2.0
         }
+        // Without bubbles the first row of buttons under text sits about as far below the descenders as the rows sit
+        // apart: the text's own bottom inset already keeps most of that room.
+        let bubblelessActionButtonsLift: CGFloat = (bubbleStyle == .bubbleless && contentNodeMessagesAndClasses.last?.1 == ChatMessageTextBubbleContentNode.self) ? chatMessageBubblelessActionButtonsLift : 0.0
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
-            layoutSize.height += 1.0 + actionButtonsSizeAndApply.0.height
+            layoutSize.height += 1.0 + actionButtonsSizeAndApply.0.height - bubblelessActionButtonsLift
         }
         
         var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
@@ -3808,6 +4141,33 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if isAd {
                 layoutInsets.top += 4.0
             }
+        }
+        
+        if !item.presentationData.chatBubbleCorners.bubbleMode {
+            // Without bubbles messages follow each other like paragraphs; bubbles and service messages keep a little
+            // more air (`chatMessageBubblelessRhythm`). Text brings the room of its own lines, as do rich data, a file and
+            // a contact, which keep their half of a block gap themselves; anything else is a block.
+            func blockKind(_ type: AnyClass) -> ChatMessageBubblelessBlockKind {
+                if type == ChatMessageTextBubbleContentNode.self || type == ChatMessageRichDataBubbleContentNode.self || type == ChatMessageFileBubbleContentNode.self || type == ChatMessageContactBubbleContentNode.self {
+                    return .text
+                }
+                return .block
+            }
+            let rhythm = chatMessageBubblelessRhythm(
+                style: bubbleStyle,
+                incoming: incoming,
+                mergedTop: mergedTop.merged,
+                mergedBottom: mergedBottom.merged,
+                hasDateAbove: dateHeaderAtBottom.hasDate,
+                hasBubbleAbove: dateHeaderAtBottom.hasBubbleAbove,
+                hasBubbleBelow: dateHeaderAtBottom.hasBubbleBelow,
+                hasHeader: !headerSize.height.isZero,
+                firstBlock: contentNodeMessagesAndClasses.first.flatMap { blockKind($0.1) },
+                lastBlock: contentNodeMessagesAndClasses.last.flatMap { blockKind($0.1) },
+                hasButtonsOrReactionsBelow: reactionButtonsSizeAndApply != nil || actionButtonsSizeAndApply != nil
+            )
+            layoutInsets.top += rhythm.top
+            layoutInsets.bottom += rhythm.bottom
         }
         
         layoutSize.height += layoutInsets.top + layoutInsets.bottom
@@ -3848,6 +4208,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 updatedMergedTop: updatedMergedTop,
                 updatedMergedBottom: updatedMergedBottom,
                 hideBackground: hideBackground,
+                bubblelessCardTopInset: bubblelessCardTopInset,
+                bubblelessActionButtonsLift: bubblelessActionButtonsLift,
+                bubblelessSideButtonsX: bubblelessSideButtonsX,
+                isUnsupportedMessage: isUnsupportedContent,
+                bubblelessSelectedNeighbors: (dateHeaderAtBottom.selectedAbove, dateHeaderAtBottom.selectedBelow),
                 incoming: incoming,
                 graphics: graphics,
                 presentationContext: item.controllerInteraction.presentationContext,
@@ -3855,6 +4220,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 backgroundFrame: backgroundFrame.offsetBy(dx: 0.0, dy: layoutInsets.top),
                 deliveryFailedInset: deliveryFailedInset,
                 nameNodeSizeApply: nameNodeSizeApply,
+                bubblelessHeaderTime: bubblelessHeaderTime,
+                bubblelessHeaderRankOffset: bubblelessHeaderRankOffset,
+                bubblelessLeadCenterY: bubblelessLeadCenterY,
+                hasAvatar: hasAvatar,
                 viaWidth: viaWidth,
                 contentOrigin: contentOrigin.offsetBy(dx: 0.0, dy: layoutInsets.top),
                 nameNodeOriginY: layoutInsets.top + nameNodeOriginY + detachedContentNodesHeight + additionalTopHeight,
@@ -3922,6 +4291,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         updatedMergedTop: ChatMessageMerge,
         updatedMergedBottom: ChatMessageMerge,
         hideBackground: Bool,
+        bubblelessCardTopInset: CGFloat?,
+        bubblelessActionButtonsLift: CGFloat,
+        bubblelessSideButtonsX: CGFloat?,
+        isUnsupportedMessage: Bool,
+        bubblelessSelectedNeighbors: (above: Bool, below: Bool),
         incoming: Bool,
         graphics: PrincipalThemeEssentialGraphics,
         presentationContext: ChatPresentationContext,
@@ -3929,6 +4303,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         backgroundFrame: CGRect,
         deliveryFailedInset: CGFloat,
         nameNodeSizeApply: (CGSize, () -> TextNode?),
+        bubblelessHeaderTime: BubblelessHeaderTime?,
+        bubblelessHeaderRankOffset: CGFloat?,
+        bubblelessLeadCenterY: CGFloat?,
+        hasAvatar: Bool,
         viaWidth: CGFloat,
         contentOrigin: CGPoint,
         nameNodeOriginY: CGFloat,
@@ -4050,7 +4428,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             } else if !item.presentationData.chatBubbleCorners.hasTails {
                 backgroundType = .incoming(.Extracted)
             } else {
-                backgroundType = .incoming(mergeType)
+                backgroundType = bubblelessCardTopInset != nil ? .incoming(.Extracted) : .incoming(mergeType)
             }
         }
         let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
@@ -4065,6 +4443,35 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         let previousBackgroundFrame = strongSelf.backgroundNode.backgroundFrame
         strongSelf.backgroundNode.backgroundFrame = backgroundFrame
+        
+        // Without bubbles a card is its bubble's outline alone, starting below its author header; the clipping node and
+        // every content frame still use the full `backgroundFrame`. Two pixels further out than a bubble's, the stroke
+        // lines up with the edges of media around it.
+        var bubblelessCardLiftFrame: CGRect?
+        if let bubblelessCardTopInset {
+            var cardFrame = backgroundFrame
+            cardFrame.origin.y += bubblelessCardTopInset
+            cardFrame.size.height -= bubblelessCardTopInset
+            let outlineFrame = cardFrame.insetBy(dx: -1.0 - UIScreenPixel * 2.0, dy: -1.0 - UIScreenPixel * 2.0)
+            bubblelessCardLiftFrame = cardFrame
+            let outlineNode: ASImageNode
+            if let current = strongSelf.bubblelessCardOutlineNode {
+                outlineNode = current
+                animation.animator.updateFrame(layer: outlineNode.layer, frame: outlineFrame, completion: nil)
+            } else {
+                outlineNode = ASImageNode()
+                outlineNode.displaysAsynchronously = false
+                outlineNode.displayWithoutProcessing = true
+                outlineNode.isUserInteractionEnabled = false
+                strongSelf.bubblelessCardOutlineNode = outlineNode
+                strongSelf.mainContextSourceNode.contentNode.insertSubnode(outlineNode, aboveSubnode: strongSelf.backgroundNode)
+                outlineNode.frame = outlineFrame
+            }
+            outlineNode.image = graphics.chatMessageBackgroundIncomingExtractedOutlineImage
+        } else if let outlineNode = strongSelf.bubblelessCardOutlineNode {
+            strongSelf.bubblelessCardOutlineNode = nil
+            outlineNode.removeFromSupernode()
+        }
         
         if let (suggestedPostInfoSize, suggestedPostInfoApply) = suggestedPostInfoNodeLayout {
             let suggestedPostInfoNode = suggestedPostInfoApply()
@@ -4103,7 +4510,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.insertSubnode(deliveryFailedNode, belowSubnode: strongSelf.messageAccessibilityArea)
             }
             let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
-            let deliveryFailedFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: backgroundFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
+            var deliveryFailedFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: backgroundFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
+            if !item.presentationData.chatBubbleCorners.bubbleMode {
+                // The icon takes the bubble's visible edge, 7pt inside its frame (the tail's column and the stroke).
+                deliveryFailedFrame = chatMessageBubblelessDeliveryFailedFrame(iconSize: deliveryFailedSize, contentFrame: CGRect(x: backgroundFrame.minX, y: backgroundFrame.minY + 1.0, width: backgroundFrame.width - 7.0, height: backgroundFrame.height - 2.0), inset: deliveryFailedInset)
+            }
             if isAppearing {
                 deliveryFailedNode.frame = deliveryFailedFrame
                 legacyTransition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
@@ -4118,13 +4529,24 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             })
         }
         
+        var bubblelessAvatarBandTrim: CGFloat = 0.0
+        var headsBubblelessAvatarRun = false
+        // Without bubbles the selection checkmark centres on the message's first line (spec 5.8): the lead, a follower's
+        // forward header or first line, a torn strip's middle; your own messages keep it on their bubble's first line.
+        var bubblelessCheckAnchor: ChatMessageBubblelessCheckAnchor?
+        var bubblelessRowBandNameTop: CGFloat?
+        // Without bubbles: what the message shows, for the card it lifts on (spec 5.9, 6.9).
+        var bubblelessLiftHeaderParts: [ChatMessageBubblelessLiftPart] = []
+        var bubblelessLiftParts: [ChatMessageBubblelessLiftPart] = []
+        var bubblelessLiftPartsByStableId: [UInt32: [ChatMessageBubblelessLiftPart]] = [:]
         if let nameNode = nameNodeSizeApply.1() {
             strongSelf.nameNode = nameNode
             nameNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
             
             let previousNameNodeFrame = nameNode.frame
             
-            var nameNodeFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
+            // Above a card the name stays on the text column rather than at the card's inner inset.
+            var nameNodeFrame = CGRect(origin: CGPoint(x: contentOrigin.x + (bubblelessCardTopInset != nil ? 0.0 : layoutConstants.text.bubbleInsets.left), y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
             
             var nameNavigateButtonOffset: CGFloat = currentCredibilityIcon == nil ? 4.0 : 28.0
             nameNavigateButtonOffset += 34.0
@@ -4257,6 +4679,27 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             } else {
                 animation.animator.updateFrame(layer: nameNode.layer, frame: nameNodeFrame, completion: nil)
+            }
+            
+            strongSelf.applyBubblelessHeaderTime(bubblelessHeaderTime, nameNodeFrame: nameNodeFrame, animation: animation)
+            if item.bubbleStyle.isBubbleless {
+                // The name counts as a line of text; the time and views beside it only widen the card.
+                bubblelessLiftHeaderParts.append(.textLines(nameNodeFrame))
+                if let dateNode = strongSelf.bubblelessHeaderDateNode {
+                    bubblelessLiftHeaderParts.append(.widthOnly(dateNode.frame))
+                }
+                if let viewsNode = strongSelf.bubblelessHeaderViewsNode {
+                    bubblelessLiftHeaderParts.append(.widthOnly(viewsNode.frame))
+                }
+            }
+            if item.bubbleStyle.isBubbleless, let bubblelessLeadCenterY {
+                bubblelessCheckAnchor = .lead(centerY: nameNodeFrame.minY + bubblelessLeadCenterY)
+                bubblelessRowBandNameTop = nameNodeFrame.minY
+            }
+            if hasAvatar, let bubblelessLeadCenterY {
+                // The run's avatar header starts where the avatar, centered on the lead, has its top.
+                bubblelessAvatarBandTrim = nameNodeFrame.minY + bubblelessLeadCenterY - chatMessageAvatarHeaderSize * 0.5
+                headsBubblelessAvatarRun = true
             }
             
             let nameButtonNode: HighlightTrackingButtonNode
@@ -4501,7 +4944,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             if let rankBadgeNode = rankBadgeNodeSizeApply.1() {
                 strongSelf.rankBadgeNode = rankBadgeNode
-                let rankBadgeFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - layoutConstants.text.bubbleInsets.left - rightContentOffset - rankBadgeNodeSizeApply.0.width - 1.0 + UIScreenPixel, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY + 1.0 - UIScreenPixel), size: rankBadgeNodeSizeApply.0)
+                var rankBadgeFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - layoutConstants.text.bubbleInsets.left - rightContentOffset - rankBadgeNodeSizeApply.0.width - 1.0 + UIScreenPixel, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY + 1.0 - UIScreenPixel), size: rankBadgeNodeSizeApply.0)
+                if let bubblelessHeaderRankOffset {
+                    // Without a bubble the badge follows the name rather than standing in the bubble's corner.
+                    rankBadgeFrame.origin.x = nameNodeFrame.maxX + bubblelessHeaderRankOffset
+                }
                 if rankBadgeNode.supernode == nil {
                     if !rankBadgeNode.isNodeLoaded {
                         rankBadgeNode.isUserInteractionEnabled = false
@@ -4700,8 +5147,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.boostButtonNode = nil
             strongSelf.boostHighlightNode?.removeFromSupernode()
             strongSelf.boostHighlightNode = nil
+            strongSelf.applyBubblelessHeaderTime(nil, nameNodeFrame: CGRect(), animation: animation)
         }
-
         if let ephemeralBadgeTextNode = ephemeralBadgeNodeSizeApply.2() {
             strongSelf.ephemeralBadgeTextNode = ephemeralBadgeTextNode
             ephemeralBadgeTextNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
@@ -4836,6 +5283,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             let previousForwardInfoNodeFrame = forwardInfoNode.frame
             let forwardInfoFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
+            if item.bubbleStyle.isBubbleless {
+                bubblelessLiftParts.append(.textLines(forwardInfoFrame))
+            }
+            if item.bubbleStyle.isBubbleless && bubblelessCheckAnchor == nil {
+                bubblelessCheckAnchor = .forwardHeader(top: forwardInfoFrame.minY, lineHeight: ceil(Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)).lineHeight))
+            }
             if case let .System(duration, _) = animation {
                 if animateFrame {
                     forwardInfoNode.frame = forwardInfoFrame
@@ -4894,7 +5347,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         
-        let replyInfoFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: CGSize(width: backgroundFrame.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0, height: replyInfoSizeApply.0.height))
+        var replyInfoFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: CGSize(width: backgroundFrame.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0, height: replyInfoSizeApply.0.height))
+        if item.bubbleStyle == .bubbleless {
+            // Without a bubble to fill, a reply is as wide as what it quotes.
+            replyInfoFrame.size.width = min(replyInfoFrame.width, replyInfoSizeApply.0.width)
+        }
+        if item.bubbleStyle.isBubbleless, replyInfoSizeApply.0.height > 0.0 {
+            bubblelessLiftParts.append(.block(replyInfoFrame))
+        }
         if let replyInfoNode = replyInfoSizeApply.1(replyInfoFrame.size, synchronousLoads, animation) {
             strongSelf.replyInfoNode = replyInfoNode
             var animateFrame = true
@@ -4963,7 +5423,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     
                     let location = location.offsetBy(dx: 0.0, dy: strongContainerNode.frame.minY)
-                    if !strongSelf.backgroundNode.frame.contains(location) {
+                    if !strongSelf.pressFrame().contains(location) {
                         return false
                     }
                     if strongSelf.selectionNode != nil {
@@ -5262,6 +5722,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             let contentNodeFrame = relativeFrame.offsetBy(dx: effectiveContentOriginX, dy: effectiveContentOriginY)
+            if contentNodeIndex == 0 && item.bubbleStyle.isBubbleless && bubblelessCheckAnchor == nil {
+                let firstMessage = item.content.firstMessage
+                if firstMessage.media.allSatisfy({ $0 is TelegramMediaWebpage }) || firstMessage.media.contains(where: { $0 is TelegramMediaPoll || $0 is TelegramMediaTodo }) {
+                    bubblelessCheckAnchor = .firstTextLine(top: contentNodeFrame.minY + layoutConstants.text.bubbleInsets.top, lineHeight: item.presentationData.bubblelessIncomingBodyFont.lineHeight)
+                } else {
+                    bubblelessCheckAnchor = .block(top: contentNodeFrame.minY)
+                }
+            }
             
             if case let .System(duration, _) = animation {
                 var animateFrame = false
@@ -5343,10 +5811,53 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             for area in contentNode.unsupportedContentAreas() {
                 unsupportedZones.append(area.offsetBy(dx: contentNodeFrame.minX, dy: contentNodeFrame.minY))
             }
+            // The same goes for what it lifts on without bubbles: the default part is the node's own bounds.
+            if item.bubbleStyle != .bubble {
+                // An album item's nodes are laid out in its container's space; the card is in this node's.
+                var liftOrigin = contentNodeFrame.origin
+                if let stableId = contentNode.item?.message.stableId, let container = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == stableId }), contentNode.supernode === container.sourceNode.contentNode {
+                    liftOrigin.x += container.containerNode.frame.minX
+                    liftOrigin.y += container.containerNode.frame.minY
+                }
+                let parts = contentNode.bubblelessLiftParts().map { $0.offsetBy(liftOrigin) }
+                bubblelessLiftParts.append(contentsOf: parts)
+                if let stableId = contentNode.item?.message.stableId {
+                    bubblelessLiftPartsByStableId[stableId, default: []].append(contentsOf: parts)
+                }
+            }
 
             contentNode.visibility = mapVisibility(strongSelf.visibility, boundsSize: layout.contentSize, insets: strongSelf.insets, to: contentNode)
 
             contentNodeIndex += 1
+        }
+        
+        // The strip the chat tears around a message this build cannot show leaves its author's name above the tear, and
+        // the run's avatar centres on the banner in the middle of the strip, clear of the torn edges.
+        let bubblelessStripZones = chatMessageBubblelessTornStripZones(style: item.bubbleStyle, isUnsupportedMessage: isUnsupportedMessage, zones: unsupportedZones)
+        if headsBubblelessAvatarRun, let stripFrame = bubblelessStripZones.first {
+            bubblelessAvatarBandTrim = stripFrame.midY - chatMessageAvatarHeaderSize * 0.5
+        }
+        if let stripFrame = bubblelessStripZones.first {
+            bubblelessCheckAnchor = .strip(stripFrame)
+        }
+        // Without bubbles: what the row's selection and highlight bands are laid out from (spec 5.8).
+        var bubblelessRowBandInputs: ChatMessageBubblelessRowBandInputs?
+        if !item.presentationData.chatBubbleCorners.bubbleMode {
+            let isRoundVideo = item.message.media.contains(where: { ($0 as? TelegramMediaFile)?.isInstantVideo == true })
+            let isTornStrip = !bubblelessStripZones.isEmpty
+            let selectedNeighbors = chatMessageBubblelessBandSelectedNeighbors(inSelection: item.content.isInSelection, above: bubblelessSelectedNeighbors.above, below: bubblelessSelectedNeighbors.below, previous: strongSelf.bubblelessRowBandInputs)
+            bubblelessRowBandInputs = ChatMessageBubblelessRowBandInputs(nameTop: bubblelessRowBandNameTop, selectedAbove: selectedNeighbors.above, selectedBelow: selectedNeighbors.below, hasSelectionBand: chatMessageBubblelessHasSelectionBand(bubbleMode: false, isRoundVideo: isRoundVideo, isTornStrip: isTornStrip), hasHighlightBand: chatMessageBubblelessHasHighlightBand(style: item.bubbleStyle, isRoundVideo: isRoundVideo, isTornStrip: isTornStrip, isQuoteOrTaskHighlight: false))
+        }
+        if strongSelf.bubblelessRowBandInputs != bubblelessRowBandInputs {
+            strongSelf.bubblelessRowBandInputs = bubblelessRowBandInputs
+            if bubblelessRowBandInputs == nil {
+                // Bubbles came back: the bands go at once (3.3 #11).
+                strongSelf.removeBubblelessRowBands()
+            }
+        }
+        // With bubbles the trim is only ever reset, after the mode was switched off and on again.
+        if strongSelf.stickyHeaderBandTrim != bubblelessAvatarBandTrim {
+            strongSelf.stickyHeaderBandTrim = bubblelessAvatarBandTrim
         }
         
         if let mosaicStatusOrigin = mosaicStatusOrigin, let (size, apply) = mosaicStatusSizeAndApply {
@@ -5462,10 +5973,25 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             shareButtonNode.removeFromSupernode()
         }
         
-        let offset: CGFloat = params.leftInset + (incoming ? 42.0 : 0.0)
+        if !incoming && !item.presentationData.chatBubbleCorners.bubbleMode {
+            bubblelessCheckAnchor = .bubble(backgroundFrame)
+        }
+        let bubblelessSelectionCheckCenterY = bubblelessCheckAnchor.map(chatMessageBubblelessCheckCenterY)
+        if strongSelf.bubblelessSelectionCheckCenterY != bubblelessSelectionCheckCenterY {
+            strongSelf.bubblelessSelectionCheckCenterY = bubblelessSelectionCheckCenterY
+        }
+        
+        let offset: CGFloat = params.leftInset + chatMessageSelectionContentOffset(incoming: incoming, bubbleMode: item.presentationData.chatBubbleCorners.bubbleMode)
         let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
-        strongSelf.selectionNode?.frame = selectionFrame
-        strongSelf.selectionNode?.updateLayout(size: selectionFrame.size, leftInset: params.leftInset)
+        if let selectionNode = strongSelf.selectionNode {
+            selectionNode.frame = selectionFrame
+            strongSelf.updateSelectionNodeLayout(selectionNode, size: selectionFrame.size, leftInset: params.leftInset)
+        }
+        if strongSelf.bubblelessRowBandInputs != nil {
+            // A row laid out in selection (one scrolled into view) gets its band here: its selection was updated before
+            // this layout's inputs existed.
+            strongSelf.updateBubblelessSelectionBand(isSelected: strongSelf.selectionNode?.selected ?? false, contentShift: strongSelf.subnodeTransform.m41, previousContentShift: strongSelf.subnodeTransform.m41, animated: false)
+        }
         
         var reactionButtonsOffset: CGFloat = 0.0
         
@@ -5477,7 +6003,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             } else {
                 actionButtonsOriginX += incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right
             }
-            let actionButtonsFrame = CGRect(origin: CGPoint(x: actionButtonsOriginX, y: backgroundFrame.maxY), size: actionButtonsSizeAndApply.0)
+            let actionButtonsFrame = CGRect(origin: CGPoint(x: actionButtonsOriginX, y: backgroundFrame.maxY - bubblelessActionButtonsLift), size: actionButtonsSizeAndApply.0)
             if actionButtonsNode !== strongSelf.actionButtonsNode {
                 strongSelf.actionButtonsNode = actionButtonsNode
                 actionButtonsNode.buttonPressed = { [weak strongSelf] button, progress in
@@ -5515,7 +6041,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 animation.animator.updateFrame(layer: actionButtonsNode.layer, frame: actionButtonsFrame, completion: nil)
             }
             
-            reactionButtonsOffset += actionButtonsSizeAndApply.0.height
+            reactionButtonsOffset += actionButtonsSizeAndApply.0.height - bubblelessActionButtonsLift
         } else if let actionButtonsNode = strongSelf.actionButtonsNode {
             strongSelf.actionButtonsNode = nil
             if animation.isAnimated {
@@ -5653,7 +6179,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let summarizeButtonNode = strongSelf.summarizeButtonNode {
                 let buttonSize = summarizeButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId, disableComments: disablesComments, isSummarize: true)
                 
-                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.minY + 1.0), size: buttonSize)
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : (bubblelessSideButtonsX ?? backgroundFrame.maxX + 8.0), y: backgroundFrame.minY + 1.0), size: buttonSize)
                 
                 if let shareButtonOffset = shareButtonOffset {
                     if incoming {
@@ -5677,7 +6203,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId, disableComments: disablesComments)
                 
-                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : (bubblelessSideButtonsX ?? backgroundFrame.maxX + 8.0), y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 
                 if item.message.adAttribute != nil {
                     buttonFrame.origin.y = backgroundFrame.minY + 1.0
@@ -5711,7 +6237,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let summarizeButtonNode = strongSelf.summarizeButtonNode {
                 let buttonSize = summarizeButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId, disableComments: disablesComments, isSummarize: true)
                 
-                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.minY + 1.0), size: buttonSize)
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : (bubblelessSideButtonsX ?? backgroundFrame.maxX + 8.0), y: backgroundFrame.minY + 1.0), size: buttonSize)
                 
                 if let shareButtonOffset = shareButtonOffset {
                     if incoming {
@@ -5735,7 +6261,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId, disableComments: disablesComments)
                 
-                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : (bubblelessSideButtonsX ?? backgroundFrame.maxX + 8.0), y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 
                 if item.message.adAttribute != nil {
                     buttonFrame.origin.y = backgroundFrame.minY + 1.0
@@ -5786,9 +6312,48 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         // Outside both branches on purpose: the animated one only touches the background when the
         // frame CHANGED, and a tear can move while the bubble does not.
         strongSelf.updateBackgroundTear(unsupportedZones, backgroundFrame: backgroundFrame, animation: animation)
+        strongSelf.updateBubblelessTear(zones: bubblelessStripZones, width: params.width, theme: item.presentationData.theme.theme)
 
+        // Without bubbles the pressed message lifts on a card sized to its content, from the frames laid out above (spec
+        // 5.9, 6.9). Round videos, torn strips and cards lift without their header.
+        var bubblelessLift: ChatMessageBubblelessLift?
+        var bubblelessLiftHidesHeader = false
+        if item.bubbleStyle != .bubble {
+            bubblelessLiftHidesHeader = chatMessageBubblelessLiftHidesHeader(isTornStrip: !bubblelessStripZones.isEmpty, isRoundVideo: item.message.media.contains(where: { ($0 as? TelegramMediaFile)?.isInstantVideo == true }), hasCardOutline: bubblelessCardLiftFrame != nil)
+            var parts = bubblelessLiftParts
+            if let bubblelessCardLiftFrame {
+                parts.append(.outline(bubblelessCardLiftFrame))
+            }
+            if !bubblelessLiftHidesHeader {
+                parts.insert(contentsOf: bubblelessLiftHeaderParts, at: 0)
+            }
+            bubblelessLift = chatMessageBubblelessLift(parts: parts)
+            
+            for container in strongSelf.contentContainers {
+                guard let containerParts = bubblelessLiftPartsByStableId[container.contentMessageStableId], let containerLift = chatMessageBubblelessLift(parts: containerParts) else {
+                    continue
+                }
+                let containerRect = containerLift.rect.offsetBy(dx: -container.containerNode.frame.minX, dy: -container.containerNode.frame.minY)
+                container.liftsOnBubblelessCard = containerLift.hasCard
+                if container.sourceNode.contentRect != containerRect {
+                    container.sourceNode.contentRect = containerRect
+                    container.containerNode.targetNodeForActivationProgressContentRect = containerRect
+                    container.sourceNode.layoutUpdated?(container.containerNode.bounds.size, animation)
+                }
+            }
+        }
+        if strongSelf.bubblelessLift != bubblelessLift {
+            strongSelf.bubblelessLift = bubblelessLift
+        }
+        strongSelf.bubblelessLiftHidesHeader = bubblelessLiftHidesHeader
+        if let cardNode = strongSelf.bubblelessLiftCardNode, let bubblelessLift {
+            // A message that relayouts while lifted (a reaction added as the menu closes) keeps its card fitted.
+            cardNode.frame = bubblelessLift.rect
+            cardNode.cornerRadius = chatMessageBubblelessLiftCornerRadius(mainRadius: item.presentationData.chatBubbleCorners.mainRadius, height: bubblelessLift.rect.height)
+        }
+        
         let previousContextContentFrame = strongSelf.mainContextSourceNode.contentRect
-        strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+        strongSelf.mainContextSourceNode.contentRect = bubblelessLift?.rect ?? backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
         strongSelf.updateMainContainerActivationTarget(mosaicNode: strongSelf.activationProgressMosaicNode)
         
         if previousContextFrame.size != strongSelf.mainContextSourceNode.bounds.size || previousContextContentFrame != strongSelf.mainContextSourceNode.contentRect {
@@ -6364,7 +6929,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 return nil
             case .longTap, .doubleTap, .secondaryTap:
-                if let item = self.item, self.backgroundNode.frame.contains(location) {
+                if let item = self.item, self.pressFrame().contains(location) {
                     if let threadInfoNode = self.threadInfoNode, self.item?.controllerInteraction.tapMessage == nil, threadInfoNode.frame.contains(location) {
                         return .action(InternalBubbleTapAction.Action {})
                     }
@@ -6912,12 +7477,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
     
+    private func updateSelectionNodeLayout(_ selectionNode: ChatMessageSelectionNode, size: CGSize, leftInset: CGFloat) {
+        if let item = self.item, !item.presentationData.chatBubbleCorners.bubbleMode {
+            selectionNode.updateLayout(size: size, leftInset: leftInset, checkX: chatMessageBubblelessSelectionCheckX, checkCenterY: self.bubblelessSelectionCheckCenterY)
+        } else {
+            selectionNode.updateLayout(size: size, leftInset: leftInset)
+        }
+    }
+    
     override public func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
             return
         }
         
         let wasSelected = self.selectionNode?.selected
+        let previousContentShift = self.subnodeTransform.m41
         
         var canHaveSelection = true
         switch item.content {
@@ -6962,17 +7536,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     selected = allSelected
             }
             
-            let offset: CGFloat = incoming ? 42.0 : 0.0
+            let offset: CGFloat = chatMessageSelectionContentOffset(incoming: incoming, bubbleMode: item.presentationData.chatBubbleCorners.bubbleMode)
             
             if let selectionNode = self.selectionNode {
                 selectionNode.updateSelected(selected, animated: animated)
+                selectionNode.updateTheme(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, bubbleMode: item.presentationData.chatBubbleCorners.bubbleMode)
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
                 
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
+                self.updateSelectionNodeLayout(selectionNode, size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
-                let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
+                let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, bubbleMode: item.presentationData.chatBubbleCorners.bubbleMode, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         switch item.content {
                         case let .message(message, _, _, _, _):
@@ -6985,7 +7560,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
+                self.updateSelectionNodeLayout(selectionNode, size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.insertSubnode(selectionNode, belowSubnode: self.messageAccessibilityArea)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)
@@ -7019,6 +7594,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     selectionNode.removeFromSupernode()
                 }
             }
+        }
+        
+        // Without bubbles a selected row stands on a rounded band that joins its selected neighbours' (spec 5.8).
+        if self.bubblelessRowBandInputs != nil || !item.presentationData.chatBubbleCorners.bubbleMode {
+            self.updateBubblelessSelectionBand(isSelected: self.selectionNode?.selected ?? false, contentShift: self.subnodeTransform.m41, previousContentShift: previousContentShift, animated: animated)
         }
         
         let isSelected = self.selectionNode?.selected
@@ -7056,6 +7636,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     break
                 }
             }
+        }
+        
+        // Without bubbles a message a reply or link leads to flashes a band in its author's colour instead of its bubble
+        // (spec 5.8); not for a quote's, a task's or a poll option's own highlight.
+        if self.bubblelessRowBandInputs != nil {
+            let isOwnHighlight = hasCustomHighlight || highlightedState?.quote != nil || highlightedState?.subject != nil
+            let bandColor: UIColor? = (highlightedState != nil && !isOwnHighlight) ? (self.authorNameColor ?? item.presentationData.theme.theme.list.itemAccentColor) : nil
+            self.updateBubblelessHighlightBand(color: bandColor, contentShift: self.subnodeTransform.m41, animated: animated)
         }
         
         if self.highlightedState != highlightedState {
@@ -7358,7 +7946,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var leftOffset: CGFloat = 0.0
         var swipeOffset: CGFloat = 45.0
         if let item = self.item, item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData) {
-            offset = -24.0
+            // Without bubbles incoming content runs to the right margin, so the reply icon trails the margin instead of
+            // overlapping the content.
+            offset = item.bubbleStyle == .bubble ? -24.0 : chatMessageBubblelessReplySwipeOffset
             leftOffset = -10.0
         } else {
             offset = 10.0
@@ -7507,6 +8097,52 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     /// image-backed background for plain themes, the wallpaper backdrop for patterned and gradient
     /// ones — but a `setTearZones` that re-resolved per surface would be a second spelling of the
     /// policy, free to drift.
+    /// Without bubbles there is no bubble to tear around content this build cannot show (`updateBackgroundTear`), so the
+    /// chat itself tears: a strip across the whole width, outlined along torn edges above and below it. `zones` are the
+    /// content's areas, which keep room for the edges, in the main container's coordinates.
+    private func updateBubblelessTear(zones: [CGRect], width: CGFloat, theme: PresentationTheme) {
+        if zones.isEmpty {
+            if let tearLayer = self.bubblelessTearLayer {
+                self.bubblelessTearLayer = nil
+                self.bubblelessTearPathKey = nil
+                tearLayer.removeFromSuperlayer()
+            }
+            return
+        }
+        let tearLayer: SimpleShapeLayer
+        if let current = self.bubblelessTearLayer {
+            tearLayer = current
+        } else {
+            tearLayer = SimpleShapeLayer()
+            tearLayer.fillColor = nil
+            tearLayer.lineWidth = 1.0
+            tearLayer.lineJoin = .round
+            tearLayer.lineCap = .round
+            self.bubblelessTearLayer = tearLayer
+            self.mainContainerNode.layer.insertSublayer(tearLayer, at: 0)
+        }
+        let stroke = theme.chat.message.incoming.bubble.withoutWallpaper.stroke
+        tearLayer.strokeColor = (stroke.alpha > 0.01 ? stroke : theme.list.itemPlainSeparatorColor).cgColor
+        tearLayer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: self.mainContainerNode.bounds.height))
+        
+        // The torn edges are long paths, traced again only when they move.
+        if let pathKey = self.bubblelessTearPathKey, pathKey.zones == zones, pathKey.width == width {
+            return
+        }
+        self.bubblelessTearPathKey = (zones, width)
+        
+        // Past the screen's edges on both sides, so that the strip still spans them while the message is moved aside
+        // (selection, swipe to reply).
+        let overhang: CGFloat = 80.0
+        let path = CGMutablePath()
+        let contours = ChatMessageBubblelessTearContours.shared
+        for zone in zones {
+            appendChatMessageBubblelessTearEdge(contours.paperAbove, to: path, y: zone.minY, fallbackY: chatMessageBubblelessUnsupportedTearDepth * 0.5, from: -overhang, to: width + overhang)
+            appendChatMessageBubblelessTearEdge(contours.paperBelow, to: path, y: zone.maxY - chatMessageBubblelessUnsupportedTearDepth, fallbackY: chatMessageBubblelessUnsupportedTearDepth * 0.5, from: -overhang, to: width + overhang)
+        }
+        tearLayer.path = path
+    }
+
     private func updateBackgroundTear(_ zones: [CGRect], backgroundFrame: CGRect, animation: ListViewItemUpdateAnimation) {
         let resolved = resolveBubbleTearBands(
             zones.map { $0.offsetBy(dx: -backgroundFrame.minX, dy: -backgroundFrame.minY) },
@@ -7577,6 +8213,67 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         return mediaNodeCount > 1 ? result : nil
+    }
+    
+    private func updateBubblelessLiftCard(isExtracted: Bool, item: ChatMessageItem, transition: ContainedViewLayoutTransition) {
+        if isExtracted, let bubblelessLift = self.bubblelessLift {
+            if bubblelessLift.hasCard {
+                let cardNode: ASDisplayNode
+                if let current = self.bubblelessLiftCardNode {
+                    cardNode = current
+                } else {
+                    cardNode = ASDisplayNode()
+                    cardNode.isLayerBacked = true
+                    cardNode.alpha = 0.0
+                    self.mainContextSourceNode.contentNode.insertSubnode(cardNode, at: 0)
+                    self.bubblelessLiftCardNode = cardNode
+                }
+                let theme = item.presentationData.theme.theme
+                cardNode.backgroundColor = chatMessageBubblelessLiftColor(dark: theme.overallDarkAppearance, pageColor: theme.list.plainBackgroundColor)
+                cardNode.frame = bubblelessLift.rect
+                cardNode.cornerRadius = chatMessageBubblelessLiftCornerRadius(mainRadius: item.presentationData.chatBubbleCorners.mainRadius, height: bubblelessLift.rect.height)
+                transition.updateAlpha(node: cardNode, alpha: 1.0)
+            }
+            if self.bubblelessLiftHidesHeader && self.bubblelessLiftHiddenHeader == nil {
+                let headerNodes = [self.nameNode, self.bubblelessHeaderDateNode, self.bubblelessHeaderViewsIconNode, self.bubblelessHeaderViewsNode].compactMap { $0 }
+                // The header's badges and icons keep alphas of their own, so they are hidden rather than faded.
+                let badgeNodes: [ASDisplayNode?] = [self.nameAvatarNode, self.rankBackgroundNode, self.rankBadgeNode, self.ephemeralBadgeBackgroundNode, self.ephemeralBadgeTextNode, self.boostBadgeNode]
+                let badgeViews: [UIView?] = [self.nameNavigateButton, self.credibilityIconView, self.ephemeralBadgeIconNode, self.boostIconNode]
+                let headerBadgeLayers = badgeNodes.compactMap { $0?.layer } + badgeViews.compactMap { $0?.layer }
+                for headerNode in headerNodes {
+                    transition.updateAlpha(node: headerNode, alpha: 0.0)
+                }
+                for layer in headerBadgeLayers {
+                    layer.isHidden = true
+                }
+                self.bubblelessLiftHiddenHeader = (headerNodes, headerBadgeLayers)
+            }
+        } else {
+            if let cardNode = self.bubblelessLiftCardNode {
+                self.bubblelessLiftCardNode = nil
+                transition.updateAlpha(node: cardNode, alpha: 0.0, completion: { [weak cardNode] _ in
+                    cardNode?.removeFromSupernode()
+                })
+            }
+            if let (headerNodes, headerBadgeLayers) = self.bubblelessLiftHiddenHeader {
+                self.bubblelessLiftHiddenHeader = nil
+                for headerNode in headerNodes {
+                    transition.updateAlpha(node: headerNode, alpha: 1.0)
+                }
+                for layer in headerBadgeLayers {
+                    layer.isHidden = false
+                }
+            }
+        }
+    }
+    
+    /// Where a long press, double tap or secondary click acts on the message: its bubble, or without bubbles anywhere across
+    /// an incoming row, the avatar column included and the date header above it left out (spec 5.8).
+    private func pressFrame() -> CGRect {
+        if let item = self.item, item.bubbleStyle.isBubbleless {
+            return CGRect(origin: CGPoint(), size: self.mainContainerNode.bounds.size)
+        }
+        return self.backgroundNode.frame
     }
     
     private func updateMainContainerActivationTarget(mosaicNode: ChatMessageMediaBubbleContentNode?) {
@@ -8075,6 +8772,75 @@ private func generateNameNavigateButtonIconImage() -> UIImage {
     })!.withRenderingMode(.alwaysTemplate)
 }
 
+extension ChatMessageBubbleItemNode {
+    /// Without bubbles, the time and a post's views after the author's name; nil removes them, with the name.
+    fileprivate func applyBubblelessHeaderTime(_ headerTime: BubblelessHeaderTime?, nameNodeFrame: CGRect, animation: ListViewItemUpdateAnimation) {
+        guard let headerTime else {
+            if let dateNode = self.bubblelessHeaderDateNode {
+                self.bubblelessHeaderDateNode = nil
+                if animation.isAnimated {
+                    dateNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak dateNode] _ in
+                        dateNode?.removeFromSupernode()
+                    })
+                } else {
+                    dateNode.removeFromSupernode()
+                }
+            }
+            self.bubblelessHeaderViewsIconNode?.removeFromSupernode()
+            self.bubblelessHeaderViewsIconNode = nil
+            self.bubblelessHeaderViewsNode?.removeFromSupernode()
+            self.bubblelessHeaderViewsNode = nil
+            return
+        }
+        
+        let dateFrame = CGRect(origin: CGPoint(x: nameNodeFrame.maxX + headerTime.dateOffset.x, y: nameNodeFrame.minY + headerTime.dateOffset.y), size: headerTime.dateSize)
+        let dateNode = headerTime.dateApply()
+        if self.bubblelessHeaderDateNode !== dateNode {
+            self.bubblelessHeaderDateNode?.removeFromSupernode()
+            self.bubblelessHeaderDateNode = dateNode
+            dateNode.isUserInteractionEnabled = false
+            self.clippingNode.addSubnode(dateNode)
+            dateNode.frame = dateFrame
+        } else {
+            animation.animator.updateFrame(layer: dateNode.layer, frame: dateFrame, completion: nil)
+        }
+        
+        guard let views = headerTime.views else {
+            self.bubblelessHeaderViewsIconNode?.removeFromSupernode()
+            self.bubblelessHeaderViewsIconNode = nil
+            self.bubblelessHeaderViewsNode?.removeFromSupernode()
+            self.bubblelessHeaderViewsNode = nil
+            return
+        }
+        let iconFrame = CGRect(origin: CGPoint(x: nameNodeFrame.maxX + views.iconOrigin.x, y: nameNodeFrame.minY + views.iconOrigin.y), size: views.icon.size)
+        let iconNode: ASImageNode
+        if let current = self.bubblelessHeaderViewsIconNode {
+            iconNode = current
+            animation.animator.updateFrame(layer: iconNode.layer, frame: iconFrame, completion: nil)
+        } else {
+            iconNode = ASImageNode()
+            iconNode.isLayerBacked = true
+            iconNode.displaysAsynchronously = false
+            self.bubblelessHeaderViewsIconNode = iconNode
+            self.clippingNode.addSubnode(iconNode)
+            iconNode.frame = iconFrame
+        }
+        iconNode.image = views.icon
+        
+        let viewsFrame = CGRect(origin: CGPoint(x: nameNodeFrame.maxX + views.origin.x, y: nameNodeFrame.minY + views.origin.y), size: views.size)
+        let viewsNode = views.apply()
+        if self.bubblelessHeaderViewsNode !== viewsNode {
+            self.bubblelessHeaderViewsNode?.removeFromSupernode()
+            self.bubblelessHeaderViewsNode = viewsNode
+            viewsNode.isUserInteractionEnabled = false
+            self.clippingNode.addSubnode(viewsNode)
+            viewsNode.frame = viewsFrame
+        } else {
+            animation.animator.updateFrame(layer: viewsNode.layer, frame: viewsFrame, completion: nil)
+        }
+    }
+}
+
 public final class NameNavigateButton: HighlightableButton {
     private static let sharedBackgroundImage: UIImage = generateNameNavigateButtonBackgroundImage()
     private static let sharedIconImage: UIImage = generateNameNavigateButtonIconImage()
@@ -8165,6 +8931,14 @@ public final class NameNavigateButton: HighlightableButton {
             self.titleTopicIconView = nil
             titleTopicIconView.view?.removeFromSuperview()
             self.titleTopicIconComponent = nil
+        }
+    }
+}
+
+extension ChatMessageBubbleItemNode: ChatMessageBubblelessStickySelectionCheck {
+    public func updateBubblelessSelectionVisibleTop(_ visibleTop: CGFloat) {
+        if let selectionNode = self.selectionNode {
+            selectionNode.updateVisibleTop(visibleTop - selectionNode.frame.minY)
         }
     }
 }

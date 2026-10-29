@@ -8651,6 +8651,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 avatarNode.updateSelectionState(animated: animated)
             }
         }
+        self.chatDisplayNode.historyNode.updateBubblelessSelectionVisibleTops()
     }
     
     func updatePollTooltipMessageState(animated: Bool) {

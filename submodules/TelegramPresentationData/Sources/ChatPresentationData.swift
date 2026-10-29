@@ -41,7 +41,10 @@ public final class ChatPresentationData {
     public let messageBoldItalicFont: UIFont
     public let messageFixedFont: UIFont
     public let messageBlockQuoteFont: UIFont
-    
+    /// Other people's text without bubbles (spec 5.11). Built here, only in the bubble-free mode: layouts read this
+    /// object from several threads, so it is not lazy, and with bubbles nothing is built.
+    public let bubblelessIncomingTextFonts: ChatMessageTextFonts?
+
     public init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, chatBubbleCorners: PresentationChatBubbleCorners, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
         self.theme = theme
         self.fontSize = fontSize
@@ -61,8 +64,26 @@ public final class ChatPresentationData {
         self.messageBoldItalicFont = Font.semiboldItalic(baseFontSize)
         self.messageFixedFont = Font.monospace(baseFontSize)
         self.messageBlockQuoteFont = Font.regular(baseFontSize - 1.0)
-        
+        self.bubblelessIncomingTextFonts = ChatPresentationData.bubblelessIncomingTextFonts(bubbleMode: chatBubbleCorners.bubbleMode, baseFontSize: baseFontSize)
+
         self.animatedEmojiScale = animatedEmojiScale
+    }
+
+    public static func bubblelessIncomingTextFonts(bubbleMode: Bool, baseFontSize: CGFloat) -> ChatMessageTextFonts? {
+        if bubbleMode {
+            return nil
+        }
+        return ChatMessageTextFonts.newYork(baseFontSize: baseFontSize)
+    }
+
+    /// The body font of an incoming message without bubbles, which every bubble-free measurement of its first line reads.
+    public var bubblelessIncomingBodyFont: UIFont {
+        return self.bubblelessIncomingTextFonts?.regular ?? self.messageFont
+    }
+
+    /// The system family of message text, for the spans that keep it under a New York body (quotes, code-block titles).
+    public var systemTextFonts: ChatMessageTextFonts {
+        return ChatMessageTextFonts(regular: self.messageFont, bold: self.messageBoldFont, italic: self.messageItalicFont, boldItalic: self.messageBoldItalicFont)
     }
     
     public func withTheme(_ theme: ChatPresentationThemeData) -> ChatPresentationData {

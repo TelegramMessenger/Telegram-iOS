@@ -249,6 +249,9 @@ final class InstantPageV2MediaImageView: UIView, InstantPageItemView {
         let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
+        if self.layer.maskedCorners != item.roundedCorners {
+            self.layer.maskedCorners = item.roundedCorners
+        }
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)
@@ -417,6 +420,9 @@ final class InstantPageV2MediaVideoView: UIView, InstantPageItemView {
         let previousMediaId = previousMedia.media.id
         self.item = item
         self.layer.cornerRadius = item.cornerRadius
+        if self.layer.maskedCorners != item.roundedCorners {
+            self.layer.maskedCorners = item.roundedCorners
+        }
         self.clipsToBounds = item.cornerRadius > 0.0
         let strings = renderContext.context.sharedContext.currentPresentationData.with { $0 }.strings
         self.wrappedNode.update(strings: strings, theme: theme)

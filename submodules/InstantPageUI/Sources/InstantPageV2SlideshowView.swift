@@ -39,6 +39,9 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
 
         self.backgroundColor = .black                      // structural — slideshow backdrop is black (gallery look), not the media placeholder color
         self.clipsToBounds = true                          // structural
+        if item.cornerRadius != 0.0 {
+            self.layer.cornerRadius = item.cornerRadius
+        }
 
         self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
         
@@ -189,6 +192,9 @@ final class InstantPageV2SlideshowView: UIView, InstantPageItemView, UIScrollVie
         self.item = item
         self.theme = theme
         self.backgroundColor = .black
+        if self.layer.cornerRadius != item.cornerRadius {
+            self.layer.cornerRadius = item.cornerRadius
+        }
         if mediasChanged {
             self.rebuildPages()
         } else {

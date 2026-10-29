@@ -429,7 +429,7 @@ public extension ContextExtractedContentSource {
     var actionsHorizontalAlignment: ContextActionsHorizontalAlignment {
         return .default
     }
-
+    
     var shouldBeDismissed: Signal<Bool, NoError> {
         return .single(false)
     }

@@ -1983,7 +1983,7 @@ private final class CoreListNodeHostView: UIView, CoreListItemView {
         guard let itemNode = self.itemNode else {
             return 0.0
         }
-        return self.rotated ? itemNode.insets.top : itemNode.insets.bottom
+        return self.rotated ? (itemNode.insets.top + itemNode.stickyHeaderBandTrim) : itemNode.insets.bottom
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

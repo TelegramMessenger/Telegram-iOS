@@ -62,6 +62,8 @@ public enum ChatMessageInteractiveInstantVideoNodeStatusType {
 }
 
 public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
+    /// Whether the time is hidden because the round video has no bubble, so that it comes back with bubbles.
+    private var hidesDateWithoutBubbles = false
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     private var trackingIsInHierarchy: Bool = false {
         didSet {
@@ -956,6 +958,14 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if case .customChatContents = item.associatedData.subject {
                         strongSelf.dateAndStatusNode.isHidden = true
+                    } else if item.bubbleStyle.hidesIncomingStatus {
+                        // Without bubbles the time of an incoming round video is in its author header.
+                        strongSelf.hidesDateWithoutBubbles = true
+                        strongSelf.dateAndStatusNode.isHidden = true
+                    } else if strongSelf.hidesDateWithoutBubbles {
+                        // Back in bubbles, the time this hid comes back (the node is updated in place).
+                        strongSelf.hidesDateWithoutBubbles = false
+                        strongSelf.dateAndStatusNode.isHidden = false
                     }
                     
                     if let videoNode = strongSelf.videoNode {

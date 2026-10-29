@@ -4284,7 +4284,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
                         if itemHeader.stickOverInsets {
                             itemMaxY = itemFrame.maxY
                         } else {
-                            itemMaxY = itemFrame.maxY - (self.rotated ? itemNode.insets.top : itemNode.insets.bottom)
+                            itemMaxY = itemFrame.maxY - (self.rotated ? (itemNode.insets.top + itemNode.stickyHeaderBandTrim) : itemNode.insets.bottom)
                         }
                         
                         if let (previousHeaderId, previousUpperBound, previousUpperIndex, previousUpperBoundEdge, previousLowerBound, previousLowerIndex, previousHeaderItem, hasValidNodes) = previousHeaderBySpace[itemHeader.id.space] {

@@ -4831,6 +4831,7 @@ public final class StoryItemSetContainerComponent: Component {
                         animationCache: component.context.animationCache,
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         style: .glass(isTinted: false),
+                        glassHasTail: false,
                         items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         title: reactionAdditionalTitle,
