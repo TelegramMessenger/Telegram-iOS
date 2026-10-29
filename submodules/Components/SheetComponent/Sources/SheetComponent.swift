@@ -608,7 +608,14 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                 })
             }
             if self.currentHasInputHeight != previousHasInputHeight {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: restingOffset), size: self.scrollView.bounds.size))
+                // When the keyboard goes down, a sheet taller than the screen stays where it was, down to its new bottom,
+                // so what sat just above the keyboard (a comment field's Send) stays in view instead of the sheet
+                // jumping to its top.
+                var targetOffset = restingOffset
+                if previousHasInputHeight, !self.currentHasInputHeight, self.currentRestsOnTop {
+                    targetOffset = max(restingOffset, min(self.scrollView.bounds.minY, contentSize.height - availableSize.height))
+                }
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: targetOffset), size: self.scrollView.bounds.size))
             }
             
             self.currentAvailableSize = availableSize
