@@ -2503,8 +2503,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let edgeEffectHeight: CGFloat = 60.0
         var edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: -50.0), size: CGSize(width: backgroundFrame.width, height: navigationHeight + 18.0 + 50.0))
-        edgeEffectFrame.origin.y += floorToScreenPixels(realAreaExpansionFraction * 50.0)
-        
+        if self.customNavigationContentNode != nil {
+            // A pane's search bar stands in for the tabs, and the pane starts right below it, at `navigationHeight`:
+            // the edge effect ends there rather than covering the hidden tabs, which would fade the first result.
+            edgeEffectFrame.size.height = navigationHeight + 50.0
+        } else {
+            edgeEffectFrame.origin.y += floorToScreenPixels(realAreaExpansionFraction * 50.0)
+        }
+
         if additive {
             transition.updateFrameAdditive(layer: self.headerEdgeEffectView.layer, frame: edgeEffectFrame)
         } else {
