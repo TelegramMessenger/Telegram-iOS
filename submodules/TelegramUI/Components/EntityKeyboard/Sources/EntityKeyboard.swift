@@ -840,7 +840,8 @@ public final class EntityKeyboardComponent: Component {
                             context: accountContext,
                             theme: component.theme,
                             deviceMetrics: component.deviceMetrics,
-                            inputHeight: component.inputHeight
+                            inputHeight: component.inputHeight,
+                            sideStrips: sideStrips
                         )
                     },
                     containerSize: availableSize

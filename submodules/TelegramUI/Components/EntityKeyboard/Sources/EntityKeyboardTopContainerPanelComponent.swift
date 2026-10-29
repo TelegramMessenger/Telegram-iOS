@@ -174,6 +174,8 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             panelView = PanelView()
                             self.panelViews[panel.id] = panelView
                             self.addSubview(panelView.view)
+                            // Clipped like the panel itself, so the mirrored icons stay out of a side strip.
+                            panelView.tintContentView.clipsToBounds = true
                             self.tintContentMask.addSubview(panelView.tintContentView)
                         }
                         
