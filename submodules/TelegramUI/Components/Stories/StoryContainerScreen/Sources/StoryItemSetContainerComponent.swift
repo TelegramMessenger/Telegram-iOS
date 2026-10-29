@@ -113,8 +113,9 @@ public final class StoryItemSetContainerComponent: Component {
     /// The story is a card with space around it, as on an iPad, rather than filling the screen. The host sets it on a
     /// regular width (the default) and on iPhone Duo's unfolded screen, whose width class is regular only in landscape.
     public let isCardLayout: Bool
-    /// The input row's least width, centred on the card when the card is narrower (iPhone Duo's unfolded landscape
-    /// card is narrower than any phone); 0 keeps it the card's width.
+    /// The least width of the input row and of the footer row (a channel's or one's own story: views, share, reposts,
+    /// likes), centred on the card when the card is narrower (iPhone Duo's unfolded landscape card is narrower than any
+    /// phone); 0 keeps them the card's width.
     public let minimumInputPanelWidth: CGFloat
     public let isEmbeddedInCamera: Bool
     public let isProgressPaused: Bool
@@ -1368,6 +1369,11 @@ public final class StoryItemSetContainerComponent: Component {
             if let inputView = self.inputPanel.view, let inputViewHitTest = inputView.hitTest(self.convert(point, to: inputView), with: event) {
                 return inputViewHitTest
             }
+            // The footer row can be wider than the card (`minimumInputPanelWidth`), as the input row can: its ends outside
+            // the card take touches too; its empty space there stays the backdrop's.
+            if !self.bounds.contains(point), let component = self.component, let footerPanelView = self.visibleItems[component.slice.item.id]?.footerPanel?.view, let footerPanelHitTest = footerPanelView.hitTest(self.convert(point, to: footerPanelView), with: event), footerPanelHitTest !== footerPanelView {
+                return footerPanelHitTest
+            }
             
             guard let result else {
                 return nil
@@ -1959,7 +1965,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 )),
                                 environment: {},
-                                containerSize: CGSize(width: itemLayout.containerSize.width, height: 200.0)
+                                containerSize: CGSize(width: max(itemLayout.containerSize.width, component.minimumInputPanelWidth), height: 200.0)
                             )
                             if let footerPanelView = footerPanel.view {
                                 if footerPanelView.superview == nil {

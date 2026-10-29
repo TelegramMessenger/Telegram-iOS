@@ -115,8 +115,8 @@ These are the user's decisions; a screen that follows them is correct, one that 
    `widthClass == .regular`, for anything meant for iPads; it also refuses programmatic rotation requests. Modals see
    compact metrics there (`forOptionalFloatingPresentation`). The story viewer is the exception the other way: on the
    unfolded screen, both orientations, it uses the iPad card layout (9:16 card centred in the band, blurred backdrop),
-   kept clear of the status island in portrait and 16pt from the top and bottom in landscape, with an input row at
-   least a phone's width (375pt).
+   kept clear of the status island in portrait and 16pt from the top and bottom in landscape, with an input row and a
+   footer row (a channel's or one's own story: views, share, reposts, likes) at least a phone's width (375pt).
 8. **The status bar follows what covers its corner block**: with a modal up, the folded postures and unfolded
    landscape take the style of the topmost card that still overlaps the block, else the screens behind; an
    interactive dismiss switches it once the card has left the block entirely (not the regular phone's forced white).
