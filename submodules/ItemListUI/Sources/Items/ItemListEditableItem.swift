@@ -204,7 +204,8 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         }
         transition.updateFrame(node: highlightedBackgroundNode, frame: frame)
         highlightedBackgroundNode.layer.cornerCurve = .continuous
-        highlightedBackgroundNode.cornerRadius = min(self.revealOptionsHighlightedBackgroundActiveCornerRadius, baseFrame.height / 2) * (self.revealOptionsAllowsHighlight ? self.revealOptionsHighlightProgress : 0)
+        let activeCornerRadius = min(self.revealOptionsHighlightedBackgroundActiveCornerRadius, baseFrame.height / 2) * (self.revealOptionsAllowsHighlight ? self.revealOptionsHighlightProgress : 0)
+        highlightedBackgroundNode.cornerRadius = max(self.revealOptionsHighlightedBackgroundRestingCornerRadius, activeCornerRadius)
     }
 
     public func updateRevealOptionsSeparatorNodes(top: ASDisplayNode?, bottom: ASDisplayNode?, topIsHidden: Bool, bottomIsHidden: Bool, topHiddenByPreviousRevealOptions: Bool = false, bottomHiddenByNextRevealOptions: Bool = false) {
@@ -227,6 +228,9 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerD
         self.revealOptionsHighlightedBackgroundActiveCornerRadius = activeCornerRadius
         self.updateRevealOptionsHighlightedBackgroundGeometry(transition: transition)
     }
+
+    /// The highlight's corner radius outside the reveal gesture (the chat side list's inset rounded plate).
+    public var revealOptionsHighlightedBackgroundRestingCornerRadius: CGFloat = 0.0
 
     public var revealOptionsHighlightProgress: CGFloat {
         return CGFloat(min(1, max(0, self.motion.surface.value)))

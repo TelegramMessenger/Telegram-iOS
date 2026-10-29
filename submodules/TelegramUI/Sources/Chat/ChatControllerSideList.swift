@@ -5,6 +5,7 @@ import TelegramCore
 import AccountContext
 import ChatPresentationInterfaceState
 import ChatSideListPanel
+import ChatListUI
 import ChatControllerInteraction
 
 extension ChatControllerImpl {
@@ -36,7 +37,7 @@ extension ChatControllerImpl {
         if let current = self.sideListPanel {
             panel = current
         } else {
-            let listController = self.context.sharedContext.makeChatListController(context: self.context, location: kind.listLocation, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: false, enableDebugActions: false)
+            let listController = ChatListControllerImpl(context: self.context, location: kind.listLocation, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: false, enableDebugActions: false, isSideList: true)
             self.addChild(listController)
             panel = ChatSideListPanelNode(kind: kind, listController: listController, presentationData: self.presentationData)
             panel.requestClose = { [weak self] in

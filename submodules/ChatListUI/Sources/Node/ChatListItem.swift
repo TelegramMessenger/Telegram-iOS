@@ -162,6 +162,8 @@ public enum ChatListItemContent {
         public var displayAsTopicList: Bool
         public var tags: [Tag]
         public var customMessageListData: CustomMessageListData?
+        /// The chat side list's "All Messages" row: the parent's own chat, previewing its latest message.
+        public var isSideListAllThreadsItem: Bool
         
         public init(
             messages: [EngineMessage],
@@ -188,7 +190,8 @@ public enum ChatListItemContent {
             requiresPremiumForMessaging: Bool,
             displayAsTopicList: Bool,
             tags: [Tag],
-            customMessageListData: CustomMessageListData? = nil
+            customMessageListData: CustomMessageListData? = nil,
+            isSideListAllThreadsItem: Bool = false
         ) {
             self.messages = messages
             self.peer = peer
@@ -215,6 +218,7 @@ public enum ChatListItemContent {
             self.displayAsTopicList = displayAsTopicList
             self.tags = tags
             self.customMessageListData = customMessageListData
+            self.isSideListAllThreadsItem = isSideListAllThreadsItem
         }
     }
     
@@ -255,6 +259,9 @@ public enum ChatListItemContent {
         case .loading:
             return nil
         case let .peer(peerData):
+            if peerData.isSideListAllThreadsItem {
+                return nil
+            }
             return .peer(id: peerData.peer.peerId)
         case .groupReference:
             return nil
@@ -486,6 +493,20 @@ public class ChatListItem: ListViewItem {
     let context: AccountContext
     let chatListLocation: ChatListControllerLocation
     let filterData: ChatListItemFilterData?
+    
+    static let sideListInlineAvatarDiameter: CGFloat = 18.0
+    
+    /// A Saved Messages or direct-messages row in the chat side list: the peer's avatar is small and inline before
+    /// the title, as a topic's icon is in the inline list.
+    var isSideListCompactPeerRow: Bool {
+        if !self.interaction.isSideListMode {
+            return false
+        }
+        if case .savedMessagesChats = self.chatListLocation {
+            return true
+        }
+        return false
+    }
     let index: EngineChatList.Item.Index
     public let content: ChatListItemContent
     let editing: Bool
@@ -515,6 +536,9 @@ public class ChatListItem: ListViewItem {
     }
 
     public var isPinned: Bool {
+        if case let .peer(peerData) = self.content, peerData.isSideListAllThreadsItem {
+            return false
+        }
         switch self.index {
         case let .chatList(index):
             return index.pinningIndex != nil
@@ -613,6 +637,8 @@ public class ChatListItem: ListViewItem {
         switch self.content {
         case .loading:
             break
+        case let .peer(peerData) where peerData.isSideListAllThreadsItem:
+            self.interaction.openSideListAllThreads?()
         case let .peer(peerData):
             if let message = peerData.messages.last, let peer = peerData.peer.peer {
                 if case .community = peer {
@@ -2030,6 +2056,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             var overrideImage: AvatarNodeImageOverride?
             if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
+            } else if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem {
+                // Saved Messages' bookmark; a channel's direct messages keep the channel's avatar.
+                if peer.id == item.context.account.peerId {
+                    overrideImage = .savedMessagesIcon
+                }
             } else if peer.id.isReplies {
                 overrideImage = .repliesIcon
             } else if peer.id.isAnonymousSavedMessages {
@@ -2063,6 +2094,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
                 avatarDiameter = 40.0
+            }
+            if item.isSideListCompactPeerRow {
+                avatarDiameter = ChatListItem.sideListInlineAvatarDiameter
             }
                 
             if avatarDiameter != 60.0 {
@@ -2199,6 +2233,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     var reallyHighlighted: Bool {
         var reallyHighlighted = self.isHighlighted
         if let item = self.item {
+            // The parent's own chat is open when the side list highlights no thread.
+            if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem, item.interaction.isSideListMode, item.interaction.highlightedChatLocation == nil {
+                reallyHighlighted = true
+            }
             if let itemChatLocation = item.content.chatLocation {
                 if itemChatLocation == item.interaction.highlightedChatLocation?.location {
                     reallyHighlighted = true
@@ -2598,6 +2636,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
                 avatarDiameter = 40.0
                 avatarLeftInset = 17.0 + avatarDiameter
+            } else if item.isSideListCompactPeerRow {
+                avatarDiameter = ChatListItem.sideListInlineAvatarDiameter
+                avatarLeftInset = 12.0
             } else if item.useCommunityViewLayout {
                 avatarLeftInset = avatarLeftEdgeInset + 8.0 + avatarDiameter
             } else {
@@ -3335,7 +3376,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             switch contentData {
                 case let .chat(itemPeer, threadInfo, _, _, _, _, _, _, _):
-                    if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                    if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem {
+                        titleAttributedString = NSAttributedString(string: item.presentationData.strings.Chat_SideList_AllMessages, font: titleFont, textColor: theme.titleColor)
+                    } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
                         if customMessageListData.commandPrefix != nil {
                             titleAttributedString = nil
                         } else {
@@ -3938,7 +3981,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var onlineIsVoiceChat = false
             
             var isPinned = false
-            if case let .chatList(index) = item.index {
+            if case let .peer(peerData) = item.content, peerData.isSideListAllThreadsItem {
+            } else if case let .chatList(index) = item.index {
                 isPinned = index.pinningIndex != nil
             } else if case let .forum(pinnedIndex, _, _, _, _) = item.index {
                 if case .index = pinnedIndex {
@@ -4259,7 +4303,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
-                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + avatarLeftEdgeInset + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                    var avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + avatarLeftEdgeInset + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                    if item.isSideListCompactPeerRow {
+                        // Inline before the title, where a topic's icon sits in the inline list.
+                        avatarFrame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y + 1.0), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                    }
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
                     if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
@@ -4272,7 +4320,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrame(node: strongSelf.avatarContainerNode, frame: avatarFrame)
 
-                    if useChatListLayout && isCommunity && avatarContentImageSpec == nil, let shadowImage = UIImage(bundleImageName: "Components/CommunityShadow") {
+                    if useChatListLayout && isCommunity && avatarContentImageSpec == nil && !item.isSideListCompactPeerRow, let shadowImage = UIImage(bundleImageName: "Components/CommunityShadow") {
                         strongSelf.communityAvatarShadowNode.isHidden = false
                         strongSelf.communityAvatarShadowNode.image = generateTintedImage(image: shadowImage, color: theme.titleColor.withAlphaComponent(0.9))
 
@@ -4285,7 +4333,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.communityAvatarShadowNode.isHidden = true
                     }
 
-                    if useChatListLayout && displayCommunityAvatarBadge && avatarContentImageSpec == nil && !item.useCommunityViewLayout {
+                    if useChatListLayout && displayCommunityAvatarBadge && avatarContentImageSpec == nil && !item.useCommunityViewLayout && !item.isSideListCompactPeerRow {
                         let communityAvatarBadgeBackgroundView: GlassBackgroundView
                         let communityAvatarBadgeIconView: GlassBackgroundView.ContentImageView
                         if let currentBackgroundView = strongSelf.communityAvatarBadgeBackgroundView, let currentIconView = strongSelf.communityAvatarBadgeIconView {
@@ -5497,7 +5545,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.highlightedBackgroundNode.backgroundColor = highlightedBackgroundColor
                     let topNegativeInset: CGFloat = 0.0
-                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: params.leftInset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height + separatorHeight + topNegativeInset)), aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
+                    var highlightedBackgroundFrame = CGRect(origin: CGPoint(x: params.leftInset, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width - params.leftInset - params.rightInset, height: layout.contentSize.height + separatorHeight + topNegativeInset))
+                    if item.interaction.isSideListMode {
+                        // The side list highlights a row as an inset rounded plate.
+                        highlightedBackgroundFrame = highlightedBackgroundFrame.insetBy(dx: 8.0, dy: 0.0)
+                        strongSelf.revealOptionsHighlightedBackgroundRestingCornerRadius = 24.0
+                    } else {
+                        strongSelf.revealOptionsHighlightedBackgroundRestingCornerRadius = 0.0
+                    }
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: highlightedBackgroundFrame, aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
                     
                     if let peerPresence = peerPresence {
                         strongSelf.peerPresenceManager?.reset(presence: EnginePeer.Presence(status: peerPresence.status, lastActivity: 0), isOnline: online)
