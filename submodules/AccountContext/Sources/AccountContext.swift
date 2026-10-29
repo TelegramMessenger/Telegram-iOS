@@ -1467,15 +1467,15 @@ public final class ChatMessageFeedItemActions {
     public let openMessage: (EngineMessage) -> Bool
     public let openPeer: (EnginePeer) -> Void
     public let openInstantPage: (EngineMessage) -> Void
-    /// A tap on the content that hit nothing of its own (plain text).
-    public let clickThrough: () -> Void
+    /// A tap on a reply header: the message it replies to.
+    public let navigateToMessage: (EngineMessage.Id) -> Void
 
-    public init(openUrl: @escaping (String) -> Void, openMessage: @escaping (EngineMessage) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void, clickThrough: @escaping () -> Void) {
+    public init(openUrl: @escaping (String) -> Void, openMessage: @escaping (EngineMessage) -> Bool, openPeer: @escaping (EnginePeer) -> Void, openInstantPage: @escaping (EngineMessage) -> Void, navigateToMessage: @escaping (EngineMessage.Id) -> Void) {
         self.openUrl = openUrl
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openInstantPage = openInstantPage
-        self.clickThrough = clickThrough
+        self.navigateToMessage = navigateToMessage
     }
 }
 

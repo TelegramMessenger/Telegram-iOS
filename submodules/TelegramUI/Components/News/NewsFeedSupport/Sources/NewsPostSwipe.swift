@@ -38,6 +38,14 @@ public func newsPagerDefersToRowLeftReveal(touchX: CGFloat, width: CGFloat, left
     return isOnRevealableRow && touchX <= leftInset + newsPagerRevealZoneWidth(width: rowWidth)
 }
 
+/// Whether a swipe that starts at `touchX` (in the row, `width` wide) is the row's own: the chat list's rule, on both
+/// sides. From the right zone (`newsPagerRevealZoneWidth`) a swipe reveals the right side's actions, from the left
+/// zone the left side's Expand; from the middle a swipe is the pager's, or nothing. An open row closes from anywhere.
+public func newsRowRevealAllowed(touchX: CGFloat, width: CGFloat) -> Bool {
+    let zone = newsPagerRevealZoneWidth(width: width)
+    return touchX <= zone || touchX >= width - zone
+}
+
 /// The alpha each loaded post row gives its bottom separator. The separator between two rows is the upper row's,
 /// and it fades with the lower row's swipe surface, as the chat list's do. `swipeAlphas` maps a loaded post row's
 /// index to its own swipe separator alpha (1 closed, 0 open); a row without a post row directly below keeps 1.

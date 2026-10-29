@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import CoreList
 import CoreListComponentHost
 import NewsFeedSupport
@@ -141,6 +142,7 @@ final class NewsFeedListView: UIView {
         self.updateSwipeSeparators()
         // A programmatic pass fires no scroll callback: report the settled offset.
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
+        self.reportOffsetOnceSettled(after: transition)
         self.layoutSkeleton()
         if scrollTo != nil {
             self.onProgrammaticScroll?()
@@ -201,10 +203,36 @@ final class NewsFeedListView: UIView {
         }
     }
 
+    private var settledReportGeneration = 0
+
+    /// Once a pass's animation is over, where the list really rests: a pass can land elsewhere than the settled
+    /// frames said at submission (clamped against an edge, re-anchored by a later pass), and CoreList reports
+    /// nothing for a landing, so whoever follows the offset (the header's search fold) would keep the stale value
+    /// until the next scroll. Superseded by any later pass; skipped while a finger scrolls (that reports itself).
+    private func reportOffsetOnceSettled(after transition: CoreListTransition) {
+        self.settledReportGeneration += 1
+        let generation = self.settledReportGeneration
+        let delay = transition.isImmediate ? 0.0 : transition.duration + 0.05
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.settledReportGeneration == generation, !self.isDragging else {
+                return
+            }
+            self.onScrollOffsetChanged?(self.scrollOffset(settled: false), .immediate)
+        }
+    }
+
     // MARK: Swipe (spec §1, §4, §5)
 
     private func postRow(_ view: UIView) -> NewsFeedPostComponent.View? {
         return (view as? CoreListComponentItemView)?.componentView as? NewsFeedPostComponent.View
+    }
+
+    /// The loaded post row of `identity`, if any.
+    func postRow(identity: AnyHashable) -> NewsFeedPostComponent.View? {
+        guard let index = self.items.firstIndex(where: { $0.identity == identity }), let view = self.coreList.loadedItemView(at: index) else {
+            return nil
+        }
+        return self.postRow(view)
     }
 
     /// One open row at a time: closes every loaded row but `keptRow`. A row outside the loaded window is gone and
@@ -215,6 +243,21 @@ final class NewsFeedListView: UIView {
                 continue
             }
             row.closeSwipe(animated: animated)
+        }
+    }
+
+    /// A switch of the feed's mode to `displayMode`: every open row closes, at once where the switch morphs it, its
+    /// content springing back on the morph's spring (`NewsFeedPostComponent.View.closeSwipeForMorph`).
+    func closeSwipedRowsForMorph(to displayMode: NewsFeedDisplayMode) {
+        for view in self.coreList.loadedItemViews {
+            self.postRow(view)?.closeSwipeForMorph(to: displayMode)
+        }
+    }
+
+    /// A pinch began: a long press in progress on a row yields to it.
+    func cancelContextGestures() {
+        for view in self.coreList.loadedItemViews {
+            self.postRow(view)?.cancelContextGesture()
         }
     }
 
@@ -261,11 +304,31 @@ final class NewsFeedListView: UIView {
         return false
     }
 
+    /// The floating avatars standing still at the display's top edge (the header's current bottom), in this view's
+    /// coordinates: the header keeps its edge effects off them. An avatar riding its run, up under the header with
+    /// the run's end or down at its start, is content and passes under them.
+    func stuckFloatingAvatarFrames() -> [CGRect] {
+        let stuckTop = self.floatingTopInset + NewsExpandedPostMetrics.avatarTop
+        var frames: [CGRect] = []
+        for view in self.coreList.loadedItemViews {
+            guard let row = self.postRow(view) else {
+                continue
+            }
+            for frame in row.floatingAvatarFrames(in: self) where abs(frame.minY - stuckTop) < 1.0 {
+                frames.append(frame)
+            }
+        }
+        return frames
+    }
+
+    private var floatingTopInset: CGFloat = 0.0
+
     /// Where the expanded rows' floating avatars stick: the header's current bottom edge, which rises as the
     /// search block scrolls under the top row (`NewsHeaderView.currentBottom`), while the rows' own top inset
     /// stays the resting header's. Without it the avatars would park at the resting inset, under an empty band
     /// where the search block was.
     func setFloatingTopInset(_ top: CGFloat) {
+        self.floatingTopInset = top
         var insets = self.coreListInsets
         insets.top = top
         self.coreList.updateAttachmentDisplayInsets(insets)
@@ -286,30 +349,45 @@ final class NewsFeedListView: UIView {
         return false
     }
 
-    /// CoreList's own preload margin, back in force once a display-mode switch has run.
+    /// CoreList's own preload margin, back in force once a pass that changes rows' heights has run.
     private lazy var restingPreloadMargin: CGFloat = self.coreList.preloadMargin
-    private var wideRowWindowGeneration = 0
+    private var heightChangeGeneration = 0
 
-    /// Before a display-mode switch: keeps every row the switch carries across the screen loaded, so each morphs
-    /// (`NewsFeedPostComponent`'s morph runs only in an animated update of a loaded row). CoreList lays out and
-    /// animates only the union of the old loaded window and the new one, a screen plus 160 pt each: the rows the
-    /// taller layout pushes below that leave with their old content, and the rows the shorter layout pulls in from
-    /// below are made fresh at their final size. So the preload margin grows to several screens for the switch, the
-    /// rows the old layout has below the screen are laid out now (immediately, as the rows a scroll loads are),
-    /// and once the morph has run the margin returns; the next pass unloads what is out of reach.
-    func widenRowWindow(for duration: Double) {
-        self.wideRowWindowGeneration += 1
-        let generation = self.wideRowWindowGeneration
-        self.coreList.preloadMargin = max(self.restingPreloadMargin, self.bounds.height * 4.0)
-        self.withSynchronousRowLoading {
-            self.coreList.applyChanges(transition: .immediate)
+    /// Before an animated pass that changes rows' heights (a display-mode switch, one row's Expand / Collapse, Show
+    /// more), so every row the pass carries across the screen morphs (`NewsFeedPostComponent`'s morph runs only in an
+    /// animated update of a loaded row). CoreList animates only the union of the old loaded window and the new one, a
+    /// screen plus `preloadMargin` each, and such a pass carries nothing out of it: a row a taller layout pushes past
+    /// the new band leaves in the pass's first frame, and a row a shorter layout pulls in from beyond the old band
+    /// arrives at its final place with no morph. So the margin grows by how far rows may travel (`travel`) for the
+    /// pass, and returns once it has run; the next pass unloads what is out of reach.
+    /// `preloadsRows`: the layout shrinks, so the rows it will pull in are laid out now, in their old layout, by an
+    /// immediate pass handed the items again (CoreList skips a pass with nothing changed before it builds a window). A
+    /// growing layout needs only the room: the rows it pushes away are loaded already.
+    /// A margin already that wide (a switch flipped back mid-flight) changes nothing, so no extra pass re-bases rows in
+    /// flight.
+    func prepareHeightChange(travel: CGFloat, preloadsRows: Bool, duration: Double) {
+        self.heightChangeGeneration += 1
+        let generation = self.heightChangeGeneration
+        let margin = self.restingPreloadMargin + max(0.0, travel)
+        if margin > self.coreList.preloadMargin + 0.5 {
+            self.coreList.preloadMargin = margin
+            if preloadsRows {
+                self.withSynchronousRowLoading {
+                    self.coreList.applyChanges(items: self.items, transition: .immediate)
+                }
+            }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) { [weak self] in
-            guard let self, self.wideRowWindowGeneration == generation else {
+            guard let self, self.heightChangeGeneration == generation else {
                 return
             }
             self.coreList.preloadMargin = self.restingPreloadMargin
         }
+    }
+
+    /// `prepareHeightChange` for rows that may travel `screens` heights of this list.
+    func prepareHeightChange(screens: CGFloat, preloadsRows: Bool, duration: Double) {
+        self.prepareHeightChange(travel: self.bounds.height * screens, preloadsRows: preloadsRows, duration: duration)
     }
 
     private func withSynchronousRowLoading(_ f: () -> Void) {
@@ -508,6 +586,7 @@ final class NewsFeedListView: UIView {
             self.coreList.applyChanges(scrollTo: CoreListScrollTarget(index: index, pointOffset: pointOffset), transition: transition)
         }
         self.onScrollOffsetChanged?(self.scrollOffset(settled: true), transition)
+        self.reportOffsetOnceSettled(after: transition)
         self.onProgrammaticScroll?()
         self.updateFreshGlows()
     }

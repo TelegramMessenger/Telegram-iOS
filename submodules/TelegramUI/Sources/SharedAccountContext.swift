@@ -2397,9 +2397,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         // shows both in its channel line instead; the bubble's shape does not matter, it draws no background.
         let corners = presentationData.chatBubbleCorners
         let feedCorners = PresentationChatBubbleCorners(mainRadius: corners.mainRadius, auxiliaryRadius: corners.auxiliaryRadius, mergeBubbleCorners: corners.mergeBubbleCorners, hasTails: false)
-        return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: presentationData.theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: feedCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: { _, _ in
-            actions.clickThrough()
-        }, backgroundNode: nil, availableReactions: nil, accountPeer: accountPeer, isCentered: false, isPreview: false, isStandalone: true, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil, feedActions: actions)
+        return self.makeStandaloneChatMessageItem(context: context, messages: messages, theme: presentationData.theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: feedCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: accountPeer, isCentered: false, isPreview: false, isStandalone: true, rank: nil, rankRole: nil, isGiftMessageComposerPreview: false, activateGiftMessageInput: nil, feedActions: actions)
     }
 
     /// The item behind both the preview and the feed bubble; `feedActions` is set for the feed, which draws no
@@ -2430,12 +2428,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             activateMessagePinch: { _ in
             },
             openMessageContextActions: { _, _, _, _ in },
-            navigateToMessage: { _, _, _ in },
+            navigateToMessage: { _, id, _ in
+                feedActions?.navigateToMessage(id)
+            },
             navigateToMessageStandalone: { _ in
             },
             navigateToThreadMessage: { _, _, _ in
             },
-            tapMessage: isGiftMessageComposerPreview ? nil : { message in
+            // The feed passes no `tapMessage` and gets none: with a closure in place the bubble answers a tap on its
+            // plain text with an empty action of its own (and reply headers stop navigating), and the host's tap
+            // never fires.
+            tapMessage: isGiftMessageComposerPreview || feedActions != nil ? nil : { message in
                 tapMessage?(EngineMessage(message))
             },
             clickThroughMessage: { view, location in
@@ -2662,7 +2665,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             displayPollRestrictedToast: { _ in
             },
-            automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+            // The feed's videos play as the chat's do, by the user's autoplay settings.
+            automaticMediaDownloadSettings: feedActions != nil ? self.currentAutomaticMediaDownloadSettings : MediaAutoDownloadSettings.defaultSettings,
             pollActionState: ChatInterfacePollActionState(),
             stickerSettings: ChatInterfaceStickerSettings(),
             presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode)
@@ -2730,7 +2734,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 showTextAsPlaceholder: rank != nil,
                 hidesBubbleBackground: feedActions != nil,
                 hidesAuthorHeader: feedActions != nil,
-                hidesShareButton: feedActions != nil
+                hidesShareButton: feedActions != nil,
+                hostHandlesGestures: feedActions != nil
             ),
             controllerInteraction: controllerInteraction,
             content: content,

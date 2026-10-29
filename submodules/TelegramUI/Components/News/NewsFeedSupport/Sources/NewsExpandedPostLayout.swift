@@ -20,6 +20,8 @@ public enum NewsExpandedPostMetrics {
     public static let galleryHeight: CGFloat = 270.0
     public static let galleryItemSpacing: CGFloat = 4.0
     public static let galleryCornerRadius: CGFloat = 8.0
+    /// "▶ 0:12" on a gallery video sits this far in from its bottom-left corner.
+    public static let galleryLabelInset: CGFloat = 8.0
     public static let galleryMinimumItemWidth: CGFloat = 120.0
     public static let galleryTopSpacing: CGFloat = 6.0
     public static let showMoreTopSpacing: CGFloat = 2.0
@@ -99,10 +101,61 @@ public func newsExpandedAvatarOffset(galleryScrolled scrolled: CGFloat, galleryF
 
 /// The text kept while a post is collapsed: its first `lineLimit` lines, when it has more. `lineRanges` are the
 /// laid-out lines' character ranges, in order. nil when the whole text fits.
-public func newsCollapsedTextRange(lineRanges: [NSRange], lineLimit: Int = NewsExpandedPostMetrics.collapsedLineLimit) -> NSRange? {
+private func newsCollapsedTextRange(lineRanges: [NSRange], lineLimit: Int) -> NSRange? {
     guard lineRanges.count > lineLimit, lineLimit > 0 else {
         return nil
     }
     let last = lineRanges[lineLimit - 1]
     return NSRange(location: 0, length: last.location + last.length)
+}
+
+/// The length (UTF-16) of the text a collapsed post keeps: its first `lineLimit` lines without the spaces and line
+/// breaks that end them; nil when the whole text fits, or when those lines hold nothing but breaks. Never trimmed at
+/// the start: the entities' offsets index the whole text, and the kept text must lay out as the start of the whole
+/// text does.
+public func newsCollapsedTextLength(text: NSString, lineRanges: [NSRange], lineLimit: Int) -> Int? {
+    guard let range = newsCollapsedTextRange(lineRanges: lineRanges, lineLimit: lineLimit) else {
+        return nil
+    }
+    var end = min(range.location + range.length, text.length)
+    while end > 0, let scalar = Unicode.Scalar(text.character(at: end - 1)), CharacterSet.whitespacesAndNewlines.contains(scalar) {
+        end -= 1
+    }
+    return end > 0 ? end : nil
+}
+
+/// "▶ 0:12" on a picture, `inset` in from its bottom-left corner: the compact thumbnail's, the gallery's, and the one a
+/// mode morph carries between them on the travelling picture's corner.
+public func newsVideoLabelFrame(pictureFrame: CGRect, labelSize: CGSize, inset: CGFloat) -> CGRect {
+    return CGRect(origin: CGPoint(x: pictureFrame.minX + inset, y: pictureFrame.maxY - inset - labelSize.height), size: labelSize)
+}
+
+/// The widest picture the compact thumbnail draws whole. A wider panorama keeps the square drawing (its whole width
+/// would cost up to its aspect times the square's bitmap), and its mode morph fades instead of travelling.
+private let newsThumbnailMaximumWholeAspect: CGFloat = 4.0
+
+/// The size the compact thumbnail draws its picture at: the whole picture, covering the square. What lies beyond the
+/// square is an even number of points, so the layer's centred crop (`resizeAspectFill`) falls on whole pixels at every
+/// scale and the thumbnail at rest is as sharp as a square drawing. A mode morph animates the thumbnail's frame into
+/// the gallery's first photo; drawn whole, every frame on the way shows the photo's own crop at that aspect, not a
+/// square zoomed to fill it. A picture taller than any gallery item shows is cut to the narrowest one
+/// (`galleryMinimumItemWidth` at `galleryHeight`), which bounds a long screenshot. nil for a panorama or a picture
+/// without dimensions: the square is drawn.
+public func newsThumbnailDrawingSize(dimensions: CGSize, square: CGSize) -> CGSize? {
+    guard dimensions.width > 0.0, dimensions.height > 0.0, square.width > 0.0, square.height > 0.0 else {
+        return nil
+    }
+    let metrics = NewsExpandedPostMetrics.self
+    let aspect = max(dimensions.width / dimensions.height, metrics.galleryMinimumItemWidth / metrics.galleryHeight)
+    guard aspect <= newsThumbnailMaximumWholeAspect else {
+        return nil
+    }
+    func covering(_ side: CGFloat, _ exact: CGFloat) -> CGFloat {
+        return side + 2.0 * ceil(max(0.0, exact - side) / 2.0)
+    }
+    if aspect >= square.width / square.height {
+        return CGSize(width: covering(square.width, square.height * aspect), height: square.height)
+    } else {
+        return CGSize(width: square.width, height: covering(square.height, square.width / aspect))
+    }
 }

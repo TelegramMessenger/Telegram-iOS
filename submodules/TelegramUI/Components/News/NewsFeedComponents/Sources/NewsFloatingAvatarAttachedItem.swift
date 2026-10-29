@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import ComponentFlow
-import Display
 import CoreList
 import AccountContext
 import TelegramCore
@@ -17,16 +16,12 @@ public final class NewsFloatingAvatarAttachedItem: CoreListAttachedItem {
     let theme: PresentationTheme
     let peer: EnginePeer
     let loading: NewsFeedRowLoading
-    /// The avatar's view, when made by this item, fades in: the row is morphing from compact, and its own avatar is
-    /// growing into this place underneath. A view made by a scroll appears at once, as the rows do.
-    let fadesIn: Bool
 
-    public init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer, loading: NewsFeedRowLoading, fadesIn: Bool) {
+    public init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer, loading: NewsFeedRowLoading) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.loading = loading
-        self.fadesIn = fadesIn
     }
 
     public var placement: CoreListAttachmentPlacement {
@@ -59,17 +54,71 @@ public final class NewsFloatingAvatarAttachedItem: CoreListAttachedItem {
 
 /// The floating avatar's view: the avatar at the row's avatar position, over a band as wide as the list. It takes no
 /// touches (the row under it does). A gallery scrolled under the avatar's column moves it aside
-/// (`newsExpandedAvatarOffset`): the row tells this view where its gallery is through `obstacle`.
+/// (`newsExpandedAvatarOffset`): the row tells this view where its gallery is through `obstacle`. The row hides it
+/// (`isHidden`) while its own avatar stands in for it: pressed or lifted into a context menu, or flying into this
+/// one's place in a morph from compact. It shows in the frame that avatar hides.
 public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
     private var item: NewsFloatingAvatarAttachedItem
     private let avatar = ComponentView<Empty>()
     private var restingFrame = CGRect()
-    private var hasAppeared = false
 
     public var onContentDidChange: ((Bool) -> Void)?
     /// The scrolled gallery under this avatar's column, if any, in this view's coordinates: its frame and how far
     /// its content has moved from rest. Asked on every stick update and whenever the row says it changed.
     var obstacle: (() -> (frame: CGRect, scrolled: CGFloat)?)?
+    /// How far the row the avatar sits on has slid for its swipe: the avatar slides with it.
+    var swipeOffset: CGFloat = 0.0 {
+        didSet {
+            if self.swipeOffset != oldValue {
+                self.applyObstacle()
+            }
+        }
+    }
+
+    /// Where the avatar rests in this view, before the gallery and the swipe move it.
+    var restingAvatarFrame: CGRect {
+        return self.restingFrame
+    }
+
+    /// Where the avatar is in this view now.
+    var avatarFrame: CGRect {
+        return self.avatar.view?.frame ?? self.restingFrame
+    }
+
+    /// Where the avatar is on screen now, in `view`: through the presentation layers, since the list may be animating
+    /// this view and `view` apart; the model geometry where either has none yet.
+    func presentedAvatarFrame(in view: UIView) -> CGRect {
+        guard let avatarView = self.avatar.view else {
+            return self.convert(self.restingFrame, to: view)
+        }
+        if let from = avatarView.layer.presentation(), let to = view.layer.presentation() {
+            return from.convert(from.bounds, to: to)
+        }
+        return avatarView.convert(avatarView.bounds, to: view)
+    }
+
+    /// The row's own avatar has just handed over to this one, drawn at `frame` (in this view, as on screen). Where the
+    /// list has moved this avatar since the flight was aimed (a scroll during the morph moves a stuck or parked one
+    /// against its row), it goes the rest of the way instead of jumping. Additive, so the stick and the swipe keep
+    /// moving its frame meanwhile.
+    func takeOver(from frame: CGRect) {
+        guard let avatarView = self.avatar.view else {
+            return
+        }
+        let offset = CGPoint(x: frame.midX - avatarView.frame.midX, y: frame.midY - avatarView.frame.midY)
+        guard abs(offset.x) > 0.5 || abs(offset.y) > 0.5 else {
+            return
+        }
+        ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)).animatePosition(view: avatarView, from: offset, to: CGPoint(), additive: true)
+    }
+
+    /// The avatar moved, or the list moved this view: whoever draws around it (the header's edge) follows.
+    var frameChanged: (() -> Void)?
+
+    /// The row whose own avatar is flying into this one in a morph from compact
+    /// (`NewsFeedPostComponent.View.aimAvatarHandOff`). This one stays hidden until that flight lands, even if the list
+    /// binds it to another row meanwhile (a scroll or a pinch during the morph).
+    weak var landingRow: AnyObject?
 
     init(item: NewsFloatingAvatarAttachedItem) {
         self.item = item
@@ -107,14 +156,6 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
             avatarView.frame = frame
         }
         self.applyObstacle()
-        if !self.hasAppeared {
-            self.hasAppeared = true
-            // On a morph from compact the row's own avatar grows into this place underneath, and the floating one
-            // must not cover it before it has arrived.
-            if self.item.fadesIn {
-                self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.45)
-            }
-        }
         return metrics.avatarTop + metrics.avatarSize + metrics.bottomInset
     }
 
@@ -135,6 +176,7 @@ public final class NewsFloatingAvatarView: UIView, CoreListAttachedItemView {
         if let obstacle = self.obstacle?() {
             offset = newsExpandedAvatarOffset(galleryScrolled: obstacle.scrolled, galleryFrame: obstacle.frame, avatarFrame: self.restingFrame)
         }
-        avatarView.frame = self.restingFrame.offsetBy(dx: offset, dy: 0.0)
+        avatarView.frame = self.restingFrame.offsetBy(dx: offset + self.swipeOffset, dy: 0.0)
+        self.frameChanged?()
     }
 }

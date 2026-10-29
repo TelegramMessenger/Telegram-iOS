@@ -123,6 +123,15 @@ final class NewsSearchContentNode: SearchDisplayControllerContentNode {
         self.listView.scrollToTop()
     }
 
+    /// Show more on one of the results: the rows are laid out again on `transition`, the window first widened by the
+    /// post's growth so the rows under it slide down (`NewsFeedListView.prepareHeightChange`).
+    func textExpansionChanged(identity: AnyHashable, expands: Bool, transition: CoreListTransition) {
+        if expands, let growth = self.listView.postRow(identity: identity)?.textExpansionGrowth {
+            self.listView.prepareHeightChange(travel: growth, preloadsRows: false, duration: transition.duration)
+        }
+        self.updateResults(scrollToTop: false, transition: transition)
+    }
+
     private func updateResults(scrollToTop: Bool, transition: CoreListTransition = .immediate) {
         guard let (layout, navigationBarHeight) = self.validLayout else {
             return

@@ -103,3 +103,9 @@ public struct NewsReloadTracker: Equatable {
         }
     }
 }
+
+/// The mode morph's spring (a feed's switch, one row's Expand / Collapse, Show more): at exactly 0.5 s CoreList and
+/// Display both play `.spring` as the system spring, so everything a switch moves rides one motion.
+public enum NewsMorphMotion {
+    public static let duration: Double = 0.5
+}

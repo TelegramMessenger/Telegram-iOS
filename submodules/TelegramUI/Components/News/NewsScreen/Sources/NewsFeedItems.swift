@@ -1,4 +1,5 @@
 import Foundation
+import Display
 import SwiftSignalKit
 import ComponentFlow
 import AccountContext
@@ -45,13 +46,14 @@ struct NewsFeedItemEnvironment {
     let postSwipe: ((EnginePeer, EngineMessage.Id, AnyHashable) -> NewsPostSwipe)?
     /// The tab's "Post hidden" flow; nil for Added and search results.
     let feedback: NewsFeedItemFeedback?
+    /// A post row's context menu (a long press): the row, its channel, its messages and identity.
+    let postContextMenu: ((NewsFeedPostComponent.View, ContextGesture, EnginePeer, [EngineMessage], AnyHashable) -> Void)?
+    /// A row's floating avatar moved or stuck: the header's edge effects follow.
+    let floatingAvatarsChanged: (() -> Void)?
     /// Compact rows, or the expanded posts.
     let displayMode: NewsFeedDisplayMode
     /// The posts a swipe switched to the other mode on their own (`NewsPostSwipeAction.expand` / `.collapse`).
     let rowModeOverrides: Set<AnyHashable>
-    /// This pass switches rows between the modes with a morph: a floating avatar made now fades in over the row's
-    /// own avatar growing into its place.
-    let rowsMorph: Bool
     /// The content an expanded row needs, per post (its first message and its identity).
     let expandedContent: ((EngineMessage, AnyHashable) -> NewsFeedPostExpandedContent?)?
 
@@ -142,7 +144,7 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
     var attachedItems: [AnyHashable: CoreListAttachedItem] = [:]
     let displayMode = environment.rowDisplayMode(identity)
     if displayMode == .expanded {
-        attachedItems[AnyHashable(peer.id)] = NewsFloatingAvatarAttachedItem(context: environment.context, theme: presentationData.theme, peer: peer, loading: environment.rowLoading, fadesIn: environment.rowsMorph)
+        attachedItems[AnyHashable(peer.id)] = NewsFloatingAvatarAttachedItem(context: environment.context, theme: presentationData.theme, peer: peer, loading: environment.rowLoading)
     }
     return CoreListComponentItem(identity: identity, attachedItems: attachedItems, component: AnyComponent(NewsFeedPostComponent(
         context: environment.context,
@@ -161,6 +163,12 @@ func newsPostItem(entry: EngineFeedEntry, messages: [EngineMessage.Id: EngineMes
         swipe: isLeaving ? nil : environment.postSwipe?(peer, messageId, identity),
         displayMode: displayMode,
         expanded: displayMode == .expanded ? environment.expandedContent?(first, identity) : nil,
+        contextMenu: isLeaving ? nil : environment.postContextMenu.map { menu in
+            return { row, gesture in
+                menu(row, gesture, peer, resolved, identity)
+            }
+        },
+        floatingAvatarsChanged: environment.floatingAvatarsChanged,
         action: {
             if !isLeaving {
                 openPost(peer, messageId)

@@ -20,6 +20,15 @@ import CoreListComponentHost
 import NewsFeedSupport
 import NewsFeedComponents
 
+/// What a post row's context menu offers: For you's votes, and opening or forwarding the post.
+struct NewsPostMenu {
+    let hasFeedbackActions: Bool
+    let interesting: () -> Void
+    let notInterested: () -> Void
+    let showInChat: () -> Void
+    let forward: () -> Void
+}
+
 /// A page's layer above the header's edges: it takes no touch of its own, so the touches it does not give a child
 /// reach the header and the list beneath.
 private final class NewsPageOverlayView: UIView {
@@ -86,13 +95,16 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     /// expanded one), per tab (0 For you, 1 Added: a post in both expands in one); a change of the feed's mode
     /// forgets them.
     private var rowModeOverrides: [Int: Set<AnyHashable>] = [:]
-    /// The list pass in progress morphs rows between the modes (`NewsFeedItemEnvironment.rowsMorph`).
-    private var rowsMorph = false
     /// Pinching the feed switches the modes (`NewsFeedPinch`): the lists' container scales about its centre.
     private var pinchRecognizer: UIPinchGestureRecognizer?
     private var pinchState = NewsFeedPinchState()
-    private let pinchHaptic = HapticFeedback()
-    /// Posts whose Show more was tapped: their whole text, with its formatting and links.
+    /// The list whose open search the pinch folded under the top row while the list rested at its top. The fold was the
+    /// pinch's, not the user's: once the pinch is over and the list rests, a search still within its fold opens again
+    /// (`openSearchFoldedByPinch`).
+    private weak var searchFoldedByPinch: NewsFeedListView?
+    /// A tap of haptics with every switch between the modes, of the feed or of one row.
+    private let modeHaptic = HapticFeedback()
+    /// Posts whose Show more was tapped: their whole text rather than its first lines.
     private var expandedTextPosts = Set<AnyHashable>()
     /// For the expanded rows' bubble.
     private var accountPeer: EnginePeer?
@@ -106,6 +118,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
     var openMoreMenu: ((UIView) -> Void)?
+    /// A post row's context menu, lifting the row's content out of the list.
+    var openPostMenu: ((ContextExtractedContentContainingView, ContextGesture, NewsPostMenu) -> Void)?
 
     init(context: AccountContext, controller: NewsScreen) {
         self.context = context
@@ -254,7 +268,7 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
 
     /// The rows morph between the two layouts on the spring a scroll to top runs, so the height changes and the moving
     /// avatars ride one motion.
-    private static let displayModeTransition: CoreListTransition = .spring(duration: 0.5)
+    private static let displayModeTransition: CoreListTransition = .spring(duration: NewsMorphMotion.duration)
 
     func setDisplayMode(_ displayMode: NewsFeedDisplayMode) {
         self.applyDisplayMode(displayMode, animated: true)
@@ -269,23 +283,79 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         self.displayMode = displayMode
         self.rowModeOverrides.removeAll()
-        self.closeSwipedRows(animated: animated)
-        if animated {
-            // Every row the switch carries across the screen morphs, not only the few loaded in both layouts.
-            self.activeList.widenRowWindow(for: NewsScreenNode.displayModeTransition.duration)
+        guard animated else {
+            self.closeSwipedRows(animated: false)
+            self.updateLists(transition: .immediate)
+            return
         }
-        self.rowsMorph = animated
-        self.updateLists(transition: animated ? NewsScreenNode.displayModeTransition : .immediate)
-        self.rowsMorph = false
+        self.modeHaptic.impact(.medium)
+        // An open row the switch morphs closes at once, its content springing back on the morph's spring, in one
+        // commit with the passes below: the swipe control renders in explicit transactions of its own, and one of them
+        // alone could show the closed row ahead of its morph (the menu's switch runs in a turn of its own).
+        CATransaction.begin()
+        defer {
+            CATransaction.commit()
+        }
+        self.closeSwipedRowsForMorph(to: displayMode)
+        // Read before any pass. A list resting at its top stays there: its first row keeps its place and the rows below
+        // grow or shrink downward (`.preserveVisibleContent`, whose witness is that row). Anywhere else the row through
+        // the visible area's centre keeps its midpoint while every row changes height (`.preserveCentredContent`), and
+        // CoreList keeps the list's ends: no gap opens above the first row or below the last.
+        let forYouRestsAtTop = self.restsAtTop(self.forYouList)
+        let addedRestsAtTop = self.restsAtTop(self.addedList)
+        // Every row the switch carries across the screen morphs, not only the few loaded in both layouts: the rows a
+        // taller layout pushes away stay loaded, the rows a shorter one pulls in are laid out first. A list kept at its
+        // top changes height below its first row only, so its rows travel up to twice as far as around the centre.
+        let shrinks = displayMode == .compact
+        let activeRestsAtTop = self.activeList === self.forYouList ? forYouRestsAtTop : addedRestsAtTop
+        self.activeList.prepareHeightChange(screens: shrinks || activeRestsAtTop ? 4.0 : 3.0, preloadsRows: shrinks, duration: NewsScreenNode.displayModeTransition.duration)
+        // One pass per list, in which every row's position and height ride one spring.
+        self.updateForYouList(transition: NewsScreenNode.displayModeTransition, anchorMode: forYouRestsAtTop ? .preserveVisibleContent : .preserveCentredContent)
+        self.updateAddedList(transition: NewsScreenNode.displayModeTransition, anchorMode: addedRestsAtTop ? .preserveVisibleContent : .preserveCentredContent)
+        if self.activeList === self.addedList {
+            // A pass without a scroll target reports no programmatic scroll (`onProgrammaticScroll`): the read mark
+            // and the pill read where the rows will rest.
+            self.trackAddedReading(settled: true)
+            self.updatePill(transition: .immediate, settled: true)
+        }
+    }
+
+    /// Whether a switch of the feed's mode keeps `list` at its top (a switch never scrolls a feed resting at its top
+    /// away from it, either way): it has no rows, or its first post rests under the open search, or under the tabs with
+    /// the search folded.
+    private func restsAtTop(_ list: NewsFeedListView) -> Bool {
+        if list.items.isEmpty {
+            return true
+        }
+        guard let offset = list.scrollOffset(settled: true).knownValue else {
+            return false
+        }
+        return offset <= (self.headerView.geometry?.blockHeight ?? 0.0) + 0.5
     }
 
     private func toggleTextExpanded(_ identity: AnyHashable) {
-        if self.expandedTextPosts.contains(identity) {
-            self.expandedTextPosts.remove(identity)
-        } else {
+        let expands = !self.expandedTextPosts.contains(identity)
+        if expands {
             self.expandedTextPosts.insert(identity)
+        } else {
+            self.expandedTextPosts.remove(identity)
         }
-        self.updateLists(transition: NewsScreenNode.displayModeTransition)
+        let transition = NewsScreenNode.displayModeTransition
+        if self.isSearchActive, let searchContentNode = self.searchContentNode {
+            // A search result's Show more: its list grows; the feeds under the search take the change at once.
+            searchContentNode.textExpansionChanged(identity: identity, expands: expands, transition: transition)
+            self.updateLists(transition: .immediate)
+            return
+        }
+        // The post grows by its hidden lines: the rows under it stay loaded and slide down instead of leaving in the
+        // pass's first frame (a pass that only reconfigures rows carries nothing out of CoreList's window).
+        let list = self.activeList
+        if expands, let growth = list.postRow(identity: identity)?.textExpansionGrowth {
+            list.prepareHeightChange(travel: growth, preloadsRows: false, duration: transition.duration)
+        }
+        // Only the list on screen animates.
+        self.updateForYouList(transition: list === self.forYouList ? transition : .immediate)
+        self.updateAddedList(transition: list === self.addedList ? transition : .immediate)
     }
 
     private func expandedContent(message: EngineMessage, identity: AnyHashable) -> NewsFeedPostExpandedContent {
@@ -299,16 +369,30 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             openUrl: { [weak self] url in
                 self?.openUrl(url)
             },
-            openMedia: { [weak self] message, _ in
-                return self?.openMedia(message: message) ?? false
+            openMedia: { [weak self] message, _, transition in
+                return self?.openMedia(message: message, transition: transition) ?? false
             },
             openPeer: { [weak self] peer in
                 self?.openPeer(peer)
             },
             openInstantPage: { [weak self] message in
                 self?.openInstantPage(message: message)
+            },
+            openMessage: { [weak self] messageId in
+                self?.openPost(messageId: messageId)
             }
         )
+    }
+
+    /// A post by its id (a reply header's target): opened in its chat once the chat's peer is known.
+    private func openPost(messageId: EngineMessage.Id) {
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            guard let self, let peer else {
+                return
+            }
+            self.openPost(peer: peer, messageId: messageId)
+        })
     }
 
     private func openUrl(_ url: String) {
@@ -338,8 +422,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
     }
 
-    /// A photo or video of the gallery, or media the bubble shows: the gallery, as a tap in the chat opens it.
-    private func openMedia(message: EngineMessage) -> Bool {
+    /// A photo of the gallery, or media the bubble shows: the media viewer, as a tap in the chat opens it, zooming
+    /// out of the row's photo (`transition`) and back into it.
+    private func openMedia(message: EngineMessage, transition: NewsGalleryTransition?) -> Bool {
         guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
             return false
         }
@@ -347,8 +432,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }, present: { [weak controller] c, a, _ in
             controller?.present(c, in: .window(.root), with: a)
         }, transitionNode: { _, _, _ in
-            return nil
-        }, addToTransitionSurface: { _ in
+            return transition.map { ($0.node, $0.bounds, $0.snapshot) }
+        }, addToTransitionSurface: { [weak self] view in
+            self?.view.addSubview(view)
         }, openUrl: { [weak self] url in
             self?.openUrl(url)
         }, openPeer: { [weak self] peer, _ in
@@ -359,6 +445,14 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in
         }, chatAvatarHiddenMedia: { _, _ in
         }))
+    }
+
+    /// Forward: the share sheet with the post's messages, as the media viewer forwards.
+    private func forward(messages: [EngineMessage]) {
+        guard let controller = self.controller else {
+            return
+        }
+        controller.present(self.context.sharedContext.makeShareScreen(context: self.context, params: ShareControllerParams(subject: .messages(messages.map { $0._asMessage() }), showInChat: nil, externalShare: true, immediateExternalShare: false)), in: .window(.root))
     }
 
     private func openInstantPage(message: EngineMessage) {
@@ -442,22 +536,59 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         case .began:
             self.refreshController.detach()
             self.closeSwipedRows(animated: true)
+            // A finger resting on a row while the other lands is a long press until here: the pinch has it now.
+            self.activeList.cancelContextGestures()
             self.pinchState = NewsFeedPinchState()
-            self.pinchHaptic.prepareImpact(.medium)
+            self.modeHaptic.prepareImpact(.medium)
+            // The search block folds under the top row first, so the scaled feed does not pass through it. A list that
+            // rested at its top with the search open gets it back once the pinch is over.
+            self.searchFoldedByPinch = nil
+            if let geometry = self.headerView.geometry, self.headerView.blockOffset < geometry.blockHeight {
+                if let offset = self.activeList.scrollOffset(settled: true).knownValue, offset <= 0.5 {
+                    self.searchFoldedByPinch = self.activeList
+                }
+                self.activeList.scroll(toIndex: 0, pointOffset: -geometry.blockHeight, transition: CoreListTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+            }
             self.setFeedScale(newsFeedPinchScale(progress: newsFeedPinchProgress(ratio: recognizer.scale)), transition: .immediate)
         case .changed:
             let progress = newsFeedPinchProgress(ratio: recognizer.scale)
             self.setFeedScale(newsFeedPinchScale(progress: progress), transition: .immediate)
             if self.pinchState.update(progress: progress) {
                 // The rows morph while the feed is still held small: the switch is seen where the fingers are.
-                self.pinchHaptic.impact(.medium)
                 self.setDisplayMode(self.displayMode == .compact ? .expanded : .compact)
             }
         case .ended, .cancelled, .failed:
             self.setFeedScale(1.0, transition: .animated(duration: 0.5, curve: .spring))
+            self.openSearchFoldedByPinch()
         default:
             break
         }
+    }
+
+    private var isPinching: Bool {
+        switch self.pinchRecognizer?.state {
+        case .began?, .changed?:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Opens a search the pinch folded once the pinch is over and the list rests: no finger on it (the list's pan rides
+    /// the pinch and can outlive it) and no momentum, or `onScrollingEnded` asks again when they end. A list still
+    /// within the fold goes back to its top on the 0.5 s spring, as a scroll to top does, and the header unfolds with
+    /// it; one the user scrolled on past the fold keeps its place. Returns whether it scrolled.
+    @discardableResult
+    private func openSearchFoldedByPinch() -> Bool {
+        guard let list = self.searchFoldedByPinch, !self.isPinching, !list.isDragging, !list.coreList.isScrollDecelerating else {
+            return false
+        }
+        self.searchFoldedByPinch = nil
+        guard list === self.activeList, !self.isSearchActive, let geometry = self.headerView.geometry, let offset = list.scrollOffset(settled: true).knownValue, offset > 0.5, offset <= geometry.blockHeight + 0.5 else {
+            return false
+        }
+        list.scrollToTop()
+        return true
     }
 
     /// Scales the lists' container about its centre (a sublayer transform is applied about the layer's anchor point),
@@ -504,6 +635,9 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             } else {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             }
+            // The header followed a blend of both lists during the swipe: back to the selected list's own offset,
+            // whatever the blend ended on.
+            self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: true), transition: ComponentTransition(transition))
         default:
             break
         }
@@ -615,6 +749,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     /// A tap on a tab, or a swipe that settled on it.
     private func setSelectedSegment(_ index: Int, transition: ContainedViewLayoutTransition) {
         self.closeSwipedRows(animated: true)
+        // A search the pinch folded on the page being left stays folded.
+        self.searchFoldedByPinch = nil
         self.selectedSegment = index
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
@@ -709,9 +845,26 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 feedbackController?.choose(post: post, channel: channel, choice: choice)
             })
         }
+        // A long press: For you's votes (the swipe's actions), then opening the post in its chat and forwarding it.
+        let postContextMenu: (NewsFeedPostComponent.View, ContextGesture, EnginePeer, [EngineMessage], AnyHashable) -> Void = { [weak self, weak feedbackController] row, gesture, peer, messages, post in
+            guard let self, let first = messages.first else {
+                return
+            }
+            self.openPostMenu?(row.contextContentView, gesture, NewsPostMenu(hasFeedbackActions: segment == 0, interesting: { [weak self] in
+                self?.castVote(.like, messageId: first.id)
+            }, notInterested: { [weak feedbackController] in
+                feedbackController?.notInterested(post: post, messageId: first.id)
+            }, showInChat: { [weak self] in
+                self?.openPost(peer: peer, messageId: first.id)
+            }, forward: { [weak self] in
+                self?.forward(messages: messages)
+            }))
+        }
         return NewsFeedItemEnvironment(context: self.context, presentationData: self.presentationData, skeletonRowLayout: self.skeletonRowLayout(), rowLoading: list.rowLoading, openPost: { [weak self] peer, messageId in
             self?.openPost(peer: peer, messageId: messageId)
-        }, postSwipe: postSwipe, feedback: feedback, displayMode: self.displayMode, rowModeOverrides: segment.flatMap { self.rowModeOverrides[$0] } ?? [], rowsMorph: self.rowsMorph, expandedContent: { [weak self] message, identity in
+        }, postSwipe: postSwipe, feedback: feedback, postContextMenu: postContextMenu, floatingAvatarsChanged: { [weak self] in
+            self?.updateHeaderHoles()
+        }, displayMode: self.displayMode, rowModeOverrides: segment.flatMap { self.rowModeOverrides[$0] } ?? [], expandedContent: { [weak self] message, identity in
             return self?.expandedContent(message: message, identity: identity)
         })
     }
@@ -733,10 +886,29 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 overrides.insert(post)
             }
             self.rowModeOverrides[segment] = overrides
-            self.rowsMorph = true
-            self.updateLists(transition: NewsScreenNode.displayModeTransition)
-            self.rowsMorph = false
+            self.modeHaptic.impact(.medium)
+            // The rows the swiped one pushes away stay loaded and the rows it pulls in are laid out first, so every row
+            // it moves slides.
+            let list = segment == 0 ? self.forYouList : self.addedList
+            list.prepareHeightChange(screens: 1.5, preloadsRows: action == .collapse, duration: NewsScreenNode.displayModeTransition.duration)
+            let anchorMode = self.rowModeAnchor(post: post, in: list)
+            // Only the swiped list's rows change height, so the other list keeps its own anchor.
+            self.updateForYouList(transition: NewsScreenNode.displayModeTransition, anchorMode: segment == 0 ? anchorMode : .automatic)
+            self.updateAddedList(transition: NewsScreenNode.displayModeTransition, anchorMode: segment == 1 ? anchorMode : .preserveVisibleContent)
         }
+    }
+
+    /// How one row's Expand / Collapse keeps its list in place: the swiped row keeps its top, so it grows or shrinks
+    /// downward where it was swiped, and one partly under the header lands on the list's top inset, in view
+    /// (`.preserveItem`). That inset is the resting header's edge, the search's height below the header's while the
+    /// search is folded: a row whose top shows between the two edges would drop onto the lower one, so it keeps its top
+    /// as the row crossing the inset edge instead (`.preserveVisibleContent`'s witness).
+    private func rowModeAnchor(post: AnyHashable, in list: NewsFeedListView) -> CoreListAnchorMode {
+        let headerBottom = list.insets.top - self.headerView.blockOffset
+        if let index = list.items.firstIndex(where: { $0.identity == post }), let row = list.visibleRowFrames(settled: true).first(where: { $0.index == index }), row.frame.minY >= headerBottom - 0.5, row.frame.minY < list.insets.top {
+            return .preserveVisibleContent
+        }
+        return .preserveItem(post)
     }
 
     private func castVote(_ vote: NewsPostVote, messageId: EngineMessage.Id) {
@@ -786,7 +958,13 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             guard let self, let list, self.activeList === list, self.pagerFraction == 0.0 else {
                 return
             }
-            self.snapNavigationBar()
+            // Where the list rests, in case a programmatic pass landed short of what it reported (a list too
+            // short to fold the search away): the header never stays folded over an unfolded list.
+            self.updateNavigationScrolling(offset: self.navigationScrollOffset(settled: false), transition: .immediate)
+            // A search the pinch folded opens once the list rests after it; otherwise a half-hidden one snaps.
+            if !self.openSearchFoldedByPinch() {
+                self.snapNavigationBar()
+            }
         }
     }
 
@@ -825,6 +1003,12 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private func closeSwipedRows(animated: Bool) {
         self.forYouList.closeSwipedRows(animated: animated)
         self.addedList.closeSwipedRows(animated: animated)
+    }
+
+    /// Closes an open swipe in either feed for a switch to `displayMode`: at once on a row the switch morphs.
+    private func closeSwipedRowsForMorph(to displayMode: NewsFeedDisplayMode) {
+        self.forYouList.closeSwipedRowsForMorph(to: displayMode)
+        self.addedList.closeSwipedRowsForMorph(to: displayMode)
     }
 
     private func updateLists(transition: CoreListTransition) {
@@ -1095,8 +1279,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
             return current
         }
         let next = (self.selectedSegment == 0 ? self.addedList : self.forYouList).scrollOffset(settled: settled)
-        // Blended up to the search's full travel, so mid-swipe it can still be scrolled entirely away.
-        return .known(newsPagerHeaderOffset(current: current.knownValue, next: next.knownValue, progress: abs(self.pagerFraction), foldHeight: geometry.searchTravelLimit))
+        // Blended up to the search's full fold, so mid-swipe it can still be scrolled entirely away.
+        return .known(newsPagerHeaderOffset(current: current.knownValue, next: next.knownValue, progress: abs(self.pagerFraction), foldHeight: geometry.blockHeight))
     }
 
     private func updateNavigationScrolling(offset scrollOffset: NewsFeedListView.ScrollOffset, transition: ComponentTransition) {
@@ -1105,8 +1289,8 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         case let .known(value):
             offset = value
         case .unknown:
-            // The first row is not loaded: the list is scrolled well past the search, which is off the screen.
-            offset = self.headerView.geometry?.searchTravelLimit ?? 0.0
+            // The first row is not loaded: the list is scrolled well past the search, which is folded away.
+            offset = self.headerView.geometry?.blockHeight ?? 0.0
         }
         if self.isSearchActive {
             offset = 0.0
@@ -1117,6 +1301,18 @@ final class NewsScreenNode: ASDisplayNode, ASGestureRecognizerDelegate {
         let floatingTop = self.headerView.currentBottom
         self.forYouList.setFloatingTopInset(floatingTop)
         self.addedList.setFloatingTopInset(floatingTop)
+        self.updateHeaderHoles()
+    }
+
+    /// The header's edge effects leave the avatars stuck at its edge crisp: a hole for each (an avatar riding its
+    /// run under the header passes beneath them, as content does).
+    private func updateHeaderHoles() {
+        guard !self.isSearchActive else {
+            self.headerView.updateEdgeHoles([])
+            return
+        }
+        let list = self.activeList
+        self.headerView.updateEdgeHoles(list.stuckFloatingAvatarFrames().map { list.convert($0, to: self.headerView) })
     }
 
     /// A half-hidden search snaps open or shut when scrolling ends (as `ContactsControllerNode.contentScrollingEnded`).
