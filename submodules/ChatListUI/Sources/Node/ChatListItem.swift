@@ -495,6 +495,8 @@ public class ChatListItem: ListViewItem {
     let filterData: ChatListItemFilterData?
     
     static let sideListInlineAvatarDiameter: CGFloat = 18.0
+    /// The side list's content inset from the list's edges: 12pt inside the highlighted plate (inset 8pt).
+    static let sideListContentInset: CGFloat = 18.0
     
     /// A Saved Messages or direct-messages row in the chat side list: the peer's avatar is small and inline before
     /// the title, as a topic's icon is in the inline list.
@@ -2677,12 +2679,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 avatarLeftInset = 17.0 + avatarDiameter
             } else if item.isSideListCompactPeerRow {
                 avatarDiameter = ChatListItem.sideListInlineAvatarDiameter
-                avatarLeftInset = 12.0
+                avatarLeftInset = ChatListItem.sideListContentInset
             } else if item.useCommunityViewLayout {
                 avatarLeftInset = avatarLeftEdgeInset + 8.0 + avatarDiameter
             } else {
                 if item.interaction.isInlineMode {
-                    avatarLeftInset = 12.0
+                    avatarLeftInset = item.interaction.isSideListMode ? ChatListItem.sideListContentInset : 12.0
                 } else if !useChatListLayout {
                     avatarLeftInset = 50.0
                 } else {
@@ -3818,7 +3820,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let layoutOffset: CGFloat = 0.0
             
-            let rawContentWidth = params.width - leftInset - params.rightInset - 18.0 - editingOffset
+            let rawContentWidth = params.width - leftInset - params.rightInset - 18.0 - editingOffset - (item.interaction.isSideListMode ? ChatListItem.sideListContentInset - 12.0 : 0.0)
             
             let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
